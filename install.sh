@@ -20,10 +20,11 @@ sleep 2
 ui_print
 ui_print "- Extracting module files"
 mkdir /data/Antares
+unzip -o "$ZIPFILE" 'common/system.prop' -d $MODPATH >&2
 unzip -o "$ZIPFILE" 'system/*' -d $MODPATH >&2
 unzip -o "$ZIPFILE" 'service.sh' -d "$MODPATH" >&2
 unzip -o "$ZIPFILE" 'gamelist.txt' -d "/data/Antares" >&2
-
+unzip -o "$ZIPFILE" 'antares.png' -d "/data/local/tmp" >&2
 ui_print "- Installing bellavita toast"
 unzip -o "$ZIPFILE" 'toast.apk' -d $MODPATH >&2
 pm install $MODPATH/toast.apk
