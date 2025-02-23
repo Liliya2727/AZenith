@@ -8,7 +8,7 @@ apply() {
     echo "$1" > "$2"
 }
 
-
+sleep 1
 # Renderer Configurations
 resetprop -n debug.hwui.renderer skiagl
 resetprop -n vendor.debug.renderengine.backend skiaglthreaded
@@ -29,6 +29,14 @@ echo "90" > /sys/module/ged/parameters/g_fb_dvfs_threshold
 echo "1" > /sys/module/ged/parameters/g_gpu_timer_based_emu
 echo "1" > /sys/module/ged/parameters/gpu_cust_boost_freq
 echo "1" > /sys/kernel/ged/hal/gpu_boost_level
+
+# Volt Optimizer
+echo "-14" /proc/eem/EEM_DET_B/eem_offset
+echo "-14" /proc/eem/EEM_DET_BL/eem_offset
+exho "-14" /proc/eem/EEM_DET_L/eem_offset
+echo "-9" /proc/eem/EEM_DET_CCI/eem_offset
+echo "-2" /proc/eemg/EEMG_DET_GPU/eemg_offset
+echo "-2" /proc/eemg/EEMG_DET_GPU_HI/eemg_offset
 
 # Schedul Optimisation
 echo "500000" > /proc/sys/kernel/sched_migration_cost_ns
