@@ -2,5 +2,5 @@
 
 
 
-# remove ZepassCharge data folder
-rm -rf /data/ZepassCharge
+# remove Antares data folder
+rm -rf /data/Antares
