@@ -1,7 +1,7 @@
 #!/bin/sh
 SKIPMOUNT=false
-PROPFILE=false
-POSTFSDATA=true
+PROPFILE=true
+POSTFSDATA=false
 LATESTARTSERVICE=true
 REPLACE="
 
