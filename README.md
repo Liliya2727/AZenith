@@ -1,2 +1,2 @@
 # Antares
-X6739 Gaming Modules
+Antares is a performance module designed for Infinix GT 10 Pro, but i will make it work in other infinix Devices
