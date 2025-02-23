@@ -33,7 +33,7 @@ echo "1" > /sys/kernel/ged/hal/gpu_boost_level
 # Volt Optimizer
 echo "-14" /proc/eem/EEM_DET_B/eem_offset
 echo "-14" /proc/eem/EEM_DET_BL/eem_offset
-exho "-14" /proc/eem/EEM_DET_L/eem_offset
+echo "-14" /proc/eem/EEM_DET_L/eem_offset
 echo "-9" /proc/eem/EEM_DET_CCI/eem_offset
 echo "-2" /proc/eemg/EEMG_DET_GPU/eemg_offset
 echo "-2" /proc/eemg/EEMG_DET_GPU_HI/eemg_offset
