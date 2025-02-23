@@ -1,1 +1,134 @@
+# This file will be read by resetprop
+# Enable SkiaGL threaded mode
+debug.hwui.render_thread=true
 
+# Hypothetical advanced settings (only if such properties are supported)
+debug.skia.threaded_mode=true
+debug.hwui.render_thread_count=1
+debug.skia.num_render_threads=1
+debug.skia.render_thread_priority=1
+debug.skia.max_memory_usage_mb=512
+persist.sys.gpu.working_thread_priority=1
+debug.hwui.profile=true
+debug.hwui.profile.maxframes=120
+debug.hwui.show_dirty_regions=false
+debug.hwui.fps_divisor=1
+debug.hwui.show_non_rect_clip=false
+debug.hwui.webview_overlays_enabled=true
+renderthread.skia.reduceopstasksplitting=true
+debug.hwui.renderer=skiagl
+debug.hwui.use_hint_manager=false
+debug.hwui.target_cpu_time_percent=0
+debug.hwui.skia_tracing_enabled=false
+debug.hwui.skia_use_perfetto_track_events=false
+debug.hwui.capture_skp_enabled=false
+debug.hwui.trace_gpu_resources=false
+debug.hwui.show_layers_updates=false
+debug.hwui.skip_empty_damage=true
+debug.hwui.use_buffer_age=false
+debug.hwui.use_partial_updates=false
+debug.hwui.use_gpu_pixel_buffers=true
+debug.hwui.filter_test_overhead=false
+debug.hwui.overdraw=false
+debug.hwui.level=1
+
+# Dalvik Thermal
+dalvik.vm.dexopt.thermal-cutoff=0
+
+# Renderer
+debug.hwui.renderer=vulkan
+debug.renderengine.backend=vulkan
+vendor.debug.renderengine.backend=vulkan
+ro.hwui.use_vulkan=true
+renderthread.vulkan.reduceopstasksplitting=true
+ro.config.hw_quickpoweron=true
+
+# Smooth Touch
+ro.vendor.qti.sys.fw.touch_smoothing_level=5
+ro.vendor.qti.sys.fw.touch_smoothing_ms=5
+ro.vendor.qti.sys.fw.use-smooth-touch=true
+
+# Fps Enhancements
+debug.sf.showupdates=0 
+debug.sf.showcpu=0
+debug.sf.showbackground=0
+debug.sf.showfps=0
+debug.gr.swapinterval=1
+debug.egl.swapinterval=0
+ro.vendor.dfps.enable=false
+ro.vendor.smart_dfps.enable=false
+
+# Cpu Core Control
+ro.vendor.qti.core.ctl_max_cpu=8
+ro.vendor.qti.core.ctl_min_cpu=8
+
+# Graphics Optimized
+debug.hwui.skia_atrace_enabled=false
+debug.egl.profiler=1
+debug.egl.hw=1
+debug.performance.tuning=1
+debug.sf.hw=1
+
+# Gpu Optimization
+ro.vendor.gpu.optimize.level=5
+ro.vendor.gpu.optimize.load_level=3
+ro.vendor.gpu.optimize.driver_version=3
+ro.vendor.gpu.optimize.preload=1
+ro.vendor.gpu.optimize.purgeable_limit=128
+ro.vendor.gpu.optimize.retry_max=6
+ro.vendor.gpu.optimize.texture_control=true
+ro.vendor.gpu.optimize.memory_compaction=true
+ro.vendor.gpu.optimize.hires_preload=true
+ro.vendor.gpu.optimize.fork_detector=true
+ro.vendor.gpu.optimize.fork_detector_threshold=5
+ro.vendor.gpu.optimize.max_job_count=4
+ro.vendor.gpu.optimize.max_target_duration=10
+ro.vendor.gpu.optimize.min_target_size=200
+
+# Dalvik Dex2oat
+dalvik.vm.dex2oat-minidebuginfo=false
+dalvik.vm.dex2oat-cpu-set=0,1,2,3,4,5,6,7
+dalvik.vm.dex2oat-threads=8
+dalvik.vm.dex2oat-resolve-startup-strings=true
+dalvik.vm.dexopt.secondary=true
+dalvik.vm.dexopt.thermal-cutoff=0
+dalvik.vm.dexopt-flags=m=y
+dalvik.vm.dex2oat64.enabled=true
+dalvik.vm.ps-min-first-save-ms=18000
+dalvik.vm.minidebuginfo=false
+dalvik.vm.systemuicompilerfilter=speed
+dalvik.vm.usejit=true
+dalvik.vm.usejitprofiles=true
+dalvik.vm.extra-opts=-verbose:jit
+
+# Pm Dexopt
+pm.dexopt.install=speed
+pm.dexopt.shared=speed
+pm.dexopt.boot=speed
+pm.dexopt.first-boot=speed
+pm.dexopt.bg-dexopt=speed
+pm.dexopt.ab-ota=speed
+pm.dexopt.inactive=speed
+
+# Surface Flinger Optimisation
+debug.sf.use_phase_offsets_as_durations=1
+debug.sf.late.sf.duration=20000000
+debug.sf.late.app.duration=15000000
+debug.sf.early.sf.duration=20000000
+debug.sf.early.app.duration=15000000
+debug.sf.earlyGl.sf.duration=20000000
+debug.sf.earlyGl.app.duration=15000000
+debug.sf.hwc.min.duration=15000000
+
+# Random Configuration
+video.accelerate.hw=1
+hw3d.force=1
+hw2d.force=1
+debug.composition.type=mdp
+debug.enabletr=true
+hwui.disable_vsync=true
+hwui.render_dirty_regions=false
+persist.sys.composition.type=mdp
+persist.sys.ui.hw=1
+ro.config.enable.hw_accel=true
+ro.sf.compbypass.enable=0
