@@ -9,12 +9,12 @@ REPLACE="
 sleep 2
 ui_print
 ui_print
-ui_print "        ANTARES!          "
+ui_print "          ANTARES!            "
 ui_print 
 ui_print
-ui_print "- Releases : 24/2/2025"
+ui_print "- Releases : 24/02/2025"
 ui_print "- Author : @Zexshia"
-ui_print "- Version : 1.0"
+ui_print "- Version : 1.2"
 sleep 1
 ui_print "- Device : $(getprop ro.product.board) "
 sleep 2
