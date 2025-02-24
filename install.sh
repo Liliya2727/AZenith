@@ -8,16 +8,18 @@ REPLACE="
 "
 sleep 2
 ui_print
-ui_print "ANTARES!"
-ui_print 
-ui_print "by : @Zexshia!"
 ui_print
+ui_print "        ANTARES!          "
+ui_print 
+ui_print
+ui_print "Releases : 24/2/2025"
+ui_print "Author : @Zexshia"
+ui_print "Version : 1.0"
 sleep 1
 ui_print "Device : $(getprop ro.product.board) "
-
 sleep 2
-
-ui_print
+ui_print "- Installing Antares!"
+sleep 2
 ui_print "- Extracting module files"
 mkdir /data/Antares
 unzip -o "$ZIPFILE" 'common/system.prop' -d $MODPATH >&2
