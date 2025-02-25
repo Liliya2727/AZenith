@@ -14,7 +14,7 @@ ui_print
 ui_print "          ANTARES!            "
 ui_print 
 ui_print
-ui_print "- Releases : 26/02/2025"
+ui_print "- Releases : 25/02/2025"
 ui_print "- Author : @Zexshia"
 ui_print "- Version : 1.5"
 sleep 1
