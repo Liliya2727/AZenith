@@ -1,9 +1,7 @@
 #!/bin/sh
-
-
-
 # remove Antares data folder
 rm -rf /data/Antares
+rm -rf /data/local/tmp/antares.png
 
 if [ -f $INFO ]; then
   while read LINE; do
