@@ -1,3 +1,5 @@
+![1000032513](https://github.com/user-attachments/assets/3bf4fdfc-30dc-4ead-93f6-a270c00b67f9)
+
 #  Antares -  Performance modul for mtk devices especially D8050 
 
 **Antares** is a high-performance tuning module specifically designed for the **D8050**. to enhance system performance, responsiveness, and gaming experience.  
@@ -5,18 +7,18 @@
 ---
 
 ##  Features  
-- ** Active automatically on gaming!**
-- ** Include Better Volt Optimizer!**
-- ** Include SkiaGLthreaded**
-- ** Android Scheduler Tweak!**
-- ** Include Schedhorizon Tunes!**
-- ** Toggle gaming mode using action.sh**
+- **Active automatically on gaming!**
+- **Include Better Volt Optimizer!**
+- **Include SkiaGLthreaded**
+- **Android Scheduler Tweak!**
+- **Include Schedhorizon Tunes!**
+- **Toggle gaming mode using action.sh**
 
 ---
 
 ##  Compatibility  
-- ** D8050**
-- ** Haven't tested it on other devices** 
+- **D8050**
+- **Haven't tested it on other devices** 
  
 ---
 
