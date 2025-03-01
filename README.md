@@ -9,7 +9,6 @@
 ##  Features  
 - **Active automatically on gaming!**
 - **Include Better Volt Optimizer!**
-- **Include SkiaGLthreaded**
 - **Android Scheduler Tweak!**
 - **Include Schedhorizon Tunes!**
 - **Toggle gaming mode using action.sh**
