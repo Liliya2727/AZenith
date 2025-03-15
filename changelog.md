@@ -1,3 +1,11 @@
+## Changelog V1.2 Release (1216)
+- Fix a bug where service won't restart
+- Fix Volt Opt wont save the Value before Disabling it
+- Adjust monitoring loop to 10 Seconds
+- Change some shell Notification
+- Add Description in WebUi
+
+
 ## Changelog V1 Release (1014)
 - Initial Release on Github
 - Sync with Encore 2.3 WebUi
