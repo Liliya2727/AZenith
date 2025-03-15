@@ -6,7 +6,7 @@
 - Add Description in WebUi
 
 
-## Changelog V1 Release (1014)
+## Changelog V1.0 Release (1014)
 - Initial Release on Github
 - Sync with Encore 2.3 WebUi
 - Added FSTrim (Adjustable in Webui)
