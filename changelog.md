@@ -1,9 +1,11 @@
 ## Changelog V1.2 Release (1216)
-- Fix a bug where service won't restart
+- Fix a bug where service won't start again after being disabled
 - Fix Volt Opt wont save the Value before Disabling it
 - Adjust monitoring loop to 10 Seconds
 - Change some shell Notification
-- Add Description in WebUi
+- Reworked Something in WebUI
+- Droped Kill Logger
+- Some rework on Monitoring Service (Background Service)
 
 
 ## Changelog V1.0 Release (1014)
