@@ -24,7 +24,7 @@ Huge thanks to the following contributors for their support and expertise:
 - **ShiraXblood**  
 - **Laynsb**  
 - **Goten**  
-
+- **kanaochar**
 ---
 
 ## Stay Updated  
