@@ -1,3 +1,13 @@
+## Changelog V1.7 (1723)
+- Optimize Performance Script and Tweak
+- Added Feature to Underclock CPU Frequency
+- Rebrand to Universal MediaTek Modules
+- Optimize Monitoring Service
+- Fix a bug where service won't start after being restarted
+- Added KillLogger
+- Fix a bug where ML High Prior always killed the Monitoring Service
+
+
 ## Changelog V1.2 Release (1216)
 - Fix a bug where service won't start again after being disabled
 - Fix Volt Opt wont save the Value before Disabling it
