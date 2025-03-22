@@ -1,6 +1,6 @@
 ![1000032513](https://github.com/user-attachments/assets/3bf4fdfc-30dc-4ead-93f6-a270c00b67f9)
 
-#  AZenith -  Performance module for mtk devices especially D8050 
+#  AZenith -  Performance module for mtk device 
 
 **AZenith** is a high-performance tuning module specifically designed for the **D8050**. to enhance system performance, responsiveness, and gaming experience.  
 
