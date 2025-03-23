@@ -1,3 +1,8 @@
+## Changelog V1.8 (1823)
+- Optimizing Script
+- Added a script to clear background apps on Performance Profiles
+
+
 ## Changelog V1.7 (1723)
 - Optimize Performance Script and Tweak
 - Added Feature to Underclock CPU Frequency
