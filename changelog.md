@@ -1,4 +1,8 @@
-## Changelog V1.8 (1823)
+## Changelog V1.8 (1825)
+- Fix Profiler, some settings wouldn't work without this one
+
+
+## Changelog V1.8 (1824)
 - Optimizing Script
 - Added a script to clear background apps on Performance Profiles
 
