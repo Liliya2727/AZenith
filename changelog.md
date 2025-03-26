@@ -1,3 +1,14 @@
+## Changelog V1.9 (V1927)
+- Introducing Game Preload, Preload game libs to memory to reduce load time and minimize lag
+- Ram Freed, Kill background apps when entering performance profiles to reduce ram usage
+- WebUi: added loading screen on WebUI, let everything to load before accessing WebUI
+- WebUi: Now chipset automatically detect name, it'll use it's marketing name instead using the codename
+- Removed the script to kill mlbb when it's in the background for too long
+- Adjust the monitoring loops to 15 S
+- Drop PID detection and using dumpsys activity recents instead
+- Refining Module Logging, now it has 2 logging files, /data/AZenith/AZenith.log && /data/AZenith/AZenithMon.log thanks to @kanaochar
+
+
 ## Changelog V1.8 (1825)
 - Fix Profiler, some settings wouldn't work without this one
 
