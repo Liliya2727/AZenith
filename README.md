@@ -24,4 +24,4 @@ Huge thanks to the following contributors for their support and expertise:
 ---
 
 ## Stay Updated  
-Follow the development and upcoming updates on **[@Zexshia](https://t.me/zexshiarch)**
+Follow the development and upcoming updates on **[@Zexshia](https://t.me/ZeshArch)**
