@@ -8,12 +8,8 @@
 
 ##  Features  
 - **Active automatically on gaming!**
-
----
-
-##  Compatibility  
-- **D8050**
-- **Haven't tested it on other devices** 
+- **Customize as u want!**
+- **WebUI!**
  
 ---
 
@@ -28,4 +24,4 @@ Huge thanks to the following contributors for their support and expertise:
 ---
 
 ## Stay Updated  
-Follow the development and upcoming updates on **[@Zexshia](https://t.me/zexshiach)**
+Follow the development and upcoming updates on **[@Zexshia](https://t.me/zexshiarch)**
