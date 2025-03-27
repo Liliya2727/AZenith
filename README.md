@@ -2,7 +2,7 @@
 
 #  AZenith -  Performance module for mtk device 
 
-**AZenith** is a high-performance tuning module specifically designed for the **D8050**. to enhance system performance, responsiveness, and gaming experience.  
+**AZenith** is a high-performance tuning module specifically designed for the **MediaTek**. to enhance system performance, responsiveness, and gaming experience.  
 
 ---
 
