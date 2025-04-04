@@ -1,3 +1,12 @@
+## Changelog V2.0 (V2044)
+- Increase Loop delay to 35 Seconds when Using GamePreload to reduce usage
+- Fix bootloop issue on some devices
+- Fix Bypass Charge Checking when Installing Module
+- Adjust Surfaceflinger Value
+- Removed System.prop 
+- Bypass charge now only supports Specific Devices!
+
+
 ## Changelog V1.9 (V1927)
 - Introducing Game Preload, Preload game libs to memory to reduce load time and minimize lag
 - Ram Freed, Kill background apps when entering performance profiles to reduce ram usage
