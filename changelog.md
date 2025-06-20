@@ -1,3 +1,22 @@
+## Changelog V2.4 (R2467)
+- Changes : Redesign the WebUI a little bit to enhance stability and user experiences
+- Updates : Add 2 new profiles, ECO Mode(Powersave) and Balanced Performance(Lite Mode)
+- Updates : Remove toggle to force performance profile manually because it's buggy and unstable
+- Fixes : Fix a problem where webui won't load after restarting Daemon
+- Fixes : Restarting Daemon now doesn't take times and restart immediately (It took 45 Seconds in AZenith 2.0)
+- Changes : Remove button to Kill the service since we don't really have to use it
+- Changes : Move all startup process from service.sh to main AZenith Process for faster process and reduce child process
+- Update : Add new logic to change from Balanced profile to ECO Mode and vice versa
+- Change : New Logging method for better Readability, I also added Preload Log to check all game libraries that has been processed by VMT
+- Update : New Logic to change profiler, using 2 different dumpsys in different flow but still in the same loop, this is prevent a bug where performance profile always run without opening any games.
+- Changes : Daemon now run directly to improve responsiveness and faster process
+- Changes : Move all AZenith file libraries from /AZenith/libs to /AZenith/system/bin
+- Changes : Merge some small process to one single flow
+- Updates : Add toggle to enable Lite Mode (balanced Performance)
+- Changes : Limit Max Frequency now only work on ECO Mode and Lock High Frequency works only in High Performance Mode
+- Updates : Add new path to bypass charging : /mt-battery/disable_charger
+
+
 ## Changelog V2.0 (V2044)
 - Increase Loop delay to 35 Seconds when Using GamePreload to reduce usage
 - Fix bootloop issue on some devices
