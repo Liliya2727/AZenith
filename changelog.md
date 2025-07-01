@@ -1,3 +1,32 @@
+## Changelog V2.5 (R2509)
+- Update : Added color scheme settings based on Zirelia 1.0
+- Change : Removed Lite Mode
+- Change : Migrate to C Daemon based on Encore 4.5 (Thanks to Rem01Project for OpenSource EncoreDaemon)
+- Fix : Fixed a condition where cpu frequency won't set to default after using ECO Mode
+- Update : Added toggle to enable GPU Mali Scheduling
+- Update : Added toggle to enable FPSGO and GED Parameters (it was applied by default before)
+- Update : Added toggle to enable Scheduler Tunes (it was applied by default before)
+- Change : Removed ML Prior and Replace it to App priority settings
+- Update : Added Real time monitoring Ram Usage and Cpu Frequency on WebUI
+- Change : Refine WebUI a little bit to improve UX
+- Change : Change UP_RATE limit from 7000 => 7500
+- Change : Change DOWN_RATE limit from 15000 => 14000
+- Change : Increase Swappiness from 10 => 20
+- Change : Increase nr_request from 64 => 128
+- Change : Increase read_ahead_kb from 128 => 256
+- Change : Decrease dirty_background_ratio from 35 => 10
+- Change : Decrease dirty_ratio from 30 => 20
+- Change : Decrease vfs_cache_pressure from 120 => 80
+- Change : Decrease dirty_expire_centisecs from 400 => 300
+- Change : Decrease dirty_writeback_centisecs from 6000 => 3000
+- Change : Increase stat_interval from 10 => 20
+- Change : Disable compaction_proactiveness from 1 => 0
+- Change : Disable watermark_boost_factor from 1 => 0
+- Change : Decrease watermark_scale_factor from 50 => 20
+- Change : Decrease vfs_cache_pressure from 100 => 40
+- Change : Decrease perf_cpu_time_max_percent from 3 => 1
+
+
 ## Changelog V2.4 (R2467)
 - Changes : Redesign the WebUI a little bit to enhance stability and user experiences
 - Updates : Add 2 new profiles, ECO Mode(Powersave) and Balanced Performance(Lite Mode)
