@@ -1,3 +1,10 @@
+## Changelog V2.6 (R2648)
+- Change : Change the logic of the slider in webUi and optimize it for low end devices
+- Change : Compress webui and convert it gif to Webp
+- Change : Restructure the webui script to make it lighter
+- Change : increase the interval for Real time monitoring
+
+
 ## Changelog V2.5 (R2509)
 - Update : Added color scheme settings based on Zirelia 1.0
 - Change : Removed Lite Mode
