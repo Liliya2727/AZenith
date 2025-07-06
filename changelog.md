@@ -1,4 +1,4 @@
-## Changelog V2.8 (R2857)
+## Changelog V2.8 (R2864)
 - Update : Initial Support for Snapdragon
 - Change : FSTrim is not set on boot now
 - Update : Added an Option to Change Performance Governor
