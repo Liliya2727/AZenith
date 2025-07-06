@@ -1,3 +1,13 @@
+## Changelog V2.8 (R2857)
+- Update : Initial Support for Snapdragon
+- Change : FSTrim is not set on boot now
+- Update : Added an Option to Change Performance Governor
+- Update : Added Lock Mode / Disable AI, Run Performance and Powersave Profile through the WebUI
+- Change : Fix An issue where WebUI is lag on some devices
+- Update : Disable Vsync now supports 60hz/90hz/120hz
+- Change : Refactoring script and other improvement on flow and Logic
+
+
 ## Changelog V2.6 (R2648)
 - Change : Change the logic of the slider in webUi and optimize it for low end devices
 - Change : Compress webui and convert it gif to Webp
