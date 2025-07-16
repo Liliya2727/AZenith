@@ -26,31 +26,37 @@ make_node() {
     [ ! -f "$2" ] && echo "$1" > "$2"
 }
 
-
 # Displaybanner
 ui_print ""
 ui_print "              AZenith              "
 ui_print ""
 ui_print "- Installing AZenith..."
 
-
 # Extract Module Directiories
 mkdir -p "$MODULE_CONFIG"
 ui_print "- Create module config"
 
+# Flashable integrity checkup
+ui_print "- Extracting verify.sh"
+unzip -o "$ZIPFILE" 'verify.sh' -d "$TMPDIR" >&2
+[ ! -f "$TMPDIR/verify.sh" ] && abort_corrupted
+source "$TMPDIR/verify.sh"
+
 # Extract Module files
 ui_print "- Extracting system directory..."
-extract -o "$ZIPFILE" 'system/*' -d "$MODPATH" >&2
+extract "$ZIPFILE" 'system/bin/vmt' "$MODPATH"
+extract "$ZIPFILE" 'system/bin/bypassCharge' "$MODPATH"
+extract "$ZIPFILE" 'system/bin/AZenith_Profiler' "$MODPATH"
 ui_print "- Extracting service.sh..."
-extract -qo "$ZIPFILE" service.sh -d "$MODPATH" >&2
+extract "$ZIPFILE" service.sh "$MODPATH"
 ui_print "- Extracting module.prop..."
-extract -qo "$ZIPFILE" module.prop -d "$MODPATH" >&2
+extract "$ZIPFILE" module.prop "$MODPATH"
 ui_print "- Extracting uninstall.sh..."
-extract -qo "$ZIPFILE" uninstall.sh -d "$MODPATH" >&2
+extract "$ZIPFILE" uninstall.sh "$MODPATH" 
 ui_print "- Extracting gamelist.txt..."
-extract -qo "$ZIPFILE" gamelist.txt -d "$MODULE_CONFIG" >&2
+extract "$ZIPFILE" gamelist.txt "$MODULE_CONFIG" 
 ui_print "- Extracting AZenith_icon.png..."
-extract -qo "$ZIPFILE" AZenith_icon.png -d /data/local/tmp >&2
+extract "$ZIPFILE" AZenith_icon.png /data/local/tmp 
 ui_print "- Extracting webroot"
 unzip -o "$ZIPFILE" "webroot/*" -d "$MODPATH" >&2
 
@@ -76,7 +82,7 @@ case $ARCH in
 esac
 
 # Extract daemon
-extract -o "$ZIPFILE" "libs/$ARCH_TMP/AZenith" "$TMPDIR"
+extract "$ZIPFILE" "libs/$ARCH_TMP/AZenith" "$TMPDIR"
 cp "$TMPDIR"/libs/"$ARCH_TMP"/* "$MODPATH/system/bin"
 rm -rf "$TMPDIR/libs"
 ui_print "- Installing for Arch : $ARCH_TMP"
@@ -171,6 +177,9 @@ make_node "Disabled" "$MODULE_CONFIG/customVsync"
 
 # Make sure to enable Auto Every installment and Update
 echo "1" > "$MODULE_CONFIG/AIenabled"
+
+# Clean Up useless files
+rm -rf "$MODPATH/webroot/include"
 
 # Set Permissions
 ui_print "- Setting Permissions..."
