@@ -13,9 +13,8 @@ on:
       - '.github/scripts/**'
       - 'jni/**'
       - 'AZenith/scripts/**'
-      - 'module/**'
-      - 'webui/**'
-      - 'gamelist.txt'
+      - 'AZenith/**'
+      - 'AZenith/gamelist.txt'
       - 'version'
 
 # Allow only one concurrent build workflows
