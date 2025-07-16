@@ -1,7 +1,4 @@
 ## AZenith 3.0
-
-**One, Two, Three! AZenith is here!**
-
 ### Changelog
 
 - Compile with ndk-build to support MultiArch
