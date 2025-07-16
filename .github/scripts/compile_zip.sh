@@ -47,6 +47,10 @@ find mainfiles/system/bin -maxdepth 1 -type f -name "*.sh" -exec sh -c 'mv -- "$
 zipName="AZenith火-$version-$release_code.zip"
 echo "zipName=$zipName" >>"$GITHUB_OUTPUT"
 
+# Generate sha256sum for integrity checkup
+for file in "${need_integrity[@]}"; do
+	bash .github/scripts/gen_sha256sum.sh "$file"
+done
 
 # Zip the file
 cd ./mainfiles || {
