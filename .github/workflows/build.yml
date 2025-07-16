@@ -1,41 +1,57 @@
-name: Build AZenith jni
+name: Build Encore Zip
 
 on:
   pull_request:
     branches:
-      - main
+      -main
   workflow_dispatch:
   push:
     branches:
       - main
     paths:
+      - '.github/workflows/build.yml'
+      - '.github/scripts/**'
       - 'jni/**'
+      - 'AZenith/scripts/**'
+      - 'module/**'
+      - 'webui/**'
+      - 'gamelist.txt'
+      - 'version'
 
+# Allow only one concurrent build workflows
 concurrency:
   group: build
   cancel-in-progress: true
 
 jobs:
   build:
-    name: Build JNI Libraries
+    name: Build Flashable Zip
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4.2.2
-        with:
-          fetch-depth: 0
+    - name: Checkout
+      uses: actions/checkout@v4.2.2
+      with:
+        fetch-depth: 0
 
-      - name: Set up Android NDK
-        uses: nttld/setup-ndk@v1.5.0
-        with:
-          ndk-version: r28b
+    - name: NDK Setup
+      uses: nttld/setup-ndk@v1.5.0
+      with:
+        ndk-version: r28b
 
-      - name: Build JNI with ndk-build
-        run: ndk-build
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2.0.2
 
-      - name: Upload JNI Artifacts
-        uses: actions/upload-artifact@v4.6.2
-        with:
-          name: AZenith-jni-libs
-          path: |
-            libs/
+    - name: Build AZenith JNI
+      run: ndk-build
+
+    - name: Compile Flashable Zip
+      id: compileZip
+      run: bash .github/scripts/compile_zip.sh
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v4.6.2
+      with:
+        name: AZenith-build
+        path: ${{ steps.compileZip.outputs.zipName }}
+
+    
