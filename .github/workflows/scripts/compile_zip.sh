@@ -21,6 +21,7 @@ need_integrity=(
 	"AZenith/uninstall.sh"
 	"AZenith/module.prop"
 	"AZenith/gamelist.txt"
+        "AZenith/toast.apk"
 )
 
 # Version info
