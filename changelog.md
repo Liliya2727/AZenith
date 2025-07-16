@@ -1,3 +1,19 @@
+## AZenith 3.0
+
+**One, Two, Three! AZenith is here!**
+
+### Changelog
+
+- Compile with ndk-build to support MultiArch
+- Rebrand to universal performance module
+- Fix missing function call in script
+- Add module banner for KernelSU Next
+- Use symlink for ksu/apatch
+- Fix cpu recognition not detecting some specific chipset
+- Add verify sha256
+- Fix missing custom governor file in installation
+
+
 ## Changelog V2.8 (R2864)
 - Update : Initial Support for Snapdragon
 - Change : FSTrim is not set on boot now
