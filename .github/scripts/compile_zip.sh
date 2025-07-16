@@ -27,7 +27,7 @@ need_integrity=(
 # Version info
 version="$(cat version)"
 version_code="$(git rev-list HEAD --count)"
-release_code="R-$(git rev-parse --short HEAD)"
+release_code="$(git rev-parse --short HEAD)-Release"
 sed -i "s/version=.*/version=$version ($release_code)/" mainfiles/module.prop
 sed -i "s/versionCode=.*/versionCode=$version_code/" mainfiles/module.prop
 
@@ -49,7 +49,7 @@ echo "zipName=$zipName" >>"$GITHUB_OUTPUT"
 
 # Generate sha256sum for integrity checkup
 for file in "${need_integrity[@]}"; do
-	bash .github/scripts/gen_sha256sum.sh "$file"
+	bash .github/scripts/generatesha256.sh "$file"
 done
 
 # Zip the file
