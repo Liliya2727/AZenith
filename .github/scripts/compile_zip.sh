@@ -35,8 +35,8 @@ sed -i "s/versionCode=.*/versionCode=$version_code/" mainfiles/module.prop
 paste -sd '|' - <"$GITHUB_WORKSPACE/gamelist.txt" >"$GITHUB_WORKSPACE/mainfiles/gamelist.txt"
 
 # Copy module files
-cp -r ./libs module
-cp -r ./scripts/* mainfiles/system/bin
+cp -r ./libs mainfiles
+cp -r ./tweakfls/* mainfiles/system/bin
 cp LICENSE ./mainfiles
 
 # Remove .sh extension from scripts
