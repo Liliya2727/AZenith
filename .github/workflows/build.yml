@@ -1,4 +1,4 @@
-name: Build Encore Zip
+name: Build AZenith
 
 on:
   pull_request:
@@ -12,9 +12,10 @@ on:
       - '.github/workflows/build.yml'
       - '.github/scripts/**'
       - 'jni/**'
-      - 'AZenith/scripts/**'
-      - 'AZenith/**'
-      - 'AZenith/gamelist.txt'
+      - 'scripts/**'
+      - 'mainfiles/**'
+      - 'webui/**'
+      - 'gamelist.txt'
       - 'version'
 
 # Allow only one concurrent build workflows
@@ -42,6 +43,11 @@ jobs:
 
     - name: Build AZenith JNI
       run: ndk-build
+      
+    - name: Build WebUI
+      working-directory: ./webui
+      run: |
+        cp -r ./webui/* ../mainfile/webroot
 
     - name: Compile Flashable Zip
       id: compileZip
