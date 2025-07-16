@@ -40,17 +40,17 @@ ui_print "- Create module config"
 
 # Extract Module files
 ui_print "- Extracting system directory..."
-unzip -o "$ZIPFILE" 'system/*' -d "$MODPATH" >&2
+extract -o "$ZIPFILE" 'system/*' -d "$MODPATH" >&2
 ui_print "- Extracting service.sh..."
-unzip -qo "$ZIPFILE" service.sh -d "$MODPATH" >&2
+extract -qo "$ZIPFILE" service.sh -d "$MODPATH" >&2
 ui_print "- Extracting module.prop..."
-unzip -qo "$ZIPFILE" module.prop -d "$MODPATH" >&2
+extract -qo "$ZIPFILE" module.prop -d "$MODPATH" >&2
 ui_print "- Extracting uninstall.sh..."
-unzip -qo "$ZIPFILE" uninstall.sh -d "$MODPATH" >&2
+extract -qo "$ZIPFILE" uninstall.sh -d "$MODPATH" >&2
 ui_print "- Extracting gamelist.txt..."
-unzip -qo "$ZIPFILE" gamelist.txt -d "$MODULE_CONFIG" >&2
+extract -qo "$ZIPFILE" gamelist.txt -d "$MODULE_CONFIG" >&2
 ui_print "- Extracting AZenith_icon.png..."
-unzip -qo "$ZIPFILE" AZenith_icon.png -d /data/local/tmp >&2
+extract -qo "$ZIPFILE" AZenith_icon.png -d /data/local/tmp >&2
 ui_print "- Extracting webroot"
 unzip -o "$ZIPFILE" "webroot/*" -d "$MODPATH" >&2
 
@@ -76,7 +76,7 @@ case $ARCH in
 esac
 
 # Extract daemon
-unzip -o "$ZIPFILE" "libs/$ARCH_TMP/AZenith" -d "$TMPDIR" >&2
+extract -o "$ZIPFILE" "libs/$ARCH_TMP/AZenith" "$TMPDIR"
 cp "$TMPDIR"/libs/"$ARCH_TMP"/* "$MODPATH/system/bin"
 rm -rf "$TMPDIR/libs"
 ui_print "- Installing for Arch : $ARCH_TMP"
