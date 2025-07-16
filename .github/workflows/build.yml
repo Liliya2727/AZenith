@@ -12,7 +12,7 @@ on:
       - '.github/workflows/build.yml'
       - '.github/scripts/**'
       - 'jni/**'
-      - 'scripts/**'
+      - 'tweakfls/**'
       - 'mainfiles/**'
       - 'webui/**'
       - 'gamelist.txt'
