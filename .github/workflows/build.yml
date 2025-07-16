@@ -43,11 +43,6 @@ jobs:
 
     - name: Build AZenith JNI
       run: ndk-build
-      
-    - name: Build WebUI
-      working-directory: ./webui
-      run: |
-        cp -r ./webui/* ../mainfile/webroot
 
     - name: Compile Flashable Zip
       id: compileZip
