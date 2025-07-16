@@ -1,27 +1,41 @@
-name: Build AZenith
+name: Build AZenith jni
 
 on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
   push:
+    branches:
+      - main
     paths:
       - 'jni/**'
-      - '.github/workflows/**'
-  workflow_dispatch:
+
+concurrency:
+  group: build
+  cancel-in-progress: true
 
 jobs:
   build:
+    name: Build JNI Libraries
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up NDK
-        uses: nttld/setup-ndk@v1
+      - name: Checkout Code
+        uses: actions/checkout@v4.2.2
         with:
-          ndk-version: r26b
+          fetch-depth: 0
 
-      - name: Build with ndk-build
-        working-directory: jni
-        run: |
-          ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=./Android.mk \
-            APP_PLATFORM=android-24 APP_ABI="arm64-v8a armeabi-v7a"
+      - name: Set up Android NDK
+        uses: nttld/setup-ndk@v1.5.0
+        with:
+          ndk-version: r28b
+
+      - name: Build JNI with ndk-build
+        run: ndk-build
+
+      - name: Upload JNI Artifacts
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: AZenith-jni-libs
+          path: |
+            libs/
