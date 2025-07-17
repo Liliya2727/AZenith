@@ -3,7 +3,7 @@ name: Build AZenith
 on:
   pull_request:
     branches:
-      -main
+      - main
   workflow_dispatch:
   push:
     branches:
