@@ -38,6 +38,12 @@ null == o && ((o = function(c) {
     import.meta.url).toString(), JSON.parse('["gvBVN","fn762ag.js","jkrgM","48MX7"]'));
 let i = 0;
 
+
+import BannerZenith from '/Banner_AZenith.avif';
+import AvatarZenith from '/Avatar_AZenith.avif';
+import SchemeBanner from '/AvatarAZenith.avif';
+
+
 function executeCommand(c, s) {
     return void 0 === s && (s = {}), new Promise((r, d) => {
         let l = `exec_callback_${Date.now()}_${i++}`;
@@ -705,6 +711,15 @@ function setupUIListeners() {
         c.checked = d, s.style.display = d ? "block" : "none", s.classList.toggle("show", d)
     }), document.getElementById("startButton").addEventListener("click", startService), document.getElementById("applyperformance").addEventListener("click", applyperformanceprofile), document.getElementById("applybalanced").addEventListener("click", applybalancedprofile), document.getElementById("applypowersave").addEventListener("click", applyecomode), document.getElementById("FSTrim").addEventListener("click", applyFSTRIM), document.getElementById("fpsged").addEventListener("change", function() {
         setfpsged(this.checked)
+ 
+  const banner = document.getElementById("BannerZenith");
+  const avatar = document.getElementById("AvatarZenith");
+  const scheme = document.getElementById("SchemeBanner");
+
+  if (banner) banner.src = BannerZenith;
+  if (avatar) avatar.src = AvatarZenith;
+  if (scheme) scheme.src = SchemeBanner;
+
     }), document.getElementById("GPreload").addEventListener("change", function() {
         setGPreloadStatus(this.checked)
     }), document.getElementById("disableai").addEventListener("change", function() {
@@ -743,6 +758,7 @@ function setupUIListeners() {
         setVsyncValue(this.value)
     }), document.getElementById("colorschemebutton").addEventListener("click", showColorScheme), document.getElementById("applybutton").addEventListener("click", hidecolorscheme), document.getElementById("editGamelistButton").addEventListener("click", showGameListModal), document.getElementById("cancelButton").addEventListener("click", hideGameListModal), document.getElementById("saveGamelistButton").addEventListener("click", saveGameList)
 }
+
 
 function heavyInit() {
     checkAvailableRAM(), checkProfile(), checkServiceStatus(), checkGPreload(), loadColorSchemeSettings(), checkCPUFrequencies(), setInterval(checkCPUFrequencies, 2e3), setInterval(checkServiceStatus, 5e3), setInterval(checkProfile, 5e3), setInterval(showRandomMessage, 1e4), setInterval(checkAvailableRAM, 5e3), Promise.all([checkModuleVersion(), checkCPUInfo(), checkKernelVersion(), getAndroidVersion(), checkfpsged(), checkOPPIndexStatus(), checkDThermal(), checkiosched(), checkmalisched(), checkAI(), checkDND(), loadCpuFreq(), loadCpuGovernors(), loadGameGovernors(), GovernorPowersave(), loadVsyncValue(), checkBypassChargeStatus(), checkschedtunes(), checkSFL(), checkKillLog(), checklogger(), checkRamBoost(), ]).then(() => {
