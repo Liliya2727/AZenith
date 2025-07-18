@@ -133,17 +133,19 @@ esac
 # 0) Unknown/No Unsupported
 # /// More chipset will be added soon ////
 
-
-# /// Extract WebUi based on device Chipset ////
+# EXTRACT WEBUI DIRECTORIES
+mkdir -p "$MODPATH/webroot"
+# /// Extract WebUI based on device Chipset ////
 if [ "$soc" = "MediaTek" ]; then
     ui_print "- Inflating WebUI for MediaTek"
     unzip -o "$ZIPFILE" "webroot/webuimtk/*" -d "$TMPDIR" >&2
-    cp "$TMPDIR"/webroot/webuimtk/* "$MODPATH/webroot"
+    cp -r "$TMPDIR/webroot/webuimtk/"* "$MODPATH/webroot/"
 else
     ui_print "- Inflating Universal WebUI"
     unzip -o "$ZIPFILE" "webroot/webuiuniv/*" -d "$TMPDIR" >&2
-    cp "$TMPDIR"/webroot/webuiuniv/* "$MODPATH/webroot"
+    cp -r "$TMPDIR/webroot/webuiuniv/"* "$MODPATH/webroot/"
 fi
+# Clean up
 rm -rf "$TMPDIR/webroot"
 
 # Make module config 
