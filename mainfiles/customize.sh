@@ -134,27 +134,6 @@ esac
 # 0) Unknown/No Unsupported
 # /// More chipset will be added soon ////
 
-# Inflate WebUI Based on SoC
-case "$soc" in
-    "MediaTek")
-        ui_print "- Inflating WebUI for MediaTek"
-        cp -f "$MODPATH/webroot/include/mtkhtml" "$MODPATH/webroot/index.html"
-        cp -f "$MODPATH/webroot/include/mtkjs" "$MODPATH/webroot/assets/fn762ag.js"
-        ;;
-    "Snapdragon")
-        ui_print "- Inflating WebUI for Snapdragon"
-        cp -f "$MODPATH/webroot/include/sdmhtml" "$MODPATH/webroot/index.html"
-        cp -f "$MODPATH/webroot/include/sdmjs" "$MODPATH/webroot/assets/fn762ag.js"
-        ;;
-    *)
-        ui_print "- Inflating Universal WebUI"
-        cp -f "$MODPATH/webroot/include/bschtml" "$MODPATH/webroot/index.html"
-        cp -f "$MODPATH/webroot/include/bscjs" "$MODPATH/webroot/assets/fn762ag.js"
-        ;;
-esac
-# I made 3 differs WebUI for this to match every Chipsets
-# # # # # # 
-
 # Make module config 
 make_node 0 "$MODULE_CONFIG/clearbg"
 make_node 0 "$MODULE_CONFIG/bypass"
