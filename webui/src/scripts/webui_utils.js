@@ -700,18 +700,6 @@ async function applyecomode() {
 }
 
 function setupUIListeners() {
-    let c = document.getElementById("disableai"),
-        s = document.getElementById("extraSettings");
-    c.addEventListener("change", function() {
-        setAI(this.checked), s.style.display = this.checked ? "block" : "none", s.classList.toggle("show", this.checked)
-    }), executeCommand("cat /data/adb/.config/AZenith/AIenabled").then(({
-        stdout: r
-    }) => {
-        let d = "0" === r.trim();
-        c.checked = d, s.style.display = d ? "block" : "none", s.classList.toggle("show", d)
-    }), document.getElementById("startButton").addEventListener("click", startService), document.getElementById("applyperformance").addEventListener("click", applyperformanceprofile), document.getElementById("applybalanced").addEventListener("click", applybalancedprofile), document.getElementById("applypowersave").addEventListener("click", applyecomode), document.getElementById("FSTrim").addEventListener("click", applyFSTRIM), document.getElementById("fpsged").addEventListener("change", function() {
-        setfpsged(this.checked)
- 
   const banner = document.getElementById("BannerZenith");
   const avatar = document.getElementById("AvatarZenith");
   const scheme = document.getElementById("SchemeBanner");
@@ -720,43 +708,61 @@ function setupUIListeners() {
   if (avatar) avatar.src = AvatarZenith;
   if (scheme) scheme.src = SchemeBanner;
 
-    }), document.getElementById("GPreload").addEventListener("change", function() {
-        setGPreloadStatus(this.checked)
-    }), document.getElementById("disableai").addEventListener("change", function() {
-        setAI(this.checked), document.getElementById("extraSettings").classList.toggle("show", this.checked)
-    }), document.getElementById("clearbg").addEventListener("change", function() {
-        setRamBoostStatus(this.checked)
-    }), document.getElementById("SFL").addEventListener("change", function() {
-        setSFL(this.checked)
-    }), document.getElementById("DThermal").addEventListener("change", function() {
-        setDThermal(this.checked)
-    }), document.getElementById("OPPIndex").addEventListener("change", function() {
-        setOPPIndexStatus(this.checked)
-    }), document.getElementById("schedtunes").addEventListener("change", function() {
-        setschedtunes(this.checked)
-    }), document.getElementById("logger").addEventListener("change", function() {
-        setlogger(this.checked)
-    }), document.getElementById("iosched").addEventListener("change", function() {
-        setiosched(this.checked)
-    }), document.getElementById("malisched").addEventListener("change", function() {
-        setmalisched(this.checked)
-    }), document.getElementById("DoNoDis").addEventListener("change", function() {
-        setDND(this.checked)
-    }), document.getElementById("logd").addEventListener("change", function() {
-        setKillLog(this.checked)
-    }), document.getElementById("Zepass").addEventListener("change", function() {
-        setBypassChargeStatus(this.checked)
-    }), document.getElementById("cpuGovernorGame").addEventListener("change", function() {
-        setGameCpuGovernor(this.value)
-    }), document.getElementById("cpuGovernor").addEventListener("change", function() {
-        setDefaultCpuGovernor(this.value)
-    }), document.getElementById("GovernorPowersave").addEventListener("change", function() {
-        setGovernorPowersave(this.value)
-    }), document.getElementById("cpuFreq").addEventListener("change", function() {
-        setCpuFreqOffsets(this.value)
-    }), document.getElementById("disablevsync").addEventListener("change", function() {
-        setVsyncValue(this.value)
-    }), document.getElementById("colorschemebutton").addEventListener("click", showColorScheme), document.getElementById("applybutton").addEventListener("click", hidecolorscheme), document.getElementById("editGamelistButton").addEventListener("click", showGameListModal), document.getElementById("cancelButton").addEventListener("click", hideGameListModal), document.getElementById("saveGamelistButton").addEventListener("click", saveGameList)
+  const c = document.getElementById("disableai");
+  const s = document.getElementById("extraSettings");
+
+  if (c && s) {
+    c.addEventListener("change", function () {
+      setAI(this.checked);
+      s.style.display = this.checked ? "block" : "none";
+      s.classList.toggle("show", this.checked);
+    });
+
+    executeCommand("cat /data/adb/.config/AZenith/AIenabled").then(({ stdout: r }) => {
+      const d = r.trim() === "0";
+      c.checked = d;
+      s.style.display = d ? "block" : "none";
+      s.classList.toggle("show", d);
+    });
+  }
+
+  // Button Clicks
+  document.getElementById("startButton")?.addEventListener("click", startService);
+  document.getElementById("applyperformance")?.addEventListener("click", applyperformanceprofile);
+  document.getElementById("applybalanced")?.addEventListener("click", applybalancedprofile);
+  document.getElementById("applypowersave")?.addEventListener("click", applyecomode);
+  document.getElementById("FSTrim")?.addEventListener("click", applyFSTRIM);
+
+  // Toggle Switches
+  document.getElementById("fpsged")?.addEventListener("change", e => setfpsged(e.target.checked));
+  document.getElementById("GPreload")?.addEventListener("change", e => setGPreloadStatus(e.target.checked));
+  document.getElementById("clearbg")?.addEventListener("change", e => setRamBoostStatus(e.target.checked));
+  document.getElementById("SFL")?.addEventListener("change", e => setSFL(e.target.checked));
+  document.getElementById("DThermal")?.addEventListener("change", e => setDThermal(e.target.checked));
+  document.getElementById("OPPIndex")?.addEventListener("change", e => setOPPIndexStatus(e.target.checked));
+  document.getElementById("schedtunes")?.addEventListener("change", e => setschedtunes(e.target.checked));
+  document.getElementById("logger")?.addEventListener("change", e => setlogger(e.target.checked));
+  document.getElementById("iosched")?.addEventListener("change", e => setiosched(e.target.checked));
+  document.getElementById("malisched")?.addEventListener("change", e => setmalisched(e.target.checked));
+  document.getElementById("DoNoDis")?.addEventListener("change", e => setDND(e.target.checked));
+  document.getElementById("logd")?.addEventListener("change", e => setKillLog(e.target.checked));
+  document.getElementById("Zepass")?.addEventListener("change", e => setBypassChargeStatus(e.target.checked));
+
+  // Select dropdowns
+  document.getElementById("cpuGovernorGame")?.addEventListener("change", e => setGameCpuGovernor(e.target.value));
+  document.getElementById("cpuGovernor")?.addEventListener("change", e => setDefaultCpuGovernor(e.target.value));
+  document.getElementById("GovernorPowersave")?.addEventListener("change", e => setGovernorPowersave(e.target.value));
+  document.getElementById("cpuFreq")?.addEventListener("change", e => setCpuFreqOffsets(e.target.value));
+  document.getElementById("disablevsync")?.addEventListener("change", e => setVsyncValue(e.target.value));
+
+  // Color scheme buttons
+  document.getElementById("colorschemebutton")?.addEventListener("click", showColorScheme);
+  document.getElementById("applybutton")?.addEventListener("click", hidecolorscheme);
+
+  // Gamelist modal buttons
+  document.getElementById("editGamelistButton")?.addEventListener("click", showGameListModal);
+  document.getElementById("cancelButton")?.addEventListener("click", hideGameListModal);
+  document.getElementById("saveGamelistButton")?.addEventListener("click", saveGameList);
 }
 
 
