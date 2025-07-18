@@ -123,14 +123,14 @@ case "$(echo "$chipset" | tr '[:upper:]' '[:lower:]')" in
         ;;
     *)
         soc="Unknown"
-        ui_print "- Unsupported Chipset: $chipset, Skipping some tweaks"
+        ui_print "- Applying Tweaks for $chipset"
         make_node 0 "$MODULE_CONFIG/soctype"
         ;;
 esac
 # Soc Type
 # 1) MediaTek
 # 2) Snapdragon 
-# 0) Unknown/No Unsupported
+# 0) Unknown
 # /// More chipset will be added soon ////
 
 # EXTRACT WEBUI DIRECTORIES

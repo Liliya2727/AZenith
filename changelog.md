@@ -1,6 +1,5 @@
 ## AZenith 3.0
 ### Changelog
-
 - Compile with ndk-build to support MultiArch
 - Rebrand to universal performance module
 - Fix missing function call in script
