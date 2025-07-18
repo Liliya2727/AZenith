@@ -44,12 +44,19 @@ jobs:
     - name: Build AZenith JNI
       run: ndk-build
       
-    - name: Build WebUI
-      working-directory: ./webui
+    - name: Build Mediatek Special WebUI
+      working-directory: ./webui/webuimediatekspc
       run: |
         bun install
         bun run build
-        cp -r ./dist/* ../mainfiles/webroot
+        cp -r ./dist/* ../mainfiles/webroot/webuimtk
+        
+    - name: Build Universal WebUI
+      working-directory: ./webui/webuiuniversal
+      run: |
+        bun install
+        bun run build
+        cp -r ./dist/* ../mainfiles/webroot/webuiuniv
 
     - name: Compile Flashable Zip
       id: compileZip
