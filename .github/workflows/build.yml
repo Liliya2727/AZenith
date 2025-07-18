@@ -1,4 +1,4 @@
-name: Build AZenith
+name: AZenith
 
 on:
   pull_request:
@@ -43,15 +43,25 @@ jobs:
 
     - name: Build AZenith JNI
       run: ndk-build
+      
+    - name: Build WebUI
+      working-directory: ./webui
+      run: |
+        bun install
+        bun run build
+        cp -r ./dist/* ../module/webroot
 
     - name: Compile Flashable Zip
       id: compileZip
       run: bash .github/scripts/compile_zip.sh
 
+    - name: Unzip AZenith Package
+      run: |
+      unzip ${{ steps.compileZip.outputs.zipName }} -d extracted
+
     - name: Upload Build Artifact
       uses: actions/upload-artifact@v4.6.2
       with:
-        name: AZenith-build
-        path: ${{ steps.compileZip.outputs.zipName }}
-
+        name: ${{ steps.compileZip.outputs.zipName }}
+        path: extracted/**
     
