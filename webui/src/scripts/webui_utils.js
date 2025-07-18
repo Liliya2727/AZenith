@@ -700,14 +700,6 @@ async function applyecomode() {
 }
 
 function setupUIListeners() {
-  const banner = document.getElementById("BannerZenith");
-  const avatar = document.getElementById("AvatarZenith");
-  const scheme = document.getElementById("SchemeBanner");
-
-  if (banner) banner.src = BannerZenith;
-  if (avatar) avatar.src = AvatarZenith;
-  if (scheme) scheme.src = SchemeBanner;
-
   const c = document.getElementById("disableai");
   const s = document.getElementById("extraSettings");
 
@@ -821,6 +813,18 @@ async function loadColorSchemeSettings() {
         c.value = s.value = r.value = d.value = 1e3, await setRGB(1e3, 1e3, 1e3), await setSaturation(1e3), saveDisplaySettings(1e3, 1e3, 1e3, 1e3), showToast("Display settings reset!")
     })
 }
+import BannerZenith from '/Banner_AZenith.avif';
+import AvatarZenith from '/Avatar_AZenith.avif';
+import SchemeBanner from '/AvatarAZenith.avif';
+
 document.addEventListener("DOMContentLoaded", () => {
-    showRandomMessage(), setupUIListeners()
+  showRandomMessage(), setupUIListeners(),
+
+  const banner = document.getElementById("BannerZenith");
+  const avatar = document.getElementById("AvatarZenith");
+  const scheme = document.getElementById("SchemeBanner");
+
+  if (banner) banner.src = BannerZenith;
+  if (avatar) avatar.src = AvatarZenith;
+  if (scheme) scheme.src = SchemeBanner;
 });
