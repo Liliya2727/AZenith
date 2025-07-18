@@ -39,11 +39,6 @@ null == o && ((o = function(c) {
 let i = 0;
 
 
-import BannerZenith from '/Banner_AZenith.avif';
-import AvatarZenith from '/Avatar_AZenith.avif';
-import SchemeBanner from '/SchemeBanner.avif';
-
-
 function executeCommand(c, s) {
     return void 0 === s && (s = {}), new Promise((r, d) => {
         let l = `exec_callback_${Date.now()}_${i++}`;
@@ -813,6 +808,10 @@ async function loadColorSchemeSettings() {
         c.value = s.value = r.value = d.value = 1e3, await setRGB(1e3, 1e3, 1e3), await setSaturation(1e3), saveDisplaySettings(1e3, 1e3, 1e3, 1e3), showToast("Display settings reset!")
     })
 }
+
+import BannerZenith from '/Banner_AZenith.webp';
+import AvatarZenith from '/Avatar_AZenith.webp';
+import SchemeBanner from '/SchemeBanner.webp';
 
 document.addEventListener("DOMContentLoaded", () => {
   showRandomMessage();
