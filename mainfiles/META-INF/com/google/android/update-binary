@@ -1,0 +1,160 @@
+#!/sbin/sh
+
+###############################
+# AZenith
+###############################
+
+# Set proper permissions
+umask 022
+
+# Define directories
+TMPDIR=/dev/tmp
+PERSISTDIR=/sbin/.magisk/mirror/persist
+
+# Cleanup temporary directory
+rm -rf $TMPDIR 2>/dev/null
+mkdir -p $TMPDIR
+
+# Custom UI print function (filters unwanted messages)
+ui_print() {
+  if [ "$1" != "*******************************" ] && [ "$1" != " Powered by Magisk " ]; then
+    echo "$1"
+  fi
+}
+
+# Magisk version check
+require_new_magisk() {
+  ui_print "*******************************"
+  ui_print " Please install Magisk v20.0+! "
+  ui_print "*******************************"
+  exit 1
+}
+
+# Check for legacy installation method
+is_legacy_script() {
+  unzip -l "$ZIPFILE" install.sh | grep -q install.sh
+  return $?
+}
+
+# Display module installation message
+print_modname() {
+  ui_print "- Installing Antares Performance Module..."
+}
+
+###############################
+# Environment Setup
+###############################
+
+OUTFD=$2
+ZIPFILE=$3
+
+# Ensure /data is mounted
+mount /data 2>/dev/null
+
+# Load Magisk utility functions
+if [ -f /data/adb/magisk/util_functions.sh ]; then
+  . /data/adb/magisk/util_functions.sh
+  NVBASE=/data/adb
+else
+  require_new_magisk
+fi
+
+setup_flashable
+mount_partitions
+api_level_arch_detect
+$BOOTMODE && boot_actions || recovery_actions
+
+###############################
+# Preparation
+###############################
+
+# Extract module properties
+unzip -o "$ZIPFILE" module.prop -d $TMPDIR >&2
+[ ! -f $TMPDIR/module.prop ] && abort "! Failed to extract module properties!"
+
+# Define installation directories
+$BOOTMODE && MODDIRNAME=modules_update || MODDIRNAME=modules
+MODULEROOT=$NVBASE/$MODDIRNAME
+MODID=$(grep_prop id $TMPDIR/module.prop)
+MODPATH=$MODULEROOT/$MODID
+MODNAME=$(grep_prop name $TMPDIR/module.prop)
+
+# Install additional APK (if applicable)
+pm install $MODPATH/vest.apk 2>/dev/null
+
+# Clean up old installation and create new module directory
+rm -rf $MODPATH 2>/dev/null
+mkdir -p $MODPATH
+
+###############################
+# Module Installation
+###############################
+
+if is_legacy_script; then
+  unzip -oj "$ZIPFILE" module.prop install.sh uninstall.sh 'common/*' -d $TMPDIR >&2
+  . $TMPDIR/install.sh
+
+  print_modname
+  on_install
+
+  # Copy essential files
+  [ -f $TMPDIR/uninstall.sh ] && cp -af $TMPDIR/uninstall.sh $MODPATH/uninstall.sh
+  $SKIPMOUNT && touch $MODPATH/skip_mount
+  $PROPFILE && cp -af $TMPDIR/system.prop $MODPATH/system.prop
+  cp -af $TMPDIR/module.prop $MODPATH/module.prop
+  $POSTFSDATA && cp -af $TMPDIR/post-fs-data.sh $MODPATH/post-fs-data.sh
+  $LATESTARTSERVICE && cp -af $TMPDIR/service.sh $MODPATH/service.sh
+
+  # Set permissions
+  ui_print "- Setting permissions"
+  set_permissions
+else
+  print_modname
+
+  unzip -o "$ZIPFILE" customize.sh -d $MODPATH >&2
+
+  if ! grep -q '^SKIPUNZIP=1$' $MODPATH/customize.sh 2>/dev/null; then
+    ui_print "- Extracting module files..."
+    unzip -o "$ZIPFILE" -x 'META-INF/*' -d $MODPATH >&2
+    set_perm_recursive $MODPATH 0 0 0755 0644
+  fi
+
+  [ -f $MODPATH/customize.sh ] && . $MODPATH/customize.sh
+fi
+
+# Apply file replacements (if defined)
+for TARGET in $REPLACE; do
+  ui_print "- Replacing system file: $TARGET"
+  mktouch $MODPATH$TARGET/.replace
+done
+
+# Create update flag if in boot mode
+if $BOOTMODE; then
+  mktouch $NVBASE/modules/$MODID/update
+  cp -af $MODPATH/module.prop $NVBASE/modules/$MODID/module.prop
+fi
+
+# Apply custom SELinux policies if necessary
+if [ -f $MODPATH/sepolicy.rule ] && [ -e $PERSISTDIR ]; then
+  ui_print "- Applying custom SELinux policy..."
+  PERSISTMOD=$PERSISTDIR/magisk/$MODID
+  mkdir -p $PERSISTMOD
+  cp -af $MODPATH/sepolicy.rule $PERSISTMOD/sepolicy.rule
+fi
+
+# Cleanup unnecessary files
+rm -rf $MODPATH/system/placeholder \
+       $MODPATH/customize.sh \
+       $MODPATH/README.md \
+       $MODPATH/.git* 2>/dev/null
+
+###############################
+# Finalization
+###############################
+
+cd /
+$BOOTMODE || recovery_cleanup
+rm -rf $TMPDIR
+
+ui_print "- Installation complete!"
+exit 0
