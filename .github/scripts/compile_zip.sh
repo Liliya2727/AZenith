@@ -37,7 +37,6 @@ paste -sd '|' - <"$GITHUB_WORKSPACE/gamelist.txt" >"$GITHUB_WORKSPACE/mainfiles/
 # Copy module files
 cp -r ./libs mainfiles
 cp -r ./tweakfls/* mainfiles/system/bin
-cp -r ./webui/* mainfiles/webroot
 cp LICENSE ./mainfiles
 
 # Remove .sh extension from scripts
