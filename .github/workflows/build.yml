@@ -49,14 +49,14 @@ jobs:
       run: |
         bun install
         bun run build
-        cp -r ./dist/* ../mainfiles/webroot/webuimtk
+        cp -r ./dist/* ../../mainfiles/webroot/webuimtk
         
     - name: Build Universal WebUI
       working-directory: ./webui/webuiuniversal
       run: |
         bun install
         bun run build
-        cp -r ./dist/* ../mainfiles/webroot/webuiuniv
+        cp -r ./dist/* ../../mainfiles/webroot/webuiuniv
 
     - name: Compile Flashable Zip
       id: compileZip
