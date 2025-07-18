@@ -57,8 +57,7 @@ ui_print "- Extracting gamelist.txt..."
 extract "$ZIPFILE" gamelist.txt "$MODULE_CONFIG" 
 ui_print "- Extracting AZenith_icon.png..."
 extract "$ZIPFILE" AZenith_icon.png /data/local/tmp 
-ui_print "- Extracting webroot"
-unzip -o "$ZIPFILE" "webroot/*" -d "$MODPATH" >&2
+
 
 # Install toast if not installed
 if pm list packages | grep -q bellavita.toast; then
@@ -133,6 +132,19 @@ esac
 # 2) Snapdragon 
 # 0) Unknown/No Unsupported
 # /// More chipset will be added soon ////
+
+
+# /// Extract WebUi based on device Chipset ////
+if [ "$soc" = "MediaTek" ]; then
+    ui_print "- Inflating WebUI for MediaTek"
+    unzip -o "$ZIPFILE" "webroot/webuimtk/*" -d "$TMPDIR" >&2
+    cp "$TMPDIR"/webroot/webuimtk/* "$MODPATH/webroot"
+else
+    ui_print "- Inflating Universal WebUI"
+    unzip -o "$ZIPFILE" "webroot/webuiuniv/*" -d "$TMPDIR" >&2
+    cp "$TMPDIR"/webroot/webuiuniv/* "$MODPATH/webroot"
+fi
+rm -rf "$TMPDIR/webroot"
 
 # Make module config 
 make_node 0 "$MODULE_CONFIG/clearbg"
