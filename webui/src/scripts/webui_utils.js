@@ -41,7 +41,7 @@ let i = 0;
 
 import BannerZenith from '/Banner_AZenith.avif';
 import AvatarZenith from '/Avatar_AZenith.avif';
-import SchemeBanner from '/AvatarAZenith.avif';
+import SchemeBanner from '/SchemeBanner.avif';
 
 
 function executeCommand(c, s) {
