@@ -817,9 +817,9 @@ document.addEventListener("DOMContentLoaded", () => {
   showRandomMessage();
   setupUIListeners();
 
-  const banner = document.getElementById("BannerZenith");
-  const avatar = document.getElementById("AvatarZenith");
-  const scheme = document.getElementById("SchemeBanner");
+  const banner = document.getElementById("Banner");
+  const avatar = document.getElementById("Avatar");
+  const scheme = document.getElementById("Scheme");
 
   if (banner) banner.src = BannerZenith;
   if (avatar) avatar.src = AvatarZenith;
