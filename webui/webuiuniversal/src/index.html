@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=noviewport-fit=cover" name="viewport">
+    <link href="styles/index.css" type="text/css" rel="stylesheet" />
+    <script type="module" src="scripts/webui_utils.js"></script>
+    <script type="module" src="scripts/block_copy.js"></script>
+</head>
+
+<body class="background flex flex-col min-h-screen text-white">
+    <div id="loading-screen">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p id="loading-text">Loading AZenith...</p>
+        </div>
+    </div>
+    <header class="backdrop-blur-md toptiga sticky top-0 z-50">
+        <div style="position:relative"><img id="Avatar" alt="Avatar" class="avatar-kanan"></div>
+        <h1 class="font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500">AZenith火</h1><span id="moduleVer" class="text-pink-400 text-sm">Module Version</span></header>
+    <main>
+        <div class="image-container rounded-lg"><img id="Banner" alt="Banner">
+            <div class="bg-displaybanner"><span id="serviceStatus" class="overlay-text">Suspended💤</span><span id="servicePID" class="overlay-textcppt">Service is Stopped</span><span id="msg" class="overlay-subtext">No Data Acquired</span></div>
+        </div>
+        <div class="p-6">
+            <div>
+                <div class="device-info-card">
+                    <h2># Basic Information</h2>
+                    <div class="device-info-row">
+                        <div class="device-info-divider"></div>
+                        <p class="device-info-label">Current Profile</p>
+                        <p id="CurProfile" class="text-pink-400 text-sm font-medium italic animate-pulse">Getting info...</p>
+                    </div>
+                    <div class="device-info-row">
+                        <div class="device-info-divider"></div>
+                        <p class="device-info-label">Ram Usage</p>
+                        <p id="ramInfo" class="device-info-value">Getting info...</p>
+                    </div>
+                    <div class="device-info-row">
+                        <div class="device-info-divider"></div>
+                        <p class="device-info-label">CPU Frequency</p>
+                        <p id="cpuFreqInfo" class="device-info-value">Getting info...</p>
+                    </div>
+                    <div class="device-info-row">
+                        <div class="device-info-divider"></div>
+                        <p class="device-info-label">Chipset</p>
+                        <p id="cpuInfo" class="device-info-value">Getting info...</p>
+                    </div>
+                    <div class="device-info-divider"></div>
+                    <div class="device-info-row">
+                        <p class="device-info-label">Kernel</p>
+                        <p id="kernelInfo" class="device-info-value">Getting info...</p>
+                    </div>
+                    <div class="device-info-divider"></div>
+                    <div class="device-info-row">
+                        <p class="device-info-label">Android Version</p>
+                        <p id="android" class="device-info-value">Getting info...</p>
+                    </div>
+                    <div class="device-info-divider"></div>
+                </div>
+            </div>
+        </div>
+        <div id="extraSettings" class="transition-section">
+            <div class="p-9">
+                <div class="bg-gray-900 profilesettings rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <h2 class="font-semibold mb-4 text-lg text-black-69"># Profile Settings</h2>
+                    </div><small class="block text-gray-400 text-hsss">App Priority and Game Preload wont be Available in Performance Profile!</small>
+                    <div class="device-info-divider"></div>
+                    <div class="flex items-center justify-between mb-3"><button id="applybalanced" class="bigbutton w-full">Apply Balanced Profile</button></div>
+                    <div class="flex items-center justify-between mb-3"><button id="applyperformance" class="bigbutton w-full">Apply Performance Profile</button></div>
+                    <div class="flex items-center justify-between mb-3"><button id="applypowersave" class="bigbutton w-full">Apply ECO Mode</button></div>
+                </div>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="bg-gray-900 mb-4 p-4 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <h2 class="font-semibold mb-4 text-lg text-black-69"># CPU Settings</h2>
+                </div>
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <p class="text-sm text-white">Game CPU Governor</p><small class="block text-gray-400 text-sss">Governor that will be used on Performance profile</small></div><select id="cpuGovernorGame" class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs"><option value="schedutil" selected="selected"></option></select></div>
+                <div
+                    class="flex items-center justify-between mb-3">
+                    <div>
+                        <p class="text-sm text-white">Default CPU Governor</p><small class="block text-gray-400 text-sss">Governor that will be used on Normal profile</small></div><select id="cpuGovernor" class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs"><option value="schedutil" selected="selected"></option></select></div>
+            <div
+                class="flex items-center justify-between mb-3">
+                <div>
+                    <p class="text-sm text-white">Powersave CPU Governor</p><small class="block text-gray-400 text-sss">Governor that will be used on Powersave profile</small></div><select id="GovernorPowersave" class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs"><option value="powersave" selected="selected"></option></select></div>
+        <div
+            class="flex items-center justify-between mb-3">
+            <div>
+                <p class="text-sm text-white">Limit CPU Freq</p><small class="block text-gray-400 text-sss">Set Max CPU Frequency in ECO Mode</small></div><select id="cpuFreq" class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs"><option value="100" selected="selected">OFF</option></select></div>
+            <div
+                class="flex items-center justify-between mb-3"><label for="OPPIndex" class="cursor-pointer flex items-center w-full"><div><p class="text-sm text-white">Fix Target Opp Index</p><small class="block text-gray-400 text-sss">Lock CPU Min Frequency to the highest in Performance Profile (Disable this if you're not using Performance Governor)</small></div><div class="ml-auto"><input type="checkbox" id="OPPIndex" class="peer sr-only"><div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 dark:border-gray-600 peer-checked:bg-blue-600 rounded-full after:absolute after:bg-white after:border after:border-gray-300 after:content-[''] after:h-5 after:left-[2px] after:rounded-full after:top-0.5 after:transition-all after:w-5 peer-checked:after:border-white peer-checked:after:translate-x-full"></div></div></label></div>
+                </div>
+                </div>
+                <div class="p-6">
+                    <div class="bg-gray-900 mt-211 mb-4 p-4 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <h2 class="font-semibold mb-4 text-lg text-black-69"># Additional Tweak</h2>
+                        </div>
+                        <div class="flex items-center justify-between mb-3"><label for="GPreload" class="cursor-pointer flex items-center w-full"><div><p class="text-sm text-white">Game Preload</p><small class="block text-gray-400 text-sss">Preload all required libraries when game start to reduce load time and minimize lag</small></div><div class="ml-auto"><input type="checkbox" id="GPreload" class="peer sr-only"><div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 dark:border-gray-600 peer-checked:bg-blue-600 rounded-full after:absolute after:bg-white after:border after:border-gray-300 after:content-[''] after:h-5 after:left-[2px] after:rounded-full after:top-0.5 after:transition-all after:w-5 peer-checked:after:border-white peer-checked:after:translate-x-full"></div></div></label></div>
+                        <div
+                            class="flex items-center justify-between mb-3"><label for="clearbg" class="cursor-pointer flex items-center w-full"><div><p class="text-sm text-white">Memory Killer</p><small class="block text-gray-400 text-sss">Kill all running apps in the background on Performance Profile</small></div><div class="ml-auto"><input type="checkbox" id="clearbg" class="peer sr-only"><div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 dark:border-gray-600 peer-checked:bg-blue-600 rounded-full after:absolute after:bg-white after:border after:border-gray-300 after:content-[''] after:h-5 after:left-[2px] after:rounded-full after:top-0.5 after:transition-all after:w-5 peer-checked:after:border-white peer-checked:after:translate-x-full"></div></div></label></div>
+                    <div
+                        class="flex items-center justify-between mb-3"><label for="iosched" class="cursor-pointer flex items-center w-full"><div><p class="text-sm text-white">App Priority Control</p><small class="block text-gray-400 text-sss">Increase CPU and I/O Scheduling Priority on Performance Profile</small></div><div class="ml-auto"><input type="checkbox" id="iosched" class="peer sr-only"><div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 dark:border-gray-600 peer-checked:bg-blue-600 rounded-full after:absolute after:bg-white after:border after:border-gray-300 after:content-[''] after:h-5 after:left-[2px] after:rounded-full after:top-0.5 after:transition-all after:w-5 peer-checked:after:border-white peer-checked:after:translate-x-full"></div></div></label></div>
+                
+                    <div
+                        class="flex items-center justify-between mb-3"><label class="cursor-pointer inline-flex items-center w-full"><div><p class="text-sm text-white">Do Not Disturb</p><small class="block text-gray-400 text-sss">Block all notifications on Performance Profile to enhance gaming experiences</small></div><div class="ml-auto"><input type="checkbox" id="DoNoDis" class="peer sr-only"><div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 dark:border-gray-600 peer-checked:bg-blue-600 rounded-full after:absolute after:bg-white after:border after:border-gray-300 after:content-[''] after:h-5 after:left-[2px] after:rounded-full after:top-0.5 after:transition-all after:w-5 peer-checked:after:border-white peer-checked:after:translate-x-full"></div></div></label></div>
+                        <div
+                            class="flex items-center justify-between mb-3">
+                            <div>
+                                <p class="text-sm text-white">Disable Vsync</p><small class="block text-gray-400 text-sss">Disable Synchronization between rendering frame rate and display refresh rate</small></div><select id="disablevsync" class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs"><option value="OFF" selected="selected">OFF</option></select></div>
+                            <div
+                                class="flex items-center justify-between mb-3">
+                                <div>
+                                    <p class="text-sm text-white">FSTrim Partition</p><small class="block text-gray-400 text-sss">Trim unused blocks in system partitions to optimize I/O performance and reduce storage overhead</small></div><button id="FSTrim" class="bg-gray-700 hover:bg-gray-600 px-7 py-1 rounded-md text-sm text-white">Trim</button></div>
+                                </div>
+                                </div>
+                                <div class="p-6">
+                                    <div class="bg-gray-900 mt-211 mb-4 p-4 rounded-lg">
+                                        <div class="flex items-center justify-between">
+                                            <h2 class="font-semibold mb-4 text-lg text-black-69"># Preferences / / Need Reboot / /</h2>
+                                        </div>
+
+                                        <div
+                                            class="flex items-center justify-between mb-3"><label class="cursor-pointer inline-flex items-center w-full"><div><p class="text-sm text-white">SurfaceFlinger Latency</p><small class="block text-gray-400 text-sss">Tweak surfaceflinger to reduce screen latency and Improve screen responsiveness.</small></div><div class="ml-auto"><input type="checkbox" id="SFL" class="peer sr-only"><div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 dark:border-gray-600 peer-checked:bg-blue-600 rounded-full after:absolute after:bg-white after:border after:border-gray-300 after:content-[''] after:h-5 after:left-[2px] after:rounded-full after:top-0.5 after:transition-all after:w-5 peer-checked:after:border-white peer-checked:after:translate-x-full"></div></div></label></div>
+
+                                <div
+                                    class="flex items-center justify-between mb-3"><label for="logd" class="cursor-pointer flex items-center w-full"><div><p class="text-sm text-white">Kill Logger</p><small class="block text-gray-400 text-sss">Disable system logging services to reduce background activity and improve performance.</small></div><div class="ml-auto"><input type="checkbox" id="logd" class="peer sr-only"><div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 dark:border-gray-600 peer-checked:bg-blue-600 rounded-full after:absolute after:bg-white after:border after:border-gray-300 after:content-[''] after:h-5 after:left-[2px] after:rounded-full after:top-0.5 after:transition-all after:w-5 peer-checked:after:border-white peer-checked:after:translate-x-full"></div></div></label></div>
+                                    
+
+                                            </div>
+                                            </div>
+                                            <div class="p-6">
+                                                <div class="bg-gray-900 mt-211 mb-4 p-4 rounded-lg">
+                                                    <div class="flex items-center justify-between">
+                                                        <h2 class="font-semibold mb-4 text-lg text-black-69"># Settings</h2>
+                                                    </div>
+                                                    <div class="flex items-center justify-between mb-3"><label for="logger" class="cursor-pointer flex items-center w-full"><div><p class="text-sm text-white">Enable Verbose Logging for AZenith</p><small class="block text-gray-400 text-sss">Allow Verbose logging of AZenith Process</small></div><div class="ml-auto"><input type="checkbox" id="logger" class="peer sr-only"><div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 dark:border-gray-600 peer-checked:bg-blue-600 rounded-full after:absolute after:bg-white after:border after:border-gray-300 after:content-[''] after:h-5 after:left-[2px] after:rounded-full after:top-0.5 after:transition-all after:w-5 peer-checked:after:border-white peer-checked:after:translate-x-full"></div></div></label></div>
+                                                    <div
+                                                        class="flex items-center justify-between mb-3"><label for="disableai" class="cursor-pointer inline-flex items-center w-full"><div><p class="text-sm text-white">Disable Dynamic Profile</p><small class="block text-gray-400 text-sss">Disable switching profiles when opening games</small></div><div class="ml-auto"><input type="checkbox" id="disableai" class="peer sr-only"><div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 dark:border-gray-600 peer-checked:bg-blue-600 rounded-full after:absolute after:bg-white after:border after:border-gray-300 after:content-[''] after:h-5 after:left-[2px] after:rounded-full after:top-0.5 after:transition-all after:w-5 peer-checked:after:border-white peer-checked:after:translate-x-full"></div></div></label></div>
+                                                <input
+                                                    type="checkbox" id="disableai" class="peer hidden">
+                                                    <div class="flex items-center justify-between mb-3"><button id="editGamelistButton" class="bigbutton w-full">Edit Gamelist</button></div>
+                                                    <div class="flex items-center justify-between mb-3"><button id="colorschemebutton" class="bigbutton w-full">Color Scheme Settings</button></div>
+                                                    <div class="flex items-center justify-between mb-3"><button id="startButton" class="bigbutton w-full">Restart Daemon</button></div>
+                                            </div>
+                                            </div>
+                                            <div id="schemeModal" class="scheme-modal">
+                                                <div class="scheme-container">
+                                                    <h3 class="scheme-title">Color Scheme</h3>
+                                                    <p class="scheme-desc">Adjust screen saturation and RGB Colors</p><img id="Scheme" alt="Scheme" class="scheme-image">
+                                                    <div class="m-3">
+                                                        <p class="mb-2"># Red</p><input type="range" min="0" max="1000" value="1000" id="red" class="[--range-shdw:#EA6661] range range-xs"></div>
+                                                    <div class="m-3">
+                                                        <p class="mb-2"># Green</p><input type="range" min="0" max="1000" value="1000" id="green" class="[--range-shdw:#73E875] range range-xs"></div>
+                                                    <div class="m-3">
+                                                        <p class="mb-2"># Blue</p><input type="range" min="0" max="1000" value="1000" id="blue" class="[--range-shdw:#6262F4] range range-xs"></div>
+                                                    <div class="m-3">
+                                                        <p class="mb-2"># Saturation</p><input type="range" min="0" max="2000" value="1000" id="saturation" class="[--range-shdw:#0079C8] range range-xs"></div>
+                                                    <div class="scheme-actions"><button id="reset-btn" class="modal-btn cancel">Reset Color Settings</button><button id="applybutton" class="modal-btn apply">Apply</button></div>
+                                                </div>
+                                            </div>
+                                            <div id="gamelistModal" class="gamelist-modal">
+                                                <div class="gamelist-content">
+                                                    <h3 class="gamelist-title">Game List</h3>
+                                                    <p class="gamelist-desc">Any Apps and Games listed here will trigger Game profile</p><textarea id="gamelistInput" class="gamelist-textarea" rows="14"></textarea>
+                                                    <div class="gamelist-buttons"><button id="cancelButton" class="modal-btn cancel">Cancel</button><button id="saveGamelistButton" class="modal-btn apply">Save</button></div>
+                                                </div>
+                                            </div>
+    </main>
+    <footer class="footer-container">
+        <p class="footer-quote">"Zenith your game, Zenith your performance"</p>
+        <p class="footer-credits">WebUI Designed by:<span>@kanaochar</span>and:<span>@Zexshia</span></p>
+    </footer>
+</body>
+
+</html>
