@@ -1,0 +1,46 @@
+# Logs
+logs/
+*.log
+
+# Diagnostic reports
+report.*.json
+
+# Runtime data
+pids/
+*.pid
+*.pid.lock
+
+# Dependency directories
+node_modules/
+
+# Bun lockfile (optional to ignore, but usually committed)
+# bun.lockb
+
+# Build output
+dist/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Editor-specific
+.vscode/
+.idea/
+*.swp
+
+# Environment files
+.env
+.env.*.local
+
+# Miscellaneous caches
+.cache/
+.nyc_output/
+.eslintcache
+.stylelintcache
+
+# Test coverage
+coverage/
+*.lcov
+
+# Optional REPL history
+.node_repl_history
