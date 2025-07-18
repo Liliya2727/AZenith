@@ -813,9 +813,6 @@ async function loadColorSchemeSettings() {
         c.value = s.value = r.value = d.value = 1e3, await setRGB(1e3, 1e3, 1e3), await setSaturation(1e3), saveDisplaySettings(1e3, 1e3, 1e3, 1e3), showToast("Display settings reset!")
     })
 }
-import BannerZenith from '/Banner_AZenith.avif';
-import AvatarZenith from '/Avatar_AZenith.avif';
-import SchemeBanner from '/AvatarAZenith.avif';
 
 document.addEventListener("DOMContentLoaded", () => {
   showRandomMessage();
