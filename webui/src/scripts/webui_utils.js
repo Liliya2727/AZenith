@@ -818,7 +818,8 @@ import AvatarZenith from '/Avatar_AZenith.avif';
 import SchemeBanner from '/AvatarAZenith.avif';
 
 document.addEventListener("DOMContentLoaded", () => {
-  showRandomMessage(), setupUIListeners(),
+  showRandomMessage();
+  setupUIListeners();
 
   const banner = document.getElementById("BannerZenith");
   const avatar = document.getElementById("AvatarZenith");
