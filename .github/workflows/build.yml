@@ -49,7 +49,7 @@ jobs:
       run: |
         bun install
         bun run build
-        cp -r ./dist/* ../module/webroot
+        cp -r ./dist/* ../mainfiles/webroot
 
     - name: Compile Flashable Zip
       id: compileZip
