@@ -472,15 +472,41 @@ function filterGameList() {
 
 async function saveGameList() {
     const gamelistInput = document.getElementById("gamelistInput");
+    const searchInput = document.getElementById("gamelistSearch");
+    const searchTerm = (searchInput?.value || "").toLowerCase();
 
-    const packagesToSave = gamelistInput.value
+    const editedLines = gamelistInput.value
         .split("\n")
         .map(x => x.trim())
-        .filter(Boolean); // removes empty lines
+        .filter(Boolean);
 
-    const outputString = packagesToSave.join('|').replace(/"/g, '\\"');
+    const originalLines = originalGamelist
+        .split("\n")
+        .map(x => x.trim())
+        .filter(Boolean);
+
+    // If no search, save entire input as-is
+    if (!searchTerm) {
+        const outputString = editedLines.join('|').replace(/"/g, '\\"');
+        await executeCommand(`echo "${outputString}" > /data/adb/.config/AZenith/gamelist.txt`);
+        showToast(`Saved ${editedLines.length} packages`);
+        hideGameListModal();
+        return;
+    }
+
+    // Search is active → replace only matching lines with edited ones
+    let editedIndex = 0;
+    const mergedLines = originalLines.map(line => {
+        if (line.toLowerCase().includes(searchTerm)) {
+            const replacement = editedLines[editedIndex++]?.trim();
+            return replacement || line; // fallback to original if edited line is empty
+        }
+        return line;
+    });
+
+    const outputString = mergedLines.join('|').replace(/"/g, '\\"');
     await executeCommand(`echo "${outputString}" > /data/adb/.config/AZenith/gamelist.txt`);
-    showToast(`Saved ${packagesToSave.length} packages`);
+    showToast(`Saved ${mergedLines.length} packages`);
     hideGameListModal();
 }
 async function checklogger() {
