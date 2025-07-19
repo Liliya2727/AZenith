@@ -1339,13 +1339,18 @@ video {
   margin-bottom: 0.2rem;
 }
 
-.support-card .zenith-text {
+.support-card {
   color: #BAFFF3; 
   font-size: 1rem;
   margin-top: 0.2rem;
   margin-bottom: 1rem;
 }
-
+.zenith-text {
+  color: #819192;
+  font-size: 0.8rem;
+  margin-top: -1rem;
+  margin-bottom: 1rem;
+}
 .support-card {
   font-size: 0.75rem; 
   color: rgba(255, 255, 255, 0.4); 
@@ -1353,7 +1358,7 @@ video {
 }
 
 .footertext {
-  font-size: 0.75rem;
+  font-size: 0.6rem;
   color: rgba(255, 255, 255, 0.4);  
   text-align: center;               
   margin-top: 1rem;                 

@@ -775,8 +775,19 @@ function setupUIListeners() {
     });
   }
 
+async function savelog() {
+    try {
+        await executeCommand("AZenith_Profiler saveLog");
+        showToast("Saved Log");
+    } catch (e) {
+        showToast("Failed to save log");
+        console.error("saveLog error:", e);
+    }
+}
+
   // Button Clicks
   document.getElementById("startButton")?.addEventListener("click", startService);
+  document.getElementById("savelogButton")?.addEventListener("click", savelog);
   document.getElementById("applyperformance")?.addEventListener("click", applyperformanceprofile);
   document.getElementById("applybalanced")?.addEventListener("click", applybalancedprofile);
   document.getElementById("applypowersave")?.addEventListener("click", applyecomode);

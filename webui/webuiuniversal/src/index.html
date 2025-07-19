@@ -136,48 +136,97 @@
 
                                             </div>
                                             </div>
-                                            <div class="p-6">
-                                                <div class="bg-gray-900 mt-211 mb-4 p-4 rounded-lg">
-                                                    <div class="flex items-center justify-between">
-                                                        <h2 class="font-semibold mb-4 text-lg text-black-69"># Settings</h2>
-                                                    </div>
-                                                    <div class="flex items-center justify-between mb-3"><label for="logger" class="cursor-pointer flex items-center w-full"><div><p class="text-sm text-white">Enable Verbose Logging for AZenith</p><small class="block text-gray-400 text-sss">Allow Verbose logging of AZenith Process</small></div><div class="ml-auto"><input type="checkbox" id="logger" class="peer sr-only"><div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 dark:border-gray-600 peer-checked:bg-blue-600 rounded-full after:absolute after:bg-white after:border after:border-gray-300 after:content-[''] after:h-5 after:left-[2px] after:rounded-full after:top-0.5 after:transition-all after:w-5 peer-checked:after:border-white peer-checked:after:translate-x-full"></div></div></label></div>
-                                                    <div
-                                                        class="flex items-center justify-between mb-3"><label for="disableai" class="cursor-pointer inline-flex items-center w-full"><div><p class="text-sm text-white">Disable Dynamic Profile</p><small class="block text-gray-400 text-sss">Disable switching profiles when opening games</small></div><div class="ml-auto"><input type="checkbox" id="disableai" class="peer sr-only"><div class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 dark:border-gray-600 peer-checked:bg-blue-600 rounded-full after:absolute after:bg-white after:border after:border-gray-300 after:content-[''] after:h-5 after:left-[2px] after:rounded-full after:top-0.5 after:transition-all after:w-5 peer-checked:after:border-white peer-checked:after:translate-x-full"></div></div></label></div>
-                                                <input
-                                                    type="checkbox" id="disableai" class="peer hidden">
-                                                    <div class="flex items-center justify-between mb-3"><button id="editGamelistButton" class="bigbutton w-full">Edit Gamelist</button></div>
-                                                    <div class="flex items-center justify-between mb-3"><button id="colorschemebutton" class="bigbutton w-full">Color Scheme Settings</button></div>
-                                                    <div class="flex items-center justify-between mb-3"><button id="startButton" class="bigbutton w-full">Reinitialize Daemon</button></div>
-                                            </div>
-                                            </div>
-                                            <div id="schemeModal" class="scheme-modal">
-                                                <div class="scheme-container">
-                                                    <h3 class="scheme-title">Color Scheme</h3>
-                                                    <p class="scheme-desc">Adjust screen saturation and RGB Colors</p><img id="Scheme" alt="Scheme" class="scheme-image">
-                                                    <div class="m-3">
-                                                        <p class="mb-2"># Red</p><input type="range" min="0" max="1000" value="1000" id="red" class="[--range-shdw:#EA6661] range range-xs"></div>
-                                                    <div class="m-3">
-                                                        <p class="mb-2"># Green</p><input type="range" min="0" max="1000" value="1000" id="green" class="[--range-shdw:#73E875] range range-xs"></div>
-                                                    <div class="m-3">
-                                                        <p class="mb-2"># Blue</p><input type="range" min="0" max="1000" value="1000" id="blue" class="[--range-shdw:#6262F4] range range-xs"></div>
-                                                    <div class="m-3">
-                                                        <p class="mb-2"># Saturation</p><input type="range" min="0" max="2000" value="1000" id="saturation" class="[--range-shdw:#0079C8] range range-xs"></div>
-                                                    <div class="scheme-actions"><button id="reset-btn" class="modal-btn cancel">Reset Color Settings</button><button id="applybutton" class="modal-btn apply">Apply</button></div>
-                                                </div>
-                                            </div>
-                                            <div id="gamelistModal" class="gamelist-modal">
-                                                <div class="gamelist-content">
-                                                    <h3 class="gamelist-title">Game List</h3>
-                                                    <p class="gamelist-desc">Any Apps and Games listed here will trigger Game profile</p><textarea id="gamelistInput" class="gamelist-textarea" rows="14"></textarea>
-                                                    <div class="gamelist-buttons"><button id="cancelButton" class="modal-btn cancel">Cancel</button><button id="saveGamelistButton" class="modal-btn apply">Save</button></div>
-                                                </div>
-                                            </div>
-    </main>
-    <footer class="footer-container">
-        <p class="footer-quote">"Zenith your game, Zenith your performance"</p>
-        <p class="footer-credits">WebUI Designed by:<span>@kanaochar</span>and:<span>@Zexshia</span></p>
-    </footer>
-</body>
+<div class="p-6">
+                <div class="bg-gray-900 mt-211 mb-4 p-4 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <h2 class="font-semibold mb-4 text-lg text-black-69"># Settings</h2>
+                    </div>
+                    <div class="flex items-center justify-between mb-3">
+                        <label for="logger" class="cursor-pointer flex items-center w-full">
+                            <div>
+                                <p class="text-sm text-white">Enable Verbose Logging for AZenith</p>
+                                <small class="block text-gray-400 text-sss">Allow Verbose logging of AZenith Process</small>
+                            </div>
+                            <div class="ml-auto">
+                                <input type="checkbox" id="logger" class="peer sr-only" />
+                                <div
+                                    class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 dark:border-gray-600 peer-checked:bg-blue-600 rounded-full after:absolute after:bg-white after:border after:border-gray-300 after:content-[''] after:h-5 after:left-[2px] after:rounded-full after:top-0.5 after:transition-all after:w-5 peer-checked:after:border-white peer-checked:after:translate-x-full"
+                                ></div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between mb-3">
+                        <label for="disableai" class="cursor-pointer inline-flex items-center w-full">
+                            <div>
+                                <p class="text-sm text-white">Disable Dynamic Profile</p>
+                                <small class="block text-gray-400 text-sss">Disable switching profiles when opening games</small>
+                            </div>
+                            <div class="ml-auto">
+                                <input type="checkbox" id="disableai" class="peer sr-only" />
+                                <div
+                                    class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 dark:border-gray-600 peer-checked:bg-blue-600 rounded-full after:absolute after:bg-white after:border after:border-gray-300 after:content-[''] after:h-5 after:left-[2px] after:rounded-full after:top-0.5 after:transition-all after:w-5 peer-checked:after:border-white peer-checked:after:translate-x-full"
+                                ></div>
+                            </div>
+                        </label>
+                    </div>
+                    <input type="checkbox" id="disableai" class="peer hidden" />
+                    <div class="flex items-center justify-between mb-3"><button id="editGamelistButton" class="bigbutton w-full">Edit Gamelist</button></div>
+                    <div class="flex items-center justify-between mb-3"><button id="colorschemebutton" class="bigbutton w-full">Color Scheme Settings</button></div>
+                    <div class="flex items-center justify-between mb-3"><button id="savelogButton" class="bigbutton w-full">Save Logs</button></div>
+                    <div class="flex items-center justify-between mb-3"><button id="startButton" class="bigbutton w-full">Reinitialize Daemon</button></div>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="bg-gray-900 mt-211 mb-4 p-4 rounded-lg">
+                    <div class="support-header">
+                        <h2 class="font-semibold mb-4 text-lg text-black-69">Thanks!✨</h2>
+                        <h2 class="zenith-text">Thanks for using AZenith! I really appreciate you for using AZenith, Without you, This module wouldn't be here today, AZenith will always be with you!</h2>
+                        <p class="footertext">Webui Designed by @kanaochar & @Zexshia</p>
+                    </div>
+                </div>
+            </div>
+            <div id="schemeModal" class="scheme-modal">
+                <div class="scheme-container">
+                    <h3 class="scheme-title">Color Scheme</h3>
+                    <p class="scheme-desc">Adjust screen saturation and RGB Colors</p>
+                    <img id="Scheme" alt="Scheme" class="scheme-image" />
+                    <div class="m-3">
+                        <p class="mb-2"># Red</p>
+                        <input type="range" min="0" max="1000" value="1000" id="red" class="[--range-shdw:#EA6661] range range-xs" />
+                    </div>
 
+                    <div class="m-3">
+                        <p class="mb-2"># Green</p>
+                        <input type="range" min="0" max="1000" value="1000" id="green" class="[--range-shdw:#73E875] range range-xs" />
+                    </div>
+
+                    <div class="m-3">
+                        <p class="mb-2"># Blue</p>
+                        <input type="range" min="0" max="1000" value="1000" id="blue" class="[--range-shdw:#6262F4] range range-xs" />
+                    </div>
+
+                    <div class="m-3">
+                        <p class="mb-2"># Saturation</p>
+                        <input type="range" min="0" max="2000" value="1000" id="saturation" class="[--range-shdw:#0079C8] range range-xs" />
+                    </div>
+
+                    <div class="scheme-actions"><button id="reset-btn" class="modal-btn cancel">Reset Color Settings</button><button id="applybutton" class="modal-btn apply">Apply</button></div>
+                </div>
+            </div>
+
+            <div id="gamelistModal" class="gamelist-modal">
+                <div class="gamelist-content">
+                    <h3 class="gamelist-title">Game List</h3>
+                    <div class="search-input-container">
+                        <p class="gamelist-desc">Any Apps and Games listed here will trigger Game profile</p>
+                        <input type="text" id="gamelistSearch" class="gamelistsearch" placeholder="Search pkg" />
+                    </div>
+
+                    <textarea id="gamelistInput" class="gamelist-textarea" rows="14"></textarea>
+
+                    <div class="gamelist-buttons"><button id="cancelButton" class="modal-btn cancel">Cancel</button><button id="saveGamelistButton" class="modal-btn apply">Save</button></div>
+                </div>
+            </div>
+        </main>
+    </body>
 </html>
