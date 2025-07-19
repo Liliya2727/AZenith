@@ -1299,7 +1299,7 @@ video {
 
 .gamelistsearch {
   width: 100%;
-  max-width: 220px;
+  max-width: 330px;
   padding: 8px 16px;
   font-size: 14px;
   color: #FFFFFF;
@@ -1312,8 +1312,9 @@ video {
 }
 
 .gamelistsearch:focus {
-  border-color: #8ac1ff; /* bright blue border on focus */
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); /* subtle blue glow */
+  border-color: #8ac1ff; /* bright glow-like blue */
+  outline: 1px solid #8ac1ff; /* acts like a glow */
+  outline-offset: 0px;
 }
 
 .support-card {
@@ -1339,21 +1340,24 @@ video {
 }
 
 .support-card .zenith-text {
-  color: #fff; 
+  color: #BAFFF3; 
   font-size: 1rem;
   margin-top: 0.2rem;
   margin-bottom: 1rem;
 }
 
-.support-card .footertext {
+.support-card {
   font-size: 0.75rem; 
   color: rgba(255, 255, 255, 0.4); 
   margin-top: auto;
 }
+
 .footertext {
-    font-size: 10px;
-    margin-bottom: 2rem;
-    color: #a0a0a0
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);  
+  text-align: center;               
+  margin-top: 1rem;                 
+  margin-bottom: 0rem;              
 }
 
 .after\:content-\'\':after{--tw-content:"";content:var(--tw-content)}.hover\:bg-blue-500:hover{background-color:#6585b8}.hover\:bg-gray-500:hover{background-color:#6b7280}.peer:checked~.peer-checked\:bg-blue-600{background-color:#76d1fe}.peer:checked~.peer-checked\:after\:translate-x-full:after{content:var(--tw-content);transform:translateX(100%)}.peer:checked~.peer-checked\:after\:border-white:after{content:var(--tw-content);border-color:#000}@media (prefers-color-scheme:dark){.dark\:border-gray-600{border-color:#4b5563}.dark\:bg-gray-700{background-color:#374151}}
