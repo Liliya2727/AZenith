@@ -673,7 +673,12 @@ video {
     margin-bottom: 0
 }
 
-.gamelist-desc,
+.gamelist-desc {
+    font-size: .75rem;
+    color: #ccc;
+    text-align: center;
+    margin-bottom: 0rem
+}
 .scheme-desc {
     font-size: .75rem;
     color: #ccc;
@@ -993,7 +998,7 @@ video {
     color: silver
 }
 
-.footer-credits {
+.footertext {
     font-size: 10px;
     margin-bottom: 2rem;
     color: #a0a0a0
@@ -1297,20 +1302,47 @@ video {
     max-width: 220px;
     padding: 8px 16px;
     font-size: 14px;
-    color: var(--on-surface);
-    background-color: var(--surface-container);
-    border: 1px solid var(--outline);
+    color: #AAE0F2;
+    background-color: #343637;
+    margin-bottom: 1rem;
+    border: 0.5px solid;
     border-radius: 100px;
     transition: border-color 0.2s;
 }
 
-.gamelistsearch:focus {
-    outline: none;
-    border-color: var(--primary);
+.support-card {
+  background-color: #1f2937; 
+  margin-top: 211px;
+  margin-bottom: 1rem; 
+  padding: 1rem; 
+  border-radius: 0.5rem; 
+  color: #fff;
 }
 
-.gamelistsearch::placeholder {
-    color: var(--on-surface-variant);
+.support-card .support-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.support-card h2 {
+  font-weight: 600;
+  font-size: 1.125rem; 
+  color: #111827; 
+  margin-bottom: 0.2rem;
+}
+
+.support-card .zenith-text {
+  color: #3b82f6; 
+  font-size: 1rem;
+  margin-top: 0.2rem;
+  margin-bottom: 1rem;
+}
+
+.support-card .footertext {
+  font-size: 0.75rem; 
+  color: rgba(255, 255, 255, 0.4); 
+  margin-top: auto;
 }
 
 .after\:content-\'\':after{--tw-content:"";content:var(--tw-content)}.hover\:bg-blue-500:hover{background-color:#6585b8}.hover\:bg-gray-500:hover{background-color:#6b7280}.peer:checked~.peer-checked\:bg-blue-600{background-color:#76d1fe}.peer:checked~.peer-checked\:after\:translate-x-full:after{content:var(--tw-content);transform:translateX(100%)}.peer:checked~.peer-checked\:after\:border-white:after{content:var(--tw-content);border-color:#000}@media (prefers-color-scheme:dark){.dark\:border-gray-600{border-color:#4b5563}.dark\:bg-gray-700{background-color:#374151}}
