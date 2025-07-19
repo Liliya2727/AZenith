@@ -510,26 +510,11 @@ function filterGameList() {
 
 async function saveGameList() {
     const gamelistInput = document.getElementById("gamelistInput");
-    const searchInput = document.getElementById("gamelistSearch");
-    const searchTerm = (searchInput?.value || "").toLowerCase();
 
-    let packagesToSave;
-
-    if (!searchTerm) {
-        packagesToSave = gamelistInput.value.split("\n").map(x => x.trim()).filter(Boolean);
-    } else {
-        const visibleLines = new Set(
-            gamelistInput.value.split("\n").map(x => x.trim()).filter(Boolean)
-        );
-        const originalLines = originalGamelist.split("\n").map(x => x.trim()).filter(Boolean);
-
-        const finalLines = originalLines.filter(line => {
-            const isMatch = line.toLowerCase().includes(searchTerm);
-            return isMatch ? visibleLines.has(line) : true;
-        });
-
-        packagesToSave = finalLines;
-    }
+    const packagesToSave = gamelistInput.value
+        .split("\n")
+        .map(x => x.trim())
+        .filter(Boolean); // removes empty lines
 
     const outputString = packagesToSave.join('|').replace(/"/g, '\\"');
     await executeCommand(`echo "${outputString}" > /data/adb/.config/AZenith/gamelist.txt`);

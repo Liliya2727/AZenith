@@ -472,26 +472,11 @@ function filterGameList() {
 
 async function saveGameList() {
     const gamelistInput = document.getElementById("gamelistInput");
-    const searchInput = document.getElementById("gamelistSearch");
-    const searchTerm = (searchInput?.value || "").toLowerCase();
 
-    let packagesToSave;
-
-    if (!searchTerm) {
-        packagesToSave = gamelistInput.value.split("\n").map(x => x.trim()).filter(Boolean);
-    } else {
-        const visibleLines = new Set(
-            gamelistInput.value.split("\n").map(x => x.trim()).filter(Boolean)
-        );
-        const originalLines = originalGamelist.split("\n").map(x => x.trim()).filter(Boolean);
-
-        const finalLines = originalLines.filter(line => {
-            const isMatch = line.toLowerCase().includes(searchTerm);
-            return isMatch ? visibleLines.has(line) : true;
-        });
-
-        packagesToSave = finalLines;
-    }
+    const packagesToSave = gamelistInput.value
+        .split("\n")
+        .map(x => x.trim())
+        .filter(Boolean); // removes empty lines
 
     const outputString = packagesToSave.join('|').replace(/"/g, '\\"');
     await executeCommand(`echo "${outputString}" > /data/adb/.config/AZenith/gamelist.txt`);
@@ -758,8 +743,7 @@ async function savelog() {
   
   document.getElementById("DoNoDis")?.addEventListener("change", e => setDND(e.target.checked));
   document.getElementById("logd")?.addEventListener("change", e => setKillLog(e.target.checked));
-  document.getElementById("Zepass")?.addEventListener("change", e => setBypassChargeStatus(e.target.checked));
-
+  
   // Select dropdowns
   document.getElementById("cpuGovernorGame")?.addEventListener("change", e => setGameCpuGovernor(e.target.value));
   document.getElementById("cpuGovernor")?.addEventListener("change", e => setDefaultCpuGovernor(e.target.value));
@@ -779,7 +763,7 @@ async function savelog() {
 
 
 function heavyInit() {
-    checkAvailableRAM(), checkProfile(), checkServiceStatus(), checkGPreload(), loadColorSchemeSettings(), checkCPUFrequencies(), setInterval(checkCPUFrequencies, 2e3), setInterval(checkServiceStatus, 5e3), setInterval(checkProfile, 5e3), setInterval(showRandomMessage, 1e4), setInterval(checkAvailableRAM, 5e3), Promise.all([checkModuleVersion(), checkCPUInfo(), checkKernelVersion(), getAndroidVersion(), checkfpsged(), checkOPPIndexStatus(), checkDThermal(), checkiosched(), checkmalisched(), checkAI(), checkDND(), loadCpuFreq(), loadCpuGovernors(), loadGameGovernors(), GovernorPowersave(), loadVsyncValue(), checkBypassChargeStatus(), checkschedtunes(), checkSFL(), checkKillLog(), checklogger(), checkRamBoost(), ]).then(() => {
+    checkAvailableRAM(), checkProfile(), checkServiceStatus(), checkGPreload(), loadColorSchemeSettings(), checkCPUFrequencies(), setInterval(checkCPUFrequencies, 2e3), setInterval(checkServiceStatus, 5e3), setInterval(checkProfile, 5e3), setInterval(showRandomMessage, 1e4), setInterval(checkAvailableRAM, 5e3), Promise.all([checkModuleVersion(), checkCPUInfo(), checkKernelVersion(), getAndroidVersion(), checkOPPIndexStatus(), checkiosched(), checkAI(), checkDND(), loadCpuFreq(), loadCpuGovernors(), loadGameGovernors(), GovernorPowersave(), loadVsyncValue(), checkSFL(), checkKillLog(), checklogger(), checkRamBoost(), ]).then(() => {
         document.getElementById("loading-screen").classList.add("hidden")
     })
 }
