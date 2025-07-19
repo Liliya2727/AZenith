@@ -410,6 +410,8 @@ function hideGameListModal() {
     let c = document.getElementById("gamelistModal");
     c.classList.remove("show"), document.body.classList.remove("modal-open"), c._resizeHandler && (window.removeEventListener("resize", c._resizeHandler), delete c._resizeHandler)
 }
+let originalGamelist = '';
+
 async function showGameListModal() {
     let { errno: c, stdout: s } = await executeCommand("cat /data/adb/.config/AZenith/AIenabled");
     if (0 === c && "0" === s.trim()) {
@@ -469,7 +471,6 @@ function filterGameList() {
 
     gamelistInput.value = filteredList;
 }
-
 async function saveGameList() {
     const gamelistInput = document.getElementById("gamelistInput");
     const searchInput = document.getElementById("gamelistSearch");
