@@ -677,7 +677,7 @@ video {
     font-size: .75rem;
     color: #ccc;
     text-align: center;
-    margin-bottom: 0rem
+    margin-bottom: 1rem
 }
 .scheme-desc {
     font-size: .75rem;
@@ -1298,16 +1298,22 @@ video {
 }
 
 .gamelistsearch {
-    width: 100%;
-    max-width: 220px;
-    padding: 8px 16px;
-    font-size: 14px;
-    color: #AAE0F2;
-    background-color: #343637;
-    margin-bottom: 1rem;
-    border: 0.5px solid;
-    border-radius: 100px;
-    transition: border-color 0.2s;
+  width: 100%;
+  max-width: 220px;
+  padding: 8px 16px;
+  font-size: 14px;
+  color: #FFFFFF;
+  background-color: #343637;
+  margin-bottom: 1rem;
+  border: 0.5px solid #5a5a5a;
+  border-radius: 100px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.gamelistsearch:focus {
+  border-color: #8ac1ff; /* bright blue border on focus */
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3); /* subtle blue glow */
 }
 
 .support-card {
@@ -1333,7 +1339,7 @@ video {
 }
 
 .support-card .zenith-text {
-  color: #3b82f6; 
+  color: #fff; 
   font-size: 1rem;
   margin-top: 0.2rem;
   margin-bottom: 1rem;
@@ -1343,6 +1349,11 @@ video {
   font-size: 0.75rem; 
   color: rgba(255, 255, 255, 0.4); 
   margin-top: auto;
+}
+.footertext {
+    font-size: 10px;
+    margin-bottom: 2rem;
+    color: #a0a0a0
 }
 
 .after\:content-\'\':after{--tw-content:"";content:var(--tw-content)}.hover\:bg-blue-500:hover{background-color:#6585b8}.hover\:bg-gray-500:hover{background-color:#6b7280}.peer:checked~.peer-checked\:bg-blue-600{background-color:#76d1fe}.peer:checked~.peer-checked\:after\:translate-x-full:after{content:var(--tw-content);transform:translateX(100%)}.peer:checked~.peer-checked\:after\:border-white:after{content:var(--tw-content);border-color:#000}@media (prefers-color-scheme:dark){.dark\:border-gray-600{border-color:#4b5563}.dark\:bg-gray-700{background-color:#374151}}
