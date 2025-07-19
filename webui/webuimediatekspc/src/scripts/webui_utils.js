@@ -340,7 +340,7 @@ async function setiosched(c) {
     await executeCommand(c ? "echo 1 >/data/adb/.config/AZenith/iosched" : "echo 0 >/data/adb/.config/AZenith/iosched")
 }
 async function applyFSTRIM() {
-    await executeCommand("/data/adb/modules/AZenith/system/bin/AZenith_Profiler FSTrim"), showToast("Trimmed Unused Blocks")
+    await executeCommand("AZenith_Profiler FSTrim"), showToast("Trimmed Unused Blocks")
 }
 async function setGameCpuGovernor(c) {
     let s = "/data/adb/.config/AZenith",
@@ -446,33 +446,95 @@ function hideGameListModal() {
     let c = document.getElementById("gamelistModal");
     c.classList.remove("show"), document.body.classList.remove("modal-open"), c._resizeHandler && (window.removeEventListener("resize", c._resizeHandler), delete c._resizeHandler)
 }
+let originalGamelist = '';
+
 async function showGameListModal() {
-    let {
-        errno: c,
-        stdout: s
-    } = await executeCommand("cat /data/adb/.config/AZenith/AIenabled");
+    let { errno: c, stdout: s } = await executeCommand("cat /data/adb/.config/AZenith/AIenabled");
     if (0 === c && "0" === s.trim()) {
         showToast("Can't access in current mode");
-        return
+        return;
     }
-    let r = document.getElementById("gamelistModal"),
-        d = document.getElementById("gamelistInput"),
-        l = r.querySelector(".gamelist-content"),
-        {
-            errno: m,
-            stdout: h
-        } = await executeCommand("cat /data/adb/.config/AZenith/gamelist.txt");
-    0 === m && (d.value = h.trim().replace(/\|/g, "\n")), r.classList.add("show"), document.body.classList.add("modal-open"), setTimeout(() => d.focus(), 100);
-    let g = window.innerHeight,
-        f = () => {
-            window.innerHeight < g - 150 ? l.style.transform = "translateY(-10%) scale(1)" : l.style.transform = "translateY(0) scale(1)"
-        };
-    window.addEventListener("resize", f, {
-        passive: !0
-    }), r._resizeHandler = f, f()
+
+    const r = document.getElementById("gamelistModal");
+    const d = document.getElementById("gamelistInput");
+    const searchInput = document.getElementById("gamelistSearch"); // Must exist in HTML
+    const l = r.querySelector(".gamelist-content");
+
+    const { errno: m, stdout: h } = await executeCommand("cat /data/adb/.config/AZenith/gamelist.txt");
+
+    if (m === 0) {
+        const formatted = h.trim().replace(/\|/g, "\n");
+        originalGamelist = formatted;
+        d.value = formatted;
+    }
+
+    if (searchInput) {
+        searchInput.value = ""; // Reset search
+        // Remove existing listener first to prevent duplicates on reopen
+        searchInput.removeEventListener("input", filterGameList);
+        searchInput.addEventListener("input", filterGameList);
+    }
+
+    r.classList.add("show");
+    document.body.classList.add("modal-open");
+    setTimeout(() => d.focus(), 100);
+
+    const g = window.innerHeight;
+    const f = () => {
+        window.innerHeight < g - 150
+            ? (l.style.transform = "translateY(-10%) scale(1)")
+            : (l.style.transform = "translateY(0) scale(1)");
+    };
+
+    window.addEventListener("resize", f, { passive: true });
+    r._resizeHandler = f;
+    f();
 }
+
+function filterGameList() {
+    const searchTerm = document.getElementById('gamelistSearch').value.toLowerCase();
+    const gamelistInput = document.getElementById('gamelistInput');
+
+    if (!searchTerm) {
+        gamelistInput.value = originalGamelist;
+        return;
+    }
+
+    const filteredList = originalGamelist
+        .split('\n')
+        .filter(line => line.toLowerCase().includes(searchTerm))
+        .join('\n');
+
+    gamelistInput.value = filteredList;
+}
+
 async function saveGameList() {
-    await executeCommand(`echo "${document.getElementById("gamelistInput").value.trim().replace(/\n+/g,"/").replace(/"/g,'\\"')}" | tr '/' '|' > /data/adb/.config/AZenith/gamelist.txt`), showToast("Gamelist saved."), hideGameListModal()
+    const gamelistInput = document.getElementById("gamelistInput");
+    const searchInput = document.getElementById("gamelistSearch");
+    const searchTerm = (searchInput?.value || "").toLowerCase();
+
+    let packagesToSave;
+
+    if (!searchTerm) {
+        packagesToSave = gamelistInput.value.split("\n").map(x => x.trim()).filter(Boolean);
+    } else {
+        const visibleLines = new Set(
+            gamelistInput.value.split("\n").map(x => x.trim()).filter(Boolean)
+        );
+        const originalLines = originalGamelist.split("\n").map(x => x.trim()).filter(Boolean);
+
+        const finalLines = originalLines.filter(line => {
+            const isMatch = line.toLowerCase().includes(searchTerm);
+            return isMatch ? visibleLines.has(line) : true;
+        });
+
+        packagesToSave = finalLines;
+    }
+
+    const outputString = packagesToSave.join('|').replace(/"/g, '\\"');
+    await executeCommand(`echo "${outputString}" > /data/adb/.config/AZenith/gamelist.txt`);
+    showToast(`Saved ${packagesToSave.length} packages`);
+    hideGameListModal();
 }
 async function checklogger() {
     let {
@@ -485,7 +547,7 @@ async function setlogger(c) {
     await executeCommand(c ? "echo 1 > /data/adb/.config/AZenith/logger" : "echo 0 > /data/adb/.config/AZenith/logger")
 }
 async function setVsyncValue(c) {
-    await executeCommand(`echo ${c} > /data/adb/.config/AZenith/customVsync`), await executeCommand(`/data/adb/modules/AZenith/system/bin/AZenith_Profiler disablevsync ${c}`)
+    await executeCommand(`echo ${c} > /data/adb/.config/AZenith/customVsync`), await executeCommand(`AZenith_Profiler disablevsync ${c}`)
 }
 async function loadVsyncValue() {
     let {

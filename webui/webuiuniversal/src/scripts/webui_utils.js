@@ -304,7 +304,7 @@ async function setiosched(c) {
     await executeCommand(c ? "echo 1 >/data/adb/.config/AZenith/iosched" : "echo 0 >/data/adb/.config/AZenith/iosched")
 }
 async function applyFSTRIM() {
-    await executeCommand("/data/adb/modules/AZenith/system/bin/AZenith_Profiler FSTrim"), showToast("Trimmed Unused Blocks")
+    await executeCommand("AZenith_Profiler FSTrim"), showToast("Trimmed Unused Blocks")
 }
 async function setGameCpuGovernor(c) {
     let s = "/data/adb/.config/AZenith",
@@ -449,7 +449,7 @@ async function setlogger(c) {
     await executeCommand(c ? "echo 1 > /data/adb/.config/AZenith/logger" : "echo 0 > /data/adb/.config/AZenith/logger")
 }
 async function setVsyncValue(c) {
-    await executeCommand(`echo ${c} > /data/adb/.config/AZenith/customVsync`), await executeCommand(`/data/adb/modules/AZenith/system/bin/AZenith_Profiler disablevsync ${c}`)
+    await executeCommand(`echo ${c} > /data/adb/.config/AZenith/customVsync`), await executeCommand(`AZenith_Profiler disablevsync ${c}`)
 }
 async function loadVsyncValue() {
     let {
