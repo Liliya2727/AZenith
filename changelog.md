@@ -17,7 +17,8 @@
 - Fix missing custom governor file in installation
 
 
-## Changelog V2.8 (R2864)
+## AZenith 2.8
+### Changelog
 - Update : Initial Support for Snapdragon
 - Change : FSTrim is not set on boot now
 - Update : Added an Option to Change Performance Governor
@@ -27,14 +28,16 @@
 - Change : Refactoring script and other improvement on flow and Logic
 
 
-## Changelog V2.6 (R2648)
+## AZenith 2.6
+### Changelog
 - Change : Change the logic of the slider in webUi and optimize it for low end devices
 - Change : Compress webui and convert it gif to Webp
 - Change : Restructure the webui script to make it lighter
 - Change : increase the interval for Real time monitoring
 
 
-## Changelog V2.5 (R2509)
+## AZenith 2.5
+### Changelog
 - Update : Added color scheme settings based on Zirelia 1.0
 - Change : Removed Lite Mode
 - Change : Migrate to C Daemon based on Encore 4.5 (Thanks to Rem01Project for OpenSource EncoreDaemon)
@@ -63,7 +66,8 @@
 - Change : Decrease perf_cpu_time_max_percent from 3 => 1
 
 
-## Changelog V2.4 (R2467)
+## AZenith 2.4
+### Changelog
 - Changes : Redesign the WebUI a little bit to enhance stability and user experiences
 - Updates : Add 2 new profiles, ECO Mode(Powersave) and Balanced Performance(Lite Mode)
 - Updates : Remove toggle to force performance profile manually because it's buggy and unstable
@@ -82,7 +86,8 @@
 - Updates : Add new path to bypass charging : /mt-battery/disable_charger
 
 
-## Changelog V2.0 (V2044)
+## AZenith 2.0
+### Changelog
 - Increase Loop delay to 35 Seconds when Using GamePreload to reduce usage
 - Fix bootloop issue on some devices
 - Fix Bypass Charge Checking when Installing Module
@@ -91,7 +96,8 @@
 - Bypass charge now only supports Specific Devices!
 
 
-## Changelog V1.9 (V1927)
+## AZenith 1.9
+### Changelog
 - Introducing Game Preload, Preload game libs to memory to reduce load time and minimize lag
 - Ram Freed, Kill background apps when entering performance profiles to reduce ram usage
 - WebUi: added loading screen on WebUI, let everything to load before accessing WebUI
@@ -102,16 +108,19 @@
 - Refining Module Logging, now it has 2 logging files, /data/AZenith/AZenith.log && /data/AZenith/AZenithMon.log thanks to @kanaochar
 
 
-## Changelog V1.8 (1825)
+## AZenith 1.8 R2
+### Changelog
 - Fix Profiler, some settings wouldn't work without this one
 
 
-## Changelog V1.8 (1824)
+## AZenith 1.8 R1
+### Changelog
 - Optimizing Script
 - Added a script to clear background apps on Performance Profiles
 
 
-## Changelog V1.7 (1723)
+## AZenith 1.7
+### Changelog
 - Optimize Performance Script and Tweak
 - Added Feature to Underclock CPU Frequency
 - Rebrand to Universal MediaTek Modules
@@ -121,7 +130,8 @@
 - Fix a bug where ML High Prior always killed the Monitoring Service
 
 
-## Changelog V1.2 Release (1216)
+## AZenith 1.2
+### Changelog
 - Fix a bug where service won't start again after being disabled
 - Fix Volt Opt wont save the Value before Disabling it
 - Adjust monitoring loop to 10 Seconds
@@ -131,7 +141,8 @@
 - Some rework on Monitoring Service (Background Service)
 
 
-## Changelog V1.0 Release (1014)
+## AZenith 1.0
+### Changelog
 - Initial Release on Github
 - Sync with Encore 2.3 WebUi
 - Added FSTrim (Adjustable in Webui)
