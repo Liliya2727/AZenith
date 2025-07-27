@@ -1,3 +1,10 @@
+## AZenith 3.1
+### Changelog
+- Add searchbar for gamelist edit in WebUi
+- Update mediatek disable thermal
+- Refactoring codes...
+
+
 ## AZenith 3.0
 ### Changelog
 - Compile with ndk-build to support MultiArch
