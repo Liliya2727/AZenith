@@ -47,6 +47,7 @@ ui_print "- Extracting system directory..."
 extract "$ZIPFILE" 'system/bin/vmt' "$MODPATH"
 extract "$ZIPFILE" 'system/bin/bypassCharge' "$MODPATH"
 extract "$ZIPFILE" 'system/bin/AZenith_Profiler' "$MODPATH"
+extract "$ZIPFILE" 'system/bin/Utils' "$MODPATH"
 ui_print "- Extracting service.sh..."
 extract "$ZIPFILE" service.sh "$MODPATH"
 ui_print "- Extracting module.prop..."
@@ -83,6 +84,7 @@ esac
 # Extract daemon
 extract "$ZIPFILE" "libs/$ARCH_TMP/AZenith" "$TMPDIR"
 cp "$TMPDIR"/libs/"$ARCH_TMP"/* "$MODPATH/system/bin"
+ln -sf "$MODPATH/system/bin/AZenith" "$MODPATH/system/bin/AZenith_log"
 rm -rf "$TMPDIR/libs"
 ui_print "- Installing for Arch : $ARCH_TMP"
 
@@ -100,6 +102,7 @@ if [ "$KSU" = "true" ] || [ "$APATCH" = "true" ]; then
 			ln -sf "$BIN_PATH/AZenith" "$dir/AZenith"
 			ln -sf "$BIN_PATH/AZenith" "$dir/AZenith_log"
 			ln -sf "$BIN_PATH/AZenith_Profiler" "$dir/AZenith_Profiler"
+                        ln -sf "$BIN_PATH/Utils" "$dir/Utils"
 			ln -sf "$BIN_PATH/bypassCharge" "$dir/bypassCharge"
 			ln -sf "$BIN_PATH/vmt" "$dir/vmt"
 		}
