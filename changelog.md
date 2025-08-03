@@ -1,3 +1,12 @@
+## AZenith 3.2
+### Changelog
+- Remove Scheduler settings
+- Remove all vm settings
+- Remove tcp settings
+- Remove Swappines settings
+- Improving flow mechanism
+
+
 ## AZenith 3.1
 ### Changelog
 - Add searchbar for gamelist edit in WebUi

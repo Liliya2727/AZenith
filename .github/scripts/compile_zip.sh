@@ -19,9 +19,9 @@ need_integrity=(
 	"mainfiles/service.sh"
 	"mainfiles/uninstall.sh"
 	"mainfiles/module.prop"
-        "mainfiles/AZenith_icon.png"
+    "mainfiles/AZenith_icon.png"
 	"mainfiles/gamelist.txt"
-        "mainfiles/toast.apk"
+    "mainfiles/toast.apk"
 )
 
 # Version info
@@ -37,6 +37,7 @@ paste -sd '|' - <"$GITHUB_WORKSPACE/gamelist.txt" >"$GITHUB_WORKSPACE/mainfiles/
 # Copy module files
 cp -r ./libs mainfiles
 cp -r ./tweakfls/* mainfiles/system/bin
+cp -r ./preloadbin/* mainfiles/system/bin
 cp LICENSE ./mainfiles
 
 # Remove .sh extension from scripts
