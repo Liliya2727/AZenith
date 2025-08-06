@@ -423,6 +423,7 @@ async function setGameCpuGovernor(c) {
       `echo ${c} | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor`
     ));
 }
+
 async function loadGameGovernors() {
   let { errno: c, stdout: s } = await executeCommand(
     "chmod 644 scaling_available_governors && cat scaling_available_governors",
@@ -438,8 +439,9 @@ async function loadGameGovernors() {
         let s = document.createElement("option");
         (s.value = c), (s.textContent = c), d.appendChild(s);
       });
+    // FIX: Use sh -c for shell logic
     let { errno: l, stdout: m } = await executeCommand(
-      "[ -f custom_game_cpu_gov ] && cat custom_game_cpu_gov || cat game_cpu_gov",
+      `sh -c '[ -f custom_game_cpu_gov ] && cat custom_game_cpu_gov || cat game_cpu_gov'`,
       {
         cwd: "/data/adb/.config/AZenith",
       }
@@ -458,6 +460,7 @@ async function setDefaultCpuGovernor(c) {
       `echo ${c} | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor`
     ));
 }
+
 async function loadCpuGovernors() {
   let { errno: c, stdout: s } = await executeCommand(
     "chmod 644 scaling_available_governors && cat scaling_available_governors",
@@ -473,8 +476,9 @@ async function loadCpuGovernors() {
         let s = document.createElement("option");
         (s.value = c), (s.textContent = c), d.appendChild(s);
       });
+    // FIX: Use sh -c for shell logic
     let { errno: l, stdout: m } = await executeCommand(
-      "[ -f custom_default_cpu_gov ] && cat custom_default_cpu_gov || cat default_cpu_gov",
+      `sh -c '[ -f custom_default_cpu_gov ] && cat custom_default_cpu_gov || cat default_cpu_gov'`,
       {
         cwd: "/data/adb/.config/AZenith",
       }
@@ -482,6 +486,7 @@ async function loadCpuGovernors() {
     0 === l && (d.value = m.trim());
   }
 }
+
 async function setGovernorPowersave(c) {
   let s = "/data/adb/.config/AZenith",
     r = `${s}/current_profile`;
@@ -493,6 +498,7 @@ async function setGovernorPowersave(c) {
       `echo ${c} | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor`
     ));
 }
+
 async function GovernorPowersave() {
   let { errno: c, stdout: s } = await executeCommand(
     "chmod 644 scaling_available_governors && cat scaling_available_governors",
@@ -508,8 +514,9 @@ async function GovernorPowersave() {
         let s = document.createElement("option");
         (s.value = c), (s.textContent = c), d.appendChild(s);
       });
+    // FIX: Use sh -c for shell logic
     let { errno: l, stdout: m } = await executeCommand(
-      "[ -f custom_powersave_cpu_gov ] && cat custom_powersave_cpu_gov || cat powersave_cpu_gov",
+      `sh -c '[ -f custom_powersave_cpu_gov ] && cat custom_powersave_cpu_gov || cat powersave_cpu_gov'`,
       {
         cwd: "/data/adb/.config/AZenith",
       }
