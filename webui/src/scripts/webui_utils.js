@@ -211,6 +211,32 @@ async function checkCPUInfo() {
         document.getElementById("cpuInfo").textContent = c || "Error"
     }
 }
+async function checkCPUInfo() {
+    let c = localStorage.getItem("soc_info");
+    try {
+        let {
+            errno: s,
+            stdout: r
+        } = await executeCommand("getprop ro.soc.model");
+        if (0 === s) {
+            let d = r.trim().replace(/\s+/g, "").toUpperCase(),
+                l = await fetchSOCDatabase(),
+                m = l[d];
+            if (!m)
+                for (let h = d.length; h >= 6; h--) {
+                    let g = d.substring(0, h);
+                    if (l[g]) {
+                        m = l[g];
+                        break
+                    }
+                }
+            m || (m = d), document.getElementById("cpuInfo").textContent = m, c !== m && localStorage.setItem("soc_info", m)
+        } else document.getElementById("cpuInfo").textContent = c || "Unknown SoC"
+    } catch {
+        document.getElementById("cpuInfo").textContent = c || "Error"
+    }
+    showFPSGEDIfMediatek(); // <-- Add this line
+}
 async function checkKernelVersion() {
     let c = localStorage.getItem("kernel_version");
     try {
@@ -268,6 +294,13 @@ async function checkfpsged() {
 }
 async function setfpsged(c) {
     await executeCommand(c ? "echo 1 >/data/adb/.config/AZenith/fpsged" : "echo 0 >/data/adb/.config/AZenith/fpsged")
+}
+function showFPSGEDIfMediatek() {
+    const soc = (localStorage.getItem("soc_info") || "").toLowerCase();
+    const fpsgedDiv = document.getElementById("fpsged-container");
+    if (fpsgedDiv) {
+        fpsgedDiv.style.display = soc.includes("mediatek") ? "flex" : "none";
+    }
 }
 async function checkDND() {
     let {
