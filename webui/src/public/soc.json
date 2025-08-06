@@ -1,4 +1,4 @@
-{  
+{
   "MT6983": "MediaTek Dimensity 9000",
   "MT6985": "MediaTek Dimensity 9200",
   "MT6988": "MediaTek Dimensity 9300",
@@ -92,7 +92,7 @@
   "APQ8084": "Qualcomm Snapdragon 805",
   "MSM8974AC": "Qualcomm Snapdragon 801",
   "MSM8974AB": "Qualcomm Snapdragon 800 (AB)",
-  "MSM8974": "Qualcomm Snapdragon 800",  
+  "MSM8974": "Qualcomm Snapdragon 800",
   "SM7675-AB": "Qualcomm Snapdragon 7+ Gen 3",
   "SM7635": "Qualcomm Snapdragon 7s Gen 3",
   "SM7550-AB": "Qualcomm Snapdragon 7 Gen 3",

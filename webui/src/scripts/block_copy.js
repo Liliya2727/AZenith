@@ -1,13 +1,13 @@
-function killCopy(e){
+function killCopy(e) {
   return false;
 }
 
-function reEnable(){
+function reEnable() {
   return true;
 }
 
-document.onselectstart=new Function ("return false");
-if (window.sidebar){
-  document.onmousedown=killCopy;
-  document.onclick=reEnable;
+document.onselectstart = new Function("return false");
+if (window.sidebar) {
+  document.onmousedown = killCopy;
+  document.onclick = reEnable;
 }

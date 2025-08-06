@@ -679,6 +679,7 @@ video {
     text-align: center;
     margin-bottom: 1rem
 }
+
 .scheme-desc {
     font-size: .75rem;
     color: #ccc;
@@ -1182,6 +1183,7 @@ video {
     0% {
         transform: rotate(0)
     }
+
     100% {
         transform: rotate(360deg)
     }
@@ -1298,71 +1300,110 @@ video {
 }
 
 .gamelistsearch {
-  width: 100%;
-  max-width: 330px;
-  padding: 8px 16px;
-  font-size: 14px;
-  color: #FFFFFF;
-  background-color: #343637;
-  margin-bottom: 1rem;
-  border: 0.5px solid #5a5a5a;
-  border-radius: 100px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  outline: none;
+    width: 100%;
+    max-width: 330px;
+    padding: 8px 16px;
+    font-size: 14px;
+    color: #FFFFFF;
+    background-color: #343637;
+    margin-bottom: 1rem;
+    border: 0.5px solid #5a5a5a;
+    border-radius: 100px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
 }
 
 .gamelistsearch:focus {
-  border-color: #8ac1ff; /* bright glow-like blue */
-  outline: 1px solid #8ac1ff; /* acts like a glow */
-  outline-offset: 0px;
+    border-color: #8ac1ff;
+    /* bright glow-like blue */
+    outline: 1px solid #8ac1ff;
+    /* acts like a glow */
+    outline-offset: 0px;
 }
 
 .support-card {
-  background-color: #1f2937; 
-  margin-top: 211px;
-  margin-bottom: 1rem; 
-  padding: 1rem; 
-  border-radius: 0.5rem; 
-  color: #fff;
+    background-color: #1f2937;
+    margin-top: 211px;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    color: #fff;
 }
 
 .support-card .support-header {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
 }
 
 .support-card h2 {
-  font-weight: 600;
-  font-size: 1.125rem; 
-  color: #111827; 
-  margin-bottom: 0.2rem;
+    font-weight: 600;
+    font-size: 1.125rem;
+    color: #111827;
+    margin-bottom: 0.2rem;
 }
 
 .support-card {
-  color: #BAFFF3; 
-  font-size: 1rem;
-  margin-top: 0.2rem;
-  margin-bottom: 1rem;
+    color: #BAFFF3;
+    font-size: 1rem;
+    margin-top: 0.2rem;
+    margin-bottom: 1rem;
 }
+
 .zenith-text {
-  color: #819192;
-  font-size: 0.8rem;
-  margin-top: -1rem;
-  margin-bottom: 1rem;
+    color: #819192;
+    font-size: 0.8rem;
+    margin-top: -1rem;
+    margin-bottom: 1rem;
 }
+
 .support-card {
-  font-size: 0.75rem; 
-  color: rgba(255, 255, 255, 0.4); 
-  margin-top: auto;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: auto;
 }
 
 .footertext {
-  font-size: 0.6rem;
-  color: rgba(255, 255, 255, 0.4);  
-  text-align: center;               
-  margin-top: 1rem;                 
-  margin-bottom: 0rem;              
+    font-size: 0.6rem;
+    color: rgba(255, 255, 255, 0.4);
+    text-align: center;
+    margin-top: 1rem;
+    margin-bottom: 0rem;
 }
 
-.after\:content-\'\':after{--tw-content:"";content:var(--tw-content)}.hover\:bg-blue-500:hover{background-color:#6585b8}.hover\:bg-gray-500:hover{background-color:#6b7280}.peer:checked~.peer-checked\:bg-blue-600{background-color:#76d1fe}.peer:checked~.peer-checked\:after\:translate-x-full:after{content:var(--tw-content);transform:translateX(100%)}.peer:checked~.peer-checked\:after\:border-white:after{content:var(--tw-content);border-color:#000}@media (prefers-color-scheme:dark){.dark\:border-gray-600{border-color:#4b5563}.dark\:bg-gray-700{background-color:#374151}}
+.after\:content-\'\':after {
+    --tw-content: "";
+    content: var(--tw-content)
+}
+
+.hover\:bg-blue-500:hover {
+    background-color: #6585b8
+}
+
+.hover\:bg-gray-500:hover {
+    background-color: #6b7280
+}
+
+.peer:checked~.peer-checked\:bg-blue-600 {
+    background-color: #76d1fe
+}
+
+.peer:checked~.peer-checked\:after\:translate-x-full:after {
+    content: var(--tw-content);
+    transform: translateX(100%)
+}
+
+.peer:checked~.peer-checked\:after\:border-white:after {
+    content: var(--tw-content);
+    border-color: #000
+}
+
+@media (prefers-color-scheme:dark) {
+    .dark\:border-gray-600 {
+        border-color: #4b5563
+    }
+
+    .dark\:bg-gray-700 {
+        background-color: #374151
+    }
+}
