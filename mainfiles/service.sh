@@ -28,8 +28,8 @@ rm -f /data/adb/.config/AZenith/AZenithVerbose.log
 rm -f /data/adb/.config/AZenith/AZenithPR.log
 
 # Wait for boot to Complete
-while [ "$(getprop sys.boot_completed)" != "1" ]; do  
-    sleep 40
+while [ "$(getprop sys.boot_completed)" != "1" ]; do
+	sleep 40
 done
 
 # Fallback to normal gov if default is performance
@@ -48,7 +48,6 @@ custom_gov="$CONF/custom_default_cpu_gov"
 echo "$default_gov" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
 [ ! -f $CONF/custom_powersave_cpu_gov ] && echo "$default_gov" >$CONF/custom_powersave_cpu_gov
 [ ! -f $CONF/custom_game_cpu_gov ] && echo "$default_gov" >$CONF/custom_game_cpu_gov
-
 
 # Run Daemon
 AZenith
