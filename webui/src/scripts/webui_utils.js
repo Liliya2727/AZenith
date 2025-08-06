@@ -19,11 +19,13 @@ import AvatarZenith from "/Avatar_AZenith.webp";
 import SchemeBanner from "/SchemeBanner.webp";
 import { exec, toast } from "kernelsu";
 
-let i = 0;
-
 const executeCommand = async (cmd, cwd = null) => {
-  const { errno, stdout, stderr } = await exec(cmd, cwd ? { cwd } : {});
-  return errno === 0 ? stdout.trim() : { error: stderr };
+  try {
+    const { errno, stdout, stderr } = await exec(cmd, cwd ? { cwd } : {});
+    return { errno, stdout, stderr };
+  } catch (e) {
+    return { errno: -1, stdout: "", stderr: e.message || String(e) };
+  }
 };
 
 function EventEmitter() {
