@@ -412,6 +412,7 @@ async function applyFSTRIM() {
   await executeCommand("/data/adb/modules/AZenith/system/bin/Utils FSTrim"),
     showToast("Trimmed Unused Blocks");
 }
+
 async function setGameCpuGovernor(c) {
   let s = "/data/adb/.config/AZenith",
     r = `${s}/current_profile`;
@@ -439,16 +440,14 @@ async function loadGameGovernors() {
         let s = document.createElement("option");
         (s.value = c), (s.textContent = c), d.appendChild(s);
       });
-    // FIX: Use sh -c for shell logic
+    // Use absolute paths and no cwd for shell logic
     let { errno: l, stdout: m } = await executeCommand(
-      `sh -c '[ -f custom_game_cpu_gov ] && cat custom_game_cpu_gov || cat game_cpu_gov'`,
-      {
-        cwd: "/data/adb/.config/AZenith",
-      }
+      `sh -c '[ -f /data/adb/.config/AZenith/custom_game_cpu_gov ] && cat /data/adb/.config/AZenith/custom_game_cpu_gov || cat /data/adb/.config/AZenith/game_cpu_gov'`
     );
     0 === l && (d.value = m.trim());
   }
 }
+
 async function setDefaultCpuGovernor(c) {
   let s = "/data/adb/.config/AZenith",
     r = `${s}/current_profile`;
@@ -476,12 +475,8 @@ async function loadCpuGovernors() {
         let s = document.createElement("option");
         (s.value = c), (s.textContent = c), d.appendChild(s);
       });
-    // FIX: Use sh -c for shell logic
     let { errno: l, stdout: m } = await executeCommand(
-      `sh -c '[ -f custom_default_cpu_gov ] && cat custom_default_cpu_gov || cat default_cpu_gov'`,
-      {
-        cwd: "/data/adb/.config/AZenith",
-      }
+      `sh -c '[ -f /data/adb/.config/AZenith/custom_default_cpu_gov ] && cat /data/adb/.config/AZenith/custom_default_cpu_gov || cat /data/adb/.config/AZenith/default_cpu_gov'`
     );
     0 === l && (d.value = m.trim());
   }
@@ -514,12 +509,8 @@ async function GovernorPowersave() {
         let s = document.createElement("option");
         (s.value = c), (s.textContent = c), d.appendChild(s);
       });
-    // FIX: Use sh -c for shell logic
     let { errno: l, stdout: m } = await executeCommand(
-      `sh -c '[ -f custom_powersave_cpu_gov ] && cat custom_powersave_cpu_gov || cat powersave_cpu_gov'`,
-      {
-        cwd: "/data/adb/.config/AZenith",
-      }
+      `sh -c '[ -f /data/adb/.config/AZenith/custom_powersave_cpu_gov ] && cat /data/adb/.config/AZenith/custom_powersave_cpu_gov || cat /data/adb/.config/AZenith/powersave_cpu_gov'`
     );
     0 === l && (d.value = m.trim());
   }
