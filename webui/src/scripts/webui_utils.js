@@ -427,10 +427,7 @@ async function setGameCpuGovernor(c) {
 
 async function loadGameGovernors() {
   let { errno: c, stdout: s } = await executeCommand(
-    "chmod 644 scaling_available_governors && cat scaling_available_governors",
-    {
-      cwd: "/sys/devices/system/cpu/cpu0/cpufreq",
-    }
+    "chmod 644 /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors && cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors"
   );
   if (0 === c) {
     let r = s.trim().split(/\s+/),
@@ -462,10 +459,7 @@ async function setDefaultCpuGovernor(c) {
 
 async function loadCpuGovernors() {
   let { errno: c, stdout: s } = await executeCommand(
-    "chmod 644 scaling_available_governors && cat scaling_available_governors",
-    {
-      cwd: "/sys/devices/system/cpu/cpu0/cpufreq",
-    }
+    "chmod 644 /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors && cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors"
   );
   if (0 === c) {
     let r = s.trim().split(/\s+/),
@@ -496,10 +490,7 @@ async function setGovernorPowersave(c) {
 
 async function GovernorPowersave() {
   let { errno: c, stdout: s } = await executeCommand(
-    "chmod 644 scaling_available_governors && cat scaling_available_governors",
-    {
-      cwd: "/sys/devices/system/cpu/cpu0/cpufreq",
-    }
+    "chmod 644 /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors && cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors"
   );
   if (0 === c) {
     let r = s.trim().split(/\s+/),
@@ -515,7 +506,6 @@ async function GovernorPowersave() {
     0 === l && (d.value = m.trim());
   }
 }
-
 function hideGameListModal() {
   let c = document.getElementById("gamelistModal");
   c.classList.remove("show"),
@@ -653,10 +643,11 @@ async function setVsyncValue(c) {
       `/data/adb/modules/AZenith/system/bin/Utils disablevsync ${c}`
     );
 }
+
 async function loadVsyncValue() {
-  let { errno: c, stdout: s } = await executeCommand("cat availableValue", {
-    cwd: "/data/adb/.config/AZenith",
-  });
+  let { errno: c, stdout: s } = await executeCommand(
+    "cat /data/adb/.config/AZenith/availableValue"
+  );
   if (0 === c) {
     let r = s.trim().split(/\s+/),
       d = document.getElementById("disablevsync");
@@ -666,10 +657,7 @@ async function loadVsyncValue() {
         (s.value = c), (s.textContent = c), d.appendChild(s);
       });
     let { errno: l, stdout: m } = await executeCommand(
-      "[ -f customVsync ] && cat customVsync",
-      {
-        cwd: "/data/adb/.config/AZenith",
-      }
+      `sh -c '[ -f /data/adb/.config/AZenith/customVsync ] && cat /data/adb/.config/AZenith/customVsync'`
     );
     0 === l && (d.value = m.trim());
   }
@@ -677,10 +665,11 @@ async function loadVsyncValue() {
 async function setCpuFreqOffsets(c) {
   await executeCommand(`echo ${c} >/data/adb/.config/AZenith/customFreqOffset`);
 }
+
 async function loadCpuFreq() {
-  let { errno: c, stdout: s } = await executeCommand("cat availableFreq", {
-    cwd: "/data/adb/.config/AZenith",
-  });
+  let { errno: c, stdout: s } = await executeCommand(
+    "cat /data/adb/.config/AZenith/availableFreq"
+  );
   if (0 === c) {
     let r = s.trim().split(/\s+/),
       d = document.getElementById("cpuFreq");
@@ -690,10 +679,7 @@ async function loadCpuFreq() {
         (s.value = c), (s.textContent = c), d.appendChild(s);
       });
     let { errno: l, stdout: m } = await executeCommand(
-      "[ -f customFreqOffset ] && cat customFreqOffset",
-      {
-        cwd: "/data/adb/.config/AZenith",
-      }
+      `sh -c '[ -f /data/adb/.config/AZenith/customFreqOffset ] && cat /data/adb/.config/AZenith/customFreqOffset'`
     );
     0 === l && (d.value = m.trim());
   }
