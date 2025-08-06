@@ -210,33 +210,9 @@ async function checkCPUInfo() {
     } catch {
         document.getElementById("cpuInfo").textContent = c || "Error"
     }
+    showFPSGEDIfMediatek();
 }
-async function checkCPUInfo() {
-    let c = localStorage.getItem("soc_info");
-    try {
-        let {
-            errno: s,
-            stdout: r
-        } = await executeCommand("getprop ro.soc.model");
-        if (0 === s) {
-            let d = r.trim().replace(/\s+/g, "").toUpperCase(),
-                l = await fetchSOCDatabase(),
-                m = l[d];
-            if (!m)
-                for (let h = d.length; h >= 6; h--) {
-                    let g = d.substring(0, h);
-                    if (l[g]) {
-                        m = l[g];
-                        break
-                    }
-                }
-            m || (m = d), document.getElementById("cpuInfo").textContent = m, c !== m && localStorage.setItem("soc_info", m)
-        } else document.getElementById("cpuInfo").textContent = c || "Unknown SoC"
-    } catch {
-        document.getElementById("cpuInfo").textContent = c || "Error"
-    }
-    showFPSGEDIfMediatek(); // <-- Add this line
-}
+
 async function checkKernelVersion() {
     let c = localStorage.getItem("kernel_version");
     try {
