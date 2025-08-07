@@ -207,23 +207,28 @@ async function checkCPUInfo() {
   // Try to read SoC type from file first
   let c = localStorage.getItem("soc_info");
   try {
-    let { errno: fileErrno, stdout: fileStdout } = await executeCommand("cat /data/adb/.config/AZenith/soctype");
+    let { errno: fileErrno, stdout: fileStdout } = await executeCommand(
+      "cat /data/adb/.config/AZenith/soctype"
+    );
     if (fileErrno === 0 && fileStdout.trim()) {
       // Map number to SoC name
       let socNum = fileStdout.trim();
-      let socName = {
-        "1": "MediaTek",
-        "2": "Snapdragon",
-        "4": "Exynos",
-        "5": "Unisoc",
-        "6": "Tensor",
-        "0": "Unknown"
-      }[socNum] || "Unknown";
+      let socName =
+        {
+          1: "MediaTek",
+          2: "Snapdragon",
+          4: "Exynos",
+          5: "Unisoc",
+          6: "Tensor",
+          0: "Unknown",
+        }[socNum] || "Unknown";
       document.getElementById("cpuInfo").textContent = socName;
       if (c !== socName) localStorage.setItem("soc_info", socName);
     } else {
       // Fallback to old logic using getprop and soc.json
-      let { errno: s, stdout: r } = await executeCommand("getprop ro.soc.model");
+      let { errno: s, stdout: r } = await executeCommand(
+        "getprop ro.soc.model"
+      );
       if (0 === s) {
         let d = r.trim().replace(/\s+/g, "").toUpperCase(),
           l = await fetchSOCDatabase(),
