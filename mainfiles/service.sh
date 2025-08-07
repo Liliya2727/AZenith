@@ -42,10 +42,14 @@ if [ "$default_gov" == "performance" ] && [ ! -f $CONF/custom_default_cpu_gov ];
 		}
 	done
 fi
+
 # Revert governor
 custom_gov="$CONF/custom_default_cpu_gov"
 [ -f "$custom_gov" ] && default_gov=$(cat "$custom_gov")
+chmod 644 /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
 echo "$default_gov" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+chmod 444 /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
+chmod 444 /sys/devices/system/cpu/cpufreq/policy*/scaling_governor
 [ ! -f $CONF/custom_powersave_cpu_gov ] && echo "$default_gov" >$CONF/custom_powersave_cpu_gov
 [ ! -f $CONF/custom_game_cpu_gov ] && echo "$default_gov" >$CONF/custom_game_cpu_gov
 
