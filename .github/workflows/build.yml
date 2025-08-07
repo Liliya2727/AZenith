@@ -45,7 +45,7 @@ jobs:
       - name: Build AZenith JNI
         run: ndk-build
 
-      - name: Build Webroot
+      - name: Building WebRoots
         working-directory: ./webui
         run: |
           bun install
