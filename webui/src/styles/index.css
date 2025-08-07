@@ -577,7 +577,7 @@ video {
     height: 100%;
     object-fit: cover;
     object-position: center;
-    filter: blur(4px);
+    filter: blur(6px);
     display: block;
     border: 2px solid rgba(255, 255, 255, .05);
     position: relative

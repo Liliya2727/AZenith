@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import BannerZenith from "/Banner_AZenith.webp";
-import AvatarZenith from "/Avatar_AZenith.webp";
-import SchemeBanner from "/SchemeBanner.webp";
+import BannerZenith from "/Banner_AZenith.avif";
+import AvatarZenith from "/Avatar_AZenith.avif";
+import SchemeBanner from "/SchemeBanner.avif";
 import { exec, toast } from "kernelsu";
 
 const executeCommand = async (cmd, cwd = null) => {
