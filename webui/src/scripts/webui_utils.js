@@ -204,49 +204,26 @@ async function fetchSOCDatabase() {
 }
 
 async function checkCPUInfo() {
-  // Try to read SoC type from file first
   let c = localStorage.getItem("soc_info");
   try {
-    let { errno: fileErrno, stdout: fileStdout } = await executeCommand(
-      "cat /data/adb/.config/AZenith/soctype"
-    );
-    if (fileErrno === 0 && fileStdout.trim()) {
-      // Map number to SoC name
-      let socNum = fileStdout.trim();
-      let socName =
-        {
-          1: "MediaTek",
-          2: "Snapdragon",
-          4: "Exynos",
-          5: "Unisoc",
-          6: "Tensor",
-          0: "Unknown",
-        }[socNum] || "Unknown";
-      document.getElementById("cpuInfo").textContent = socName;
-      if (c !== socName) localStorage.setItem("soc_info", socName);
-    } else {
-      // Fallback to old logic using getprop and soc.json
-      let { errno: s, stdout: r } = await executeCommand(
-        "getprop ro.soc.model"
-      );
-      if (0 === s) {
-        let d = r.trim().replace(/\s+/g, "").toUpperCase(),
-          l = await fetchSOCDatabase(),
-          m = l[d];
-        if (!m)
-          for (let h = d.length; h >= 6; h--) {
-            let g = d.substring(0, h);
-            if (l[g]) {
-              m = l[g];
-              break;
-            }
+    let { errno: s, stdout: r } = await executeCommand("getprop ro.soc.model");
+    if (0 === s) {
+      let d = r.trim().replace(/\s+/g, "").toUpperCase(),
+        l = await fetchSOCDatabase(),
+        m = l[d];
+      if (!m)
+        for (let h = d.length; h >= 6; h--) {
+          let g = d.substring(0, h);
+          if (l[g]) {
+            m = l[g];
+            break;
           }
-        m || (m = d),
-          (document.getElementById("cpuInfo").textContent = m),
-          c !== m && localStorage.setItem("soc_info", m);
-      } else {
-        document.getElementById("cpuInfo").textContent = c || "Unknown SoC";
-      }
+        }
+      m || (m = d),
+        (document.getElementById("cpuInfo").textContent = m),
+        c !== m && localStorage.setItem("soc_info", m);
+    } else {
+      document.getElementById("cpuInfo").textContent = c || "Unknown SoC";
     }
   } catch {
     document.getElementById("cpuInfo").textContent = c || "Error";
