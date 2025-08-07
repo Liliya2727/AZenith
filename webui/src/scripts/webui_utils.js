@@ -441,7 +441,7 @@ async function setGameCpuGovernor(c) {
   0 === d &&
     "1" === l.trim() &&
     (await executeCommand(
-      `/data/adb/modules/AZenith/system/bin/Utils setsgov ${governor}`
+      `/data/adb/modules/AZenith/system/bin/Utils setsgov ${c}`
     ));
 }
 
@@ -473,7 +473,7 @@ async function setDefaultCpuGovernor(c) {
   0 === d &&
     "2" === l.trim() &&
     (await executeCommand(
-      `/data/adb/modules/AZenith/system/bin/Utils setsgov ${governor}`
+      `/data/adb/modules/AZenith/system/bin/Utils setsgov ${c}`
     ));
 }
 
@@ -504,7 +504,7 @@ async function setGovernorPowersave(c) {
   0 === d &&
     "3" === l.trim() &&
     (await executeCommand(
-      `/data/adb/modules/AZenith/system/bin/Utils setsgov ${governor}`
+      `/data/adb/modules/AZenith/system/bin/Utils setsgov ${c}`
     ));
 }
 
