@@ -441,7 +441,7 @@ async function setGameCpuGovernor(c) {
   0 === d &&
     "1" === l.trim() &&
     (await executeCommand(
-      `echo ${c} | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor`
+      `/data/adb/modules/AZenith/system/bin/Utils setsgov ${governor}`
     ));
 }
 
@@ -473,7 +473,7 @@ async function setDefaultCpuGovernor(c) {
   0 === d &&
     "2" === l.trim() &&
     (await executeCommand(
-      `echo ${c} | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor`
+      `/data/adb/modules/AZenith/system/bin/Utils setsgov ${governor}`
     ));
 }
 
@@ -504,7 +504,7 @@ async function setGovernorPowersave(c) {
   0 === d &&
     "3" === l.trim() &&
     (await executeCommand(
-      `echo ${c} | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor`
+      `/data/adb/modules/AZenith/system/bin/Utils setsgov ${governor}`
     ));
 }
 
