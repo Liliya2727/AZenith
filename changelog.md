@@ -1,5 +1,7 @@
 ## AZenith 3.3
 ### Changelog
+- Fix Governor Parse, and change cpuFreq Logic
+- Fix Webui Governor Settings
 - Remove Scheduler settings
 - Remove all vm settings
 - Remove tcp settings
