@@ -1,10 +1,14 @@
-## AZenith 3.2
+## AZenith 3.3
 ### Changelog
 - Remove Scheduler settings
 - Remove all vm settings
 - Remove tcp settings
 - Remove Swappines settings
 - Improving flow mechanism
+- Added tweak script for exynos, tensor, and unisoc
+- Reducing module size
+- Improving soc recognition logic
+- Improve ksu exec logic
 
 
 ## AZenith 3.1
