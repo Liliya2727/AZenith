@@ -123,17 +123,35 @@ case "$(echo "$chipset" | tr '[:upper:]' '[:lower:]')" in
     ui_print "- Applying Tweaks for $soc"
     make_node 2 "$MODULE_CONFIG/soctype"
     ;;
+*exynos* | *Exynos* | *EXYNOS* | *universal* | *samsung* | *erd* | *s5e*)
+    soc="Exynos"
+    ui_print "- Applying Tweaks for $soc"
+    make_node 3 "$MODULE_CONFIG/soctype"
+    ;;
+*Unisoc* | *unisoc* | *ums*)
+    soc="Unisoc"
+    ui_print "- Applying Tweaks for $soc"
+    make_node 4 "$MODULE_CONFIG/soctype"
+    ;;
+*gs* | *Tensor* | *tensor*)
+    soc="Tensor"
+    ui_print "- Applying Tweaks for $soc"
+    make_node 5 "$MODULE_CONFIG/soctype"
+    ;;
 *)
     soc="Unknown"
     ui_print "- Applying Tweaks for $chipset"
     make_node 0 "$MODULE_CONFIG/soctype"
     ;;
 esac
+
 # Soc Type
 # 1) MediaTek
 # 2) Snapdragon
+# 3) Exynos
+# 4) Unisoc
+# 5) Tensor
 # 0) Unknown
-# /// More chipset will be added soon ////
 
 # Extract Webui
 mkdir -p "$MODPATH/webroot"
