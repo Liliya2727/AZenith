@@ -202,30 +202,54 @@ async function fetchSOCDatabase() {
     }
   return cachedSOCData;
 }
+
 async function checkCPUInfo() {
+  // Try to read SoC type from file first
   let c = localStorage.getItem("soc_info");
   try {
-    let { errno: s, stdout: r } = await executeCommand("getprop ro.soc.model");
-    if (0 === s) {
-      let d = r.trim().replace(/\s+/g, "").toUpperCase(),
-        l = await fetchSOCDatabase(),
-        m = l[d];
-      if (!m)
-        for (let h = d.length; h >= 6; h--) {
-          let g = d.substring(0, h);
-          if (l[g]) {
-            m = l[g];
-            break;
+    let { errno: fileErrno, stdout: fileStdout } = await executeCommand("cat /data/adb/.config/AZenith/soctype");
+    if (fileErrno === 0 && fileStdout.trim()) {
+      // Map number to SoC name
+      let socNum = fileStdout.trim();
+      let socName = {
+        "1": "MediaTek",
+        "2": "Snapdragon",
+        "4": "Exynos",
+        "5": "Unisoc",
+        "6": "Tensor",
+        "0": "Unknown"
+      }[socNum] || "Unknown";
+      document.getElementById("cpuInfo").textContent = socName;
+      if (c !== socName) localStorage.setItem("soc_info", socName);
+    } else {
+      // Fallback to old logic using getprop and soc.json
+      let { errno: s, stdout: r } = await executeCommand("getprop ro.soc.model");
+      if (0 === s) {
+        let d = r.trim().replace(/\s+/g, "").toUpperCase(),
+          l = await fetchSOCDatabase(),
+          m = l[d];
+        if (!m)
+          for (let h = d.length; h >= 6; h--) {
+            let g = d.substring(0, h);
+            if (l[g]) {
+              m = l[g];
+              break;
+            }
           }
-        }
-      m || (m = d),
-        (document.getElementById("cpuInfo").textContent = m),
-        c !== m && localStorage.setItem("soc_info", m);
-    } else document.getElementById("cpuInfo").textContent = c || "Unknown SoC";
+        m || (m = d),
+          (document.getElementById("cpuInfo").textContent = m),
+          c !== m && localStorage.setItem("soc_info", m);
+      } else {
+        document.getElementById("cpuInfo").textContent = c || "Unknown SoC";
+      }
+    }
   } catch {
     document.getElementById("cpuInfo").textContent = c || "Error";
   }
   showFPSGEDIfMediatek();
+  showMaliSchedIfMediatek();
+  showBypassIfMTK();
+  showThermalIfMTK();
 }
 
 async function checkKernelVersion() {
@@ -343,6 +367,13 @@ async function setBypassChargeStatus(c) {
       : "echo 0 >/data/adb/.config/AZenith/bypass_charge"
   );
 }
+function showBypassIfMTK() {
+  const soc = (localStorage.getItem("soc_info") || "").toLowerCase();
+  const ZepassDiv = document.getElementById("Zepass-container");
+  if (ZepassDiv) {
+    ZepassDiv.style.display = soc.includes("mediatek") ? "flex" : "none";
+  }
+}
 async function checkOPPIndexStatus() {
   let { errno: c, stdout: s } = await executeCommand(
     "cat /data/adb/.config/AZenith/cpulimit"
@@ -368,6 +399,13 @@ async function setDThermal(c) {
       ? "echo 1 >/data/adb/.config/AZenith/DThermal"
       : "echo 0 >/data/adb/.config/AZenith/DThermal"
   );
+}
+function showThermalIfMTK() {
+  const soc = (localStorage.getItem("soc_info") || "").toLowerCase();
+  const thermalDiv = document.getElementById("DThermal-container");
+  if (thermalDiv) {
+    thermalDiv.style.display = soc.includes("mediatek") ? "flex" : "none";
+  }
 }
 async function checkSFL() {
   let { errno: c, stdout: s } = await executeCommand(
@@ -760,6 +798,13 @@ async function setmalisched(c) {
       ? "echo 1 >/data/adb/.config/AZenith/malisched"
       : "echo 0 >/data/adb/.config/AZenith/malisched"
   );
+}
+function showMaliSchedIfMediatek() {
+  const soc = (localStorage.getItem("soc_info") || "").toLowerCase();
+  const MaliSchedDiv = document.getElementById("malisched-container");
+  if (MaliSchedDiv) {
+    MaliSchedDiv.style.display = soc.includes("mediatek") ? "flex" : "none";
+  }
 }
 async function showColorScheme() {
   let c = document.getElementById("schemeModal"),
