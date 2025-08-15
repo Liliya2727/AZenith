@@ -52,15 +52,6 @@ jobs:
           bun run build
           cp -r ./dist/* ../mainfiles/webroot
 
-      - name: Obfuscate SH File
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y shc
-          find . -name "*.sh" | while read script; do
-            shc -f "$script" -o "${script%.sh}.out"
-            mv "${script%.sh}.out" "$script"
-          done
-
       - name: Compile Flashable Zip
         id: compileZip
         run: bash .github/scripts/compile_zip.sh
