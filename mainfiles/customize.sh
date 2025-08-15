@@ -45,9 +45,8 @@ source "$TMPDIR/verify.sh"
 # Extract Module files
 ui_print "- Extracting system directory..."
 extract "$ZIPFILE" 'system/bin/vmt' "$MODPATH"
-extract "$ZIPFILE" 'system/bin/bypassCharge' "$MODPATH"
-extract "$ZIPFILE" 'system/bin/AZenith_Profiler' "$MODPATH"
-extract "$ZIPFILE" 'system/bin/Utils' "$MODPATH"
+extract "$ZIPFILE" 'system/bin/azenith_profilesettings' "$MODPATH"
+extract "$ZIPFILE" 'system/bin/azenith_configuration' "$MODPATH"
 ui_print "- Extracting service.sh..."
 extract "$ZIPFILE" service.sh "$MODPATH"
 ui_print "- Extracting module.prop..."
@@ -83,7 +82,7 @@ esac
 # Extract daemon
 extract "$ZIPFILE" "libs/$ARCH_TMP/AZenith" "$TMPDIR"
 cp "$TMPDIR"/libs/"$ARCH_TMP"/* "$MODPATH/system/bin"
-ln -sf "$MODPATH/system/bin/AZenith" "$MODPATH/system/bin/AZenith_log"
+ln -sf "$MODPATH/system/bin/sys.azenith-service" "$MODPATH/system/bin/sys.azenith-service_log"
 rm -rf "$TMPDIR/libs"
 ui_print "- Installing for Arch : $ARCH_TMP"
 
@@ -98,11 +97,10 @@ if [ "$KSU" = "true" ] || [ "$APATCH" = "true" ]; then
     for dir in $manager_paths; do
         [ -d "$dir" ] && {
             ui_print "- Creating symlink in $dir"
-            ln -sf "$BIN_PATH/AZenith" "$dir/AZenith"
-            ln -sf "$BIN_PATH/AZenith" "$dir/AZenith_log"
-            ln -sf "$BIN_PATH/AZenith_Profiler" "$dir/AZenith_Profiler"
-            ln -sf "$BIN_PATH/Utils" "$dir/Utils"
-            ln -sf "$BIN_PATH/bypassCharge" "$dir/bypassCharge"
+            ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-service"
+            ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-service_log"
+            ln -sf "$BIN_PATH/azenith_profilesettings" "$dir/azenith_profilesettings"
+            ln -sf "$BIN_PATH/azenith_configuration" "$dir/azenith_configuration"
             ln -sf "$BIN_PATH/vmt" "$dir/vmt"
         }
     done
@@ -162,7 +160,7 @@ rm -rf "$TMPDIR/webroot"
 
 # Make module config
 make_node 0 "$MODULE_CONFIG/clearbg"
-make_node 0 "$MODULE_CONFIG/bypass"
+make_node 0 "$MODULE_CONFIG/bypass_charge"
 make_node 0 "$MODULE_CONFIG/APreload"
 make_node 0 "$MODULE_CONFIG/logger"
 make_node 0 "$MODULE_CONFIG/logd"
@@ -189,9 +187,9 @@ rm -rf "$MODPATH/webroot/include"
 # Set Permissions
 ui_print "- Setting Permissions..."
 set_perm_recursive "$MODPATH/system/bin" 0 2000 0777 0777
-chmod +x "$MODPATH/system/bin/AZenith"
-chmod +x "$MODPATH/system/bin/AZenith_Profiler"
-chmod +x "$MODPATH/system/bin/bypassCharge"
+chmod +x "$MODPATH/system/bin/sys.azenith-service"
+chmod +x "$MODPATH/system/bin/azenith_profilesettings"
+chmod +x "$MODPATH/system/bin/azenith_configuration"
 chmod +x "$MODPATH/system/bin/vmt"
 
 ui_print "- Installation complete!"
