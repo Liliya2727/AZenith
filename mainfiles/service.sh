@@ -83,4 +83,4 @@ restore_prop cpulimit sys.azenith.cpulimit
 restore_prop soctype sys.azenith.soctype
 
 # Run Daemon
-azenithd
+sys.azenith-service

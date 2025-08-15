@@ -80,7 +80,7 @@ case $ARCH in
 esac
 
 # Extract daemon
-extract "$ZIPFILE" "libs/$ARCH_TMP/AZenith" "$TMPDIR"
+extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-service" "$TMPDIR"
 cp "$TMPDIR"/libs/"$ARCH_TMP"/* "$MODPATH/system/bin"
 ln -sf "$MODPATH/system/bin/sys.azenith-service" "$MODPATH/system/bin/sys.azenith-service_log"
 rm -rf "$TMPDIR/libs"
