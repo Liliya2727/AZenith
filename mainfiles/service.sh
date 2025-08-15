@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+MODULE_CONFIG="/data/adb/.config/AZenith"
 CONF="/data/adb/.config/AZenith"
 CPU="/sys/devices/system/cpu/cpu0/cpufreq"
 # Parse Governor to use
@@ -53,5 +54,33 @@ chmod 444 /sys/devices/system/cpu/cpufreq/policy*/scaling_governor
 [ ! -f $CONF/custom_powersave_cpu_gov ] && echo "$default_gov" >$CONF/custom_powersave_cpu_gov
 [ ! -f $CONF/custom_game_cpu_gov ] && echo "$default_gov" >$CONF/custom_game_cpu_gov
 
+# Restore Poperties that has been saved on config file
+restore_prop() {
+    file="$1"
+    prop="$2"
+
+    if [ -f "$MODULE_CONFIG/$file" ]; then
+        value=$(cat "$MODULE_CONFIG/$file")
+        setprop "$prop" "$value"
+    fi
+}
+
+# Mappings
+restore_prop clearbg sys.azenith.clearbg
+restore_prop bypass_charge sys.azenith.bypasschg
+restore_prop APreload sys.azenith.APreload
+restore_prop debugmode sys.azenith.debugmode
+restore_prop logd sys.azenith.logd
+restore_prop DThermal sys.azenith.DThermal
+restore_prop dnd sys.azenith.dnd
+restore_prop schedtunes sys.azenith.schedtunes
+restore_prop fpsged sys.azenith.fpsged
+restore_prop AIenabled sys.azenith.AIenabled
+restore_prop iosched sys.azenith.iosched
+restore_prop SFL sys.azenith.SFL
+restore_prop malisched sys.azenith.malisched
+restore_prop cpulimit sys.azenith.cpulimit
+restore_prop soctype sys.azenith.soctype
+
 # Run Daemon
-AZenith
+azenithd
