@@ -747,7 +747,7 @@ async function startService() {
     await executeCommand("rm -f /data/adb/.config/AZenith/AZenith.log");
 
     await executeCommand(
-      "pkill -9 AZenith && su -c 'AZenith > /dev/null 2>&1 & disown'"
+      "pkill -9 sys.azenith-service && su -c 'sys.azenith-service > /dev/null 2>&1 & disown'"
     );
 
     await checkServiceStatus();
