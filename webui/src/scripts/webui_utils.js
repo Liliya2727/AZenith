@@ -285,7 +285,7 @@ async function checkServiceStatus() {
         "cat /data/adb/.config/AZenith/current_profile"
       ),
       { stdout: h } = await executeCommand(
-        "cat /data/adb/.config/AZenith/AIenabled"
+        "getprop sys.azenith.AIenabled"
       ),
       g = m.trim(),
       f = h.trim();
@@ -305,15 +305,15 @@ async function checkServiceStatus() {
 }
 async function checkfpsged() {
   let { errno: c, stdout: s } = await executeCommand(
-    "cat /data/adb/.config/AZenith/fpsged"
+    "getprop sys.azenith.fpsged"
   );
   0 === c && (document.getElementById("fpsged").checked = "1" === s.trim());
 }
 async function setfpsged(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/fpsged"
-      : "echo 0 >/data/adb/.config/AZenith/fpsged"
+      ? "echo 1 >/data/adb/.config/AZenith/fpsged && setprop sys.azenith.fpsged 1"
+      : "echo 0 >/data/adb/.config/AZenith/fpsged && setprop sys.azenith.fpsged 0"
   );
 }
 function showFPSGEDIfMediatek() {
@@ -325,28 +325,28 @@ function showFPSGEDIfMediatek() {
 }
 async function checkDND() {
   let { errno: c, stdout: s } = await executeCommand(
-    "cat /data/adb/.config/AZenith/dnd"
+    "getprop sys.azenith.dnd"
   );
   0 === c && (document.getElementById("DoNoDis").checked = "1" === s.trim());
 }
 async function setDND(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/dnd"
-      : "echo 0 >/data/adb/.config/AZenith/dnd"
+      ? "echo 1 >/data/adb/.config/AZenith/dnd && setprop sys.azenith.dnd 1"
+      : "echo 0 >/data/adb/.config/AZenith/dnd && setprop sys.azenith.dnd 0"
   );
 }
 async function checkBypassChargeStatus() {
   let { errno: c, stdout: s } = await executeCommand(
-    "cat /data/adb/.config/AZenith/bypass_charge"
+    "getprop sys.azenith.bypasschg"
   );
   0 === c && (document.getElementById("Zepass").checked = "1" === s.trim());
 }
 async function setBypassChargeStatus(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/bypass_charge"
-      : "echo 0 >/data/adb/.config/AZenith/bypass_charge"
+      ? "echo 1 >/data/adb/.config/AZenith/bypass_charge && setprop sys.azenith.bypasschg 1"
+      : "echo 0 >/data/adb/.config/AZenith/bypass_charge && setprop sys.azenith.bypasschg 0"
   );
 }
 function showBypassIfMTK() {
@@ -358,28 +358,28 @@ function showBypassIfMTK() {
 }
 async function checkOPPIndexStatus() {
   let { errno: c, stdout: s } = await executeCommand(
-    "cat /data/adb/.config/AZenith/cpulimit"
+    "getprop sys.azenith.cpulimit"
   );
   0 === c && (document.getElementById("OPPIndex").checked = "1" === s.trim());
 }
 async function setOPPIndexStatus(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/cpulimit"
-      : "echo 0 >/data/adb/.config/AZenith/cpulimit"
+      ? "echo 1 >/data/adb/.config/AZenith/cpulimit && setprop sys.azenith.cpulimit 1"
+      : "echo 0 >/data/adb/.config/AZenith/cpulimit && setprop sys.azenith.cpulimit 0"
   );
 }
 async function checkDThermal() {
   let { errno: c, stdout: s } = await executeCommand(
-    "cat /data/adb/.config/AZenith/DThermal"
+    "getprop sys.azenith.DThermal"
   );
   0 === c && (document.getElementById("DThermal").checked = "1" === s.trim());
 }
 async function setDThermal(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/DThermal"
-      : "echo 0 >/data/adb/.config/AZenith/DThermal"
+      ? "echo 1 >/data/adb/.config/AZenith/DThermal && setprop sys.azenith.DThermal 1"
+      : "echo 0 >/data/adb/.config/AZenith/DThermal && setprop sys.azenith.DThermal 0"
   );
 }
 function showThermalIfMTK() {
@@ -391,45 +391,45 @@ function showThermalIfMTK() {
 }
 async function checkSFL() {
   let { errno: c, stdout: s } = await executeCommand(
-    "cat /data/adb/.config/AZenith/SFL"
+    "getprop sys.azenith.SFL"
   );
   0 === c && (document.getElementById("SFL").checked = "1" === s.trim());
 }
 async function setSFL(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/SFL"
-      : "echo 0 >/data/adb/.config/AZenith/SFL"
+      ? "echo 1 >/data/adb/.config/AZenith/SFL && setprop sys.azenith.SFL 1"
+      : "echo 0 >/data/adb/.config/AZenith/SFL && setprop sys.azenith.SFL 0"
   );
 }
 async function checkschedtunes() {
   let { errno: c, stdout: s } = await executeCommand(
-    "cat /data/adb/.config/AZenith/schedtunes"
+    "getprop sys.azenith.schedtunes"
   );
   0 === c && (document.getElementById("schedtunes").checked = "1" === s.trim());
 }
 async function setschedtunes(c) {
   await executeCommand(
     c
-      ? "echo 1 > /data/adb/.config/AZenith/schedtunes"
-      : "echo 0 > /data/adb/.config/AZenith/schedtunes"
+      ? "echo 1 > /data/adb/.config/AZenith/schedtunes && setprop sys.azenith.schedtunes 1"
+      : "echo 0 > /data/adb/.config/AZenith/schedtunes && setprop sys.azenith.schedtunes 0"
   );
 }
 async function checkiosched() {
   let { errno: c, stdout: s } = await executeCommand(
-    "cat /data/adb/.config/AZenith/iosched"
+    "getprop sys.azenith.iosched"
   );
   0 === c && (document.getElementById("iosched").checked = "1" === s.trim());
 }
 async function setiosched(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/iosched"
-      : "echo 0 >/data/adb/.config/AZenith/iosched"
+      ? "echo 1 >/data/adb/.config/AZenith/iosched && setprop sys.azenith.iosched 1"
+      : "echo 0 >/data/adb/.config/AZenith/iosched && setprop sys.azenith.iosched 0"
   );
 }
 async function applyFSTRIM() {
-  await executeCommand("/data/adb/modules/AZenith/system/bin/Utils FSTrim"),
+  await executeCommand("/data/adb/modules/AZenith/system/bin/azenith_configuration FSTrim"),
     showToast("Trimmed Unused Blocks");
 }
 
@@ -441,7 +441,7 @@ async function setGameCpuGovernor(c) {
   0 === d &&
     "1" === l.trim() &&
     (await executeCommand(
-      `/data/adb/modules/AZenith/system/bin/Utils setsgov ${c}`
+      `/data/adb/modules/AZenith/system/bin/azenith_configuration setsgov ${c}`
     ));
 }
 
@@ -473,7 +473,7 @@ async function setDefaultCpuGovernor(c) {
   0 === d &&
     "2" === l.trim() &&
     (await executeCommand(
-      `/data/adb/modules/AZenith/system/bin/Utils setsgov ${c}`
+      `/data/adb/modules/AZenith/system/bin/azenith_configuration setsgov ${c}`
     ));
 }
 
@@ -504,7 +504,7 @@ async function setGovernorPowersave(c) {
   0 === d &&
     "3" === l.trim() &&
     (await executeCommand(
-      `/data/adb/modules/AZenith/system/bin/Utils setsgov ${c}`
+      `/data/adb/modules/AZenith/system/bin/azenith_configuration setsgov ${c}`
     ));
 }
 
@@ -538,7 +538,7 @@ let originalGamelist = "";
 
 async function showGameListModal() {
   let { errno: c, stdout: s } = await executeCommand(
-    "cat /data/adb/.config/AZenith/AIenabled"
+    "getprop sys.azenith.AIenabled"
   );
   if (0 === c && "0" === s.trim()) {
     showToast("Can't access in current mode");
@@ -646,21 +646,21 @@ async function saveGameList() {
 }
 async function checklogger() {
   let { errno: c, stdout: s } = await executeCommand(
-    "cat /data/adb/.config/AZenith/logger"
+    "getprop sys.azenith.debugmode"
   );
   0 === c && (document.getElementById("logger").checked = "1" === s.trim());
 }
 async function setlogger(c) {
   await executeCommand(
     c
-      ? "echo 1 > /data/adb/.config/AZenith/logger"
-      : "echo 0 > /data/adb/.config/AZenith/logger"
+      ? "echo 1 > /data/adb/.config/AZenith/debugmode && setprop sys.azenith.debugmode 1"
+      : "echo 0 > /data/adb/.config/AZenith/debugmode && setprop sys.azenith.debugmode 0"
   );
 }
 async function setVsyncValue(c) {
   await executeCommand(`echo ${c} > /data/adb/.config/AZenith/customVsync`),
     await executeCommand(
-      `/data/adb/modules/AZenith/system/bin/Utils disablevsync ${c}`
+      `/data/adb/modules/AZenith/system/bin/azenith_configuration disablevsync ${c}`
     );
 }
 
@@ -706,79 +706,94 @@ async function loadCpuFreq() {
 }
 async function checkKillLog() {
   let { errno: c, stdout: s } = await executeCommand(
-    "cat /data/adb/.config/AZenith/logd"
+    "getprop sys.azenith.logd"
   );
   0 === c && (document.getElementById("logd").checked = "1" === s.trim());
 }
 async function setKillLog(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/logd"
-      : "echo 0 >/data/adb/.config/AZenith/logd"
+      ? "echo 1 >/data/adb/.config/AZenith/logd && setprop sys.azenith.logd 1"
+      : "echo 0 >/data/adb/.config/AZenith/logd && setprop sys.azenith.logd 0"
   );
 }
 async function startService() {
   try {
+    // Check current profile
     let { stdout: c } = await executeCommand(
-        "cat /data/adb/.config/AZenith/current_profile"
-      ),
-      s = c.trim();
-    if ("0" === s) {
+      "cat /data/adb/.config/AZenith/current_profile"
+    );
+    let s = c.trim();
+
+    if (s === "0") {
       showToast("Can't Restart, Initializing Daemon");
       return;
     }
-    showToast("Restarting Daemon"),
-      await executeCommand(
-        "rm -f /data/adb/.config/AZenith/AZenithVerbose.log"
-      ),
-      await executeCommand("rm -f /data/adb/.config/AZenith/AZenithPR.log"),
-      await executeCommand("rm -f /data/adb/.config/AZenith/AZenith.log"),
-      await executeCommand(
-        "pkill -9 AZenith && su -c 'AZenith > /dev/null 2>&1 & disown'"
-      ),
-      await checkServiceStatus();
+
+    let { stdout: pid } = await executeCommand(
+      "/system/bin/toybox pidof AZenith"
+    );
+    if (!pid || pid.trim() === "") {
+      showToast("Can't Restart, Daemon Not Running");
+      return;
+    }
+
+    showToast("Restarting Daemon");
+
+    await executeCommand(
+      "rm -f /data/adb/.config/AZenith/AZenithVerbose.log"
+    );
+    await executeCommand("rm -f /data/adb/.config/AZenith/AZenithPR.log");
+    await executeCommand("rm -f /data/adb/.config/AZenith/AZenith.log");
+
+    await executeCommand(
+      "pkill -9 AZenith && su -c 'AZenith > /dev/null 2>&1 & disown'"
+    );
+
+    await checkServiceStatus();
   } catch (r) {
-    showToast("Failed to restart daemon"),
-      console.error("startService error:", r);
+    showToast("Failed to restart daemon");
+    console.error("startService error:", r);
   }
 }
+
 async function checkGPreload() {
   let { errno: c, stdout: s } = await executeCommand(
-    "cat /data/adb/.config/AZenith/APreload"
+    "getprop sys.azenith.APreload"
   );
   0 === c && (document.getElementById("GPreload").checked = "1" === s.trim());
 }
 async function setGPreloadStatus(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/APreload"
-      : "echo 0 >/data/adb/.config/AZenith/APreload"
+      ? "echo 1 >/data/adb/.config/AZenith/APreload && setprop sys.azenith.APreload 1"
+      : "echo 0 >/data/adb/.config/AZenith/APreload && setprop sys.azenith.APreload 0"
   );
 }
 async function checkRamBoost() {
   let { errno: c, stdout: s } = await executeCommand(
-    "cat /data/adb/.config/AZenith/clearbg"
+    "getprop sys.azenith.clearbg"
   );
   0 === c && (document.getElementById("clearbg").checked = "1" === s.trim());
 }
 async function setRamBoostStatus(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/clearbg"
-      : "echo 0 >/data/adb/.config/AZenith/clearbg"
+      ? "echo 1 >/data/adb/.config/AZenith/clearbg && setprop sys.azenith.clearbg 1"
+      : "echo 0 >/data/adb/.config/AZenith/clearbg && setprop sys.azenith.clearbg 0"
   );
 }
 async function checkmalisched() {
   let { errno: c, stdout: s } = await executeCommand(
-    "cat /data/adb/.config/AZenith/malisched"
+    "getprop sys.azenith.malisched"
   );
   0 === c && (document.getElementById("malisched").checked = "1" === s.trim());
 }
 async function setmalisched(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/malisched"
-      : "echo 0 >/data/adb/.config/AZenith/malisched"
+      ? "echo 1 >/data/adb/.config/AZenith/malisched && setprop sys.azenith.malisched 1"
+      : "echo 0 >/data/adb/.config/AZenith/malisched && setprop sys.azenith.malisched 0"
   );
 }
 function showMaliSchedIfMediatek() {
@@ -881,15 +896,15 @@ async function resetDisplaySettings() {
 }
 async function checkAI() {
   let { errno: c, stdout: s } = await executeCommand(
-    "cat /data/adb/.config/AZenith/AIenabled"
+    "getprop sys.azenith.AIenabled"
   );
   0 === c && (document.getElementById("disableai").checked = "0" === s.trim());
 }
 async function setAI(c) {
   await executeCommand(
     c
-      ? "echo 0 >/data/adb/.config/AZenith/AIenabled"
-      : "echo 1 >/data/adb/.config/AZenith/AIenabled"
+      ? "echo 0 >/data/adb/.config/AZenith/AIenabled && setprop sys.azenith.AIenabled 1"
+      : "echo 1 >/data/adb/.config/AZenith/AIenabled && setprop sys.azenith.AIenabled 0"
   ),
     await executeCommand(
       c
@@ -906,7 +921,7 @@ async function applyperformanceprofile() {
     return;
   }
   executeCommand(
-    "/data/adb/modules/AZenith/system/bin/AZenith_Profiler 1 >/dev/null 2>&1 &"
+    "/data/adb/modules/AZenith/system/bin/azenith_profilesettings 1 >/dev/null 2>&1 &"
   ),
     setTimeout(() => {
       executeCommand("echo 1 > /data/adb/.config/AZenith/current_profile");
@@ -922,7 +937,7 @@ async function applybalancedprofile() {
     return;
   }
   executeCommand(
-    "/data/adb/modules/AZenith/system/bin/AZenith_Profiler 2 >/dev/null 2>&1 &"
+    "/data/adb/modules/AZenith/system/bin/azenith_profilesettings 2 >/dev/null 2>&1 &"
   ),
     setTimeout(() => {
       executeCommand("echo 2 > /data/adb/.config/AZenith/current_profile");
@@ -938,7 +953,7 @@ async function applyecomode() {
     return;
   }
   executeCommand(
-    "/data/adb/modules/AZenith/system/bin/AZenith_Profiler 3 >/dev/null 2>&1 &"
+    "/data/adb/modules/AZenith/system/bin/azenith_profilesettings 3 >/dev/null 2>&1 &"
   ),
     setTimeout(() => {
       executeCommand("echo 3 > /data/adb/.config/AZenith/current_profile");
@@ -957,7 +972,7 @@ function setupUIListeners() {
       s.classList.toggle("show", this.checked);
     });
 
-    executeCommand("cat /data/adb/.config/AZenith/AIenabled").then(
+    executeCommand("getprop sys.azemith.AIenabled").then(
       ({ stdout: r }) => {
         const d = r.trim() === "0";
         c.checked = d;
@@ -970,7 +985,7 @@ function setupUIListeners() {
   async function savelog() {
     try {
       await executeCommand(
-        "/data/adb/modules/AZenith/system/bin/Utils saveLog"
+        "/data/adb/modules/AZenith/system/bin/azenith_configuration saveLog"
       );
       showToast("Saved Log");
     } catch (e) {
