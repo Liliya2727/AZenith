@@ -275,7 +275,7 @@ async function getAndroidVersion() {
 }
 async function checkServiceStatus() {
   let { errno: c, stdout: s } = await executeCommand(
-      "/system/bin/toybox pidof AZenith"
+      "/system/bin/toybox pidof sys.azenith-service"
     ),
     r = document.getElementById("serviceStatus"),
     d = document.getElementById("servicePID");
@@ -731,7 +731,7 @@ async function startService() {
     }
 
     let { stdout: pid } = await executeCommand(
-      "/system/bin/toybox pidof AZenith"
+      "/system/bin/toybox pidof sys.azenith-service"
     );
     if (!pid || pid.trim() === "") {
       showToast("Can't Restart, Daemon Not Running");
