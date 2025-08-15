@@ -16,71 +16,10 @@
 # limitations under the License.
 #
 
-MODULE_CONFIG="/data/adb/.config/AZenith"
-CONF="/data/adb/.config/AZenith"
-CPU="/sys/devices/system/cpu/cpu0/cpufreq"
-# Parse Governor to use
-chmod 644 "$CPU/scaling_governor"
-default_gov=$(cat "$CPU/scaling_governor")
-echo "$default_gov" >$CONF/default_cpu_gov
-# Cleanup old Logs
-rm -f /data/adb/.config/AZenith/AZenith.log
-rm -f /data/adb/.config/AZenith/AZenithVerbose.log
-rm -f /data/adb/.config/AZenith/AZenithPR.log
-
 # Wait for boot to Complete
 while [ "$(getprop sys.boot_completed)" != "1" ]; do
 	sleep 40
 done
-
-# Fallback to normal gov if default is performance
-if [ "$default_gov" == "performance" ] && [ ! -f $CONF/custom_default_cpu_gov ]; then
-	for gov in scx schedhorizon walt sched_pixel sugov_ext uag schedplus energy_step schedutil interactive conservative powersave; do
-		grep -q "$gov" "$CPU/scaling_available_governors" && {
-			echo "$gov" >$CONF/default_cpu_gov
-			default_gov="$gov"
-			break
-		}
-	done
-fi
-
-# Revert governor
-custom_gov="$CONF/custom_default_cpu_gov"
-[ -f "$custom_gov" ] && default_gov=$(cat "$custom_gov")
-chmod 644 /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
-echo "$default_gov" | tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
-chmod 444 /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
-chmod 444 /sys/devices/system/cpu/cpufreq/policy*/scaling_governor
-[ ! -f $CONF/custom_powersave_cpu_gov ] && echo "$default_gov" >$CONF/custom_powersave_cpu_gov
-[ ! -f $CONF/custom_game_cpu_gov ] && echo "$default_gov" >$CONF/custom_game_cpu_gov
-
-# Restore Poperties that has been saved on config file
-restore_prop() {
-    file="$1"
-    prop="$2"
-
-    if [ -f "$MODULE_CONFIG/$file" ]; then
-        value=$(cat "$MODULE_CONFIG/$file")
-        setprop "$prop" "$value"
-    fi
-}
-
-# Mappings
-restore_prop clearbg sys.azenith.clearbg
-restore_prop bypass_charge sys.azenith.bypasschg
-restore_prop APreload sys.azenith.APreload
-restore_prop debugmode sys.azenith.debugmode
-restore_prop logd sys.azenith.logd
-restore_prop DThermal sys.azenith.DThermal
-restore_prop dnd sys.azenith.dnd
-restore_prop schedtunes sys.azenith.schedtunes
-restore_prop fpsged sys.azenith.fpsged
-restore_prop AIenabled sys.azenith.AIenabled
-restore_prop iosched sys.azenith.iosched
-restore_prop SFL sys.azenith.SFL
-restore_prop malisched sys.azenith.malisched
-restore_prop cpulimit sys.azenith.cpulimit
-restore_prop soctype sys.azenith.soctype
 
 # Run Daemon
 sys.azenith-service
