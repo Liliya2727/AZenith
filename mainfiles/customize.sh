@@ -203,5 +203,6 @@ chmod +x "$MODPATH/system/bin/sys.azenith-service"
 chmod +x "$MODPATH/system/bin/sys.azenith-profilesettings"
 chmod +x "$MODPATH/system/bin/sys.azenith-utilityconf"
 chmod +x "$MODPATH/system/bin/sys.azenith-preloadbin"
+chmod +x "$MODPATH/service.sh"
 
 ui_print "- Installation complete!"
