@@ -16,9 +16,17 @@
 # limitations under the License.
 #
 
+# Remove Persistent Properties
+resetprop --delete persist.sys.azenith.state
+resetprop --delete persist.sys.azenith.debugmode
+resetprop --delete persist.sys.azenith.service
+
+# Uninstall module directories
 rm -rf /data/local/tmp/module_icon.png
 rm -rf /data/adb/.config/AZenith
 rm -rf /data/AZenith
+
+# Uninstaller Script
 if [ -f $INFO ]; then
   while read LINE; do
     if [ "$(echo -n $LINE | tail -c 1)" == "~" ]; then
