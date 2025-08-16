@@ -109,7 +109,7 @@ async function checkModuleVersion() {
 async function checkProfile() {
   try {
     let { errno: c, stdout: s } = await executeCommand(
-      "cat /data/adb/.config/AZenith/current_profile"
+      "cat /data/adb/.config/AZenith/API/current_profile"
     );
     if (0 === c) {
       let r = s.trim(),
@@ -282,7 +282,7 @@ async function checkServiceStatus() {
   if (0 === c && "0" !== s.trim()) {
     let l = s.trim(),
       { stdout: m } = await executeCommand(
-        "cat /data/adb/.config/AZenith/current_profile"
+        "cat /data/adb/.config/AZenith/API/current_profile"
       ),
       { stdout: h } = await executeCommand(
         "getprop sys.azenith.AIenabled"
@@ -434,7 +434,7 @@ async function applyFSTRIM() {
 }
 
 async function setGameCpuGovernor(c) {
-  let s = "/data/adb/.config/AZenith",
+  let s = "/data/adb/.config/AZenith/API",
     r = `${s}/current_profile`;
   await executeCommand(`echo ${c} > ${s}/custom_game_cpu_gov`);
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
@@ -466,7 +466,7 @@ async function loadGameGovernors() {
 }
 
 async function setDefaultCpuGovernor(c) {
-  let s = "/data/adb/.config/AZenith",
+  let s = "/data/adb/.config/AZenith/API",
     r = `${s}/current_profile`;
   await executeCommand(`echo ${c} > ${s}/custom_default_cpu_gov`);
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
@@ -497,7 +497,7 @@ async function loadCpuGovernors() {
 }
 
 async function setGovernorPowersave(c) {
-  let s = "/data/adb/.config/AZenith",
+  let s = "/data/adb/.config/AZenith/API",
     r = `${s}/current_profile`;
   await executeCommand(`echo ${c} > ${s}/custom_powersave_cpu_gov`);
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
@@ -551,7 +551,7 @@ async function showGameListModal() {
   const l = r.querySelector(".gamelist-content");
 
   const { errno: m, stdout: h } = await executeCommand(
-    "cat /data/adb/.config/AZenith/gamelist.txt"
+    "cat /data/adb/.config/AZenith/gamelist/gamelist.txt"
   );
 
   if (m === 0) {
@@ -620,7 +620,7 @@ async function saveGameList() {
   if (!searchTerm) {
     const outputString = editedLines.join("|").replace(/"/g, '\\"');
     await executeCommand(
-      `echo "${outputString}" > /data/adb/.config/AZenith/gamelist.txt`
+      `echo "${outputString}" > /data/adb/.config/AZenith/gamelist/gamelist.txt`
     );
     showToast(`Saved ${editedLines.length} packages`);
     hideGameListModal();
@@ -639,7 +639,7 @@ async function saveGameList() {
 
   const outputString = mergedLines.join("|").replace(/"/g, '\\"');
   await executeCommand(
-    `echo "${outputString}" > /data/adb/.config/AZenith/gamelist.txt`
+    `echo "${outputString}" > /data/adb/.config/AZenith/gamelist/gamelist.txt`
   );
   showToast(`Saved ${mergedLines.length} packages`);
   hideGameListModal();
@@ -721,7 +721,7 @@ async function startService() {
   try {
     // Check current profile
     let { stdout: c } = await executeCommand(
-      "cat /data/adb/.config/AZenith/current_profile"
+      "cat /data/adb/.config/AZenith/API/current_profile"
     );
     let s = c.trim();
 
@@ -737,7 +737,7 @@ async function startService() {
       showToast("Initiating Daemon...");
       executeCommand(
         "su -c /data/adb/modules/AZenith/service.sh"
-      )
+      );
       return;
     }
 
@@ -905,13 +905,13 @@ async function setAI(c) {
   ),
     await executeCommand(
       c
-        ? "mv /data/adb/.config/AZenith/gamelist.txt /data/adb/.config/AZenith/gamelist.bin"
-        : "mv /data/adb/.config/AZenith/gamelist.bin /data/adb/.config/AZenith/gamelist.txt"
+        ? "mv /data/adb/.config/AZenith/gamelist/gamelist.txt /data/adb/.config/AZenith/gamelist/gamelist.bin"
+        : "mv /data/adb/.config/AZenith/gamelist/gamelist.bin /data/adb/.config/AZenith/gamelist/gamelist.txt"
     );
 }
 async function applyperformanceprofile() {
   let { stdout: c } = await executeCommand(
-    "cat /data/adb/.config/AZenith/current_profile"
+    "cat /data/adb/.config/AZenith/API/current_profile"
   );
   if ("1" === c.trim()) {
     showToast("You are already in Performance Profile");
@@ -921,13 +921,13 @@ async function applyperformanceprofile() {
     "/data/adb/modules/AZenith/system/bin/azenith_profilesettings 1 >/dev/null 2>&1 &"
   ),
     setTimeout(() => {
-      executeCommand("echo 1 > /data/adb/.config/AZenith/current_profile");
+      executeCommand("echo 1 > /data/adb/.config/AZenith/API/current_profile");
     }, 300),
     showToast("Applying Performance Profile");
 }
 async function applybalancedprofile() {
   let { stdout: c } = await executeCommand(
-    "cat /data/adb/.config/AZenith/current_profile"
+    "cat /data/adb/.config/AZenith/API/current_profile"
   );
   if ("2" === c.trim()) {
     showToast("Already in Balanced Profile");
@@ -937,13 +937,13 @@ async function applybalancedprofile() {
     "/data/adb/modules/AZenith/system/bin/azenith_profilesettings 2 >/dev/null 2>&1 &"
   ),
     setTimeout(() => {
-      executeCommand("echo 2 > /data/adb/.config/AZenith/current_profile");
+      executeCommand("echo 2 > /data/adb/.config/AZenith/API/current_profile");
     }, 300),
     showToast("Applying Balanced Profile");
 }
 async function applyecomode() {
   let { stdout: c } = await executeCommand(
-    "cat /data/adb/.config/AZenith/current_profile"
+    "cat /data/adb/.config/AZenith/API/current_profile"
   );
   if ("3" === c.trim()) {
     showToast("Already in ECO Mode");
@@ -953,7 +953,7 @@ async function applyecomode() {
     "/data/adb/modules/AZenith/system/bin/azenith_profilesettings 3 >/dev/null 2>&1 &"
   ),
     setTimeout(() => {
-      executeCommand("echo 3 > /data/adb/.config/AZenith/current_profile");
+      executeCommand("echo 3 > /data/adb/.config/AZenith/API/current_profile");
     }, 300),
     showToast("Applying ECO Mode");
 }
@@ -969,7 +969,7 @@ function setupUIListeners() {
       s.classList.toggle("show", this.checked);
     });
 
-    executeCommand("getprop sys.azemith.AIenabled").then(
+    executeCommand("getprop sys.azenith.AIenabled").then(
       ({ stdout: r }) => {
         const d = r.trim() === "0";
         c.checked = d;
