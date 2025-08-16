@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-rm -rf /data/local/tmp/AZenith_icon.png
+rm -rf /data/local/tmp/module_icon.png
 rm -rf /data/adb/.config/AZenith
 rm -rf /data/AZenith
 if [ -f $INFO ]; then
