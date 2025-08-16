@@ -34,6 +34,8 @@ ui_print "- Installing AZenith..."
 
 # Extract Module Directiories
 mkdir -p "$MODULE_CONFIG"
+mkdir -p "$MODULE_CONFIG/debug"
+mkdir -p "$MODULE_CONFIG/API"
 ui_print "- Create module config"
 
 # Flashable integrity checkup
@@ -54,8 +56,8 @@ extract "$ZIPFILE" module.prop "$MODPATH"
 ui_print "- Extracting uninstall.sh..."
 extract "$ZIPFILE" uninstall.sh "$MODPATH"
 ui_print "- Extracting gamelist.txt..."
-extract "$ZIPFILE" gamelist.txt "$MODULE_CONFIG"
-ui_print "- Extracting AZenith_icon.png..."
+extract "$ZIPFILE" gamelist.txt "$MODULE_CONFIG/gamelist"
+ui_print "- Extracting module_icon.png..."
 extract "$ZIPFILE" module_icon.png /data/local/tmp
 
 # Install toast if not installed
