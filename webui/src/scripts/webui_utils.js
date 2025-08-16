@@ -434,8 +434,8 @@ async function applyFSTRIM() {
 }
 
 async function setGameCpuGovernor(c) {
-  let s = "/data/adb/.config/AZenith/API",
-    r = `${s}/current_profile`;
+  let s = "/data/adb/.config/AZenith",
+    r = `${s}/API/current_profile`;
   await executeCommand(`echo ${c} > ${s}/custom_game_cpu_gov`);
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   0 === d &&
@@ -466,8 +466,8 @@ async function loadGameGovernors() {
 }
 
 async function setDefaultCpuGovernor(c) {
-  let s = "/data/adb/.config/AZenith/API",
-    r = `${s}/current_profile`;
+  let s = "/data/adb/.config/AZenith",
+    r = `${s}/API/current_profile`;
   await executeCommand(`echo ${c} > ${s}/custom_default_cpu_gov`);
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   0 === d &&
@@ -497,8 +497,8 @@ async function loadCpuGovernors() {
 }
 
 async function setGovernorPowersave(c) {
-  let s = "/data/adb/.config/AZenith/API",
-    r = `${s}/current_profile`;
+  let s = "/data/adb/.config/AZenith",
+    r = `${s}/API/current_profile`;
   await executeCommand(`echo ${c} > ${s}/custom_powersave_cpu_gov`);
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   0 === d &&
@@ -744,7 +744,7 @@ async function startService() {
     showToast("Restarting Daemon...");
 
     await executeCommand(
-      "pkill -9 /data/adb/modules/AZenith/system/bin/sys.azenith-service && su -c '/data/adb/modules/AZenith/system/bin/sys.azenith-service > /dev/null 2>&1 & disown'"
+      "pkill -f sys.azenith-service && su -c '/data/adb/modules/AZenith/system/bin/sys.azenith-service > /dev/null 2>&1 & disown'"
     );
 
     await checkServiceStatus();
@@ -900,8 +900,8 @@ async function checkAI() {
 async function setAI(c) {
   await executeCommand(
     c
-      ? "setprop persist.sys.azenithconf.AIenabled 1"
-      : "setprop persist.sys.azenithconf.AIenabled 0"
+      ? "setprop persist.sys.azenithconf.AIenabled 0"
+      : "setprop persist.sys.azenithconf.AIenabled 1"
   ),
     await executeCommand(
       c
