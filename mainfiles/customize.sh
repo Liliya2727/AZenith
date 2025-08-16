@@ -36,6 +36,7 @@ ui_print "- Installing AZenith..."
 mkdir -p "$MODULE_CONFIG"
 mkdir -p "$MODULE_CONFIG/debug"
 mkdir -p "$MODULE_CONFIG/API"
+mkdir -p "$MODULE_CONFIG/preload"
 ui_print "- Create module config"
 
 # Flashable integrity checkup
