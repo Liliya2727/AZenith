@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import BannerZenith from "/Banner_AZenith.avif";
-import AvatarZenith from "/Avatar_AZenith.avif";
-import SchemeBanner from "/SchemeBanner.avif";
+import BannerZenith from "/webui.banner.avif";
+import AvatarZenith from "/webui.avatar.avif";
+import SchemeBanner from "/webui.schemebanner.avif";
 import { exec, toast } from "kernelsu";
 
 const executeCommand = async (cmd, cwd = null) => {
@@ -196,7 +196,7 @@ let cachedSOCData = null;
 async function fetchSOCDatabase() {
   if (!cachedSOCData)
     try {
-      cachedSOCData = await (await fetch("soc.json")).json();
+      cachedSOCData = await (await fetch("webui.soclist.json")).json();
     } catch {
       cachedSOCData = {};
     }
@@ -429,7 +429,7 @@ async function setiosched(c) {
   );
 }
 async function applyFSTRIM() {
-  await executeCommand("/data/adb/modules/AZenith/system/bin/azenith_configuration FSTrim"),
+  await executeCommand("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf FSTrim"),
     showToast("Trimmed Unused Blocks");
 }
 
@@ -441,7 +441,7 @@ async function setGameCpuGovernor(c) {
   0 === d &&
     "1" === l.trim() &&
     (await executeCommand(
-      `/data/adb/modules/AZenith/system/bin/azenith_configuration setsgov ${c}`
+      `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsgov ${c}`
     ));
 }
 
@@ -473,7 +473,7 @@ async function setDefaultCpuGovernor(c) {
   0 === d &&
     "2" === l.trim() &&
     (await executeCommand(
-      `/data/adb/modules/AZenith/system/bin/azenith_configuration setsgov ${c}`
+      `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsgov ${c}`
     ));
 }
 
@@ -504,7 +504,7 @@ async function setGovernorPowersave(c) {
   0 === d &&
     "3" === l.trim() &&
     (await executeCommand(
-      `/data/adb/modules/AZenith/system/bin/azenith_configuration setsgov ${c}`
+      `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsgov ${c}`
     ));
 }
 
@@ -660,7 +660,7 @@ async function setlogger(c) {
 async function setVsyncValue(c) {
   await executeCommand(`echo ${c} > /data/adb/.config/AZenith/customVsync`),
     await executeCommand(
-      `/data/adb/modules/AZenith/system/bin/azenith_configuration disablevsync ${c}`
+      `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf disablevsync ${c}`
     );
 }
 
@@ -979,7 +979,7 @@ function setupUIListeners() {
   async function savelog() {
     try {
       await executeCommand(
-        "/data/adb/modules/AZenith/system/bin/azenith_configuration saveLog"
+        "/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf saveLog"
       );
       showToast("Saved Log");
     } catch (e) {
