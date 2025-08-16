@@ -285,7 +285,7 @@ async function checkServiceStatus() {
         "cat /data/adb/.config/AZenith/API/current_profile"
       ),
       { stdout: h } = await executeCommand(
-        "getprop sys.azenithconf.AIenabled"
+        "getprop persist.sys.azenithconf.AIenabled"
       ),
       g = m.trim(),
       f = h.trim();
@@ -734,17 +734,14 @@ async function startService() {
       "/system/bin/toybox pidof sys.azenith-service"
     );
     if (!pid || pid.trim() === "") {
-      showToast("Initiating Daemon...");
-      executeCommand(
-        "/data/adb/modules/AZenith/service.sh"
-      );
+      showToast("Service dead, please reboot!");
       return;
     }
 
     showToast("Restarting Daemon...");
 
     await executeCommand(
-      "pkill -9 sys.azenith-service && /data/adb/modules/AZenith/system/bin/sys.azenith-service > /dev/null 2>&1 & disown"
+      "pkill -f sys.azenith-service && '/data/adb/modules/AZenith/system/bin/sys.azenith-service > /dev/null 2>&1 & disown'"
     );
 
     await checkServiceStatus();
