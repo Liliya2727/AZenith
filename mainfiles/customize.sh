@@ -161,28 +161,37 @@ unzip -o "$ZIPFILE" "webroot/*" -d "$TMPDIR" >&2
 cp -r "$TMPDIR/webroot/"* "$MODPATH/webroot/"
 rm -rf "$TMPDIR/webroot"
 
-# Make module config
-make_node 0 "$MODULE_CONFIG/clearbg"
-make_node 0 "$MODULE_CONFIG/bypass_charge"
-make_node 0 "$MODULE_CONFIG/APreload"
-make_node "false" "$MODULE_CONFIG/debugmode"
-make_node 0 "$MODULE_CONFIG/logd"
-make_node 0 "$MODULE_CONFIG/DThermal"
-make_node 0 "$MODULE_CONFIG/dnd"
-make_node 0 "$MODULE_CONFIG/schedtunes"
-make_node 0 "$MODULE_CONFIG/fpsged"
-make_node 0 "$MODULE_CONFIG/iosched"
-make_node 0 "$MODULE_CONFIG/SFL"
-make_node 0 "$MODULE_CONFIG/malisched"
-make_node 0 "$MODULE_CONFIG/cpulimit"
+# Make Module Config
 make_node "1000 1000 1000 1000" "$MODULE_CONFIG/color_scheme"
 make_node "Disabled 90% 80% 70% 60% 50% 40%" "$MODULE_CONFIG/availableFreq"
 make_node "Disabled" "$MODULE_CONFIG/customFreqOffset"
 make_node "Disabled 60hz 90hz 120hz" "$MODULE_CONFIG/availableValue"
 make_node "Disabled" "$MODULE_CONFIG/customVsync"
 
+# Set config properties to use
+props="
+persist.sys.azenithconf.logd
+persist.sys.azenithconf.DThermal
+persist.sys.azenithconf.SFL
+persist.sys.azenithconf.malisched
+persist.sys.azenithconf.fpsged
+persist.sys.azenithconf.schedtunes
+persist.sys.azenithconf.clearbg
+persist.sys.azenithconf.bypasschg
+persist.sys.azenithconf.APreload
+persist.sys.azenithconf.iosched
+persist.sys.azenithconf.cpulimit
+persist.sys.azenithconf.dnd
+"
+for prop in $props; do
+    curval=$(getprop "$prop")
+    if [ -z "$curval" ]; then
+        setprop "$prop" 0
+    fi
+done
+
 # Make sure to enable Auto Every installment and Update
-echo "1" >"$MODULE_CONFIG/AIenabled"
+setprop persist.sys.azenithconf.AIenabled 1
 
 # Clean Up useless files
 rm -rf "$MODPATH/webroot/include"
