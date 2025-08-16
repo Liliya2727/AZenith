@@ -17,9 +17,54 @@
 #
 
 # Remove Persistent Properties
+setprop persist.sys.azenith.state ""
 resetprop --delete persist.sys.azenith.state
+
+setprop persist.sys.azenith.debugmode ""
 resetprop --delete persist.sys.azenith.debugmode
+
+setprop persist.sys.azenith.service ""
 resetprop --delete persist.sys.azenith.service
+
+setprop persist.sys.azenithconf.logd ""
+resetprop --delete persist.sys.azenithconf.logd
+
+setprop persist.sys.azenithconf.DThermal ""
+resetprop --delete persist.sys.azenithconf.DThermal
+
+setprop persist.sys.azenithconf.SFL ""
+resetprop --delete persist.sys.azenithconf.SFL
+
+setprop persist.sys.azenithconf.malisched ""
+resetprop --delete persist.sys.azenithconf.malisched
+
+setprop persist.sys.azenithconf.fpsged ""
+resetprop --delete persist.sys.azenithconf.fpsged
+
+setprop persist.sys.azenithconf.schedtunes ""
+resetprop --delete persist.sys.azenithconf.schedtunes
+
+setprop persist.sys.azenithconf.clearbg ""
+resetprop --delete persist.sys.azenithconf.clearbg
+
+setprop persist.sys.azenithconf.bypasschg ""
+resetprop --delete persist.sys.azenithconf.bypasschg
+
+setprop persist.sys.azenithconf.APreload ""
+resetprop --delete persist.sys.azenithconf.APreload
+
+setprop persist.sys.azenithconf.iosched ""
+resetprop --delete persist.sys.azenithconf.iosched
+
+setprop persist.sys.azenithconf.cpulimit ""
+resetprop --delete persist.sys.azenithconf.cpulimit
+
+setprop persist.sys.azenithconf.dnd ""
+resetprop --delete persist.sys.azenithconf.dnd
+
+setprop persist.sys.azenithconf.AIenabled ""
+resetprop --delete persist.sys.azenithconf.AIenabled
+
 
 # Uninstall module directories
 rm -rf /data/local/tmp/module_icon.png
