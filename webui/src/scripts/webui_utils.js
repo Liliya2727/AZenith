@@ -646,15 +646,15 @@ async function saveGameList() {
 }
 async function checklogger() {
   let { errno: c, stdout: s } = await executeCommand(
-    "getprop sys.azenith.debugmode"
+    "getprop persist.sys.azenith.debugmode"
   );
-  0 === c && (document.getElementById("logger").checked = "1" === s.trim());
+  0 === c && (document.getElementById("logger").checked = "true" === s.trim());
 }
 async function setlogger(c) {
   await executeCommand(
     c
-      ? "echo 1 > /data/adb/.config/AZenith/debugmode && setprop sys.azenith.debugmode 1"
-      : "echo 0 > /data/adb/.config/AZenith/debugmode && setprop sys.azenith.debugmode 0"
+      ? "echo true > /data/adb/.config/AZenith/debugmode && setprop persist.sys.azenith.debugmode true"
+      : "echo false > /data/adb/.config/AZenith/debugmode && setprop persist.sys.azenith.debugmode false"
   );
 }
 async function setVsyncValue(c) {
