@@ -44,9 +44,9 @@ source "$TMPDIR/verify.sh"
 
 # Extract Module files
 ui_print "- Extracting system directory..."
-extract "$ZIPFILE" 'system/bin/vmt' "$MODPATH"
-extract "$ZIPFILE" 'system/bin/azenith_profilesettings' "$MODPATH"
-extract "$ZIPFILE" 'system/bin/azenith_configuration' "$MODPATH"
+extract "$ZIPFILE" 'system/bin/sys.azenith-preloadbin' "$MODPATH"
+extract "$ZIPFILE" 'system/bin/sys.azenith-profilesettings' "$MODPATH"
+extract "$ZIPFILE" 'system/bin/sys.azenith-utilityconf' "$MODPATH"
 ui_print "- Extracting service.sh..."
 extract "$ZIPFILE" service.sh "$MODPATH"
 ui_print "- Extracting module.prop..."
@@ -56,7 +56,7 @@ extract "$ZIPFILE" uninstall.sh "$MODPATH"
 ui_print "- Extracting gamelist.txt..."
 extract "$ZIPFILE" gamelist.txt "$MODULE_CONFIG"
 ui_print "- Extracting AZenith_icon.png..."
-extract "$ZIPFILE" AZenith_icon.png /data/local/tmp
+extract "$ZIPFILE" module_icon.png /data/local/tmp
 
 # Install toast if not installed
 if pm list packages | grep -q bellavita.toast; then
@@ -99,9 +99,9 @@ if [ "$KSU" = "true" ] || [ "$APATCH" = "true" ]; then
             ui_print "- Creating symlink in $dir"
             ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-service"
             ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-service_log"
-            ln -sf "$BIN_PATH/azenith_profilesettings" "$dir/azenith_profilesettings"
-            ln -sf "$BIN_PATH/azenith_configuration" "$dir/azenith_configuration"
-            ln -sf "$BIN_PATH/vmt" "$dir/vmt"
+            ln -sf "$BIN_PATH/sys.azenith-profilesettings" "$dir/sys.azenith-profilesettings"
+            ln -sf "$BIN_PATH/sys.azenith-utilityconf" "$dir/sys.azenith-utilityconf"
+            ln -sf "$BIN_PATH/sys.azenith-preloadbin" "$dir/sys.azenith-preloadbin"
         }
     done
 fi
@@ -188,8 +188,8 @@ rm -rf "$MODPATH/webroot/include"
 ui_print "- Setting Permissions..."
 set_perm_recursive "$MODPATH/system/bin" 0 2000 0777 0777
 chmod +x "$MODPATH/system/bin/sys.azenith-service"
-chmod +x "$MODPATH/system/bin/azenith_profilesettings"
-chmod +x "$MODPATH/system/bin/azenith_configuration"
-chmod +x "$MODPATH/system/bin/vmt"
+chmod +x "$MODPATH/system/bin/sys.azenith-profilesettings"
+chmod +x "$MODPATH/system/bin/sys.azenith-utilityconf"
+chmod +x "$MODPATH/system/bin/sys.azenith-preloadbin"
 
 ui_print "- Installation complete!"
