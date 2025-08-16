@@ -305,15 +305,15 @@ async function checkServiceStatus() {
 }
 async function checkfpsged() {
   let { errno: c, stdout: s } = await executeCommand(
-    "getprop sys.azenith.fpsged"
+    "getprop persist.sys.azenithconf.fpsged"
   );
   0 === c && (document.getElementById("fpsged").checked = "1" === s.trim());
 }
 async function setfpsged(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/fpsged && setprop sys.azenith.fpsged 1"
-      : "echo 0 >/data/adb/.config/AZenith/fpsged && setprop sys.azenith.fpsged 0"
+      ? "setprop persist.sys.azenithconf.fpsged 1"
+      : "setprop persist.sys.azenithconf.fpsged 0"
   );
 }
 function showFPSGEDIfMediatek() {
@@ -325,28 +325,28 @@ function showFPSGEDIfMediatek() {
 }
 async function checkDND() {
   let { errno: c, stdout: s } = await executeCommand(
-    "getprop sys.azenith.dnd"
+    "getprop persist.sys.azenithconf.dnd"
   );
   0 === c && (document.getElementById("DoNoDis").checked = "1" === s.trim());
 }
 async function setDND(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/dnd && setprop sys.azenith.dnd 1"
-      : "echo 0 >/data/adb/.config/AZenith/dnd && setprop sys.azenith.dnd 0"
+      ? "setprop persist.sys.azenithconf.dnd 1"
+      : "setprop persist.sys.azenithconf.dnd 0"
   );
 }
 async function checkBypassChargeStatus() {
   let { errno: c, stdout: s } = await executeCommand(
-    "getprop sys.azenith.bypasschg"
+    "getprop persist.sys.azenithconf.bypasschg"
   );
   0 === c && (document.getElementById("Zepass").checked = "1" === s.trim());
 }
 async function setBypassChargeStatus(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/bypass_charge && setprop sys.azenith.bypasschg 1"
-      : "echo 0 >/data/adb/.config/AZenith/bypass_charge && setprop sys.azenith.bypasschg 0"
+      ? "setprop persist.sys.azenithconf.bypasschg 1"
+      : "setprop persist.sys.azenithconf.bypasschg 0"
   );
 }
 function showBypassIfMTK() {
@@ -358,28 +358,28 @@ function showBypassIfMTK() {
 }
 async function checkOPPIndexStatus() {
   let { errno: c, stdout: s } = await executeCommand(
-    "getprop sys.azenith.cpulimit"
+    "getprop persist.sys.azenithconf.cpulimit"
   );
   0 === c && (document.getElementById("OPPIndex").checked = "1" === s.trim());
 }
 async function setOPPIndexStatus(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/cpulimit && setprop sys.azenith.cpulimit 1"
-      : "echo 0 >/data/adb/.config/AZenith/cpulimit && setprop sys.azenith.cpulimit 0"
+      ? "setprop persist.sys.azenithconf.cpulimit 1"
+      : "setprop persist.sys.azenithconf.cpulimit 0"
   );
 }
 async function checkDThermal() {
   let { errno: c, stdout: s } = await executeCommand(
-    "getprop sys.azenith.DThermal"
+    "getprop persist.sys.azenithconf.DThermal"
   );
   0 === c && (document.getElementById("DThermal").checked = "1" === s.trim());
 }
 async function setDThermal(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/DThermal && setprop sys.azenith.DThermal 1"
-      : "echo 0 >/data/adb/.config/AZenith/DThermal && setprop sys.azenith.DThermal 0"
+      ? "setprop persist.sys.azenithconf.DThermal 1"
+      : "setprop persist.sys.azenithconf.DThermal 0"
   );
 }
 function showThermalIfMTK() {
@@ -391,41 +391,41 @@ function showThermalIfMTK() {
 }
 async function checkSFL() {
   let { errno: c, stdout: s } = await executeCommand(
-    "getprop sys.azenith.SFL"
+    "getprop persist.sys.azenithconf.SFL"
   );
   0 === c && (document.getElementById("SFL").checked = "1" === s.trim());
 }
 async function setSFL(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/SFL && setprop sys.azenith.SFL 1"
-      : "echo 0 >/data/adb/.config/AZenith/SFL && setprop sys.azenith.SFL 0"
+      ? "setprop persist.sys.azenithconf.SFL 1"
+      : "setprop persist.sys.azenithconf.SFL 0"
   );
 }
 async function checkschedtunes() {
   let { errno: c, stdout: s } = await executeCommand(
-    "getprop sys.azenith.schedtunes"
+    "getprop persist.sys.azenithconf.schedtunes"
   );
   0 === c && (document.getElementById("schedtunes").checked = "1" === s.trim());
 }
 async function setschedtunes(c) {
   await executeCommand(
     c
-      ? "echo 1 > /data/adb/.config/AZenith/schedtunes && setprop sys.azenith.schedtunes 1"
-      : "echo 0 > /data/adb/.config/AZenith/schedtunes && setprop sys.azenith.schedtunes 0"
+      ? "setprop persist.sys.azenithconf.schedtunes 1"
+      : "setprop persist.sys.azenithconf.schedtunes 0"
   );
 }
 async function checkiosched() {
   let { errno: c, stdout: s } = await executeCommand(
-    "getprop sys.azenith.iosched"
+    "getprop persist.sys.azenithconf.iosched"
   );
   0 === c && (document.getElementById("iosched").checked = "1" === s.trim());
 }
 async function setiosched(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/iosched && setprop sys.azenith.iosched 1"
-      : "echo 0 >/data/adb/.config/AZenith/iosched && setprop sys.azenith.iosched 0"
+      ? "setprop persist.sys.azenithconf.iosched 1"
+      : "setprop persist.sys.azenithconf.iosched 0"
   );
 }
 async function applyFSTRIM() {
@@ -653,8 +653,8 @@ async function checklogger() {
 async function setlogger(c) {
   await executeCommand(
     c
-      ? "echo true > /data/adb/.config/AZenith/debugmode && setprop persist.sys.azenith.debugmode true"
-      : "echo false > /data/adb/.config/AZenith/debugmode && setprop persist.sys.azenith.debugmode false"
+      ? "setprop persist.sys.azenith.debugmode true"
+      : "setprop persist.sys.azenith.debugmode false"
   );
 }
 async function setVsyncValue(c) {
@@ -706,15 +706,15 @@ async function loadCpuFreq() {
 }
 async function checkKillLog() {
   let { errno: c, stdout: s } = await executeCommand(
-    "getprop sys.azenith.logd"
+    "getprop persist.sys.azenithconf.logd"
   );
   0 === c && (document.getElementById("logd").checked = "1" === s.trim());
 }
 async function setKillLog(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/logd && setprop sys.azenith.logd 1"
-      : "echo 0 >/data/adb/.config/AZenith/logd && setprop sys.azenith.logd 0"
+      ? "setprop persist.sys.azenithconf.logd 1"
+      : "setprop persist.sys.azenithconf.logd 0"
   );
 }
 async function startService() {
@@ -744,7 +744,7 @@ async function startService() {
     showToast("Restarting Daemon...");
 
     await executeCommand(
-      "pkill -9 sys.azenith-service && su -c 'sys.azenith-service > /dev/null 2>&1 & disown'"
+      "pkill -9 /data/adb/modules/AZenith/system/bin/sys.azenith-service && su -c '/data/adb/modules/AZenith/system/bin/sys.azenith-service > /dev/null 2>&1 & disown'"
     );
 
     await checkServiceStatus();
@@ -756,41 +756,41 @@ async function startService() {
 
 async function checkGPreload() {
   let { errno: c, stdout: s } = await executeCommand(
-    "getprop sys.azenith.APreload"
+    "getprop persist.sys.azenithconf.APreload"
   );
   0 === c && (document.getElementById("GPreload").checked = "1" === s.trim());
 }
 async function setGPreloadStatus(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/APreload && setprop sys.azenith.APreload 1"
-      : "echo 0 >/data/adb/.config/AZenith/APreload && setprop sys.azenith.APreload 0"
+      ? "setprop persist.sys.azenithconf.APreload 1"
+      : "setprop persist.sys.azenithconf.APreload 0"
   );
 }
 async function checkRamBoost() {
   let { errno: c, stdout: s } = await executeCommand(
-    "getprop sys.azenith.clearbg"
+    "getprop persist.sys.azenithconf.clearbg"
   );
   0 === c && (document.getElementById("clearbg").checked = "1" === s.trim());
 }
 async function setRamBoostStatus(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/clearbg && setprop sys.azenith.clearbg 1"
-      : "echo 0 >/data/adb/.config/AZenith/clearbg && setprop sys.azenith.clearbg 0"
+      ? "setprop persist.sys.azenithconf.clearbg 1"
+      : "setprop persist.sys.azenithconf.clearbg 0"
   );
 }
 async function checkmalisched() {
   let { errno: c, stdout: s } = await executeCommand(
-    "getprop sys.azenith.malisched"
+    "getprop persist.sys.azenithconf.malisched"
   );
   0 === c && (document.getElementById("malisched").checked = "1" === s.trim());
 }
 async function setmalisched(c) {
   await executeCommand(
     c
-      ? "echo 1 >/data/adb/.config/AZenith/malisched && setprop sys.azenith.malisched 1"
-      : "echo 0 >/data/adb/.config/AZenith/malisched && setprop sys.azenith.malisched 0"
+      ? "setprop persist.sys.azenithconf.malisched 1"
+      : "setprop persist.sys.azenithconf.malisched 0"
   );
 }
 function showMaliSchedIfMediatek() {
@@ -893,15 +893,15 @@ async function resetDisplaySettings() {
 }
 async function checkAI() {
   let { errno: c, stdout: s } = await executeCommand(
-    "getprop sys.azenith.AIenabled"
+    "getprop persist.sys.azenithconf.AIenabled"
   );
   0 === c && (document.getElementById("disableai").checked = "0" === s.trim());
 }
 async function setAI(c) {
   await executeCommand(
     c
-      ? "echo 0 >/data/adb/.config/AZenith/AIenabled && setprop sys.azenith.AIenabled 1"
-      : "echo 1 >/data/adb/.config/AZenith/AIenabled && setprop sys.azenith.AIenabled 0"
+      ? "setprop persist.sys.azenithconf.AIenabled 1"
+      : "setprop persist.sys.azenithconf.AIenabled 0"
   ),
     await executeCommand(
       c
