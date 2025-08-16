@@ -17,7 +17,7 @@
 import BannerZenith from "/webui.banner.avif";
 import AvatarZenith from "/webui.avatar.avif";
 import SchemeBanner from "/webui.schemebanner.avif";
-import { exec, toast } from "kernelsu";
+import { exec } from "kernelsu";
 
 const executeCommand = async (cmd, cwd = null) => {
   try {
@@ -285,7 +285,7 @@ async function checkServiceStatus() {
         "cat /data/adb/.config/AZenith/API/current_profile"
       ),
       { stdout: h } = await executeCommand(
-        "getprop sys.azenith.AIenabled"
+        "getprop sys.azenithconf.AIenabled"
       ),
       g = m.trim(),
       f = h.trim();
@@ -538,7 +538,7 @@ let originalGamelist = "";
 
 async function showGameListModal() {
   let { errno: c, stdout: s } = await executeCommand(
-    "getprop sys.azenith.AIenabled"
+    "getprop sys.azenithconf.AIenabled"
   );
   if (0 === c && "0" === s.trim()) {
     showToast("Can't access in current mode");
@@ -736,7 +736,7 @@ async function startService() {
     if (!pid || pid.trim() === "") {
       showToast("Initiating Daemon...");
       executeCommand(
-        "su -c /data/adb/modules/AZenith/service.sh"
+        "/data/adb/modules/AZenith/service.sh"
       );
       return;
     }
@@ -744,7 +744,7 @@ async function startService() {
     showToast("Restarting Daemon...");
 
     await executeCommand(
-      "pkill -f sys.azenith-service && su -c '/data/adb/modules/AZenith/system/bin/sys.azenith-service > /dev/null 2>&1 & disown'"
+      "pkill -9 sys.azenith-service && /data/adb/modules/AZenith/system/bin/sys.azenith-service > /dev/null 2>&1 & disown"
     );
 
     await checkServiceStatus();
@@ -918,7 +918,7 @@ async function applyperformanceprofile() {
     return;
   }
   executeCommand(
-    "/data/adb/modules/AZenith/system/bin/azenith_profilesettings 1 >/dev/null 2>&1 &"
+    "/data/adb/modules/AZenith/system/bin/sys.azenith-profilesettings 1 >/dev/null 2>&1 &"
   ),
     setTimeout(() => {
       executeCommand("echo 1 > /data/adb/.config/AZenith/API/current_profile");
@@ -934,7 +934,7 @@ async function applybalancedprofile() {
     return;
   }
   executeCommand(
-    "/data/adb/modules/AZenith/system/bin/azenith_profilesettings 2 >/dev/null 2>&1 &"
+    "/data/adb/modules/AZenith/system/bin/sys.azenith-profilesettings 2 >/dev/null 2>&1 &"
   ),
     setTimeout(() => {
       executeCommand("echo 2 > /data/adb/.config/AZenith/API/current_profile");
@@ -950,7 +950,7 @@ async function applyecomode() {
     return;
   }
   executeCommand(
-    "/data/adb/modules/AZenith/system/bin/azenith_profilesettings 3 >/dev/null 2>&1 &"
+    "/data/adb/modules/AZenith/system/bin/sys.azenith-profilesettings 3 >/dev/null 2>&1 &"
   ),
     setTimeout(() => {
       executeCommand("echo 3 > /data/adb/.config/AZenith/API/current_profile");
@@ -969,7 +969,7 @@ function setupUIListeners() {
       s.classList.toggle("show", this.checked);
     });
 
-    executeCommand("getprop sys.azenith.AIenabled").then(
+    executeCommand("getprop sys.azenithconf.AIenabled").then(
       ({ stdout: r }) => {
         const d = r.trim() === "0";
         c.checked = d;
