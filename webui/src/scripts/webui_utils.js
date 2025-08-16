@@ -734,11 +734,14 @@ async function startService() {
       "/system/bin/toybox pidof sys.azenith-service"
     );
     if (!pid || pid.trim() === "") {
-      showToast("Can't Restart, Daemon Not Running");
+      showToast("Initiating Daemon...");
+      executeCommand(
+        "su -c /data/adb/modules/AZenith/service.sh"
+      )
       return;
     }
 
-    showToast("Restarting Daemon");
+    showToast("Restarting Daemon...");
 
     await executeCommand(
       "pkill -9 sys.azenith-service && su -c 'sys.azenith-service > /dev/null 2>&1 & disown'"
