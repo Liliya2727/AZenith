@@ -17,74 +17,39 @@
 #
 
 # Remove Persistent Properties
-setprop persist.sys.azenith.state ""
-resetprop --delete persist.sys.azenith.state
-
-setprop persist.sys.azenith.debugmode ""
-resetprop --delete persist.sys.azenith.debugmode
-
-setprop persist.sys.azenith.service ""
-resetprop --delete persist.sys.azenith.service
-
-setprop persist.sys.azenithconf.logd ""
-resetprop --delete persist.sys.azenithconf.logd
-
-setprop persist.sys.azenithconf.DThermal ""
-resetprop --delete persist.sys.azenithconf.DThermal
-
-setprop persist.sys.azenithconf.SFL ""
-resetprop --delete persist.sys.azenithconf.SFL
-
-setprop persist.sys.azenithconf.malisched ""
-resetprop --delete persist.sys.azenithconf.malisched
-
-setprop persist.sys.azenithconf.fpsged ""
-resetprop --delete persist.sys.azenithconf.fpsged
-
-setprop persist.sys.azenithconf.schedtunes ""
-resetprop --delete persist.sys.azenithconf.schedtunes
-
-setprop persist.sys.azenithconf.clearbg ""
-resetprop --delete persist.sys.azenithconf.clearbg
-
-setprop persist.sys.azenithconf.bypasschg ""
-resetprop --delete persist.sys.azenithconf.bypasschg
-
-setprop persist.sys.azenithconf.APreload ""
-resetprop --delete persist.sys.azenithconf.APreload
-
-setprop persist.sys.azenithconf.iosched ""
-resetprop --delete persist.sys.azenithconf.iosched
-
-setprop persist.sys.azenithconf.cpulimit ""
-resetprop --delete persist.sys.azenithconf.cpulimit
-
-setprop persist.sys.azenithconf.dnd ""
-resetprop --delete persist.sys.azenithconf.dnd
-
-setprop persist.sys.azenithconf.AIenabled ""
-resetprop --delete persist.sys.azenithconf.AIenabled
-
-
+props="persist.sys.azenith.state \
+persist.sys.azenith.debugmode \
+persist.sys.azenith.service \
+persist.sys.azenithconf.logd \
+persist.sys.azenithconf.DThermal \
+persist.sys.azenithconf.SFL \
+persist.sys.azenithconf.malisched \
+persist.sys.azenithconf.fpsged \
+persist.sys.azenithconf.schedtunes \
+persist.sys.azenithconf.clearbg \
+persist.sys.azenithconf.bypasschg \
+persist.sys.azenithconf.APreload \
+persist.sys.azenithconf.iosched \
+persist.sys.azenithconf.cpulimit \
+persist.sys.azenithconf.dnd \
+persist.sys.azenithconf.AIenabled"
+for prop in $props; do
+  setprop "$prop" ""
+  resetprop --delete "$prop"
+done
 # Uninstall module directories
 rm -rf /data/local/tmp/module_icon.png
 rm -rf /data/adb/.config/AZenith
 rm -rf /data/AZenith
-
 # Uninstaller Script
-if [ -f $INFO ]; then
-  while read LINE; do
-    if [ "$(echo -n $LINE | tail -c 1)" == "~" ]; then
-      continue
-    elif [ -f "$LINE~" ]; then
-      mv -f $LINE~ $LINE
-    else
-      rm -f $LINE
-      while true; do
-        LINE=$(dirname $LINE)
-        [ "$(ls -A $LINE 2>/dev/null)" ] && break 1 || rm -rf $LINE
-      done
-    fi
-  done <$INFO
-  rm -f $INFO
-fi
+manager_paths="/data/adb/ap/bin /data/adb/ksu/bin"
+binaries="sys.azenith-service sys.azenith-service_log \
+          sys.azenith-profilesettings sys.azenith-utilityconf \
+          sys.azenith-preloadbin sys.azenith-preloadbin2"
+for dir in $manager_paths; do
+  [ -d "$dir" ] || continue
+  for remove in $binaries; do
+    link="$dir/$remove"
+    rm -f "$link"
+  done
+done
