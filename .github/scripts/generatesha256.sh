@@ -9,7 +9,9 @@ fi
 
 generate_checksum() {
   local file="$1"
-  sha256sum "$file" | awk '{print $1}' > "${file}.sha256"
+  local hash
+  hash=$(sha256sum "$file" | awk '{print $1}')
+  printf "%s" "$hash" > "${file}.sha256"
   echo "Generated checksum for: $file"
 }
 
