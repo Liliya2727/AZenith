@@ -24,6 +24,7 @@ done
 # Refresh daemon state
 if [ -z "$(getprop persist.sys.azenith.state)" ] || { [ "$(getprop persist.sys.azenith.state)" = "running" ] && [ -z "$(/system/bin/toybox pidof sys.azenith-service)" ]; }; then
     setprop persist.sys.azenith.state stopped
+    setprop persist.sys.azenith.service ""
 fi
 
 # Run Daemon
