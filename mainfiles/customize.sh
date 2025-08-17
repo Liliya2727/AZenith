@@ -61,17 +61,6 @@ extract "$ZIPFILE" gamelist.txt "$MODULE_CONFIG/gamelist"
 ui_print "- Extracting module_icon.png..."
 extract "$ZIPFILE" module_icon.png /data/local/tmp
 
-# Install toast if not installed
-if pm list packages | grep -q bellavita.toast; then
-    ui_print "- Bellavita Toast is already installed."
-else
-    ui_print "- Extracting Bellavita Toast..."
-    unzip -qo "$ZIPFILE" toast.apk -d "$MODPATH" >&2
-    ui_print "- Installing Bellavita Toast..."
-    pm install "$MODPATH/toast.apk"
-    rm "$MODPATH/toast.apk"
-fi
-
 # Target architecture
 case $ARCH in
 "arm64") ARCH_TMP="arm64-v8a" ;;
@@ -83,6 +72,7 @@ case $ARCH in
 esac
 
 # Extract daemon
+ui_print "- Extracting sys.azenith-service for $ARCH_TMP"
 extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-service" "$TMPDIR"
 cp "$TMPDIR"/libs/"$ARCH_TMP"/* "$MODPATH/system/bin"
 ln -sf "$MODPATH/system/bin/sys.azenith-service" "$MODPATH/system/bin/sys.azenith-service_log"
@@ -110,6 +100,7 @@ if [ "$KSU" = "true" ] || [ "$APATCH" = "true" ]; then
 fi
 
 # Apply Tweaks Based on Chipset
+ui_print "- Checking device soc"
 chipset=$(grep -i 'hardware' /proc/cpuinfo | uniq | cut -d ':' -f2 | sed 's/^[ \t]*//')
 [ -z "$chipset" ] && chipset="$(getprop ro.board.platform) $(getprop ro.hardware)"
 
@@ -155,13 +146,14 @@ esac
 # 0) Unknown
 
 # Extract Webui
+ui_print "- Extracting WebUI"
 mkdir -p "$MODPATH/webroot"
-ui_print "- Inflating WebUI"
 unzip -o "$ZIPFILE" "webroot/*" -d "$TMPDIR" >&2
 cp -r "$TMPDIR/webroot/"* "$MODPATH/webroot/"
 rm -rf "$TMPDIR/webroot"
 
 # Make Module Config
+ui_print "- Creating Module Config"
 make_node "1000 1000 1000 1000" "$MODULE_CONFIG/color_scheme"
 make_node "Disabled 90% 80% 70% 60% 50% 40%" "$MODULE_CONFIG/availableFreq"
 make_node "Disabled" "$MODULE_CONFIG/customFreqOffset"
@@ -169,6 +161,7 @@ make_node "Disabled 60hz 90hz 120hz" "$MODULE_CONFIG/availableValue"
 make_node "Disabled" "$MODULE_CONFIG/customVsync"
 
 # Set config properties to use
+ui_print "- Setting config properties..."
 props="
 persist.sys.azenithconf.logd
 persist.sys.azenithconf.DThermal
@@ -190,10 +183,23 @@ for prop in $props; do
     fi
 done
 
+# Install toast if not installed
+if pm list packages | grep -q bellavita.toast; then
+    ui_print "- Bellavita Toast is already installed."
+else
+    ui_print "- Extracting Bellavita Toast..."
+    unzip -qo "$ZIPFILE" toast.apk -d "$MODPATH" >&2
+    ui_print "- Installing Bellavita Toast..."
+    pm install "$MODPATH/toast.apk"
+    rm "$MODPATH/toast.apk"
+fi
+
 # Make sure to enable Auto Every installment and Update
+ui_print "- Enabling Auto Mode"
 setprop persist.sys.azenithconf.AIenabled 1
 
 # Clean Up useless files
+ui_print "- Cleaning Up..."
 rm -rf "$MODPATH/webroot/include"
 
 # Set Permissions
@@ -203,6 +209,5 @@ chmod +x "$MODPATH/system/bin/sys.azenith-service"
 chmod +x "$MODPATH/system/bin/sys.azenith-profilesettings"
 chmod +x "$MODPATH/system/bin/sys.azenith-utilityconf"
 chmod +x "$MODPATH/system/bin/sys.azenith-preloadbin"
-chmod +x "$MODPATH/service.sh"
 
 ui_print "- Installation complete!"
