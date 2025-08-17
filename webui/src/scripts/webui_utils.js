@@ -538,7 +538,7 @@ let originalGamelist = "";
 
 async function showGameListModal() {
   let { errno: c, stdout: s } = await executeCommand(
-    "getprop sys.azenithconf.AIenabled"
+    "getprop persist.sys.azenithconf.AIenabled"
   );
   if (0 === c && "0" === s.trim()) {
     showToast("Can't access in current mode");
@@ -966,7 +966,7 @@ function setupUIListeners() {
       s.classList.toggle("show", this.checked);
     });
 
-    executeCommand("getprop sys.azenithconf.AIenabled").then(
+    executeCommand("getprop persist.sys.azenithconf.AIenabled").then(
       ({ stdout: r }) => {
         const d = r.trim() === "0";
         c.checked = d;
