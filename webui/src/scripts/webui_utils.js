@@ -955,6 +955,34 @@ async function applyecomode() {
     showToast("Applying ECO Mode");
 }
 
+async function checkjit() {
+  let { errno: c, stdout: s } = await executeCommand(
+    "getprop persist.sys.azenithconf.justintime"
+  );
+  0 === c && (document.getElementById("jit").checked = "1" === s.trim());
+}
+async function setjit(c) {
+  await executeCommand(
+    c
+      ? "setprop persist.sys.azenithconf.justintime 1"
+      : "setprop persist.sys.azenithconf.justintime 0"
+  );
+}
+
+async function checkdtrace() {
+  let { errno: c, stdout: s } = await executeCommand(
+    "getprop persist.sys.azenithconf.disabletrace"
+  );
+  0 === c && (document.getElementById("trace").checked = "1" === s.trim());
+}
+async function setdtrace(c) {
+  await executeCommand(
+    c
+      ? "setprop persist.sys.azenithconf.disabletrace 1"
+      : "setprop persist.sys.azenithconf.disabletrace 0"
+  );
+}
+
 function setupUIListeners() {
   const c = document.getElementById("disableai");
   const s = document.getElementById("extraSettings");
@@ -1008,6 +1036,12 @@ function setupUIListeners() {
   document
     .getElementById("fpsged")
     ?.addEventListener("change", (e) => setfpsged(e.target.checked));
+  document
+    .getElementById("jit")
+    ?.addEventListener("change", (e) => setjit(e.target.checked));
+  document
+    .getElementById("trace")
+    ?.addEventListener("change", (e) => setdtrace(e.target.checked));
   document
     .getElementById("GPreload")
     ?.addEventListener("change", (e) => setGPreloadStatus(e.target.checked));
@@ -1109,6 +1143,8 @@ function heavyInit() {
       checkAI(),
       checkDND(),
       loadCpuFreq(),
+      checkdtrace(),
+      checkjit(),
       loadCpuGovernors(),
       loadGameGovernors(),
       GovernorPowersave(),
