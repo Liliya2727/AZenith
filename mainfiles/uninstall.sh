@@ -19,7 +19,9 @@
 # Remove Persistent Properties
 props="persist.sys.azenith.state \
 persist.sys.azenith.debugmode \
+persist.sys.azenith.justintime \
 persist.sys.azenith.service \
+persist.sys.azenith.disabletrace \
 persist.sys.azenithconf.logd \
 persist.sys.azenithconf.DThermal \
 persist.sys.azenithconf.SFL \
