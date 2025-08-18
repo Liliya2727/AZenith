@@ -34,7 +34,8 @@ persist.sys.azenithconf.APreload \
 persist.sys.azenithconf.iosched \
 persist.sys.azenithconf.cpulimit \
 persist.sys.azenithconf.dnd \
-persist.sys.azenithconf.AIenabled"
+persist.sys.azenithconf.AIenabled \
+persist.sys.azenithconf.showtoast"
 for prop in $props; do
   setprop "$prop" ""
   resetprop --delete "$prop"
