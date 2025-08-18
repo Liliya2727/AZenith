@@ -186,6 +186,9 @@ for prop in $props; do
         setprop "$prop" 0
     fi
 done
+if [ -z "$(getprop persist.sys.azenithconf.showtoast)" ]; then
+    setprop persist.sys.azenithconf.showtoast 1
+fi
 
 # Install toast if not installed
 if pm list packages | grep -q bellavita.toast; then
