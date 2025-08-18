@@ -177,6 +177,8 @@ persist.sys.azenithconf.APreload
 persist.sys.azenithconf.iosched
 persist.sys.azenithconf.cpulimit
 persist.sys.azenithconf.dnd
+persist.sys.azenithconf.justintime
+persist.sys.azenithconf.disabletrace
 "
 for prop in $props; do
     curval=$(getprop "$prop")
