@@ -77,9 +77,15 @@ function Process() {
     (this.stderr = new EventEmitter());
 }
 
-function showToast(c) {
-  ksu.toast(c);
+async function showToast(c) {
+  let { stdout: val } = await executeCommand(
+    "getprop persist.sys.azenithconf.showtoast"
+  );
+  if (val.trim() === "1") {
+    ksu.toast(c);
+  }
 }
+
 (window.onload = () => {
   requestIdleCallback
     ? requestIdleCallback(heavyInit)
@@ -429,7 +435,9 @@ async function setiosched(c) {
   );
 }
 async function applyFSTRIM() {
-  await executeCommand("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf FSTrim"),
+  await executeCommand(
+    "/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf FSTrim"
+  ),
     showToast("Trimmed Unused Blocks");
 }
 
@@ -983,6 +991,20 @@ async function setdtrace(c) {
   );
 }
 
+async function checktoast() {
+  let { errno: c, stdout: s } = await executeCommand(
+    "getprop persist.sys.azenithconf.showtoast"
+  );
+  0 === c && (document.getElementById("toast").checked = "1" === s.trim());
+}
+async function settoast(c) {
+  await executeCommand(
+    c
+      ? "setprop persist.sys.azenithconf.showtoast 1"
+      : "setprop persist.sys.azenithconf.showtoast 0"
+  );
+}
+
 function setupUIListeners() {
   const c = document.getElementById("disableai");
   const s = document.getElementById("extraSettings");
@@ -1039,6 +1061,9 @@ function setupUIListeners() {
   document
     .getElementById("jit")
     ?.addEventListener("change", (e) => setjit(e.target.checked));
+  document
+    .getElementById("toast")
+    ?.addEventListener("change", (e) => settoast(e.target.checked));
   document
     .getElementById("trace")
     ?.addEventListener("change", (e) => setdtrace(e.target.checked));
@@ -1148,6 +1173,7 @@ function heavyInit() {
       loadCpuGovernors(),
       loadGameGovernors(),
       GovernorPowersave(),
+      checktoast(),
       loadVsyncValue(),
       checkBypassChargeStatus(),
       checkschedtunes(),
