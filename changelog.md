@@ -1,3 +1,20 @@
+## AZenith 3.4
+### Changelog 
+- Major changes in backend flow
+- Replace file-based saving value with persistence.prop.
+- Add an option to enable or disable Toast notification(enabled by default).
+- switch cat with getprop to increase efficiency.
+- Resolved issue where cpufreq locked at max in Powersave mode.
+- Implement android logcat (system logging) in daemon and sh script, check using "logcat | grep -i azenith"
+- Add Disable tracing option.
+- Add JIT(Just In Time) Option.
+- Updated uninstaller.sh to correctly remove symlinks from /ksu/bin and /ap/bin.
+- Daemon state is now stored in system prop, check using "getprop | grep azenith"
+- Improving logging messages for better readability
+- Restructuring codes...
+
+
+
 ## AZenith 3.3
 ### Changelog
 - Fix CPU Governor Permission and Cpu Frequency anomalies
