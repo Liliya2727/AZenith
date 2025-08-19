@@ -2,7 +2,7 @@
   "lockfileVersion": 1,
   "workspaces": {
     "": {
-      "name": "AZenith WebUi",
+      "name": "azenith",
       "dependencies": {
         "kernelsu": "^1.0.6",
       },
