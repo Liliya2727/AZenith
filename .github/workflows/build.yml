@@ -60,8 +60,7 @@ jobs:
           aarch64-linux-android \
           armv7-linux-androideabi \
           i686-linux-android \
-          x86_64-linux-android \
-          riscv64-linux-android
+          x86_64-linux-android 
 
       - name: Install cargo-ndk
         run: cargo install cargo-ndk
@@ -77,21 +76,18 @@ jobs:
           cargo ndk --target armv7-linux-androideabi build --release
           cargo ndk --target i686-linux-android build --release
           cargo ndk --target x86_64-linux-android build --release
-          cargo ndk --target riscv64-linux-android build --release
 
           echo "Stripping binaries..."
           $ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip target/aarch64-linux-android/release/sys_azenithrs-service
           $ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip target/armv7-linux-androideabi/release/sys_azenithrs-service
           $ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip target/i686-linux-android/release/sys_azenithrs-service
           $ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip target/x86_64-linux-android/release/sys_azenithrs-service
-          $ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip target/riscv64-linux-android/release/sys_azenithrs-service || true
-
+       
           echo "Compressing with UPX..."
           upx --best --lzma target/aarch64-linux-android/release/sys_azenithrs-service
           upx --best --lzma target/armv7-linux-androideabi/release/sys_azenithrs-service
           upx --best --lzma target/i686-linux-android/release/sys_azenithrs-service
           upx --best --lzma target/x86_64-linux-android/release/sys_azenithrs-service
-          upx --best --lzma target/riscv64-linux-android/release/sys_azenithrs-service || true
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2.0.2

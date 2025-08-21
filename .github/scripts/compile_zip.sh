@@ -39,7 +39,6 @@ cp -r ./cargo/target/aarch64-linux-android/release/sys_azenithrs-service mainfil
 cp -r ./cargo/target/armv7-linux-androideabi/release/sys_azenithrs-service mainfiles/libs/armeabi-v7a/
 cp -r ./cargo/target/i686-linux-android/release/sys_azenithrs-service mainfiles/libs/x86/
 cp -r ./cargo/target/x86_64-linux-android/release/sys_azenithrs-service mainfiles/libs/x86_64/
-cp -r ./cargo/target/riscv64-linux-android/release/sys_azenithrs-service mainfiles/libs/riscv64/
 cp -r ./tweakfls/* mainfiles/system/bin
 cp -r ./preloadbin/* mainfiles/system/bin
 cp LICENSE ./mainfiles
