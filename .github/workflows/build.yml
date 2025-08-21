@@ -58,6 +58,7 @@ jobs:
 
       - name: Build Rust Daemon
         run: |
+          cd ./cargo
           cargo ndk --target aarch64-linux-android build --release
           cargo ndk --target armv7-linux-androideabi build --release
 
