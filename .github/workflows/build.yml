@@ -56,11 +56,31 @@ jobs:
       - name: Install cargo-ndk
         run: cargo install cargo-ndk
 
+      - name: Install UPX
+        run: sudo apt-get update && sudo apt-get install -y upx
+
       - name: Build Rust Daemon
         run: |
           cd ./cargo
           cargo ndk --target aarch64-linux-android build --release
           cargo ndk --target armv7-linux-androideabi build --release
+
+          # Paths to your compiled binaries (adjust the name)
+          ARM64=target/aarch64-linux-android/release/your-daemon-binary
+          ARMV7=target/armv7-linux-androideabi/release/your-daemon-binary
+
+          echo "Stripping binaries..."
+          aarch64-linux-android-strip $ARM64
+          arm-linux-androideabi-strip $ARMV7
+
+          # Optional: compress with UPX if installed
+          if command -v upx >/dev/null 2>&1; then
+            echo "Compressing with UPX..."
+            upx --best --lzma $ARM64
+            upx --best --lzma $ARMV7
+          else
+            echo "UPX not installed, skipping..."
+          fi
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2.0.2
