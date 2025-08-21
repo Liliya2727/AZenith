@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build Flashable ZIP + Rust
+    name: Build Flashable ZIP
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -72,11 +72,16 @@ jobs:
           bun run build
           cp -r ./dist/* ../mainfiles/webroot
 
-      - name: Compile Flashable ZIP
+      - name: Compile Flashable Zip
+        id: compileZip
         run: bash .github/scripts/compile_zip.sh
+
+      - name: Unzip AZenith Package
+        run: |
+          unzip ${{ steps.compileZip.outputs.zipName }} -d extracted
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4.6.2
         with:
-          name: AZenith-build
-          path: mainfiles/**/*.zip
+          name: ${{ steps.compileZip.outputs.zipName }}
+          path: extracted/**
