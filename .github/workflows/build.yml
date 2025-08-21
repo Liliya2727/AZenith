@@ -1,0 +1,67 @@
+name: AZenith
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build.yml"
+      - ".github/scripts/**"
+      - "jni/**"
+      - "tweakfls/**"
+      - "mainfiles/**"
+      - "preloadbin/**"
+      - "webui/**"
+      - "gamelist.txt"
+      - "version"
+
+# Allow only one concurrent build workflows
+concurrency:
+  group: build
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Flashable Zip
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: NDK Setup
+        uses: nttld/setup-ndk@v1.5.0
+        with:
+          ndk-version: r28b
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2.0.2
+
+      - name: Build AZenith JNI
+        run: ndk-build
+
+      - name: Building WebRoots
+        working-directory: ./webui
+        run: |
+          bun install
+          bun run build
+          cp -r ./dist/* ../mainfiles/webroot
+
+      - name: Compile Flashable Zip
+        id: compileZip
+        run: bash .github/scripts/compile_zip.sh
+
+      - name: Unzip AZenith Package
+        run: |
+          unzip ${{ steps.compileZip.outputs.zipName }} -d extracted
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: ${{ steps.compileZip.outputs.zipName }}
+          path: extracted/**
