@@ -66,17 +66,13 @@ extract "$ZIPFILE" module_icon.png /data/local/tmp
 case $ARCH in
 "arm64") ARCH_TMP="arm64-v8a" ;;
 "arm") ARCH_TMP="armeabi-v7a" ;;
-"x64") ARCH_TMP="x86_64" ;;
-"x86") ARCH_TMP="x86" ;;
-"riscv64") ARCH_TMP="riscv64" ;;
 *) abort ;;
 esac
 
 # Extract daemon
-ui_print "- Extracting sys.azenith-service for $ARCH_TMP"
-extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-service" "$TMPDIR"
+ui_print "- Extracting sys_azenithrs-service for $ARCH_TMP"
+extract "$ZIPFILE" "libs/$ARCH_TMP/sys_azenithrs-service" "$TMPDIR"
 cp "$TMPDIR"/libs/"$ARCH_TMP"/* "$MODPATH/system/bin"
-ln -sf "$MODPATH/system/bin/sys.azenith-service" "$MODPATH/system/bin/sys.azenith-service_log"
 rm -rf "$TMPDIR/libs"
 ui_print "- Installing for Arch : $ARCH_TMP"
 
@@ -91,8 +87,7 @@ if [ "$KSU" = "true" ] || [ "$APATCH" = "true" ]; then
     for dir in $manager_paths; do
         [ -d "$dir" ] && {
             ui_print "- Creating symlink in $dir"
-            ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-service"
-            ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-service_log"
+            ln -sf "$BIN_PATH/sys_azenith-service" "$dir/sys_azenith-service"
             ln -sf "$BIN_PATH/sys.azenith-profilesettings" "$dir/sys.azenith-profilesettings"
             ln -sf "$BIN_PATH/sys.azenith-utilityconf" "$dir/sys.azenith-utilityconf"
             ln -sf "$BIN_PATH/sys.azenith-preloadbin" "$dir/sys.azenith-preloadbin"
@@ -212,7 +207,7 @@ rm -rf "$MODPATH/webroot/include"
 # Set Permissions
 ui_print "- Setting Permissions..."
 set_perm_recursive "$MODPATH/system/bin" 0 2000 0777 0777
-chmod +x "$MODPATH/system/bin/sys.azenith-service"
+chmod +x "$MODPATH/system/bin/sys_azenithrs-service"
 chmod +x "$MODPATH/system/bin/sys.azenith-profilesettings"
 chmod +x "$MODPATH/system/bin/sys.azenith-utilityconf"
 chmod +x "$MODPATH/system/bin/sys.azenith-preloadbin"
