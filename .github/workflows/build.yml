@@ -56,7 +56,12 @@ jobs:
 
       - name: Add ARCH Target
         run: |
-          rustup target add aarch64-linux-android armv7-linux-androideabi
+          rustup target add \
+          aarch64-linux-android \
+          armv7-linux-androideabi \
+          i686-linux-android \
+          x86_64-linux-android \
+          riscv64-linux-android
 
       - name: Install cargo-ndk
         run: cargo install cargo-ndk
