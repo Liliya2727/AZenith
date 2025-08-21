@@ -13,7 +13,7 @@ on:
       - ".github/scripts/**"
       - "mainfiles/**"
       - "preloadbin/**"
-      - "Cargo/**"
+      - "cargo/**"
       - "webui/**"
       - "gamelist.txt"
       - "version"
@@ -32,21 +32,34 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Rust
+      - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
-          components: rust-src,cargo
 
-      - name: Add Android targets
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Add ARCH Target
         run: |
           rustup target add aarch64-linux-android armv7-linux-androideabi
 
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
+
       - name: Build Rust Daemon
         run: |
-          cargo build --release --target aarch64-linux-android
-          cargo build --release --target armv7-linux-androideabi
+          cargo ndk --target aarch64-linux-android build --release
+          cargo ndk --target armv7-linux-androideabi build --release
 
       - name: Build WebRoots
         working-directory: ./webui
