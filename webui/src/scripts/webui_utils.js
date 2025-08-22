@@ -442,8 +442,11 @@ async function applyFSTRIM() {
 }
 
 async function setGameCpuGovernor(c) {
+  let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
-  await executeCommand(`setprop persist.sys.azenith.custom_game_cpu_gov ${c}`);
+  await executeCommand(
+    `setprop persist.sys.azenith.custom_game_cpu_gov ${c}`
+  );
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   0 === d &&
     "1" === l.trim() &&
@@ -464,7 +467,7 @@ async function loadGameGovernors() {
         let s = document.createElement("option");
         (s.value = c), (s.textContent = c), d.appendChild(s);
       });
-    
+
     let { errno: l, stdout: m } = await executeCommand(
       `sh -c '[ -n "$(getprop persist.sys.azenith.custom_game_cpu_gov)" ] && getprop persist.sys.azenith.custom_game_cpu_gov'`
     );
@@ -473,8 +476,11 @@ async function loadGameGovernors() {
 }
 
 async function setDefaultCpuGovernor(c) {
+  let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
-  await executeCommand(`setprop persist.sys.azenith.custom_default_cpu_gov ${c}`);
+  await executeCommand(
+    `setprop persist.sys.azenith.custom_default_cpu_gov ${c}`
+  );
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   0 === d &&
     "2" === l.trim() &&
@@ -503,8 +509,11 @@ async function loadCpuGovernors() {
 }
 
 async function setGovernorPowersave(c) {
+  let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
-  await executeCommand(`setprop persist.sys.azenith.custom_powersave_cpu_gov ${c}`);
+  await executeCommand(
+    `setprop persist.sys.azenith.custom_powersave_cpu_gov ${c}`
+  );
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   0 === d &&
     "3" === l.trim() &&
@@ -835,7 +844,9 @@ function saveDisplaySettings(c, s, r, d) {
 }
 async function loadDisplaySettings() {
   try {
-    let c = await executeCommand(`sh -c "getprop persist.sys.azenithconf.schemeconfig"`),
+    let c = await executeCommand(
+        `sh -c "getprop persist.sys.azenithconf.schemeconfig"`
+      ),
       [s, r, d, l] = (
         "object" == typeof c && c.stdout ? c.stdout.trim() : String(c).trim()
       )
