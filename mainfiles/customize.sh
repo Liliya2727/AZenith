@@ -207,6 +207,9 @@ fi
 ui_print "- Enabling Auto Mode"
 setprop persist.sys.azenithconf.AIenabled 1
 
+ui_print "- Disable Debugmode"
+setprop persist.sys.azenith.debugmode "false"
+
 # Install toast if not installed
 if pm list packages | grep -q bellavita.toast; then
     ui_print "- Bellavita Toast is already installed."
