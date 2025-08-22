@@ -37,6 +37,7 @@ mkdir -p "$MODULE_CONFIG"
 mkdir -p "$MODULE_CONFIG/debug"
 mkdir -p "$MODULE_CONFIG/API"
 mkdir -p "$MODULE_CONFIG/preload"
+mkdir -p "$MODULE_CONFIG/gamelist"
 ui_print "- Create module config"
 
 # Flashable integrity checkup
@@ -110,32 +111,32 @@ case "$(echo "$chipset" | tr '[:upper:]' '[:lower:]')" in
 *mt* | *MT*)
     soc="MediaTek"
     ui_print "- Applying Tweaks for $soc"
-    make_node 1 "$MODULE_CONFIG/soctype"
+    setprop persist.sys.azenithdebug.soctype 1
     ;;
 *sm* | *qcom* | *SM* | *QCOM* | *Qualcomm* | *sdm* | *snapdragon*)
     soc="Snapdragon"
     ui_print "- Applying Tweaks for $soc"
-    make_node 2 "$MODULE_CONFIG/soctype"
+    setprop persist.sys.azenithdebug.soctype 2
     ;;
 *exynos* | *Exynos* | *EXYNOS* | *universal* | *samsung* | *erd* | *s5e*)
     soc="Exynos"
     ui_print "- Applying Tweaks for $soc"
-    make_node 3 "$MODULE_CONFIG/soctype"
+    setprop persist.sys.azenithdebug.soctype 3
     ;;
 *Unisoc* | *unisoc* | *ums*)
     soc="Unisoc"
     ui_print "- Applying Tweaks for $soc"
-    make_node 4 "$MODULE_CONFIG/soctype"
+    setprop persist.sys.azenithdebug.soctype 4
     ;;
 *gs* | *Tensor* | *tensor*)
     soc="Tensor"
     ui_print "- Applying Tweaks for $soc"
-    make_node 5 "$MODULE_CONFIG/soctype"
+    setprop persist.sys.azenithdebug.soctype 5
     ;;
 *)
     soc="Unknown"
     ui_print "- Applying Tweaks for $chipset"
-    make_node 0 "$MODULE_CONFIG/soctype"
+    setprop persist.sys.azenithdebug.soctype 0
     ;;
 esac
 
@@ -154,13 +155,25 @@ unzip -o "$ZIPFILE" "webroot/*" -d "$TMPDIR" >&2
 cp -r "$TMPDIR/webroot/"* "$MODPATH/webroot/"
 rm -rf "$TMPDIR/webroot"
 
-# Make Module Config
-ui_print "- Creating Module Config"
-make_node "1000 1000 1000 1000" "$MODULE_CONFIG/color_scheme"
-make_node "Disabled 90% 80% 70% 60% 50% 40%" "$MODULE_CONFIG/availableFreq"
-make_node "Disabled" "$MODULE_CONFIG/customFreqOffset"
-make_node "Disabled 60hz 90hz 120hz" "$MODULE_CONFIG/availableValue"
-make_node "Disabled" "$MODULE_CONFIG/customVsync"
+# Make Properties
+ui_print "- Setting UP AZenith Properties"
+setprop persist.sys.azenithdebug.freqlist "Disabled 90% 80% 70% 60% 50% 40%"
+setprop persist.sys.azenithdebug.vsynclist "Disabled 60hz 90hz 120hz"
+
+# Set default freqoffset if not set
+if [ -z "$(getprop persist.sys.azenithconf.freqoffset)" ]; then
+    setprop persist.sys.azenithconf.freqoffset "Disabled"
+fi
+
+# Set default vsync config if not set
+if [ -z "$(getprop persist.sys.azenithconf.vsync)" ]; then
+    setprop persist.sys.azenithconf.vsync "Disabled"
+fi
+
+# Set default color scheme if not set
+if [ -z "$(getprop persist.sys.azenithconf.schemeconfig)" ]; then
+    setprop persist.sys.azenithconf.schemeconfig "1000 1000 1000 1000"
+fi
 
 # Set config properties to use
 ui_print "- Setting config properties..."
@@ -190,6 +203,10 @@ if [ -z "$(getprop persist.sys.azenithconf.showtoast)" ]; then
     setprop persist.sys.azenithconf.showtoast 1
 fi
 
+# Make sure to enable Auto Every installment and Update
+ui_print "- Enabling Auto Mode"
+setprop persist.sys.azenithconf.AIenabled 1
+
 # Install toast if not installed
 if pm list packages | grep -q bellavita.toast; then
     ui_print "- Bellavita Toast is already installed."
@@ -200,14 +217,6 @@ else
     pm install "$MODPATH/toast.apk"
     rm "$MODPATH/toast.apk"
 fi
-
-# Make sure to enable Auto Every installment and Update
-ui_print "- Enabling Auto Mode"
-setprop persist.sys.azenithconf.AIenabled 1
-
-# Clean Up useless files
-ui_print "- Cleaning Up..."
-rm -rf "$MODPATH/webroot/include"
 
 # Set Permissions
 ui_print "- Setting Permissions..."
