@@ -442,9 +442,8 @@ async function applyFSTRIM() {
 }
 
 async function setGameCpuGovernor(c) {
-  let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
-  await executeCommand(`echo ${c} > ${s}/custom_game_cpu_gov`);
+  await executeCommand(`setprop persist.sys.azenith.custom_game_cpu_gov ${c}`);
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   0 === d &&
     "1" === l.trim() &&
@@ -465,18 +464,17 @@ async function loadGameGovernors() {
         let s = document.createElement("option");
         (s.value = c), (s.textContent = c), d.appendChild(s);
       });
-    // Use absolute paths and no cwd for shell logic
+    
     let { errno: l, stdout: m } = await executeCommand(
-      `sh -c '[ -f /data/adb/.config/AZenith/custom_game_cpu_gov ] && cat /data/adb/.config/AZenith/custom_game_cpu_gov || cat /data/adb/.config/AZenith/game_cpu_gov'`
+      `sh -c '[ -n "$(getprop persist.sys.azenith.custom_game_cpu_gov)" ] && getprop persist.sys.azenith.custom_game_cpu_gov'`
     );
     0 === l && (d.value = m.trim());
   }
 }
 
 async function setDefaultCpuGovernor(c) {
-  let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
-  await executeCommand(`echo ${c} > ${s}/custom_default_cpu_gov`);
+  await executeCommand(`setprop persist.sys.azenith.custom_default_cpu_gov ${c}`);
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   0 === d &&
     "2" === l.trim() &&
@@ -498,16 +496,15 @@ async function loadCpuGovernors() {
         (s.value = c), (s.textContent = c), d.appendChild(s);
       });
     let { errno: l, stdout: m } = await executeCommand(
-      `sh -c '[ -f /data/adb/.config/AZenith/custom_default_cpu_gov ] && cat /data/adb/.config/AZenith/custom_default_cpu_gov || cat /data/adb/.config/AZenith/default_cpu_gov'`
+      `sh -c '[ -n "$(getprop persist.sys.azenith.custom_default_cpu_gov)" ] && getprop persist.sys.azenith.custom_default_cpu_gov || getprop persist.sys.azenith.default_cpu_gov'`
     );
     0 === l && (d.value = m.trim());
   }
 }
 
 async function setGovernorPowersave(c) {
-  let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
-  await executeCommand(`echo ${c} > ${s}/custom_powersave_cpu_gov`);
+  await executeCommand(`setprop persist.sys.azenith.custom_powersave_cpu_gov ${c}`);
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   0 === d &&
     "3" === l.trim() &&
@@ -529,7 +526,7 @@ async function GovernorPowersave() {
         (s.value = c), (s.textContent = c), d.appendChild(s);
       });
     let { errno: l, stdout: m } = await executeCommand(
-      `sh -c '[ -f /data/adb/.config/AZenith/custom_powersave_cpu_gov ] && cat /data/adb/.config/AZenith/custom_powersave_cpu_gov || cat /data/adb/.config/AZenith/powersave_cpu_gov'`
+      `sh -c '[ -n "$(getprop persist.sys.azenith.custom_powersave_cpu_gov)" ] && getprop persist.sys.azenith.custom_powersave_cpu_gov'`
     );
     0 === l && (d.value = m.trim());
   }
@@ -666,7 +663,7 @@ async function setlogger(c) {
   );
 }
 async function setVsyncValue(c) {
-  await executeCommand(`echo ${c} > /data/adb/.config/AZenith/customVsync`),
+  await executeCommand(`setprop persist.sys.azenithconf.vsync ${c}`),
     await executeCommand(
       `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf disablevsync ${c}`
     );
@@ -674,7 +671,7 @@ async function setVsyncValue(c) {
 
 async function loadVsyncValue() {
   let { errno: c, stdout: s } = await executeCommand(
-    "cat /data/adb/.config/AZenith/availableValue"
+    "getprop persist.sys.azenithdebug.vsynclist"
   );
   if (0 === c) {
     let r = s.trim().split(/\s+/),
@@ -685,18 +682,18 @@ async function loadVsyncValue() {
         (s.value = c), (s.textContent = c), d.appendChild(s);
       });
     let { errno: l, stdout: m } = await executeCommand(
-      `sh -c '[ -f /data/adb/.config/AZenith/customVsync ] && cat /data/adb/.config/AZenith/customVsync'`
+      `sh -c '[ -n "$(getprop persist.sys.azenithconf.vsync)" ] && getprop persist.sys.azenithconf.vsync'`
     );
     0 === l && (d.value = m.trim());
   }
 }
 async function setCpuFreqOffsets(c) {
-  await executeCommand(`echo ${c} >/data/adb/.config/AZenith/customFreqOffset`);
+  await executeCommand(`setprop persist.sys.azenithconf.freqoffset ${c}`);
 }
 
 async function loadCpuFreq() {
   let { errno: c, stdout: s } = await executeCommand(
-    "cat /data/adb/.config/AZenith/availableFreq"
+    "getprop persist.sys.azenithdebug.freqlist"
   );
   if (0 === c) {
     let r = s.trim().split(/\s+/),
@@ -707,7 +704,7 @@ async function loadCpuFreq() {
         (s.value = c), (s.textContent = c), d.appendChild(s);
       });
     let { errno: l, stdout: m } = await executeCommand(
-      `sh -c '[ -f /data/adb/.config/AZenith/customFreqOffset ] && cat /data/adb/.config/AZenith/customFreqOffset'`
+      `sh -c '[ -n "$(getprop persist.sys.azenithconf.freqoffset)" ] && getprop persist.sys.azenithconf.freqoffset'`
     );
     0 === l && (d.value = m.trim());
   }
@@ -831,15 +828,14 @@ function hidecolorscheme() {
       (window.removeEventListener("resize", c._resizeHandler),
       delete c._resizeHandler);
 }
-const CACHE_FILE_PATH = "/data/adb/.config/AZenith/color_scheme";
 
 function saveDisplaySettings(c, s, r, d) {
-  let l = `sh -c 'echo "${c} ${s} ${r} ${d}" > ${CACHE_FILE_PATH}'`;
+  let l = `sh -c 'setprop persist.sys.azenithconf.schemeconfig "${c} ${s} ${r} ${d}"'`;
   executeCommand(l);
 }
 async function loadDisplaySettings() {
   try {
-    let c = await executeCommand(`sh -c "cat '${CACHE_FILE_PATH}'"`),
+    let c = await executeCommand(`sh -c "getprop persist.sys.azenithconf.schemeconfig"`),
       [s, r, d, l] = (
         "object" == typeof c && c.stdout ? c.stdout.trim() : String(c).trim()
       )
