@@ -35,6 +35,16 @@ persist.sys.azenithconf.iosched \
 persist.sys.azenithconf.cpulimit \
 persist.sys.azenithconf.dnd \
 persist.sys.azenithconf.AIenabled \
+persist.sys.azenithdebug.soctype \
+persist.sys.azenithconf.vsync \
+persist.sys.azenithconf.freqoffset \
+persist.sys.azenithconf.schemeconfig \
+persist.sys.azenithdebug.freqlist \
+persist.sys.azenithdebug.vsynclist \
+persist.sys.azenith.custom_default_cpu_gov \
+persist.sys.azenith.custom_game_cpu_gov \
+persist.sys.azenith.custom_powersave_cpu_gov \
+persist.sys.azenith.default_cpu_gov \
 persist.sys.azenithconf.showtoast"
 for prop in $props; do
   setprop "$prop" ""
