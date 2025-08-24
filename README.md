@@ -1,4 +1,4 @@
-## 🔥 AZenith火
+## AZenith火
 
 🍃 *Yet another performance module for maintaining a smooth gaming experience while preserving battery life and day-to-day usability.*
 
@@ -8,7 +8,7 @@
 
 ---
 
-## 👨‍💻 AZenith for Developers
+## AZenith for Developers
 
 Introducing **ROM-Integrated AZenith** for ROM developers and maintainers.
 
@@ -19,7 +19,7 @@ Introducing **ROM-Integrated AZenith** for ROM developers and maintainers.
 🔗 **[visit repository](https://github.com/Liliya2727/RomIntegratedAZenith)**
 
 
-## 📜 Credits
+## Credits
 
 ### 👥 Collaborator
 - @kanaochar

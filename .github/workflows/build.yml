@@ -65,3 +65,20 @@ jobs:
         with:
           name: ${{ steps.compileZip.outputs.zipName }}
           path: extracted/**
+
+      - name: Upload To Telegram
+        env:
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COMMIT_URL: ${{ github.event.head_commit.url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TITLE: AZenith
+        run: |
+          if [ ! -z "${{ secrets.CHAT_ID }}" ] && [ ! -z "${{ secrets.BOT_TOKEN }}" ]; then
+            export VERSION=$(git rev-list --count HEAD)
+            bash .github/scripts/telebot.sh ${{ steps.compileZip.outputs.zipName }}
+          else
+            echo "Telegram bot token or chatid is undefined, please add it to repository secrets!"
+            exit 1
+          fi
