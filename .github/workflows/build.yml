@@ -82,4 +82,14 @@ jobs:
             echo "Telegram bot token or chatid is undefined, please add it to repository secrets!"
             exit 1
           fi
+
+          - name: Unzip AZenith Package
+        run: |
+          unzip ${{ steps.compileZip.outputs.zipName }} -d extracted
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: ${{ steps.compileZip.outputs.zipName }}
+          path: extracted/**
           
