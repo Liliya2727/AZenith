@@ -24,3 +24,4 @@ curl -s "https://api.telegram.org/bot$BOT_TOKEN/sendDocument" \
 	-F "parse_mode=markdownv2" \
 	-F thumb=@"$thumbnail" \
 	-F caption="$msg"
+    
