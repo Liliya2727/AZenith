@@ -56,12 +56,6 @@ jobs:
         id: compileZip
         run: bash .github/scripts/compile_zip.sh
 
-      - name: Upload Build Artifact
-        uses: actions/upload-artifact@v4.6.2
-        with:
-          name: ${{ steps.compileZip.outputs.zipName }}
-          path: ${{ steps.compileZip.outputs.zipName }}
-
       - name: Upload To Telegram
         env:
           CHAT_ID: ${{ secrets.CHAT_ID }}
@@ -69,7 +63,7 @@ jobs:
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
           COMMIT_URL: ${{ github.event.head_commit.url }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          TITLE: AZenith!
+          TITLE: AZenith
         run: |
           if [ ! -z "${{ secrets.CHAT_ID }}" ] && [ ! -z "${{ secrets.BOT_TOKEN }}" ]; then
             export VERSION=$(git rev-list --count HEAD)
@@ -78,3 +72,13 @@ jobs:
             echo "Telegram bot token or chatid is undefined, please add it to repository secrets!"
             exit 1
           fi
+
+      - name: Unzip AZenith Package
+        run: |
+          unzip ${{ steps.compileZip.outputs.zipName }} -d extracted
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: ${{ steps.compileZip.outputs.zipName }}
+          path: extracted/**

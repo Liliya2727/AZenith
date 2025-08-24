@@ -1,4 +1,5 @@
 #!/bin/env bash
+# shellcheck disable=SC2035
 
 if [ -z "$GITHUB_WORKSPACE" ]; then
 	echo "This script should only run on GitHub action!" >&2
