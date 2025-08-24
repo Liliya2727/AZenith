@@ -56,16 +56,6 @@ jobs:
         id: compileZip
         run: bash .github/scripts/compile_zip.sh
 
-      - name: Unzip AZenith Package
-        run: |
-          unzip ${{ steps.compileZip.outputs.zipName }} -d extracted
-
-      - name: Upload Build Artifact
-        uses: actions/upload-artifact@v4.6.2
-        with:
-          name: ${{ steps.compileZip.outputs.zipName }}
-          path: extracted/**
-
       - name: Upload To Telegram
         env:
           CHAT_ID: ${{ secrets.CHAT_ID }}
