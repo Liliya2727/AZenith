@@ -83,7 +83,7 @@ jobs:
             exit 1
           fi
 
-          - name: Unzip AZenith Package
+      - name: Unzip AZenith Package
         run: |
           unzip ${{ steps.compileZip.outputs.zipName }} -d extracted
 
@@ -92,4 +92,3 @@ jobs:
         with:
           name: ${{ steps.compileZip.outputs.zipName }}
           path: extracted/**
-          
