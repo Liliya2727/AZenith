@@ -45,6 +45,9 @@ persist.sys.azenith.custom_default_cpu_gov \
 persist.sys.azenith.custom_game_cpu_gov \
 persist.sys.azenith.custom_powersave_cpu_gov \
 persist.sys.azenith.default_cpu_gov \
+persist.sys.azenithconf.scale \
+persist.sys.azenithconf.hgsize \
+persist.sys.azenithconf.wdsize \
 persist.sys.azenithconf.showtoast"
 for prop in $props; do
   setprop "$prop" ""
