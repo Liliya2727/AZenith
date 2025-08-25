@@ -1257,10 +1257,10 @@ async function loadColorSchemeSettings() {
     dv.value = d.value;
 
     updateColorState({
-      red: parseInt(c.value),
-      green: parseInt(s.value),
-      blue: parseInt(r.value),
-      saturation: parseInt(d.value),
+      red: Number(c.value),
+      green: Number(s.value),
+      blue: Number(r.value),
+      saturation: Number(d.value),
     });
   }, 100);
 
@@ -1269,22 +1269,38 @@ async function loadColorSchemeSettings() {
   r.addEventListener("input", h);
   d.addEventListener("input", h);
 
-  cv.addEventListener("input", () => {
-    c.value = cv.value;
-    h();
-  });
-  sv.addEventListener("input", () => {
-    s.value = sv.value;
-    h();
-  });
-  rv.addEventListener("input", () => {
-    r.value = rv.value;
-    h();
-  });
-  dv.addEventListener("input", () => {
-    d.value = dv.value;
-    h();
-  });
+  function bindInput(numberInput, slider, min, max) {
+
+    numberInput.addEventListener("input", () => {
+      if (numberInput.value === "") return;
+      slider.value = numberInput.value;
+      h();
+    });
+
+    function finalize() {
+      if (numberInput.value === "") {
+        numberInput.value = slider.value; 
+      }
+      let v = Number(numberInput.value);
+      if (isNaN(v)) v = min;
+      if (v < min) v = min;
+      if (v > max) v = max;
+      numberInput.value = v;
+      slider.value = v;
+      h();
+    }
+    numberInput.addEventListener("blur", finalize);
+    numberInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        numberInput.blur(); 
+      }
+    });
+  }
+
+  bindInput(cv, c, 0, 1000);
+  bindInput(sv, s, 0, 1000);
+  bindInput(rv, r, 0, 1000);
+  bindInput(dv, d, 0, 2000);
 
   l.addEventListener("click", async () => {
     c.value = s.value = r.value = d.value = 1000;
@@ -1292,6 +1308,7 @@ async function loadColorSchemeSettings() {
 
     await setRGB(1000, 1000, 1000);
     await setSaturation(1000);
+    updateColorState({ red: 1000, green: 1000, blue: 1000, saturation: 1000 });
     saveDisplaySettings(1000, 1000, 1000, 1000);
     showToast("Display settings reset!");
   });

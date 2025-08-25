@@ -8,15 +8,13 @@
     float: right;
     margin-bottom: .5rem;
     width: 100%;
-    max-width: 330px;
-    padding: 8px 16px;
-    font-size: 14px;
+    max-width: 20px;
+    font-size: 6px;
     color: #FFFFFF;
     background-color: #343637;
     margin-bottom: 1rem;
     border: 0.5px solid #5a5a5a;
     border-radius: 100px;
-    transition: border-color 0.2s, box-shadow 0.2s;
     outline: none;
 }
 
