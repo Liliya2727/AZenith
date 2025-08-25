@@ -667,7 +667,7 @@ video {
 }
 
 .gamelist-modal.show .gamelist-content,
-.reso-modal.show .reso-content,
+.reso-modal.show .reso-container,
 .scheme-modal.show .scheme-container {
     transform: scale(1)
 }
