@@ -776,6 +776,34 @@ video {
     border: 2px solid #1e3037
 }
 
+.reso-section {
+  margin-bottom: 16px;
+}
+
+.reso-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: #bbb;
+}
+
+.reso-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr; 
+  gap: 12px;
+}
+
+.reso-input {
+  width: 100%;
+  padding: 12px;
+  background: #2b2b2b;
+  border: none;
+  border-radius: 70px;
+  color: white;
+  font-size: 16px;
+  text-align: center;
+}
+
 .schemecolortitle {
     font-size: 1rem;
     font-weight: 600;

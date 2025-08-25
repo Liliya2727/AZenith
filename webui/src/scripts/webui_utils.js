@@ -1011,31 +1011,31 @@ async function settoast(c) {
 }
 
 async function showCustomResolution() {
-    let c = document.getElementById("resoModal"),
-      s = c.querySelector(".reso-content");
-    document.body.classList.add("modal-open"), c.classList.add("show");
-    let r = window.innerHeight,
-      d = () => {
-        window.innerHeight < r - 150
-          ? (s.style.transform = "translateY(-10%) scale(1)")
-          : (s.style.transform = "translateY(0) scale(1)");
-      };
-    window.addEventListener("resize", d, {
-      passive: !0,
-    }),
-      (c._resizeHandler = d),
-      d();
-  }
+  let c = document.getElementById("resomodal"),
+    s = c.querySelector(".reso-content");
+  document.body.classList.add("modal-open"), c.classList.add("show");
+  let r = window.innerHeight,
+    d = () => {
+      window.innerHeight < r - 150
+        ? (s.style.transform = "translateY(-10%) scale(1)")
+        : (s.style.transform = "translateY(0) scale(1)");
+    };
+  window.addEventListener("resize", d, {
+    passive: !0,
+  }),
+    (c._resizeHandler = d),
+    d();
+}
 
-  function hideCustomResolution() {
-    let c = document.getElementById("resoModal");
-    c.classList.remove("show"),
-      document.body.classList.remove("modal-open"),
-      showToast("Saved color underscale settings."),
-      c._resizeHandler &&
-        (window.removeEventListener("resize", c._resizeHandler),
-        delete c._resizeHandler);
-  }
+function hideCustomResolution() {
+  let c = document.getElementById("resomodal");
+  c.classList.remove("show"),
+    document.body.classList.remove("modal-open"),
+    showToast("Saved color underscale settings."),
+    c._resizeHandler &&
+      (window.removeEventListener("resize", c._resizeHandler),
+      delete c._resizeHandler);
+}
 
 function setupUIListeners() {
   const c = document.getElementById("disableai");

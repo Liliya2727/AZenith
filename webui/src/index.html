@@ -606,12 +606,28 @@
           <p class="reso-desc">
             Custom resolution will be applied in performance profile
           </p>
-          <img id="reso" alt="reso" class="reso-image" />
+
+          <div class="reso-section">
+            <label class="reso-label">Resolution</label>
+            <div class="reso-grid">
+              <input
+                type="number"
+                id="reso-width"
+                placeholder="1080"
+                class="reso-input"
+              />
+              <input
+                type="number"
+                id="reso-height"
+                placeholder="2160"
+                class="reso-input"
+              />
+            </div>
+          </div>
 
           <div class="reso-actions">
-            <button id="resetreso-btn" class="modal-btn cancel">
-              Reset Resolution Settings</button
-            ><button id="applyreso" class="modal-btn apply">Apply</button>
+            <button id="resetreso-btn" class="modal-btn cancel">RESET</button>
+            <button id="applyreso" class="modal-btn apply">APPLY</button>
           </div>
         </div>
       </div>
