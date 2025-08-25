@@ -444,9 +444,7 @@ async function applyFSTRIM() {
 async function setGameCpuGovernor(c) {
   let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
-  await executeCommand(
-    `setprop persist.sys.azenith.custom_game_cpu_gov ${c}`
-  );
+  await executeCommand(`setprop persist.sys.azenith.custom_game_cpu_gov ${c}`);
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   0 === d &&
     "1" === l.trim() &&
@@ -1233,15 +1231,31 @@ async function loadColorSchemeSettings() {
     r = document.getElementById("blue"),
     d = document.getElementById("saturation"),
     l = document.getElementById("reset-btn"),
+    cv = document.getElementById("red-value"),
+    sv = document.getElementById("green-value"),
+    rv = document.getElementById("blue-value"),
+    dv = document.getElementById("saturation-value"),
     m = await loadDisplaySettings();
-  (c.value = m.red),
-    (s.value = m.green),
-    (r.value = m.blue),
-    (d.value = m.saturation),
-    (currentColor = m),
-    await setRGB(m.red, m.green, m.blue),
-    await setSaturation(m.saturation);
+
+  c.value = m.red;
+  s.value = m.green;
+  r.value = m.blue;
+  d.value = m.saturation;
+  cv.textContent = m.red;
+  sv.textContent = m.green;
+  rv.textContent = m.blue;
+  dv.textContent = m.saturation;
+
+  currentColor = m;
+  await setRGB(m.red, m.green, m.blue);
+  await setSaturation(m.saturation);
+
   let h = debounce(() => {
+    cv.textContent = c.value;
+    sv.textContent = s.value;
+    rv.textContent = r.value;
+    dv.textContent = d.value;
+
     updateColorState({
       red: parseInt(c.value),
       green: parseInt(s.value),
@@ -1249,17 +1263,21 @@ async function loadColorSchemeSettings() {
       saturation: parseInt(d.value),
     });
   }, 100);
-  c.addEventListener("input", h),
-    s.addEventListener("input", h),
-    r.addEventListener("input", h),
-    d.addEventListener("input", h),
-    l.addEventListener("click", async () => {
-      (c.value = s.value = r.value = d.value = 1e3),
-        await setRGB(1e3, 1e3, 1e3),
-        await setSaturation(1e3),
-        saveDisplaySettings(1e3, 1e3, 1e3, 1e3),
-        showToast("Display settings reset!");
-    });
+
+  c.addEventListener("input", h);
+  s.addEventListener("input", h);
+  r.addEventListener("input", h);
+  d.addEventListener("input", h);
+
+  l.addEventListener("click", async () => {
+    c.value = s.value = r.value = d.value = 1e3;
+    cv.textContent = sv.textContent = rv.textContent = dv.textContent = 1e3;
+
+    await setRGB(1e3, 1e3, 1e3);
+    await setSaturation(1e3);
+    saveDisplaySettings(1e3, 1e3, 1e3, 1e3);
+    showToast("Display settings reset!");
+  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
