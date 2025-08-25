@@ -747,7 +747,7 @@ video {
     background: #2a65c7
 }
 
-.reso.modal {
+.reso-modal {
     display: flex;
     align-items: center;
     justify-content: center;
