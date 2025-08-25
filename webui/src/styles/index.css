@@ -4,20 +4,6 @@
     backdrop-filter: blur(8px)
 }
 
-.schemetext {
-    float: right;
-    margin-bottom: .5rem;
-    width: 100%;
-    max-width: 20px;
-    font-size: 6px;
-    color: #FFFFFF;
-    background-color: #343637;
-    margin-bottom: 1rem;
-    border: 0.5px solid #5a5a5a;
-    border-radius: 100px;
-    outline: none;
-}
-
 .sr-only,
 body.modal-open {
     overflow: hidden
@@ -754,10 +740,11 @@ video {
 
 .scheme-modal {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     background: rgba(0, 0, 0, .3);
-    transition: opacity .3s
+    transition: opacity .3s;
+    padding-top: 3vh
 }
 
 .scheme-image {
@@ -768,6 +755,36 @@ video {
     margin-bottom: 1.5rem;
     display: block;
     border: 2px solid #1e3037
+}
+
+.schemecolortitle {
+  font-size: 1rem;   
+  font-weight: 600;        
+  color: #e5e7eb;          
+  margin-right: 0.5rem;     
+  display: inline-block;
+  min-width: 70px;      
+}
+
+.schemetext {
+  float: right;
+  width: 50px;             
+  font-size: 0.85rem;
+  font-weight: 450;
+  color: #ffffff;            
+  background-color: #2a2b2c; 
+  border: 1px solid #5a5a5a; 
+  border-radius: 100px;   
+  outline: none;
+  padding: 2px 4px;
+  text-align: center;     
+  transition: all 0.2s ease; 
+}
+
+.schemetext:focus {
+  border-color: #357ae8;   
+  box-shadow: 0 0 3px rgba(0, 121, 200, 0.5);
+  background-color: #3a3b3c;
 }
 
 .modal-btn.apply,
@@ -1293,12 +1310,6 @@ video {
     height: 1rem
 }
 
-.profilesettings {
-    margin-top: -.4rem;
-    margin-bottom: 0;
-    padding: 1rem
-}
-
 .\[--range-shdw\:\#0079C8\] {
     --range-shdw: #0079c8
 }
@@ -1313,6 +1324,12 @@ video {
 
 .\[--range-shdw\:\#EA6661\] {
     --range-shdw: #ea6661
+}
+
+.profilesettings {
+    margin-top: -.4rem;
+    margin-bottom: 0;
+    padding: 1rem
 }
 
 .gamelistsearch {
