@@ -749,11 +749,10 @@ video {
 
 .reso.modal {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
     background: rgba(0, 0, 0, .3);
     transition: opacity .3s;
-    padding-top: 16vh
 }
 
 .scheme-modal {
