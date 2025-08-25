@@ -4,6 +4,11 @@
     backdrop-filter: blur(8px)
 }
 
+.schemetext {
+    float: right;
+    margin-bottom: .5rem;
+}
+
 .sr-only,
 body.modal-open {
     overflow: hidden

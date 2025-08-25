@@ -1241,20 +1241,20 @@ async function loadColorSchemeSettings() {
   s.value = m.green;
   r.value = m.blue;
   d.value = m.saturation;
-  cv.textContent = m.red;
-  sv.textContent = m.green;
-  rv.textContent = m.blue;
-  dv.textContent = m.saturation;
+  cv.value = m.red;
+  sv.value = m.green;
+  rv.value = m.blue;
+  dv.value = m.saturation;
 
   currentColor = m;
   await setRGB(m.red, m.green, m.blue);
   await setSaturation(m.saturation);
 
   let h = debounce(() => {
-    cv.textContent = c.value;
-    sv.textContent = s.value;
-    rv.textContent = r.value;
-    dv.textContent = d.value;
+    cv.value = c.value;
+    sv.value = s.value;
+    rv.value = r.value;
+    dv.value = d.value;
 
     updateColorState({
       red: parseInt(c.value),
@@ -1269,13 +1269,30 @@ async function loadColorSchemeSettings() {
   r.addEventListener("input", h);
   d.addEventListener("input", h);
 
-  l.addEventListener("click", async () => {
-    c.value = s.value = r.value = d.value = 1e3;
-    cv.textContent = sv.textContent = rv.textContent = dv.textContent = 1e3;
+  cv.addEventListener("input", () => {
+    c.value = cv.value;
+    h();
+  });
+  sv.addEventListener("input", () => {
+    s.value = sv.value;
+    h();
+  });
+  rv.addEventListener("input", () => {
+    r.value = rv.value;
+    h();
+  });
+  dv.addEventListener("input", () => {
+    d.value = dv.value;
+    h();
+  });
 
-    await setRGB(1e3, 1e3, 1e3);
-    await setSaturation(1e3);
-    saveDisplaySettings(1e3, 1e3, 1e3, 1e3);
+  l.addEventListener("click", async () => {
+    c.value = s.value = r.value = d.value = 1000;
+    cv.value = sv.value = rv.value = dv.value = 1000;
+
+    await setRGB(1000, 1000, 1000);
+    await setSaturation(1000);
+    saveDisplaySettings(1000, 1000, 1000, 1000);
     showToast("Display settings reset!");
   });
 }
