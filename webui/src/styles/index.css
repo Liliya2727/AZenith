@@ -559,7 +559,7 @@ video {
 
 #loading-screen.hidden,
 .gamelist-modal,
-.reso-modal
+.reso-modal,
 .scheme-modal {
     opacity: 0;
     pointer-events: none
@@ -629,7 +629,7 @@ video {
 
 #loading-screen,
 .gamelist-modal,
-.reso-modal
+.reso-modal,
 .scheme-modal {
     position: fixed;
     z-index: 9999
@@ -755,6 +755,7 @@ video {
     transition: opacity .3s;
     padding-top: 6vh
 }
+
 .scheme-modal {
     display: flex;
     align-items: flex-start;
