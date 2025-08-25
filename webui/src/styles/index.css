@@ -753,7 +753,7 @@ video {
     justify-content: center;
     background: rgba(0, 0, 0, .3);
     transition: opacity .3s;
-    padding-top: 6vh
+    padding-top: 16vh
 }
 
 .scheme-modal {
@@ -1379,7 +1379,7 @@ video {
     --range-shdw: #ea6661;
 }
 
-*/ input[type="range"]::-webkit-slider-runnable-track {
+input[type="range"]::-webkit-slider-runnable-track {
     height: 12px;
     background: #2a2a2a;
     border-radius: 5px;
