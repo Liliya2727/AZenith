@@ -333,6 +333,11 @@
               Trim
             </button>
           </div>
+          <div class="flex items-center justify-between mb-3">
+            <button id="customreso" class="bigbutton w-full">
+              Custom Resolution Settings
+            </button>
+          </div>
         </div>
       </div>
       <div class="p-6">
@@ -595,6 +600,21 @@
           </div>
         </div>
       </div>
+       <div id="resomodal" class="reso-modal">
+        <div class="reso-container">
+          <h3 class="reso-title">Underscale Resolution</h3>
+          <p class="reso-desc">Custom resolution will be applied in performance profile</p>
+          <img id="reso" alt="reso" class="reso-image" />
+          </div>
+
+          <div class="reso-actions">
+            <button id="resetreso-btn" class="modal-btn cancel">
+              Reset Resolution Settings</button
+            ><button id="applyreso" class="modal-btn apply">Apply</button>
+          </div>
+        </div>
+      </div>
+
       <div id="schemeModal" class="scheme-modal">
         <div class="scheme-container">
           <h3 class="scheme-title">Color Scheme</h3>

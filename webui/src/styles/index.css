@@ -1,4 +1,5 @@
 .gamelist-modal,
+.reso-modal,
 .scheme-modal {
     inset: 0;
     backdrop-filter: blur(8px)
@@ -558,6 +559,7 @@ video {
 
 #loading-screen.hidden,
 .gamelist-modal,
+.reso-modal
 .scheme-modal {
     opacity: 0;
     pointer-events: none
@@ -627,6 +629,7 @@ video {
 
 #loading-screen,
 .gamelist-modal,
+.reso-modal
 .scheme-modal {
     position: fixed;
     z-index: 9999
@@ -643,12 +646,14 @@ video {
 
 .gamelist-modal.show,
 .scheme-modal.show,
+.reso-modal.show,
 .transition-section.show {
     opacity: 1;
     pointer-events: auto
 }
 
 .gamelist-content,
+.reso-container,
 .scheme-container {
     background: #111d23;
     border-radius: 1.5rem;
@@ -662,11 +667,13 @@ video {
 }
 
 .gamelist-modal.show .gamelist-content,
+.reso-modal.show .reso-content,
 .scheme-modal.show .scheme-container {
     transform: scale(1)
 }
 
 .gamelist-title,
+.reso-title,
 .scheme-title {
     font-size: 1.5rem;
     text-align: center;
@@ -682,6 +689,7 @@ video {
     margin-bottom: 1rem
 }
 
+.reso-desc,
 .scheme-desc {
     font-size: .75rem;
     color: #ccc;
@@ -703,6 +711,7 @@ video {
 }
 
 .gamelist-buttons,
+.reso-actions,
 .scheme-actions {
     display: flex;
     justify-content: space-between;
@@ -738,6 +747,14 @@ video {
     background: #2a65c7
 }
 
+.reso.modal {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    background: rgba(0, 0, 0, .3);
+    transition: opacity .3s;
+    padding-top: 6vh
+}
 .scheme-modal {
     display: flex;
     align-items: flex-start;
@@ -747,6 +764,7 @@ video {
     padding-top: 3vh
 }
 
+.reso-image,
 .scheme-image {
     width: 100%;
     aspect-ratio: 16/9;

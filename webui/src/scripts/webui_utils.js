@@ -1010,6 +1010,33 @@ async function settoast(c) {
   );
 }
 
+async function showCustomResolution() {
+    let c = document.getElementById("resoModal"),
+      s = c.querySelector(".reso-content");
+    document.body.classList.add("modal-open"), c.classList.add("show");
+    let r = window.innerHeight,
+      d = () => {
+        window.innerHeight < r - 150
+          ? (s.style.transform = "translateY(-10%) scale(1)")
+          : (s.style.transform = "translateY(0) scale(1)");
+      };
+    window.addEventListener("resize", d, {
+      passive: !0,
+    }),
+      (c._resizeHandler = d),
+      d();
+  }
+
+  function hideCustomResolution() {
+    let c = document.getElementById("resoModal");
+    c.classList.remove("show"),
+      document.body.classList.remove("modal-open"),
+      showToast("Saved color underscale settings."),
+      c._resizeHandler &&
+        (window.removeEventListener("resize", c._resizeHandler),
+        delete c._resizeHandler);
+  }
+
 function setupUIListeners() {
   const c = document.getElementById("disableai");
   const s = document.getElementById("extraSettings");
@@ -1127,6 +1154,14 @@ function setupUIListeners() {
   document
     .getElementById("disablevsync")
     ?.addEventListener("change", (e) => setVsyncValue(e.target.value));
+
+  // Custom Resolution Settings
+  document
+    .getElementById("customreso")
+    ?.addEventListener("click", showCustomResolution);
+  document
+    .getElementById("applyreso")
+    ?.addEventListener("click", hideCustomResolution);
 
   // Color scheme buttons
   document
@@ -1270,7 +1305,6 @@ async function loadColorSchemeSettings() {
   d.addEventListener("input", h);
 
   function bindInput(numberInput, slider, min, max) {
-
     numberInput.addEventListener("input", () => {
       if (numberInput.value === "") return;
       slider.value = numberInput.value;
@@ -1279,7 +1313,7 @@ async function loadColorSchemeSettings() {
 
     function finalize() {
       if (numberInput.value === "") {
-        numberInput.value = slider.value; 
+        numberInput.value = slider.value;
       }
       let v = Number(numberInput.value);
       if (isNaN(v)) v = min;
@@ -1292,7 +1326,7 @@ async function loadColorSchemeSettings() {
     numberInput.addEventListener("blur", finalize);
     numberInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
-        numberInput.blur(); 
+        numberInput.blur();
       }
     });
   }
