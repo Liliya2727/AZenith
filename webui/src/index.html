@@ -606,23 +606,38 @@
           <p class="reso-desc">
             Custom resolution will be applied in performance profile
           </p>
-          <img id="reso" alt="reso" class="reso-image" />
+          <img id="reso" alt="reso" class="scheme-image" />
           <div class="reso-section">
             <label class="reso-label">Resolution</label>
             <div class="reso-grid">
               <input
                 type="number"
                 id="reso-width"
-                placeholder="1080"
+                placeholder="width"
                 class="reso-input"
               />
               <input
                 type="number"
                 id="reso-height"
-                placeholder="2160"
+                placeholder="height"
                 class="reso-input"
               />
             </div>
+            <div class="flex items-center justify-between mb-3">
+              <label class="cursor-pointer flex items-center w-full">
+                <div>
+                  <p class="text-sm text-white">
+                    Apply On Performance Profiles
+                  </p>
+                <div class="ml-auto">
+                  <input type="checkbox" id="applyinperf" class="peer sr-only" />
+                  <div
+                    class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 dark:border-gray-600 peer-checked:bg-blue-600 rounded-full after:absolute after:bg-white after:border after:border-gray-300 after:content-[''] after:h-5 after:left-[2px] after:rounded-full after:top-0.5 after:transition-all after:w-5 peer-checked:after:border-white peer-checked:after:translate-x-full"
+                  ></div>
+                </div>
+              </label>
+            </div>
+            <div class="device-info-divider"></div>
           </div>
 
           <div class="reso-actions">
