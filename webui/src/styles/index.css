@@ -803,6 +803,13 @@ video {
   text-align: center;
 }
 
+.reso-input:focus {
+    border-color: #8ac1ff;
+    outline: 1px solid #8ac1ff;
+    outline-offset: 0px;
+}
+
+
 .schemecolortitle {
     font-size: 1rem;
     font-weight: 600;
