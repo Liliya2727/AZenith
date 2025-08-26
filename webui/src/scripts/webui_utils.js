@@ -1014,6 +1014,10 @@ async function showCustomResolution() {
   let c = document.getElementById("resomodal"),
     s = c.querySelector(".reso-content");
   document.body.classList.add("modal-open"), c.classList.add("show");
+
+  // Pre-fill resolution values when modal opens
+  await checkResolution();
+
   let r = window.innerHeight,
     d = () => {
       window.innerHeight < r - 150
@@ -1031,10 +1035,68 @@ function hideCustomResolution() {
   let c = document.getElementById("resomodal");
   c.classList.remove("show"),
     document.body.classList.remove("modal-open"),
-    showToast("Saved color underscale settings."),
     c._resizeHandler &&
       (window.removeEventListener("resize", c._resizeHandler),
       delete c._resizeHandler);
+}
+
+async function checkResolution() {
+  let { stdout: w } = await executeCommand(
+    "getprop persist.sys.azenithconf.wdsize"
+  );
+  let { stdout: h } = await executeCommand(
+    "getprop persist.sys.azenithconf.hgsize"
+  );
+
+  document.getElementById("reso-width").value = w.trim() || "";
+  document.getElementById("reso-height").value = h.trim() || "";
+}
+
+async function setResolution(width, height) {
+  if (!width || !height) {
+    showToast("Invalid resolution!");
+    return;
+  }
+  await executeCommand(`setprop persist.sys.azenithconf.wdsize ${width}`);
+  await executeCommand(`setprop persist.sys.azenithconf.hgsize ${height}`);
+
+  // also enable underscale flag
+  await setunderscale(true);
+
+  showToast(`Resolution saved: ${width}x${height}`);
+}
+
+async function resetResolution() {
+  let { stdout: res } = await executeCommand("wm size");
+  let match = res.match(/Physical size:\s*(\d+)x(\d+)/);
+  if (match) {
+    document.getElementById("reso-width").value = match[1];
+    document.getElementById("reso-height").value = match[2];
+
+    // reset back to defaults
+    await executeCommand(`setprop persist.sys.azenithconf.wdsize ${match[1]}`);
+    await executeCommand(`setprop persist.sys.azenithconf.hgsize ${match[2]}`);
+    await setunderscale(false);
+
+    showToast(`Default resolution: ${match[1]}x${match[2]}`);
+  } else {
+    showToast("Failed to detect default resolution!");
+  }
+}
+
+async function checkunderscale() {
+  let { errno: c, stdout: s } = await executeCommand(
+    "getprop persist.sys.azenithconf.scale"
+  );
+  0 === c &&
+    (document.getElementById("applyinperf").checked = "1" === s.trim());
+}
+async function setunderscale(c) {
+  await executeCommand(
+    c
+      ? "setprop persist.sys.azenithconf.scale 1"
+      : "setprop persist.sys.azenithconf.scale 0"
+  );
 }
 
 function setupUIListeners() {
@@ -1106,6 +1168,9 @@ function setupUIListeners() {
     .getElementById("clearbg")
     ?.addEventListener("change", (e) => setRamBoostStatus(e.target.checked));
   document
+    .getElementById("applyinperf")
+    ?.addEventListener("change", (e) => setunderscale(e.target.checked));
+  document
     .getElementById("SFL")
     ?.addEventListener("change", (e) => setSFL(e.target.checked));
   document
@@ -1159,9 +1224,15 @@ function setupUIListeners() {
   document
     .getElementById("customreso")
     ?.addEventListener("click", showCustomResolution);
+  document.getElementById("applyreso")?.addEventListener("click", async () => {
+    let w = document.getElementById("reso-width").value;
+    let h = document.getElementById("reso-height").value;
+    await setResolution(w, h);
+    hideCustomResolution();
+  });
   document
-    .getElementById("applyreso")
-    ?.addEventListener("click", hideCustomResolution);
+    .getElementById("resetreso-btn")
+    ?.addEventListener("click", resetResolution);
 
   // Color scheme buttons
   document
@@ -1198,6 +1269,8 @@ function heavyInit() {
     Promise.all([
       checkModuleVersion(),
       checkCPUInfo(),
+      checkunderscale(),
+      checkResolution(),
       checkKernelVersion(),
       getAndroidVersion(),
       checkfpsged(),
@@ -1225,6 +1298,7 @@ function heavyInit() {
       document.getElementById("loading-screen").classList.add("hidden");
     });
 }
+
 document.getElementById("disableai").addEventListener("change", function () {
   setAI(this.checked),
     document
