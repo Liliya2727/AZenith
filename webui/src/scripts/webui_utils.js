@@ -17,6 +17,7 @@
 import BannerZenith from "/webui.banner.avif";
 import AvatarZenith from "/webui.avatar.avif";
 import SchemeBanner from "/webui.schemebanner.avif";
+import ResoBanner from "/webui.reso.avif";
 import { exec } from "kernelsu";
 
 const executeCommand = async (cmd, cwd = null) => {
@@ -559,7 +560,7 @@ async function showGameListModal() {
 
   const r = document.getElementById("gamelistModal");
   const d = document.getElementById("gamelistInput");
-  const searchInput = document.getElementById("gamelistSearch"); // Must exist in HTML
+  const searchInput = document.getElementById("gamelistSearch");
   const l = r.querySelector(".gamelist-content");
 
   const { errno: m, stdout: h } = await executeCommand(
@@ -573,8 +574,7 @@ async function showGameListModal() {
   }
 
   if (searchInput) {
-    searchInput.value = ""; // Reset search
-    // Remove existing listener first to prevent duplicates on reopen
+    searchInput.value = "";
     searchInput.removeEventListener("input", filterGameList);
     searchInput.addEventListener("input", filterGameList);
   }
@@ -628,7 +628,6 @@ async function saveGameList() {
     .map((x) => x.trim())
     .filter(Boolean);
 
-  // If no search, save entire input as-is
   if (!searchTerm) {
     const outputString = editedLines.join("|").replace(/"/g, '\\"');
     await executeCommand(
@@ -639,12 +638,11 @@ async function saveGameList() {
     return;
   }
 
-  // Search is active → replace only matching lines with edited ones
   let editedIndex = 0;
   const mergedLines = originalLines.map((line) => {
     if (line.toLowerCase().includes(searchTerm)) {
       const replacement = editedLines[editedIndex++]?.trim();
-      return replacement || line; // fallback to original if edited line is empty
+      return replacement || line;
     }
     return line;
   });
@@ -731,7 +729,6 @@ async function setKillLog(c) {
 }
 async function startService() {
   try {
-    // Check current profile
     let { stdout: c } = await executeCommand(
       "cat /data/adb/.config/AZenith/API/current_profile"
     );
@@ -1015,7 +1012,6 @@ async function showCustomResolution() {
     s = c.querySelector(".reso-content");
   document.body.classList.add("modal-open"), c.classList.add("show");
 
-  // Pre-fill resolution values when modal opens
   await checkResolution();
 
   let r = window.innerHeight,
@@ -1060,9 +1056,6 @@ async function setResolution(width, height) {
   await executeCommand(`setprop persist.sys.azenithconf.wdsize ${width}`);
   await executeCommand(`setprop persist.sys.azenithconf.hgsize ${height}`);
 
-  // also enable underscale flag
-  await setunderscale(true);
-
   showToast(`Resolution saved: ${width}x${height}`);
 }
 
@@ -1076,7 +1069,6 @@ async function resetResolution() {
     // reset back to defaults
     await executeCommand(`setprop persist.sys.azenithconf.wdsize ${match[1]}`);
     await executeCommand(`setprop persist.sys.azenithconf.hgsize ${match[2]}`);
-    await setunderscale(false);
 
     showToast(`Default resolution: ${match[1]}x${match[2]}`);
   } else {
@@ -1429,8 +1421,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const banner = document.getElementById("Banner");
   const avatar = document.getElementById("Avatar");
   const scheme = document.getElementById("Scheme");
+  const reso = document.getElementById("Reso");
 
   if (banner) banner.src = BannerZenith;
   if (avatar) avatar.src = AvatarZenith;
   if (scheme) scheme.src = SchemeBanner;
+  if (reso) reso.src = ResoBanner;
 });
