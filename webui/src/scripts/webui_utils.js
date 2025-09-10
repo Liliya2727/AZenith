@@ -79,12 +79,7 @@ function Process() {
 }
 
 async function showToast(c) {
-  let { stdout: val } = await executeCommand(
-    "getprop persist.sys.azenithconf.showtoast"
-  );
-  if (val.trim() === "1") {
     ksu.toast(c);
-  }
 }
 
 (window.onload = () => {
