@@ -677,7 +677,7 @@ async function setCpuFreqOffsets(c) {
     let profile = l.trim();
     if (profile === "2" || profile === "3") {
       await executeCommand(
-        `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsfreqs ${c}`
+        `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsfreqs`
       );
     }
   }
