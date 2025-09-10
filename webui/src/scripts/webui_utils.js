@@ -675,7 +675,7 @@ async function loadVsyncValue() {
 async function setCpuFreqOffsets(c) {
   await executeCommand(`setprop persist.sys.azenithconf.freqoffset ${c}`);
   await executeCommand(
-    `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setFrequency ${c}`
+    `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setFrequency`
   );
 }
 
