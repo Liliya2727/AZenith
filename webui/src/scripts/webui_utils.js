@@ -79,7 +79,7 @@ function Process() {
 }
 
 async function showToast(c) {
-    ksu.toast(c);
+  ksu.toast(c);
 }
 
 (window.onload = () => {
@@ -667,11 +667,20 @@ async function loadVsyncValue() {
     0 === l && (d.value = m.trim());
   }
 }
+
 async function setCpuFreqOffsets(c) {
+  let s = "/data/adb/.config/AZenith",
+    r = `${s}/API/current_profile`;
   await executeCommand(`setprop persist.sys.azenithconf.freqoffset ${c}`);
-  await executeCommand(
-    `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setFrequency`
-  );
+  let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
+  if (d === 0) {
+    let profile = l.trim();
+    if (profile === "2" || profile === "3") {
+      await executeCommand(
+        `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsfreqs ${c}`
+      );
+    }
+  }
 }
 
 async function loadCpuFreq() {
