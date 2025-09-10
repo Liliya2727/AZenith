@@ -211,14 +211,14 @@ ui_print "- Disable Debugmode"
 setprop persist.sys.azenith.debugmode "false"
 
 # Install toast if not installed
-if pm list packages | grep -q bellavita.toast; then
-    ui_print "- Bellavita Toast is already installed."
+if pm list packages | grep -q azenith.toast; then
+    ui_print "- AZenith Toast is already installed."
 else
-    ui_print "- Extracting Bellavita Toast..."
-    unzip -qo "$ZIPFILE" toast.apk -d "$MODPATH" >&2
-    ui_print "- Installing Bellavita Toast..."
-    pm install "$MODPATH/toast.apk"
-    rm "$MODPATH/toast.apk"
+    ui_print "- Extracting AZenith Toast..."
+    unzip -qo "$ZIPFILE" azenithtoast.apk -d "$MODPATH" >&2
+    ui_print "- Installing AZenith Toast..."
+    pm install "$MODPATH/azenithtoast.apk"
+    rm "$MODPATH/azenithtoast.apk"
 fi
 
 # Set Permissions

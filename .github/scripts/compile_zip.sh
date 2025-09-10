@@ -22,7 +22,7 @@ need_integrity=(
 	"mainfiles/module.prop"
     "mainfiles/module_icon.png"
 	"mainfiles/gamelist.txt"
-    "mainfiles/toast.apk"
+    "mainfiles/azenithtoast.apk"
 )
 
 # Version info
