@@ -119,20 +119,6 @@
           </div>
           <div class="flex items-center justify-between mb-3">
             <div>
-              <p class="text-sm text-white">Game CPU Governor</p>
-              <small class="block text-gray-400 text-sss"
-                >Governor that will be used on Performance profile</small
-              >
-            </div>
-            <select
-              id="cpuGovernorGame"
-              class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs"
-            >
-              <option value="schedutil" selected="selected"></option>
-            </select>
-          </div>
-          <div class="flex items-center justify-between mb-3">
-            <div>
               <p class="text-sm text-white">Default CPU Governor</p>
               <small class="block text-gray-400 text-sss"
                 >Governor that will be used on Normal profile</small
@@ -163,7 +149,7 @@
             <div>
               <p class="text-sm text-white">Limit CPU Freq</p>
               <small class="block text-gray-400 text-sss"
-                >Set Max CPU Frequency in ECO Mode</small
+                >Set Max CPU Frequency in Balanced profile and ECO Mode</small
               >
             </div>
             <select
@@ -175,18 +161,17 @@
           </div>
           <div class="flex items-center justify-between mb-3">
             <label
-              for="OPPIndex"
+              for="LiteMode"
               class="cursor-pointer flex items-center w-full"
             >
               <div>
-                <p class="text-sm text-white">Fix Target Opp Index</p>
+                <p class="text-sm text-white">Lite Mode</p>
                 <small class="block text-gray-400 text-sss"
-                  >Lock CPU Min Frequency to the highest in Performance Profile
-                  (Disable this if you're not using Performance Governor)</small
+                  >Reduce Overheating by reducing CPU Frequency on Performance Profile</small
                 >
               </div>
               <div class="ml-auto">
-                <input type="checkbox" id="OPPIndex" class="peer sr-only" />
+                <input type="checkbox" id="LiteMode" class="peer sr-only" />
                 <div
                   class="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 dark:border-gray-600 peer-checked:bg-blue-600 rounded-full after:absolute after:bg-white after:border after:border-gray-300 after:content-[''] after:h-5 after:left-[2px] after:rounded-full after:top-0.5 after:transition-all after:w-5 peer-checked:after:border-white peer-checked:after:translate-x-full"
                 ></div>
@@ -330,9 +315,20 @@
               Trim
             </button>
           </div>
+          <div class="device-info-divider"></div>
           <div class="flex items-center justify-between mb-3">
             <button id="customreso" class="bigbutton w-full">
               Custom Resolution Settings
+            </button>
+          </div>
+          <div class="flex items-center justify-between mb-3">
+            <button id="editGamelistButton" class="bigbutton w-full">
+              Edit Gamelist
+            </button>
+          </div>
+          <div class="flex items-center justify-between mb-3">
+            <button id="colorschemebutton" class="bigbutton w-full">
+              Color Scheme Settings
             </button>
           </div>
         </div>
@@ -562,16 +558,7 @@
             </label>
           </div>
           <input type="checkbox" id="disableai" class="peer hidden" />
-          <div class="flex items-center justify-between mb-3">
-            <button id="editGamelistButton" class="bigbutton w-full">
-              Edit Gamelist
-            </button>
-          </div>
-          <div class="flex items-center justify-between mb-3">
-            <button id="colorschemebutton" class="bigbutton w-full">
-              Color Scheme Settings
-            </button>
-          </div>
+          <div class="device-info-divider"></div>
           <div class="flex items-center justify-between mb-3">
             <button id="savelogButton" class="bigbutton w-full">
               Save Logs

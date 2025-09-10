@@ -118,7 +118,8 @@ async function checkProfile() {
     let { errno: c, stdout: s } = await executeCommand(
       "cat /data/adb/.config/AZenith/API/current_profile"
     );
-    if (0 === c) {
+
+    if (c === 0) {
       let r = s.trim(),
         d = document.getElementById("CurProfile"),
         l =
@@ -128,7 +129,18 @@ async function checkProfile() {
             2: "Balanced",
             3: "ECO Mode",
           }[r] || "Unknown";
-      switch (((d.textContent = l), l)) {
+
+      // Check cpulimit property
+      let { errno: c2, stdout: s2 } = await executeCommand(
+        "getprop persist.sys.azenithconf.cpulimit"
+      );
+      if (c2 === 0 && s2.trim() === "1") {
+        l += " (Lite)";
+      }
+
+      d.textContent = l;
+
+      switch (l.replace(" (Lite)", "")) {
         case "Performance":
           d.style.color = "#ef4444";
           break;
@@ -363,13 +375,13 @@ function showBypassIfMTK() {
     ZepassDiv.style.display = soc.includes("mediatek") ? "flex" : "none";
   }
 }
-async function checkOPPIndexStatus() {
+async function checkLiteModeStatus() {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.cpulimit"
   );
-  0 === c && (document.getElementById("OPPIndex").checked = "1" === s.trim());
+  0 === c && (document.getElementById("LiteMode").checked = "1" === s.trim());
 }
-async function setOPPIndexStatus(c) {
+async function setLiteModeStatus(c) {
   await executeCommand(
     c
       ? "setprop persist.sys.azenithconf.cpulimit 1"
@@ -440,38 +452,6 @@ async function applyFSTRIM() {
     "/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf FSTrim"
   ),
     showToast("Trimmed Unused Blocks");
-}
-
-async function setGameCpuGovernor(c) {
-  let s = "/data/adb/.config/AZenith",
-    r = `${s}/API/current_profile`;
-  await executeCommand(`setprop persist.sys.azenith.custom_game_cpu_gov ${c}`);
-  let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
-  0 === d &&
-    "1" === l.trim() &&
-    (await executeCommand(
-      `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsgov ${c}`
-    ));
-}
-
-async function loadGameGovernors() {
-  let { errno: c, stdout: s } = await executeCommand(
-    "chmod 644 /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors && cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors"
-  );
-  if (0 === c) {
-    let r = s.trim().split(/\s+/),
-      d = document.getElementById("cpuGovernorGame");
-    (d.innerHTML = ""),
-      r.forEach((c) => {
-        let s = document.createElement("option");
-        (s.value = c), (s.textContent = c), d.appendChild(s);
-      });
-
-    let { errno: l, stdout: m } = await executeCommand(
-      `sh -c '[ -n "$(getprop persist.sys.azenith.custom_game_cpu_gov)" ] && getprop persist.sys.azenith.custom_game_cpu_gov'`
-    );
-    0 === l && (d.value = m.trim());
-  }
 }
 
 async function setDefaultCpuGovernor(c) {
@@ -694,6 +674,9 @@ async function loadVsyncValue() {
 }
 async function setCpuFreqOffsets(c) {
   await executeCommand(`setprop persist.sys.azenithconf.freqoffset ${c}`);
+  await executeCommand(
+    `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setFrequency ${c}`
+  );
 }
 
 async function loadCpuFreq() {
@@ -1169,8 +1152,8 @@ function setupUIListeners() {
     .getElementById("DThermal")
     ?.addEventListener("change", (e) => setDThermal(e.target.checked));
   document
-    .getElementById("OPPIndex")
-    ?.addEventListener("change", (e) => setOPPIndexStatus(e.target.checked));
+    .getElementById("LiteMode")
+    ?.addEventListener("change", (e) => setLiteModeStatus(e.target.checked));
   document
     .getElementById("schedtunes")
     ?.addEventListener("change", (e) => setschedtunes(e.target.checked));
@@ -1196,9 +1179,6 @@ function setupUIListeners() {
     );
 
   // Select dropdowns
-  document
-    .getElementById("cpuGovernorGame")
-    ?.addEventListener("change", (e) => setGameCpuGovernor(e.target.value));
   document
     .getElementById("cpuGovernor")
     ?.addEventListener("change", (e) => setDefaultCpuGovernor(e.target.value));
@@ -1266,7 +1246,7 @@ function heavyInit() {
       checkKernelVersion(),
       getAndroidVersion(),
       checkfpsged(),
-      checkOPPIndexStatus(),
+      checkLiteModeStatus(),
       checkDThermal(),
       checkiosched(),
       checkmalisched(),
@@ -1276,7 +1256,6 @@ function heavyInit() {
       checkdtrace(),
       checkjit(),
       loadCpuGovernors(),
-      loadGameGovernors(),
       GovernorPowersave(),
       checktoast(),
       loadVsyncValue(),
