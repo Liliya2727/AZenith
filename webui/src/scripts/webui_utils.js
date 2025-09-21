@@ -444,7 +444,7 @@ async function setiosched(c) {
 }
 async function applyFSTRIM() {
   await executeCommand(
-    "/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf FSTrim"
+    "sys.azenith-utilityconf FSTrim"
   ),
     showToast("Trimmed Unused Blocks");
 }
@@ -459,7 +459,7 @@ async function setDefaultCpuGovernor(c) {
   0 === d &&
     "2" === l.trim() &&
     (await executeCommand(
-      `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsgov ${c}`
+      `sys.azenith-utilityconf setsgov ${c}`
     ));
 }
 
@@ -492,7 +492,7 @@ async function setGovernorPowersave(c) {
   0 === d &&
     "3" === l.trim() &&
     (await executeCommand(
-      `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsgov ${c}`
+      `sys.azenith-utilityconf setsgov ${c}`
     ));
 }
 
@@ -645,7 +645,7 @@ async function setlogger(c) {
 async function setVsyncValue(c) {
   await executeCommand(`setprop persist.sys.azenithconf.vsync ${c}`),
     await executeCommand(
-      `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf disablevsync ${c}`
+      `sys.azenith-utilityconf disablevsync ${c}`
     );
 }
 
@@ -677,7 +677,7 @@ async function setCpuFreqOffsets(c) {
     let profile = l.trim();
     if (profile === "2" || profile === "3") {
       await executeCommand(
-        `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsfreqs`
+        `sys.azenith-utilityconf setsfreqs`
       );
     }
   }
@@ -737,7 +737,7 @@ async function startService() {
     showToast("Restarting Daemon...");
 
     await executeCommand(
-      "setprop persist.sys.azenith.state stopped && pkill -9 -f sys.azenith-service; su -c '/data/adb/modules/AZenith/system/bin/sys.azenith-service > /dev/null 2>&1 & disown'"
+      "setprop persist.sys.azenith.state stopped && pkill -9 -f sys.azenith-service; su -c 'sys.azenith-service > /dev/null 2>&1 & disown'"
     );
 
     await checkServiceStatus();
@@ -912,7 +912,7 @@ async function applyperformanceprofile() {
     return;
   }
   executeCommand(
-    "/data/adb/modules/AZenith/system/bin/sys.azenith-profilesettings 1 >/dev/null 2>&1 &"
+    "sys.azenith-profilesettings 1 >/dev/null 2>&1 &"
   ),
     setTimeout(() => {
       executeCommand("echo 1 > /data/adb/.config/AZenith/API/current_profile");
@@ -928,7 +928,7 @@ async function applybalancedprofile() {
     return;
   }
   executeCommand(
-    "/data/adb/modules/AZenith/system/bin/sys.azenith-profilesettings 2 >/dev/null 2>&1 &"
+    "sys.azenith-profilesettings 2 >/dev/null 2>&1 &"
   ),
     setTimeout(() => {
       executeCommand("echo 2 > /data/adb/.config/AZenith/API/current_profile");
@@ -944,7 +944,7 @@ async function applyecomode() {
     return;
   }
   executeCommand(
-    "/data/adb/modules/AZenith/system/bin/sys.azenith-profilesettings 3 >/dev/null 2>&1 &"
+    "sys.azenith-profilesettings 3 >/dev/null 2>&1 &"
   ),
     setTimeout(() => {
       executeCommand("echo 3 > /data/adb/.config/AZenith/API/current_profile");
@@ -1117,7 +1117,7 @@ function setupUIListeners() {
   async function savelog() {
     try {
       await executeCommand(
-        "/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf saveLog"
+        "sys.azenith-utilityconf saveLog"
       );
       showToast("Saved Log");
     } catch (e) {
