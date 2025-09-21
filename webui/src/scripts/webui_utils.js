@@ -1040,10 +1040,25 @@ async function setResolution(width, height) {
     showToast("Invalid resolution!");
     return;
   }
+
+  let { stdout: freqpropsStr } = await executeCommand(
+    "getprop persist.sys.azenithconf.scale"
+  );
+  let freqprops = parseInt(freqpropsStr.trim(), 10) || 0;
+
+  if (freqprops === 0) {
+    await executeCommand(`wm size ${width}x${height}`);
+  } else if (freqprops === 1) {
+    await executeCommand("wm size reset");
+  }
   await executeCommand(`setprop persist.sys.azenithconf.wdsize ${width}`);
   await executeCommand(`setprop persist.sys.azenithconf.hgsize ${height}`);
 
-  showToast(`Resolution saved: ${width}x${height}`);
+  showToast(
+    freqprops === 0
+      ? `Resolution applied: ${width}x${height}`
+      : `Resolution saved: ${width}x${height}, Current resolution set to default`
+  );
 }
 
 async function resetResolution() {
