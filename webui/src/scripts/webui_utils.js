@@ -1246,47 +1246,60 @@ function setupUIListeners() {
 }
 
 function heavyInit() {
-  checkAvailableRAM(),
-    checkProfile(),
-    checkServiceStatus(),
-    checkGPreload(),
-    loadColorSchemeSettings(),
-    checkCPUFrequencies(),
-    setInterval(checkCPUFrequencies, 2e3),
-    setInterval(checkServiceStatus, 5e3),
-    setInterval(checkProfile, 5e3),
-    setInterval(showRandomMessage, 1e4),
-    setInterval(checkAvailableRAM, 5e3),
-    Promise.all([
-      checkModuleVersion(),
-      checkCPUInfo(),
-      checkunderscale(),
-      checkResolution(),
-      checkKernelVersion(),
-      getAndroidVersion(),
-      checkfpsged(),
-      checkLiteModeStatus(),
-      checkDThermal(),
-      checkiosched(),
-      checkmalisched(),
-      checkAI(),
-      checkDND(),
-      loadCpuFreq(),
-      checkdtrace(),
-      checkjit(),
-      loadCpuGovernors(),
-      GovernorPowersave(),
-      checktoast(),
-      loadVsyncValue(),
-      checkBypassChargeStatus(),
-      checkschedtunes(),
-      checkSFL(),
-      checkKillLog(),
-      checklogger(),
-      checkRamBoost(),
-    ]).then(() => {
-      document.getElementById("loading-screen").classList.add("hidden");
-    });
+  // Initial checks
+  checkAvailableRAM();
+  checkProfile();
+  checkServiceStatus();
+  checkGPreload();
+  loadColorSchemeSettings();
+  checkCPUFrequencies();
+
+  // Reduce interval frequency to lower device load
+  setInterval(checkCPUFrequencies, 5000);
+  setInterval(checkServiceStatus, 7000); 
+  setInterval(checkProfile, 7000);
+  setInterval(showRandomMessage, 10000);
+  setInterval(checkAvailableRAM, 15000);
+
+  // Stagger heavy system commands to avoid rapid execution
+  const heavyChecks = [
+    checkModuleVersion,
+    checkCPUInfo,
+    checkunderscale,
+    checkResolution,
+    checkKernelVersion,
+    getAndroidVersion,
+    checkfpsged,
+    checkLiteModeStatus,
+    checkDThermal,
+    checkiosched,
+    checkmalisched,
+    checkAI,
+    checkDND,
+    loadCpuFreq,
+    checkdtrace,
+    checkjit,
+    loadCpuGovernors,
+    GovernorPowersave,
+    checktoast,
+    loadVsyncValue,
+    checkBypassChargeStatus,
+    checkschedtunes,
+    checkSFL,
+    checkKillLog,
+    checklogger,
+    checkRamBoost,
+  ];
+  let delay = 0;
+  heavyChecks.forEach((fn) => {
+    setTimeout(() => {
+      try { fn(); } catch (e) { console.error("heavyInit error", e); }
+    }, delay);
+    delay += 300;
+  });
+  setTimeout(() => {
+    document.getElementById("loading-screen").classList.add("hidden");
+  }, delay + 500);
 }
 
 document.getElementById("disableai").addEventListener("change", function () {
