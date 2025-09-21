@@ -1,3 +1,17 @@
+## AZenith 3.6
+### Changelog
+- Re Added Lite mode
+- Add Resolution Changer / Underscale
+- Color Scheme a.k.a Color boost now applied on boot
+- Migrate restover azenith config into persistence properties
+- Remove force target opp index
+- Remove custom game governor(performance by default)
+- Limit cpu frequency now applied in both balanced and powersaves profiles
+- Fixed an anomaly where GamePreload left zombie processes
+- Frequency now applied periodically to keep its value
+- Other improvements in backend services
+
+
 ## AZenith 3.4
 ### Changelog 
 - Major changes in backend flow
@@ -12,7 +26,6 @@
 - Daemon state is now stored in system prop, check using "getprop | grep azenith"
 - Improving logging messages for better readability
 - Restructuring codes...
-
 
 
 ## AZenith 3.3
