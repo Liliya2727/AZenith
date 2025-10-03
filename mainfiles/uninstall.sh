@@ -48,7 +48,11 @@ persist.sys.azenith.default_cpu_gov \
 persist.sys.azenithconf.scale \
 persist.sys.azenithconf.hgsize \
 persist.sys.azenithconf.wdsize \
-persist.sys.azenithconf.showtoast"
+persist.sys.azenithconf.showtoast \
+persist.sys.azenith.custom_default_balanced_IO \
+persist.sys.azenith.custom_powersave_IO \
+persist.sys.azenith.custom_performance_IO \
+persist.sys.azenith.default_balanced_IO"
 for prop in $props; do
   setprop "$prop" ""
   resetprop --delete "$prop"
