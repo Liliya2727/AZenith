@@ -771,6 +771,14 @@ video {
     background: #2a65c7
 }
 
+.additional-modal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, .3);
+    transition: opacity .3s;
+}
+
 .reso-modal {
     display: flex;
     align-items: center;
