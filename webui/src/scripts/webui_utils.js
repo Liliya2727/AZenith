@@ -1093,26 +1093,106 @@ async function setunderscale(c) {
   );
 }
 
-function setupUIListeners() {
-  const c = document.getElementById("disableai");
-  const s = document.getElementById("extraSettings");
+async function setIObalance(c) {
+  let s = "/data/adb/.config/AZenith",
+    r = `${s}/API/current_profile`;
+  await executeCommand(
+    `setprop persist.sys.azenith.custom_default_balanced_IO ${c}`
+  );
+  let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
+  0 === d &&
+    "2" === l.trim() &&
+    (await executeCommand(
+      `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO ${c}`
+    ));
+}
 
-  if (c && s) {
-    c.addEventListener("change", function () {
-      setAI(this.checked);
-      s.style.display = this.checked ? "block" : "none";
-      s.classList.toggle("show", this.checked);
-    });
-
-    executeCommand("getprop persist.sys.azenithconf.AIenabled").then(
-      ({ stdout: r }) => {
-        const d = r.trim() === "0";
-        c.checked = d;
-        s.style.display = d ? "block" : "none";
-        s.classList.toggle("show", d);
-      }
+async function loadIObalance() {
+  let { errno: c, stdout: s } = await executeCommand(
+    "chmod 644 /sys/block/sda/queue/scheduler && cat /sys/block/sda/queue/scheduler | tr -d '[]'"
+  );
+  if (0 === c) {
+    let r = s.trim().split(/\s+/),
+      d = document.getElementById("ioSchedulerBalanced");
+    (d.innerHTML = ""),
+      r.forEach((c) => {
+        let s = document.createElement("option");
+        (s.value = c), (s.textContent = c), d.appendChild(s);
+      });
+    let { errno: l, stdout: m } = await executeCommand(
+      `sh -c '[ -n "$(getprop persist.sys.azenith.custom_default_balanced_IO)" ] && getprop persist.sys.azenith.custom_default_balanced_IO || getprop persist.sys.azenith.default_balanced_IO'`
     );
+    0 === l && (d.value = m.trim());
   }
+}
+
+async function setIOperformance(c) {
+  let s = "/data/adb/.config/AZenith",
+    r = `${s}/API/current_profile`;
+  await executeCommand(
+    `setprop persist.sys.azenith.custom_performance_IO ${c}`
+  );
+  let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
+  0 === d &&
+    "2" === l.trim() &&
+    (await executeCommand(
+      `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO ${c}`
+    ));
+}
+
+async function loadIOperformance() {
+  let { errno: c, stdout: s } = await executeCommand(
+    "chmod 644 /sys/block/sda/queue/scheduler && cat /sys/block/sda/queue/scheduler | tr -d '[]'"
+  );
+  if (0 === c) {
+    let r = s.trim().split(/\s+/),
+      d = document.getElementById("ioSchedulerPerformance");
+    (d.innerHTML = ""),
+      r.forEach((c) => {
+        let s = document.createElement("option");
+        (s.value = c), (s.textContent = c), d.appendChild(s);
+      });
+    let { errno: l, stdout: m } = await executeCommand(
+      `sh -c '[ -n "$(getprop persist.sys.azenith.custom_performance_IO)" ] && getprop persist.sys.azenith.custom_performance_IO'`
+    );
+    0 === l && (d.value = m.trim());
+  }
+}
+
+async function setIOpowersave(c) {
+  let s = "/data/adb/.config/AZenith",
+    r = `${s}/API/current_profile`;
+  await executeCommand(
+    `setprop persist.sys.azenith.custom_powersave_IO ${c}`
+  );
+  let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
+  0 === d &&
+    "2" === l.trim() &&
+    (await executeCommand(
+      `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO ${c}`
+    ));
+}
+
+async function loadIOpowersave() {
+  let { errno: c, stdout: s } = await executeCommand(
+    "chmod 644 /sys/block/sda/queue/scheduler && cat /sys/block/sda/queue/scheduler | tr -d '[]'"
+  );
+  if (0 === c) {
+    let r = s.trim().split(/\s+/),
+      d = document.getElementById("ioSchedulerPowersave");
+    (d.innerHTML = ""),
+      r.forEach((c) => {
+        let s = document.createElement("option");
+        (s.value = c), (s.textContent = c), d.appendChild(s);
+      });
+    let { errno: l, stdout: m } = await executeCommand(
+      `sh -c '[ -n "$(getprop persist.sys.azenith.custom_powersave_IO)" ] && getprop persist.sys.azenith.custom_powersave_IO'`
+    );
+    0 === l && (d.value = m.trim());
+  }
+}
+
+function setupUIListeners() {
 
   async function savelog() {
     try {
@@ -1131,15 +1211,6 @@ function setupUIListeners() {
     .getElementById("startButton")
     ?.addEventListener("click", startService);
   document.getElementById("savelogButton")?.addEventListener("click", savelog);
-  document
-    .getElementById("applyperformance")
-    ?.addEventListener("click", applyperformanceprofile);
-  document
-    .getElementById("applybalanced")
-    ?.addEventListener("click", applybalancedprofile);
-  document
-    .getElementById("applypowersave")
-    ?.addEventListener("click", applyecomode);
   document.getElementById("FSTrim")?.addEventListener("click", applyFSTRIM);
 
   // Toggle Switches
@@ -1149,6 +1220,9 @@ function setupUIListeners() {
   document
     .getElementById("jit")
     ?.addEventListener("change", (e) => setjit(e.target.checked));
+  document
+    .getElementById("disableai")
+    ?.addEventListener("change", (e) => setAI(e.target.checked));
   document
     .getElementById("toast")
     ?.addEventListener("change", (e) => settoast(e.target.checked));
@@ -1204,6 +1278,15 @@ function setupUIListeners() {
   document
     .getElementById("GovernorPowersave")
     ?.addEventListener("change", (e) => setGovernorPowersave(e.target.value));
+  document
+    .getElementById("ioSchedulerBalanced")
+    ?.addEventListener("change", (e) => setIObalance(e.target.value));
+  document
+    .getElementById("ioSchedulerPerformance")
+    ?.addEventListener("change", (e) => setIOperformance(e.target.value));
+  document
+    .getElementById("ioSchedulerPowersave")
+    ?.addEventListener("change", (e) => setIOpowersave(e.target.value));
   document
     .getElementById("cpuFreq")
     ?.addEventListener("change", (e) => setCpuFreqOffsets(e.target.value));
@@ -1281,6 +1364,9 @@ function heavyInit() {
     checkjit,
     loadCpuGovernors,
     GovernorPowersave,
+    loadIObalance,
+    loadIOperformance,
+    loadIOpowersave,
     checktoast,
     loadVsyncValue,
     checkBypassChargeStatus,
@@ -1302,12 +1388,6 @@ function heavyInit() {
   }, delay + 500);
 }
 
-document.getElementById("disableai").addEventListener("change", function () {
-  setAI(this.checked),
-    document
-      .getElementById("extraSettings")
-      .classList.toggle("show", this.checked);
-});
 let currentColor = {
   red: 1e3,
   green: 1e3,
