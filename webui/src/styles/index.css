@@ -560,6 +560,7 @@ video {
 
 #loading-screen.hidden,
 .gamelist-modal,
+.additional-modal,
 .reso-modal,
 .scheme-modal {
     opacity: 0;
@@ -630,6 +631,7 @@ video {
 
 #loading-screen,
 .gamelist-modal,
+.additional-modal,
 .reso-modal,
 .scheme-modal {
     position: fixed;
@@ -648,6 +650,7 @@ video {
 .gamelist-modal.show,
 .scheme-modal.show,
 .reso-modal.show,
+.additional-modal.show
 .transition-section.show {
     opacity: 1;
     pointer-events: auto
