@@ -706,19 +706,19 @@ video {
 }
 
 .close-btn {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  background: transparent;
-  border: none;
-  font-size: 20px;
-  color: #bbb;
-  cursor: pointer;
-  transition: color 0.2s;
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    color: #bbb;
+    cursor: pointer;
+    transition: color 0.2s;
 }
 
 .close-btn:hover {
-  color: #fff;
+    color: #fff;
 }
 
 .gamelist-textarea {
@@ -771,6 +771,15 @@ video {
     background: #2a65c7
 }
 
+.arrow-icon {
+    font-size: 1.25rem;
+    color: #9ca3af;
+    margin-left: 1rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+
 .additional-modal {
     display: flex;
     align-items: center;
@@ -808,31 +817,31 @@ video {
 }
 
 .reso-section {
-  margin-bottom: 16px;
+    margin-bottom: 16px;
 }
 
 .reso-label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
-  color: #bbb;
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: #bbb;
 }
 
 .reso-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr; 
-  gap: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
 }
 
 .reso-input {
-  width: 100%;
-  padding: 12px;
-  background: #2b2b2b;
-  border: none;
-  border-radius: 70px;
-  color: white;
-  font-size: 16px;
-  text-align: center;
+    width: 100%;
+    padding: 12px;
+    background: #2b2b2b;
+    border: none;
+    border-radius: 70px;
+    color: white;
+    font-size: 16px;
+    text-align: center;
 }
 
 .reso-input:focus {
