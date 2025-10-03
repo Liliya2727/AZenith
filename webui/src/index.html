@@ -201,16 +201,19 @@
           </div>
         </div>
       </div>
-      <button class="p-6" id="additional-settings">
-        <div class="bg-gray-900 mt-211 mb-4 p-4 rounded-lg">
+      <button
+        id="show-additional-settings"
+        class="w-full bg-gray-900 mt-2 mb-4 p-6 rounded-lg flex items-center justify-between cursor-pointer hover:bg-gray-800"
+      >
+        <div class="flex flex-col items-start">
           <h2 class="font-semibold text-lg text-gray-200">
             # Additional Tweak
           </h2>
           <small class="block text-gray-400 text-sss">
             Additional settings to enhance your experience.
           </small>
-          <span class="text-gray-400 text-xl">&rsaquo;</span>
         </div>
+        <span class="text-gray-400 text-xl">&rsaquo;</span>
       </button>
       <div class="p-6">
         <div class="bg-gray-900 mt-211 mb-4 p-4 rounded-lg">
@@ -526,7 +529,7 @@
         </div>
       </div>
 
-      <div id="additional-settings" class="additional-modal">
+      <div id="additional-modal" class="additional-modal">
         <div class="additional-container">
           <button class="close-btn" id="close-additional">&times;</button>
           <h3 class="additional-title">Additional Settings</h3>

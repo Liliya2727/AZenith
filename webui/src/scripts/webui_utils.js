@@ -1193,7 +1193,7 @@ async function loadIOpowersave() {
 }
 
 async function showAdditionalSettings() {
-  let c = document.getElementById("additional-settings"),
+  let c = document.getElementById("additional-modal"),
     s = c.querySelector(".additional-container");
   document.body.classList.add("modal-open"), c.classList.add("show");
 
@@ -1211,7 +1211,7 @@ async function showAdditionalSettings() {
 }
 
 function hideAdditionalSettings() {
-  let c = document.getElementById("additional-settings");
+  let c = document.getElementById("additional-modal");
   c.classList.remove("show"),
     document.body.classList.remove("modal-open"),
     c._resizeHandler &&
@@ -1323,7 +1323,7 @@ function setupUIListeners() {
 
   // Additional Settings
   document
-    .getElementById("additional-settings")
+    .getElementById("show-additional-settings")
     ?.addEventListener("click", showAdditionalSettings);
   document
     .getElementById("close-additional")
