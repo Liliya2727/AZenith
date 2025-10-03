@@ -650,7 +650,7 @@ video {
 .gamelist-modal.show,
 .scheme-modal.show,
 .reso-modal.show,
-.additional-modal.show
+.additional-modal.show,
 .transition-section.show {
     opacity: 1;
     pointer-events: auto
