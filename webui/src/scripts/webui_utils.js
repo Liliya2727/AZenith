@@ -1134,7 +1134,7 @@ async function setIOperformance(c) {
   );
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   0 === d &&
-    "2" === l.trim() &&
+    "1" === l.trim() &&
     (await executeCommand(
       `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO ${c}`
     ));
@@ -1167,7 +1167,7 @@ async function setIOpowersave(c) {
   );
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   0 === d &&
-    "2" === l.trim() &&
+    "3" === l.trim() &&
     (await executeCommand(
       `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO ${c}`
     ));
