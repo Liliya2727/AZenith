@@ -1219,6 +1219,33 @@ function hideAdditionalSettings() {
       delete c._resizeHandler);
 }
 
+async function showPreferenceSettings() {
+  let c = document.getElementById("preference-modal"),
+    s = c.querySelector(".preference-container");
+  document.body.classList.add("modal-open"), c.classList.add("show");
+
+  let r = window.innerHeight,
+    d = () => {
+      window.innerHeight < r - 150
+        ? (s.style.transform = "translateY(-10%) scale(1)")
+        : (s.style.transform = "translateY(0) scale(1)");
+    };
+  window.addEventListener("resize", d, {
+    passive: !0,
+  }),
+    (c._resizeHandler = d),
+    d();
+}
+
+function hidePreferenceSettings() {
+  let c = document.getElementById("preference-modal");
+  c.classList.remove("show"),
+    document.body.classList.remove("modal-open"),
+    c._resizeHandler &&
+      (window.removeEventListener("resize", c._resizeHandler),
+      delete c._resizeHandler);
+}
+
 function setupUIListeners() {
 
   async function savelog() {
@@ -1328,6 +1355,14 @@ function setupUIListeners() {
   document
     .getElementById("close-additional")
     ?.addEventListener("click", hideAdditionalSettings);
+
+  // Preference Settings
+  document
+    .getElementById("show-preference-settings")
+    ?.addEventListener("click", showPreferenceSettings);
+  document
+    .getElementById("close-preference")
+    ?.addEventListener("click", hidePreferenceSettings);
 
   // Custom Resolution Settings
   document

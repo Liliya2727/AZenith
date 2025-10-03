@@ -1,5 +1,6 @@
 .gamelist-modal,
 .additional-modal,
+.preference-modal,
 .reso-modal,
 .scheme-modal {
     inset: 0;
@@ -561,6 +562,7 @@ video {
 #loading-screen.hidden,
 .gamelist-modal,
 .additional-modal,
+.preference-modal,
 .reso-modal,
 .scheme-modal {
     opacity: 0;
@@ -632,6 +634,7 @@ video {
 #loading-screen,
 .gamelist-modal,
 .additional-modal,
+.preference-modal,
 .reso-modal,
 .scheme-modal {
     position: fixed;
@@ -650,6 +653,7 @@ video {
 .gamelist-modal.show,
 .scheme-modal.show,
 .reso-modal.show,
+.preference-modal.show,
 .additional-modal.show,
 .transition-section.show {
     opacity: 1;
@@ -658,6 +662,7 @@ video {
 
 .gamelist-content,
 .reso-container,
+.preference-container,
 .additional-container,
 .scheme-container {
     background: #111d23;
@@ -674,12 +679,14 @@ video {
 .gamelist-modal.show .gamelist-content,
 .additional-modal.show .additional-container,
 .reso-modal.show .reso-container,
+.preference-modal.show .preference-container,
 .scheme-modal.show .scheme-container {
     transform: scale(1)
 }
 
 .gamelist-title,
 .additional-title,
+.preference-title,
 .reso-title,
 .scheme-title {
     font-size: 1.5rem;
@@ -697,6 +704,7 @@ video {
 }
 
 .reso-desc,
+.preference-desc,
 .additional-desc,
 .scheme-desc {
     font-size: .75rem;
@@ -707,11 +715,11 @@ video {
 
 .close-btn {
     position: absolute;
-    top: 10px;
+    top: 12px;
     right: 12px;
     background: transparent;
     border: none;
-    font-size: 20px;
+    font-size: 24px;
     color: #bbb;
     cursor: pointer;
     transition: color 0.2s;
@@ -783,6 +791,14 @@ video {
     flex-shrink: 0;
     display: flex;
     align-items: center;
+}
+
+.preference-modal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, .3);
+    transition: opacity .3s;
 }
 
 .additional-modal {
