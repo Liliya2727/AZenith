@@ -771,6 +771,10 @@ video {
     background: #2a65c7
 }
 
+.text-left {
+    text-align: left
+}
+
 .arrow-icon {
     font-size: 1.75rem;
     color: #9ca3af;
