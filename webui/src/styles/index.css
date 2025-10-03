@@ -772,9 +772,10 @@ video {
 }
 
 .arrow-icon {
-    font-size: 1.25rem;
+    font-size: 1.75rem;
     color: #9ca3af;
-    margin-left: 1rem;
+    margin-left: 0.75rem;
+    margin-right: 0.5rem;
     flex-shrink: 0;
     display: flex;
     align-items: center;
