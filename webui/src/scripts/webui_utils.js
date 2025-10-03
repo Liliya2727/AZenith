@@ -1364,7 +1364,6 @@ function setupUIListeners() {
 }
 
 function heavyInit() {
-  // Initial checks
   checkAvailableRAM();
   checkProfile();
   checkServiceStatus();
@@ -1372,14 +1371,29 @@ function heavyInit() {
   loadColorSchemeSettings();
   checkCPUFrequencies();
 
-  // Reduce interval frequency to lower device load
-  setInterval(checkCPUFrequencies, 5000);
-  setInterval(checkServiceStatus, 7000); 
-  setInterval(checkProfile, 7000);
-  setInterval(showRandomMessage, 10000);
-  setInterval(checkAvailableRAM, 15000);
+  function loopCPU() {
+    checkCPUFrequencies();
+    setTimeout(loopCPU, 5000);
+  }
+  function loopStatus() {
+    checkServiceStatus();
+    checkProfile();
+    setTimeout(loopStatus, 7000);
+  }
+  function loopMessage() {
+    showRandomMessage();
+    setTimeout(loopMessage, 10000);
+  }
+  function loopRAM() {
+    checkAvailableRAM();
+    setTimeout(loopRAM, 15000);
+  }
 
-  // Stagger heavy system commands to avoid rapid execution
+  loopCPU();
+  loopStatus();
+  loopMessage();
+  loopRAM();
+
   const heavyChecks = [
     checkModuleVersion,
     checkCPUInfo,
@@ -1411,13 +1425,19 @@ function heavyInit() {
     checklogger,
     checkRamBoost,
   ];
+
   let delay = 0;
   heavyChecks.forEach((fn) => {
     setTimeout(() => {
-      try { fn(); } catch (e) { console.error("heavyInit error", e); }
+      try {
+        fn();
+      } catch (e) {
+        console.error("heavyInit error", e);
+      }
     }, delay);
     delay += 300;
   });
+
   setTimeout(() => {
     document.getElementById("loading-screen").classList.add("hidden");
   }, delay + 500);
