@@ -83,6 +83,57 @@
         <div class="bg-gray-900 mb-4 p-4 rounded-lg">
           <div class="flex items-center justify-between">
             <h2 class="font-semibold mb-4 text-lg text-black-69">
+              # I/O Scheduler Settings
+            </h2>
+          </div>
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <p class="text-sm text-white">Default I/O Scheduler</p>
+              <small class="block text-gray-400 text-sss"
+                >Scheduler that will be used on Normal profile</small
+              >
+            </div>
+            <select
+              id="ioSchedulerBalanced"
+              class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs"
+            >
+              <option value="none" selected="selected"></option>
+            </select>
+          </div>
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <p class="text-sm text-white">Performance I/O Scheduler</p>
+              <small class="block text-gray-400 text-sss"
+                >Scheduler that will be used on Performance profile</small
+              >
+            </div>
+            <select
+              id="ioSchedulerPerformance"
+              class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs"
+            >
+              <option value="none" selected="selected"></option>
+            </select>
+          </div>
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <p class="text-sm text-white">Powersave I/O Scheduler</p>
+              <small class="block text-gray-400 text-sss"
+                >Scheduler that will be used on Powersave profile</small
+              >
+            </div>
+            <select
+              id="ioSchedulerPowersave"
+              class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs"
+            >
+              <option value="none" selected="selected"></option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="p-6">
+        <div class="bg-gray-900 mb-4 p-4 rounded-lg">
+          <div class="flex items-center justify-between">
+            <h2 class="font-semibold mb-4 text-lg text-black-69">
               # CPU Settings
             </h2>
           </div>
@@ -146,57 +197,6 @@
                 ></div>
               </div>
             </label>
-          </div>
-        </div>
-      </div>
-      <div class="p-6">
-        <div class="bg-gray-900 mb-4 p-4 rounded-lg">
-          <div class="flex items-center justify-between">
-            <h2 class="font-semibold mb-4 text-lg text-black-69">
-              # I/O Scheduler Settings
-            </h2>
-          </div>
-          <div class="flex items-center justify-between mb-3">
-            <div>
-              <p class="text-sm text-white">Default I/O Scheduler</p>
-              <small class="block text-gray-400 text-sss"
-                >Scheduler that will be used on Normal profile</small
-              >
-            </div>
-            <select
-              id="ioSchedulerBalanced"
-              class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs"
-            >
-              <option value="none" selected="selected"></option>
-            </select>
-          </div>
-          <div class="flex items-center justify-between mb-3">
-            <div>
-              <p class="text-sm text-white">Performance I/O Scheduler</p>
-              <small class="block text-gray-400 text-sss"
-                >Scheduler that will be used on Performance profile</small
-              >
-            </div>
-            <select
-              id="ioSchedulerPerformance"
-              class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs"
-            >
-              <option value="none" selected="selected"></option>
-            </select>
-          </div>
-          <div class="flex items-center justify-between mb-3">
-            <div>
-              <p class="text-sm text-white">Powersave I/O Scheduler</p>
-              <small class="block text-gray-400 text-sss"
-                >Scheduler that will be used on Powersave profile</small
-              >
-            </div>
-            <select
-              id="ioSchedulerPowersave"
-              class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs"
-            >
-              <option value="none" selected="selected"></option>
-            </select>
           </div>
         </div>
       </div>
