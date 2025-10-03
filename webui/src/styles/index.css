@@ -1,4 +1,5 @@
 .gamelist-modal,
+.additional-modal,
 .reso-modal,
 .scheme-modal {
     inset: 0;
@@ -654,6 +655,7 @@ video {
 
 .gamelist-content,
 .reso-container,
+.additional-container,
 .scheme-container {
     background: #111d23;
     border-radius: 1.5rem;
@@ -667,12 +669,14 @@ video {
 }
 
 .gamelist-modal.show .gamelist-content,
+.additional-modal.show .additional-container,
 .reso-modal.show .reso-container,
 .scheme-modal.show .scheme-container {
     transform: scale(1)
 }
 
 .gamelist-title,
+.additional-title,
 .reso-title,
 .scheme-title {
     font-size: 1.5rem;
@@ -690,11 +694,28 @@ video {
 }
 
 .reso-desc,
+.additional-desc,
 .scheme-desc {
     font-size: .75rem;
     color: #ccc;
     text-align: center;
     margin-bottom: 1rem
+}
+
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  color: #bbb;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.close-btn:hover {
+  color: #fff;
 }
 
 .gamelist-textarea {

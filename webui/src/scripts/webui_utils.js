@@ -1192,6 +1192,33 @@ async function loadIOpowersave() {
   }
 }
 
+async function showAdditionalSettings() {
+  let c = document.getElementById("additional-settings"),
+    s = c.querySelector(".additional-container");
+  document.body.classList.add("modal-open"), c.classList.add("show");
+
+  let r = window.innerHeight,
+    d = () => {
+      window.innerHeight < r - 150
+        ? (s.style.transform = "translateY(-10%) scale(1)")
+        : (s.style.transform = "translateY(0) scale(1)");
+    };
+  window.addEventListener("resize", d, {
+    passive: !0,
+  }),
+    (c._resizeHandler = d),
+    d();
+}
+
+function hideAdditionalSettings() {
+  let c = document.getElementById("additional-settings");
+  c.classList.remove("show"),
+    document.body.classList.remove("modal-open"),
+    c._resizeHandler &&
+      (window.removeEventListener("resize", c._resizeHandler),
+      delete c._resizeHandler);
+}
+
 function setupUIListeners() {
 
   async function savelog() {
@@ -1293,6 +1320,14 @@ function setupUIListeners() {
   document
     .getElementById("disablevsync")
     ?.addEventListener("change", (e) => setVsyncValue(e.target.value));
+
+  // Additional Settings
+  document
+    .getElementById("additional-settings")
+    ?.addEventListener("click", showAdditionalSettings);
+  document
+    .getElementById("close-additional")
+    ?.addEventListener("click", hideAdditionalSettings);
 
   // Custom Resolution Settings
   document
