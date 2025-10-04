@@ -1401,12 +1401,10 @@ let heavyInitDone = false;
 let heavyInitTimeouts = [];
 let cleaningInterval = null;
 
-function schedule(fn, delay) {
+function schedule(fn, delay = 0) {
   const id = setTimeout(() => {
     try {
       fn();
-    } catch (_) {
-      // silently ignore errors
     } finally {
       heavyInitTimeouts = heavyInitTimeouts.filter((t) => t !== id);
     }
@@ -1427,27 +1425,13 @@ function startMonitoringLoops() {
   if (loopsActive) return;
   loopsActive = true;
 
-  loopIntervals.push(
-    setInterval(() => {
-      checkCPUFrequencies();
-    }, 5000)
-  );
-  loopIntervals.push(
-    setInterval(() => {
-      checkServiceStatus();
-      checkProfile();
-    }, 10000)
-  );
-  loopIntervals.push(
-    setInterval(() => {
-      checkAvailableRAM();
-    }, 8000)
-  );
-  loopIntervals.push(
-    setInterval(() => {
-      showRandomMessage();
-    }, 20000)
-  );
+  loopIntervals.push(setInterval(() => checkCPUFrequencies(), 5000));
+  loopIntervals.push(setInterval(() => {
+    checkServiceStatus();
+    checkProfile();
+  }, 9000));
+  loopIntervals.push(setInterval(() => checkAvailableRAM(), 8000));
+  loopIntervals.push(setInterval(() => showRandomMessage(), 20000));
 }
 
 function stopMonitoringLoops() {
@@ -1461,7 +1445,7 @@ function observeVisibility() {
     if (document.hidden) {
       stopMonitoringLoops();
       cancelAllTimeouts();
-      if (cleaningInterval) clearInterval(cleaningInterval);
+      clearInterval(cleaningInterval);
     } else {
       startMonitoringLoops();
     }
@@ -1500,10 +1484,10 @@ function heavyInit() {
     GovernorPowersave,
   ];
 
-  let delay = 800;
-  for (const fn of quickChecks) {
-    schedule(fn, delay);
-    delay += 300;
+  let batchSize = 3;
+  for (let i = 0; i < quickChecks.length; i += batchSize) {
+    const batch = quickChecks.slice(i, i + batchSize);
+    schedule(() => batch.forEach((fn) => fn()), 600 + i * 300);
   }
 
   const heavyChecks = [
@@ -1531,12 +1515,12 @@ function heavyInit() {
     checkRamBoost,
   ];
 
-  for (const fn of heavyChecks) {
-    schedule(fn, delay);
-    delay += 400;
-  }
+  let step = 300;
+  heavyChecks.forEach((fn, i) => {
+    schedule(fn, 1600 + i * step);
+  });
 
-  cleaningInterval = setInterval(cleanMemory, 20000);
+  cleaningInterval = setInterval(cleanMemory, 15000);
 }
 
 let currentColor = {
