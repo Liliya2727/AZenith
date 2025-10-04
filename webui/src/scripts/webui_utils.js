@@ -1162,7 +1162,9 @@ async function loadIOperformance() {
 async function setIOpowersave(c) {
   let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
-  await executeCommand(`setprop persist.sys.azenith.custom_powersave_IO ${c}`);
+  await executeCommand(
+    `setprop persist.sys.azenith.custom_powersave_IO ${c}`
+  );
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   0 === d &&
     "3" === l.trim() &&
@@ -1245,6 +1247,7 @@ function hidePreferenceSettings() {
 }
 
 function setupUIListeners() {
+
   async function savelog() {
     try {
       await executeCommand(
@@ -1403,27 +1406,20 @@ function startMonitoringLoops() {
   if (loopsActive) return;
   loopsActive = true;
 
-  loopIntervals.push(
-    setInterval(() => {
-      checkCPUFrequencies().catch(console.error);
-    }, 5000)
-  );
-  loopIntervals.push(
-    setInterval(() => {
-      checkServiceStatus().catch(console.error);
-      checkProfile().catch(console.error);
-    }, 10000)
-  );
-  loopIntervals.push(
-    setInterval(() => {
-      checkAvailableRAM().catch(console.error);
-    }, 8000)
-  );
-  loopIntervals.push(
-    setInterval(() => {
-      showRandomMessage();
-    }, 20000)
-  );
+  loopIntervals.push(setInterval(() => {
+    checkCPUFrequencies().catch(console.error);
+  }, 5000));
+  loopIntervals.push(setInterval(() => {
+    checkServiceStatus().catch(console.error);
+    checkProfile().catch(console.error);
+  }, 10000));
+  loopIntervals.push(setInterval(() => {
+    checkAvailableRAM().catch(console.error);
+  }, 8000));
+  loopIntervals.push(setInterval(() => {
+    showRandomMessage();
+  }, 20000));
+
 }
 
 function stopMonitoringLoops() {
@@ -1470,6 +1466,7 @@ function heavyInit() {
       loadCpuGovernors,
       loadCpuFreq,
     ];
+    quickChecks.forEach((fn) => fn());
   }, 800);
 
   setTimeout(() => {
@@ -1498,6 +1495,7 @@ function heavyInit() {
       checklogger,
       checkRamBoost,
     ];
+    heavyChecks.forEach((fn) => fn());
   }, 1800);
 }
 
