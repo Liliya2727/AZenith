@@ -1465,6 +1465,7 @@ function heavyInit() {
       getAndroidVersion,
       loadCpuGovernors,
       loadCpuFreq,
+      GovernorPowersave,
     ];
     quickChecks.forEach((fn) => fn());
   }, 800);
@@ -1482,7 +1483,6 @@ function heavyInit() {
       checkDND,
       checkdtrace,
       checkjit,
-      GovernorPowersave,
       loadIObalance,
       loadIOperformance,
       loadIOpowersave,
