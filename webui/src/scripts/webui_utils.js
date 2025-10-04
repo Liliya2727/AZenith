@@ -1398,36 +1398,58 @@ function setupUIListeners() {
     ?.addEventListener("click", saveGameList);
 }
 
-function heavyInit() {
-  checkAvailableRAM();
-  checkProfile();
-  checkServiceStatus();
-  checkGPreload();
-  loadColorSchemeSettings();
-  checkCPUFrequencies();
+let loopIntervals = [];
+let loopsActive = false;
+let heavyInitDone = false;
 
-  function loopCPU() {
-    checkCPUFrequencies();
-    setTimeout(loopCPU, 5000);
-  }
-  function loopStatus() {
-    checkServiceStatus();
-    checkProfile();
-    setTimeout(loopStatus, 7000);
-  }
-  function loopMessage() {
+function startMonitoringLoops() {
+  if (loopsActive) return;
+  loopsActive = true;
+
+  loopIntervals.push(setInterval(() => {
+    checkCPUFrequencies().catch(console.error);
+  }, 5000));
+  loopIntervals.push(setInterval(() => {
+    checkServiceStatus().catch(console.error);
+    checkProfile().catch(console.error);
+  }, 10000));
+  loopIntervals.push(setInterval(() => {
+    checkAvailableRAM().catch(console.error);
+  }, 8000));
+  loopIntervals.push(setInterval(() => {
     showRandomMessage();
-    setTimeout(loopMessage, 10000);
-  }
-  function loopRAM() {
-    checkAvailableRAM();
-    setTimeout(loopRAM, 15000);
-  }
+  }, 20000));
 
-  loopCPU();
-  loopStatus();
-  loopMessage();
-  loopRAM();
+}
+
+function stopMonitoringLoops() {
+  loopsActive = false;
+  loopIntervals.forEach(clearInterval);
+  loopIntervals = [];
+}
+
+function observeVisibility() {
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      stopMonitoringLoops();
+    } else {
+      startMonitoringLoops();
+    }
+  });
+}
+
+function heavyInit() {
+  if (heavyInitDone) return;
+  heavyInitDone = true;
+
+  Promise.allSettled([
+    checkAvailableRAM(),
+    checkProfile(),
+    checkServiceStatus(),
+    checkGPreload(),
+    loadColorSchemeSettings(),
+    checkCPUFrequencies(),
+  ]).catch(console.error);
 
   const heavyChecks = [
     checkModuleVersion,
@@ -1467,15 +1489,19 @@ function heavyInit() {
       try {
         fn();
       } catch (e) {
-        console.error("heavyInit error", e);
+        console.error("[AZenith WebUI] heavyInit error:", e);
       }
     }, delay);
-    delay += 300;
+    delay += 400; // slower spacing to reduce load
   });
 
+  // Start background loops only after heavyInit
   setTimeout(() => {
-    document.getElementById("loading-screen").classList.add("hidden");
-  }, delay + 500);
+    startMonitoringLoops();
+    observeVisibility();
+    const loader = document.getElementById("loading-screen");
+    if (loader) loader.classList.add("hidden");
+  }, delay + 800);
 }
 
 let currentColor = {
