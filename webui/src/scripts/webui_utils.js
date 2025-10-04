@@ -1162,9 +1162,7 @@ async function loadIOperformance() {
 async function setIOpowersave(c) {
   let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
-  await executeCommand(
-    `setprop persist.sys.azenith.custom_powersave_IO ${c}`
-  );
+  await executeCommand(`setprop persist.sys.azenith.custom_powersave_IO ${c}`);
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   0 === d &&
     "3" === l.trim() &&
@@ -1247,7 +1245,6 @@ function hidePreferenceSettings() {
 }
 
 function setupUIListeners() {
-
   async function savelog() {
     try {
       await executeCommand(
@@ -1406,20 +1403,27 @@ function startMonitoringLoops() {
   if (loopsActive) return;
   loopsActive = true;
 
-  loopIntervals.push(setInterval(() => {
-    checkCPUFrequencies().catch(console.error);
-  }, 5000));
-  loopIntervals.push(setInterval(() => {
-    checkServiceStatus().catch(console.error);
-    checkProfile().catch(console.error);
-  }, 10000));
-  loopIntervals.push(setInterval(() => {
-    checkAvailableRAM().catch(console.error);
-  }, 8000));
-  loopIntervals.push(setInterval(() => {
-    showRandomMessage();
-  }, 20000));
-
+  loopIntervals.push(
+    setInterval(() => {
+      checkCPUFrequencies().catch(console.error);
+    }, 5000)
+  );
+  loopIntervals.push(
+    setInterval(() => {
+      checkServiceStatus().catch(console.error);
+      checkProfile().catch(console.error);
+    }, 10000)
+  );
+  loopIntervals.push(
+    setInterval(() => {
+      checkAvailableRAM().catch(console.error);
+    }, 8000)
+  );
+  loopIntervals.push(
+    setInterval(() => {
+      showRandomMessage();
+    }, 20000)
+  );
 }
 
 function stopMonitoringLoops() {
@@ -1442,66 +1446,59 @@ function heavyInit() {
   if (heavyInitDone) return;
   heavyInitDone = true;
 
+  const loader = document.getElementById("loading-screen");
+
   Promise.allSettled([
-    checkAvailableRAM(),
     checkProfile(),
     checkServiceStatus(),
+    checkCPUFrequencies(),
+    checkAvailableRAM(),
     checkGPreload(),
     loadColorSchemeSettings(),
-    checkCPUFrequencies(),
-  ]).catch(console.error);
-
-  const heavyChecks = [
-    checkModuleVersion,
-    checkCPUInfo,
-    checkunderscale,
-    checkResolution,
-    checkKernelVersion,
-    getAndroidVersion,
-    checkfpsged,
-    checkLiteModeStatus,
-    checkDThermal,
-    checkiosched,
-    checkmalisched,
-    checkAI,
-    checkDND,
-    loadCpuFreq,
-    checkdtrace,
-    checkjit,
-    loadCpuGovernors,
-    GovernorPowersave,
-    loadIObalance,
-    loadIOperformance,
-    loadIOpowersave,
-    checktoast,
-    loadVsyncValue,
-    checkBypassChargeStatus,
-    checkschedtunes,
-    checkSFL,
-    checkKillLog,
-    checklogger,
-    checkRamBoost,
-  ];
-
-  let delay = 0;
-  heavyChecks.forEach((fn) => {
-    setTimeout(() => {
-      try {
-        fn();
-      } catch (e) {
-        console.error("[AZenith WebUI] heavyInit error:", e);
-      }
-    }, delay);
-    delay += 400; // slower spacing to reduce load
-  });
-
-  // Start background loops only after heavyInit
-  setTimeout(() => {
+  ]).then(() => {
+    if (loader) loader.classList.add("hidden");
     startMonitoringLoops();
     observeVisibility();
-    const loader = document.getElementById("loading-screen");
-    if (loader) loader.classList.add("hidden");
-  }, delay + 800);
+  });
+
+  setTimeout(() => {
+    const quickChecks = [
+      checkModuleVersion,
+      checkCPUInfo,
+      checkKernelVersion,
+      getAndroidVersion,
+      loadCpuGovernors,
+      loadCpuFreq,
+    ];
+  }, 800);
+
+  setTimeout(() => {
+    const heavyChecks = [
+      checkunderscale,
+      checkResolution,
+      checkfpsged,
+      checkLiteModeStatus,
+      checkDThermal,
+      checkiosched,
+      checkmalisched,
+      checkAI,
+      checkDND,
+      checkdtrace,
+      checkjit,
+      GovernorPowersave,
+      loadIObalance,
+      loadIOperformance,
+      loadIOpowersave,
+      checktoast,
+      loadVsyncValue,
+      checkBypassChargeStatus,
+      checkschedtunes,
+      checkSFL,
+      checkKillLog,
+      checklogger,
+      checkRamBoost,
+    ];
+  }, 1800);
 }
 
 let currentColor = {
