@@ -1162,9 +1162,7 @@ async function loadIOperformance() {
 async function setIOpowersave(c) {
   let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
-  await executeCommand(
-    `setprop persist.sys.azenith.custom_powersave_IO ${c}`
-  );
+  await executeCommand(`setprop persist.sys.azenith.custom_powersave_IO ${c}`);
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   0 === d &&
     "3" === l.trim() &&
@@ -1247,7 +1245,6 @@ function hidePreferenceSettings() {
 }
 
 function setupUIListeners() {
-
   async function savelog() {
     try {
       await executeCommand(
@@ -1401,25 +1398,56 @@ function setupUIListeners() {
 let loopIntervals = [];
 let loopsActive = false;
 let heavyInitDone = false;
+let heavyInitTimeouts = [];
+let cleaningInterval = null;
+
+function schedule(fn, delay) {
+  const id = setTimeout(() => {
+    try {
+      fn();
+    } catch (_) {
+      // silently ignore errors
+    } finally {
+      heavyInitTimeouts = heavyInitTimeouts.filter((t) => t !== id);
+    }
+  }, delay);
+  heavyInitTimeouts.push(id);
+}
+
+function cancelAllTimeouts() {
+  for (const t of heavyInitTimeouts) clearTimeout(t);
+  heavyInitTimeouts = [];
+}
+
+function cleanMemory() {
+  if (typeof globalThis.gc === "function") globalThis.gc();
+}
 
 function startMonitoringLoops() {
   if (loopsActive) return;
   loopsActive = true;
 
-  loopIntervals.push(setInterval(() => {
-    checkCPUFrequencies().catch(console.error);
-  }, 5000));
-  loopIntervals.push(setInterval(() => {
-    checkServiceStatus().catch(console.error);
-    checkProfile().catch(console.error);
-  }, 10000));
-  loopIntervals.push(setInterval(() => {
-    checkAvailableRAM().catch(console.error);
-  }, 8000));
-  loopIntervals.push(setInterval(() => {
-    showRandomMessage();
-  }, 20000));
-
+  loopIntervals.push(
+    setInterval(() => {
+      checkCPUFrequencies();
+    }, 5000)
+  );
+  loopIntervals.push(
+    setInterval(() => {
+      checkServiceStatus();
+      checkProfile();
+    }, 10000)
+  );
+  loopIntervals.push(
+    setInterval(() => {
+      checkAvailableRAM();
+    }, 8000)
+  );
+  loopIntervals.push(
+    setInterval(() => {
+      showRandomMessage();
+    }, 20000)
+  );
 }
 
 function stopMonitoringLoops() {
@@ -1432,6 +1460,8 @@ function observeVisibility() {
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
       stopMonitoringLoops();
+      cancelAllTimeouts();
+      if (cleaningInterval) clearInterval(cleaningInterval);
     } else {
       startMonitoringLoops();
     }
@@ -1441,6 +1471,9 @@ function observeVisibility() {
 function heavyInit() {
   if (heavyInitDone) return;
   heavyInitDone = true;
+
+  cancelAllTimeouts();
+  if (cleaningInterval) clearInterval(cleaningInterval);
 
   const loader = document.getElementById("loading-screen");
 
@@ -1457,46 +1490,53 @@ function heavyInit() {
     observeVisibility();
   });
 
-  setTimeout(() => {
-    const quickChecks = [
-      checkModuleVersion,
-      checkCPUInfo,
-      checkKernelVersion,
-      getAndroidVersion,
-      loadCpuGovernors,
-      loadCpuFreq,
-      GovernorPowersave,
-    ];
-    quickChecks.forEach((fn) => fn());
-  }, 800);
+  const quickChecks = [
+    checkModuleVersion,
+    checkCPUInfo,
+    checkKernelVersion,
+    getAndroidVersion,
+    loadCpuGovernors,
+    loadCpuFreq,
+    GovernorPowersave,
+  ];
 
-  setTimeout(() => {
-    const heavyChecks = [
-      checkunderscale,
-      checkResolution,
-      checkfpsged,
-      checkLiteModeStatus,
-      checkDThermal,
-      checkiosched,
-      checkmalisched,
-      checkAI,
-      checkDND,
-      checkdtrace,
-      checkjit,
-      loadIObalance,
-      loadIOperformance,
-      loadIOpowersave,
-      checktoast,
-      loadVsyncValue,
-      checkBypassChargeStatus,
-      checkschedtunes,
-      checkSFL,
-      checkKillLog,
-      checklogger,
-      checkRamBoost,
-    ];
-    heavyChecks.forEach((fn) => fn());
-  }, 1800);
+  let delay = 800;
+  for (const fn of quickChecks) {
+    schedule(fn, delay);
+    delay += 300;
+  }
+
+  const heavyChecks = [
+    checkunderscale,
+    checkResolution,
+    checkfpsged,
+    checkLiteModeStatus,
+    checkDThermal,
+    checkiosched,
+    checkmalisched,
+    checkAI,
+    checkDND,
+    checkdtrace,
+    checkjit,
+    loadIObalance,
+    loadIOperformance,
+    loadIOpowersave,
+    checktoast,
+    loadVsyncValue,
+    checkBypassChargeStatus,
+    checkschedtunes,
+    checkSFL,
+    checkKillLog,
+    checklogger,
+    checkRamBoost,
+  ];
+
+  for (const fn of heavyChecks) {
+    schedule(fn, delay);
+    delay += 400;
+  }
+
+  cleaningInterval = setInterval(cleanMemory, 20000);
 }
 
 let currentColor = {
