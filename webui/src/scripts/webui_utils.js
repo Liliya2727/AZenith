@@ -1426,10 +1426,12 @@ function startMonitoringLoops() {
   loopsActive = true;
 
   loopIntervals.push(setInterval(() => checkCPUFrequencies(), 5000));
-  loopIntervals.push(setInterval(() => {
-    checkServiceStatus();
-    checkProfile();
-  }, 9000));
+  loopIntervals.push(
+    setInterval(() => {
+      checkServiceStatus();
+      checkProfile();
+    }, 9000)
+  );
   loopIntervals.push(setInterval(() => checkAvailableRAM(), 8000));
   loopIntervals.push(setInterval(() => showRandomMessage(), 20000));
 }
@@ -1481,6 +1483,9 @@ function heavyInit() {
     getAndroidVersion,
     loadCpuGovernors,
     loadCpuFreq,
+    loadIObalance,
+    loadIOperformance,
+    loadIOpowersave,
     GovernorPowersave,
   ];
 
@@ -1502,9 +1507,6 @@ function heavyInit() {
     checkDND,
     checkdtrace,
     checkjit,
-    loadIObalance,
-    loadIOperformance,
-    loadIOpowersave,
     checktoast,
     loadVsyncValue,
     checkBypassChargeStatus,
