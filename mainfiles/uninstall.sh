@@ -54,8 +54,8 @@ persist.sys.azenith.custom_powersave_IO \
 persist.sys.azenith.custom_performance_IO \
 persist.sys.azenith.default_balanced_IO"
 for prop in $props; do
-  setprop "$prop" ""
-  resetprop --delete "$prop"
+	setprop "$prop" ""
+	resetprop --delete "$prop"
 done
 # Uninstall module directories
 rm -rf /data/local/tmp/module_icon.png
@@ -69,9 +69,9 @@ binaries="sys.azenith-service sys.azenith-service_log \
           sys.azenith-profilesettings sys.azenith-utilityconf \
           sys.azenith-preloadbin sys.azenith-preloadbin2"
 for dir in $manager_paths; do
-  [ -d "$dir" ] || continue
-  for remove in $binaries; do
-    link="$dir/$remove"
-    rm -f "$link"
-  done
+	[ -d "$dir" ] || continue
+	for remove in $binaries; do
+		link="$dir/$remove"
+		rm -f "$link"
+	done
 done
