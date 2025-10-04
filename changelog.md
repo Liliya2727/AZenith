@@ -1,3 +1,13 @@
+## AZenith 3.8
+### Changelog
+- Added I/O Scheduler settings
+- Fix an issue where webui causing a random reboot
+- Update sf settings based on carlotta render tweak
+- Remove button to change profile in Idle mode
+- Fix an issue where game preload keep reapplying performance profile while running
+- Some optimization in background flow...
+
+
 ## AZenith 3.6
 ### Changelog
 - Re Added Lite mode
