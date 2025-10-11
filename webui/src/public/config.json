@@ -1,0 +1,9 @@
+{
+    "title": "AZenith",
+    "icon": "webui.icon.webp",
+    "windowResize": false,
+    "backHandler": true,
+    "exitConfirm": false,
+    "pullToRefresh": true,
+    "autoStatusBars": true
+}

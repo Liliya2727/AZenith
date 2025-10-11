@@ -152,8 +152,6 @@ async function checkProfile() {
           d.style.color = "#ffffff";
       }
     }
-  } catch (m) {
-    console.error("Error checking profile:", m);
   }
 }
 async function checkAvailableRAM() {
@@ -743,7 +741,6 @@ async function startService() {
     await checkServiceStatus();
   } catch (r) {
     showToast("Failed to restart daemon");
-    console.error("startService error:", r);
   }
 }
 
@@ -852,7 +849,6 @@ async function loadDisplaySettings() {
     };
   } catch (m) {
     return (
-      console.log("Error reading display settings:", m),
       showToast("color_scheme not found. Using defaults."),
       {
         red: 1e3,
@@ -1253,7 +1249,6 @@ function setupUIListeners() {
       showToast("Saved Log");
     } catch (e) {
       showToast("Failed to save log");
-      console.error("saveLog error:", e);
     }
   }
 
