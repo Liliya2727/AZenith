@@ -82,24 +82,6 @@ async function showToast(c) {
   ksu.toast(c);
 }
 
-(window.onload = () => {
-  requestIdleCallback
-    ? requestIdleCallback(heavyInit)
-    : setTimeout(heavyInit, 100);
-}),
-  (EventEmitter.prototype.on = function (c, s) {
-    this.listeners[c] || (this.listeners[c] = []), this.listeners[c].push(s);
-  }),
-  (EventEmitter.prototype.emit = function (c, ...s) {
-    this.listeners[c] && this.listeners[c].forEach((c) => c(...s));
-  }),
-  (Process.prototype.on = function (c, s) {
-    this.listeners[c] || (this.listeners[c] = []), this.listeners[c].push(s);
-  }),
-  (Process.prototype.emit = function (c, ...s) {
-    this.listeners[c] && this.listeners[c].forEach((c) => c(...s));
-  });
-var u = {};
 async function checkModuleVersion() {
   try {
     let { errno: c, stdout: s } = await executeCommand(
@@ -1244,6 +1226,33 @@ function hidePreferenceSettings() {
       delete c._resizeHandler);
 }
 
+function hideGamelistSettings() {
+  let c = document.getElementById("gamelist-modal");
+  c.classList.remove("show"),
+    document.body.classList.remove("modal-open"),
+    c._resizeHandler &&
+      (window.removeEventListener("resize", c._resizeHandler),
+      delete c._resizeHandler);
+}
+
+function hideSchemeSettings() {
+  let c = document.getElementById("scheme-modal");
+  c.classList.remove("show"),
+    document.body.classList.remove("modal-open"),
+    c._resizeHandler &&
+      (window.removeEventListener("resize", c._resizeHandler),
+      delete c._resizeHandler);
+}
+
+function hideResoSettings() {
+  let c = document.getElementById("reso-modal");
+  c.classList.remove("show"),
+    document.body.classList.remove("modal-open"),
+    c._resizeHandler &&
+      (window.removeEventListener("resize", c._resizeHandler),
+      delete c._resizeHandler);
+}
+
 function setupUIListeners() {
   async function savelog() {
     try {
@@ -1374,6 +1383,9 @@ function setupUIListeners() {
   document
     .getElementById("resetreso-btn")
     ?.addEventListener("click", resetResolution);
+  document
+    .getElementById("close-reso")
+    ?.addEventListener("click", hideResoSettings);
 
   // Color scheme buttons
   document
@@ -1382,6 +1394,9 @@ function setupUIListeners() {
   document
     .getElementById("applybutton")
     ?.addEventListener("click", hidecolorscheme);
+  document
+    .getElementById("close-scheme")
+    ?.addEventListener("click", hideSchemeSettings);
 
   // Gamelist modal buttons
   document
@@ -1393,6 +1408,9 @@ function setupUIListeners() {
   document
     .getElementById("saveGamelistButton")
     ?.addEventListener("click", saveGameList);
+  document
+    .getElementById("close-gamelist")
+    ?.addEventListener("click", hideGamelistSettings);    
 }
 
 let loopIntervals = [];

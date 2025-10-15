@@ -1255,6 +1255,13 @@ input[type="checkbox"]:checked + .toggle::after {
     margin: .5rem 0
 }
 
+.device-info-divider2 {
+    border-bottom: 1.5px solid #12141F;
+    margin: .5rem 0;
+    margin-top: 1rem
+    
+}
+
 .device-info-label {
     font-size: .875rem;
     font-weight: 500;
@@ -1695,6 +1702,7 @@ input[type=range]::-ms-track {
     color: #424242
 }
 
+.device-info-divider2,
 .device-info-divider {
     border-bottom: 1.5px solid #C3C9ED;
 }
