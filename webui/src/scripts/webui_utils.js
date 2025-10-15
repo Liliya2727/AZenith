@@ -1047,21 +1047,6 @@ const hideCustomResolution = () => {
 };
 
 
-const checkunderscale = async () => {
-  let { errno: c, stdout: s } = await executeCommand(
-    "getprop persist.sys.azenithconf.scale"
-  );
-  0 === c && (document.getElementById("applyinperf").checked = "1" === s.trim());
-};
-
-const setunderscale = async (c) => {
-  await executeCommand(
-    c
-      ? "setprop persist.sys.azenithconf.scale 1"
-      : "setprop persist.sys.azenithconf.scale 0"
-  );
-};
-
 const setIObalance = async (c) => {
   let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
@@ -1409,9 +1394,6 @@ const setupUIListeners = () => {
     .getElementById("clearbg")
     ?.addEventListener("change", (e) => setRamBoostStatus(e.target.checked));
   document
-    .getElementById("applyinperf")
-    ?.addEventListener("change", (e) => setunderscale(e.target.checked));
-  document
     .getElementById("SFL")
     ?.addEventListener("change", (e) => setSFL(e.target.checked));
   document
@@ -1624,7 +1606,6 @@ const heavyInit = async () => {
 
   // Heavy checks sequentially with delay
   const heavyChecks = [
-    checkunderscale,
     checkfpsged,
     checkLiteModeStatus,
     checkDThermal,
