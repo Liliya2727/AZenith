@@ -1235,10 +1235,10 @@ const savelog = async () => {
 };
  
 const currentColor = {
-  red: 1e3,
-  green: 1e3,
-  blue: 1e3,
-  saturation: 1e3,
+  red: 1000,
+  green: 1000,
+  blue: 1000,
+  saturation: 1000,
 };
 
 const debounce = (fn, delay = 200) => {
@@ -1256,6 +1256,7 @@ const updateColorState = ({ red, green, blue, saturation }) => {
     blue !== currentColor.blue ||
     saturation !== currentColor.saturation
   ) {
+    // Mutate properties instead of reassigning
     currentColor.red = red;
     currentColor.green = green;
     currentColor.blue = blue;
@@ -1266,6 +1267,7 @@ const updateColorState = ({ red, green, blue, saturation }) => {
     setSaturation(saturation);
   }
 };
+
 const loadColorSchemeSettings = async () => {
   const c = document.getElementById("red"),
     s = document.getElementById("green"),
@@ -1278,16 +1280,22 @@ const loadColorSchemeSettings = async () => {
     dv = document.getElementById("saturation-value"),
     m = await loadDisplaySettings();
 
-  c.value = m.red;
-  s.value = m.green;
-  r.value = m.blue;
-  d.value = m.saturation;
-  cv.value = m.red;
-  sv.value = m.green;
-  rv.value = m.blue;
-  dv.value = m.saturation;
+  // Update slider and number inputs
+  [c, s, r, d].forEach((el, i) => {
+    switch (i) {
+      case 0: el.value = m.red; cv.value = m.red; break;
+      case 1: el.value = m.green; sv.value = m.green; break;
+      case 2: el.value = m.blue; rv.value = m.blue; break;
+      case 3: el.value = m.saturation; dv.value = m.saturation; break;
+    }
+  });
 
-  currentColor = m;
+  // Mutate currentColor instead of reassigning
+  currentColor.red = m.red;
+  currentColor.green = m.green;
+  currentColor.blue = m.blue;
+  currentColor.saturation = m.saturation;
+
   await setRGB(m.red, m.green, m.blue);
   await setSaturation(m.saturation);
 
@@ -1315,9 +1323,7 @@ const loadColorSchemeSettings = async () => {
     });
 
     const finalize = () => {
-      if (numberInput.value === "") {
-        numberInput.value = slider.value;
-      }
+      if (numberInput.value === "") numberInput.value = slider.value;
       let v = Number(numberInput.value);
       if (isNaN(v)) v = min;
       if (v < min) v = min;
@@ -1344,7 +1350,12 @@ const loadColorSchemeSettings = async () => {
 
     await setRGB(1000, 1000, 1000);
     await setSaturation(1000);
-    updateColorState({ red: 1000, green: 1000, blue: 1000, saturation: 1000 });
+
+    currentColor.red = 1000;
+    currentColor.green = 1000;
+    currentColor.blue = 1000;
+    currentColor.saturation = 1000;
+
     saveDisplaySettings(1000, 1000, 1000, 1000);
     showToast("Display settings reset!");
   });
