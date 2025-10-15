@@ -94,10 +94,12 @@ if [ "$KSU" = "true" ] || [ "$APATCH" = "true" ]; then
             ui_print "- Creating symlink in $dir"
             ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-service"
             ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-service_log"
+            ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-profiler"
             ln -sf "$BIN_PATH/sys.azenith-profilesettings" "$dir/sys.azenith-profilesettings"
             ln -sf "$BIN_PATH/sys.azenith-utilityconf" "$dir/sys.azenith-utilityconf"
             ln -sf "$BIN_PATH/sys.azenith-preloadbin" "$dir/sys.azenith-preloadbin"
             ln -sf "$BIN_PATH/sys.azenith-preloadbin2" "$dir/sys.azenith-preloadbin2"
+            
         }
     done
 fi
