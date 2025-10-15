@@ -830,7 +830,7 @@ const showColorScheme = async () => {
   const c = document.getElementById("schemeModal");
   if (!c) return; // Modal element not found
 
-  const s = c.querySelector(".scheme-content");
+  const s = c.querySelector(".scheme-container");
   if (!s) return; // Modal content not found
 
   document.body.classList.add("modal-open");
@@ -1036,7 +1036,7 @@ const showCustomResolution = async () => {
   const c = document.getElementById("resomodal");
   if (!c) return; // exit if modal not found
 
-  const s = c.querySelector(".reso-content");
+  const s = c.querySelector(".reso-container");
   if (!s) return;
 
   document.body.classList.add("modal-open");
@@ -1564,15 +1564,15 @@ const startMonitoringLoops = () => {
   if (loopsActive) return;
   loopsActive = true;
 
-  loopIntervals.push(setInterval(() => checkCPUFrequencies(), 5000));
+  loopIntervals.push(setInterval(() => checkCPUFrequencies(), 2000));
   loopIntervals.push(
     setInterval(() => {
       checkServiceStatus();
       checkProfile();
-    }, 9000)
+    }, 7000)
   );
-  loopIntervals.push(setInterval(() => checkAvailableRAM(), 8000));
-  loopIntervals.push(setInterval(() => showRandomMessage(), 20000));
+  loopIntervals.push(setInterval(() => checkAvailableRAM(), 4000));
+  loopIntervals.push(setInterval(() => showRandomMessage(), 10000));
 };
 
 const stopMonitoringLoops = () => {
@@ -1597,16 +1597,15 @@ const heavyInit = async () => {
   if (heavyInitDone) return;
   heavyInitDone = true;
 
+  // Cancel any existing timeouts/intervals
   cancelAllTimeouts();
   if (cleaningInterval) clearInterval(cleaningInterval);
 
   const loader = document.getElementById("loading-screen");
+  if (loader) loader.classList.remove("hidden"); // show loader
+  document.body.classList.add("no-scroll");      // disable scroll
 
-  // Show loader and disable scroll
-  if (loader) loader.classList.remove("hidden");
-  document.body.classList.add("no-scroll");
-
-  // First batch
+  // --- Essential UI-related tasks (first batch, parallel) ---
   await Promise.all([
     showRandomMessage(),
     checkProfile(),
@@ -1615,7 +1614,7 @@ const heavyInit = async () => {
     checkAvailableRAM(),
   ]);
 
-  // Quick checks in batches
+  // --- Quick checks (parallel) ---
   const quickChecks = [
     checkModuleVersion,
     checkCPUInfo,
@@ -1628,20 +1627,19 @@ const heavyInit = async () => {
     loadIOpowersave,
     GovernorPowersave,
   ];
+  await Promise.all(quickChecks.map(fn => fn()));
 
-  for (let i = 0; i < quickChecks.length; i += 3) {
-    const batch = quickChecks.slice(i, i + 3);
-    await Promise.all(batch.map((fn) => fn()));
-  }
-
-  // Heavy checks sequentially with delay
-  const heavyChecks = [
+  // --- Heavy checks (parallel for async-friendly, sequential for CPU-heavy) ---
+  const heavyAsync = [
     checkfpsged,
     checkLiteModeStatus,
     checkDThermal,
     checkiosched,
     checkGPreload,
     loadColorSchemeSettings,
+  ];
+
+  const heavySequential = [
     checkmalisched,
     checkAI,
     checkDND,
@@ -1657,20 +1655,23 @@ const heavyInit = async () => {
     checkRamBoost,
   ];
 
-  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  // Run async-friendly heavy checks in parallel
+  await Promise.all(heavyAsync.map(fn => fn()));
 
-  for (const fn of heavyChecks) {
-    await delay(300);
+  // Run CPU-heavy heavy checks sequentially to avoid blocking UI
+  for (const fn of heavySequential) {
     await fn();
   }
 
+  // --- Start monitoring loops and observe page visibility ---
   startMonitoringLoops();
   observeVisibility();
 
-  // Hide loader and re-enable scroll after everything is done
+  // --- Hide loader and re-enable scroll ---
   if (loader) loader.classList.add("hidden");
   document.body.classList.remove("no-scroll");
 
+  // --- Memory cleanup interval ---
   cleaningInterval = setInterval(cleanMemory, 15000);
 };
 
