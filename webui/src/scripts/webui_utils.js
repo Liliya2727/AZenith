@@ -1610,7 +1610,7 @@ const heavyInit = async () => {
     checkLiteModeStatus,
     checkDThermal,
     checkiosched,
-    checkGPreload(),
+    checkGPreload,
     loadColorSchemeSettings,
     checkmalisched,
     checkAI,
