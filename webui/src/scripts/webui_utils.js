@@ -29,9 +29,9 @@ const executeCommand = async (cmd, cwd = null) => {
   }
 };
 
-async function showToast(c) {
+const showToast = async (c) => {
   ksu.toast(c);
-}
+};
 
 const randomMessages = [
   "The sky is really pretty today... did you notice?",
@@ -66,41 +66,48 @@ const randomMessages = [
   "You don’t have to glow loud — some stars shine in silence ✨",
 ];
 
-function showRandomMessage() {
-  let c = document.getElementById("msg"),
-    s = randomMessages[Math.floor(Math.random() * randomMessages.length)];
+const showRandomMessage = () => {
+  const c = document.getElementById("msg");
+  const s = randomMessages[Math.floor(Math.random() * randomMessages.length)];
   c.textContent = s;
-}
+};
 
-async function checkModuleVersion() {
+const checkModuleVersion = async () => {
   try {
-    let { errno: c, stdout: s } = await executeCommand(
+    const { errno: c, stdout: s } = await executeCommand(
       "echo 'Version :' && grep \"version=\" /data/adb/modules/AZenith/module.prop | awk -F'=' '{print $2}'"
     );
-    0 === c && (document.getElementById("moduleVer").textContent = s.trim());
-  } catch {}
-}
-async function checkProfile() {
+    if (c === 0) {
+      document.getElementById("moduleVer").textContent = s.trim();
+    }
+  } catch {
+    // optional: handle errors here if needed
+  }
+};
+
+const checkProfile = async () => {
   try {
-    let { errno: c, stdout: s } = await executeCommand(
+    const { errno: c, stdout: s } = await executeCommand(
       "cat /data/adb/.config/AZenith/API/current_profile"
     );
 
     if (c === 0) {
-      let r = s.trim(),
-        d = document.getElementById("CurProfile"),
-        l =
-          {
-            0: "Initializing...",
-            1: "Performance",
-            2: "Balanced",
-            3: "ECO Mode",
-          }[r] || "Unknown";
+      const r = s.trim();
+      const d = document.getElementById("CurProfile");
+
+      let l =
+        {
+          0: "Initializing...",
+          1: "Performance",
+          2: "Balanced",
+          3: "ECO Mode",
+        }[r] || "Unknown";
 
       // Check cpulimit property
-      let { errno: c2, stdout: s2 } = await executeCommand(
+      const { errno: c2, stdout: s2 } = await executeCommand(
         "getprop persist.sys.azenithconf.cpulimit"
       );
+
       if (c2 === 0 && s2.trim() === "1") {
         l += " (Lite)";
       }
@@ -127,100 +134,118 @@ async function checkProfile() {
   } catch (m) {
     showToast("Error checking profile:", m);
   }
-}
-async function checkAvailableRAM() {
+};
+
+const checkAvailableRAM = async () => {
   try {
-    let { stdout: c } = await executeCommand(
-        "cat /proc/meminfo | grep -E 'MemTotal|MemAvailable'"
-      ),
-      s = c.trim().split("\n"),
-      r = 0,
-      d = 0;
-    for (let l of s)
-      l.includes("MemTotal")
-        ? (r = parseInt(l.match(/\d+/)[0]))
-        : l.includes("MemAvailable") && (d = parseInt(l.match(/\d+/)[0]));
+    const { stdout: c } = await executeCommand(
+      "cat /proc/meminfo | grep -E 'MemTotal|MemAvailable'"
+    );
+
+    const s = c.trim().split("\n");
+    let r = 0, d = 0;
+
+    for (const l of s) {
+      if (l.includes("MemTotal")) r = parseInt(l.match(/\d+/)[0]);
+      else if (l.includes("MemAvailable")) d = parseInt(l.match(/\d+/)[0]);
+    }
+
     if (r && d) {
-      let m = r - d,
-        h = (m / 1024 / 1024).toFixed(2),
-        g = (r / 1024 / 1024).toFixed(2),
-        f = (d / 1024 / 1024).toFixed(2),
-        y = ((m / r) * 100).toFixed(0);
-      document.getElementById(
-        "ramInfo"
-      ).textContent = `${h} GB / ${g} GB (${y}%) — Available: ${f} GB`;
-    } else
+      const m = r - d;
+      const h = (m / 1024 / 1024).toFixed(2);
+      const g = (r / 1024 / 1024).toFixed(2);
+      const f = (d / 1024 / 1024).toFixed(2);
+      const y = ((m / r) * 100).toFixed(0);
+
+      document.getElementById("ramInfo").textContent = 
+        `${h} GB / ${g} GB (${y}%) — Available: ${f} GB`;
+    } else {
       document.getElementById("ramInfo").textContent = "Error reading memory";
-  } catch (p) {
+    }
+  } catch {
     document.getElementById("ramInfo").textContent = "Error";
   }
-}
-async function checkCPUFrequencies() {
-  let c = document.getElementById("cpuFreqInfo"),
-    s = "";
+};
+
+const checkCPUFrequencies = async () => {
+  const c = document.getElementById("cpuFreqInfo");
+  let s = "";
+
   try {
-    let { stdout: r } = await executeCommand(
-        "ls /sys/devices/system/cpu/cpufreq/ | grep policy"
-      ),
-      d = r.trim().split("\n").filter(Boolean);
-    for (let l of d) {
-      let m = `/sys/devices/system/cpu/cpufreq/${l}`,
-        [{ stdout: h }, { stdout: g }] = await Promise.all([
-          executeCommand(`cat ${m}/scaling_cur_freq`),
-          executeCommand(`cat ${m}/related_cpus`),
-        ]),
-        f = (parseInt(h.trim()) / 1e3).toFixed(0),
-        y = g.trim().split(" ").join(", ");
+    const { stdout: r } = await executeCommand(
+      "ls /sys/devices/system/cpu/cpufreq/ | grep policy"
+    );
+    const d = r.trim().split("\n").filter(Boolean);
+
+    for (const l of d) {
+      const m = `/sys/devices/system/cpu/cpufreq/${l}`;
+      const [{ stdout: h }, { stdout: g }] = await Promise.all([
+        executeCommand(`cat ${m}/scaling_cur_freq`),
+        executeCommand(`cat ${m}/related_cpus`),
+      ]);
+
+      const f = (parseInt(h.trim()) / 1e3).toFixed(0);
+      const y = g.trim().split(" ").join(", ");
       s += `Cluster ${y}: ${f} MHz<br>`;
     }
+
     c.innerHTML = s.trim();
-  } catch (p) {
+  } catch {
     c.innerHTML = "Failed to read CPU frequencies.";
   }
-}
+};
 let cachedSOCData = null;
-async function fetchSOCDatabase() {
-  if (!cachedSOCData)
+const fetchSOCDatabase = async () => {
+  if (!cachedSOCData) {
     try {
       cachedSOCData = await (await fetch("webui.soclist.json")).json();
     } catch {
       cachedSOCData = {};
     }
+  }
   return cachedSOCData;
-}
+};
 
-async function checkCPUInfo() {
-  let c = localStorage.getItem("soc_info");
+const checkCPUInfo = async () => {
+  const c = localStorage.getItem("soc_info");
   try {
-    let { errno: s, stdout: r } = await executeCommand("getprop ro.soc.model");
-    if (0 === s) {
-      let d = r.trim().replace(/\s+/g, "").toUpperCase(),
-        l = await fetchSOCDatabase(),
-        m = l[d];
-      if (!m)
+    const { errno: s, stdout: r } = await executeCommand("getprop ro.soc.model");
+    if (s === 0) {
+      let d = r.trim().replace(/\s+/g, "").toUpperCase();
+      const l = await fetchSOCDatabase();
+      let m = l[d];
+
+      if (!m) {
         for (let h = d.length; h >= 6; h--) {
-          let g = d.substring(0, h);
+          const g = d.substring(0, h);
           if (l[g]) {
             m = l[g];
             break;
           }
         }
-      m || (m = d),
-        (document.getElementById("cpuInfo").textContent = m),
-        c !== m && localStorage.setItem("soc_info", m);
+      }
+
+      if (!m) m = d;
+
+      document.getElementById("cpuInfo").textContent = m;
+
+      if (c !== m) {
+        localStorage.setItem("soc_info", m);
+      }
     } else {
       document.getElementById("cpuInfo").textContent = c || "Unknown SoC";
     }
   } catch {
     document.getElementById("cpuInfo").textContent = c || "Error";
   }
+
   showFPSGEDIfMediatek();
   showMaliSchedIfMediatek();
   showBypassIfMTK();
   showThermalIfMTK();
-}
+};
 
-async function checkKernelVersion() {
+const checkKernelVersion = async () => {
   let c = localStorage.getItem("kernel_version");
   try {
     let { errno: s, stdout: r } = await executeCommand("uname -r");
@@ -238,8 +263,9 @@ async function checkKernelVersion() {
       ? (document.getElementById("kernelInfo").textContent = c)
       : (document.getElementById("kernelInfo").textContent = "Error");
   }
-}
-async function getAndroidVersion() {
+};
+
+const getAndroidVersion = async () => {
   let c = localStorage.getItem("android_version");
   try {
     let { errno: s, stdout: r } = await executeCommand(
@@ -258,8 +284,9 @@ async function getAndroidVersion() {
       ? (document.getElementById("android").textContent = c)
       : (document.getElementById("android").textContent = "Error");
   }
-}
-async function checkServiceStatus() {
+};
+
+const checkServiceStatus = async () => {
   let { errno: c, stdout: s } = await executeCommand(
       "/system/bin/toybox pidof sys.azenith-service"
     ),
@@ -288,140 +315,157 @@ async function checkServiceStatus() {
   } else
     (r.textContent = "Suspended\uD83D\uDCA4"),
       (d.textContent = "Service PID: null");
-}
-async function checkfpsged() {
+};
+const checkfpsged = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.fpsged"
   );
   0 === c && (document.getElementById("fpsged").checked = "1" === s.trim());
-}
-async function setfpsged(c) {
+};
+
+const setfpsged = async (c) => {
   await executeCommand(
     c
       ? "setprop persist.sys.azenithconf.fpsged 1"
       : "setprop persist.sys.azenithconf.fpsged 0"
   );
-}
-function showFPSGEDIfMediatek() {
+};
+
+const showFPSGEDIfMediatek = () => {
   const soc = (localStorage.getItem("soc_info") || "").toLowerCase();
   const fpsgedDiv = document.getElementById("fpsged-container");
   if (fpsgedDiv) {
     fpsgedDiv.style.display = soc.includes("mediatek") ? "flex" : "none";
   }
-}
-async function checkDND() {
+};
+
+const checkDND = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.dnd"
   );
   0 === c && (document.getElementById("DoNoDis").checked = "1" === s.trim());
-}
-async function setDND(c) {
+};
+
+const setDND = async (c) => {
   await executeCommand(
     c
       ? "setprop persist.sys.azenithconf.dnd 1"
       : "setprop persist.sys.azenithconf.dnd 0"
   );
-}
-async function checkBypassChargeStatus() {
+};
+
+const checkBypassChargeStatus = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.bypasschg"
   );
   0 === c && (document.getElementById("Zepass").checked = "1" === s.trim());
-}
-async function setBypassChargeStatus(c) {
+};
+
+const setBypassChargeStatus = async (c) => {
   await executeCommand(
     c
       ? "setprop persist.sys.azenithconf.bypasschg 1"
       : "setprop persist.sys.azenithconf.bypasschg 0"
   );
-}
-function showBypassIfMTK() {
+};
+const showBypassIfMTK = () => {
   const soc = (localStorage.getItem("soc_info") || "").toLowerCase();
   const ZepassDiv = document.getElementById("Zepass-container");
   if (ZepassDiv) {
     ZepassDiv.style.display = soc.includes("mediatek") ? "flex" : "none";
   }
-}
-async function checkLiteModeStatus() {
+};
+
+const checkLiteModeStatus = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.cpulimit"
   );
   0 === c && (document.getElementById("LiteMode").checked = "1" === s.trim());
-}
-async function setLiteModeStatus(c) {
+};
+
+const setLiteModeStatus = async (c) => {
   await executeCommand(
     c
       ? "setprop persist.sys.azenithconf.cpulimit 1"
       : "setprop persist.sys.azenithconf.cpulimit 0"
   );
-}
-async function checkDThermal() {
+};
+
+const checkDThermal = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.DThermal"
   );
   0 === c && (document.getElementById("DThermal").checked = "1" === s.trim());
-}
-async function setDThermal(c) {
+};
+
+const setDThermal = async (c) => {
   await executeCommand(
     c
       ? "setprop persist.sys.azenithconf.DThermal 1"
       : "setprop persist.sys.azenithconf.DThermal 0"
   );
-}
-function showThermalIfMTK() {
+};
+
+const showThermalIfMTK = () => {
   const soc = (localStorage.getItem("soc_info") || "").toLowerCase();
   const thermalDiv = document.getElementById("DThermal-container");
   if (thermalDiv) {
     thermalDiv.style.display = soc.includes("mediatek") ? "flex" : "none";
   }
-}
-async function checkSFL() {
+};
+
+const checkSFL = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.SFL"
   );
   0 === c && (document.getElementById("SFL").checked = "1" === s.trim());
-}
-async function setSFL(c) {
+};
+
+const setSFL = async (c) => {
   await executeCommand(
     c
       ? "setprop persist.sys.azenithconf.SFL 1"
       : "setprop persist.sys.azenithconf.SFL 0"
   );
-}
-async function checkschedtunes() {
+};
+const checkschedtunes = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.schedtunes"
   );
   0 === c && (document.getElementById("schedtunes").checked = "1" === s.trim());
-}
-async function setschedtunes(c) {
+};
+
+const setschedtunes = async (c) => {
   await executeCommand(
     c
       ? "setprop persist.sys.azenithconf.schedtunes 1"
       : "setprop persist.sys.azenithconf.schedtunes 0"
   );
-}
-async function checkiosched() {
+};
+
+const checkiosched = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.iosched"
   );
   0 === c && (document.getElementById("iosched").checked = "1" === s.trim());
-}
-async function setiosched(c) {
+};
+
+const setiosched = async (c) => {
   await executeCommand(
     c
       ? "setprop persist.sys.azenithconf.iosched 1"
       : "setprop persist.sys.azenithconf.iosched 0"
   );
-}
-async function applyFSTRIM() {
+};
+
+const applyFSTRIM = async () => {
   await executeCommand(
     "/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf FSTrim"
-  ),
-    showToast("Trimmed Unused Blocks");
-}
+  );
+  showToast("Trimmed Unused Blocks");
+};
 
-async function setDefaultCpuGovernor(c) {
+const setDefaultCpuGovernor = async (c) => {
   let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
   await executeCommand(
@@ -433,28 +477,30 @@ async function setDefaultCpuGovernor(c) {
     (await executeCommand(
       `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsgov ${c}`
     ));
-}
+};
 
-async function loadCpuGovernors() {
+const loadCpuGovernors = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "chmod 644 /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors && cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors"
   );
   if (0 === c) {
     let r = s.trim().split(/\s+/),
       d = document.getElementById("cpuGovernor");
-    (d.innerHTML = ""),
-      r.forEach((c) => {
-        let s = document.createElement("option");
-        (s.value = c), (s.textContent = c), d.appendChild(s);
-      });
+    d.innerHTML = "";
+    r.forEach((c) => {
+      let s = document.createElement("option");
+      s.value = c;
+      s.textContent = c;
+      d.appendChild(s);
+    });
     let { errno: l, stdout: m } = await executeCommand(
       `sh -c '[ -n "$(getprop persist.sys.azenith.custom_default_cpu_gov)" ] && getprop persist.sys.azenith.custom_default_cpu_gov || getprop persist.sys.azenith.default_cpu_gov'`
     );
     0 === l && (d.value = m.trim());
   }
-}
+};
 
-async function setGovernorPowersave(c) {
+const setGovernorPowersave = async (c) => {
   let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
   await executeCommand(
@@ -466,37 +512,41 @@ async function setGovernorPowersave(c) {
     (await executeCommand(
       `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsgov ${c}`
     ));
-}
+};
 
-async function GovernorPowersave() {
+const GovernorPowersave = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "chmod 644 /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors && cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors"
   );
   if (0 === c) {
     let r = s.trim().split(/\s+/),
       d = document.getElementById("GovernorPowersave");
-    (d.innerHTML = ""),
-      r.forEach((c) => {
-        let s = document.createElement("option");
-        (s.value = c), (s.textContent = c), d.appendChild(s);
-      });
+    d.innerHTML = "";
+    r.forEach((c) => {
+      let s = document.createElement("option");
+      s.value = c;
+      s.textContent = c;
+      d.appendChild(s);
+    });
     let { errno: l, stdout: m } = await executeCommand(
       `sh -c '[ -n "$(getprop persist.sys.azenith.custom_powersave_cpu_gov)" ] && getprop persist.sys.azenith.custom_powersave_cpu_gov'`
     );
     0 === l && (d.value = m.trim());
   }
-}
-function hideGameListModal() {
+};
+
+const hideGameListModal = () => {
   let c = document.getElementById("gamelistModal");
-  c.classList.remove("show"),
-    document.body.classList.remove("modal-open"),
-    c._resizeHandler &&
-      (window.removeEventListener("resize", c._resizeHandler),
-      delete c._resizeHandler);
-}
+  c.classList.remove("show");
+  document.body.classList.remove("modal-open");
+  c._resizeHandler &&
+    (window.removeEventListener("resize", c._resizeHandler),
+    delete c._resizeHandler);
+};
+
 let originalGamelist = "";
 
-async function showGameListModal() {
+const showGameListModal = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.AIenabled"
   );
@@ -540,9 +590,9 @@ async function showGameListModal() {
   window.addEventListener("resize", f, { passive: true });
   r._resizeHandler = f;
   f();
-}
+};
 
-function filterGameList() {
+const filterGameList = () => {
   const searchTerm = document
     .getElementById("gamelistSearch")
     .value.toLowerCase();
@@ -559,8 +609,9 @@ function filterGameList() {
     .join("\n");
 
   gamelistInput.value = filteredList;
-}
-async function saveGameList() {
+};
+
+const saveGameList = async () => {
   const gamelistInput = document.getElementById("gamelistInput");
   const searchInput = document.getElementById("gamelistSearch");
   const searchTerm = (searchInput?.value || "").toLowerCase();
@@ -600,28 +651,30 @@ async function saveGameList() {
   );
   showToast(`Saved ${mergedLines.length} packages`);
   hideGameListModal();
-}
-async function checklogger() {
+};
+const checklogger = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenith.debugmode"
   );
   0 === c && (document.getElementById("logger").checked = "true" === s.trim());
-}
-async function setlogger(c) {
+};
+
+const setlogger = async (c) => {
   await executeCommand(
     c
       ? "setprop persist.sys.azenith.debugmode true"
       : "setprop persist.sys.azenith.debugmode false"
   );
-}
-async function setVsyncValue(c) {
-  await executeCommand(`setprop persist.sys.azenithconf.vsync ${c}`),
-    await executeCommand(
-      `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf disablevsync ${c}`
-    );
-}
+};
 
-async function loadVsyncValue() {
+const setVsyncValue = async (c) => {
+  await executeCommand(`setprop persist.sys.azenithconf.vsync ${c}`);
+  await executeCommand(
+    `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf disablevsync ${c}`
+  );
+};
+
+const loadVsyncValue = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithdebug.vsynclist"
   );
@@ -638,9 +691,9 @@ async function loadVsyncValue() {
     );
     0 === l && (d.value = m.trim());
   }
-}
+};
 
-async function setCpuFreqOffsets(c) {
+const setCpuFreqOffsets = async (c) => {
   let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
   await executeCommand(`setprop persist.sys.azenithconf.freqoffset ${c}`);
@@ -653,9 +706,9 @@ async function setCpuFreqOffsets(c) {
       );
     }
   }
-}
+};
 
-async function loadCpuFreq() {
+const loadCpuFreq = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithdebug.freqlist"
   );
@@ -672,21 +725,23 @@ async function loadCpuFreq() {
     );
     0 === l && (d.value = m.trim());
   }
-}
-async function checkKillLog() {
+};
+const checkKillLog = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.logd"
   );
   0 === c && (document.getElementById("logd").checked = "1" === s.trim());
-}
-async function setKillLog(c) {
+};
+
+const setKillLog = async (c) => {
   await executeCommand(
     c
       ? "setprop persist.sys.azenithconf.logd 1"
       : "setprop persist.sys.azenithconf.logd 0"
   );
-}
-async function startService() {
+};
+
+const startService = async () => {
   try {
     let { stdout: c } = await executeCommand(
       "cat /data/adb/.config/AZenith/API/current_profile"
@@ -717,165 +772,159 @@ async function startService() {
     showToast("Failed to restart daemon");
     console.error("startService error:", r);
   }
-}
+};
 
-async function checkGPreload() {
+const checkGPreload = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.APreload"
   );
   0 === c && (document.getElementById("GPreload").checked = "1" === s.trim());
-}
-async function setGPreloadStatus(c) {
+};
+
+const setGPreloadStatus = async (c) => {
   await executeCommand(
     c
       ? "setprop persist.sys.azenithconf.APreload 1"
       : "setprop persist.sys.azenithconf.APreload 0"
   );
-}
-async function checkRamBoost() {
+};
+const checkRamBoost = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.clearbg"
   );
   0 === c && (document.getElementById("clearbg").checked = "1" === s.trim());
-}
-async function setRamBoostStatus(c) {
+};
+
+const setRamBoostStatus = async (c) => {
   await executeCommand(
     c
       ? "setprop persist.sys.azenithconf.clearbg 1"
       : "setprop persist.sys.azenithconf.clearbg 0"
   );
-}
-async function checkmalisched() {
+};
+
+const checkmalisched = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.malisched"
   );
   0 === c && (document.getElementById("malisched").checked = "1" === s.trim());
-}
-async function setmalisched(c) {
+};
+
+const setmalisched = async (c) => {
   await executeCommand(
     c
       ? "setprop persist.sys.azenithconf.malisched 1"
       : "setprop persist.sys.azenithconf.malisched 0"
   );
-}
-function showMaliSchedIfMediatek() {
+};
+
+const showMaliSchedIfMediatek = () => {
   const soc = (localStorage.getItem("soc_info") || "").toLowerCase();
   const MaliSchedDiv = document.getElementById("malisched-container");
   if (MaliSchedDiv) {
     MaliSchedDiv.style.display = soc.includes("mediatek") ? "flex" : "none";
   }
-}
-async function showColorScheme() {
-  let c = document.getElementById("schemeModal"),
-    s = c.querySelector(".scheme-content");
-  document.body.classList.add("modal-open"), c.classList.add("show");
-  let r = window.innerHeight,
-    d = () => {
-      window.innerHeight < r - 150
-        ? (s.style.transform = "translateY(-10%) scale(1)")
-        : (s.style.transform = "translateY(0) scale(1)");
-    };
-  window.addEventListener("resize", d, {
-    passive: !0,
-  }),
-    (c._resizeHandler = d),
-    d();
-}
+};
 
-function hidecolorscheme() {
-  let c = document.getElementById("schemeModal");
-  c.classList.remove("show"),
-    document.body.classList.remove("modal-open"),
-    showToast("Saved color scheme settings."),
-    c._resizeHandler &&
-      (window.removeEventListener("resize", c._resizeHandler),
-      delete c._resizeHandler);
-}
+const showColorScheme = async () => {
+  const c = document.getElementById("schemeModal"),
+        s = c.querySelector(".scheme-content");
+  document.body.classList.add("modal-open");
+  c.classList.add("show");
+  const r = window.innerHeight;
+  const d = () => {
+    window.innerHeight < r - 150
+      ? (s.style.transform = "translateY(-10%) scale(1)")
+      : (s.style.transform = "translateY(0) scale(1)");
+  };
+  window.addEventListener("resize", d, { passive: true });
+  c._resizeHandler = d;
+  d();
+};
 
-function saveDisplaySettings(c, s, r, d) {
-  let l = `sh -c 'setprop persist.sys.azenithconf.schemeconfig "${c} ${s} ${r} ${d}"'`;
-  executeCommand(l);
-}
-async function loadDisplaySettings() {
-  try {
-    let c = await executeCommand(
-        `sh -c "getprop persist.sys.azenithconf.schemeconfig"`
-      ),
-      [s, r, d, l] = (
-        "object" == typeof c && c.stdout ? c.stdout.trim() : String(c).trim()
-      )
-        .split(/\s+/)
-        .map(Number);
-    if ([s, r, d, l].some(isNaN))
-      return (
-        showToast("Invalid color_scheme format. Using safe defaults."),
-        {
-          red: 1e3,
-          green: 1e3,
-          blue: 1e3,
-          saturation: 1e3,
-        }
-      );
-    return {
-      red: s,
-      green: r,
-      blue: d,
-      saturation: l,
-    };
-  } catch (m) {
-    return (
-      console.log("Error reading display settings:", m),
-      showToast("color_scheme not found. Using defaults."),
-      {
-        red: 1e3,
-        green: 1e3,
-        blue: 1e3,
-        saturation: 1e3,
-      }
-    );
+const hidecolorscheme = () => {
+  const c = document.getElementById("schemeModal");
+  c.classList.remove("show");
+  document.body.classList.remove("modal-open");
+  showToast("Saved color scheme settings.");
+  if (c._resizeHandler) {
+    window.removeEventListener("resize", c._resizeHandler);
+    delete c._resizeHandler;
   }
-}
-async function setRGB(c, s, r) {
+};
+
+const saveDisplaySettings = (c, s, r, d) => {
+  const cmd = `sh -c 'setprop persist.sys.azenithconf.schemeconfig "${c} ${s} ${r} ${d}"'`;
+  executeCommand(cmd);
+};
+
+const loadDisplaySettings = async () => {
+  try {
+    const c = await executeCommand(
+      `sh -c "getprop persist.sys.azenithconf.schemeconfig"`
+    );
+    const [s, r, d, l] = (
+      typeof c === "object" && c.stdout ? c.stdout.trim() : String(c).trim()
+    )
+      .split(/\s+/)
+      .map(Number);
+
+    if ([s, r, d, l].some(isNaN)) {
+      showToast("Invalid color_scheme format. Using safe defaults.");
+      return { red: 1000, green: 1000, blue: 1000, saturation: 1000 };
+    }
+
+    return { red: s, green: r, blue: d, saturation: l };
+  } catch (m) {
+    console.log("Error reading display settings:", m);
+    showToast("color_scheme not found. Using defaults.");
+    return { red: 1000, green: 1000, blue: 1000, saturation: 1000 };
+  }
+};
+
+const setRGB = async (c, s, r) => {
   await executeCommand(
-    `service call SurfaceFlinger 1015 i32 1 f ${c / 1e3} f 0 f 0 f 0 f 0 f ${
-      s / 1e3
-    } f 0 f 0 f 0 f 0 f ${r / 1e3} f 0 f 0 f 0 f 0 f 1`
+    `service call SurfaceFlinger 1015 i32 1 f ${c / 1000} f 0 f 0 f 0 f 0 f ${s / 1000} f 0 f 0 f 0 f 0 f ${r / 1000} f 0 f 0 f 0 f 0 f 1`
   );
-}
-async function setSaturation(c) {
-  await executeCommand(`service call SurfaceFlinger 1022 f ${c / 1e3}`);
-}
-async function resetDisplaySettings() {
+};
+
+const setSaturation = async (c) => {
+  await executeCommand(`service call SurfaceFlinger 1022 f ${c / 1000}`);
+};
+
+const resetDisplaySettings = async () => {
   await executeCommand(
     "service call SurfaceFlinger 1015 i32 1 f 1 f 0 f 0 f 0 f 0 f 1 f 0 f 0 f 0 f 0 f 1 f 0 f 0 f 0 f 0 f 1"
-  ),
-    await executeCommand("service call SurfaceFlinger 1022 f 1"),
-    saveDisplaySettings(1e3, 1e3, 1e3, 1e3),
-    (document.getElementById("red").value = 1e3),
-    (document.getElementById("green").value = 1e3),
-    (document.getElementById("blue").value = 1e3),
-    (document.getElementById("saturation").value = 1e3),
-    showToast("Display settings reset!");
-}
-async function checkAI() {
+  );
+  await executeCommand("service call SurfaceFlinger 1022 f 1");
+  saveDisplaySettings(1000, 1000, 1000, 1000);
+  document.getElementById("red").value = 1000;
+  document.getElementById("green").value = 1000;
+  document.getElementById("blue").value = 1000;
+  document.getElementById("saturation").value = 1000;
+  showToast("Display settings reset!");
+};
+const checkAI = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.AIenabled"
   );
   0 === c && (document.getElementById("disableai").checked = "0" === s.trim());
-}
-async function setAI(c) {
+};
+
+const setAI = async (c) => {
   await executeCommand(
     c
       ? "setprop persist.sys.azenithconf.AIenabled 0"
       : "setprop persist.sys.azenithconf.AIenabled 1"
-  ),
-    await executeCommand(
-      c
-        ? "mv /data/adb/.config/AZenith/gamelist/gamelist.txt /data/adb/.config/AZenith/gamelist/gamelist.bin"
-        : "mv /data/adb/.config/AZenith/gamelist/gamelist.bin /data/adb/.config/AZenith/gamelist/gamelist.txt"
-    );
-}
-async function applyperformanceprofile() {
+  );
+  await executeCommand(
+    c
+      ? "mv /data/adb/.config/AZenith/gamelist/gamelist.txt /data/adb/.config/AZenith/gamelist/gamelist.bin"
+      : "mv /data/adb/.config/AZenith/gamelist/gamelist.bin /data/adb/.config/AZenith/gamelist/gamelist.txt"
+  );
+};
+
+const applyperformanceprofile = async () => {
   let { stdout: c } = await executeCommand(
     "cat /data/adb/.config/AZenith/API/current_profile"
   );
@@ -885,13 +934,14 @@ async function applyperformanceprofile() {
   }
   executeCommand(
     "/data/adb/modules/AZenith/system/bin/sys.azenith-profilesettings 1 >/dev/null 2>&1 &"
-  ),
-    setTimeout(() => {
-      executeCommand("echo 1 > /data/adb/.config/AZenith/API/current_profile");
-    }, 300),
-    showToast("Applying Performance Profile");
-}
-async function applybalancedprofile() {
+  );
+  setTimeout(() => {
+    executeCommand("echo 1 > /data/adb/.config/AZenith/API/current_profile");
+  }, 300);
+  showToast("Applying Performance Profile");
+};
+
+const applybalancedprofile = async () => {
   let { stdout: c } = await executeCommand(
     "cat /data/adb/.config/AZenith/API/current_profile"
   );
@@ -901,13 +951,14 @@ async function applybalancedprofile() {
   }
   executeCommand(
     "/data/adb/modules/AZenith/system/bin/sys.azenith-profilesettings 2 >/dev/null 2>&1 &"
-  ),
-    setTimeout(() => {
-      executeCommand("echo 2 > /data/adb/.config/AZenith/API/current_profile");
-    }, 300),
-    showToast("Applying Balanced Profile");
-}
-async function applyecomode() {
+  );
+  setTimeout(() => {
+    executeCommand("echo 2 > /data/adb/.config/AZenith/API/current_profile");
+  }, 300);
+  showToast("Applying Balanced Profile");
+};
+
+const applyecomode = async () => {
   let { stdout: c } = await executeCommand(
     "cat /data/adb/.config/AZenith/API/current_profile"
   );
@@ -917,56 +968,59 @@ async function applyecomode() {
   }
   executeCommand(
     "/data/adb/modules/AZenith/system/bin/sys.azenith-profilesettings 3 >/dev/null 2>&1 &"
-  ),
-    setTimeout(() => {
-      executeCommand("echo 3 > /data/adb/.config/AZenith/API/current_profile");
-    }, 300),
-    showToast("Applying ECO Mode");
-}
+  );
+  setTimeout(() => {
+    executeCommand("echo 3 > /data/adb/.config/AZenith/API/current_profile");
+  }, 300);
+  showToast("Applying ECO Mode");
+};
 
-async function checkjit() {
+const checkjit = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.justintime"
   );
   0 === c && (document.getElementById("jit").checked = "1" === s.trim());
-}
-async function setjit(c) {
+};
+
+const setjit = async (c) => {
   await executeCommand(
     c
       ? "setprop persist.sys.azenithconf.justintime 1"
       : "setprop persist.sys.azenithconf.justintime 0"
   );
-}
+};
 
-async function checkdtrace() {
+const checkdtrace = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.disabletrace"
   );
   0 === c && (document.getElementById("trace").checked = "1" === s.trim());
-}
-async function setdtrace(c) {
+};
+
+const setdtrace = async (c) => {
   await executeCommand(
     c
       ? "setprop persist.sys.azenithconf.disabletrace 1"
       : "setprop persist.sys.azenithconf.disabletrace 0"
   );
-}
+};
 
-async function checktoast() {
+const checktoast = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.showtoast"
   );
   0 === c && (document.getElementById("toast").checked = "1" === s.trim());
-}
-async function settoast(c) {
+};
+
+const settoast = async (c) => {
   await executeCommand(
     c
       ? "setprop persist.sys.azenithconf.showtoast 1"
       : "setprop persist.sys.azenithconf.showtoast 0"
   );
-}
+};
 
-async function showCustomResolution() {
+const showCustomResolution = async () => {
   let c = document.getElementById("resomodal"),
     s = c.querySelector(".reso-content");
   document.body.classList.add("modal-open"), c.classList.add("show");
@@ -979,23 +1033,21 @@ async function showCustomResolution() {
         ? (s.style.transform = "translateY(-10%) scale(1)")
         : (s.style.transform = "translateY(0) scale(1)");
     };
-  window.addEventListener("resize", d, {
-    passive: !0,
-  }),
+  window.addEventListener("resize", d, { passive: true }),
     (c._resizeHandler = d),
     d();
-}
+};
 
-function hideCustomResolution() {
+const hideCustomResolution = () => {
   let c = document.getElementById("resomodal");
   c.classList.remove("show"),
     document.body.classList.remove("modal-open"),
     c._resizeHandler &&
       (window.removeEventListener("resize", c._resizeHandler),
       delete c._resizeHandler);
-}
+};
 
-async function checkResolution() {
+const checkResolution = async () => {
   let { stdout: w } = await executeCommand(
     "getprop persist.sys.azenithconf.wdsize"
   );
@@ -1005,9 +1057,9 @@ async function checkResolution() {
 
   document.getElementById("reso-width").value = w.trim() || "";
   document.getElementById("reso-height").value = h.trim() || "";
-}
+};
 
-async function setResolution(width, height) {
+const setResolution = async (width, height) => {
   if (!width || !height) {
     showToast("Invalid resolution!");
     return;
@@ -1031,9 +1083,9 @@ async function setResolution(width, height) {
       ? `Resolution applied: ${width}x${height}`
       : `Resolution saved: ${width}x${height}, Current resolution set to default`
   );
-}
+};
 
-async function resetResolution() {
+const resetResolution = async () => {
   let { stdout: res } = await executeCommand("wm size");
   let match = res.match(/Physical size:\s*(\d+)x(\d+)/);
   if (match) {
@@ -1048,38 +1100,34 @@ async function resetResolution() {
   } else {
     showToast("Failed to detect default resolution!");
   }
-}
+};
 
-async function checkunderscale() {
+const checkunderscale = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.scale"
   );
-  0 === c &&
-    (document.getElementById("applyinperf").checked = "1" === s.trim());
-}
-async function setunderscale(c) {
+  0 === c && (document.getElementById("applyinperf").checked = "1" === s.trim());
+};
+
+const setunderscale = async (c) => {
   await executeCommand(
     c
       ? "setprop persist.sys.azenithconf.scale 1"
       : "setprop persist.sys.azenithconf.scale 0"
   );
-}
+};
 
-async function setIObalance(c) {
+const setIObalance = async (c) => {
   let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
-  await executeCommand(
-    `setprop persist.sys.azenith.custom_default_balanced_IO ${c}`
-  );
+  await executeCommand(`setprop persist.sys.azenith.custom_default_balanced_IO ${c}`);
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   0 === d &&
     "2" === l.trim() &&
-    (await executeCommand(
-      `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO ${c}`
-    ));
-}
+    (await executeCommand(`/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO ${c}`));
+};
 
-async function loadIObalance() {
+const loadIObalance = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "chmod 644 /sys/block/sda/queue/scheduler && cat /sys/block/sda/queue/scheduler | tr -d '[]'"
   );
@@ -1096,23 +1144,19 @@ async function loadIObalance() {
     );
     0 === l && (d.value = m.trim());
   }
-}
+};
 
-async function setIOperformance(c) {
+const setIOperformance = async (c) => {
   let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
-  await executeCommand(
-    `setprop persist.sys.azenith.custom_performance_IO ${c}`
-  );
+  await executeCommand(`setprop persist.sys.azenith.custom_performance_IO ${c}`);
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   0 === d &&
     "1" === l.trim() &&
-    (await executeCommand(
-      `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO ${c}`
-    ));
-}
+    (await executeCommand(`/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO ${c}`));
+};
 
-async function loadIOperformance() {
+const loadIOperformance = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "chmod 644 /sys/block/sda/queue/scheduler && cat /sys/block/sda/queue/scheduler | tr -d '[]'"
   );
@@ -1129,139 +1173,157 @@ async function loadIOperformance() {
     );
     0 === l && (d.value = m.trim());
   }
-}
+};
 
-async function setIOpowersave(c) {
-  let s = "/data/adb/.config/AZenith",
-    r = `${s}/API/current_profile`;
+const setIOpowersave = async (c) => {
+  const s = "/data/adb/.config/AZenith",
+        r = `${s}/API/current_profile`;
   await executeCommand(`setprop persist.sys.azenith.custom_powersave_IO ${c}`);
-  let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
-  0 === d &&
-    "3" === l.trim() &&
-    (await executeCommand(
+  const { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
+  if (d === 0 && l.trim() === "3") {
+    await executeCommand(
       `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO ${c}`
-    ));
-}
+    );
+  }
+};
 
-async function loadIOpowersave() {
-  let { errno: c, stdout: s } = await executeCommand(
+const loadIOpowersave = async () => {
+  const { errno: c, stdout: s } = await executeCommand(
     "chmod 644 /sys/block/sda/queue/scheduler && cat /sys/block/sda/queue/scheduler | tr -d '[]'"
   );
-  if (0 === c) {
-    let r = s.trim().split(/\s+/),
-      d = document.getElementById("ioSchedulerPowersave");
-    (d.innerHTML = ""),
-      r.forEach((c) => {
-        let s = document.createElement("option");
-        (s.value = c), (s.textContent = c), d.appendChild(s);
-      });
-    let { errno: l, stdout: m } = await executeCommand(
+  if (c === 0) {
+    const r = s.trim().split(/\s+/),
+          d = document.getElementById("ioSchedulerPowersave");
+    d.innerHTML = "";
+    r.forEach((c) => {
+      const s = document.createElement("option");
+      s.value = c;
+      s.textContent = c;
+      d.appendChild(s);
+    });
+    const { errno: l, stdout: m } = await executeCommand(
       `sh -c '[ -n "$(getprop persist.sys.azenith.custom_powersave_IO)" ] && getprop persist.sys.azenith.custom_powersave_IO'`
     );
-    0 === l && (d.value = m.trim());
+    if (l === 0) d.value = m.trim();
   }
-}
+};
 
-async function showAdditionalSettings() {
-  let c = document.getElementById("additional-modal"),
-    s = c.querySelector(".additional-container");
-  document.body.classList.add("modal-open"), c.classList.add("show");
+const showAdditionalSettings = async () => {
+  const c = document.getElementById("additional-modal"),
+        s = c.querySelector(".additional-container");
+  document.body.classList.add("modal-open");
+  c.classList.add("show");
 
-  let r = window.innerHeight,
-    d = () => {
-      window.innerHeight < r - 150
-        ? (s.style.transform = "translateY(-10%) scale(1)")
-        : (s.style.transform = "translateY(0) scale(1)");
-    };
-  window.addEventListener("resize", d, {
-    passive: !0,
-  }),
-    (c._resizeHandler = d),
-    d();
-}
+  const r = window.innerHeight;
+  const d = () => {
+    s.style.transform = window.innerHeight < r - 150
+      ? "translateY(-10%) scale(1)"
+      : "translateY(0) scale(1)";
+  };
+  window.addEventListener("resize", d, { passive: true });
+  c._resizeHandler = d;
+  d();
+};
 
-function hideAdditionalSettings() {
-  let c = document.getElementById("additional-modal");
-  c.classList.remove("show"),
-    document.body.classList.remove("modal-open"),
-    c._resizeHandler &&
-      (window.removeEventListener("resize", c._resizeHandler),
-      delete c._resizeHandler);
-}
-
-async function showPreferenceSettings() {
-  let c = document.getElementById("preference-modal"),
-    s = c.querySelector(".preference-container");
-  document.body.classList.add("modal-open"), c.classList.add("show");
-
-  let r = window.innerHeight,
-    d = () => {
-      window.innerHeight < r - 150
-        ? (s.style.transform = "translateY(-10%) scale(1)")
-        : (s.style.transform = "translateY(0) scale(1)");
-    };
-  window.addEventListener("resize", d, {
-    passive: !0,
-  }),
-    (c._resizeHandler = d),
-    d();
-}
-
-function hidePreferenceSettings() {
-  let c = document.getElementById("preference-modal");
-  c.classList.remove("show"),
-    document.body.classList.remove("modal-open"),
-    c._resizeHandler &&
-      (window.removeEventListener("resize", c._resizeHandler),
-      delete c._resizeHandler);
-}
-
-function hideGamelistSettings() {
-  let c = document.getElementById("gamelist-modal");
-  c.classList.remove("show"),
-    document.body.classList.remove("modal-open"),
-    c._resizeHandler &&
-      (window.removeEventListener("resize", c._resizeHandler),
-      delete c._resizeHandler);
-}
-
-function hideSchemeSettings() {
-  let c = document.getElementById("scheme-modal");
-  c.classList.remove("show"),
-    document.body.classList.remove("modal-open"),
-    c._resizeHandler &&
-      (window.removeEventListener("resize", c._resizeHandler),
-      delete c._resizeHandler);
-}
-
-function hideResoSettings() {
-  let c = document.getElementById("reso-modal");
-  c.classList.remove("show"),
-    document.body.classList.remove("modal-open"),
-    c._resizeHandler &&
-      (window.removeEventListener("resize", c._resizeHandler),
-      delete c._resizeHandler);
-}
-
-function setupUIListeners() {
-  async function savelog() {
-    try {
-      await executeCommand(
-        "/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf saveLog"
-      );
-      showToast("Saved Log");
-    } catch (e) {
-      showToast("Failed to save log");
-      console.error("saveLog error:", e);
-    }
+const hideAdditionalSettings = () => {
+  const c = document.getElementById("additional-modal");
+  c.classList.remove("show");
+  document.body.classList.remove("modal-open");
+  if (c._resizeHandler) {
+    window.removeEventListener("resize", c._resizeHandler);
+    delete c._resizeHandler;
   }
+};
 
+const showPreferenceSettings = async () => {
+  const c = document.getElementById("preference-modal"),
+        s = c.querySelector(".preference-container");
+  document.body.classList.add("modal-open");
+  c.classList.add("show");
+
+  const r = window.innerHeight;
+  const d = () => {
+    s.style.transform = window.innerHeight < r - 150
+      ? "translateY(-10%) scale(1)"
+      : "translateY(0) scale(1)";
+  };
+  window.addEventListener("resize", d, { passive: true });
+  c._resizeHandler = d;
+  d();
+};
+
+const hidePreferenceSettings = () => {
+  const c = document.getElementById("preference-modal");
+  c.classList.remove("show");
+  document.body.classList.remove("modal-open");
+  if (c._resizeHandler) {
+    window.removeEventListener("resize", c._resizeHandler);
+    delete c._resizeHandler;
+  }
+};
+
+const hideGamelistSettings = () => {
+  const c = document.getElementById("gamelist-modal");
+  c.classList.remove("show");
+  document.body.classList.remove("modal-open");
+  if (c._resizeHandler) {
+    window.removeEventListener("resize", c._resizeHandler);
+    delete c._resizeHandler;
+  }
+};
+
+const hideSchemeSettings = () => {
+  const c = document.getElementById("scheme-modal");
+  c.classList.remove("show");
+  document.body.classList.remove("modal-open");
+  if (c._resizeHandler) {
+    window.removeEventListener("resize", c._resizeHandler);
+    delete c._resizeHandler;
+  }
+};
+
+const hideResoSettings = () => {
+  const c = document.getElementById("reso-modal");
+  c.classList.remove("show");
+  document.body.classList.remove("modal-open");
+  if (c._resizeHandler) {
+    window.removeEventListener("resize", c._resizeHandler);
+    delete c._resizeHandler;
+  }
+};
+
+const savelog = async () => {
+  try {
+    await executeCommand(
+      "/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf saveLog"
+    );
+    showToast("Saved Log");
+  } catch (e) {
+    showToast("Failed to save log");
+    console.error("saveLog error:", e);
+  }
+};
+  
+const setupUIListeners = () => {
+  const banner = document.getElementById("Banner");
+  const avatar = document.getElementById("Avatar");
+const scheme = document.getElementById("Scheme");
+const reso = document.getElementById("Reso");
+
+if (banner) banner.src = BannerZenith;
+if (avatar) avatar.src = AvatarZenith;
+if (scheme) scheme.src = SchemeBanner;
+if (reso) reso.src = ResoBanner;
   // Button Clicks
   document
     .getElementById("startButton")
     ?.addEventListener("click", startService);
-  document.getElementById("savelogButton")?.addEventListener("click", savelog);
-  document.getElementById("FSTrim")?.addEventListener("click", applyFSTRIM);
+  document
+    .getElementById("savelogButton")
+    ?.addEventListener("click", savelog);
+  document
+    .getElementById("FSTrim")
+    ?.addEventListener("click", applyFSTRIM);
 
   // Toggle Switches
   document
@@ -1401,7 +1463,7 @@ function setupUIListeners() {
   document
     .getElementById("close-gamelist")
     ?.addEventListener("click", hideGamelistSettings);    
-}
+};
 
 let loopIntervals = [];
 let loopsActive = false;
@@ -1409,7 +1471,7 @@ let heavyInitDone = false;
 let heavyInitTimeouts = [];
 let cleaningInterval = null;
 
-function schedule(fn, delay = 0) {
+const schedule = (fn, delay = 0) => {
   const id = setTimeout(() => {
     try {
       fn();
@@ -1418,18 +1480,18 @@ function schedule(fn, delay = 0) {
     }
   }, delay);
   heavyInitTimeouts.push(id);
-}
+};
 
-function cancelAllTimeouts() {
+const cancelAllTimeouts = () => {
   for (const t of heavyInitTimeouts) clearTimeout(t);
   heavyInitTimeouts = [];
-}
+};
 
-function cleanMemory() {
+const cleanMemory = () => {
   if (typeof globalThis.gc === "function") globalThis.gc();
-}
+};
 
-function startMonitoringLoops() {
+const startMonitoringLoops = () => {
   if (loopsActive) return;
   loopsActive = true;
 
@@ -1442,15 +1504,15 @@ function startMonitoringLoops() {
   );
   loopIntervals.push(setInterval(() => checkAvailableRAM(), 8000));
   loopIntervals.push(setInterval(() => showRandomMessage(), 20000));
-}
+};
 
-function stopMonitoringLoops() {
+const stopMonitoringLoops = () => {
   loopsActive = false;
   loopIntervals.forEach(clearInterval);
   loopIntervals = [];
-}
+};
 
-function observeVisibility() {
+const observeVisibility = () => {
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
       stopMonitoringLoops();
@@ -1460,9 +1522,9 @@ function observeVisibility() {
       startMonitoringLoops();
     }
   });
-}
+};
 
-function heavyInit() {
+const heavyInit = () => {
   if (heavyInitDone) return;
   heavyInitDone = true;
 
@@ -1472,14 +1534,14 @@ function heavyInit() {
   const loader = document.getElementById("loading-screen");
 
   Promise.allSettled([
+    showRandomMessage(),
     checkProfile(),
     checkServiceStatus(),
     checkCPUFrequencies(),
     checkAvailableRAM(),
     checkGPreload(),
     loadColorSchemeSettings(),
-  ]).then(() => {
-    if (loader) loader.classList.add("hidden");
+  ]).then(() => {    
     startMonitoringLoops();
     observeVisibility();
   });
@@ -1497,7 +1559,7 @@ function heavyInit() {
     GovernorPowersave,
   ];
 
-  let batchSize = 3;
+  const batchSize = 3;
   for (let i = 0; i < quickChecks.length; i += batchSize) {
     const batch = quickChecks.slice(i, i + batchSize);
     schedule(() => batch.forEach((fn) => fn()), 600 + i * 300);
@@ -1524,46 +1586,49 @@ function heavyInit() {
     checklogger,
     checkRamBoost,
   ];
-
-  let step = 300;
+  if (loader) loader.classList.add("hidden");
+  const step = 300;
   heavyChecks.forEach((fn, i) => {
     schedule(fn, 1600 + i * step);
   });
 
   cleaningInterval = setInterval(cleanMemory, 15000);
-}
+};
 
-let currentColor = {
+const currentColor = {
   red: 1e3,
   green: 1e3,
   blue: 1e3,
   saturation: 1e3,
 };
 
-function debounce(c, s = 200) {
-  let r;
-  return (...d) => {
-    clearTimeout(r), (r = setTimeout(() => c(...d), s));
+const debounce = (fn, delay = 200) => {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
   };
-}
+};
 
-function updateColorState({ red: c, green: s, blue: r, saturation: d }) {
-  (c !== currentColor.red ||
-    s !== currentColor.green ||
-    r !== currentColor.blue ||
-    d !== currentColor.saturation) &&
-    ((currentColor = {
-      red: c,
-      green: s,
-      blue: r,
-      saturation: d,
-    }),
-    saveDisplaySettings(c, s, r, d),
-    setRGB(c, s, r),
-    setSaturation(d));
-}
-async function loadColorSchemeSettings() {
-  let c = document.getElementById("red"),
+const updateColorState = ({ red, green, blue, saturation }) => {
+  if (
+    red !== currentColor.red ||
+    green !== currentColor.green ||
+    blue !== currentColor.blue ||
+    saturation !== currentColor.saturation
+  ) {
+    currentColor.red = red;
+    currentColor.green = green;
+    currentColor.blue = blue;
+    currentColor.saturation = saturation;
+
+    saveDisplaySettings(red, green, blue, saturation);
+    setRGB(red, green, blue);
+    setSaturation(saturation);
+  }
+};
+const loadColorSchemeSettings = async () => {
+  const c = document.getElementById("red"),
     s = document.getElementById("green"),
     r = document.getElementById("blue"),
     d = document.getElementById("saturation"),
@@ -1587,7 +1652,7 @@ async function loadColorSchemeSettings() {
   await setRGB(m.red, m.green, m.blue);
   await setSaturation(m.saturation);
 
-  let h = debounce(() => {
+  const handleInputChange = debounce(() => {
     cv.value = c.value;
     sv.value = s.value;
     rv.value = r.value;
@@ -1601,19 +1666,16 @@ async function loadColorSchemeSettings() {
     });
   }, 100);
 
-  c.addEventListener("input", h);
-  s.addEventListener("input", h);
-  r.addEventListener("input", h);
-  d.addEventListener("input", h);
+  [c, s, r, d].forEach((el) => el.addEventListener("input", handleInputChange));
 
-  function bindInput(numberInput, slider, min, max) {
+  const bindInput = (numberInput, slider, min, max) => {
     numberInput.addEventListener("input", () => {
       if (numberInput.value === "") return;
       slider.value = numberInput.value;
-      h();
+      handleInputChange();
     });
 
-    function finalize() {
+    const finalize = () => {
       if (numberInput.value === "") {
         numberInput.value = slider.value;
       }
@@ -1623,15 +1685,14 @@ async function loadColorSchemeSettings() {
       if (v > max) v = max;
       numberInput.value = v;
       slider.value = v;
-      h();
-    }
+      handleInputChange();
+    };
+
     numberInput.addEventListener("blur", finalize);
     numberInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        numberInput.blur();
-      }
+      if (e.key === "Enter") numberInput.blur();
     });
-  }
+  };
 
   bindInput(cv, c, 0, 1000);
   bindInput(sv, s, 0, 1000);
@@ -1648,19 +1709,8 @@ async function loadColorSchemeSettings() {
     saveDisplaySettings(1000, 1000, 1000, 1000);
     showToast("Display settings reset!");
   });
-}
+};
 
-document.addEventListener("DOMContentLoaded", () => {
-  showRandomMessage();
-  setupUIListeners();
-
-  const banner = document.getElementById("Banner");
-  const avatar = document.getElementById("Avatar");
-  const scheme = document.getElementById("Scheme");
-  const reso = document.getElementById("Reso");
-
-  if (banner) banner.src = BannerZenith;
-  if (avatar) avatar.src = AvatarZenith;
-  if (scheme) scheme.src = SchemeBanner;
-  if (reso) reso.src = ResoBanner;
-});
+// event Listeners
+setupUIListeners();
+heavyInit();
