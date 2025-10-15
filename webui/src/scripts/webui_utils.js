@@ -1263,7 +1263,7 @@ const hidePreferenceSettings = () => {
 };
 
 const hideGamelistSettings = () => {
-  const c = document.getElementById("gamelist-modal");
+  const c = document.getElementById("gamelistModal");
   c.classList.remove("show");
   document.body.classList.remove("modal-open");
   if (c._resizeHandler) {
@@ -1273,7 +1273,7 @@ const hideGamelistSettings = () => {
 };
 
 const hideSchemeSettings = () => {
-  const c = document.getElementById("scheme-modal");
+  const c = document.getElementById("schemeModal");
   c.classList.remove("show");
   document.body.classList.remove("modal-open");
   if (c._resizeHandler) {
@@ -1283,7 +1283,7 @@ const hideSchemeSettings = () => {
 };
 
 const hideResoSettings = () => {
-  const c = document.getElementById("reso-modal");
+  const c = document.getElementById("resomodall");
   c.classList.remove("show");
   document.body.classList.remove("modal-open");
   if (c._resizeHandler) {
@@ -1303,17 +1303,133 @@ const savelog = async () => {
     console.error("saveLog error:", e);
   }
 };
-  
+ 
+const currentColor = {
+  red: 1e3,
+  green: 1e3,
+  blue: 1e3,
+  saturation: 1e3,
+};
+
+const debounce = (fn, delay = 200) => {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+};
+
+const updateColorState = ({ red, green, blue, saturation }) => {
+  if (
+    red !== currentColor.red ||
+    green !== currentColor.green ||
+    blue !== currentColor.blue ||
+    saturation !== currentColor.saturation
+  ) {
+    currentColor.red = red;
+    currentColor.green = green;
+    currentColor.blue = blue;
+    currentColor.saturation = saturation;
+
+    saveDisplaySettings(red, green, blue, saturation);
+    setRGB(red, green, blue);
+    setSaturation(saturation);
+  }
+};
+const loadColorSchemeSettings = async () => {
+  const c = document.getElementById("red"),
+    s = document.getElementById("green"),
+    r = document.getElementById("blue"),
+    d = document.getElementById("saturation"),
+    l = document.getElementById("reset-btn"),
+    cv = document.getElementById("red-value"),
+    sv = document.getElementById("green-value"),
+    rv = document.getElementById("blue-value"),
+    dv = document.getElementById("saturation-value"),
+    m = await loadDisplaySettings();
+
+  c.value = m.red;
+  s.value = m.green;
+  r.value = m.blue;
+  d.value = m.saturation;
+  cv.value = m.red;
+  sv.value = m.green;
+  rv.value = m.blue;
+  dv.value = m.saturation;
+
+  currentColor = m;
+  await setRGB(m.red, m.green, m.blue);
+  await setSaturation(m.saturation);
+
+  const handleInputChange = debounce(() => {
+    cv.value = c.value;
+    sv.value = s.value;
+    rv.value = r.value;
+    dv.value = d.value;
+
+    updateColorState({
+      red: Number(c.value),
+      green: Number(s.value),
+      blue: Number(r.value),
+      saturation: Number(d.value),
+    });
+  }, 100);
+
+  [c, s, r, d].forEach((el) => el.addEventListener("input", handleInputChange));
+
+  const bindInput = (numberInput, slider, min, max) => {
+    numberInput.addEventListener("input", () => {
+      if (numberInput.value === "") return;
+      slider.value = numberInput.value;
+      handleInputChange();
+    });
+
+    const finalize = () => {
+      if (numberInput.value === "") {
+        numberInput.value = slider.value;
+      }
+      let v = Number(numberInput.value);
+      if (isNaN(v)) v = min;
+      if (v < min) v = min;
+      if (v > max) v = max;
+      numberInput.value = v;
+      slider.value = v;
+      handleInputChange();
+    };
+
+    numberInput.addEventListener("blur", finalize);
+    numberInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") numberInput.blur();
+    });
+  };
+
+  bindInput(cv, c, 0, 1000);
+  bindInput(sv, s, 0, 1000);
+  bindInput(rv, r, 0, 1000);
+  bindInput(dv, d, 0, 2000);
+
+  l.addEventListener("click", async () => {
+    c.value = s.value = r.value = d.value = 1000;
+    cv.value = sv.value = rv.value = dv.value = 1000;
+
+    await setRGB(1000, 1000, 1000);
+    await setSaturation(1000);
+    updateColorState({ red: 1000, green: 1000, blue: 1000, saturation: 1000 });
+    saveDisplaySettings(1000, 1000, 1000, 1000);
+    showToast("Display settings reset!");
+  });
+};
+ 
 const setupUIListeners = () => {
   const banner = document.getElementById("Banner");
   const avatar = document.getElementById("Avatar");
-const scheme = document.getElementById("Scheme");
-const reso = document.getElementById("Reso");
+  const scheme = document.getElementById("Scheme");
+  const reso = document.getElementById("Reso");
 
-if (banner) banner.src = BannerZenith;
-if (avatar) avatar.src = AvatarZenith;
-if (scheme) scheme.src = SchemeBanner;
-if (reso) reso.src = ResoBanner;
+  if (banner) banner.src = BannerZenith;
+  if (avatar) avatar.src = AvatarZenith;
+  if (scheme) scheme.src = SchemeBanner;
+  if (reso) reso.src = ResoBanner;
   // Button Clicks
   document
     .getElementById("startButton")
@@ -1524,7 +1640,7 @@ const observeVisibility = () => {
   });
 };
 
-const heavyInit = () => {
+const heavyInit = async () => {
   if (heavyInitDone) return;
   heavyInitDone = true;
 
@@ -1532,8 +1648,10 @@ const heavyInit = () => {
   if (cleaningInterval) clearInterval(cleaningInterval);
 
   const loader = document.getElementById("loading-screen");
+  if (loader) loader.classList.remove("hidden");
 
-  Promise.allSettled([
+  // First batch
+  await Promise.all([
     showRandomMessage(),
     checkProfile(),
     checkServiceStatus(),
@@ -1541,11 +1659,9 @@ const heavyInit = () => {
     checkAvailableRAM(),
     checkGPreload(),
     loadColorSchemeSettings(),
-  ]).then(() => {    
-    startMonitoringLoops();
-    observeVisibility();
-  });
+  ]);
 
+  // Quick checks in batches
   const quickChecks = [
     checkModuleVersion,
     checkCPUInfo,
@@ -1559,12 +1675,12 @@ const heavyInit = () => {
     GovernorPowersave,
   ];
 
-  const batchSize = 3;
-  for (let i = 0; i < quickChecks.length; i += batchSize) {
-    const batch = quickChecks.slice(i, i + batchSize);
-    schedule(() => batch.forEach((fn) => fn()), 600 + i * 300);
+  for (let i = 0; i < quickChecks.length; i += 3) {
+    const batch = quickChecks.slice(i, i + 3);
+    await Promise.all(batch.map((fn) => fn()));
   }
 
+  // Heavy checks with proper async handling
   const heavyChecks = [
     checkunderscale,
     checkResolution,
@@ -1586,129 +1702,21 @@ const heavyInit = () => {
     checklogger,
     checkRamBoost,
   ];
-  if (loader) loader.classList.add("hidden");
-  const step = 300;
-  heavyChecks.forEach((fn, i) => {
-    schedule(fn, 1600 + i * step);
-  });
 
-  cleaningInterval = setInterval(cleanMemory, 15000);
-};
-
-const currentColor = {
-  red: 1e3,
-  green: 1e3,
-  blue: 1e3,
-  saturation: 1e3,
-};
-
-const debounce = (fn, delay = 200) => {
-  let timer;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), delay);
-  };
-};
-
-const updateColorState = ({ red, green, blue, saturation }) => {
-  if (
-    red !== currentColor.red ||
-    green !== currentColor.green ||
-    blue !== currentColor.blue ||
-    saturation !== currentColor.saturation
-  ) {
-    currentColor.red = red;
-    currentColor.green = green;
-    currentColor.blue = blue;
-    currentColor.saturation = saturation;
-
-    saveDisplaySettings(red, green, blue, saturation);
-    setRGB(red, green, blue);
-    setSaturation(saturation);
+  for (let i = 0; i < heavyChecks.length; i++) {
+    await new Promise((resolve) =>
+      setTimeout(async () => {
+        await heavyChecks[i]();
+        resolve();
+      }, 300 * i)
+    );
   }
-};
-const loadColorSchemeSettings = async () => {
-  const c = document.getElementById("red"),
-    s = document.getElementById("green"),
-    r = document.getElementById("blue"),
-    d = document.getElementById("saturation"),
-    l = document.getElementById("reset-btn"),
-    cv = document.getElementById("red-value"),
-    sv = document.getElementById("green-value"),
-    rv = document.getElementById("blue-value"),
-    dv = document.getElementById("saturation-value"),
-    m = await loadDisplaySettings();
 
-  c.value = m.red;
-  s.value = m.green;
-  r.value = m.blue;
-  d.value = m.saturation;
-  cv.value = m.red;
-  sv.value = m.green;
-  rv.value = m.blue;
-  dv.value = m.saturation;
+  startMonitoringLoops();
+  observeVisibility();
 
-  currentColor = m;
-  await setRGB(m.red, m.green, m.blue);
-  await setSaturation(m.saturation);
-
-  const handleInputChange = debounce(() => {
-    cv.value = c.value;
-    sv.value = s.value;
-    rv.value = r.value;
-    dv.value = d.value;
-
-    updateColorState({
-      red: Number(c.value),
-      green: Number(s.value),
-      blue: Number(r.value),
-      saturation: Number(d.value),
-    });
-  }, 100);
-
-  [c, s, r, d].forEach((el) => el.addEventListener("input", handleInputChange));
-
-  const bindInput = (numberInput, slider, min, max) => {
-    numberInput.addEventListener("input", () => {
-      if (numberInput.value === "") return;
-      slider.value = numberInput.value;
-      handleInputChange();
-    });
-
-    const finalize = () => {
-      if (numberInput.value === "") {
-        numberInput.value = slider.value;
-      }
-      let v = Number(numberInput.value);
-      if (isNaN(v)) v = min;
-      if (v < min) v = min;
-      if (v > max) v = max;
-      numberInput.value = v;
-      slider.value = v;
-      handleInputChange();
-    };
-
-    numberInput.addEventListener("blur", finalize);
-    numberInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") numberInput.blur();
-    });
-  };
-
-  bindInput(cv, c, 0, 1000);
-  bindInput(sv, s, 0, 1000);
-  bindInput(rv, r, 0, 1000);
-  bindInput(dv, d, 0, 2000);
-
-  l.addEventListener("click", async () => {
-    c.value = s.value = r.value = d.value = 1000;
-    cv.value = sv.value = rv.value = dv.value = 1000;
-
-    await setRGB(1000, 1000, 1000);
-    await setSaturation(1000);
-    updateColorState({ red: 1000, green: 1000, blue: 1000, saturation: 1000 });
-    saveDisplaySettings(1000, 1000, 1000, 1000);
-    showToast("Display settings reset!");
-  });
+  if (loader) loader.classList.add("hidden");
+  cleaningInterval = setInterval(cleanMemory, 15000);
 };
 
 // event Listeners
