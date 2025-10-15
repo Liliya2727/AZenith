@@ -29,9 +29,10 @@ const executeCommand = async (cmd, cwd = null) => {
   }
 };
 
-function EventEmitter() {
-  this.listeners = {};
+async function showToast(c) {
+  ksu.toast(c);
 }
+
 const randomMessages = [
   "The sky is really pretty today... did you notice?",
   "Sparkles make everything better ✨",
@@ -69,17 +70,6 @@ function showRandomMessage() {
   let c = document.getElementById("msg"),
     s = randomMessages[Math.floor(Math.random() * randomMessages.length)];
   c.textContent = s;
-}
-
-function Process() {
-  (this.listeners = {}),
-    (this.stdin = new EventEmitter()),
-    (this.stdout = new EventEmitter()),
-    (this.stderr = new EventEmitter());
-}
-
-async function showToast(c) {
-  ksu.toast(c);
 }
 
 async function checkModuleVersion() {
@@ -135,7 +125,7 @@ async function checkProfile() {
       }
     }
   } catch (m) {
-    console.error("Error checking profile:", m);
+    showToast("Error checking profile:", m);
   }
 }
 async function checkAvailableRAM() {
