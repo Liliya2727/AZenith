@@ -827,26 +827,38 @@ const showMaliSchedIfMediatek = () => {
 };
 
 const showColorScheme = async () => {
-  const c = document.getElementById("schemeModal"),
-        s = c.querySelector(".scheme-content");
+  const c = document.getElementById("schemeModal");
+  if (!c) return; // Modal element not found
+
+  const s = c.querySelector(".scheme-content");
+  if (!s) return; // Modal content not found
+
   document.body.classList.add("modal-open");
   c.classList.add("show");
-  const r = window.innerHeight;
-  const d = () => {
-    window.innerHeight < r - 150
+
+  const originalHeight = window.innerHeight;
+
+  const resizeHandler = () => {
+    if (!s) return;
+    window.innerHeight < originalHeight - 150
       ? (s.style.transform = "translateY(-10%) scale(1)")
       : (s.style.transform = "translateY(0) scale(1)");
   };
-  window.addEventListener("resize", d, { passive: true });
-  c._resizeHandler = d;
-  d();
+
+  window.addEventListener("resize", resizeHandler, { passive: true });
+  c._resizeHandler = resizeHandler;
+
+  resizeHandler();
 };
 
 const hidecolorscheme = () => {
   const c = document.getElementById("schemeModal");
+  if (!c) return; // exit if modal not found
+
   c.classList.remove("show");
   document.body.classList.remove("modal-open");
   showToast("Saved color scheme settings.");
+
   if (c._resizeHandler) {
     window.removeEventListener("resize", c._resizeHandler);
     delete c._resizeHandler;
@@ -1021,29 +1033,38 @@ const settoast = async (c) => {
 };
 
 const showCustomResolution = async () => {
-  let c = document.getElementById("resomodal"),
-    s = c.querySelector(".reso-content");
-  document.body.classList.add("modal-open"), c.classList.add("show");
+  const c = document.getElementById("resomodal");
+  if (!c) return; // exit if modal not found
 
+  const s = c.querySelector(".reso-content");
+  if (!s) return;
 
-  let r = window.innerHeight,
-    d = () => {
-      window.innerHeight < r - 150
-        ? (s.style.transform = "translateY(-10%) scale(1)")
-        : (s.style.transform = "translateY(0) scale(1)");
-    };
-  window.addEventListener("resize", d, { passive: true }),
-    (c._resizeHandler = d),
-    d();
+  document.body.classList.add("modal-open");
+  c.classList.add("show");
+
+  const r = window.innerHeight;
+  const d = () => {
+    window.innerHeight < r - 150
+      ? (s.style.transform = "translateY(-10%) scale(1)")
+      : (s.style.transform = "translateY(0) scale(1)");
+  };
+
+  window.addEventListener("resize", d, { passive: true });
+  c._resizeHandler = d;
+  d();
 };
 
 const hideCustomResolution = () => {
-  let c = document.getElementById("resomodal");
-  c.classList.remove("show"),
-    document.body.classList.remove("modal-open"),
-    c._resizeHandler &&
-      (window.removeEventListener("resize", c._resizeHandler),
-      delete c._resizeHandler);
+  const c = document.getElementById("resomodal");
+  if (!c) return;
+
+  c.classList.remove("show");
+  document.body.classList.remove("modal-open");
+
+  if (c._resizeHandler) {
+    window.removeEventListener("resize", c._resizeHandler);
+    delete c._resizeHandler;
+  }
 };
 
 
@@ -1213,7 +1234,7 @@ const hideSchemeSettings = () => {
 };
 
 const hideResoSettings = () => {
-  const c = document.getElementById("resomodall");
+  const c = document.getElementById("resomodal");
   c.classList.remove("show");
   document.body.classList.remove("modal-open");
   if (c._resizeHandler) {
@@ -1480,11 +1501,9 @@ const setupUIListeners = () => {
   document
     .getElementById("customreso")
     ?.addEventListener("click", showCustomResolution);
-  document.getElementById("applyreso")?.addEventListener("click", async () => {
-    let w = document.getElementById("reso-width").value;
-    let h = document.getElementById("reso-height").value;
-    hideCustomResolution();
-  });
+  document
+    .getElementById("applyreso")
+    ?.addEventListener("click", hideCustomResolution);
   document
     .getElementById("close-reso")
     ?.addEventListener("click", hideResoSettings);
