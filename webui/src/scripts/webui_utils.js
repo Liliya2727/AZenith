@@ -1046,6 +1046,7 @@ const hideCustomResolution = () => {
       delete c._resizeHandler);
 };
 
+
 const checkunderscale = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.scale"
@@ -1490,6 +1491,7 @@ const setupUIListeners = () => {
     let w = document.getElementById("reso-width").value;
     let h = document.getElementById("reso-height").value;
     hideCustomResolution();
+  });
   document
     .getElementById("close-reso")
     ?.addEventListener("click", hideResoSettings);
