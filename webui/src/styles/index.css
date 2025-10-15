@@ -1328,6 +1328,11 @@ input[type="checkbox"]:checked + .toggle::after {
     animation: .8s linear infinite spin
 }
 
+.no-scroll {
+  overflow: hidden; /* disables scrolling */
+  height: 100vh;    /* optional, ensures full viewport height */
+}
+
 #loading-text {
     color: #fff;
     font-size: 10px;

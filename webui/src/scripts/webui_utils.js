@@ -1648,7 +1648,10 @@ const heavyInit = async () => {
   if (cleaningInterval) clearInterval(cleaningInterval);
 
   const loader = document.getElementById("loading-screen");
+
+  // Show loader and disable scroll
   if (loader) loader.classList.remove("hidden");
+  document.body.classList.add("no-scroll");
 
   // First batch
   await Promise.all([
@@ -1657,8 +1660,6 @@ const heavyInit = async () => {
     checkServiceStatus(),
     checkCPUFrequencies(),
     checkAvailableRAM(),
-    checkGPreload(),
-    loadColorSchemeSettings(),
   ]);
 
   // Quick checks in batches
@@ -1680,7 +1681,7 @@ const heavyInit = async () => {
     await Promise.all(batch.map((fn) => fn()));
   }
 
-  // Heavy checks with proper async handling
+  // Heavy checks sequentially with delay
   const heavyChecks = [
     checkunderscale,
     checkResolution,
@@ -1688,6 +1689,8 @@ const heavyInit = async () => {
     checkLiteModeStatus,
     checkDThermal,
     checkiosched,
+    checkGPreload(),
+    loadColorSchemeSettings,
     checkmalisched,
     checkAI,
     checkDND,
@@ -1703,19 +1706,20 @@ const heavyInit = async () => {
     checkRamBoost,
   ];
 
-  for (let i = 0; i < heavyChecks.length; i++) {
-    await new Promise((resolve) =>
-      setTimeout(async () => {
-        await heavyChecks[i]();
-        resolve();
-      }, 300 * i)
-    );
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  for (const fn of heavyChecks) {
+    await delay(300);
+    await fn();
   }
 
   startMonitoringLoops();
   observeVisibility();
 
+  // Hide loader and re-enable scroll after everything is done
   if (loader) loader.classList.add("hidden");
+  document.body.classList.remove("no-scroll");
+
   cleaningInterval = setInterval(cleanMemory, 15000);
 };
 
