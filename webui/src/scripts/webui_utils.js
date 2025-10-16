@@ -19,6 +19,7 @@ import AvatarZenith from "/webui.avatar.avif";
 import SchemeBanner from "/webui.schemebanner.avif";
 import ResoBanner from "/webui.reso.avif";
 import { exec } from "kernelsu";
+const RESO_PROP = "persist.sys.azenithconf.resosettings";
 
 const executeCommand = async (cmd, cwd = null) => {
   try {
@@ -1423,7 +1424,102 @@ const loadColorSchemeSettings = async () => {
     showToast("Display settings reset!");
   });
 };
- 
+
+const detectResolution = async () => {
+  // Detect current resolution
+  const { errno, stdout } = await executeCommand("wm size | awk '{print $3}'");
+  if (errno !== 0 || !stdout.trim()) {
+    console.error("Failed to detect resolution");
+    showToast("Unable to detect screen resolution");
+    return;
+  }
+
+  const defaultRes = stdout.trim(); // e.g. "2400x1080"
+  const [height, width] = defaultRes.split("x").map(Number);
+  if (!height || !width) return;
+
+  // Calculate scaled resolutions
+  const mediumRes = `${Math.round(height * 0.833)}x${Math.round(width * 0.833)}`;
+  const lowRes = `${Math.round(height * 0.666)}x${Math.round(width * 0.666)}`;
+
+  // Update text in UI
+  const resoSizes = document.querySelectorAll(".reso-size");
+  if (resoSizes.length === 3) {
+    resoSizes[0].textContent = lowRes;
+    resoSizes[1].textContent = mediumRes;
+    resoSizes[2].textContent = defaultRes;
+  }
+
+  // Store globally
+  window._reso = {
+    default: defaultRes,
+    medium: mediumRes,
+    low: lowRes,
+    selected: defaultRes,
+  };
+
+  // Restore saved resolution selection (if exists)
+  const { stdout: saved } = await executeCommand(`getprop ${RESO_PROP}`);
+  const savedRes = saved.trim();
+
+  if (savedRes) {
+    const buttons = document.querySelectorAll(".reso-option");
+    buttons.forEach((btn) => {
+      const text = btn.querySelector(".reso-size")?.textContent;
+      if (text === savedRes) btn.classList.add("active");
+      else btn.classList.remove("active");
+    });
+    if (window._reso) window._reso.selected = savedRes;
+  } else {
+    // Default to max resolution
+    document.querySelectorAll(".reso-option")[2]?.classList.add("active");
+  }
+};
+
+const selectResolution = async (btn) => {
+  document.querySelectorAll(".reso-option").forEach((b) => b.classList.remove("active"));
+  btn.classList.add("active");
+
+  const selectedText = btn.querySelector(".reso-size")?.textContent;
+  if (!selectedText) return;
+
+  // Save selected resolution in global and system property
+  if (window._reso) window._reso.selected = selectedText;
+  await executeCommand(`setprop ${RESO_PROP} ${selectedText}`);
+  showToast(`Selected ${selectedText}`);
+};
+
+const applyResolution = async () => {
+  if (!window._reso || !window._reso.selected) {
+    showToast("No resolution selected");
+    return;
+  }
+
+  const selected = window._reso.selected;
+  const def = window._reso.default;
+
+  if (selected === def) {
+    await executeCommand("wm size reset");
+    showToast(`Reset to default ${def}`);
+  } else {
+    await executeCommand(`wm size ${selected}`);
+    showToast(`Applied ${selected}`);
+  }
+};
+
+const showCustomResolution = () => {
+  const modal = document.getElementById("resomodal");
+  if (modal) {
+    modal.classList.add("show");
+    detectResolution();
+  }
+};
+
+const hideResoSettings = () => {
+  const modal = document.getElementById("resomodal");
+  if (modal) modal.classList.remove("show");
+};
+
 const setupUIListeners = () => {
   const banner = document.getElementById("Banner");
   const avatar = document.getElementById("Avatar");
@@ -1539,16 +1635,24 @@ const setupUIListeners = () => {
     .getElementById("close-preference")
     ?.addEventListener("click", hidePreferenceSettings);
 
-  // Custom Resolution Settings
+// Custom Resolution Settings
   document
     .getElementById("customreso")
     ?.addEventListener("click", showCustomResolution);
   document
     .getElementById("applyreso")
-    ?.addEventListener("click", hideCustomResolution);
+    ?.addEventListener("click", applyResolution);
+  document
+    .getElementById("resetreso-btn")
+    ?.addEventListener("click", hideResoSettings);
   document
     .getElementById("close-reso")
     ?.addEventListener("click", hideResoSettings);
+
+  // Selectable resolutions
+  document.querySelectorAll(".reso-option")?.forEach((btn) => {
+    btn.addEventListener("click", () => selectResolution(btn));
+  });
 
   // Color scheme buttons
   document

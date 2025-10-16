@@ -889,6 +889,81 @@ input[type="checkbox"]:checked + .toggle::after {
     outline-offset: 0px
 }
 
+
+
+.reso-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.reso-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #121420;
+  border-radius: 1.25rem;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: 1px solid transparent; 
+}
+
+.reso-option:hover {
+  background: #161b23;
+}
+
+.reso-option.active {
+  background: linear-gradient(145deg, #1a2330, #202c3d);
+  border: 1px solid #4da6ff;
+  box-shadow: 0 0 10px rgba(77, 166, 255, 0.25);
+}
+
+.reso-option.active .reso-info,
+.reso-option.active .reso-dot {
+  transition: all 0.25s ease;
+}
+
+.reso-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid #777;
+  background-color: transparent;
+  flex-shrink: 0;
+  transition: all 0.25s ease;
+}
+
+.reso-option.active .reso-dot {
+  background-color: #4da6ff;
+  border-color: #4da6ff;
+  box-shadow: 0 0 6px #4da6ff;
+}
+
+/* Text styles (unchanged, but ensure no layout shift) */
+.reso-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.reso-label {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.reso-size {
+  color: #a5a5a5;
+  font-size: 13px;
+}
+
+/* Optional: subtle hover scaling for better feedback */
+.reso-option:active {
+  transform: scale(0.98);
+}
+
 .schemecolortitle {
     font-size: 1rem;
     font-weight: 600;
@@ -1258,7 +1333,7 @@ input[type="checkbox"]:checked + .toggle::after {
 .device-info-divider2 {
     border-bottom: 1.5px solid #12141F;
     margin: .5rem 0;
-    margin-top: 1rem
+    margin-top: 1.5rem
     
 }
 
@@ -1569,68 +1644,6 @@ input[type=range]::-ms-track {
     border-color: #3B4360;
 }
 
-.reso-selector {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.reso-option {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #121420;
-  border-radius: 1.25rem;
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: all 0.25s ease;
-}
-
-.reso-option:hover {
-  background: #161b23;
-}
-
-.reso-option.active {
-  background: #1f2a38;
-  border: 1px solid #4da6ff;
-  box-shadow: 0 0 8px rgba(77, 166, 255, 0.3);
-}
-
-.reso-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.reso-label {
-  color: #fff;
-  font-size: 15px;
-  font-weight: 500;
-  margin: 0;
-}
-
-.reso-size {
-  color: #a5a5a5;
-  font-size: 13px;
-}
-
-/* The clickable dot */
-.reso-dot {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 2px solid #777;
-  transition: all 0.25s ease;
-  flex-shrink: 0;
-}
-
-/* When parent has .active */
-.reso-option.active .reso-dot {
-  background-color: #4da6ff;
-  border-color: #4da6ff;
-  box-shadow: 0 0 6px #4da6ff;
-}
-
 @media (prefers-color-scheme: light) {
 
 .smallbutton {
@@ -1849,6 +1862,18 @@ input[type=range]::-ms-track {
   font-size: 15px;
   font-weight: 500;
   margin: 0;
+}
+
+input[type=range]::-webkit-slider-runnable-track {
+    background: #E7E6EE;
+}
+
+input[type=range]::-moz-range-track {
+    background: #E7E6EE;
+}
+
+input[type=range]::-ms-track {
+    background: #E7E6EE;
 }
 
 }
