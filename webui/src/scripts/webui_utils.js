@@ -1075,42 +1075,6 @@ const settoast = async (c) => {
   );
 };
 
-const showCustomResolution = async () => {
-  const c = document.getElementById("resomodal");
-  if (!c) return; // exit if modal not found
-
-  const s = c.querySelector(".reso-container");
-  if (!s) return;
-
-  document.body.classList.add("modal-open");
-  c.classList.add("show");
-
-  const r = window.innerHeight;
-  const d = () => {
-    window.innerHeight < r - 150
-      ? (s.style.transform = "translateY(-10%) scale(1)")
-      : (s.style.transform = "translateY(0) scale(1)");
-  };
-
-  window.addEventListener("resize", d, { passive: true });
-  c._resizeHandler = d;
-  d();
-};
-
-const hideCustomResolution = () => {
-  const c = document.getElementById("resomodal");
-  if (!c) return;
-
-  c.classList.remove("show");
-  document.body.classList.remove("modal-open");
-
-  if (c._resizeHandler) {
-    window.removeEventListener("resize", c._resizeHandler);
-    delete c._resizeHandler;
-  }
-};
-
-
 const setIObalance = async (c) => {
   let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
@@ -1268,16 +1232,6 @@ const hideGamelistSettings = () => {
 
 const hideSchemeSettings = () => {
   const c = document.getElementById("schemeModal");
-  c.classList.remove("show");
-  document.body.classList.remove("modal-open");
-  if (c._resizeHandler) {
-    window.removeEventListener("resize", c._resizeHandler);
-    delete c._resizeHandler;
-  }
-};
-
-const hideResoSettings = () => {
-  const c = document.getElementById("resomodal");
   c.classList.remove("show");
   document.body.classList.remove("modal-open");
   if (c._resizeHandler) {
@@ -1507,17 +1461,36 @@ const applyResolution = async () => {
   }
 };
 
-const showCustomResolution = () => {
-  const modal = document.getElementById("resomodal");
-  if (modal) {
-    modal.classList.add("show");
-    detectResolution();
-  }
+const showCustomResolution = async () => {
+  const c = document.getElementById("resomodal");
+  if (!c) return; // exit if modal not found
+
+  const s = c.querySelector(".reso-container");
+  if (!s) return;
+
+  document.body.classList.add("modal-open");
+  c.classList.add("show");
+
+  const r = window.innerHeight;
+  const d = () => {
+    window.innerHeight < r - 150
+      ? (s.style.transform = "translateY(-10%) scale(1)")
+      : (s.style.transform = "translateY(0) scale(1)");
+  };
+
+  window.addEventListener("resize", d, { passive: true });
+  c._resizeHandler = d;
+  d();
 };
 
 const hideResoSettings = () => {
-  const modal = document.getElementById("resomodal");
-  if (modal) modal.classList.remove("show");
+  const c = document.getElementById("resomodal");
+  c.classList.remove("show");
+  document.body.classList.remove("modal-open");
+  if (c._resizeHandler) {
+    window.removeEventListener("resize", c._resizeHandler);
+    delete c._resizeHandler;
+  }
 };
 
 const setupUIListeners = () => {
@@ -1641,7 +1614,10 @@ const setupUIListeners = () => {
     ?.addEventListener("click", showCustomResolution);
   document
     .getElementById("applyreso")
-    ?.addEventListener("click", applyResolution);
+    ?.addEventListener("click", async () => {
+      await applyResolution();
+      hideResoSettings();
+  });
   document
     .getElementById("resetreso-btn")
     ?.addEventListener("click", hideResoSettings);
