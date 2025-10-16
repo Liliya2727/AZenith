@@ -1534,51 +1534,63 @@ const setupUIListeners = () => {
     ?.addEventListener("click", hideGamelistSettings);    
 };
 
-let loopIntervals = [];
 let loopsActive = false;
+let loopTimeout = null;
 let heavyInitDone = false;
-let heavyInitTimeouts = [];
 let cleaningInterval = null;
+let heavyInitTimeouts = [];
+
+const cancelAllTimeouts = () => {
+  heavyInitTimeouts.forEach(clearTimeout);
+  heavyInitTimeouts = [];
+};
 
 const schedule = (fn, delay = 0) => {
   const id = setTimeout(() => {
-    try {
-      fn();
-    } finally {
-      heavyInitTimeouts = heavyInitTimeouts.filter((t) => t !== id);
+    try { fn(); } finally {
+      heavyInitTimeouts = heavyInitTimeouts.filter(t => t !== id);
     }
   }, delay);
   heavyInitTimeouts.push(id);
-};
-
-const cancelAllTimeouts = () => {
-  for (const t of heavyInitTimeouts) clearTimeout(t);
-  heavyInitTimeouts = [];
 };
 
 const cleanMemory = () => {
   if (typeof globalThis.gc === "function") globalThis.gc();
 };
 
+const monitoredTasks = [
+  { fn: checkCPUFrequencies, interval: 5000 },
+  { fn: checkServiceStatus, interval: 15000 },
+  { fn: checkProfile, interval: 15000 },
+  { fn: checkAvailableRAM, interval: 10000 },
+  { fn: showRandomMessage, interval: 30000 },
+];
+
+const runMonitoredTasks = async () => {
+  if (!loopsActive) return;
+  const now = Date.now();
+  if (!runMonitoredTasks.lastRun) runMonitoredTasks.lastRun = {};
+
+  for (const task of monitoredTasks) {
+    const last = runMonitoredTasks.lastRun[task.fn.name] || 0;
+    if (now - last >= task.interval) {
+      try { await task.fn(); } catch (e) { console.warn(`Task ${task.fn.name} failed:`, e); }
+      runMonitoredTasks.lastRun[task.fn.name] = Date.now();
+    }
+  }
+
+  loopTimeout = setTimeout(runMonitoredTasks, 1000);
+};
+
 const startMonitoringLoops = () => {
   if (loopsActive) return;
   loopsActive = true;
-
-  loopIntervals.push(setInterval(() => checkCPUFrequencies(), 2000));
-  loopIntervals.push(
-    setInterval(() => {
-      checkServiceStatus();
-      checkProfile();
-    }, 7000)
-  );
-  loopIntervals.push(setInterval(() => checkAvailableRAM(), 4000));
-  loopIntervals.push(setInterval(() => showRandomMessage(), 10000));
+  runMonitoredTasks();
 };
 
 const stopMonitoringLoops = () => {
   loopsActive = false;
-  loopIntervals.forEach(clearInterval);
-  loopIntervals = [];
+  if (loopTimeout) clearTimeout(loopTimeout);
 };
 
 const observeVisibility = () => {
@@ -1586,7 +1598,7 @@ const observeVisibility = () => {
     if (document.hidden) {
       stopMonitoringLoops();
       cancelAllTimeouts();
-      clearInterval(cleaningInterval);
+      if (cleaningInterval) clearInterval(cleaningInterval);
     } else {
       startMonitoringLoops();
     }
@@ -1597,84 +1609,54 @@ const heavyInit = async () => {
   if (heavyInitDone) return;
   heavyInitDone = true;
 
-  // Cancel any existing timeouts/intervals
   cancelAllTimeouts();
   if (cleaningInterval) clearInterval(cleaningInterval);
 
   const loader = document.getElementById("loading-screen");
-  if (loader) loader.classList.remove("hidden"); // show loader
-  document.body.classList.add("no-scroll");      // disable scroll
+  if (loader) loader.classList.remove("hidden");
+  document.body.classList.add("no-scroll");
 
-  // --- Essential UI-related tasks (first batch, parallel) ---
-  await Promise.all([
-    showRandomMessage(),
-    checkProfile(),
-    checkServiceStatus(),
-    checkCPUFrequencies(),
-    checkAvailableRAM(),
-  ]);
+  const stage1 = [
+    showRandomMessage,
+    checkProfile,
+    checkServiceStatus,
+    checkCPUFrequencies,
+    checkAvailableRAM,
+  ];
+  await Promise.all(stage1.map(fn => fn()));
 
-  // --- Quick checks (parallel) ---
   const quickChecks = [
-    checkModuleVersion,
-    checkCPUInfo,
-    checkKernelVersion,
-    getAndroidVersion,
-    loadCpuGovernors,
-    loadCpuFreq,
-    loadIObalance,
-    loadIOperformance,
-    loadIOpowersave,
+    checkModuleVersion, checkCPUInfo, checkKernelVersion,
+    getAndroidVersion, loadCpuGovernors, loadCpuFreq,
+    loadIObalance, loadIOperformance, loadIOpowersave,
     GovernorPowersave,
   ];
   await Promise.all(quickChecks.map(fn => fn()));
 
-  // --- Heavy checks (parallel for async-friendly, sequential for CPU-heavy) ---
+  // Stage 3: heavy async
   const heavyAsync = [
-    checkfpsged,
-    checkLiteModeStatus,
-    checkDThermal,
-    checkiosched,
-    checkGPreload,
-    loadColorSchemeSettings,
+    checkfpsged, checkLiteModeStatus, checkDThermal,
+    checkiosched, checkGPreload, loadColorSchemeSettings,
   ];
-
-  const heavySequential = [
-    checkmalisched,
-    checkAI,
-    checkDND,
-    checkdtrace,
-    checkjit,
-    checktoast,
-    loadVsyncValue,
-    checkBypassChargeStatus,
-    checkschedtunes,
-    checkSFL,
-    checkKillLog,
-    checklogger,
-    checkRamBoost,
-  ];
-
-  // Run async-friendly heavy checks in parallel
   await Promise.all(heavyAsync.map(fn => fn()));
 
-  // Run CPU-heavy heavy checks sequentially to avoid blocking UI
-  for (const fn of heavySequential) {
-    await fn();
-  }
+  const heavySequential = [
+    checkmalisched, checkAI, checkDND, checkdtrace,
+    checkjit, checktoast, loadVsyncValue,
+    checkBypassChargeStatus, checkschedtunes, checkSFL,
+    checkKillLog, checklogger, checkRamBoost,
+  ];
+  for (const fn of heavySequential) { await fn(); }
 
-  // --- Start monitoring loops and observe page visibility ---
   startMonitoringLoops();
   observeVisibility();
 
-  // --- Hide loader and re-enable scroll ---
   if (loader) loader.classList.add("hidden");
   document.body.classList.remove("no-scroll");
 
-  // --- Memory cleanup interval ---
   cleaningInterval = setInterval(cleanMemory, 15000);
 };
 
-// event Listeners
+// Event Listeners
 setupUIListeners();
 heavyInit();
