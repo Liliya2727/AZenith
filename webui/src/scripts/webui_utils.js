@@ -66,77 +66,88 @@ const randomMessages = [
   "You don’t have to glow loud — some stars shine in silence ✨",
 ];
 
+let lastMessageTime = 0;
 const showRandomMessage = () => {
+  const now = Date.now();
+  if (now - lastMessageTime < 10000) return;
+  lastMessageTime = now;
+
   const c = document.getElementById("msg");
+  if (!c) return;
+
   const s = randomMessages[Math.floor(Math.random() * randomMessages.length)];
   c.textContent = s;
 };
 
+let lastModuleVersion = { time: 0, value: "" };
 const checkModuleVersion = async () => {
+  const now = Date.now();
+  if (now - lastModuleVersion.time < 30000) return;
+
   try {
     const { errno: c, stdout: s } = await executeCommand(
       "echo 'Version :' && grep \"version=\" /data/adb/modules/AZenith/module.prop | awk -F'=' '{print $2}'"
     );
     if (c === 0) {
-      document.getElementById("moduleVer").textContent = s.trim();
+      lastModuleVersion = { time: now, value: s.trim() };
+      const elem = document.getElementById("moduleVer");
+      if (elem) elem.textContent = lastModuleVersion.value;
     }
-  } catch {
-    // optional: handle errors here if needed
-  }
+  } catch {}
 };
 
+let lastProfile = { time: 0, value: "" };
 const checkProfile = async () => {
+  const now = Date.now();
+  if (now - lastProfile.time < 5000) return;
+
   try {
     const { errno: c, stdout: s } = await executeCommand(
       "cat /data/adb/.config/AZenith/API/current_profile"
     );
 
-    if (c === 0) {
-      const r = s.trim();
-      const d = document.getElementById("CurProfile");
+    if (c !== 0) return;
+    const r = s.trim();
+    const d = document.getElementById("CurProfile");
+    if (!d) return;
 
-      let l =
-        {
-          0: "Initializing...",
-          1: "Performance",
-          2: "Balanced",
-          3: "ECO Mode",
-        }[r] || "Unknown";
+    let l =
+      { 0: "Initializing...", 1: "Performance", 2: "Balanced", 3: "ECO Mode" }[r] ||
+      "Unknown";
 
-      // Check cpulimit property
-      const { errno: c2, stdout: s2 } = await executeCommand(
-        "getprop persist.sys.azenithconf.cpulimit"
-      );
+    // cpulimit check
+    const { errno: c2, stdout: s2 } = await executeCommand(
+      "getprop persist.sys.azenithconf.cpulimit"
+    );
+    if (c2 === 0 && s2.trim() === "1") l += " (Lite)";
 
-      if (c2 === 0 && s2.trim() === "1") {
-        l += " (Lite)";
-      }
+    if (lastProfile.value === l) return; // skip if unchanged
+    lastProfile = { time: now, value: l };
 
-      d.textContent = l;
-
-      switch (l.replace(" (Lite)", "")) {
-        case "Performance":
-          d.style.color = "#ef4444";
-          break;
-        case "ECO Mode":
-          d.style.color = "#5eead4";
-          break;
-        case "Balanced":
-          d.style.color = "#7dd3fc";
-          break;
-        case "Initializing...":
-          d.style.color = "#60a5fa";
-          break;
-        default:
-          d.style.color = "#ffffff";
-      }
+    d.textContent = l;
+    switch (l.replace(" (Lite)", "")) {
+      case "Performance":
+        d.style.color = "#ef4444"; break;
+      case "ECO Mode":
+        d.style.color = "#5eead4"; break;
+      case "Balanced":
+        d.style.color = "#7dd3fc"; break;
+      case "Initializing...":
+        d.style.color = "#60a5fa"; break;
+      default:
+        d.style.color = "#ffffff";
     }
   } catch (m) {
     showToast("Error checking profile:", m);
   }
 };
 
+// Available RAM: update setiap 10 detik
+let lastRAM = { time: 0, value: "" };
 const checkAvailableRAM = async () => {
+  const now = Date.now();
+  if (now - lastRAM.time < 7000) return;
+
   try {
     const { stdout: c } = await executeCommand(
       "cat /proc/meminfo | grep -E 'MemTotal|MemAvailable'"
@@ -144,33 +155,44 @@ const checkAvailableRAM = async () => {
 
     const s = c.trim().split("\n");
     let r = 0, d = 0;
-
     for (const l of s) {
       if (l.includes("MemTotal")) r = parseInt(l.match(/\d+/)[0]);
       else if (l.includes("MemAvailable")) d = parseInt(l.match(/\d+/)[0]);
     }
 
-    if (r && d) {
-      const m = r - d;
-      const h = (m / 1024 / 1024).toFixed(2);
-      const g = (r / 1024 / 1024).toFixed(2);
-      const f = (d / 1024 / 1024).toFixed(2);
-      const y = ((m / r) * 100).toFixed(0);
+    if (!r || !d) return;
 
-      document.getElementById("ramInfo").textContent = 
-        `${h} GB / ${g} GB (${y}%) — Available: ${f} GB`;
-    } else {
-      document.getElementById("ramInfo").textContent = "Error reading memory";
+    const m = r - d;
+    const h = (m / 1024 / 1024).toFixed(2);
+    const g = (r / 1024 / 1024).toFixed(2);
+    const f = (d / 1024 / 1024).toFixed(2);
+    const y = ((m / r) * 100).toFixed(0);
+
+    const elem = document.getElementById("ramInfo");
+    if (!elem) return;
+
+    const text = `${h} GB / ${g} GB (${y}%) — Available: ${f} GB`;
+    if (lastRAM.value !== text) {
+      lastRAM = { time: now, value: text };
+      elem.textContent = text;
     }
   } catch {
-    document.getElementById("ramInfo").textContent = "Error";
+    const elem = document.getElementById("ramInfo");
+    if (elem) elem.textContent = "Error";
   }
 };
 
+// CPU Frequencies: update setiap 15 detik
+let lastCpuRead = 0;
 const checkCPUFrequencies = async () => {
-  const c = document.getElementById("cpuFreqInfo");
-  let s = "";
+  const now = Date.now();
+  if (now - lastCpuRead < 5000) return; // throttle
+  lastCpuRead = now;
 
+  const c = document.getElementById("cpuFreqInfo");
+  if (!c) return;
+
+  let s = "";
   try {
     const { stdout: r } = await executeCommand(
       "ls /sys/devices/system/cpu/cpufreq/ | grep policy"
@@ -179,16 +201,14 @@ const checkCPUFrequencies = async () => {
 
     for (const l of d) {
       const m = `/sys/devices/system/cpu/cpufreq/${l}`;
-      const [{ stdout: h }, { stdout: g }] = await Promise.all([
-        executeCommand(`cat ${m}/scaling_cur_freq`),
-        executeCommand(`cat ${m}/related_cpus`),
-      ]);
-
-      const f = (parseInt(h.trim()) / 1e3).toFixed(0);
-      const y = g.trim().split(" ").join(", ");
-      s += `Cluster ${y}: ${f} MHz<br>`;
+      try {
+        const { stdout: h } = await executeCommand(`cat ${m}/scaling_cur_freq`);
+        const { stdout: g } = await executeCommand(`cat ${m}/related_cpus`);
+        const f = (parseInt(h.trim()) / 1e3).toFixed(0);
+        const y = g.trim().split(" ").join(", ");
+        s += `Cluster ${y}: ${f} MHz<br>`;
+      } catch {}
     }
-
     c.innerHTML = s.trim();
   } catch {
     c.innerHTML = "Failed to read CPU frequencies.";
@@ -286,36 +306,58 @@ const getAndroidVersion = async () => {
   }
 };
 
+let lastServiceCheck = { time: 0, status: "", pid: "" };
 const checkServiceStatus = async () => {
-  let { errno: c, stdout: s } = await executeCommand(
+  const now = Date.now();
+  if (now - lastServiceCheck.time < 5000) return;
+  lastServiceCheck.time = now;
+
+  const r = document.getElementById("serviceStatus");
+  const d = document.getElementById("servicePID");
+  if (!r || !d) return;
+
+  try {
+    const { errno: c, stdout: s } = await executeCommand(
       "/system/bin/toybox pidof sys.azenith-service"
-    ),
-    r = document.getElementById("serviceStatus"),
-    d = document.getElementById("servicePID");
-  if (0 === c && "0" !== s.trim()) {
-    let l = s.trim(),
-      { stdout: m } = await executeCommand(
+    );
+    let status = "", pidText = "Service PID: null";
+
+    if (c === 0 && s.trim() !== "0") {
+      const pid = s.trim();
+      pidText = "Service PID: " + pid;
+
+      const { stdout: profileRaw } = await executeCommand(
         "cat /data/adb/.config/AZenith/API/current_profile"
-      ),
-      { stdout: h } = await executeCommand(
+      );
+      const { stdout: aiRaw } = await executeCommand(
         "getprop persist.sys.azenithconf.AIenabled"
-      ),
-      g = m.trim(),
-      f = h.trim();
-    "0" === g
-      ? (r.textContent = "Initializing...\uD83C\uDF31")
-      : ["1", "2", "3"].includes(g)
-      ? "1" === f
-        ? (r.textContent = "Running\uD83C\uDF43")
-        : "0" === f
-        ? (r.textContent = "Idle\uD83D\uDCAB")
-        : (r.textContent = "Unknown Profile")
-      : (r.textContent = "Unknown Profile"),
-      (d.textContent = "Service PID: " + l);
-  } else
-    (r.textContent = "Suspended\uD83D\uDCA4"),
-      (d.textContent = "Service PID: null");
+      );
+
+      const profile = profileRaw.trim();
+      const ai = aiRaw.trim();
+
+      if (profile === "0") status = "Initializing...\uD83C\uDF31";
+      else if (["1","2","3"].includes(profile)) {
+        status = ai === "1" ? "Running\uD83C\uDF43" :
+                 ai === "0" ? "Idle\uD83D\uDCAB" :
+                 "Unknown Profile";
+      } else status = "Unknown Profile";
+    } else {
+      status = "Suspended\uD83D\uDCA4";
+    }
+
+    // Update UI hanya jika berubah
+    if (lastServiceCheck.status !== status) r.textContent = status;
+    if (lastServiceCheck.pid !== pidText) d.textContent = pidText;
+
+    lastServiceCheck.status = status;
+    lastServiceCheck.pid = pidText;
+
+  } catch (e) {
+    console.warn("checkServiceStatus error:", e);
+  }
 };
+
 const checkfpsged = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.fpsged"
@@ -1559,11 +1601,11 @@ const cleanMemory = () => {
 };
 
 const monitoredTasks = [
-  { fn: checkCPUFrequencies, interval: 5000 },
-  { fn: checkServiceStatus, interval: 15000 },
-  { fn: checkProfile, interval: 15000 },
-  { fn: checkAvailableRAM, interval: 10000 },
-  { fn: showRandomMessage, interval: 30000 },
+  { fn: checkCPUFrequencies, interval: 2000 },
+  { fn: checkServiceStatus, interval: 5000 },
+  { fn: checkProfile, interval: 5000 },
+  { fn: checkAvailableRAM, interval: 7000 },
+  { fn: showRandomMessage, interval: 10000 },
 ];
 
 const runMonitoredTasks = async () => {
@@ -1633,7 +1675,6 @@ const heavyInit = async () => {
   ];
   await Promise.all(quickChecks.map(fn => fn()));
 
-  // Stage 3: heavy async
   const heavyAsync = [
     checkfpsged, checkLiteModeStatus, checkDThermal,
     checkiosched, checkGPreload, loadColorSchemeSettings,
