@@ -1481,7 +1481,7 @@ const showCustomResolution = async () => {
   window.addEventListener("resize", d, { passive: true });
   c._resizeHandler = d;
   d();
-};
+}; 
 
 const hideResoSettings = () => {
   const c = document.getElementById("resomodal");
@@ -1765,7 +1765,7 @@ const heavyInit = async () => {
     checkmalisched, checkAI, checkDND, checkdtrace,
     checkjit, checktoast, loadVsyncValue,
     checkBypassChargeStatus, checkschedtunes, checkSFL,
-    checkKillLog, checklogger, checkRamBoost,
+    checkKillLog, checklogger, checkRamBoost, detectResolution
   ];
   for (const fn of heavySequential) { await fn(); }
 
