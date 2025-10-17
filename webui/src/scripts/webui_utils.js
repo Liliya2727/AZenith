@@ -1459,7 +1459,7 @@ const applyResolution = async () => {
   } else {
     await executeCommand(`wm size ${selected}`);
     showToast(`Applied ${selected}`);
-    await executeCommand(`setprop ${RESO_PROP} ${selectedText}`);
+    await executeCommand(`setprop ${RESO_PROP} ${selected}`);
   }
 };
 

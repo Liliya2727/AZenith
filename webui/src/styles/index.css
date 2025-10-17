@@ -859,38 +859,6 @@ input[type="checkbox"]:checked + .toggle::after {
     margin-bottom: 16px
 }
 
-.reso-label {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 14px;
-    color: #bbb
-}
-
-.reso-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px
-}
-
-.reso-input {
-    width: 100%;
-    padding: 12px;
-    background: #2b2b2b;
-    border: none;
-    border-radius: 70px;
-    color: #fff;
-    font-size: 16px;
-    text-align: center
-}
-
-.reso-input:focus {
-    border-color: #8ac1ff;
-    outline: 1px solid #8ac1ff;
-    outline-offset: 0px
-}
-
-
-
 .reso-selector {
   display: flex;
   flex-direction: column;
@@ -907,7 +875,7 @@ input[type="checkbox"]:checked + .toggle::after {
   padding: 12px 16px;
   cursor: pointer;
   transition: all 0.25s ease;
-  border: 1px solid transparent; 
+  border: 1px solid transparent;
 }
 
 .reso-option:hover {
@@ -918,11 +886,6 @@ input[type="checkbox"]:checked + .toggle::after {
   background: linear-gradient(145deg, #1a2330, #202c3d);
   border: 1px solid #4da6ff;
   box-shadow: 0 0 10px rgba(77, 166, 255, 0.25);
-}
-
-.reso-option.active .reso-info,
-.reso-option.active .reso-dot {
-  transition: all 0.25s ease;
 }
 
 .reso-dot {
@@ -941,10 +904,12 @@ input[type="checkbox"]:checked + .toggle::after {
   box-shadow: 0 0 6px #4da6ff;
 }
 
-/* Text styles (unchanged, but ensure no layout shift) */
+/* --- LEFT text alignment fix --- */
 .reso-info {
   display: flex;
   flex-direction: column;
+  align-items: flex-start; /* aligns both texts to the left */
+  justify-content: center;
 }
 
 .reso-label {
@@ -957,9 +922,10 @@ input[type="checkbox"]:checked + .toggle::after {
 .reso-size {
   color: #a5a5a5;
   font-size: 13px;
+  margin-top: 2px; /* small spacing between label and size */
 }
 
-/* Optional: subtle hover scaling for better feedback */
+/* Optional: slight press animation */
 .reso-option:active {
   transform: scale(0.98);
 }
