@@ -15,7 +15,7 @@
  */
 
 import BannerDarkZenith from "/webui.bannerdarkmode.avif";
-import BannerLightZenith from "/webui.bannerwhitemode.avif";
+import BannerLightZenith from "/webui.bannerlightmode.avif";
 import AvatarZenith from "/webui.avatar.avif";
 import SchemeBanner from "/webui.schemebanner.avif";
 import ResoBanner from "/webui.reso.avif";
