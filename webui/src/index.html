@@ -7,8 +7,7 @@
     <script type="module" src="scripts/webui_utils.js"></script>
     <script type="module" src="scripts/block_copy.js"></script>
   </head>
-
-          <body class="background flex flex-col min-h-screen text-white">
+  <body class="background flex flex-col min-h-screen text-white">
         <div id="loading-screen">
             <div class="loading-content">
                 <div class="spinner"></div>
@@ -33,36 +32,11 @@
                     ><span id="msg" class="overlay-subtext">No Data Acquired</span>
                 </div>
             </div>
-            <div class="flex flex-wrap gap-4 mt-bokep w-full">
-                <button id="show-additional-settings" class="flex-1 min-w-[45%]">
-                    <div class="bg-gray-900 mb-4 p-4 rounded-lg flex justify-between h-full">
-                        <div class="text-left">
-                            <h2 class="topsets">Additional Settings</h2>
-                            <small class="block text-gray-400 text-sss">
-                                Additional settings to enhance your experience.
-                            </small>
-                        </div>
-                        <span class="arrow-icon self-end">&rsaquo;</span>
-                    </div>
-                </button>
-                <button id="show-preference-settings" class="flex-1 min-w-[45%]">
-                    <div class="bg-gray-900 mb-4 p-4 rounded-lg flex justify-between h-full">
-                        <div class="text-left">
-                            <h2 class="topsets">Preferences Settings</h2>
-                            <small class="block text-gray-400 text-sss">
-                                Preferenced tweaks or addon that applied on boot.
-                            </small>
-                        </div>
-                        <span class="arrow-icon self-end">&rsaquo;</span>
-                    </div>
-                </button>
-            </div>
             <div class="p-6">
                 <div>
                     <div class="device-info-card">
                         <h2 class="font-semibold mb-4 text-lg text-black-69"># Basic Information</h2>
                         <div class="device-info-row">
-                            <div class="device-info-divider"></div>
                             <p class="device-info-label">Current Profile</p>
                             <p id="CurProfile" class="text-pink-400 text-sm font-medium italic animate-pulse">
                                 Getting info...
@@ -82,13 +56,36 @@
                         <div class="device-info-row">
                             <p class="device-info-label">Android Version</p>
                             <p id="android" class="device-info-value">Getting info...</p>
-                        </div>
-                        <div class="device-info-divider"></div>
+                        </div>                       
                     </div>
                 </div>
             </div>
+            <div class="flex flex-wrap gap-4 mt-bokep w-full">
+                <button id="show-additional-settings" class="p-991 flex-1 min-w-[45%]">
+                    <div class="bg-gray-900 mb-4 p-4 rounded-lg flex justify-between h-full w-full">
+                        <div class="text-left">
+                            <h2 class="topsets">Additional Settings</h2>
+                            <small class="block text-gray-400 text-sss">
+                                Additional settings to enhance your experience.
+                            </small>
+                        </div>
+                        <span class="arrow-icon self-end">&rsaquo;</span>
+                    </div>
+                </button>
+                <button id="show-preference-settings" class="p-992 flex-1 min-w-[45%]">
+                    <div class="bg-gray-900 mb-4 p-4 rounded-lg flex justify-between h-full w-full">
+                        <div class="text-left">
+                            <h2 class="topsets">Preferences Settings</h2>
+                            <small class="block text-gray-400 text-sss">
+                                Preferenced tweaks or addon that applied on boot.
+                            </small>
+                        </div>
+                        <span class="arrow-icon self-end">&rsaquo;</span>
+                    </div>
+                </button>
+            </div>
             <div class="p-6">
-                <div class="bg-gray-900 mt-211 mb-4 p-4 rounded-lg">
+                <div class="bg-gray-900 mt-277 mb-4 p-4 rounded-lg">
                     <div class="flex items-center justify-between">
                         <h2 class="font-semibold mb-4 text-lg text-black-69"># CPU Settings</h2>
                     </div>

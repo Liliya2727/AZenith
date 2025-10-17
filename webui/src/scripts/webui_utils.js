@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import BannerZenith from "/webui.banner.avif";
+import BannerDarkZenith from "/webui.bannerdarkmode.avif";
+import BannerLightZenith from "/webui.bannerwhitemode.avif";
 import AvatarZenith from "/webui.avatar.avif";
 import SchemeBanner from "/webui.schemebanner.avif";
 import ResoBanner from "/webui.reso.avif";
@@ -1428,11 +1429,21 @@ const setupUIListeners = () => {
   const avatar = document.getElementById("Avatar");
   const scheme = document.getElementById("Scheme");
   const reso = document.getElementById("Reso");
-
-  if (banner) banner.src = BannerZenith;
+  
   if (avatar) avatar.src = AvatarZenith;
   if (scheme) scheme.src = SchemeBanner;
   if (reso) reso.src = ResoBanner;
+
+  const updateBannerByTheme = () => {
+    const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    if (banner) banner.src = isDark ? BannerDarkZenith : BannerLightZenith;
+  };
+    
+  updateBannerByTheme();
+    
+  // Listen for system theme changes (auto updates on toggle)
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateBannerByTheme);
+  
   // Button Clicks
   document
     .getElementById("startButton")
