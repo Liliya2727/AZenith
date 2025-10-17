@@ -143,78 +143,6 @@ const checkProfile = async () => {
   }
 };
 
-// Available RAM: update setiap 10 detik
-let lastRAM = { time: 0, value: "" };
-const checkAvailableRAM = async () => {
-  const now = Date.now();
-  if (now - lastRAM.time < 7000) return;
-
-  try {
-    const { stdout: c } = await executeCommand(
-      "cat /proc/meminfo | grep -E 'MemTotal|MemAvailable'"
-    );
-
-    const s = c.trim().split("\n");
-    let r = 0, d = 0;
-    for (const l of s) {
-      if (l.includes("MemTotal")) r = parseInt(l.match(/\d+/)[0]);
-      else if (l.includes("MemAvailable")) d = parseInt(l.match(/\d+/)[0]);
-    }
-
-    if (!r || !d) return;
-
-    const m = r - d;
-    const h = (m / 1024 / 1024).toFixed(2);
-    const g = (r / 1024 / 1024).toFixed(2);
-    const f = (d / 1024 / 1024).toFixed(2);
-    const y = ((m / r) * 100).toFixed(0);
-
-    const elem = document.getElementById("ramInfo");
-    if (!elem) return;
-
-    const text = `${h} GB / ${g} GB (${y}%) — Available: ${f} GB`;
-    if (lastRAM.value !== text) {
-      lastRAM = { time: now, value: text };
-      elem.textContent = text;
-    }
-  } catch {
-    const elem = document.getElementById("ramInfo");
-    if (elem) elem.textContent = "Error";
-  }
-};
-
-// CPU Frequencies: update setiap 15 detik
-let lastCpuRead = 0;
-const checkCPUFrequencies = async () => {
-  const now = Date.now();
-  if (now - lastCpuRead < 5000) return; // throttle
-  lastCpuRead = now;
-
-  const c = document.getElementById("cpuFreqInfo");
-  if (!c) return;
-
-  let s = "";
-  try {
-    const { stdout: r } = await executeCommand(
-      "ls /sys/devices/system/cpu/cpufreq/ | grep policy"
-    );
-    const d = r.trim().split("\n").filter(Boolean);
-
-    for (const l of d) {
-      const m = `/sys/devices/system/cpu/cpufreq/${l}`;
-      try {
-        const { stdout: h } = await executeCommand(`cat ${m}/scaling_cur_freq`);
-        const { stdout: g } = await executeCommand(`cat ${m}/related_cpus`);
-        const f = (parseInt(h.trim()) / 1e3).toFixed(0);
-        const y = g.trim().split(" ").join(", ");
-        s += `Cluster ${y}: ${f} MHz<br>`;
-      } catch {}
-    }
-    c.innerHTML = s.trim();
-  } catch {
-    c.innerHTML = "Failed to read CPU frequencies.";
-  }
-};
 let cachedSOCData = null;
 const fetchSOCDatabase = async () => {
   if (!cachedSOCData) {
@@ -339,8 +267,8 @@ const checkServiceStatus = async () => {
 
       if (profile === "0") status = "Initializing...\uD83C\uDF31";
       else if (["1","2","3"].includes(profile)) {
-        status = ai === "1" ? "Running\uD83C\uDF43" :
-                 ai === "0" ? "Idle\uD83D\uDCAB" :
+        status = ai === "1" ? "Running - Auto Mode\uD83C\uDF43 " :
+                 ai === "0" ? "Running - Idle Mode\uD83D\uDCAB" :
                  "Unknown Profile";
       } else status = "Unknown Profile";
     } else {
@@ -1683,10 +1611,8 @@ const cleanMemory = () => {
 };
 
 const monitoredTasks = [
-  { fn: checkCPUFrequencies, interval: 2000 },
   { fn: checkServiceStatus, interval: 5000 },
   { fn: checkProfile, interval: 5000 },
-  { fn: checkAvailableRAM, interval: 7000 },
   { fn: showRandomMessage, interval: 10000 },
 ];
 
@@ -1744,8 +1670,6 @@ const heavyInit = async () => {
     showRandomMessage,
     checkProfile,
     checkServiceStatus,
-    checkCPUFrequencies,
-    checkAvailableRAM,
   ];
   await Promise.all(stage1.map(fn => fn()));
 

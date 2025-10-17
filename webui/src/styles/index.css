@@ -19,6 +19,10 @@ body.modal-open {
     text-align: center
 }
 
+.flex > button > div {
+  height: 80%;
+}
+
 a,
 hr {
     color: inherit
