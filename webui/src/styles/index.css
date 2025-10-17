@@ -857,7 +857,7 @@ input[type="checkbox"]:checked + .toggle::after {
     border-radius: 1.3rem;
     margin-bottom: 1.5rem;
     display: block;
-    box-shadow: 0 1px 4px rgba(80, 100, 160, 0.45);
+    box-shadow: 0 1px 4px rgba(80, 100, 160, 0.45),
                 0 -1px 4px rgba(80, 100, 160, 0.35);
 }
 
