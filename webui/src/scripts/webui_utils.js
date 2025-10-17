@@ -1381,7 +1381,9 @@ const loadColorSchemeSettings = async () => {
 
 const detectResolution = async () => {
   // Detect current resolution
-  const { errno, stdout } = await executeCommand("wm size | awk '{print $3}'");
+  const { errno, stdout } = await executeCommand(
+  "wm size | grep 'Physical size' | awk '{print $3}'"
+);
   if (errno !== 0 || !stdout.trim()) {
     console.error("Failed to detect resolution");
     showToast("Unable to detect screen resolution");
@@ -1392,9 +1394,9 @@ const detectResolution = async () => {
   const [height, width] = defaultRes.split("x").map(Number);
   if (!height || !width) return;
 
-  // Calculate scaled resolutions
-  const mediumRes = `${Math.round(height * 0.833)}x${Math.round(width * 0.833)}`;
-  const lowRes = `${Math.round(height * 0.666)}x${Math.round(width * 0.666)}`;
+  // Calculate scaled resolutions (Medium = 90%, Low = 80%)
+  const mediumRes = `${Math.round(height * 0.9000)}x${Math.round(width * 0.9000)}`;
+  const lowRes = `${Math.round(height * 0.8000)}x${Math.round(width * 0.8000)}`;
 
   // Update text in UI
   const resoSizes = document.querySelectorAll(".reso-size");
@@ -1439,7 +1441,6 @@ const selectResolution = async (btn) => {
 
   // Save selected resolution in global and system property
   if (window._reso) window._reso.selected = selectedText;
-  await executeCommand(`setprop ${RESO_PROP} ${selectedText}`);
   showToast(`Selected ${selectedText}`);
 };
 
@@ -1458,6 +1459,7 @@ const applyResolution = async () => {
   } else {
     await executeCommand(`wm size ${selected}`);
     showToast(`Applied ${selected}`);
+    await executeCommand(`setprop ${RESO_PROP} ${selectedText}`);
   }
 };
 
