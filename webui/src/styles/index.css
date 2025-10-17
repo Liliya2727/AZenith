@@ -887,8 +887,8 @@ input[type="checkbox"]:checked + .toggle::after {
 }
 
 .reso-option.active {
-  background: linear-gradient(145deg, #1a2330, #202c3d);
-  border: 1px solid #4da6ff;
+  background: linear-gradient(145deg, #7FA9FF, #A5B8FF);
+  border: 0.8px solid #6A74C0;
   box-shadow: 0 0 10px rgba(77, 166, 255, 0.25);
 }
 
@@ -903,9 +903,9 @@ input[type="checkbox"]:checked + .toggle::after {
 }
 
 .reso-option.active .reso-dot {
-  background-color: #4da6ff;
-  border-color: #4da6ff;
-  box-shadow: 0 0 6px #4da6ff;
+  background-color: #6A74C0;
+  border-color: #6A74C0;
+  box-shadow: 0 0 6px #6A74C0;
 }
 
 /* --- LEFT text alignment fix --- */
@@ -927,6 +927,19 @@ input[type="checkbox"]:checked + .toggle::after {
   color: #a5a5a5;
   font-size: 13px;
   margin-top: 2px; /* small spacing between label and size */
+}
+
+.reso-option.active .reso-size {
+  color: #262626;
+  font-size: 13px;
+  margin-top: 2px; /* small spacing between label and size */
+}
+
+.reso-option.active .reso-label {
+  color: #141414;
+  font-size: 15px;
+  font-weight: 500;
+  margin: 0;
 }
 
 /* Optional: slight press animation */
@@ -1351,7 +1364,7 @@ input[type="checkbox"]:checked + .toggle::after {
 }
 
 #CurProfile {
-    color: #93c5fd;
+    color: #93C5FD;
     font-size: .9rem;
     font-weight: 500;
     font-style: italic;
@@ -1643,41 +1656,41 @@ input[type=range]::-ms-track {
 
 
 .background {
-    background: #F6F8FF; /* soft off-white with cool tone */
-    color: #1A1C2A; /* dark navy-gray text */
+    background: #F3F6FF;
+    color: #1A1C2A; 
 }
 
 .bg-black-500 {
-    background-color: #E0E4FF; /* light lavender-blue */
+    background-color: #E0E4FF; 
 }
 
 .bg-blue-600 {
-    background-color: #5A77FF; /* vivid accent blue */
+    background-color: #5A77FF; 
 }
 
 .bg-gray-200,
 .bg-gray-700 {
-    background-color: #E9ECF9; /* subtle bluish-gray */
+    background-color: #E9ECF9; 
 }
 
 .bg-gray-600,
 .active\:bg-gray-600:active {
-    background-color: #C5CAE9; /* medium cool gray for hover */
+    background-color: #C5CAE9; 
 }
 
 .bg-gray-800,
 .bg-gray-888 {
-    background-color: #DCE1FA; /* faint cool background */
+    background-color: #DCE1FA; 
 }
 
 .bg-gray-80022 {
-    background-color: #D4DAF7; /* mid-light tone */
+    background-color: #D4DAF7; 
 }
 
 .bg-gray-900,
 .device-info-card {
-    background-color: #EDF2FF; /* soft bright surface */
-    border: 1px solid #DFE3FF; /* gentle cool border */
+    background-color: #EDF2FF; 
+    border: 0.7px solid #D2DDFF; 
 }
 
 .device-info-label {
@@ -1706,7 +1719,7 @@ input[type=range]::-ms-track {
 
 .device-info-divider2,
 .device-info-divider {
-    border-bottom: 1.5px solid #C3C9ED;
+    border-bottom: 0.7px solid #D2DDFF;
 }
 
 .device-info-value {
@@ -1822,30 +1835,35 @@ input[type=range]::-ms-track {
   background: #D4DAF7;
 }
 
-.reso-option.active {
-  background: #D4DAF7;
-  border: 1px solid #4da6ff;
-}
-
 .reso-size {
   color: #303030;
-  font-size: 13px;
 }
 
 .reso-dot {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
   border: 2px solid #272727;
-  transition: all 0.25s ease;
-  flex-shrink: 0;
 }
 
 .reso-label {
   color: #000000;
-  font-size: 15px;
-  font-weight: 500;
-  margin: 0;
+}
+
+
+.reso-option.active {
+  background: linear-gradient(145deg, #7FA9FF, #A5B8FF);
+  border: 0.8px solid #7FA9FF;
+  box-shadow: 0 0 10px rgba(77, 166, 255, 0.25);
+}
+
+.reso-option.active .reso-dot {
+  background-color: #6A74C0;
+  border-color: #6A74C0;
+  box-shadow: 0 0 6px #6A74C0;
+}
+
+.reso-option.active .reso-size {
+  color: #262626;
+  font-size: 13px;
+  margin-top: 2px; /* small spacing between label and size */
 }
 
 input[type=range]::-webkit-slider-runnable-track {

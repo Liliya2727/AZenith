@@ -117,28 +117,39 @@ const checkProfile = async () => {
       { 0: "Initializing...", 1: "Performance", 2: "Balanced", 3: "ECO Mode" }[r] ||
       "Unknown";
 
-    // cpulimit check
+    // Check for Lite mode
     const { errno: c2, stdout: s2 } = await executeCommand(
       "getprop persist.sys.azenithconf.cpulimit"
     );
     if (c2 === 0 && s2.trim() === "1") l += " (Lite)";
 
-    if (lastProfile.value === l) return; // skip if unchanged
+    if (lastProfile.value === l) return;
     lastProfile = { time: now, value: l };
 
     d.textContent = l;
-    switch (l.replace(" (Lite)", "")) {
-      case "Performance":
-        d.style.color = "#ef4444"; break;
-      case "ECO Mode":
-        d.style.color = "#5eead4"; break;
-      case "Balanced":
-        d.style.color = "#7dd3fc"; break;
-      case "Initializing...":
-        d.style.color = "#60a5fa"; break;
-      default:
-        d.style.color = "#ffffff";
-    }
+
+    // Detect theme mode
+    const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    // Dark mode colors (original) vs light mode (darker/saturated)
+    const colors = isDark
+      ? {
+          "Performance": "#ef4444",
+          "Balanced": "#7dd3fc",
+          "ECO Mode": "#5eead4",
+          "Initializing...": "#60a5fa",
+          "Default": "#ffffff",
+        }
+      : {
+          "Performance": "#b91c1c",
+          "Balanced": "#0284c7",
+          "ECO Mode": "#0d9488",
+          "Initializing...": "#2563eb",
+          "Default": "#1f2937",
+        };
+
+    const key = l.replace(" (Lite)", "");
+    d.style.color = colors[key] || colors.Default;
   } catch (m) {
     showToast("Error checking profile:", m);
   }
@@ -1320,12 +1331,12 @@ const detectResolution = async () => {
   }
 
   const defaultRes = stdout.trim(); // e.g. "2400x1080"
-  const [height, width] = defaultRes.split("x").map(Number);
-  if (!height || !width) return;
+  const [width, height] = defaultRes.split("x").map(Number);
+  if (!width || !height) return;
 
   // Calculate scaled resolutions (Medium = 90%, Low = 80%)
-  const mediumRes = `${Math.round(height * 0.9000)}x${Math.round(width * 0.9000)}`;
-  const lowRes = `${Math.round(height * 0.8000)}x${Math.round(width * 0.8000)}`;
+  const mediumRes = `${Math.round(width * 0.9000)}x${Math.round(height * 0.9000)}`;
+  const lowRes = `${Math.round(width * 0.8000)}x${Math.round(height * 0.8000)}`;
 
   // Update text in UI
   const resoSizes = document.querySelectorAll(".reso-size");
@@ -1384,11 +1395,9 @@ const applyResolution = async () => {
 
   if (selected === def) {
     await executeCommand("wm size reset");
-    showToast(`Reset to default ${def}`);
   } else {
-    await executeCommand(`wm size ${selected}`);
-    showToast(`Applied ${selected}`);
     await executeCommand(`setprop ${RESO_PROP} ${selected}`);
+    await executeCommand(`wm size ${selected}`);    
   }
 };
 
