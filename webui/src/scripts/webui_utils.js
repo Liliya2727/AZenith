@@ -1322,7 +1322,7 @@ const loadColorSchemeSettings = async () => {
 const detectResolution = async () => {
   // Detect current resolution
   const { errno, stdout } = await executeCommand(
-  "wm size | grep -oE "[0-9]+x[0-9]+" | head -n 1"
+  `wm size | grep -oE "[0-9]+x[0-9]+" | head -n 1`
 );
   if (errno !== 0 || !stdout.trim()) {
     console.error("Failed to detect resolution");
