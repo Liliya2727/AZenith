@@ -61,7 +61,7 @@ extract "$ZIPFILE" uninstall.sh "$MODPATH"
 ui_print "- Extracting gamelist.txt..."
 extract "$ZIPFILE" gamelist.txt "$MODULE_CONFIG/gamelist"
 ui_print "- Extracting module icon..."
-extract "$ZIPFILE" module.avatar.webp "$MODPATH"
+extract "$ZIPFILE" module.avatar.webp "/data/local/tmp"
 ui_print "- Extracting module banner..."
 extract "$ZIPFILE" module.banner.avif "$MODPATH"
 
