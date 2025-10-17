@@ -1381,7 +1381,6 @@ const selectResolution = async (btn) => {
 
   // Save selected resolution in global and system property
   if (window._reso) window._reso.selected = selectedText;
-  showToast(`Selected ${selectedText}`);
 };
 
 const applyResolution = async () => {
@@ -1393,7 +1392,8 @@ const applyResolution = async () => {
   const selected = window._reso.selected;
   const def = window._reso.default;
 
-  if (selected === def) {
+  if (selected === def) {    
+    await executeCommand(`setprop ${RESO_PROP} ${selected}`);
     await executeCommand("wm size reset");
   } else {
     await executeCommand(`setprop ${RESO_PROP} ${selected}`);
@@ -1410,6 +1410,8 @@ const showCustomResolution = async () => {
 
   document.body.classList.add("modal-open");
   c.classList.add("show");
+  
+  await detectResolution();
 
   const r = window.innerHeight;
   const d = () => {
