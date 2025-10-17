@@ -60,8 +60,10 @@ ui_print "- Extracting uninstall.sh..."
 extract "$ZIPFILE" uninstall.sh "$MODPATH"
 ui_print "- Extracting gamelist.txt..."
 extract "$ZIPFILE" gamelist.txt "$MODULE_CONFIG/gamelist"
-ui_print "- Extracting module_icon.png..."
-extract "$ZIPFILE" module_icon.png /data/local/tmp
+ui_print "- Extracting module icon..."
+extract "$ZIPFILE" module.avatar.avif "$MODPATH"
+ui_print "- Extracting module banner..."
+extract "$ZIPFILE" module.banner.avif "$MODPATH"
 
 # Target architecture
 case $ARCH in

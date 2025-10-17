@@ -58,7 +58,6 @@ for prop in $props; do
 	resetprop --delete "$prop"
 done
 # Uninstall module directories
-rm -rf /data/local/tmp/module_icon.png
 rm -rf /data/adb/.config/AZenith
 rm -rf /data/AZenith
 # Uninstall toast apk

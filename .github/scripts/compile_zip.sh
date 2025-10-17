@@ -20,7 +20,8 @@ need_integrity=(
 	"mainfiles/service.sh"
 	"mainfiles/uninstall.sh"
 	"mainfiles/module.prop"
-    "mainfiles/module_icon.png"
+    "mainfiles/module.avatar.avif"
+    "mainfiles/module.banner.avif"
 	"mainfiles/gamelist.txt"
     "mainfiles/azenithtoast.apk"
 )
