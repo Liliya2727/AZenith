@@ -19,7 +19,7 @@ import BannerLightZenith from "/webui.bannerlightmode.avif";
 import AvatarZenith from "/webui.avatar.avif";
 import SchemeBanner from "/webui.schemebanner.avif";
 import ResoBanner from "/webui.reso.avif";
-import { exec, fullScreen } from "kernelsu";
+import { exec } from "kernelsu";
 const RESO_PROP = "persist.sys.azenithconf.resosettings";
 
 const executeCommand = async (cmd, cwd = null) => {
