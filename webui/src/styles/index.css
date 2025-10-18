@@ -1,4 +1,5 @@
 .gamelist-modal,
+.settings-modal,
 .additional-modal,
 .preference-modal,
 .reso-modal,
@@ -446,12 +447,6 @@ video {
     line-height: 1.25rem
 }
 
-.textjudul {
-    color: #FFFFFF;
-    font-size: 1.5rem;
-    font-weight: 600;
-}
-
 .h-6 {
     height: 1.5rem
 }
@@ -581,6 +576,7 @@ video {
 .gamelist-modal,
 .additional-modal,
 .preference-modal,
+.settings-modal,
 .reso-modal,
 .scheme-modal {
     opacity: 0;
@@ -709,6 +705,7 @@ input[type="checkbox"]:checked+.toggle::after {
 .gamelist-modal,
 .additional-modal,
 .preference-modal,
+.settings-modal,
 .reso-modal,
 .scheme-modal {
     position: fixed;
@@ -727,6 +724,7 @@ input[type="checkbox"]:checked+.toggle::after {
 .gamelist-modal.show,
 .scheme-modal.show,
 .reso-modal.show,
+.settings-modal.show,
 .preference-modal.show,
 .additional-modal.show,
 .transition-section.show {
@@ -737,6 +735,7 @@ input[type="checkbox"]:checked+.toggle::after {
 .gamelist-content,
 .reso-container,
 .preference-container,
+.settings-container,
 .additional-container,
 .scheme-container {
     border-radius: 1.5rem;
@@ -751,6 +750,7 @@ input[type="checkbox"]:checked+.toggle::after {
 }
 
 .gamelist-modal.show .gamelist-content,
+.settings-modal.show .settings-container,
 .additional-modal.show .additional-container,
 .reso-modal.show .reso-container,
 .preference-modal.show .preference-container,
@@ -761,6 +761,7 @@ input[type="checkbox"]:checked+.toggle::after {
 .gamelist-title,
 .additional-title,
 .preference-title,
+.settings-title,
 .reso-title,
 .scheme-title {
     font-size: 1.5rem;
@@ -841,6 +842,7 @@ input[type="checkbox"]:checked+.toggle::after {
 }
 
 .preference-modal,
+.settings-modal,
 .additional-modal,
 .reso-modal {
     display: flex;
@@ -1180,28 +1182,6 @@ input[type="checkbox"]:checked+.toggle::after {
     font-weight: 700
 }
 
-.avatar-kanan {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    -o-object-fit: cover;
-    object-fit: cover;
-    border: 1px solid rgba(255, 255, 255, .3);
-    box-shadow: 0 0 8px #fff3;
-    position: absolute;
-    margin-bottom: 4px;
-    top: 5px;
-    right: 1px;
-    filter: brightness(.9);
-    transition: transform 0.8s, box-shadow 0.8s
-}
-
-.avatar-kanan:active {
-    transform: scale(1.1);
-    filter: brightness(1);
-    box-shadow: 0 0 12px #fff6
-}
-
 .font-semibold {
     font-weight: 600
 }
@@ -1287,10 +1267,52 @@ input[type="checkbox"]:checked+.toggle::after {
 }
 
 .toptiga {
-    margin-top: -0.95rem;
+    margin-top: -1.2rem;
     margin-left: 0;
     margin-bottom: 0.30rem;
-    padding: 1.5rem 1rem
+    padding: 1rem 1rem 0.5rem 1rem;
+}
+
+.avatar-kanan {
+    margin-top: 2px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    -o-object-fit: cover;
+    object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, .3);
+    box-shadow: 0 0 8px #fff3;
+    position: absolute;
+    left: 1px;
+    filter: brightness(.9);
+    transition: transform 0.8s, box-shadow 0.8s
+}
+
+.textjudul {
+    color: #FFFFFF;
+    margin-left: 40px;
+    font-size: 1.6rem;
+    font-weight: 800;
+}
+
+#settingsButton svg {
+    width: 30px;
+    height: 30px;
+    margin-top: 10px;
+    right: 1px;
+    position: absolute;
+    color: #EBEDFF;
+    transition: transform 0.5s ease;
+}
+
+#settingsButton:active svg {
+    transform: rotate(180deg);
+}
+
+.avatar-kanan:active {
+    transform: scale(1.1);
+    filter: brightness(1);
+    box-shadow: 0 0 12px #fff6
 }
 
 .after\:absolute:after {
@@ -1828,6 +1850,7 @@ input[type=range]::-ms-track {
     .reso-container,
     .preference-container,
     .additional-container,
+    .settings-container,
     .scheme-container {
         background-color: #EDF2FF;
         /* near-black with blue hue */
@@ -1839,6 +1862,7 @@ input[type=range]::-ms-track {
     .additional-title,
     .preference-title,
     .reso-title,
+    .settings-title,
     .scheme-title {
         color: #303030;
     }
@@ -1975,9 +1999,7 @@ input[type=range]::-ms-track {
 
     .backdrop-blur-md {
         -webkit-backdrop-filter: blur(15px);
-        backdrop-filter: blur(15px);
-        background: linear-gradient(rgba(0, 0, 0, 0.20),
-                rgba(0, 0, 0, 0.20));
+        backdrop-filter: blur(15px);        
     }
 
     .textver {
@@ -1988,8 +2010,7 @@ input[type=range]::-ms-track {
     }
 
     .textjudul {
-        color: #fff;
-        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+        color: #303030;        
     }
 
     .settings-card {
@@ -2012,6 +2033,10 @@ input[type=range]::-ms-track {
 
     .settings-text small {
         color: #424242;
+    }
+    
+    #settingsButton svg {        
+        color: #272A43;
     }
 
 }

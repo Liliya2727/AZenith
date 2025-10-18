@@ -1475,6 +1475,34 @@ const hideResoSettings = () => {
   }
 };
 
+const showSettings = async () => {
+  const c = document.getElementById("settingsModal"),
+    s = c.querySelector(".settings-container");
+  document.body.classList.add("modal-open");
+  c.classList.add("show");
+
+  const r = window.innerHeight;
+  const d = () => {
+    s.style.transform =
+      window.innerHeight < r - 150
+        ? "translateY(-10%) scale(1)"
+        : "translateY(0) scale(1)";
+  };
+  window.addEventListener("resize", d, { passive: true });
+  c._resizeHandler = d;
+  d();
+};
+
+const hideSettings = () => {
+  const c = document.getElementById("settingsModal");
+  c.classList.remove("show");
+  document.body.classList.remove("modal-open");
+  if (c._resizeHandler) {
+    window.removeEventListener("resize", c._resizeHandler);
+    delete c._resizeHandler;
+  }
+};
+
 const setupUIListeners = () => {
   const banner = document.getElementById("Banner");
   const avatar = document.getElementById("Avatar");
@@ -1582,6 +1610,14 @@ const setupUIListeners = () => {
     .getElementById("disablevsync")
     ?.addEventListener("change", (e) => setVsyncValue(e.target.value));
 
+  // Open settings
+  document
+    .getElementById("settingsbutton")
+    ?.addEventListener("click", showSettings);
+  document
+    .getElementById("close-settings")
+    ?.addEventListener("click", hideSettings);
+    
   // Additional Settings
   document
     .getElementById("show-additional-settings")
