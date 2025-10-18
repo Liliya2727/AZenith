@@ -23,7 +23,7 @@ chip=$(getprop ro.hardware)
 
 # Create File
 make_node() {
-    [ ! -f "$2" ] && echo "$1" >"$2"
+	[ ! -f "$2" ] && echo "$1" >"$2"
 }
 
 # Displaybanner
@@ -86,25 +86,25 @@ ui_print "- Installing for Arch : $ARCH_TMP"
 
 # Use Symlink
 if [ "$KSU" = "true" ] || [ "$APATCH" = "true" ]; then
-    # skip mount on APatch / KernelSU
-    touch "$MODPATH/skip_mount"
-    ui_print "- KSU/AP Detected, skipping module mount (skip_mount)"
-    # symlink ourselves on $PATH
-    manager_paths="/data/adb/ap/bin /data/adb/ksu/bin"
-    BIN_PATH="/data/adb/modules/AZenith/system/bin"
-    for dir in $manager_paths; do
-        [ -d "$dir" ] && {
-            ui_print "- Creating symlink in $dir"
-            ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-service"
-            ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-service_log"
-            ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-profiler"
-            ln -sf "$BIN_PATH/sys.azenith-profilesettings" "$dir/sys.azenith-profilesettings"
-            ln -sf "$BIN_PATH/sys.azenith-utilityconf" "$dir/sys.azenith-utilityconf"
-            ln -sf "$BIN_PATH/sys.azenith-preloadbin" "$dir/sys.azenith-preloadbin"
-            ln -sf "$BIN_PATH/sys.azenith-preloadbin2" "$dir/sys.azenith-preloadbin2"
-            
-        }
-    done
+	# skip mount on APatch / KernelSU
+	touch "$MODPATH/skip_mount"
+	ui_print "- KSU/AP Detected, skipping module mount (skip_mount)"
+	# symlink ourselves on $PATH
+	manager_paths="/data/adb/ap/bin /data/adb/ksu/bin"
+	BIN_PATH="/data/adb/modules/AZenith/system/bin"
+	for dir in $manager_paths; do
+		[ -d "$dir" ] && {
+			ui_print "- Creating symlink in $dir"
+			ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-service"
+			ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-service_log"
+			ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-profiler"
+			ln -sf "$BIN_PATH/sys.azenith-profilesettings" "$dir/sys.azenith-profilesettings"
+			ln -sf "$BIN_PATH/sys.azenith-utilityconf" "$dir/sys.azenith-utilityconf"
+			ln -sf "$BIN_PATH/sys.azenith-preloadbin" "$dir/sys.azenith-preloadbin"
+			ln -sf "$BIN_PATH/sys.azenith-preloadbin2" "$dir/sys.azenith-preloadbin2"
+
+		}
+	done
 fi
 
 # Apply Tweaks Based on Chipset
@@ -114,35 +114,35 @@ chipset=$(grep -i 'hardware' /proc/cpuinfo | uniq | cut -d ':' -f2 | sed 's/^[ \
 
 case "$(echo "$chipset" | tr '[:upper:]' '[:lower:]')" in
 *mt* | *MT*)
-    soc="MediaTek"
-    ui_print "- Applying Tweaks for $soc"
-    setprop persist.sys.azenithdebug.soctype 1
-    ;;
+	soc="MediaTek"
+	ui_print "- Applying Tweaks for $soc"
+	setprop persist.sys.azenithdebug.soctype 1
+	;;
 *sm* | *qcom* | *SM* | *QCOM* | *Qualcomm* | *sdm* | *snapdragon*)
-    soc="Snapdragon"
-    ui_print "- Applying Tweaks for $soc"
-    setprop persist.sys.azenithdebug.soctype 2
-    ;;
+	soc="Snapdragon"
+	ui_print "- Applying Tweaks for $soc"
+	setprop persist.sys.azenithdebug.soctype 2
+	;;
 *exynos* | *Exynos* | *EXYNOS* | *universal* | *samsung* | *erd* | *s5e*)
-    soc="Exynos"
-    ui_print "- Applying Tweaks for $soc"
-    setprop persist.sys.azenithdebug.soctype 3
-    ;;
+	soc="Exynos"
+	ui_print "- Applying Tweaks for $soc"
+	setprop persist.sys.azenithdebug.soctype 3
+	;;
 *Unisoc* | *unisoc* | *ums*)
-    soc="Unisoc"
-    ui_print "- Applying Tweaks for $soc"
-    setprop persist.sys.azenithdebug.soctype 4
-    ;;
+	soc="Unisoc"
+	ui_print "- Applying Tweaks for $soc"
+	setprop persist.sys.azenithdebug.soctype 4
+	;;
 *gs* | *Tensor* | *tensor*)
-    soc="Tensor"
-    ui_print "- Applying Tweaks for $soc"
-    setprop persist.sys.azenithdebug.soctype 5
-    ;;
+	soc="Tensor"
+	ui_print "- Applying Tweaks for $soc"
+	setprop persist.sys.azenithdebug.soctype 5
+	;;
 *)
-    soc="Unknown"
-    ui_print "- Applying Tweaks for $chipset"
-    setprop persist.sys.azenithdebug.soctype 0
-    ;;
+	soc="Unknown"
+	ui_print "- Applying Tweaks for $chipset"
+	setprop persist.sys.azenithdebug.soctype 0
+	;;
 esac
 
 # Soc Type
@@ -167,17 +167,17 @@ setprop persist.sys.azenithdebug.vsynclist "Disabled 60hz 90hz 120hz"
 
 # Set default freqoffset if not set
 if [ -z "$(getprop persist.sys.azenithconf.freqoffset)" ]; then
-    setprop persist.sys.azenithconf.freqoffset "Disabled"
+	setprop persist.sys.azenithconf.freqoffset "Disabled"
 fi
 
 # Set default vsync config if not set
 if [ -z "$(getprop persist.sys.azenithconf.vsync)" ]; then
-    setprop persist.sys.azenithconf.vsync "Disabled"
+	setprop persist.sys.azenithconf.vsync "Disabled"
 fi
 
 # Set default color scheme if not set
 if [ -z "$(getprop persist.sys.azenithconf.schemeconfig)" ]; then
-    setprop persist.sys.azenithconf.schemeconfig "1000 1000 1000 1000"
+	setprop persist.sys.azenithconf.schemeconfig "1000 1000 1000 1000"
 fi
 
 # Set config properties to use
@@ -199,13 +199,13 @@ persist.sys.azenithconf.justintime
 persist.sys.azenithconf.disabletrace
 "
 for prop in $props; do
-    curval=$(getprop "$prop")
-    if [ -z "$curval" ]; then
-        setprop "$prop" 0
-    fi
+	curval=$(getprop "$prop")
+	if [ -z "$curval" ]; then
+		setprop "$prop" 0
+	fi
 done
 if [ -z "$(getprop persist.sys.azenithconf.showtoast)" ]; then
-    setprop persist.sys.azenithconf.showtoast 1
+	setprop persist.sys.azenithconf.showtoast 1
 fi
 
 # Make sure to enable Auto Every installment and Update
@@ -217,13 +217,13 @@ setprop persist.sys.azenith.debugmode "false"
 
 # Install toast if not installed
 if pm list packages | grep -q azenith.toast; then
-    ui_print "- AZenith Toast is already installed."
+	ui_print "- AZenith Toast is already installed."
 else
-    ui_print "- Extracting AZenith Toast..."
-    unzip -qo "$ZIPFILE" azenithtoast.apk -d "$MODPATH" >&2
-    ui_print "- Installing AZenith Toast..."
-    pm install "$MODPATH/azenithtoast.apk"
-    rm "$MODPATH/azenithtoast.apk"
+	ui_print "- Extracting AZenith Toast..."
+	unzip -qo "$ZIPFILE" azenithtoast.apk -d "$MODPATH" >&2
+	ui_print "- Installing AZenith Toast..."
+	pm install "$MODPATH/azenithtoast.apk"
+	rm "$MODPATH/azenithtoast.apk"
 fi
 
 # Set Permissions
