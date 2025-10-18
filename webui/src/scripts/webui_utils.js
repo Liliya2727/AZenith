@@ -1729,4 +1729,6 @@ const heavyInit = async () => {
 // Event Listeners
 setupUIListeners();
 heavyInit();
-document.documentElement.requestFullscreen();
+window.addEventListener("click", () => {
+  document.documentElement.requestFullscreen().catch(() => {});
+}, { once: true });
