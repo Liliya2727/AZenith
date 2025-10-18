@@ -1039,20 +1039,29 @@ const setIObalance = async (c) => {
 
 const loadIObalance = async () => {
   let { errno: c, stdout: s } = await executeCommand(
-    "chmod 644 /sys/block/sda/queue/scheduler && cat /sys/block/sda/queue/scheduler | tr -d '[]'"
+    "chmod 644 /sys/block/sda/queue/scheduler && cat /sys/block/sda/queue/scheduler"
   );
-  if (0 === c) {
-    let r = s.trim().split(/\s+/),
-      d = document.getElementById("ioSchedulerBalanced");
-    (d.innerHTML = ""),
-      r.forEach((c) => {
-        let s = document.createElement("option");
-        (s.value = c), (s.textContent = c), d.appendChild(s);
-      });
+  if (c === 0) {
+    let schedulers = s.trim().split(/\s+/).map(sch => sch.replace(/[\[\]]/g, ""));
+    let select = document.getElementById("ioSchedulerBalanced");
+
+    select.innerHTML = "";
+
+    schedulers.forEach(sch => {
+      let opt = document.createElement("option");
+      opt.value = sch;
+      opt.textContent = sch;
+      select.appendChild(opt);
+    });
+
     let { errno: l, stdout: m } = await executeCommand(
       `sh -c '[ -n "$(getprop persist.sys.azenith.custom_default_balanced_IO)" ] && getprop persist.sys.azenith.custom_default_balanced_IO || getprop persist.sys.azenith.default_balanced_IO'`
     );
-    0 === l && (d.value = m.trim());
+
+    if (l === 0) {
+      let current = m.trim().replace(/[\[\]]/g, "");
+      select.value = current;
+    }
   }
 };
 
@@ -1071,21 +1080,26 @@ const setIOperformance = async (c) => {
 };
 
 const loadIOperformance = async () => {
-  let { errno: c, stdout: s } = await executeCommand(
-    "chmod 644 /sys/block/sda/queue/scheduler && cat /sys/block/sda/queue/scheduler | tr -d '[]'"
+  const { errno: c, stdout: s } = await executeCommand(
+    "chmod 644 /sys/block/sda/queue/scheduler && cat /sys/block/sda/queue/scheduler"
   );
-  if (0 === c) {
-    let r = s.trim().split(/\s+/),
-      d = document.getElementById("ioSchedulerPerformance");
-    (d.innerHTML = ""),
-      r.forEach((c) => {
-        let s = document.createElement("option");
-        (s.value = c), (s.textContent = c), d.appendChild(s);
-      });
-    let { errno: l, stdout: m } = await executeCommand(
+  if (c === 0) {
+    const schedulers = s.trim().split(/\s+/).map(x => x.replace(/[\[\]]/g, ""));
+    const select = document.getElementById("ioSchedulerPerformance");
+    select.innerHTML = "";
+
+    schedulers.forEach(sch => {
+      const opt = document.createElement("option");
+      opt.value = sch;
+      opt.textContent = sch;
+      select.appendChild(opt);
+    });
+
+    const { errno: l, stdout: m } = await executeCommand(
       `sh -c '[ -n "$(getprop persist.sys.azenith.custom_performance_IO)" ] && getprop persist.sys.azenith.custom_performance_IO'`
     );
-    0 === l && (d.value = m.trim());
+
+    if (l === 0) select.value = m.trim().replace(/[\[\]]/g, "");
   }
 };
 
@@ -1103,22 +1117,25 @@ const setIOpowersave = async (c) => {
 
 const loadIOpowersave = async () => {
   const { errno: c, stdout: s } = await executeCommand(
-    "chmod 644 /sys/block/sda/queue/scheduler && cat /sys/block/sda/queue/scheduler | tr -d '[]'"
+    "chmod 644 /sys/block/sda/queue/scheduler && cat /sys/block/sda/queue/scheduler"
   );
   if (c === 0) {
-    const r = s.trim().split(/\s+/),
-      d = document.getElementById("ioSchedulerPowersave");
-    d.innerHTML = "";
-    r.forEach((c) => {
-      const s = document.createElement("option");
-      s.value = c;
-      s.textContent = c;
-      d.appendChild(s);
+    const schedulers = s.trim().split(/\s+/).map(x => x.replace(/[\[\]]/g, ""));
+    const select = document.getElementById("ioSchedulerPowersave");
+    select.innerHTML = "";
+
+    schedulers.forEach(sch => {
+      const opt = document.createElement("option");
+      opt.value = sch;
+      opt.textContent = sch;
+      select.appendChild(opt);
     });
+
     const { errno: l, stdout: m } = await executeCommand(
       `sh -c '[ -n "$(getprop persist.sys.azenith.custom_powersave_IO)" ] && getprop persist.sys.azenith.custom_powersave_IO'`
     );
-    if (l === 0) d.value = m.trim();
+
+    if (l === 0) select.value = m.trim().replace(/[\[\]]/g, "");
   }
 };
 
