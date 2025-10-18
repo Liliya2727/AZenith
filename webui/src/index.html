@@ -60,29 +60,22 @@
                     </div>
                 </div>
             </div>
-            <div class="flex flex-wrap gap-4 mt-bokep w-full">
-                <button id="show-additional-settings" class="p-991 flex-1 min-w-[45%]">
-                    <div class="bg-gray-900 mb-4 p-4 rounded-lg flex justify-between h-full w-full">
-                        <div class="text-left">
-                            <h2 class="topsets">Additional Settings</h2>
-                            <small class="block text-gray-400 text-sss">
-                                Additional settings to enhance your experience.
-                            </small>
-                        </div>
-                        <span class="arrow-icon self-end">&rsaquo;</span>
-                    </div>
-                </button>
-                <button id="show-preference-settings" class="p-992 flex-1 min-w-[45%]">
-                    <div class="bg-gray-900 mb-4 p-4 rounded-lg flex justify-between h-full w-full">
-                        <div class="text-left">
-                            <h2 class="topsets">Preferences Settings</h2>
-                            <small class="block text-gray-400 text-sss">
-                                Preferenced tweaks or addon that applied on boot.
-                            </small>
-                        </div>
-                        <span class="arrow-icon self-end">&rsaquo;</span>
-                    </div>
-                </button>
+            <div class="settings-buttons">
+              <button id="show-additional-settings" class="settings-card">
+                <div class="settings-text">
+                  <h2>Additional Settings</h2>
+                  <small>Additional settings to enhance your experience.</small>
+                </div>
+                <span class="settings-arrow">&rsaquo;</span>
+              </button>
+            
+              <button id="show-preference-settings" class="settings-card">
+                <div class="settings-text">
+                  <h2>Preference Settings</h2>
+                  <small>Preference tweaks or addons that apply on boot.</small>
+                </div>
+                <span class="settings-arrow">&rsaquo;</span>
+              </button>
             </div>
             <div class="p-6">
                 <div class="bg-gray-900 mt-277 mb-4 p-4 rounded-lg">
@@ -546,7 +539,7 @@
             
                   <button id="midres" class="reso-option">
                     <div class="reso-info">
-                      <p class="reso-label">Medium Resolution (90%)</p>
+                      <p class="reso-label">Mid Resolution (90%)</p>
                       <small class="reso-size"></small>
                     </div>
                     <div class="reso-dot"></div>
