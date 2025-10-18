@@ -114,8 +114,9 @@ const checkProfile = async () => {
     if (!d) return;
 
     let l =
-      { 0: "Initializing...", 1: "Performance", 2: "Balanced", 3: "ECO Mode" }[r] ||
-      "Unknown";
+      { 0: "Initializing...", 1: "Performance", 2: "Balanced", 3: "ECO Mode" }[
+        r
+      ] || "Unknown";
 
     // Check for Lite mode
     const { errno: c2, stdout: s2 } = await executeCommand(
@@ -134,18 +135,18 @@ const checkProfile = async () => {
     // Dark mode colors (original) vs light mode (darker/saturated)
     const colors = isDark
       ? {
-          "Performance": "#ef4444",
-          "Balanced": "#7dd3fc",
+          Performance: "#ef4444",
+          Balanced: "#7dd3fc",
           "ECO Mode": "#5eead4",
           "Initializing...": "#60a5fa",
-          "Default": "#ffffff",
+          Default: "#ffffff",
         }
       : {
-          "Performance": "#b91c1c",
-          "Balanced": "#0284c7",
+          Performance: "#b91c1c",
+          Balanced: "#0284c7",
           "ECO Mode": "#0d9488",
           "Initializing...": "#2563eb",
-          "Default": "#1f2937",
+          Default: "#1f2937",
         };
 
     const key = l.replace(" (Lite)", "");
@@ -170,7 +171,9 @@ const fetchSOCDatabase = async () => {
 const checkCPUInfo = async () => {
   const c = localStorage.getItem("soc_info");
   try {
-    const { errno: s, stdout: r } = await executeCommand("getprop ro.soc.model");
+    const { errno: s, stdout: r } = await executeCommand(
+      "getprop ro.soc.model"
+    );
     if (s === 0) {
       let d = r.trim().replace(/\s+/g, "").toUpperCase();
       const l = await fetchSOCDatabase();
@@ -261,7 +264,8 @@ const checkServiceStatus = async () => {
     const { errno: c, stdout: s } = await executeCommand(
       "/system/bin/toybox pidof sys.azenith-service"
     );
-    let status = "", pidText = "Service PID: null";
+    let status = "",
+      pidText = "Service PID: null";
 
     if (c === 0 && s.trim() !== "0") {
       const pid = s.trim();
@@ -278,10 +282,13 @@ const checkServiceStatus = async () => {
       const ai = aiRaw.trim();
 
       if (profile === "0") status = "Initializing...\uD83C\uDF31";
-      else if (["1","2","3"].includes(profile)) {
-        status = ai === "1" ? "Running - Auto Mode\uD83C\uDF43 " :
-                 ai === "0" ? "Running - Idle Mode\uD83D\uDCAB" :
-                 "Unknown Profile";
+      else if (["1", "2", "3"].includes(profile)) {
+        status =
+          ai === "1"
+            ? "Running - Auto Mode\uD83C\uDF43 "
+            : ai === "0"
+            ? "Running - Idle Mode\uD83D\uDCAB"
+            : "Unknown Profile";
       } else status = "Unknown Profile";
     } else {
       status = "Suspended\uD83D\uDCA4";
@@ -293,7 +300,6 @@ const checkServiceStatus = async () => {
 
     lastServiceCheck.status = status;
     lastServiceCheck.pid = pidText;
-
   } catch (e) {
     console.warn("checkServiceStatus error:", e);
   }
@@ -879,7 +885,9 @@ const loadDisplaySettings = async () => {
 
 const setRGB = async (c, s, r) => {
   await executeCommand(
-    `service call SurfaceFlinger 1015 i32 1 f ${c / 1000} f 0 f 0 f 0 f 0 f ${s / 1000} f 0 f 0 f 0 f 0 f ${r / 1000} f 0 f 0 f 0 f 0 f 1`
+    `service call SurfaceFlinger 1015 i32 1 f ${c / 1000} f 0 f 0 f 0 f 0 f ${
+      s / 1000
+    } f 0 f 0 f 0 f 0 f ${r / 1000} f 0 f 0 f 0 f 0 f 1`
   );
 };
 
@@ -1018,11 +1026,15 @@ const settoast = async (c) => {
 const setIObalance = async (c) => {
   let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
-  await executeCommand(`setprop persist.sys.azenith.custom_default_balanced_IO ${c}`);
+  await executeCommand(
+    `setprop persist.sys.azenith.custom_default_balanced_IO ${c}`
+  );
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   0 === d &&
     "2" === l.trim() &&
-    (await executeCommand(`/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO ${c}`));
+    (await executeCommand(
+      `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO ${c}`
+    ));
 };
 
 const loadIObalance = async () => {
@@ -1047,11 +1059,15 @@ const loadIObalance = async () => {
 const setIOperformance = async (c) => {
   let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
-  await executeCommand(`setprop persist.sys.azenith.custom_performance_IO ${c}`);
+  await executeCommand(
+    `setprop persist.sys.azenith.custom_performance_IO ${c}`
+  );
   let { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   0 === d &&
     "1" === l.trim() &&
-    (await executeCommand(`/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO ${c}`));
+    (await executeCommand(
+      `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO ${c}`
+    ));
 };
 
 const loadIOperformance = async () => {
@@ -1075,7 +1091,7 @@ const loadIOperformance = async () => {
 
 const setIOpowersave = async (c) => {
   const s = "/data/adb/.config/AZenith",
-        r = `${s}/API/current_profile`;
+    r = `${s}/API/current_profile`;
   await executeCommand(`setprop persist.sys.azenith.custom_powersave_IO ${c}`);
   const { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
   if (d === 0 && l.trim() === "3") {
@@ -1091,7 +1107,7 @@ const loadIOpowersave = async () => {
   );
   if (c === 0) {
     const r = s.trim().split(/\s+/),
-          d = document.getElementById("ioSchedulerPowersave");
+      d = document.getElementById("ioSchedulerPowersave");
     d.innerHTML = "";
     r.forEach((c) => {
       const s = document.createElement("option");
@@ -1108,15 +1124,16 @@ const loadIOpowersave = async () => {
 
 const showAdditionalSettings = async () => {
   const c = document.getElementById("additional-modal"),
-        s = c.querySelector(".additional-container");
+    s = c.querySelector(".additional-container");
   document.body.classList.add("modal-open");
   c.classList.add("show");
 
   const r = window.innerHeight;
   const d = () => {
-    s.style.transform = window.innerHeight < r - 150
-      ? "translateY(-10%) scale(1)"
-      : "translateY(0) scale(1)";
+    s.style.transform =
+      window.innerHeight < r - 150
+        ? "translateY(-10%) scale(1)"
+        : "translateY(0) scale(1)";
   };
   window.addEventListener("resize", d, { passive: true });
   c._resizeHandler = d;
@@ -1135,15 +1152,16 @@ const hideAdditionalSettings = () => {
 
 const showPreferenceSettings = async () => {
   const c = document.getElementById("preference-modal"),
-        s = c.querySelector(".preference-container");
+    s = c.querySelector(".preference-container");
   document.body.classList.add("modal-open");
   c.classList.add("show");
 
   const r = window.innerHeight;
   const d = () => {
-    s.style.transform = window.innerHeight < r - 150
-      ? "translateY(-10%) scale(1)"
-      : "translateY(0) scale(1)";
+    s.style.transform =
+      window.innerHeight < r - 150
+        ? "translateY(-10%) scale(1)"
+        : "translateY(0) scale(1)";
   };
   window.addEventListener("resize", d, { passive: true });
   c._resizeHandler = d;
@@ -1191,7 +1209,7 @@ const savelog = async () => {
     console.error("saveLog error:", e);
   }
 };
- 
+
 const currentColor = {
   red: 1000,
   green: 1000,
@@ -1214,7 +1232,6 @@ const updateColorState = ({ red, green, blue, saturation }) => {
     blue !== currentColor.blue ||
     saturation !== currentColor.saturation
   ) {
-    // Mutate properties instead of reassigning
     currentColor.red = red;
     currentColor.green = green;
     currentColor.blue = blue;
@@ -1241,14 +1258,25 @@ const loadColorSchemeSettings = async () => {
   // Update slider and number inputs
   [c, s, r, d].forEach((el, i) => {
     switch (i) {
-      case 0: el.value = m.red; cv.value = m.red; break;
-      case 1: el.value = m.green; sv.value = m.green; break;
-      case 2: el.value = m.blue; rv.value = m.blue; break;
-      case 3: el.value = m.saturation; dv.value = m.saturation; break;
+      case 0:
+        el.value = m.red;
+        cv.value = m.red;
+        break;
+      case 1:
+        el.value = m.green;
+        sv.value = m.green;
+        break;
+      case 2:
+        el.value = m.blue;
+        rv.value = m.blue;
+        break;
+      case 3:
+        el.value = m.saturation;
+        dv.value = m.saturation;
+        break;
     }
   });
 
-  // Mutate currentColor instead of reassigning
   currentColor.red = m.red;
   currentColor.green = m.green;
   currentColor.blue = m.blue;
@@ -1320,25 +1348,22 @@ const loadColorSchemeSettings = async () => {
 };
 
 const detectResolution = async () => {
-  // Detect current resolution
   const { errno, stdout } = await executeCommand(
-  `wm size | grep -oE "[0-9]+x[0-9]+" | head -n 1`
-);
+    `wm size | grep -oE "[0-9]+x[0-9]+" | head -n 1`
+  );
   if (errno !== 0 || !stdout.trim()) {
     console.error("Failed to detect resolution");
     showToast("Unable to detect screen resolution");
     return;
   }
 
-  const defaultRes = stdout.trim(); // e.g. "2400x1080"
+  const defaultRes = stdout.trim();
   const [width, height] = defaultRes.split("x").map(Number);
   if (!width || !height) return;
 
-  // Calculate scaled resolutions (Medium = 90%, Low = 80%)
-  const mediumRes = `${Math.round(width * 0.9000)}x${Math.round(height * 0.9000)}`;
-  const lowRes = `${Math.round(width * 0.8000)}x${Math.round(height * 0.8000)}`;
+  const mediumRes = `${Math.round(width * 0.9)}x${Math.round(height * 0.9)}`;
+  const lowRes = `${Math.round(width * 0.8)}x${Math.round(height * 0.8)}`;
 
-  // Update text in UI
   const resoSizes = document.querySelectorAll(".reso-size");
   if (resoSizes.length === 3) {
     resoSizes[0].textContent = lowRes;
@@ -1346,7 +1371,6 @@ const detectResolution = async () => {
     resoSizes[2].textContent = defaultRes;
   }
 
-  // Store globally
   window._reso = {
     default: defaultRes,
     medium: mediumRes,
@@ -1354,7 +1378,6 @@ const detectResolution = async () => {
     selected: defaultRes,
   };
 
-  // Restore saved resolution selection (if exists)
   const { stdout: saved } = await executeCommand(`getprop ${RESO_PROP}`);
   const savedRes = saved.trim();
 
@@ -1367,19 +1390,19 @@ const detectResolution = async () => {
     });
     if (window._reso) window._reso.selected = savedRes;
   } else {
-    // Default to max resolution
     document.querySelectorAll(".reso-option")[2]?.classList.add("active");
   }
 };
 
 const selectResolution = async (btn) => {
-  document.querySelectorAll(".reso-option").forEach((b) => b.classList.remove("active"));
+  document
+    .querySelectorAll(".reso-option")
+    .forEach((b) => b.classList.remove("active"));
   btn.classList.add("active");
 
   const selectedText = btn.querySelector(".reso-size")?.textContent;
   if (!selectedText) return;
 
-  // Save selected resolution in global and system property
   if (window._reso) window._reso.selected = selectedText;
 };
 
@@ -1392,12 +1415,12 @@ const applyResolution = async () => {
   const selected = window._reso.selected;
   const def = window._reso.default;
 
-  if (selected === def) {    
+  if (selected === def) {
     await executeCommand(`setprop ${RESO_PROP} ${selected}`);
     await executeCommand("wm size reset");
   } else {
     await executeCommand(`setprop ${RESO_PROP} ${selected}`);
-    await executeCommand(`wm size ${selected}`);    
+    await executeCommand(`wm size ${selected}`);
   }
 };
 
@@ -1410,7 +1433,7 @@ const showCustomResolution = async () => {
 
   document.body.classList.add("modal-open");
   c.classList.add("show");
-  
+
   await detectResolution();
 
   const r = window.innerHeight;
@@ -1423,7 +1446,7 @@ const showCustomResolution = async () => {
   window.addEventListener("resize", d, { passive: true });
   c._resizeHandler = d;
   d();
-}; 
+};
 
 const hideResoSettings = () => {
   const c = document.getElementById("resomodal");
@@ -1440,7 +1463,7 @@ const setupUIListeners = () => {
   const avatar = document.getElementById("Avatar");
   const scheme = document.getElementById("Scheme");
   const reso = document.getElementById("Reso");
-  
+
   if (avatar) avatar.src = AvatarZenith;
   if (scheme) scheme.src = SchemeBanner;
   if (reso) reso.src = ResoBanner;
@@ -1449,22 +1472,20 @@ const setupUIListeners = () => {
     const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     if (banner) banner.src = isDark ? BannerDarkZenith : BannerLightZenith;
   };
-    
+
   updateBannerByTheme();
-    
-  // Listen for system theme changes (auto updates on toggle)
-  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", updateBannerByTheme);
-  
+
+  // Listen for system theme changes
+  window
+    .matchMedia("(prefers-color-scheme: dark)")
+    .addEventListener("change", updateBannerByTheme);
+
   // Button Clicks
   document
     .getElementById("startButton")
     ?.addEventListener("click", startService);
-  document
-    .getElementById("savelogButton")
-    ?.addEventListener("click", savelog);
-  document
-    .getElementById("FSTrim")
-    ?.addEventListener("click", applyFSTRIM);
+  document.getElementById("savelogButton")?.addEventListener("click", savelog);
+  document.getElementById("FSTrim")?.addEventListener("click", applyFSTRIM);
 
   // Toggle Switches
   document
@@ -1560,15 +1581,13 @@ const setupUIListeners = () => {
     .getElementById("close-preference")
     ?.addEventListener("click", hidePreferenceSettings);
 
-// Custom Resolution Settings
+  // Custom Resolution Settings
   document
     .getElementById("customreso")
     ?.addEventListener("click", showCustomResolution);
-  document
-    .getElementById("applyreso")
-    ?.addEventListener("click", async () => {
-      await applyResolution();
-      hideResoSettings();
+  document.getElementById("applyreso")?.addEventListener("click", async () => {
+    await applyResolution();
+    hideResoSettings();
   });
   document
     .getElementById("resetreso-btn")
@@ -1605,7 +1624,7 @@ const setupUIListeners = () => {
     ?.addEventListener("click", saveGameList);
   document
     .getElementById("close-gamelist")
-    ?.addEventListener("click", hideGamelistSettings);    
+    ?.addEventListener("click", hideGamelistSettings);
 };
 
 let loopsActive = false;
@@ -1621,8 +1640,10 @@ const cancelAllTimeouts = () => {
 
 const schedule = (fn, delay = 0) => {
   const id = setTimeout(() => {
-    try { fn(); } finally {
-      heavyInitTimeouts = heavyInitTimeouts.filter(t => t !== id);
+    try {
+      fn();
+    } finally {
+      heavyInitTimeouts = heavyInitTimeouts.filter((t) => t !== id);
     }
   }, delay);
   heavyInitTimeouts.push(id);
@@ -1646,7 +1667,11 @@ const runMonitoredTasks = async () => {
   for (const task of monitoredTasks) {
     const last = runMonitoredTasks.lastRun[task.fn.name] || 0;
     if (now - last >= task.interval) {
-      try { await task.fn(); } catch (e) { console.warn(`Task ${task.fn.name} failed:`, e); }
+      try {
+        await task.fn();
+      } catch (e) {
+        console.warn(`Task ${task.fn.name} failed:`, e);
+      }
       runMonitoredTasks.lastRun[task.fn.name] = Date.now();
     }
   }
@@ -1688,34 +1713,52 @@ const heavyInit = async () => {
   if (loader) loader.classList.remove("hidden");
   document.body.classList.add("no-scroll");
 
-  const stage1 = [
-    showRandomMessage,
-    checkProfile,
-    checkServiceStatus,
-  ];
-  await Promise.all(stage1.map(fn => fn()));
+  const stage1 = [showRandomMessage, checkProfile, checkServiceStatus];
+  await Promise.all(stage1.map((fn) => fn()));
 
   const quickChecks = [
-    checkModuleVersion, checkCPUInfo, checkKernelVersion,
-    getAndroidVersion, loadCpuGovernors, loadCpuFreq,
-    loadIObalance, loadIOperformance, loadIOpowersave,
+    checkModuleVersion,
+    checkCPUInfo,
+    checkKernelVersion,
+    getAndroidVersion,
+    loadCpuGovernors,
+    loadCpuFreq,
+    loadIObalance,
+    loadIOperformance,
+    loadIOpowersave,
     GovernorPowersave,
   ];
-  await Promise.all(quickChecks.map(fn => fn()));
+  await Promise.all(quickChecks.map((fn) => fn()));
 
   const heavyAsync = [
-    checkfpsged, checkLiteModeStatus, checkDThermal,
-    checkiosched, checkGPreload, loadColorSchemeSettings,
+    checkfpsged,
+    checkLiteModeStatus,
+    checkDThermal,
+    checkiosched,
+    checkGPreload,
+    loadColorSchemeSettings,
   ];
-  await Promise.all(heavyAsync.map(fn => fn()));
+  await Promise.all(heavyAsync.map((fn) => fn()));
 
   const heavySequential = [
-    checkmalisched, checkAI, checkDND, checkdtrace,
-    checkjit, checktoast, loadVsyncValue,
-    checkBypassChargeStatus, checkschedtunes, checkSFL,
-    checkKillLog, checklogger, checkRamBoost, detectResolution
+    checkmalisched,
+    checkAI,
+    checkDND,
+    checkdtrace,
+    checkjit,
+    checktoast,
+    loadVsyncValue,
+    checkBypassChargeStatus,
+    checkschedtunes,
+    checkSFL,
+    checkKillLog,
+    checklogger,
+    checkRamBoost,
+    detectResolution,
   ];
-  for (const fn of heavySequential) { await fn(); }
+  for (const fn of heavySequential) {
+    await fn();
+  }
 
   startMonitoringLoops();
   observeVisibility();
