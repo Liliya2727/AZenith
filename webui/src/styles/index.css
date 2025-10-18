@@ -772,9 +772,14 @@ input[type="checkbox"]:checked+.toggle::after {
     margin-top: 1rem
 }
 
+.settings-title {
+    margin-bottom: 2.1rem;
+}
+
 .gamelist-desc,
 .reso-desc,
 .preference-desc,
+.settings-desc,
 .additional-desc,
 .scheme-desc {
     font-size: .75rem;
@@ -1267,10 +1272,10 @@ input[type="checkbox"]:checked+.toggle::after {
 }
 
 .toptiga {
-    margin-top: -1.2rem;
+    margin-top: -1rem;
     margin-left: 0;
     margin-bottom: 0.30rem;
-    padding: 1rem 1rem 0.5rem 1rem;
+    padding: 0.2rem 1rem 0.7rem 1rem;
 }
 
 .avatar-kanan {
