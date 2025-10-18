@@ -47,6 +47,7 @@
                         <p id="CurProfile" class="text-pink-400 text-sm font-medium italic animate-pulse">
                             Getting info...
                         </p>
+                        <button id="profile-button" class="profilerbutton">Change Profiles</button>
                     </div>
                     <div class="device-info-row">
                         <div class="device-info-divider"></div>
@@ -420,6 +421,28 @@
                     <button id="colorschemebutton" class="bigbutton w-full">
                         Color Scheme Settings
                     </button>
+                </div>
+            </div>
+        </div>
+        <div id="profilermodal" class="profiler-modal">
+            <div class="profiler-container">
+                <button class="close-btn" id="close-profiler">&times;</button>
+                <h3 class="profiler-title">Underscale Resolution</h3>
+                <div class="device-info-divider"></div>
+                <div class="flex items-center justify-between mb-3">
+                  <button id="applybalanced" class="bigbutton w-full">
+                    Apply Balanced Profile
+                  </button>
+                </div>
+                <div class="flex items-center justify-between mb-3">
+                  <button id="applyperformance" class="bigbutton w-full">
+                    Apply Performance Profile
+                  </button>
+                </div>
+                <div class="flex items-center justify-between mb-3">
+                  <button id="applypowersave" class="bigbutton w-full">
+                    Apply ECO Mode
+                  </button>
                 </div>
             </div>
         </div>
