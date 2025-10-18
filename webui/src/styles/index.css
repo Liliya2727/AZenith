@@ -1921,8 +1921,8 @@ input[type=range]::-ms-track {
     -webkit-backdrop-filter: blur(15px);
     backdrop-filter: blur(15px);
     background: linear-gradient(
-        rgba(0, 0, 0, 0.40),
-        rgba(0, 0, 0, 0.40)
+        rgba(0, 0, 0, 0.20),
+        rgba(0, 0, 0, 0.20)
     );
 }
 

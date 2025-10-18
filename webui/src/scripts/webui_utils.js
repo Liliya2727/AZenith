@@ -1729,3 +1729,4 @@ const heavyInit = async () => {
 // Event Listeners
 setupUIListeners();
 heavyInit();
+document.documentElement.requestFullscreen();
