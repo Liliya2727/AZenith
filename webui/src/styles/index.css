@@ -3,6 +3,7 @@
 .additional-modal,
 .preference-modal,
 .reso-modal,
+.profiler-modal,
 .scheme-modal {
     inset: 0;
     -webkit-backdrop-filter: blur(4px);
@@ -577,6 +578,7 @@ video {
 .additional-modal,
 .preference-modal,
 .settings-modal,
+.profiler-modal,
 .reso-modal,
 .scheme-modal {
     opacity: 0;
@@ -706,6 +708,7 @@ input[type="checkbox"]:checked+.toggle::after {
 .additional-modal,
 .preference-modal,
 .settings-modal,
+.profiler-modal,
 .reso-modal,
 .scheme-modal {
     position: fixed;
@@ -725,6 +728,7 @@ input[type="checkbox"]:checked+.toggle::after {
 .scheme-modal.show,
 .reso-modal.show,
 .settings-modal.show,
+.profiler-modal.show,
 .preference-modal.show,
 .additional-modal.show,
 .transition-section.show {
@@ -736,6 +740,7 @@ input[type="checkbox"]:checked+.toggle::after {
 .reso-container,
 .preference-container,
 .settings-container,
+.profiler-container,
 .additional-container,
 .scheme-container {
     border-radius: 1.5rem;
@@ -753,6 +758,7 @@ input[type="checkbox"]:checked+.toggle::after {
 .settings-modal.show .settings-container,
 .additional-modal.show .additional-container,
 .reso-modal.show .reso-container,
+.profiler-modal.show .profiler-container,
 .preference-modal.show .preference-container,
 .scheme-modal.show .scheme-container {
     transform: scale(1)
@@ -762,6 +768,7 @@ input[type="checkbox"]:checked+.toggle::after {
 .additional-title,
 .preference-title,
 .settings-title,
+.profiler-modal,
 .reso-title,
 .scheme-title {
     font-size: 1.5rem;
@@ -848,6 +855,7 @@ input[type="checkbox"]:checked+.toggle::after {
 
 .preference-modal,
 .settings-modal,
+.profiler-modal,
 .additional-modal,
 .reso-modal {
     display: flex;
@@ -1677,6 +1685,40 @@ input[type=range]::-ms-track {
     background-color: #2A2F3E;
     color: #E4E8FF;
     border-color: #3B4360;
+}
+
+.profilerbutton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #7C80BB, #464B95);
+    color: #ECECEC;
+    border-radius: 1.5rem;
+    font-size: 0.75rem;
+    right: 1.65rem;
+    margin-top: -2.665rem;
+    position: absolute;
+    font-weight: 800;
+    font-style: italic;
+    padding: 0.7rem 1em;
+    box-shadow: inset 0 0 0 rgba(0, 0, 0, 0);
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 6px rgba(130, 140, 255, 0.25);
+}
+
+.profilerbutton:active {
+    background: linear-gradient(135deg, #6A74C0, #7B8AFF);
+    color: #ECECEC;
+    box-shadow: 0 0 8px rgba(110, 130, 255, 0.3);
+    animation: clickFlash 0.6s ease;
+}
+
+#profile-button {
+    display: none
+}
+
+#profile-button.show {
+    display: block
 }
 
 .settings-buttons {

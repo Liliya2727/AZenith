@@ -936,7 +936,7 @@ const applyperformanceprofile = async () => {
     return;
   }
   executeCommand(
-    "/data/adb/modules/AZenith/system/bin/sys.azenith-profilesettings 1 >/dev/null 2>&1 &"
+    "/data/adb/modules/AZenith/system/bin/sys.azenith-profiler 1 >/dev/null 2>&1 &"
   );
   setTimeout(() => {
     executeCommand("echo 1 > /data/adb/.config/AZenith/API/current_profile");
@@ -953,7 +953,7 @@ const applybalancedprofile = async () => {
     return;
   }
   executeCommand(
-    "/data/adb/modules/AZenith/system/bin/sys.azenith-profilesettings 2 >/dev/null 2>&1 &"
+    "/data/adb/modules/AZenith/system/bin/sys.azenith-profiler 2 >/dev/null 2>&1 &"
   );
   setTimeout(() => {
     executeCommand("echo 2 > /data/adb/.config/AZenith/API/current_profile");
@@ -970,7 +970,7 @@ const applyecomode = async () => {
     return;
   }
   executeCommand(
-    "/data/adb/modules/AZenith/system/bin/sys.azenith-profilesettings 3 >/dev/null 2>&1 &"
+    "/data/adb/modules/AZenith/system/bin/sys.azenith-profiler 3 >/dev/null 2>&1 &"
   );
   setTimeout(() => {
     executeCommand("echo 3 > /data/adb/.config/AZenith/API/current_profile");
@@ -1503,6 +1503,54 @@ const hideSettings = () => {
   }
 };
 
+  const c = document.getElementById("disableai");
+  const s = document.getElementById("profile-button");
+
+  if (c && s) {
+    c.addEventListener("change", function () {
+      setAI(this.checked);
+      s.style.display = this.checked ? "block" : "none";
+      s.classList.toggle("show", this.checked);
+    });
+
+    executeCommand("getprop persist.sys.azenithconf.AIenabled").then(
+      ({ stdout: r }) => {
+        const d = r.trim() === "0";
+        c.checked = d;
+        s.style.display = d ? "block" : "none";
+        s.classList.toggle("show", d);
+      }
+    );
+  }
+
+const showProfilerSettings = async () => {
+  const c = document.getElementById("profilerModal"),
+    s = c.querySelector(".settings-container");
+  document.body.classList.add("modal-open");
+  c.classList.add("show");
+
+  const r = window.innerHeight;
+  const d = () => {
+    s.style.transform =
+      window.innerHeight < r - 150
+        ? "translateY(-10%) scale(1)"
+        : "translateY(0) scale(1)";
+  };
+  window.addEventListener("resize", d, { passive: true });
+  c._resizeHandler = d;
+  d();
+};
+
+const hideProfilerSettings = () => {
+  const c = document.getElementById("profilerModal");
+  c.classList.remove("show");
+  document.body.classList.remove("modal-open");
+  if (c._resizeHandler) {
+    window.removeEventListener("resize", c._resizeHandler);
+    delete c._resizeHandler;
+  }
+};
+
 const setupUIListeners = () => {
   const banner = document.getElementById("Banner");
   const avatar = document.getElementById("Avatar");
@@ -1518,7 +1566,7 @@ const setupUIListeners = () => {
     if (banner) banner.src = isDark ? BannerDarkZenith : BannerLightZenith;
   };
 
-  updateBannerByTheme();
+  updateBannerByTheme();  
 
   // Listen for system theme changes
   window
@@ -1617,6 +1665,20 @@ const setupUIListeners = () => {
   document
     .getElementById("close-settings")
     ?.addEventListener("click", hideSettings);
+  document.getElementById("disableai").addEventListener("change", function () {
+  setAI(this.checked),
+    document
+      .getElementById("profile-button")
+      .classList.toggle("show", this.checked);
+  });
+    
+  // Profile Settings
+  document
+    .getElementById("profiler-button")
+    ?.addEventListener("click", showProfilerSettings);
+  document
+    .getElementById("close-profiler")
+    ?.addEventListener("click", hideProfilerSettings);
     
   // Additional Settings
   document
@@ -1677,7 +1739,7 @@ const setupUIListeners = () => {
     ?.addEventListener("click", saveGameList);
   document
     .getElementById("close-gamelist")
-    ?.addEventListener("click", hideGamelistSettings);
+    ?.addEventListener("click", hideGamelistSettings);  
 };
 
 let loopsActive = false;
