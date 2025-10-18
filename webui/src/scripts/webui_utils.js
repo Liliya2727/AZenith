@@ -1612,7 +1612,7 @@ const setupUIListeners = () => {
 
   // Open settings
   document
-    .getElementById("settingsbutton")
+    .getElementById("settingsButton")
     ?.addEventListener("click", showSettings);
   document
     .getElementById("close-settings")
