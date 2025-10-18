@@ -1789,4 +1789,3 @@ const heavyInit = async () => {
 // Event Listeners
 setupUIListeners();
 heavyInit();
-fullScreen(true);
