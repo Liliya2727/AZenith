@@ -768,7 +768,7 @@ input[type="checkbox"]:checked+.toggle::after {
 .additional-title,
 .preference-title,
 .settings-title,
-.profiler-modal,
+.profiler-title,
 .reso-title,
 .scheme-title {
     font-size: 1.5rem;
@@ -787,6 +787,7 @@ input[type="checkbox"]:checked+.toggle::after {
 .reso-desc,
 .preference-desc,
 .settings-desc,
+.profiler-desc,
 .additional-desc,
 .scheme-desc {
     font-size: .75rem;
@@ -1897,6 +1898,7 @@ input[type=range]::-ms-track {
     .reso-container,
     .preference-container,
     .additional-container,
+    .profiler-container,
     .settings-container,
     .scheme-container {
         background-color: #EDF2FF;
@@ -1909,6 +1911,7 @@ input[type=range]::-ms-track {
     .additional-title,
     .preference-title,
     .reso-title,
+    .profiler-title,
     .settings-title,
     .scheme-title {
         color: #303030;
@@ -1917,6 +1920,7 @@ input[type=range]::-ms-track {
     .gamelist-desc,
     .reso-desc,
     .preference-desc,
+    .profiler-desc,
     .additional-desc,
     .scheme-desc {
         color: #424242;

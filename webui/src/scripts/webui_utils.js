@@ -1577,6 +1577,15 @@ const setupUIListeners = () => {
   document
     .getElementById("startButton")
     ?.addEventListener("click", startService);
+    document
+    .getElementById("applyperformance")
+    ?.addEventListener("click", applyperformanceprofile);
+  document
+    .getElementById("applybalanced")
+    ?.addEventListener("click", applybalancedprofile);
+  document
+    .getElementById("applypowersave")
+    ?.addEventListener("click", applyecomode);
   document.getElementById("savelogButton")?.addEventListener("click", savelog);
   document.getElementById("FSTrim")?.addEventListener("click", applyFSTRIM);
 
