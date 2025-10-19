@@ -1674,7 +1674,7 @@ const setupUIListeners = () => {
     
   // Profile Settings
   document
-    .getElementById("profiler-button")
+    .getElementById("profile-button")
     ?.addEventListener("click", showProfilerSettings);
   document
     .getElementById("close-profiler")
