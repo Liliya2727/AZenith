@@ -1,42 +1,47 @@
-## AZenith火
+# AZenith 火
 
-🍃 *Yet another performance module for maintaining a smooth gaming experience while preserving battery life and day-to-day usability.*
+*Yet another performance module for maintaining a smooth gaming experience while preserving battery life and day-to-day usability.*
+
+**AZenith** is a universal **AIO (All-In-One)** advanced performance module featuring AI optimization and a WebUI interface. It enhances the overall user experience while giving users full control to configure performance settings according to their preferences.
 
 ![AZenith Banner](https://github.com/user-attachments/assets/904b23f2-010a-4447-bcbf-5eea41aec851)
-
-**AZenith** is a universal AIO (All-In-One) advanced performance module featuring AI optimization and a WebUI interface. It enhances the overall user experience while giving users full control to configure settings according to their personal preferences.
 
 ---
 
 ## AZenith for Developers
 
-Introducing **ROM-Integrated AZenith** for ROM developers and maintainers.
+Introducing **ROM-Integrated AZenith** — designed for ROM developers and maintainers to integrate directly into their builds.
 
-🛠️ Developed by:  
-- @Zexshia  
-- @rianixia (Telegram)
+**Developed by:**
+- [@Zexshia](https://t.me/ZeshArch)
+- [@rianixia](https://t.me/rianixia)
 
-🔗 **[visit repository](https://github.com/Liliya2727/RomIntegratedAZenith)**
+**Repository:** [RomIntegratedAZenith](https://github.com/Liliya2727/RomIntegratedAZenith)
 
+---
 
 ## Credits
 
-### 👥 Collaborator
+**Collaborator**
 - @kanaochar
 
-### 📚 Sources & References
+**Sources & References**
 - @Rem01Gaming  
 - @MiAzami  
 - @KanagawaYamadaVTeacher  
 - @ShiraXblood  
-- @Laynsb  
+- @Laynsb 
+- @Koneko_dev 
 
-### 📦 Preload Sources
+**Preload Sources**
 - @HoyoSlave  
 - @KutuMoba  
 - @Feravolt  
-- @iamlooper
+- @iamlooper  
 
+---
 
-## Stay Updated 
-Follow the development and upcoming updates on **[@Zexshia](https://t.me/ZeshArch)**
+## Stay Updated
+
+Follow ongoing development and future updates at  
+[@Zexshia on Telegram](https://t.me/ZeshArch)

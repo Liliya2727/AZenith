@@ -1,3 +1,19 @@
+## AZenith 4.0
+### Changelog
+- Underscale settings now using option based on percentage
+- Added light theme on webui(follow system)
+- Readded Manual/Idle Mode with new logic
+- Expose the Profiler Interface in the daemon | access by running "sys.azenith-profiler 1|2|3"
+- Drop "dumpsys" detection to reduce overhead
+- Fix CPUfreq limiter to correctly apply the selected frequency
+- Reduce loop interval from 15sec to 5sec (45sec if Preload is active)
+- Improve logging message for more detailed Information 
+- Fixed random reboot on WebUI
+- Reduced load time when opening WebUI
+- Some redesign in the WebUI with new banner, avatar, layout etc...
+- Minor optimization in daemon flow...
+
+
 ## AZenith 3.8
 ### Changelog
 - Added I/O Scheduler settings
