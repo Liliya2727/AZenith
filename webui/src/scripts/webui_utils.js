@@ -936,7 +936,7 @@ const applyperformanceprofile = async () => {
     return;
   }
   executeCommand(
-    "sh -c sys.azenith-profiler 1 >/dev/null 2>&1 &"
+    "sh -c 'sys.azenith-profiler 1'"
   );
   showToast("Applying Performance Profile");
 };
@@ -950,7 +950,7 @@ const applybalancedprofile = async () => {
     return;
   }
   executeCommand(
-    "sh -c sys.azenith-profiler 2 >/dev/null 2>&1 &"
+    "sh -c 'sys.azenith-profiler 2'"
   );
   showToast("Applying Balanced Profile");
 };
@@ -964,7 +964,7 @@ const applyecomode = async () => {
     return;
   }
   executeCommand(
-    "sh -c sys.azenith-profiler 3 >/dev/null 2>&1 &"
+    "sh -c 'sys.azenith-profiler 3'"
   );
   showToast("Applying ECO Mode");
 };
