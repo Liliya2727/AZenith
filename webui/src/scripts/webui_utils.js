@@ -938,7 +938,6 @@ const applyperformanceprofile = async () => {
   executeCommand(
     "su -c sys.azenith-profiler 1 >/dev/null 2>&1 &"
   );
-  showToast("Applying Performance Profile");
 };
 
 const applybalancedprofile = async () => {
@@ -952,7 +951,6 @@ const applybalancedprofile = async () => {
   executeCommand(
     "su -c sys.azenith-profiler 2 >/dev/null 2>&1 &"
   );
-  showToast("Applying Balanced Profile");
 };
 
 const applyecomode = async () => {
@@ -966,7 +964,6 @@ const applyecomode = async () => {
   executeCommand(
     "su -c sys.azenith-profiler 3 >/dev/null 2>&1 &"
   );
-  showToast("Applying ECO Mode");
 };
 
 const checkjit = async () => {
