@@ -936,11 +936,8 @@ const applyperformanceprofile = async () => {
     return;
   }
   executeCommand(
-    "/data/adb/modules/AZenith/system/bin/sys.azenith-profiler 1 >/dev/null 2>&1 &"
+    "sh -c sys.azenith-profiler 1 >/dev/null 2>&1 &"
   );
-  setTimeout(() => {
-    executeCommand("echo 1 > /data/adb/.config/AZenith/API/current_profile");
-  }, 300);
   showToast("Applying Performance Profile");
 };
 
@@ -953,11 +950,8 @@ const applybalancedprofile = async () => {
     return;
   }
   executeCommand(
-    "/data/adb/modules/AZenith/system/bin/sys.azenith-profiler 2 >/dev/null 2>&1 &"
+    "sh -c sys.azenith-profiler 2 >/dev/null 2>&1 &"
   );
-  setTimeout(() => {
-    executeCommand("echo 2 > /data/adb/.config/AZenith/API/current_profile");
-  }, 300);
   showToast("Applying Balanced Profile");
 };
 
@@ -970,11 +964,8 @@ const applyecomode = async () => {
     return;
   }
   executeCommand(
-    "/data/adb/modules/AZenith/system/bin/sys.azenith-profiler 3 >/dev/null 2>&1 &"
+    "sh -c sys.azenith-profiler 3 >/dev/null 2>&1 &"
   );
-  setTimeout(() => {
-    executeCommand("echo 3 > /data/adb/.config/AZenith/API/current_profile");
-  }, 300);
   showToast("Applying ECO Mode");
 };
 
