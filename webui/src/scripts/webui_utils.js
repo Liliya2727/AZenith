@@ -1525,7 +1525,7 @@ const hideSettings = () => {
 
 const showProfilerSettings = async () => {
   const c = document.getElementById("profilermodal"),
-    s = c.querySelector(".settings-container");
+    s = c.querySelector(".profiler-container");
   document.body.classList.add("modal-open");
   c.classList.add("show");
 
