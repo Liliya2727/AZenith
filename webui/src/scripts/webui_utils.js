@@ -1524,7 +1524,7 @@ const hideSettings = () => {
   }
 
 const showProfilerSettings = async () => {
-  const c = document.getElementById("profilerModal"),
+  const c = document.getElementById("profilermodal"),
     s = c.querySelector(".settings-container");
   document.body.classList.add("modal-open");
   c.classList.add("show");
@@ -1542,7 +1542,7 @@ const showProfilerSettings = async () => {
 };
 
 const hideProfilerSettings = () => {
-  const c = document.getElementById("profilerModal");
+  const c = document.getElementById("profilermodal");
   c.classList.remove("show");
   document.body.classList.remove("modal-open");
   if (c._resizeHandler) {
