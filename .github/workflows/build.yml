@@ -73,6 +73,9 @@ jobs:
             exit 1
           fi
 
+      - name: Unzip AZenith Package
+        run: |
+          unzip ${{ steps.compileZip.outputs.zipName }} -d extracted
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4.6.2
