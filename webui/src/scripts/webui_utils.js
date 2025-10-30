@@ -39,16 +39,18 @@ const showRandomMessage = () => {
   const c = document.getElementById("msg");
   if (!c) return;
 
-  const randomMessages = getTranslation("randomMessages");
-  if (!randomMessages || typeof randomMessages !== "object") return;
+  // Make sure currentTranslations exists
+  if (!window.getTranslation) return;
 
-  const keys = Object.keys(randomMessages);
-  if (keys.length === 0) return;
+  // Pick a random key from 0–29
+  const randomIndex = Math.floor(Math.random() * 30);
+  const message = window.getTranslation(`randomMessages.${randomIndex}`);
 
-  const randomKey = keys[Math.floor(Math.random() * keys.length)];
-  const message = randomMessages[randomKey];
-
-  c.textContent = message;
+  if (message) {
+    c.textContent = message;
+  } else {
+    c.textContent = ""; // fallback if translation not loaded
+  }
 };
 
 let lastModuleVersion = { time: 0, value: "" };
@@ -180,43 +182,34 @@ const checkCPUInfo = async () => {
 };
 
 const checkKernelVersion = async () => {
-  let c = localStorage.getItem("kernel_version");
   try {
-    let { errno: s, stdout: r } = await executeCommand("uname -r");
-    if (0 === s && r.trim()) {
-      let d = r.trim();
-      (document.getElementById("kernelInfo").textContent = d),
-        c !== d && localStorage.setItem("kernel_version", d);
-    } else
-      c
-        ? (document.getElementById("kernelInfo").textContent = c)
-        : (document.getElementById("kernelInfo").textContent =
-            "Unknown Kernel");
+    const { errno, stdout } = await executeCommand("uname -r");
+    const el = document.getElementById("kernelInfo");
+
+    if (errno === 0 && stdout.trim()) {
+      el.textContent = stdout.trim();
+    } else {
+      el.textContent = "Unknown Kernel";
+    }
   } catch {
-    c
-      ? (document.getElementById("kernelInfo").textContent = c)
-      : (document.getElementById("kernelInfo").textContent = "Error");
+    document.getElementById("kernelInfo").textContent = "Error";
   }
 };
 
 const getAndroidVersion = async () => {
-  let c = localStorage.getItem("android_version");
   try {
-    let { errno: s, stdout: r } = await executeCommand(
+    const { errno, stdout } = await executeCommand(
       "getprop ro.build.version.release"
     );
-    if (0 === s && r.trim()) {
-      let d = r.trim();
-      (document.getElementById("android").textContent = d),
-        c !== d && localStorage.setItem("android_version", d);
-    } else
-      c
-        ? (document.getElementById("android").textContent = c)
-        : (document.getElementById("android").textContent = "Unknown Android");
+    const el = document.getElementById("android");
+
+    if (errno === 0 && stdout.trim()) {
+      el.textContent = stdout.trim();
+    } else {
+      el.textContent = "Unknown Android";
+    }
   } catch {
-    c
-      ? (document.getElementById("android").textContent = c)
-      : (document.getElementById("android").textContent = "Error");
+    document.getElementById("android").textContent = "Error";
   }
 };
 
@@ -1814,7 +1807,7 @@ const heavyInit = async () => {
   if (loader) loader.classList.remove("hidden");
   document.body.classList.add("no-scroll");
 
-  const stage1 = [showRandomMessage, checkProfile, checkServiceStatus];
+  const stage1 = [checkProfile, checkServiceStatus, showRandomMessage];
   await Promise.all(stage1.map((fn) => fn()));
 
   const quickChecks = [
