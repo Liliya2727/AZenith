@@ -45,8 +45,12 @@ const showRandomMessage = () => {
   const c = document.getElementById("msg");
   if (!c) return;
 
-  const randomMessages = getTranslation("randomMessages");
-  if (!Array.isArray(randomMessages) || randomMessages.length === 0) return;
+  const randomMessagesObj = getTranslation("randomMessages");
+  if (!randomMessagesObj || typeof randomMessagesObj !== "object") return;
+
+  const randomMessages = Object.values(randomMessagesObj);
+  if (randomMessages.length === 0) return;
+
   const index = Math.floor(Math.random() * randomMessages.length);
   const message = randomMessages[index];
   c.textContent = message;
