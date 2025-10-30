@@ -182,36 +182,41 @@ const checkCPUInfo = async () => {
 };
 
 const checkKernelVersion = async () => {
-  try {
-    const { errno, stdout } = await executeCommand("uname -r");
-    const el = document.getElementById("kernelInfo");
-
-    if (errno === 0 && stdout.trim()) {
-      el.textContent = stdout.trim();
-    } else {
-      el.textContent = "Unknown Kernel";
-    }
-  } catch {
-    document.getElementById("kernelInfo").textContent = "Error";
-  }
-};
-
+        let e = localStorage.getItem("kernel_version");
+        try {
+            let { errno: t, stdout: n } = await executeCommand("uname -r");
+            if (0 === t && n.trim()) {
+                let r = n.trim();
+                (document.getElementById("kernelInfo").textContent = r),
+                    e !== r && localStorage.setItem("kernel_version", r);
+            } else
+                e
+                    ? (document.getElementById("kernelInfo").textContent = e)
+                    : (document.getElementById("kernelInfo").textContent = "Unknown Kernel");
+        } catch {
+            e
+                ? (document.getElementById("kernelInfo").textContent = e)
+                : (document.getElementById("kernelInfo").textContent = "Error");
+        }
+    },
 const getAndroidVersion = async () => {
-  try {
-    const { errno, stdout } = await executeCommand(
-      "getprop ro.build.version.release"
-    );
-    const el = document.getElementById("android");
-
-    if (errno === 0 && stdout.trim()) {
-      el.textContent = stdout.trim();
-    } else {
-      el.textContent = "Unknown Android";
-    }
-  } catch {
-    document.getElementById("android").textContent = "Error";
-  }
-};
+        let e = localStorage.getItem("android_version");
+        try {
+            let { errno: t, stdout: n } = await executeCommand("getprop ro.build.version.release");
+            if (0 === t && n.trim()) {
+                let r = n.trim();
+                (document.getElementById("android").textContent = r),
+                    e !== r && localStorage.setItem("android_version", r);
+            } else
+                e
+                    ? (document.getElementById("android").textContent = e)
+                    : (document.getElementById("android").textContent = "Unknown Android");
+        } catch {
+            e
+                ? (document.getElementById("android").textContent = e)
+                : (document.getElementById("android").textContent = "Error");
+        }
+    };
 
 let lastServiceCheck = { time: 0, status: "", pid: "" };
 
@@ -1811,12 +1816,11 @@ const heavyInit = async () => {
   await Promise.all(stage1.map((fn) => fn()));
 
   const quickChecks = [
-    checkModuleVersion,
-    checkCPUInfo,
     checkKernelVersion,
     getAndroidVersion,
     loadCpuGovernors,
     loadCpuFreq,
+    checkCPUInfo,
     loadIObalance,
     loadIOperformance,
     loadIOpowersave,
