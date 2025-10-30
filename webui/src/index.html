@@ -1,627 +1,556 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="styles/index.css" type="text/css" rel="stylesheet" />
     <script type="module" src="scripts/webui_utils.js"></script>
     <script type="module" src="scripts/block_copy.js"></script>
+    <script type="module" src="scripts/language.js"></script>
 </head>
-<body class="background flex flex-col min-h-screen text-white">
-    <div id="loading-screen">
-        <div class="loading-content">
+   <body class="background flex flex-col min-h-screen text-white">
+      <div id="loading-screen">
+         <div class="loading-content">
             <div class="spinner"></div>
-            <p id="loading-text">Initializing...</p>
-        </div>
-    </div>
-    <header class="backdrop-blur-md toptiga sticky top-0 z-50">
-        <div style="position: relative">
+            <p id="loading-text" data-lang="loading.text"></p>
+         </div>
+      </div>
+      <header class="backdrop-blur-md toptiga sticky top-0 z-50">
+         <div style="position: relative">
+            <select id="languageSelector" class="langSect"></select>
             <button id="settingsButton">
-    <svg width="64" height="64" viewBox="0 0 24.00 24.00" fill="currentColor"> <path fill-rule="evenodd" clip-rule="evenodd" d="M14.2788 2.15224C13.9085 2 13.439 2 12.5 2C11.561 2 11.0915 2 10.7212 2.15224C10.2274 2.35523 9.83509 2.74458 9.63056 3.23463C9.53719 3.45834 9.50065 3.7185 9.48635 4.09799C9.46534 4.65568 9.17716 5.17189 8.69017 5.45093C8.20318 5.72996 7.60864 5.71954 7.11149 5.45876C6.77318 5.2813 6.52789 5.18262 6.28599 5.15102C5.75609 5.08178 5.22018 5.22429 4.79616 5.5472C4.47814 5.78938 4.24339 6.1929 3.7739 6.99993C3.30441 7.80697 3.06967 8.21048 3.01735 8.60491C2.94758 9.1308 3.09118 9.66266 3.41655 10.0835C3.56506 10.2756 3.77377 10.437 4.0977 10.639C4.57391 10.936 4.88032 11.4419 4.88029 12C4.88026 12.5581 4.57386 13.0639 4.0977 13.3608C3.77372 13.5629 3.56497 13.7244 3.41645 13.9165C3.09108 14.3373 2.94749 14.8691 3.01725 15.395C3.06957 15.7894 3.30432 16.193 3.7738 17C4.24329 17.807 4.47804 18.2106 4.79606 18.4527C5.22008 18.7756 5.75599 18.9181 6.28589 18.8489C6.52778 18.8173 6.77305 18.7186 7.11133 18.5412C7.60852 18.2804 8.2031 18.27 8.69012 18.549C9.17714 18.8281 9.46533 19.3443 9.48635 19.9021C9.50065 20.2815 9.53719 20.5417 9.63056 20.7654C9.83509 21.2554 10.2274 21.6448 10.7212 21.8478C11.0915 22 11.561 22 12.5 22C13.439 22 13.9085 22 14.2788 21.8478C14.7726 21.6448 15.1649 21.2554 15.3694 20.7654C15.4628 20.5417 15.4994 20.2815 15.5137 19.902C15.5347 19.3443 15.8228 18.8281 16.3098 18.549C16.7968 18.2699 17.3914 18.2804 17.8886 18.5412C18.2269 18.7186 18.4721 18.8172 18.714 18.8488C19.2439 18.9181 19.7798 18.7756 20.2038 18.4527C20.5219 18.2105 20.7566 17.807 21.2261 16.9999C21.6956 16.1929 21.9303 15.7894 21.9827 15.395C22.0524 14.8691 21.9088 14.3372 21.5835 13.9164C21.4349 13.7243 21.2262 13.5628 20.9022 13.3608C20.4261 13.0639 20.1197 12.558 20.1197 11.9999C20.1197 11.4418 20.4261 10.9361 20.9022 10.6392C21.2263 10.4371 21.435 10.2757 21.5836 10.0835C21.9089 9.66273 22.0525 9.13087 21.9828 8.60497C21.9304 8.21055 21.6957 7.80703 21.2262 7C20.7567 6.19297 20.522 5.78945 20.2039 5.54727C19.7799 5.22436 19.244 5.08185 18.7141 5.15109C18.4722 5.18269 18.2269 5.28136 17.8887 5.4588C17.3915 5.71959 16.7969 5.73002 16.3099 5.45096C15.8229 5.17191 15.5347 4.65566 15.5136 4.09794C15.4993 3.71848 15.4628 3.45833 15.3694 3.23463C15.1649 2.74458 14.7726 2.35523 14.2788 2.15224ZM12.5 15C14.1695 15 15.5228 13.6569 15.5228 12C15.5228 10.3431 14.1695 9 12.5 9C10.8305 9 9.47716 10.3431 9.47716 12C9.47716 13.6569 10.8305 15 12.5 15Z" fill="currentColor"></path> </svg>
-  </button>
+               <svg
+                  width="64px"
+                  height="64px"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  stroke="currentColor"
+                  >
+                  <path
+                     d="M14 21H10L9.44904 18.5206C8.7879 18.2618 8.17573 17.9053 7.63028 17.4689L5.20573 18.232L3.20573 14.7679L5.07828 13.0503C5.02673 12.7077 5 12.357 5 12C5 11.643 5.02673 11.2923 5.07828 10.9496L3.20573 9.23204L5.20574 5.76794L7.6303 6.53106C8.17575 6.09467 8.78791 5.73819 9.44904 5.47935L10 3H14L14.551 5.47935C15.2121 5.73819 15.8242 6.09466 16.3697 6.53104L18.7942 5.76794L20.7942 9.23204L18.9217 10.9496C18.9733 11.2922 19 11.643 19 12C19 12.357 18.9733 12.7078 18.9217 13.0504L20.7942 14.7679L18.7942 18.232L16.3697 17.4689C15.8243 17.9053 15.2121 18.2618 14.551 18.5206L14 21Z"
+                     stroke="currentColor"
+                     stroke-linecap="round"
+                     stroke-linejoin="round"
+                     stroke-width="1.37"
+                     />
+                  <circle
+                     cx="12"
+                     cy="12"
+                     r="3"
+                     stroke="currentColor"
+                     stroke-width="1.37"
+                     />
+               </svg>
+            </button>
             <img id="Avatar" alt="Avatar" class="avatar-kanan" />
-        </div>
-        <h1
+         </div>
+         <h1
             class="textjudul">
             AZenith火
-        </h1>        
-    </header>
-    <main>
-        <div class="image-container rounded-lg">
+         </h1>
+      </header>
+      <main>
+         <div class="image-container rounded-lg">
             <img id="Banner" alt="Banner" />
             <div class="bg-displaybanner">
-                <span id="serviceStatus" class="overlay-text">Suspended💤</span><span id="servicePID"
-                    class="overlay-textcppt">Service is Stopped</span><span id="msg" class="overlay-subtext">No Data
-                    Acquired</span>
+               <span id="serviceStatus" class="overlay-text">Suspended💤</span><span id="servicePID"
+                  class="overlay-textcppt">Service is Stopped</span><span id="msg" class="overlay-subtext">No Data
+               Acquired</span>
             </div>
-        </div>
-        <div class="p-6">
+         </div>
+         <div class="p-6">
             <div>
-                <div class="device-info-card">
-                    <h2 class="font-semibold mb-4 text-lg text-black-69">
-                        # Basic Information
-                    </h2>
-                    <div class="device-info-row">
-                        <p class="device-info-label">Current Profile</p>
-                        <p id="CurProfile" class="text-pink-400 text-sm font-medium italic animate-pulse">
-                            Getting info...
-                        </p>
-                        <button id="profile-button" class="profilerbutton">Change Profiles</button>
-                    </div>
-                    <div class="device-info-row">
-                        <div class="device-info-divider"></div>
-                        <p class="device-info-label">Chipset</p>
-                        <p id="cpuInfo" class="device-info-value">Getting info...</p>
-                    </div>
-                    <div class="device-info-divider"></div>
-                    <div class="device-info-row">
-                        <p class="device-info-label">Kernel</p>
-                        <p id="kernelInfo" class="device-info-value">Getting info...</p>
-                    </div>
-                    <div class="device-info-divider"></div>
-                    <div class="device-info-row">
-                        <p class="device-info-label">Android Version</p>
-                        <p id="android" class="device-info-value">Getting info...</p>
-                    </div>
-                </div>
+               <div class="device-info-card">
+                  <h2 class="font-semibold mb-4 text-lg text-black-69" data-lang="infoTab.title"></h2>
+                  <div class="device-info-row">
+                     <p class="device-info-label" data-lang="infoTab.labels.currentProfile"></p>
+                     <p id="CurProfile" class="text-pink-400 text-sm font-medium italic animate-pulse"></p>
+                     <button id="profile-button" class="profilerbutton" data-lang="infoTab.buttons.changeProfile"></button>
+                  </div>
+                  <div class="device-info-row">
+                     <div class="device-info-divider"></div>
+                     <p class="device-info-label" data-lang="infoTab.labels.chipset"></p>
+                     <p id="cpuInfo" class="device-info-value" data-lang="infoTab.loading"></p>
+                  </div>
+                  <div class="device-info-divider"></div>
+                  <div class="device-info-row">
+                     <p class="device-info-label" data-lang="infoTab.labels.kernel"></p>
+                     <p id="kernelInfo" class="device-info-value" data-lang="infoTab.loading"></p>
+                  </div>
+                  <div class="device-info-divider"></div>
+                  <div class="device-info-row">
+                     <p class="device-info-label" data-lang="infoTab.labels.androidVersion"></p>
+                     <p id="android" class="device-info-value" data-lang="infoTab.loading"></p>
+                  </div>
+               </div>
             </div>
-        </div>
-        <div class="settings-buttons">
+         </div>
+         <div class="settings-buttons">
             <button id="show-additional-settings" class="settings-card">
-                <div class="settings-text">
-                    <h2>Additional Settings</h2>
-                    <small>Additional settings to enhance your experience.</small>
-                </div>
-                <span class="settings-arrow">&rsaquo;</span>
+               <div class="settings-text">
+                  <h2 data-lang="settingsMore.additional.title"></h2>
+                  <small data-lang="settingsMore.additional.description"></small>
+               </div>
+               <span class="settings-arrow">&rsaquo;</span>
             </button>
-
             <button id="show-preference-settings" class="settings-card">
-                <div class="settings-text">
-                    <h2>Preference Settings</h2>
-                    <small>Preference tweaks or addons that apply on boot.</small>
-                </div>
-                <span class="settings-arrow">&rsaquo;</span>
+               <div class="settings-text">
+                  <h2 data-lang="settingsMore.preference.title"></h2>
+                  <small data-lang="settingsMore.preference.description"></small>
+               </div>
+               <span class="settings-arrow">&rsaquo;</span>
             </button>
-        </div>
-        <div class="p-6">
+         </div>
+         <div class="p-6">
             <div class="bg-gray-900 mt-277 mb-4 p-4 rounded-lg">
-                <div class="flex items-center justify-between">
-                    <h2 class="font-semibold mb-4 text-lg text-black-69">
-                        # CPU Settings
-                    </h2>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <div>
-                        <p class="text-sm text-white">Default CPU Governor</p>
-                        <small class="block text-gray-400 text-sss">Governor that will be used on Normal profile</small>
-                    </div>
-                    <select id="cpuGovernor"
-                        class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs">
-                        <option value="schedutil" selected></option>
-                    </select>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <div>
-                        <p class="text-sm text-white">Powersave CPU Governor</p>
-                        <small class="block text-gray-400 text-sss">Governor that will be used on Powersave
-                            profile</small>
-                    </div>
-                    <select id="GovernorPowersave"
-                        class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs">
-                        <option value="powersave" selected></option>
-                    </select>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <div>
-                        <p class="text-sm text-white">Limit CPU Freq</p>
-                        <small class="block text-gray-400 text-sss">Set Max CPU Frequency in Balanced profile and ECO
-                            Mode</small>
-                    </div>
-                    <select id="cpuFreq"
-                        class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs">
-                        <option value="100" selected>OFF</option>
-                    </select>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <label for="LiteMode" class="cursor-pointer flex items-center w-full">
-                        <div>
-                            <p class="text-sm text-white">Lite Mode (Reboot to apply)</p>
-                            <small class="block text-gray-400 text-sss">Reduce Overheating by reducing CPU Frequency on
-                                Performance
-                                Profile</small>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="LiteMode" class="peer sr-only" />
-                            <div class="toggle"></div>
-                        </div>
-                    </label>
-                </div>
+               <div class="flex items-center justify-between">
+                  <h2 class="font-semibold mb-4 text-lg text-black-69" data-lang="cpu.title"></h2>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <div>
+                     <p class="text-sm text-white" data-lang="cpu.default.title"></p>
+                     <small class="block text-gray-400 text-sss" data-lang="cpu.default.desc"></small>
+                  </div>
+                  <select id="cpuGovernor" class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs">
+                     <option value="schedutil" selected></option>
+                  </select>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <div>
+                     <p class="text-sm text-white" data-lang="cpu.powersave.title"></p>
+                     <small class="block text-gray-400 text-sss" data-lang="cpu.powersave.desc"></small>
+                  </div>
+                  <select id="GovernorPowersave" class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs">
+                     <option value="powersave" selected></option>
+                  </select>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <div>
+                     <p class="text-sm text-white" data-lang="cpu.limit.title"></p>
+                     <small class="block text-gray-400 text-sss" data-lang="cpu.limit.desc"></small>
+                  </div>
+                  <select id="cpuFreq" class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs">
+                     <option value="100" selected>OFF</option>
+                  </select>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <label for="LiteMode" class="cursor-pointer flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="cpu.litemode.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="cpu.litemode.desc"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="LiteMode" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
             </div>
-        </div>
-        <div class="p-6">
+         </div>
+         <div class="p-6">
             <div class="bg-gray-900 mt-211 mb-4 p-4 rounded-lg">
-                <div class="flex items-center justify-between">
-                    <h2 class="font-semibold mb-4 text-lg text-black-69">
-                        # I/O Scheduler Settings
-                    </h2>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <div>
-                        <p class="text-sm text-white">Default I/O Scheduler</p>
-                        <small class="block text-gray-400 text-sss">Scheduler that will be used on Normal
-                            profile</small>
-                    </div>
-                    <select id="ioSchedulerBalanced"
-                        class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs">
-                        <option value="none" selected></option>
-                    </select>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <div>
-                        <p class="text-sm text-white">Performance I/O Scheduler</p>
-                        <small class="block text-gray-400 text-sss">Scheduler that will be used on Performance
-                            profile</small>
-                    </div>
-                    <select id="ioSchedulerPerformance"
-                        class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs">
-                        <option value="none" selected></option>
-                    </select>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <div>
-                        <p class="text-sm text-white">Powersave I/O Scheduler</p>
-                        <small class="block text-gray-400 text-sss">Scheduler that will be used on Powersave
-                            profile</small>
-                    </div>
-                    <select id="ioSchedulerPowersave"
-                        class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs">
-                        <option value="none" selected></option>
-                    </select>
-                </div>
+               <div class="flex items-center justify-between">
+                  <h2 class="font-semibold mb-4 text-lg text-black-69" data-lang="io.title"></h2>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <div>
+                     <p class="text-sm text-white" data-lang="io.default.title"></p>
+                     <small class="block text-gray-400 text-sss" data-lang="io.default.desc"></small>
+                  </div>
+                  <select id="ioSchedulerBalanced"
+                     class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs">
+                     <option value="none" selected></option>
+                  </select>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <div>
+                     <p class="text-sm text-white" data-lang="io.performance.title"></p>
+                     <small class="block text-gray-400 text-sss" data-lang="io.performance.desc"></small>
+                  </div>
+                  <select id="ioSchedulerPerformance"
+                     class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs">
+                     <option value="none" selected></option>
+                  </select>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <div>
+                     <p class="text-sm text-white" data-lang="io.powersave.title"></p>
+                     <small class="block text-gray-400 text-sss" data-lang="io.powersave.desc"></small>
+                  </div>
+                  <select id="ioSchedulerPowersave"
+                     class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs">
+                     <option value="none" selected></option>
+                  </select>
+               </div>
             </div>
-        </div>
-        <div class="p-6">
+         </div>
+         <div class="p-6">
             <div class="bg-gray-900 mt-211 mb-4 p-4 rounded-lg">
-                <div class="support-header">
-                    <h2 class="font-semibold mb-4 text-lg text-black-69">Thanks!✨</h2>
-                    <h2 class="zenith-text">
-                        Thanks for using AZenith! I really appreciate you for using
-                        AZenith, Without you, This module wouldn't be here today, AZenith
-                        will always be with you!
-                    </h2>
-                    <p class="footertext">Webui Designed by @kanaochar & @Zexshia</p>
-                </div>
+               <div class="support-header">
+                  <h2 class="font-semibold mb-4 text-lg text-black-69" data-lang="thanks.title"></h2>
+                  <h2 class="zenith-text" data-lang="thanks.message"></h2>
+                  <p class="footertext" data-lang="thanks.footer"></p>
+               </div>
             </div>
-        </div>
-        <div id="preference-modal" class="preference-modal">
+         </div>
+         <div id="preference-modal" class="preference-modal">
             <div class="preference-container">
-                <button class="close-btn" id="close-preference">&times;</button>
-                <h3 class="preference-title">Preference Settings</h3>
-                <p class="preference-desc">
-                    Preference settings or addon that applied on boot (need reboot after
-                    changes).
-                </p>
-                <div class="flex items-center justify-between mb-3">
-                    <label class="cursor-pointer inline-flex items-center w-full">
-                        <div>
-                            <p class="text-sm text-white">Sched Tunes</p>
-                            <small class="block text-gray-400 text-sss">optimize CPU frequency scaling behavior for all
-                                CPU clusters
-                                by tuning up/down limit rate (For schedutil and
-                                schedhorizon)</small>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="schedtunes" class="peer sr-only" />
-                            <div class="toggle"></div>
-                        </div>
-                    </label>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <label class="cursor-pointer inline-flex items-center w-full">
-                        <div>
-                            <p class="text-sm text-white">SurfaceFlinger Latency</p>
-                            <small class="block text-gray-400 text-sss">Tweak surfaceflinger to reduce screen latency
-                                and Improve
-                                screen responsiveness.</small>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="SFL" class="peer sr-only" />
-                            <div class="toggle"></div>
-                        </div>
-                    </label>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <label class="cursor-pointer inline-flex items-center w-full">
-                        <div>
-                            <p class="text-sm text-white">Just In Time</p>
-                            <small class="block text-gray-400 text-sss">Improve application performance by running jit
-                                compilation.</small>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="jit" class="peer sr-only" />
-                            <div class="toggle"></div>
-                        </div>
-                    </label>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <label class="cursor-pointer inline-flex items-center w-full">
-                        <div>
-                            <p class="text-sm text-white">Disable Trace</p>
-                            <small class="block text-gray-400 text-sss">Disable kernel tracing + Android framework
-                                tracing.</small>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="trace" class="peer sr-only" />
-                            <div class="toggle"></div>
-                        </div>
-                    </label>
-                </div>
-                <div id="fpsged-container" class="flex items-center justify-between mb-3" style="display: none">
-                    <label for="fpsged" class="cursor-pointer flex items-center w-full">
-                        <div>
-                            <p class="text-sm text-white">FPSGO and GED Parameter</p>
-                            <small class="block text-gray-400 text-sss">Use FPSGO and Ged Optimized Parameters</small>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="fpsged" class="peer sr-only" />
-                            <div class="toggle"></div>
-                        </div>
-                    </label>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <label for="logd" class="cursor-pointer flex items-center w-full">
-                        <div>
-                            <p class="text-sm text-white">Kill Logger</p>
-                            <small class="block text-gray-400 text-sss">Disable system logging services to reduce
-                                background activity
-                                and improve performance.</small>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="logd" class="peer sr-only" />
-                            <div class="toggle"></div>
-                        </div>
-                    </label>
-                </div>
-                <div id="malisched-container" class="flex items-center justify-between mb-3" style="display: none">
-                    <label for="malisched" class="cursor-pointer inline-flex items-center w-full">
-                        <div>
-                            <p class="text-sm text-white">GPU Mali Scheduling</p>
-                            <small class="block text-gray-400 text-sss">Forces the GPU to serialize jobs process one at
-                                a time, which
-                                can improve predictability or reduce power usage in low-load
-                                situations.</small>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="malisched" class="peer sr-only" />
-                            <div class="toggle"></div>
-                        </div>
-                    </label>
-                </div>
-                <div id="DThermal-container" class="flex items-center justify-between mb-3" style="display: none">
-                    <label for="DThermal" class="cursor-pointer flex items-center w-full">
-                        <div>
-                            <p class="text-sm text-white">Disable Thermal</p>
-                            <small class="block text-gray-400 text-sss">Kill Thermal Service (May causing
-                                Overheat)</small>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="DThermal" class="peer sr-only" />
-                            <div class="toggle"></div>
-                        </div>
-                    </label>
-                </div>
+               <button class="close-btn" id="close-preference">&times;</button>
+               <h3 class="preference-title" data-lang="preference.title"></h3>
+               <p class="preference-desc" data-lang="preference.description"></p>
+               <div class="flex items-center justify-between mb-3">
+                  <label class="cursor-pointer inline-flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="preference.schedtunes.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="preference.schedtunes.desc"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="schedtunes" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <label class="cursor-pointer inline-flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="preference.sfl.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="preference.sfl.desc"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="SFL" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <label class="cursor-pointer inline-flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="preference.jit.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="preference.jit.desc"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="jit" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <label class="cursor-pointer inline-flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="preference.trace.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="preference.trace.desc"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="trace" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
+               <div id="fpsged-container" class="flex items-center justify-between mb-3" style="display: none">
+                  <label for="fpsged" class="cursor-pointer flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="preference.fpsged.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="preference.fpsged.desc"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="fpsged" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <label for="logd" class="cursor-pointer flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="preference.logd.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="preference.logd.desc"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="logd" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
+               <div id="malisched-container" class="flex items-center justify-between mb-3" style="display: none">
+                  <label for="malisched" class="cursor-pointer inline-flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="preference.malisched.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="preference.malisched.desc"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="malisched" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
+               <div id="DThermal-container" class="flex items-center justify-between mb-3" style="display: none">
+                  <label for="DThermal" class="cursor-pointer flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="preference.dthermal.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="preference.dthermal.desc"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="DThermal" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
             </div>
-        </div>
-        <div id="additional-modal" class="additional-modal">
+         </div>
+         <div id="additional-modal" class="additional-modal">
             <div class="additional-container">
-                <button class="close-btn" id="close-additional">&times;</button>
-                <h3 class="additional-title">Additional Settings</h3>
-                <p class="additional-desc">
-                    Additional settings to enhance your experience.
-                </p>
-                <div class="flex items-center justify-between mb-3">
-                    <label for="GPreload" class="cursor-pointer flex items-center w-full">
-                        <div>
-                            <p class="text-sm text-white">Game Preload</p>
-                            <small class="block text-gray-400 text-sss">Preload all required libraries when game start
-                                to reduce load
-                                time and minimize lag</small>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="GPreload" class="peer sr-only" />
-                            <div class="toggle"></div>
-                        </div>
-                    </label>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <label for="clearbg" class="cursor-pointer flex items-center w-full">
-                        <div>
-                            <p class="text-sm text-white">Memory Killer</p>
-                            <small class="block text-gray-400 text-sss">Kill all running apps in the background on
-                                Performance
-                                Profile</small>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="clearbg" class="peer sr-only" />
-                            <div class="toggle"></div>
-                        </div>
-                    </label>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <label for="iosched" class="cursor-pointer flex items-center w-full">
-                        <div>
-                            <p class="text-sm text-white">App Priority Control</p>
-                            <small class="block text-gray-400 text-sss">Increase CPU and I/O Scheduling Priority on
-                                Performance
-                                Profile</small>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="iosched" class="peer sr-only" />
-                            <div class="toggle"></div>
-                        </div>
-                    </label>
-                </div>
-                <div id="Zepass-container" class="flex items-center justify-between mb-3" style="display: none">
-                    <label for="Zepass" class="cursor-pointer flex items-center w-full">
-                        <div>
-                            <p class="text-sm text-white">Bypass Charge</p>
-                            <small class="block text-gray-400 text-sss">Enable Bypass Charging in Performance Profile,
-                                Works on most
-                                MediaTek device</small>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="Zepass" class="peer sr-only" />
-                            <div class="toggle"></div>
-                        </div>
-                    </label>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <label class="cursor-pointer inline-flex items-center w-full">
-                        <div>
-                            <p class="text-sm text-white">Do Not Disturb</p>
-                            <small class="block text-gray-400 text-sss">Block all notifications on Performance Profile
-                                to enhance
-                                gaming experiences</small>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="DoNoDis" class="peer sr-only" />
-                            <div class="toggle"></div>
-                        </div>
-                    </label>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <div>
-                        <p class="text-sm text-white">Disable Vsync</p>
-                        <small class="block text-gray-400 text-sss">Disable Synchronization between rendering frame rate
-                            and
-                            display refresh rate</small>
-                    </div>
-                    <select id="disablevsync"
-                        class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs">
-                        <option value="OFF" selected>OFF</option>
-                    </select>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <div>
-                        <p class="text-sm text-white">FSTrim Partition</p>
-                        <small class="block text-gray-400 text-sss">Trim unused blocks in system partitions to optimize
-                            I/O
-                            performance and reduce storage overhead</small>
-                    </div>
-                    <button id="FSTrim" class="smallbutton">Trim</button>
-                </div>
-                <div class="device-info-divider"></div>
-                <div class="flex items-center justify-between mb-3">
-                    <button id="customreso" class="bigbutton w-full">
-                        Custom Resolution Settings
-                    </button>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <button id="colorschemebutton" class="bigbutton w-full">
-                        Color Scheme Settings
-                    </button>
-                </div>
+               <button class="close-btn" id="close-additional">&times;</button>
+               <h3 class="additional-title" data-lang="settingsAddi.additional.title"></h3>
+               <p class="additional-desc" data-lang="settingsAddi.additional.description"></p>
+               <div class="flex items-center justify-between mb-3">
+                  <label for="GPreload" class="cursor-pointer flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="settingsAddi.additional.gpreload.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="settingsAddi.additional.gpreload.description"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="GPreload" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <label for="clearbg" class="cursor-pointer flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="settingsAddi.additional.memorykiller.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="settingsAddi.additional.memorykiller.description"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="clearbg" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <label for="iosched" class="cursor-pointer flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="settingsAddi.additional.apppriority.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="settingsAddi.additional.apppriority.description"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="iosched" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
+               <div id="Zepass-container" class="flex items-center justify-between mb-3" style="display: none">
+                  <label for="Zepass" class="cursor-pointer flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="settingsAddi.additional.bypasscharge.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="settingsAddi.additional.bypasscharge.description"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="Zepass" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <label class="cursor-pointer inline-flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="settingsAddi.additional.dnd.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="settingsAddi.additional.dnd.description"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="DoNoDis" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <div>
+                     <p class="text-sm text-white" data-lang="settingsAddi.additional.vsync.title"></p>
+                     <small class="block text-gray-400 text-sss" data-lang="settingsAddi.additional.vsync.description"></small>
+                  </div>
+                  <select id="disablevsync"
+                     class="bg-gray-700 border-none outline-none p-2 rounded-md shadow-none text-white text-xs">
+                     <option value="OFF" selected>OFF</option>
+                  </select>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <div>
+                     <p class="text-sm text-white" data-lang="settingsAddi.additional.fstrim.title"></p>
+                     <small class="block text-gray-400 text-sss" data-lang="settingsAddi.additional.fstrim.description"></small>
+                  </div>
+                  <button id="FSTrim" class="smallbutton" data-lang="settingsAddi.additional.fstrim.button"></button>
+               </div>
+               <div class="device-info-divider"></div>
+               <div class="flex items-center justify-between mb-3">
+                  <button id="customreso" class="bigbutton w-full" data-lang="settingsAddi.additional.customreso"></button>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <button id="colorschemebutton" class="bigbutton w-full" data-lang="settingsAddi.additional.colorscheme"></button>
+               </div>
             </div>
-        </div>
-        <div id="profilermodal" class="profiler-modal">
+         </div>
+         <div id="profilermodal" class="profiler-modal">
             <div class="profiler-container">
-                <button class="close-btn" id="close-profiler">&times;</button>
-                <h3 class="profiler-title">Profiler</h3>
-                <p class="profiler-desc">Set current active Profiles</p>
-                <div class="device-info-divider"></div>
-                <div class="flex items-center justify-between mb-3">
-                  <button id="applybalanced" class="bigbutton w-full">
-                    Apply Balanced Profile
-                  </button>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                  <button id="applyperformance" class="bigbutton w-full">
-                    Apply Performance Profile
-                  </button>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                  <button id="applypowersave" class="bigbutton w-full">
-                    Apply ECO Mode
-                  </button>
-                </div>
+               <button class="close-btn" id="close-profiler">&times;</button>
+               <h3 class="profiler-title" data-lang="settingsProfile.profiler.title">Profiler</h3>
+               <p class="profiler-desc" data-lang="settingsProfile.profiler.description"></p>
+               <div class="device-info-divider"></div>
+               <div class="flex items-center justify-between mb-3">
+                  <button id="applybalanced" class="bigbutton w-full" data-lang="settingsProfile.profiler.balanced"></button>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <button id="applyperformance" class="bigbutton w-full" data-lang="settingsProfile.profiler.performance"></button>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <button id="applypowersave" class="bigbutton w-full" data-lang="settingsProfile.profiler.powersave"></button>
+               </div>
             </div>
-        </div>
-        <div id="resomodal" class="reso-modal">
+         </div>
+         <div id="resomodal" class="reso-modal">
             <div class="reso-container">
-                <button class="close-btn" id="close-reso">&times;</button>
-                <h3 class="reso-title">Underscale Resolution</h3>
-                <p class="reso-desc">Set device virtual resolution to smaller size</p>
-
-                <!-- Banner image -->
-                <img id="Reso" alt="reso" class="scheme-image" />
-
-                <!-- Resolution Selector -->
-                <div id="lowres" class="reso-selector">
-                    <button class="reso-option">
-                        <div class="reso-info">
-                            <p class="reso-label">Low Resolution (80%)</p>
-                            <small class="reso-size"></small>
-                        </div>
-                        <div class="reso-dot"></div>
-                    </button>
-
-                    <button id="midres" class="reso-option">
-                        <div class="reso-info">
-                            <p class="reso-label">Mid Resolution (90%)</p>
-                            <small class="reso-size"></small>
-                        </div>
-                        <div class="reso-dot"></div>
-                    </button>
-
-                    <button id="defaultres" class="reso-option">
-                        <div class="reso-info">
-                            <p class="reso-label">Max Resolution (100%)</p>
-                            <small class="reso-size"></small>
-                        </div>
-                        <div class="reso-dot"></div>
-                    </button>
-                </div>
-
-                <div class="device-info-divider2"></div>
-
-                <div class="reso-actions">
-                    <button id="resetreso-btn" class="modal-btn cancel">CANCEL</button>
-                    <button id="applyreso" class="modal-btn apply">APPLY</button>
-                </div>
+               <button class="close-btn" id="close-reso">&times;</button>
+               <h3 class="reso-title" data-lang="settingsReso.resolution.title"></h3>
+               <p class="reso-desc" data-lang="settingsReso.resolution.description"></p>
+               <!-- Banner image -->
+               <img id="Reso" alt="reso" class="scheme-image" />
+               <!-- Resolution Selector -->
+               <div id="lowres" class="reso-selector">
+                  <button class="reso-option">
+                     <div class="reso-info">
+                        <p class="reso-label" data-lang="settingsReso.resolution.low.title"></p>
+                        <small class="reso-size" data-lang="settingsReso.resolution.low.size"></small>
+                     </div>
+                     <div class="reso-dot"></div>
+                  </button>
+                  <button id="midres" class="reso-option">
+                     <div class="reso-info">
+                        <p class="reso-label" data-lang="settingsReso.resolution.mid.title"></p>
+                        <small class="reso-size" data-lang="settingsReso.resolution.mid.size"></small>
+                     </div>
+                     <div class="reso-dot"></div>
+                  </button>
+                  <button id="defaultres" class="reso-option">
+                     <div class="reso-info">
+                        <p class="reso-label" data-lang="settingsReso.resolution.max.title"></p>
+                        <small class="reso-size" data-lang="settingsReso.resolution.max.size"></small>
+                     </div>
+                     <div class="reso-dot"></div>
+                  </button>
+               </div>
+               <div class="device-info-divider2"></div>
+               <div class="reso-actions">
+                  <button id="resetreso-btn" class="modal-btn cancel" data-lang="settingsReso.resolution.cancel"></button>
+                  <button id="applyreso" class="modal-btn apply" data-lang="settingsReso.resolution.apply"></button>
+               </div>
             </div>
-        </div>
-        <div id="settingsModal" class="settings-modal">
+         </div>
+         <div id="settingsModal" class="settings-modal">
             <div class="settings-container">
-                <button class="close-btn" id="close-settings">&times;</button>
-                <h3 class="settings-title">Module Settings</h3>
-                <div class="device-info-divider"></div>
-                <div class="flex items-center justify-between mb-3">
-                    <label class="cursor-pointer flex items-center w-full">
-                        <div>
-                            <p class="text-sm text-white">
-                                Enable Verbose Logging for AZenith
-                            </p>
-                            <small class="block text-gray-400 text-sss">Allow Verbose logging of AZenith (keep it
-                                disabled if you
-                                don't know what is this)</small>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="logger" class="peer sr-only" />
-                            <div class="toggle"></div>
-                        </div>
-                    </label>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <label class="cursor-pointer flex items-center w-full">
-                        <div>
-                            <p class="text-sm text-white">Show Toast Notifications</p>
-                            <small class="block text-gray-400 text-sss">Show toast notification when changing
-                                profiles.</small>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="toast" class="peer sr-only" />
-                            <div class="toggle"></div>
-                        </div>
-                    </label>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <label for="disableai" class="cursor-pointer inline-flex items-center w-full">
-                        <div>
-                            <p class="text-sm text-white">Disable Dynamic Profile</p>
-                            <small class="block text-gray-400 text-sss">Disable switching profiles when opening games
-                                (skip
-                                performance profiles)</small>
-                        </div>
-                        <div class="ml-auto">
-                            <input type="checkbox" id="disableai" class="peer sr-only" />
-                            <div class="toggle"></div>
-                        </div>
-                    </label>
-                </div>
-                <input type="checkbox" id="disableai" class="peer hidden" />
-                <div class="device-info-divider"></div>
-                <div class="flex items-center justify-between mb-3">
-                    <button id="savelogButton" class="bigbutton w-full">
-                        Save Logs
-                    </button>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <button id="editGamelistButton" class="bigbutton w-full">
-                        Edit Gamelist
-                    </button>
-                </div>
-                <div class="flex items-center justify-between mb-3">
-                    <button id="startButton" class="bigbutton w-full">
-                        Reinitialize Daemon
-                    </button>
-                </div>
+               <button class="close-btn" id="close-settings">&times;</button>     
+               <h3 class="settings-title" data-lang="settingsModule.title"></h3>
+               <div class="device-info-divider"></div>
+               <div class="flex items-center justify-between mb-3">
+                  <label class="cursor-pointer flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="settingsModule.verbose.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="settingsModule.verbose.desc"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="logger" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <label class="cursor-pointer flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="settingsModule.toast.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="settingsModule.toast.desc"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="toast" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <label for="disableai" class="cursor-pointer inline-flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="settingsModule.disableai.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="settingsModule.disableai.desc"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="disableai" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
+               <div class="device-info-divider"></div>
+               <div class="flex items-center justify-between mb-3">
+                  <button id="savelogButton" class="bigbutton w-full" data-lang="settingsModule.buttons.save"></button>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <button id="editGamelistButton" class="bigbutton w-full" data-lang="settingsModule.buttons.edit"></button>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <button id="startButton" class="bigbutton w-full" data-lang="settingsModule.buttons.restart"></button>
+               </div>
             </div>
-        </div>
-        <div id="schemeModal" class="scheme-modal">
+         </div>
+         <div id="schemeModal" class="scheme-modal">
             <div class="scheme-container">
-                <button class="close-btn" id="close-scheme">&times;</button>
-                <h3 class="scheme-title">Color Scheme</h3>
-                <p class="scheme-desc">Adjust screen saturation and RGB Colors</p>
-                <img id="Scheme" alt="Scheme" class="scheme-image" />
-                <div class="m-3">
-                    <p class="mb-2">
-                        <span class="schemecolortitle"># Red</span>
-                        <input type="number" class="schemetext" id="red-value" min="0" max="1000" value="1000" />
-                    </p>
-                    <input type="range" min="0" max="1000" value="1000" id="red"
-                        class="[--range-shdw:#EA6661] range range-xs" />
-                </div>
-                <div class="m-3">
-                    <p class="mb-2">
-                        <span class="schemecolortitle"># Green</span>
-                        <input type="number" class="schemetext" id="green-value" min="0" max="1000" value="1000" />
-                    </p>
-                    <input type="range" min="0" max="1000" value="1000" id="green"
-                        class="[--range-shdw:#73E875] range range-xs" />
-                </div>
-                <div class="m-3">
-                    <p class="mb-2">
-                        <span class="schemecolortitle"># Blue</span>
-                        <input type="number" class="schemetext" id="blue-value" min="0" max="1000" value="1000" />
-                    </p>
-                    <input type="range" min="0" max="1000" value="1000" id="blue"
-                        class="[--range-shdw:#6262F4] range range-xs" />
-                </div>
-                <div class="m-3">
-                    <p class="mb-2">
-                        <span class="schemecolortitle"># Saturation</span>
-                        <input type="number" class="schemetext" id="saturation-value" min="0" max="2000" value="1000" />
-                    </p>
-                    <input type="range" min="0" max="2000" value="1000" id="saturation"
-                        class="[--range-shdw:#0079C8] range range-xs" />
-                </div>
-                <div class="scheme-actions">
-                    <button id="reset-btn" class="modal-btn cancel">
-                        Reset Color Settings</button><button id="applybutton" class="modal-btn apply">Apply</button>
-                </div>
+               <button class="close-btn" id="close-scheme">&times;</button>
+               <h3 class="scheme-title" data-lang="scheme.title"></h3>
+               <p class="scheme-desc" data-lang="scheme.description"></p>
+               <img id="Scheme" alt="Scheme" class="scheme-image" />
+               <div class="m-3">
+                  <p class="mb-2">
+                     <span class="schemecolortitle" data-lang="scheme.red.title"></span>
+                     <input type="number" class="schemetext" id="red-value" min="0" max="1000" value="1000" />
+                  </p>
+                  <input type="range" min="0" max="1000" value="1000" id="red" class="[--range-shdw:#EA6661] range range-xs" />
+               </div>
+               <div class="m-3">
+                  <p class="mb-2">
+                     <span class="schemecolortitle" data-lang="scheme.green.title"></span>
+                     <input type="number" class="schemetext" id="green-value" min="0" max="1000" value="1000" />
+                  </p>
+                  <input type="range" min="0" max="1000" value="1000" id="green" class="[--range-shdw:#73E875] range range-xs" />
+               </div>
+               <div class="m-3">
+                  <p class="mb-2">
+                     <span class="schemecolortitle" data-lang="scheme.blue.title"></span>
+                     <input type="number" class="schemetext" id="blue-value" min="0" max="1000" value="1000" />
+                  </p>
+                  <input type="range" min="0" max="1000" value="1000" id="blue" class="[--range-shdw:#6262F4] range range-xs" />
+               </div>
+               <div class="m-3">
+                  <p class="mb-2">
+                     <span class="schemecolortitle" data-lang="scheme.saturation.title"></span>
+                     <input type="number" class="schemetext" id="saturation-value" min="0" max="2000" value="1000" />
+                  </p>
+                  <input type="range" min="0" max="2000" value="1000" id="saturation" class="[--range-shdw:#0079C8] range range-xs" />
+               </div>
+               <div class="scheme-actions">
+                  <button id="reset-btn" class="modal-btn cancel" data-lang="scheme.buttons.reset"></button>
+                  <button id="applybutton" class="modal-btn apply" data-lang="scheme.buttons.apply"></button>
+               </div>
             </div>
-        </div>
-        <div id="gamelistModal" class="gamelist-modal">
+         </div>
+         <div id="gamelistModal" class="gamelist-modal">
             <div class="gamelist-content">
-                <button class="close-btn" id="close-gamelist">&times;</button>
-                <h3 class="gamelist-title">Game List</h3>
-                <div class="search-input-container">
-                    <p class="gamelist-desc">
-                        Any Apps and Games listed here will trigger Game profile
-                    </p>
-                    <input type="text" id="gamelistSearch" class="gamelistsearch" placeholder="Search pkg" />
-                </div>
-                <textarea id="gamelistInput" class="gamelist-textarea" rows="14"></textarea>
-                <div class="gamelist-buttons">
-                    <button id="cancelButton" class="modal-btn cancel">Cancel</button><button id="saveGamelistButton"
-                        class="modal-btn apply">
-                        Save
-                    </button>
-                </div>
+               <button class="close-btn" id="close-gamelist">&times;</button>
+               <h3 class="gamelist-title" data-lang="gamelist.title"></h3>
+               <div class="search-input-container">
+                  <p class="gamelist-desc" data-lang="gamelist.description"></p>
+                  <input type="text" id="gamelistSearch" class="gamelistsearch" data-lang="gamelist.search.placeholder"/>
+               </div>
+               <textarea id="gamelistInput" class="gamelist-textarea" rows="14"></textarea>
+               <div class="gamelist-buttons">
+                  <button id="cancelButton" class="modal-btn cancel" data-lang="gamelist.buttons.cancel"></button>
+                  <button id="saveGamelistButton" class="modal-btn apply" data-lang="gamelist.buttons.save"></button>
+               </div>
             </div>
-        </div>
-    </main>
-</body>
-
+         </div>
+      </main>
+   </body>
 </html>
