@@ -52,13 +52,13 @@
       </header>
       <main>
          <div class="image-container rounded-lg">
-            <img id="Banner" alt="Banner" />
-            <div class="bg-displaybanner">
-               <span id="serviceStatus" class="overlay-text">Suspended💤</span><span id="servicePID"
-                  class="overlay-textcppt">Service is Stopped</span><span id="msg" class="overlay-subtext">No Data
-               Acquired</span>
-            </div>
-         </div>
+          <img id="Banner" alt="Banner" />
+          <div class="bg-displaybanner">
+            <span id="serviceStatus" class="overlay-text" data-lang="banner.serviceStatus"></span>
+            <span id="servicePID" class="overlay-textcppt" data-lang="banner.servicePID"></span>
+            <span id="msg" class="overlay-subtext" data-lang="banner.msg"></span>
+          </div>
+        </div>
          <div class="p-6">
             <div>
                <div class="device-info-card">
@@ -542,7 +542,7 @@
                <h3 class="gamelist-title" data-lang="gamelist.title"></h3>
                <div class="search-input-container">
                   <p class="gamelist-desc" data-lang="gamelist.description"></p>
-                  <input type="text" id="gamelistSearch" class="gamelistsearch" data-lang="gamelist.search.placeholder"/>
+                  <input type="text" id="gamelistSearch" class="gamelistsearch" placeholder="com.example.example"/>
                </div>
                <textarea id="gamelistInput" class="gamelist-textarea" rows="14"></textarea>
                <div class="gamelist-buttons">

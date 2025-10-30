@@ -221,12 +221,78 @@
   "gamelist": {
     "title": "Daftar Game",
     "description": "Aplikasi dan game yang tersimpan di sini akan mengganti Profil Game.",
-    "search": {
-      "placeholder": "Cari nama pkg"
-    },
     "buttons": {
       "cancel": "Batal",
       "save": "Simpan"
     }
+  },
+
+  "banner": {
+    "serviceStatus": "Ditangguhkan💤",
+    "servicePID": "Layanan Dihentikan",
+    "msg": "Tidak Ada Data"
+  },
+  
+  "randomMessages": [
+    "Langit hari ini cakep banget ya… kamu lihat nggak?",
+    "Sparkle bikin semuanya lebih ceria ✨",
+    "Kamu udah usaha terbaikmu, itu udah cukup kok~",
+    "Santai aja, bintang juga butuh waktu untuk bersinar.",
+    "Minum hangat, tarik napas dalam… semua bakal oke.",
+    "Awan lembut, hati tenang. Santai aja hari ini~",
+    "Nggak perlu alasan buat senyum — cuma senyum aja~",
+    "Langkah kecil juga bisa bawa mimpi besar~",
+    "Anginnya lembut hari ini… kayak pelukan dari dunia.",
+    "Kamu kayak bunga kecil yang tumbuh di celah — cantik dan berani.",
+    "Aku percaya sama kamu~ walau dunia kadang berat.",
+    "Yuk kejar cahaya, walau jalannya pelan.",
+    "Bintang selalu liatin… dan bangga sama kamu.",
+    "Kamu lebih sparkle dari yang kamu kira ✨",
+    "Kadang nggak ngapa-ngapain itu justru keberanian paling besar.",
+    "Biarkan matahari mencium pipimu dan bikin khawatir pergi.",
+    "Cahaya bulan nggak buru-buru, kamu juga nggak usah~",
+    "Pegang tanganku, walau cuma di pikiran aja~",
+    "Pagi lembut dimulai dengan senyum — walau setengah ngantuk.",
+    "Melayang kayak awan, lembut dan bebas~",
+    "Kamu kayak melodi lembut di dunia yang serba ngebut — nikmatin waktumu.",
+    "Secangkir teh, kaus kaki cozy, hati yang lagi healing~",
+    "Hari hujan buat mimpi-mimpi pelan di selimut~",
+    "Bunga mekar diam-diam — kamu juga bakal.",
+    "Langit nggak minta izin buat cantik, kamu juga nggak perlu.",
+    "Kamu terbuat dari cahaya lembut dan keberanian tenang~",
+    "Ngeliat bintang bukan nunda kerjaan — ini healing buat jiwa.",
+    "Nggak apa punya hari tenang. Bulan juga begitu.",
+    "Vibe hari ini: langit calm, teh hangat, hati lembut.",
+    "Nggak perlu bersinar keras — beberapa bintang shine diam-diam ✨"
+  ],
+  
+  "serviceStatus": {
+    "initializing": "Initializing...\uD83C\uDF31",
+    "runningAuto": "Running - Auto Mode\uD83C\uDF43",
+    "runningIdle": "Running - Idle Mode\uD83D\uDCAB",
+    "unknownProfile": "Profil nggak dikenal",
+    "suspended": "Suspended\uD83D\uDCA4",
+    "servicePID": "Service PID: {0}"
+  },
+
+  "toast": {
+    "fstrim": "Blok yang tidak terpakai sudah di-trim",
+    "showcantaccess": "Tidak dapat mengakses di mode saat ini",
+    "savedPackages": "{0} paket berhasil disimpan",
+    "cantRestart": "Tidak bisa restart, daemon sedang initializing",
+    "serviceDead": "Service mati, silakan reboot!",
+    "restartingDaemon": "Restarting Daemon...",
+    "restartFailed": "Gagal restart daemon",
+    "colorSchemeSaved": "Pengaturan color scheme telah disimpan",
+    "invalidColorScheme": "Format color_scheme tidak valid. Menggunakan default aman.",
+    "colorSchemeNotFound": "Color_scheme tidak ditemukan. Menggunakan default.",
+    "displayReset": "Pengaturan display telah di-reset!",
+    "alreadyPerformance": "Kamu sudah berada di Performance Profile",
+    "alreadyBalanced": "Sudah berada di Balanced Profile",
+    "alreadyECO": "Sudah berada di ECO Mode",
+    "logSaved": "Log berhasil disimpan",
+    "logSaveFailed": "Gagal menyimpan log",
+    "unableDetectResolution": "Tidak dapat mendeteksi resolusi layar",
+    "noResolutionSelected": "Belum memilih resolusi"
   }
 }

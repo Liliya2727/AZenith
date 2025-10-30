@@ -221,12 +221,78 @@
   "gamelist": {
     "title": "Game List",
     "description": "Any apps and games listed here will trigger the Game Profile.",
-    "search": {
-      "placeholder": "Search package name"
-    },
     "buttons": {
       "cancel": "Cancel",
       "save": "Save"
     }
+  },
+  
+  "banner": {
+    "serviceStatus": "Suspended💤",
+    "servicePID": "Service is Stopped",
+    "msg": "No Data Acquired"
+  },
+  
+  "randomMessages": [
+    "The sky is really pretty today... did you notice?",
+    "Sparkles make everything better ✨",
+    "You’re doing your best, and that’s enough~",
+    "It’s okay to rest. Even stars need time to shine.",
+    "A warm drink, a deep breath… everything will be alright.",
+    "Soft clouds, quiet hearts. Let’s take it slow today~",
+    "You don’t need a reason to smile — just smile~",
+    "Even little steps can lead to big dreams~",
+    "The wind feels gentle today… like a hug from the world.",
+    "You’re like a small flower growing through the cracks — beautiful and brave.",
+    "I believe in you~ even if the world feels heavy sometimes.",
+    "Let’s chase the light, even if the path is slow.",
+    "The stars are always watching… and they’re proud of you.",
+    "You sparkle more than you think ✨",
+    "Sometimes doing nothing is the bravest thing of all.",
+    "Let the sun kiss your cheeks and your worries fade away.",
+    "Moonlight doesn’t rush, and neither should you~",
+    "Hold my hand, even just in your thoughts~",
+    "Gentle mornings start with a smile — even a sleepy one.",
+    "Float like a cloud, soft and free~",
+    "You’re a soft melody in a world that rushes — take your time.",
+    "Cup of tea, cozy socks, and a heart that’s healing~",
+    "Rainy days are for dreaming softly under blankets~",
+    "Flowers bloom quietly — you will too.",
+    "The sky doesn’t ask for permission to be beautiful, and neither should you.",
+    "You are made of soft light and quiet courage~",
+    "Stargazing isn’t procrastinating — it’s soul-healing.",
+    "It's okay to have quiet days. The moon does too.",
+    "Today’s vibe: calm skies, warm tea, soft heart.",
+    "You don’t have to glow loud — some stars shine in silence ✨"
+  ],
+  
+  "serviceStatus": {
+    "initializing": "Initializing...\uD83C\uDF31",
+    "runningAuto": "Running - Auto Mode\uD83C\uDF43",
+    "runningIdle": "Running - Idle Mode\uD83D\uDCAB",
+    "unknownProfile": "Unknown Profile",
+    "suspended": "Suspended\uD83D\uDCA4",
+    "servicePID": "Service PID: {0}"
+  },
+  
+  "toast": {
+    "fstrim": "Trimmed Unused Blocks",
+    "showcantaccess": "Can't access in current mode",
+    "savedPackages": "Saved {0} packages",
+    "cantRestart": "Can't Restart, Initializing Daemon",
+    "serviceDead": "Service dead, Please reboot!",
+    "restartingDaemon": "Restarting Daemon...",
+    "restartFailed": "Failed to restart daemon",
+    "colorSchemeSaved": "Saved color scheme settings.",
+    "invalidColorScheme": "Invalid color_scheme format. Using safe defaults.",
+    "colorSchemeNotFound": "color_scheme not found. Using defaults.",
+    "displayReset": "Display settings reset!",
+    "alreadyPerformance": "You are already in Performance Profile",
+    "alreadyBalanced": "Already in Balanced Profile",
+    "alreadyECO": "Already in ECO Mode",
+    "logSaved": "Saved Log",
+    "logSaveFailed": "Failed to save log",
+    "unableDetectResolution": "Unable to detect screen resolution",
+    "noResolutionSelected": "No resolution selected"
   }
 }
