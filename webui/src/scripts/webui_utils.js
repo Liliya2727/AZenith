@@ -36,19 +36,20 @@ const executeCommand = async (cmd, cwd = null) => {
 window.executeCommand = executeCommand;
 
 let lastMessageTime = 0;
+
 const showRandomMessage = () => {
   const now = Date.now();
-  if (now - lastMessageTime < 10000) return;
+  if (now - lastMessageTime < 10000) return; // 10s cooldown
   lastMessageTime = now;
 
   const c = document.getElementById("msg");
   if (!c) return;
 
-  const randomMessages = getTranslation('randomMessages');
+  const randomMessages = getTranslation("randomMessages");
   if (!Array.isArray(randomMessages) || randomMessages.length === 0) return;
-
-  const s = randomMessages[Math.floor(Math.random() * randomMessages.length)];
-  c.textContent = s;
+  const index = Math.floor(Math.random() * randomMessages.length);
+  const message = randomMessages[index];
+  c.textContent = message;
 };
 
 let lastModuleVersion = { time: 0, value: "" };
