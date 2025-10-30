@@ -53,23 +53,6 @@ const showRandomMessage = () => {
   }
 };
 
-let lastModuleVersion = { time: 0, value: "" };
-const checkModuleVersion = async () => {
-  const now = Date.now();
-  if (now - lastModuleVersion.time < 30000) return;
-
-  try {
-    const { errno: c, stdout: s } = await executeCommand(
-      "echo 'Version :' && grep \"version=\" /data/adb/modules/AZenith/module.prop | awk -F'=' '{print $2}'"
-    );
-    if (c === 0) {
-      lastModuleVersion = { time: now, value: s.trim() };
-      const elem = document.getElementById("moduleVer");
-      if (elem) elem.textContent = lastModuleVersion.value;
-    }
-  } catch {}
-};
-
 let lastProfile = { time: 0, value: "" };
 const checkProfile = async () => {
   const now = Date.now();
