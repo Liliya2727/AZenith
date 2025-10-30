@@ -45,14 +45,11 @@ const showRandomMessage = () => {
   const c = document.getElementById("msg");
   if (!c) return;
 
-  const randomMessagesObj = getTranslation("randomMessages");
-  if (!randomMessagesObj || typeof randomMessagesObj !== "object") return;
+  // Random number from 0 to 29
+  const randomIndex = Math.floor(Math.random() * 30);
 
-  const randomMessages = Object.values(randomMessagesObj);
-  if (randomMessages.length === 0) return;
-
-  const index = Math.floor(Math.random() * randomMessages.length);
-  const message = randomMessages[index];
+  // Get translation for that specific key
+  const message = getTranslation(`randomMessages.${randomIndex}`);
   c.textContent = message;
 };
 
@@ -226,9 +223,10 @@ const getAndroidVersion = async () => {
 };
 
 let lastServiceCheck = { time: 0, status: "", pid: "" };
+
 const checkServiceStatus = async () => {
   const now = Date.now();
-  if (now - lastServiceCheck.time < 5000) return;
+  if (now - lastServiceCheck.time < 5000) return; // 5s cooldown
   lastServiceCheck.time = now;
 
   const r = document.getElementById("serviceStatus");
@@ -236,46 +234,52 @@ const checkServiceStatus = async () => {
   if (!r || !d) return;
 
   try {
-    const { errno: c, stdout: s } = await executeCommand(
+    // Get PID
+    const { errno: pidErr, stdout: pidOut } = await executeCommand(
       "/system/bin/toybox pidof sys.azenith-service"
     );
 
     let status = "";
     let pidText = getTranslation("serviceStatus.servicePID", "null");
 
-    if (c === 0 && s.trim() !== "0") {
-      const pid = s.trim();
+    if (pidErr === 0 && pidOut.trim() !== "0") {
+      const pid = pidOut.trim();
       pidText = getTranslation("serviceStatus.servicePID", pid);
+      d.textContent = pidText; // show PID immediately
 
-      const { stdout: profileRaw } = await executeCommand(
-        "cat /data/adb/.config/AZenith/API/current_profile"
-      );
-      const { stdout: aiRaw } = await executeCommand(
-        "getprop persist.sys.azenithconf.AIenabled"
-      );
+      // Run profile & AI queries in parallel
+      const [profileRawResult, aiRawResult] = await Promise.all([
+        executeCommand("cat /data/adb/.config/AZenith/API/current_profile"),
+        executeCommand("getprop persist.sys.azenithconf.AIenabled")
+      ]);
 
-      const profile = profileRaw.trim();
-      const ai = aiRaw.trim();
+      const profile = profileRawResult.stdout?.trim() || "";
+      const ai = aiRawResult.stdout?.trim() || "";
 
-      if (profile === "0") status = getTranslation("serviceStatus.initializing");
-      else if (["1", "2", "3"].includes(profile)) {
+      // Determine status
+      if (profile === "0") {
+        status = getTranslation("serviceStatus.initializing");
+      } else if (["1", "2", "3"].includes(profile)) {
         status =
           ai === "1"
             ? getTranslation("serviceStatus.runningAuto")
             : ai === "0"
             ? getTranslation("serviceStatus.runningIdle")
             : getTranslation("serviceStatus.unknownProfile");
-      } else status = getTranslation("serviceStatus.unknownProfile");
+      } else {
+        status = getTranslation("serviceStatus.unknownProfile");
+      }
     } else {
       status = getTranslation("serviceStatus.suspended");
+      d.textContent = pidText; // show null PID
     }
 
-    // Update UI only if changed
+    // Update status only if changed
     if (lastServiceCheck.status !== status) r.textContent = status;
-    if (lastServiceCheck.pid !== pidText) d.textContent = pidText;
 
     lastServiceCheck.status = status;
     lastServiceCheck.pid = pidText;
+
   } catch (e) {
     console.warn("checkServiceStatus error:", e);
   }
