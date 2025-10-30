@@ -44,7 +44,9 @@ const showRandomMessage = () => {
   const c = document.getElementById("msg");
   if (!c) return;
 
-  const randomMessages = window.getTranslation('randomMessages'); 
+  const randomMessages = window.getTranslation('randomMessages');
+  if (!Array.isArray(randomMessages) || randomMessages.length === 0) return;
+
   const s = randomMessages[Math.floor(Math.random() * randomMessages.length)];
   c.textContent = s;
 };
@@ -64,6 +66,64 @@ const checkModuleVersion = async () => {
       if (elem) elem.textContent = lastModuleVersion.value;
     }
   } catch {}
+};
+
+let lastProfile = { time: 0, value: "" };
+const checkProfile = async () => {
+  const now = Date.now();
+  if (now - lastProfile.time < 5000) return;
+
+  try {
+    const { errno: c, stdout: s } = await executeCommand(
+      "cat /data/adb/.config/AZenith/API/current_profile"
+    );
+
+    if (c !== 0) return;
+    const r = s.trim();
+    const d = document.getElementById("CurProfile");
+    if (!d) return;
+
+    let l =
+      { 0: "Initializing...", 1: "Performance", 2: "Balanced", 3: "ECO Mode" }[
+        r
+      ] || "Unknown";
+
+    // Check for Lite mode
+    const { errno: c2, stdout: s2 } = await executeCommand(
+      "getprop persist.sys.azenithconf.cpulimit"
+    );
+    if (c2 === 0 && s2.trim() === "1") l += " (Lite)";
+
+    if (lastProfile.value === l) return;
+    lastProfile = { time: now, value: l };
+
+    d.textContent = l;
+
+    // Detect theme mode
+    const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    // Dark mode colors (original) vs light mode (darker/saturated)
+    const colors = isDark
+      ? {
+          Performance: "#ef4444",
+          Balanced: "#7dd3fc",
+          "ECO Mode": "#5eead4",
+          "Initializing...": "#60a5fa",
+          Default: "#ffffff",
+        }
+      : {
+          Performance: "#b91c1c",
+          Balanced: "#0284c7",
+          "ECO Mode": "#0d9488",
+          "Initializing...": "#2563eb",
+          Default: "#1f2937",
+        };
+
+    const key = l.replace(" (Lite)", "");
+    d.style.color = colors[key] || colors.Default;
+  } catch (m) {
+    console.error("checkProfile error:", m);
+  }
 };
 
 let cachedSOCData = null;
@@ -161,6 +221,7 @@ const getAndroidVersion = async () => {
 };
 
 let lastServiceCheck = { time: 0, status: "", pid: "" };
+
 const checkServiceStatus = async () => {
   const now = Date.now();
   if (now - lastServiceCheck.time < 5000) return;
@@ -174,12 +235,13 @@ const checkServiceStatus = async () => {
     const { errno: c, stdout: s } = await executeCommand(
       "/system/bin/toybox pidof sys.azenith-service"
     );
-    let status = "",
-      pidText = "Service PID: null";
+
+    let status = "";
+    let pidText = window.getTranslation("serviceStatus.servicePID", "null");
 
     if (c === 0 && s.trim() !== "0") {
       const pid = s.trim();
-      pidText = "Service PID: " + pid;
+      pidText = window.getTranslation("serviceStatus.servicePID", pid);
 
       const { stdout: profileRaw } = await executeCommand(
         "cat /data/adb/.config/AZenith/API/current_profile"
@@ -191,20 +253,20 @@ const checkServiceStatus = async () => {
       const profile = profileRaw.trim();
       const ai = aiRaw.trim();
 
-      if (profile === "0") status = "Initializing...\uD83C\uDF31";
+      if (profile === "0") status = window.getTranslation("serviceStatus.initializing");
       else if (["1", "2", "3"].includes(profile)) {
         status =
           ai === "1"
-            ? "Running - Auto Mode\uD83C\uDF43 "
+            ? window.getTranslation("serviceStatus.runningAuto")
             : ai === "0"
-            ? "Running - Idle Mode\uD83D\uDCAB"
-            : "Unknown Profile";
-      } else status = "Unknown Profile";
+            ? window.getTranslation("serviceStatus.runningIdle")
+            : window.getTranslation("serviceStatus.unknownProfile");
+      } else status = window.getTranslation("serviceStatus.unknownProfile");
     } else {
-      status = "Suspended\uD83D\uDCA4";
+      status = window.getTranslation("serviceStatus.suspended");
     }
 
-    // Update UI hanya jika berubah
+    // Update UI only if changed
     if (lastServiceCheck.status !== status) r.textContent = status;
     if (lastServiceCheck.pid !== pidText) d.textContent = pidText;
 
@@ -212,64 +274,6 @@ const checkServiceStatus = async () => {
     lastServiceCheck.pid = pidText;
   } catch (e) {
     console.warn("checkServiceStatus error:", e);
-  }
-};
-
-let lastProfile = { time: 0, value: "" };
-const checkProfile = async () => {
-  const now = Date.now();
-  if (now - lastProfile.time < 5000) return;
-
-  try {
-    const { errno: c, stdout: s } = await executeCommand(
-      "cat /data/adb/.config/AZenith/API/current_profile"
-    );
-
-    if (c !== 0) return;
-    const r = s.trim();
-    const d = document.getElementById("CurProfile");
-    if (!d) return;
-
-    let l =
-      { 0: "Initializing...", 1: "Performance", 2: "Balanced", 3: "ECO Mode" }[
-        r
-      ] || "Unknown";
-
-    // Check for Lite mode
-    const { errno: c2, stdout: s2 } = await executeCommand(
-      "getprop persist.sys.azenithconf.cpulimit"
-    );
-    if (c2 === 0 && s2.trim() === "1") l += " (Lite)";
-
-    if (lastProfile.value === l) return;
-    lastProfile = { time: now, value: l };
-
-    d.textContent = l;
-
-    // Detect theme mode
-    const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-
-    // Dark mode colors (original) vs light mode (darker/saturated)
-    const colors = isDark
-      ? {
-          Performance: "#ef4444",
-          Balanced: "#7dd3fc",
-          "ECO Mode": "#5eead4",
-          "Initializing...": "#60a5fa",
-          Default: "#ffffff",
-        }
-      : {
-          Performance: "#b91c1c",
-          Balanced: "#0284c7",
-          "ECO Mode": "#0d9488",
-          "Initializing...": "#2563eb",
-          Default: "#1f2937",
-        };
-
-    const key = l.replace(" (Lite)", "");
-    d.style.color = colors[key] || colors.Default;
-  } catch (m) {
-    console.error("checkProfile error:", m);
   }
 };
 
