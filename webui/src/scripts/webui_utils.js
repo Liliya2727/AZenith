@@ -19,7 +19,7 @@ import BannerLightZenith from "/webui.bannerlightmode.avif";
 import AvatarZenith from "/webui.avatar.avif";
 import SchemeBanner from "/webui.schemebanner.avif";
 import ResoBanner from "/webui.reso.avif";
-import { exec } from "kernelsu";
+import { exec, toast } from "kernelsu";
 const moduleInterface = window.$azenith;
 const fileInterface = window.$FILE;
 const RESO_PROP = "persist.sys.azenithconf.resosettings";
@@ -34,10 +34,6 @@ const executeCommand = async (cmd, cwd = null) => {
 };
 
 window.executeCommand = executeCommand;
-
-const showToast = async (c) => {
-  ksu.toast(c);
-};
 
 let lastMessageTime = 0;
 const showRandomMessage = () => {
@@ -425,7 +421,7 @@ const applyFSTRIM = async () => {
   await executeCommand(
     "/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf FSTrim"
   );
-  showToast(window.getTranslation("toast.fstrim"));
+  toast(window.getTranslation("toast.fstrim"));
 };
 
 const setDefaultCpuGovernor = async (c) => {
@@ -514,7 +510,7 @@ const showGameListModal = async () => {
     "getprop persist.sys.azenithconf.AIenabled"
   );
   if (0 === c && "0" === s.trim()) {
-    showToast(window.getTranslation("toast.showcantaccess"));
+    toast(window.getTranslation("toast.showcantaccess"));
     return;
   }
 
@@ -594,7 +590,7 @@ const saveGameList = async () => {
     await executeCommand(
       `echo "${outputString}" > /data/adb/.config/AZenith/gamelist/gamelist.txt`
     );
-    showToast(window.getTranslation("toast.savedPackages", editedLines.length));
+    toast(window.getTranslation("toast.savedPackages", editedLines.length));
     hideGameListModal();
     return;
   }
@@ -612,7 +608,7 @@ const saveGameList = async () => {
   await executeCommand(
     `echo "${outputString}" > /data/adb/.config/AZenith/gamelist/gamelist.txt`
   );
-  showToast(window.getTranslation("toast.savedPackages", mergedLines.length));
+  toast(window.getTranslation("toast.savedPackages", mergedLines.length));
   hideGameListModal();
 };
 const checklogger = async () => {
@@ -712,7 +708,7 @@ const startService = async () => {
     let s = c.trim();
 
     if (s === "0") {
-      showToast(window.getTranslation("toast.cantRestart"));
+      toast(window.getTranslation("toast.cantRestart"));
       return;
     }
 
@@ -720,11 +716,11 @@ const startService = async () => {
       "/system/bin/toybox pidof sys.azenith-service"
     );
     if (!pid || pid.trim() === "") {
-      showToast(window.getTranslation("toast.serviceDead"));
+      toast(window.getTranslation("toast.serviceDead"));
       return;
     }
 
-    showToast(window.getTranslation("toast.restartingDaemon"));
+    toast(window.getTranslation("toast.restartingDaemon"));
 
     await executeCommand(
       "setprop persist.sys.azenith.state stopped && pkill -9 -f sys.azenith-service; su -c '/data/adb/modules/AZenith/system/bin/sys.azenith-service > /dev/null 2>&1 & disown'"
@@ -732,7 +728,7 @@ const startService = async () => {
 
     await checkServiceStatus();
   } catch (r) {
-    showToast(window.getTranslation("toast.restartFailed"));
+    toast(window.getTranslation("toast.restartFailed"));
     console.error("startService error:", r);
   }
 };
@@ -820,7 +816,7 @@ const hidecolorscheme = () => {
 
   c.classList.remove("show");
   document.body.classList.remove("modal-open");
-  showToast(window.getTranslation("toast.colorSchemeSaved"));
+  toast(window.getTranslation("toast.colorSchemeSaved"));
 
   if (c._resizeHandler) {
     window.removeEventListener("resize", c._resizeHandler);
@@ -845,14 +841,14 @@ const loadDisplaySettings = async () => {
       .map(Number);
 
     if ([s, r, d, l].some(isNaN)) {
-      showToast(window.getTranslation("toast.invalidColorScheme"));
+      toast(window.getTranslation("toast.invalidColorScheme"));
       return { red: 1000, green: 1000, blue: 1000, saturation: 1000 };
     }
 
     return { red: s, green: r, blue: d, saturation: l };
   } catch (m) {
     console.log("Error reading display settings:", m);
-    showToast(window.getTranslation("toast.colorSchemeNotFound"));
+    toast(window.getTranslation("toast.colorSchemeNotFound"));
     return { red: 1000, green: 1000, blue: 1000, saturation: 1000 };
   }
 };
@@ -879,7 +875,7 @@ const resetDisplaySettings = async () => {
   document.getElementById("green").value = 1000;
   document.getElementById("blue").value = 1000;
   document.getElementById("saturation").value = 1000;
-  showToast(window.getTranslation("toast.displayReset"));
+  toast(window.getTranslation("toast.displayReset"));
 };
 const checkAI = async () => {
   let { errno: c, stdout: s } = await executeCommand(
@@ -906,7 +902,7 @@ const applyperformanceprofile = async () => {
     "cat /data/adb/.config/AZenith/API/current_profile"
   );
   if ("1" === c.trim()) {
-    showToast(window.getTranslation("toast.alreadyPerformance"));
+    toast(window.getTranslation("toast.alreadyPerformance"));
     return;
   }
   executeCommand("su -c sys.azenith-profiler 1 >/dev/null 2>&1 &");
@@ -917,7 +913,7 @@ const applybalancedprofile = async () => {
     "cat /data/adb/.config/AZenith/API/current_profile"
   );
   if ("2" === c.trim()) {
-    showToast(window.getTranslation("toast.alreadyBalanced"));
+    toast(window.getTranslation("toast.alreadyBalanced"));
     return;
   }
   executeCommand("su -c sys.azenith-profiler 2 >/dev/null 2>&1 &");
@@ -928,7 +924,7 @@ const applyecomode = async () => {
     "cat /data/adb/.config/AZenith/API/current_profile"
   );
   if ("3" === c.trim()) {
-    showToast(window.getTranslation("toast.alreadyECO"));
+    toast(window.getTranslation("toast.alreadyECO"));
     return;
   }
   executeCommand("su -c sys.azenith-profiler 3 >/dev/null 2>&1 &");
@@ -1176,9 +1172,9 @@ const savelog = async () => {
     await executeCommand(
       "/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf saveLog"
     );
-    showToast(window.getTranslation("toast.logSaved"));
+    toast(window.getTranslation("toast.logSaved"));
   } catch (e) {
-    showToast(window.getTranslation("toast.logSaveFailed"));
+    toast(window.getTranslation("toast.logSaveFailed"));
     console.error("saveLog error:", e);
   }
 };
@@ -1316,7 +1312,7 @@ const loadColorSchemeSettings = async () => {
     currentColor.saturation = 1000;
 
     saveDisplaySettings(1000, 1000, 1000, 1000);
-    showToast(window.getTranslation("toast.displayReset"));
+    toast(window.getTranslation("toast.displayReset"));
   });
 };
 
@@ -1326,7 +1322,7 @@ const detectResolution = async () => {
   );
   if (errno !== 0 || !stdout.trim()) {
     console.error("Failed to detect resolution");
-    showToast(window.getTranslation("toast.unableDetectResolution"));
+    toast(window.getTranslation("toast.unableDetectResolution"));
     return;
   }
 
@@ -1381,7 +1377,7 @@ const selectResolution = async (btn) => {
 
 const applyResolution = async () => {
   if (!window._reso || !window._reso.selected) {
-    showToast(window.getTranslation("toast.noResolutionSelected"));
+    toast(window.getTranslation("toast.noResolutionSelected"));
     return;
   }
 
