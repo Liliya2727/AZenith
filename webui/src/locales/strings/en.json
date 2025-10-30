@@ -1,0 +1,232 @@
+{
+  "loading": {
+    "text": "Initializing..."
+  },
+
+  "infoTab": {
+    "title": "Basic Information",
+    "labels": {
+      "currentProfile": "Current Profile",
+      "chipset": "Chipset",
+      "kernel": "Kernel",
+      "androidVersion": "Android Version"
+    },
+    "buttons": {
+      "changeProfile": "Change Profiles"
+    },
+    "loading": "Getting info..."
+  },
+  
+  "settingsMore": {
+    "additional": {
+      "title": "Additional Settings",
+      "description": "Additional settings to enhance your experience."
+    },
+    "preference": {
+      "title": "Preference Settings",
+      "description": "Preference tweaks or addons that apply on boot."
+    }
+  },
+  
+  "cpu": {
+    "title": "CPU Settings",
+    "default": {
+      "title": "Default CPU Governor",
+      "desc": "Governor that will be used on Normal profile"
+    },
+    "powersave": {
+      "title": "Powersave CPU Governor",
+      "desc": "Governor that will be used on Powersave profile"
+    },
+    "limit": {
+      "title": "Limit CPU Freq",
+      "desc": "Set Max CPU Frequency in Balanced profile and ECO Mode"
+    },
+    "litemode": {
+      "title": "Lite Mode (Reboot to apply)",
+      "desc": "Reduce Overheating by reducing CPU Frequency on Performance Profile"
+    }
+  },
+  
+  "io": {
+    "title": "I/O Scheduler Settings",
+    "default": {
+      "title": "Default I/O Scheduler",
+      "desc": "Scheduler that will be used on Normal profile"
+    },
+    "performance": {
+      "title": "Performance I/O Scheduler",
+      "desc": "Scheduler that will be used on Performance profile"
+    },
+    "powersave": {
+      "title": "Powersave I/O Scheduler",
+      "desc": "Scheduler that will be used on Powersave profile"
+    }
+  },
+  
+  "thanks": {
+    "title": "Thanks!✨",
+    "message": "Thanks for using AZenith! I really appreciate you for using AZenith. Without you, this module wouldn't be here today. AZenith will always be with you!",
+    "footer": "WebUI Designed by @kanaochar & @Zexshia"
+  },
+  
+  "preference": {
+    "title": "Preference Settings",
+    "description": "Preference settings or addons that are applied on boot (requires reboot after changes).",
+    "schedtunes": {
+      "title": "Sched Tunes",
+      "desc": "Optimize CPU frequency scaling for all CPU clusters by adjusting up/down rate limits (for schedutil and schedhorizon)."
+    },
+    "sfl": {
+      "title": "SurfaceFlinger Latency",
+      "desc": "Tweak SurfaceFlinger to reduce screen latency and improve responsiveness."
+    },
+    "jit": {
+      "title": "Just In Time",
+      "desc": "Improve application performance by enabling JIT compilation."
+    },
+    "trace": {
+      "title": "Disable Trace",
+      "desc": "Disable kernel tracing and Android framework tracing."
+    },
+    "fpsged": {
+      "title": "FPSGO and GED Parameter",
+      "desc": "Use optimized FPSGO and GED parameters."
+    },
+    "logd": {
+      "title": "Kill Logger",
+      "desc": "Disable system logging services to reduce background activity and improve performance."
+    },
+    "malisched": {
+      "title": "GPU Mali Scheduling",
+      "desc": "Force the GPU to serialize job processing to improve predictability or reduce power usage in low-load conditions."
+    },
+    "dthermal": {
+      "title": "Disable Thermal",
+      "desc": "Kill thermal service (may cause overheating)."
+    }
+  },
+  
+  "settingsAddi": {
+    "additional": {
+      "title": "Additional Settings",
+      "description": "Additional settings to enhance your experience.",
+      "gpreload": {
+        "title": "Game Preload",
+        "description": "Preload all required libraries when game starts to reduce load time and minimize lag."
+      },
+      "memorykiller": {
+        "title": "Memory Killer",
+        "description": "Kill all running apps in the background on Performance Profile."
+      },
+      "apppriority": {
+        "title": "App Priority Control",
+        "description": "Increase CPU and I/O Scheduling Priority on Performance Profile."
+      },
+      "bypasscharge": {
+        "title": "Bypass Charge",
+        "description": "Enable Bypass Charging in Performance Profile. Works on most MediaTek devices."
+      },
+      "dnd": {
+        "title": "Do Not Disturb",
+        "description": "Block all notifications on Performance Profile to enhance gaming experience."
+      },
+      "vsync": {
+        "title": "Disable VSync",
+        "description": "Disable synchronization between rendering frame rate and display refresh rate."
+      },
+      "fstrim": {
+        "title": "FSTrim Partition",
+        "description": "Trim unused blocks in system partitions to optimize I/O performance and reduce storage overhead.",
+        "button": "Trim"
+      },
+      "customreso": "Custom Resolution Settings",
+      "colorscheme": "Color Scheme Settings"
+    }
+  },
+  
+  "settingsProfile": {
+    "profiler": {
+      "title": "Profiler",
+      "description": "Set current active Profiles.",
+      "balanced": "Apply Balanced Profile",
+      "performance": "Apply Performance Profile",
+      "powersave": "Apply ECO Mode"
+    }
+  },
+  
+  "settingsReso": {
+    "resolution": {
+      "title": "Underscale Resolution",
+      "description": "Set device virtual resolution to a smaller size.",
+      "low": {
+        "title": "Low Resolution (80%)",
+        "size": ""
+      },
+      "mid": {
+        "title": "Mid Resolution (90%)",
+        "size": ""
+      },
+      "max": {
+        "title": "Max Resolution (100%)",
+        "size": ""
+      },
+      "cancel": "Cancel",
+      "apply": "Apply"
+    }
+  },
+  
+  "settingsModule": {
+    "title": "Module Settings",
+    "verbose": {
+      "title": "Enable Verbose Logging for AZenith",
+      "desc": "Allow Verbose logging of AZenith (keep it disabled if you don't know what this is)."
+    },
+    "toast": {
+      "title": "Show Toast Notifications",
+      "desc": "Show toast notification when changing profiles."
+    },
+    "disableai": {
+      "title": "Disable Dynamic Profile",
+      "desc": "Disable switching profiles when opening games (skip performance profiles)."
+    },
+    "buttons": {
+      "save": "Save Logs",
+      "edit": "Edit Gamelist",
+      "restart": "Reinitialize Daemon"
+    }
+  },
+  
+  "scheme": {
+    "title": "Color Scheme",
+    "description": "Adjust screen saturation and RGB colors.",
+    "red": {
+      "title": "# Red"
+    },
+    "green": {
+      "title": "# Green"
+    },
+    "blue": {
+      "title": "# Blue"
+    },
+    "saturation": {
+      "title": "# Saturation"
+    },
+    "buttons": {
+      "reset": "Reset Color Settings",
+      "apply": "Apply"
+    }
+  },
+  
+  "gamelist": {
+    "title": "Game List",
+    "description": "Any apps and games listed here will trigger the Game Profile.",
+    "search": {
+      "placeholder": "Search package name"
+    },
+    "buttons": {
+      "cancel": "Cancel",
+      "save": "Save"
+    }
+  }
+}

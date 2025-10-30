@@ -1,0 +1,232 @@
+{
+  "loading": {
+    "text": "Nginitialisasi..."
+  },
+
+  "infoTab": {
+    "title": "Informasi Dhasar",
+    "labels": {
+      "currentProfile": "Profil Saiki",
+      "chipset": "Chipset",
+      "kernel": "Kernel",
+      "androidVersion": "Versi Android"
+    },
+    "buttons": {
+      "changeProfile": "Ganti Profil"
+    },
+    "loading": "Njupuk informasi..."
+  },
+  
+  "settingsMore": {
+    "additional": {
+      "title": "Pangaturan Tambahan",
+      "description": "Pangaturan tambahan kanggo ningkataké pengalamanmu."
+    },
+    "preference": {
+      "title": "Pangaturan Preferensi",
+      "description": "Opsi utawa tambahan sing ditrapké nalika boot."
+    }
+  },
+  
+  "cpu": {
+    "title": "Pangaturan CPU",
+    "default": {
+      "title": "Gubernur CPU Standar",
+      "desc": "Gubernur sing digunakaké kanggo profil Normal"
+    },
+    "powersave": {
+      "title": "Gubernur CPU Irit Daya",
+      "desc": "Gubernur sing digunakaké kanggo profil Irit Daya"
+    },
+    "limit": {
+      "title": "Watesi Frekuensi CPU",
+      "desc": "Nentokaké frekuensi maksimum CPU ing profil Seimbang utawa ECO Mode"
+    },
+    "litemode": {
+      "title": "Mode Enteng (Reboot kanggo nerapaké)",
+      "desc": "Ngurangi panas kanthi nyuda frekuensi CPU ing Profil Performa"
+    }
+  },
+  
+  "io": {
+    "title": "Pangaturan Penjadwal I/O",
+    "default": {
+      "title": "Penjadwal I/O Standar",
+      "desc": "Penjadwal sing digunakaké ing profil Normal"
+    },
+    "performance": {
+      "title": "Penjadwal I/O Performa",
+      "desc": "Penjadwal sing digunakaké ing profil Performa"
+    },
+    "powersave": {
+      "title": "Penjadwal I/O Irit Daya",
+      "desc": "Penjadwal sing digunakaké ing profil Irit Daya"
+    }
+  },
+  
+  "thanks": {
+    "title": "Matur nuwun!✨",
+    "message": "Matur nuwun wis nganggo AZenith! Aku banget ngapresiasi panjenengan. Tanpa sampeyan, modul iki ora bakal ana saiki. AZenith bakal terus ngancani sampeyan!",
+    "footer": "WebUI dirancang déning @kanaochar & @Zexshia"
+  },
+  
+  "preference": {
+    "title": "Pangaturan Preferensi",
+    "description": "Pangaturan utawa tambahan sing ditrapaké nalika boot (mbutuhaké reboot sawisé diowahi).",
+    "schedtunes": {
+      "title": "Sched Tunes",
+      "desc": "Ngoptimalaké scaling frekuensi CPU kanthi nyetel watesan munggah/mudhun kanggo saben kluster CPU (schedutil lan schedhorizon)."
+    },
+    "sfl": {
+      "title": "Latensi SurfaceFlinger",
+      "desc": "Ngatur SurfaceFlinger kanggo nyuda latensi layar lan ningkataké responsifitas."
+    },
+    "jit": {
+      "title": "Just In Time",
+      "desc": "Ningkataké kinerja aplikasi kanthi ngaktifaké kompilasi JIT."
+    },
+    "trace": {
+      "title": "Mateni Trace",
+      "desc": "Mateni tracing kernel lan framework Android."
+    },
+    "fpsged": {
+      "title": "Parameter FPSGO lan GED",
+      "desc": "Gunakna parameter FPSGO lan GED sing wis dioptimalaké."
+    },
+    "logd": {
+      "title": "Mateni Logger",
+      "desc": "Mateni layanan logging sistem kanggo nyuda aktivitas latar lan nambah performa."
+    },
+    "malisched": {
+      "title": "Pangjadwal GPU Mali",
+      "desc": "Maksak GPU supaya nglakoni proses siji-siji kanggo nambah stabilitas utawa nyuda konsumsi daya."
+    },
+    "dthermal": {
+      "title": "Mateni Thermal",
+      "desc": "Mateni layanan thermal (bisa nyebabaké panas banget)."
+    }
+  },
+  
+  "settingsAddi": {
+    "additional": {
+      "title": "Pangaturan Tambahan",
+      "description": "Pangaturan tambahan kanggo ningkataké pengalamanmu.",
+      "gpreload": {
+        "title": "Game Preload",
+        "description": "Mbukak kabeh pustaka sing dibutuhaké nalika game diwiwiti kanggo nyuda wektu muat lan nyegah lag."
+      },
+      "memorykiller": {
+        "title": "Pambunuh Memori",
+        "description": "Mateni kabeh aplikasi latar ing Profil Performa."
+      },
+      "apppriority": {
+        "title": "Kontrol Prioritas Aplikasi",
+        "description": "Ningkataké prioritas CPU lan I/O nalika Profil Performa aktif."
+      },
+      "bypasscharge": {
+        "title": "Bypass Ngecas",
+        "description": "Ngaktifaké Bypass Charging ing Profil Performa. Dukung ing piranti MediaTek tartamtu."
+      },
+      "dnd": {
+        "title": "Aja Diganggu",
+        "description": "Blokir kabèh notifikasi ing Profil Performa kanggo pengalaman main sing luwih fokus."
+      },
+      "vsync": {
+        "title": "Mateni VSync",
+        "description": "Mateni sinkronisasi antarane frame rate rendering lan refresh rate layar."
+      },
+      "fstrim": {
+        "title": "FSTrim Partisi",
+        "description": "Ngresiki blok sing ora dienggo kanggo ngoptimalaké kinerja I/O lan ngirit panyimpenan.",
+        "button": "Trim"
+      },
+      "customreso": "Pangaturan Resolusi Kustom",
+      "colorscheme": "Pangaturan Skema Warna"
+    }
+  },
+  
+  "settingsProfile": {
+    "profiler": {
+      "title": "Profil",
+      "description": "Setel profil sing saiki aktif.",
+      "balanced": "Terapaké Profil Seimbang",
+      "performance": "Terapaké Profil Performa",
+      "powersave": "Terapaké Mode ECO"
+    }
+  },
+  
+  "settingsReso": {
+    "resolution": {
+      "title": "Ngatur Resolusi Layar",
+      "description": "Nyuda resolusi virtual piranti supaya luwih cilik.",
+      "low": {
+        "title": "Resolusi Rendah (80%)",
+        "size": ""
+      },
+      "mid": {
+        "title": "Resolusi Sedheng (90%)",
+        "size": ""
+      },
+      "max": {
+        "title": "Resolusi Maksimum (100%)",
+        "size": ""
+      },
+      "cancel": "Batal",
+      "apply": "Terapaké"
+    }
+  },
+  
+  "settingsModule": {
+    "title": "Pangaturan Modul",
+    "verbose": {
+      "title": "Aktifaké Logging Verbose kanggo AZenith",
+      "desc": "Ngidini logging rinci kanggo AZenith (aja diaktifaké yen ora ngerti)."
+    },
+    "toast": {
+      "title": "Tampilaké Notifikasi Toast",
+      "desc": "Tampilaké notifikasi nalika ganti profil."
+    },
+    "disableai": {
+      "title": "Pateni Profil Dinamis",
+      "desc": "Nyegah pangowahan profil otomatis nalika mbukak game."
+    },
+    "buttons": {
+      "save": "Simpen Log",
+      "edit": "Sunting Daftar Game",
+      "restart": "Mulihké Dæmon"
+    }
+  },
+  
+  "scheme": {
+    "title": "Skema Warna",
+    "description": "Ngatur saturasi lan warna RGB layar.",
+    "red": {
+      "title": "# Abang"
+    },
+    "green": {
+      "title": "# Ijo"
+    },
+    "blue": {
+      "title": "# Biru"
+    },
+    "saturation": {
+      "title": "# Saturasi"
+    },
+    "buttons": {
+      "reset": "Balèkaké Setelan Warna",
+      "apply": "Terapaké"
+    }
+  },
+  
+  "gamelist": {
+    "title": "Daftar Game",
+    "description": "Aplikasi utawa game ing kéné bakal ngaktifaké Profil Game.",
+    "search": {
+      "placeholder": "Telusuri jeneng paket"
+    },
+    "buttons": {
+      "cancel": "Batal",
+      "save": "Simpen"
+    }
+  }
+}

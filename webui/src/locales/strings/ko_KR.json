@@ -1,0 +1,232 @@
+{
+  "loading": {
+    "text": "초기화 중..."
+  },
+
+  "infoTab": {
+    "title": "기본 정보",
+    "labels": {
+      "currentProfile": "현재 프로필",
+      "chipset": "칩셋",
+      "kernel": "커널",
+      "androidVersion": "안드로이드 버전"
+    },
+    "buttons": {
+      "changeProfile": "프로필 변경"
+    },
+    "loading": "정보 가져오는 중..."
+  },
+
+  "settingsMore": {
+    "additional": {
+      "title": "추가 설정",
+      "description": "경험을 향상시키기 위한 추가 설정입니다."
+    },
+    "preference": {
+      "title": "환경 설정",
+      "description": "부팅 시 적용되는 환경 설정 및 추가 기능입니다."
+    }
+  },
+
+  "cpu": {
+    "title": "CPU 설정",
+    "default": {
+      "title": "기본 CPU 거버너",
+      "desc": "일반 프로필에서 사용되는 거버너입니다."
+    },
+    "powersave": {
+      "title": "절전 CPU 거버너",
+      "desc": "절전 프로필에서 사용되는 거버너입니다."
+    },
+    "limit": {
+      "title": "CPU 주파수 제한",
+      "desc": "균형 및 ECO 모드에서 최대 CPU 주파수를 설정합니다."
+    },
+    "litemode": {
+      "title": "라이트 모드 (재부팅 필요)",
+      "desc": "성능 프로필에서 CPU 주파수를 낮춰 발열을 줄입니다."
+    }
+  },
+
+  "io": {
+    "title": "I/O 스케줄러 설정",
+    "default": {
+      "title": "기본 I/O 스케줄러",
+      "desc": "일반 프로필에서 사용되는 스케줄러입니다."
+    },
+    "performance": {
+      "title": "성능 I/O 스케줄러",
+      "desc": "성능 프로필에서 사용되는 스케줄러입니다."
+    },
+    "powersave": {
+      "title": "절전 I/O 스케줄러",
+      "desc": "절전 프로필에서 사용되는 스케줄러입니다."
+    }
+  },
+
+  "thanks": {
+    "title": "감사합니다! ✨",
+    "message": "AZenith를 사용해 주셔서 감사합니다! 여러분 덕분에 이 모듈이 존재할 수 있습니다. AZenith는 항상 여러분과 함께할 것입니다!",
+    "footer": "WebUI 디자인: @kanaochar & @Zexshia"
+  },
+
+  "preference": {
+    "title": "환경 설정",
+    "description": "부팅 시 적용되는 환경 설정 또는 추가 기능입니다 (변경 후 재부팅 필요).",
+    "schedtunes": {
+      "title": "Sched Tunes",
+      "desc": "모든 CPU 클러스터의 주파수 스케일링 속도를 최적화합니다."
+    },
+    "sfl": {
+      "title": "SurfaceFlinger 지연시간",
+      "desc": "화면 지연을 줄이고 반응성을 향상시킵니다."
+    },
+    "jit": {
+      "title": "JIT (즉시 컴파일)",
+      "desc": "JIT 컴파일을 활성화하여 앱 성능을 향상시킵니다."
+    },
+    "trace": {
+      "title": "트레이스 비활성화",
+      "desc": "커널 및 프레임워크 트레이싱을 비활성화합니다."
+    },
+    "fpsged": {
+      "title": "FPSGO 및 GED 매개변수",
+      "desc": "최적화된 FPSGO 및 GED 매개변수를 사용합니다."
+    },
+    "logd": {
+      "title": "로거 비활성화",
+      "desc": "시스템 로그 서비스를 중단하여 백그라운드 활동을 줄입니다."
+    },
+    "malisched": {
+      "title": "Mali GPU 스케줄링",
+      "desc": "GPU 작업을 직렬화하여 전력 소모를 줄이거나 예측 가능성을 높입니다."
+    },
+    "dthermal": {
+      "title": "온도 제어 비활성화",
+      "desc": "온도 제어 서비스를 중단합니다 (과열 위험 있음)."
+    }
+  },
+
+  "settingsAddi": {
+    "additional": {
+      "title": "추가 설정",
+      "description": "경험을 향상시키기 위한 추가 기능입니다.",
+      "gpreload": {
+        "title": "게임 프리로드",
+        "description": "게임 실행 시 필요한 라이브러리를 미리 불러와 로딩 시간을 줄입니다."
+      },
+      "memorykiller": {
+        "title": "메모리 정리",
+        "description": "성능 프로필에서 백그라운드 앱을 모두 종료합니다."
+      },
+      "apppriority": {
+        "title": "앱 우선순위 제어",
+        "description": "성능 프로필에서 CPU 및 I/O 우선순위를 높입니다."
+      },
+      "bypasscharge": {
+        "title": "충전 우회",
+        "description": "성능 프로필에서 충전 우회를 활성화합니다 (대부분의 미디어텍 기기에서 작동)."
+      },
+      "dnd": {
+        "title": "방해 금지 모드",
+        "description": "성능 프로필에서 알림을 차단하여 게임 집중도를 높입니다."
+      },
+      "vsync": {
+        "title": "VSync 비활성화",
+        "description": "렌더링 프레임과 화면 주사율의 동기화를 해제합니다."
+      },
+      "fstrim": {
+        "title": "FSTrim 파티션",
+        "description": "시스템 파티션의 불필요한 블록을 정리하여 I/O 성능을 최적화합니다.",
+        "button": "정리"
+      },
+      "customreso": "사용자 해상도 설정",
+      "colorscheme": "색상 스킴 설정"
+    }
+  },
+
+  "settingsProfile": {
+    "profiler": {
+      "title": "프로필 설정",
+      "description": "현재 활성화된 프로필을 설정합니다.",
+      "balanced": "균형 프로필 적용",
+      "performance": "성능 프로필 적용",
+      "powersave": "ECO 모드 적용"
+    }
+  },
+
+  "settingsReso": {
+    "resolution": {
+      "title": "해상도 축소 설정",
+      "description": "기기의 가상 해상도를 낮춥니다.",
+      "low": {
+        "title": "저해상도 (80%)",
+        "size": ""
+      },
+      "mid": {
+        "title": "중간 해상도 (90%)",
+        "size": ""
+      },
+      "max": {
+        "title": "최대 해상도 (100%)",
+        "size": ""
+      },
+      "cancel": "취소",
+      "apply": "적용"
+    }
+  },
+
+  "settingsModule": {
+    "title": "모듈 설정",
+    "verbose": {
+      "title": "AZenith 자세한 로그 활성화",
+      "desc": "AZenith의 세부 로그를 허용합니다 (이 기능이 무엇인지 모를 경우 비활성화하세요)."
+    },
+    "toast": {
+      "title": "토스트 알림 표시",
+      "desc": "프로필 변경 시 토스트 알림을 표시합니다."
+    },
+    "disableai": {
+      "title": "동적 프로필 비활성화",
+      "desc": "게임 실행 시 자동 프로필 전환 기능을 비활성화합니다."
+    },
+    "buttons": {
+      "save": "로그 저장",
+      "edit": "게임 목록 편집",
+      "restart": "데몬 재시작"
+    }
+  },
+
+  "scheme": {
+    "title": "색상 스킴",
+    "description": "화면의 채도 및 RGB 색상을 조정합니다.",
+    "red": {
+      "title": "# 빨강"
+    },
+    "green": {
+      "title": "# 초록"
+    },
+    "blue": {
+      "title": "# 파랑"
+    },
+    "saturation": {
+      "title": "# 채도"
+    },
+    "buttons": {
+      "reset": "색상 설정 초기화",
+      "apply": "적용"
+    }
+  },
+
+  "gamelist": {
+    "title": "게임 목록",
+    "description": "여기에 등록된 앱과 게임은 게임 프로필을 자동으로 활성화합니다.",
+    "search": {
+      "placeholder": "패키지 이름 검색"
+    },
+    "buttons": {
+      "cancel": "취소",
+      "save": "저장"
+    }
+  }
+}

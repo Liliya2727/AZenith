@@ -1,0 +1,232 @@
+{
+  "loading": {
+  "text": "Menginisialisasi..."
+  },
+
+  "infoTab": {
+    "title": "Informasi Dasar",
+    "labels": {
+      "currentProfile": "Profil Saat Ini",
+      "chipset": "Chipset",
+      "kernel": "Kernel",
+      "androidVersion": "Versi Android"
+    },
+    "buttons": {
+      "changeProfile": "Ganti Profil"
+    },
+    "loading": "Mengambil info..."
+  },
+  
+  "settingsMore": {
+    "additional": {
+      "title": "Tambahan",
+      "description": "Pengaturan tambahan untuk meningkatkan pengalaman Anda."
+    },
+    "preference": {
+      "title": "Preferensi",
+      "description": "Penyesuaian atau tambahan yang diterapkan saat boot."
+    }
+  },
+  
+    "cpu": {
+    "title": "Pengaturan CPU",
+    "default": {
+      "title": "Governor CPU Default",
+      "desc": "Governor yang digunakan pada profil Balanced"
+    },
+    "powersave": {
+      "title": "Governor CPU Powersave",
+      "desc": "Governor yang digunakan pada profil Powersave"
+    },
+    "limit": {
+      "title": "Limit Frekuensi CPU",
+      "desc": "Set CPU maximum frekuensi pada profil Balanced dan ECO Mode"
+    },
+    "litemode": {
+      "title": "Mode Lite (Mulai ulang untuk menerapkan)",
+      "desc": "Kurangi panas berlebih dengan menurunkan frekuensi CPU pada Profil Performance"
+    }
+  },
+  
+    "io": {
+    "title": "Pengaturan I/O Scheduler",
+    "default": {
+      "title": "I/O Scheduler Default",
+      "desc": "Scheduler yang akan digunakan pada profil Balanced"
+    },
+    "performance": {
+      "title": "I/O Scheduler Performance",
+      "desc": "Scheduler yang akan digunakan pada profil Performance"
+    },
+    "powersave": {
+      "title": "I/O Scheduler Powersave",
+      "desc": "Scheduler yang akan digunakan pada profil Powersave"
+    }
+  },
+  
+  "thanks": {
+    "title": "Terima Kasih!✨",
+    "message": "Terima kasih telah menggunakan AZenith! Kami sangat menghargai dukunganmu. Tanpamu, modul ini tidak akan ada hingga hari ini. AZenith akan selalu bersamamu!",
+    "footer": "WebUI dibuat oleh @kanaochar & @Zexshia"
+  },
+  
+  "preference": {
+    "title": "Pengaturan Preferensi",
+    "description": "Pengaturan atau tambahan yang diterapkan saat boot (perlu reboot setelah perubahan).",
+    "schedtunes": {
+      "title": "Sched Tunes",
+      "desc": "Optimalkan skala frekuensi CPU dengan menyesuaikan batas up/down untuk semua kluster CPU (untuk schedutil dan schedhorizon)."
+    },
+    "sfl": {
+      "title": "SurfaceFlinger Latency",
+      "desc": "Ubah pengaturan SurfaceFlinger untuk mengurangi latensi layar dan meningkatkan responsivitas."
+    },
+    "jit": {
+      "title": "Just In Time",
+      "desc": "Tingkatkan performa aplikasi dengan mengaktifkan kompilasi JIT."
+    },
+    "trace": {
+      "title": "Disable Trace",
+      "desc": "Nonaktifkan kernel tracing dan Android framework tracing."
+    },
+    "fpsged": {
+      "title": "FPSGO dan GED Parameter",
+      "desc": "Gunakan parameter FPSGO dan GED yang telah dioptimalkan."
+    },
+    "logd": {
+      "title": "Kill Logger",
+      "desc": "Nonaktifkan logging service sistem untuk mengurangi aktivitas latar belakang dan meningkatkan performa."
+    },
+    "malisched": {
+      "title": "GPU Mali Scheduling",
+      "desc": "Paksa GPU memproses pekerjaan satu per satu untuk meningkatkan prediktabilitas atau mengurangi penggunaan daya pada beban rendah."
+    },
+    "dthermal": {
+      "title": "Disable Thermal",
+      "desc": "Matikan thermal service (dapat menyebabkan overheating)."
+    }
+  },
+  
+  "settingsAddi": {
+    "additional": {
+      "title": "Pengaturan Tambahan",
+      "description": "Pengaturan tambahan untuk meningkatkan pengalaman Anda.",
+      "gpreload": {
+        "title": "Game Preload",
+        "description": "Memuat semua pustaka yang dibutuhkan saat game dimulai untuk mengurangi waktu loading dan meminimalkan lag."
+      },
+      "memorykiller": {
+        "title": "Memory Killer",
+        "description": "Menutup semua aplikasi yang berjalan di latar belakang pada Profil Performa."
+      },
+      "apppriority": {
+        "title": "App Priority Control",
+        "description": "Meningkatkan prioritas CPU dan penjadwalan I/O pada Profil Performa."
+      },
+      "bypasscharge": {
+        "title": "Bypass Charge",
+        "description": "Mengaktifkan bypass charging pada Profil Performa. Berfungsi pada sebagian besar perangkat MediaTek."
+      },
+      "dnd": {
+        "title": "Do Not Disturb",
+        "description": "Memblokir semua notifikasi pada Profil Performa untuk meningkatkan pengalaman bermain."
+      },
+      "vsync": {
+        "title": "Disable VSync",
+        "description": "Menonaktifkan sinkronisasi antara frame rate render dan refresh rate layar."
+      },
+      "fstrim": {
+        "title": "FSTrim Partition",
+        "description": "Membersihkan blok tidak terpakai di partisi sistem untuk mengoptimalkan kinerja I/O dan mengurangi beban penyimpanan.",
+        "button": "Trim"
+      },
+      "customreso": "Atur Kustom Resolusi",
+      "colorscheme": "Atur Skema Warna"
+    }
+  },
+  
+  "settingsProfile": {
+    "profiler": {
+      "title": "Profiler",
+      "description": "Atur profil aktif saat ini.",
+      "balanced": "Terapkan Profil Balanced",
+      "performance": "Terapkan Profil Performance",
+      "powersave": "Terapkan ECO Mode"
+    }
+  },
+  
+  "settingsReso": {
+    "resolution": {
+      "title": "Atur Resolusi",
+      "description": "Atur resolusi virtual perangkat menjadi lebih kecil.",
+      "low": {
+        "title": "Resolusi Rendah (80%)",
+        "size": ""
+      },
+      "mid": {
+        "title": "Resolusi Menengah (90%)",
+        "size": ""
+      },
+      "max": {
+        "title": "Resolusi Maksimum (100%)",
+        "size": ""
+      },
+      "cancel": "Batal",
+      "apply": "Terapkan"
+    }
+  },
+  
+  "settingsModule": {
+    "title": "Pengaturan Modul",
+    "verbose": {
+      "title": "Aktifkan Log Verbose untuk AZenith",
+      "desc": "Izinkan logging detail AZenith (biarkan nonaktif jika tidak tahu fungsinya)."
+    },
+    "toast": {
+      "title": "Tampilkan Notifikasi Toast",
+      "desc": "Tampilkan notifikasi toast saat mengganti profil."
+    },
+    "disableai": {
+      "title": "Nonaktifkan Auto Mode",
+      "desc": "Nonaktifkan pergantian profil otomatis saat membuka game (lewati profil performa)."
+    },
+    "buttons": {
+      "save": "Simpan Log",
+      "edit": "Edit Daftar Game",
+      "restart": "Inisialisasi Ulang Daemon"
+    }
+  },
+
+  "scheme": {
+    "title": "Skema Warna",
+    "description": "Atur kejenuhan layar dan warna RGB.",
+    "red": {
+      "title": "# Merah"
+    },
+    "green": {
+      "title": "# Hijau"
+    },
+    "blue": {
+      "title": "# Biru"
+    },
+    "saturation": {
+      "title": "# Saturasi"
+    },
+    "buttons": {
+      "reset": "Atur Ulang Warna",
+      "apply": "Terapkan"
+    }
+  },
+  
+  "gamelist": {
+    "title": "Daftar Game",
+    "description": "Aplikasi dan game yang tersimpan di sini akan mengganti Profil Game.",
+    "search": {
+      "placeholder": "Cari nama pkg"
+    },
+    "buttons": {
+      "cancel": "Batal",
+      "save": "Simpan"
+    }
+  }
+}

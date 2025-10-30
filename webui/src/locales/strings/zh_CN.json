@@ -1,0 +1,232 @@
+{
+  "loading": {
+    "text": "正在初始化..."
+  },
+
+  "infoTab": {
+    "title": "基本信息",
+    "labels": {
+      "currentProfile": "当前配置文件",
+      "chipset": "芯片组",
+      "kernel": "内核",
+      "androidVersion": "Android 版本"
+    },
+    "buttons": {
+      "changeProfile": "更改配置文件"
+    },
+    "loading": "正在获取信息..."
+  },
+
+  "settingsMore": {
+    "additional": {
+      "title": "附加设置",
+      "description": "用于提升使用体验的额外设置。"
+    },
+    "preference": {
+      "title": "偏好设置",
+      "description": "在启动时应用的偏好或附加功能。"
+    }
+  },
+
+  "cpu": {
+    "title": "CPU 设置",
+    "default": {
+      "title": "默认 CPU Governor",
+      "desc": "用于普通配置文件的 Governor"
+    },
+    "powersave": {
+      "title": "省电 CPU Governor",
+      "desc": "用于省电配置文件的 Governor"
+    },
+    "limit": {
+      "title": "限制 CPU 频率",
+      "desc": "在平衡模式和 ECO 模式下设置最大频率"
+    },
+    "litemode": {
+      "title": "轻量模式（重启生效）",
+      "desc": "通过降低性能模式下的 CPU 频率减少过热。"
+    }
+  },
+
+  "io": {
+    "title": "I/O 调度器设置",
+    "default": {
+      "title": "默认 I/O 调度器",
+      "desc": "用于普通配置文件的调度器"
+    },
+    "performance": {
+      "title": "性能 I/O 调度器",
+      "desc": "用于性能配置文件的调度器"
+    },
+    "powersave": {
+      "title": "省电 I/O 调度器",
+      "desc": "用于省电配置文件的调度器"
+    }
+  },
+
+  "thanks": {
+    "title": "感谢使用！✨",
+    "message": "感谢您使用 AZenith！非常感谢您的支持，没有您，这个模块就不会存在。AZenith 将一直陪伴您！",
+    "footer": "WebUI 设计：@kanaochar & @Zexshia"
+  },
+
+  "preference": {
+    "title": "偏好设置",
+    "description": "在启动时应用的偏好或附加功能（修改后需重启）。",
+    "schedtunes": {
+      "title": "Sched Tunes",
+      "desc": "通过调整上升/下降速率限制优化所有 CPU 集群的频率调度。"
+    },
+    "sfl": {
+      "title": "SurfaceFlinger 延迟",
+      "desc": "优化 SurfaceFlinger，减少屏幕延迟，提高响应速度。"
+    },
+    "jit": {
+      "title": "即时编译 (JIT)",
+      "desc": "启用 JIT 编译，提高应用性能。"
+    },
+    "trace": {
+      "title": "禁用 Trace",
+      "desc": "禁用内核和 Android 框架的跟踪功能。"
+    },
+    "fpsged": {
+      "title": "FPSGO 与 GED 参数",
+      "desc": "使用优化后的 FPSGO 和 GED 参数。"
+    },
+    "logd": {
+      "title": "关闭日志系统",
+      "desc": "禁用系统日志服务，减少后台活动以提升性能。"
+    },
+    "malisched": {
+      "title": "GPU Mali 调度",
+      "desc": "强制 GPU 串行执行任务，提高稳定性或降低功耗。"
+    },
+    "dthermal": {
+      "title": "禁用温控",
+      "desc": "关闭温控服务（可能导致过热）。"
+    }
+  },
+
+  "settingsAddi": {
+    "additional": {
+      "title": "附加设置",
+      "description": "用于提升使用体验的额外设置。",
+      "gpreload": {
+        "title": "游戏预加载",
+        "description": "在启动游戏时预加载必要库文件，减少加载时间并降低卡顿。"
+      },
+      "memorykiller": {
+        "title": "内存清理",
+        "description": "在性能模式下关闭后台运行的应用程序。"
+      },
+      "apppriority": {
+        "title": "应用优先级控制",
+        "description": "在性能模式下提高 CPU 和 I/O 调度优先级。"
+      },
+      "bypasscharge": {
+        "title": "旁路充电",
+        "description": "在性能模式下启用旁路充电（适用于多数联发科设备）。"
+      },
+      "dnd": {
+        "title": "勿扰模式",
+        "description": "在性能模式下屏蔽所有通知，提升游戏体验。"
+      },
+      "vsync": {
+        "title": "禁用 VSync",
+        "description": "禁用渲染帧率与显示刷新率同步。"
+      },
+      "fstrim": {
+        "title": "FSTrim 分区",
+        "description": "清理未使用的存储块以优化 I/O 性能。",
+        "button": "清理"
+      },
+      "customreso": "自定义分辨率设置",
+      "colorscheme": "颜色方案设置"
+    }
+  },
+
+  "settingsProfile": {
+    "profiler": {
+      "title": "配置文件管理",
+      "description": "设置当前活动的配置文件。",
+      "balanced": "应用平衡模式",
+      "performance": "应用性能模式",
+      "powersave": "应用 ECO 模式"
+    }
+  },
+
+  "settingsReso": {
+    "resolution": {
+      "title": "缩放分辨率",
+      "description": "将设备虚拟分辨率设置为较小尺寸。",
+      "low": {
+        "title": "低分辨率 (80%)",
+        "size": ""
+      },
+      "mid": {
+        "title": "中分辨率 (90%)",
+        "size": ""
+      },
+      "max": {
+        "title": "最大分辨率 (100%)",
+        "size": ""
+      },
+      "cancel": "取消",
+      "apply": "应用"
+    }
+  },
+
+  "settingsModule": {
+    "title": "模块设置",
+    "verbose": {
+      "title": "启用详细日志",
+      "desc": "启用 AZenith 的详细日志记录（不熟悉请保持关闭）。"
+    },
+    "toast": {
+      "title": "显示提示通知",
+      "desc": "在切换配置文件时显示提示消息。"
+    },
+    "disableai": {
+      "title": "禁用智能切换",
+      "desc": "禁用游戏启动时的自动性能模式切换。"
+    },
+    "buttons": {
+      "save": "保存日志",
+      "edit": "编辑游戏列表",
+      "restart": "重新初始化守护进程"
+    }
+  },
+
+  "scheme": {
+    "title": "颜色方案",
+    "description": "调整屏幕饱和度与 RGB 颜色。",
+    "red": {
+      "title": "# 红色"
+    },
+    "green": {
+      "title": "# 绿色"
+    },
+    "blue": {
+      "title": "# 蓝色"
+    },
+    "saturation": {
+      "title": "# 饱和度"
+    },
+    "buttons": {
+      "reset": "重置颜色设置",
+      "apply": "应用"
+    }
+  },
+
+  "gamelist": {
+    "title": "游戏列表",
+    "description": "此处列出的应用或游戏将触发游戏模式。",
+    "search": {
+      "placeholder": "搜索包名"
+    },
+    "buttons": {
+      "cancel": "取消",
+      "save": "保存"
+    }
+  }
+}

@@ -1,0 +1,232 @@
+{
+  "loading": {
+    "text": "初期化中..."
+  },
+
+  "infoTab": {
+    "title": "基本情報",
+    "labels": {
+      "currentProfile": "現在のプロファイル",
+      "chipset": "チップセット",
+      "kernel": "カーネル",
+      "androidVersion": "Android バージョン"
+    },
+    "buttons": {
+      "changeProfile": "プロファイルを変更"
+    },
+    "loading": "情報を取得中..."
+  },
+
+  "settingsMore": {
+    "additional": {
+      "title": "追加設定",
+      "description": "体験を向上させるための追加設定です。"
+    },
+    "preference": {
+      "title": "プリファレンス設定",
+      "description": "起動時に適用されるカスタム設定やアドオンです。"
+    }
+  },
+
+  "cpu": {
+    "title": "CPU 設定",
+    "default": {
+      "title": "デフォルト CPU ガバナー",
+      "desc": "通常プロファイルで使用されるガバナー"
+    },
+    "powersave": {
+      "title": "省電力 CPU ガバナー",
+      "desc": "省電力プロファイルで使用されるガバナー"
+    },
+    "limit": {
+      "title": "CPU 周波数を制限",
+      "desc": "バランスプロファイルおよび ECO モードでの最大周波数を設定"
+    },
+    "litemode": {
+      "title": "ライトモード（再起動が必要）",
+      "desc": "パフォーマンスプロファイルで CPU 周波数を下げ、発熱を軽減します。"
+    }
+  },
+
+  "io": {
+    "title": "I/O スケジューラ設定",
+    "default": {
+      "title": "デフォルト I/O スケジューラ",
+      "desc": "通常プロファイルで使用されるスケジューラ"
+    },
+    "performance": {
+      "title": "パフォーマンス I/O スケジューラ",
+      "desc": "パフォーマンスプロファイルで使用されるスケジューラ"
+    },
+    "powersave": {
+      "title": "省電力 I/O スケジューラ",
+      "desc": "省電力プロファイルで使用されるスケジューラ"
+    }
+  },
+
+  "thanks": {
+    "title": "ありがとう！✨",
+    "message": "AZenith をご利用いただきありがとうございます！ あなたのおかげでこのモジュールが存在しています。これからも AZenith はあなたと共に歩みます！",
+    "footer": "WebUI デザイン: @kanaochar & @Zexshia"
+  },
+
+  "preference": {
+    "title": "プリファレンス設定",
+    "description": "起動時に適用される設定やアドオンです（変更後は再起動が必要です）。",
+    "schedtunes": {
+      "title": "Sched Tunes",
+      "desc": "すべての CPU クラスターの周波数スケーリングを最適化します。"
+    },
+    "sfl": {
+      "title": "SurfaceFlinger レイテンシ",
+      "desc": "画面遅延を減らし、応答性を改善します。"
+    },
+    "jit": {
+      "title": "Just In Time",
+      "desc": "JIT コンパイルを有効化し、アプリのパフォーマンスを向上します。"
+    },
+    "trace": {
+      "title": "トレースを無効化",
+      "desc": "カーネルトレースおよび Android フレームワークトレースを無効にします。"
+    },
+    "fpsged": {
+      "title": "FPSGO と GED パラメータ",
+      "desc": "最適化された FPSGO/GED パラメータを使用します。"
+    },
+    "logd": {
+      "title": "ロガーを無効化",
+      "desc": "バックグラウンドログサービスを無効化し、パフォーマンスを向上させます。"
+    },
+    "malisched": {
+      "title": "GPU Mali スケジューリング",
+      "desc": "GPU のジョブ処理を直列化して、安定性や消費電力を改善します。"
+    },
+    "dthermal": {
+      "title": "サーマル制御を無効化",
+      "desc": "サーマルサービスを停止します（過熱の恐れあり）。"
+    }
+  },
+
+  "settingsAddi": {
+    "additional": {
+      "title": "追加設定",
+      "description": "体験を向上させるための追加設定です。",
+      "gpreload": {
+        "title": "ゲームプリロード",
+        "description": "ゲーム開始時に必要なライブラリをプリロードして、読み込み時間を短縮します。"
+      },
+      "memorykiller": {
+        "title": "メモリーキラー",
+        "description": "パフォーマンスプロファイル時にバックグラウンドアプリを終了します。"
+      },
+      "apppriority": {
+        "title": "アプリ優先度制御",
+        "description": "パフォーマンスプロファイル時に CPU と I/O の優先度を上げます。"
+      },
+      "bypasscharge": {
+        "title": "バイパス充電",
+        "description": "パフォーマンスプロファイル時にバイパス充電を有効化（MediaTek デバイス対応）。"
+      },
+      "dnd": {
+        "title": "おやすみモード",
+        "description": "通知をブロックして、ゲームに集中できるようにします。"
+      },
+      "vsync": {
+        "title": "VSync を無効化",
+        "description": "レンダリングフレームレートとリフレッシュレートの同期を無効化します。"
+      },
+      "fstrim": {
+        "title": "FSTrim パーティション",
+        "description": "未使用ブロックをトリムしてストレージ性能を最適化します。",
+        "button": "トリム"
+      },
+      "customreso": "カスタム解像度設定",
+      "colorscheme": "カラー スキーム設定"
+    }
+  },
+
+  "settingsProfile": {
+    "profiler": {
+      "title": "プロファイラー",
+      "description": "現在のアクティブなプロファイルを設定します。",
+      "balanced": "バランスプロファイルを適用",
+      "performance": "パフォーマンスプロファイルを適用",
+      "powersave": "ECO モードを適用"
+    }
+  },
+
+  "settingsReso": {
+    "resolution": {
+      "title": "解像度を縮小",
+      "description": "デバイスの仮想解像度を小さく設定します。",
+      "low": {
+        "title": "低解像度 (80%)",
+        "size": ""
+      },
+      "mid": {
+        "title": "中解像度 (90%)",
+        "size": ""
+      },
+      "max": {
+        "title": "最大解像度 (100%)",
+        "size": ""
+      },
+      "cancel": "キャンセル",
+      "apply": "適用"
+    }
+  },
+
+  "settingsModule": {
+    "title": "モジュール設定",
+    "verbose": {
+      "title": "詳細ログを有効化",
+      "desc": "AZenith の詳細なログを有効化します（理解していない場合は無効のままにしてください）。"
+    },
+    "toast": {
+      "title": "トースト通知を表示",
+      "desc": "プロファイル変更時にトースト通知を表示します。"
+    },
+    "disableai": {
+      "title": "ダイナミックプロファイルを無効化",
+      "desc": "ゲーム起動時の自動プロファイル切り替えを無効化します。"
+    },
+    "buttons": {
+      "save": "ログを保存",
+      "edit": "ゲームリストを編集",
+      "restart": "デーモンを再初期化"
+    }
+  },
+
+  "scheme": {
+    "title": "カラー スキーム",
+    "description": "画面の彩度と RGB カラーを調整します。",
+    "red": {
+      "title": "# 赤"
+    },
+    "green": {
+      "title": "# 緑"
+    },
+    "blue": {
+      "title": "# 青"
+    },
+    "saturation": {
+      "title": "# 彩度"
+    },
+    "buttons": {
+      "reset": "カラー設定をリセット",
+      "apply": "適用"
+    }
+  },
+
+  "gamelist": {
+    "title": "ゲームリスト",
+    "description": "ここにリストされたアプリまたはゲームはゲームプロファイルを起動します。",
+    "search": {
+      "placeholder": "パッケージ名を検索"
+    },
+    "buttons": {
+      "cancel": "キャンセル",
+      "save": "保存"
+    }
+  }
+}
