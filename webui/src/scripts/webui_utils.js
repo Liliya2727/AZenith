@@ -44,7 +44,7 @@ const showRandomMessage = () => {
   const c = document.getElementById("msg");
   if (!c) return;
 
-  const randomMessages = window.getTranslation('randomMessages');
+  const randomMessages = getTranslation('randomMessages');
   if (!Array.isArray(randomMessages) || randomMessages.length === 0) return;
 
   const s = randomMessages[Math.floor(Math.random() * randomMessages.length)];
@@ -237,11 +237,11 @@ const checkServiceStatus = async () => {
     );
 
     let status = "";
-    let pidText = window.getTranslation("serviceStatus.servicePID", "null");
+    let pidText = getTranslation("serviceStatus.servicePID", "null");
 
     if (c === 0 && s.trim() !== "0") {
       const pid = s.trim();
-      pidText = window.getTranslation("serviceStatus.servicePID", pid);
+      pidText = getTranslation("serviceStatus.servicePID", pid);
 
       const { stdout: profileRaw } = await executeCommand(
         "cat /data/adb/.config/AZenith/API/current_profile"
@@ -253,17 +253,17 @@ const checkServiceStatus = async () => {
       const profile = profileRaw.trim();
       const ai = aiRaw.trim();
 
-      if (profile === "0") status = window.getTranslation("serviceStatus.initializing");
+      if (profile === "0") status = getTranslation("serviceStatus.initializing");
       else if (["1", "2", "3"].includes(profile)) {
         status =
           ai === "1"
-            ? window.getTranslation("serviceStatus.runningAuto")
+            ? getTranslation("serviceStatus.runningAuto")
             : ai === "0"
-            ? window.getTranslation("serviceStatus.runningIdle")
-            : window.getTranslation("serviceStatus.unknownProfile");
-      } else status = window.getTranslation("serviceStatus.unknownProfile");
+            ? getTranslation("serviceStatus.runningIdle")
+            : getTranslation("serviceStatus.unknownProfile");
+      } else status = getTranslation("serviceStatus.unknownProfile");
     } else {
-      status = window.getTranslation("serviceStatus.suspended");
+      status = getTranslation("serviceStatus.suspended");
     }
 
     // Update UI only if changed
@@ -423,7 +423,7 @@ const applyFSTRIM = async () => {
   await executeCommand(
     "/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf FSTrim"
   );
-  toast(window.getTranslation("toast.fstrim"));
+  toast(getTranslation("toast.fstrim"));
 };
 
 const setDefaultCpuGovernor = async (c) => {
@@ -512,7 +512,7 @@ const showGameListModal = async () => {
     "getprop persist.sys.azenithconf.AIenabled"
   );
   if (0 === c && "0" === s.trim()) {
-    toast(window.getTranslation("toast.showcantaccess"));
+    toast(getTranslation("toast.showcantaccess"));
     return;
   }
 
@@ -592,7 +592,7 @@ const saveGameList = async () => {
     await executeCommand(
       `echo "${outputString}" > /data/adb/.config/AZenith/gamelist/gamelist.txt`
     );
-    toast(window.getTranslation("toast.savedPackages", editedLines.length));
+    toast(getTranslation("toast.savedPackages", editedLines.length));
     hideGameListModal();
     return;
   }
@@ -610,7 +610,7 @@ const saveGameList = async () => {
   await executeCommand(
     `echo "${outputString}" > /data/adb/.config/AZenith/gamelist/gamelist.txt`
   );
-  toast(window.getTranslation("toast.savedPackages", mergedLines.length));
+  toast(getTranslation("toast.savedPackages", mergedLines.length));
   hideGameListModal();
 };
 const checklogger = async () => {
@@ -710,7 +710,7 @@ const startService = async () => {
     let s = c.trim();
 
     if (s === "0") {
-      toast(window.getTranslation("toast.cantRestart"));
+      toast(getTranslation("toast.cantRestart"));
       return;
     }
 
@@ -718,11 +718,11 @@ const startService = async () => {
       "/system/bin/toybox pidof sys.azenith-service"
     );
     if (!pid || pid.trim() === "") {
-      toast(window.getTranslation("toast.serviceDead"));
+      toast(getTranslation("toast.serviceDead"));
       return;
     }
 
-    toast(window.getTranslation("toast.restartingDaemon"));
+    toast(getTranslation("toast.restartingDaemon"));
 
     await executeCommand(
       "setprop persist.sys.azenith.state stopped && pkill -9 -f sys.azenith-service; su -c '/data/adb/modules/AZenith/system/bin/sys.azenith-service > /dev/null 2>&1 & disown'"
@@ -730,7 +730,7 @@ const startService = async () => {
 
     await checkServiceStatus();
   } catch (r) {
-    toast(window.getTranslation("toast.restartFailed"));
+    toast(getTranslation("toast.restartFailed"));
     console.error("startService error:", r);
   }
 };
@@ -818,7 +818,7 @@ const hidecolorscheme = () => {
 
   c.classList.remove("show");
   document.body.classList.remove("modal-open");
-  toast(window.getTranslation("toast.colorSchemeSaved"));
+  toast(getTranslation("toast.colorSchemeSaved"));
 
   if (c._resizeHandler) {
     window.removeEventListener("resize", c._resizeHandler);
@@ -843,14 +843,14 @@ const loadDisplaySettings = async () => {
       .map(Number);
 
     if ([s, r, d, l].some(isNaN)) {
-      toast(window.getTranslation("toast.invalidColorScheme"));
+      toast(getTranslation("toast.invalidColorScheme"));
       return { red: 1000, green: 1000, blue: 1000, saturation: 1000 };
     }
 
     return { red: s, green: r, blue: d, saturation: l };
   } catch (m) {
     console.log("Error reading display settings:", m);
-    toast(window.getTranslation("toast.colorSchemeNotFound"));
+    toast(getTranslation("toast.colorSchemeNotFound"));
     return { red: 1000, green: 1000, blue: 1000, saturation: 1000 };
   }
 };
@@ -877,7 +877,7 @@ const resetDisplaySettings = async () => {
   document.getElementById("green").value = 1000;
   document.getElementById("blue").value = 1000;
   document.getElementById("saturation").value = 1000;
-  toast(window.getTranslation("toast.displayReset"));
+  toast(getTranslation("toast.displayReset"));
 };
 const checkAI = async () => {
   let { errno: c, stdout: s } = await executeCommand(
@@ -904,7 +904,7 @@ const applyperformanceprofile = async () => {
     "cat /data/adb/.config/AZenith/API/current_profile"
   );
   if ("1" === c.trim()) {
-    toast(window.getTranslation("toast.alreadyPerformance"));
+    toast(getTranslation("toast.alreadyPerformance"));
     return;
   }
   executeCommand("su -c sys.azenith-profiler 1 >/dev/null 2>&1 &");
@@ -915,7 +915,7 @@ const applybalancedprofile = async () => {
     "cat /data/adb/.config/AZenith/API/current_profile"
   );
   if ("2" === c.trim()) {
-    toast(window.getTranslation("toast.alreadyBalanced"));
+    toast(getTranslation("toast.alreadyBalanced"));
     return;
   }
   executeCommand("su -c sys.azenith-profiler 2 >/dev/null 2>&1 &");
@@ -926,7 +926,7 @@ const applyecomode = async () => {
     "cat /data/adb/.config/AZenith/API/current_profile"
   );
   if ("3" === c.trim()) {
-    toast(window.getTranslation("toast.alreadyECO"));
+    toast(getTranslation("toast.alreadyECO"));
     return;
   }
   executeCommand("su -c sys.azenith-profiler 3 >/dev/null 2>&1 &");
@@ -1174,9 +1174,9 @@ const savelog = async () => {
     await executeCommand(
       "/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf saveLog"
     );
-    toast(window.getTranslation("toast.logSaved"));
+    toast(getTranslation("toast.logSaved"));
   } catch (e) {
-    toast(window.getTranslation("toast.logSaveFailed"));
+    toast(getTranslation("toast.logSaveFailed"));
     console.error("saveLog error:", e);
   }
 };
@@ -1314,7 +1314,7 @@ const loadColorSchemeSettings = async () => {
     currentColor.saturation = 1000;
 
     saveDisplaySettings(1000, 1000, 1000, 1000);
-    toast(window.getTranslation("toast.displayReset"));
+    toast(getTranslation("toast.displayReset"));
   });
 };
 
@@ -1324,7 +1324,7 @@ const detectResolution = async () => {
   );
   if (errno !== 0 || !stdout.trim()) {
     console.error("Failed to detect resolution");
-    toast(window.getTranslation("toast.unableDetectResolution"));
+    toast(getTranslation("toast.unableDetectResolution"));
     return;
   }
 
@@ -1379,7 +1379,7 @@ const selectResolution = async (btn) => {
 
 const applyResolution = async () => {
   if (!window._reso || !window._reso.selected) {
-    toast(window.getTranslation("toast.noResolutionSelected"));
+    toast(getTranslation("toast.noResolutionSelected"));
     return;
   }
 
