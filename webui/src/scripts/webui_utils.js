@@ -1807,8 +1807,7 @@ const heavyInit = async () => {
 
   const quickChecks = [    
     loadCpuGovernors,
-    loadCpuFreq,
-    checkCPUInfo,
+    loadCpuFreq,    
     loadIObalance,
     loadIOperformance,
     loadIOpowersave,
@@ -1817,6 +1816,7 @@ const heavyInit = async () => {
   await Promise.all(quickChecks.map((fn) => fn()));
 
   const heavyAsync = [
+    checkCPUInfo,
     checkKernelVersion,
     getAndroidVersion,
     checkfpsged,
@@ -1860,6 +1860,7 @@ const heavyInit = async () => {
 // Event Listeners
 setupUIListeners();
 heavyInit();
+checkCPUInfo();
 checkKernelVersion();
-getAndroidVersion();
+getAndroidVersion();    
 
