@@ -123,39 +123,54 @@ const fetchSOCDatabase = async () => {
   return cachedSOCData;
 };
 
-const checkCPUInfo = async () => {
-  const c = localStorage.getItem("soc_info");
-  try {
-    const { errno: s, stdout: r } = await executeCommand(
-      "getprop ro.soc.model"
-    );
-    if (s === 0) {
-      let d = r.trim().replace(/\s+/g, "").toUpperCase();
-      const l = await fetchSOCDatabase();
-      let m = l[d];
+const getSoCModel = async () => {
+  const props = [
+    "ro.soc.model",
+    "ro.hardware.chipname",
+    "ro.board.platform",
+    "ro.product.board",
+    "ro.chipname",
+    "ro.mediatek.platform",
+  ];
 
-      if (!m) {
-        for (let h = d.length; h >= 6; h--) {
-          const g = d.substring(0, h);
-          if (l[g]) {
-            m = l[g];
-            break;
-          }
+  for (const prop of props) {
+    const { errno, stdout } = await executeCommand(`getprop ${prop}`);
+    if (errno === 0 && stdout.trim()) {
+      return stdout.trim();
+    }
+  }
+
+  return "Unknown SoC";
+};
+
+const checkCPUInfo = async () => {
+  const cached = localStorage.getItem("soc_info");
+  try {
+    const rawModel = await getSoCModel();
+    const model = rawModel.replace(/\s+/g, "").toUpperCase();
+
+    const db = await fetchSOCDatabase();
+    let displayName = db[model];
+
+    if (!displayName) {
+      for (let i = model.length; i >= 6; i--) {
+        const partial = model.substring(0, i);
+        if (db[partial]) {
+          displayName = db[partial];
+          break;
         }
       }
+    }
 
-      if (!m) m = d;
+    if (!displayName) displayName = model;
 
-      document.getElementById("cpuInfo").textContent = m;
+    document.getElementById("cpuInfo").textContent = displayName;
 
-      if (c !== m) {
-        localStorage.setItem("soc_info", m);
-      }
-    } else {
-      document.getElementById("cpuInfo").textContent = c || "Unknown SoC";
+    if (cached !== displayName) {
+      localStorage.setItem("soc_info", displayName);
     }
   } catch {
-    document.getElementById("cpuInfo").textContent = c || "Error";
+    document.getElementById("cpuInfo").textContent = cached || "Error";
   }
 
   showFPSGEDIfMediatek();
