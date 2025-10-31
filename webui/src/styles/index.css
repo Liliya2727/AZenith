@@ -1158,7 +1158,7 @@ input[type=checkbox]:checked+.toggle::after {
 }
 
 .mt-211 {
-    margin-top: -26px
+    margin-top: -30px
 }
 
 .px-7 {
@@ -1792,11 +1792,11 @@ input[type=range]::-ms-track {
 .settings-buttons {
     display: flex;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 10px;
     padding: .6rem;
     width: 100%;
-    margin-top: 15px;
-    margin-bottom: 24px;
+    margin-top: 11px;
+    margin-bottom: 20px;
     justify-content: space-between
 }
 

@@ -998,9 +998,28 @@ const setIObalance = async (c) => {
 };
 
 const loadIObalance = async () => {
+  // Get list of block devices under /sys/block
+  let { errno: a, stdout: devices } = await executeCommand("ls /sys/block");
+  if (a !== 0) return;
+
+  let blocks = devices.trim().split(/\s+/);
+  let validBlock = null;
+
+  // Find first block device with scheduler file
+  for (const dev of blocks) {
+    const { errno: t } = await executeCommand(`test -f /sys/block/${dev}/queue/scheduler`);
+    if (t === 0) {
+      validBlock = dev;
+      break;
+    }
+  }
+
+  if (!validBlock) return;
+
   let { errno: c, stdout: s } = await executeCommand(
-    "chmod 644 /sys/block/sda/queue/scheduler && cat /sys/block/sda/queue/scheduler"
+    `chmod 644 /sys/block/${validBlock}/queue/scheduler && cat /sys/block/${validBlock}/queue/scheduler`
   );
+
   if (c === 0) {
     let schedulers = s.trim().split(/\s+/).map(sch => sch.replace(/[\[\]]/g, ""));
     let select = document.getElementById("ioSchedulerBalanced");
@@ -1014,6 +1033,7 @@ const loadIObalance = async () => {
       select.appendChild(opt);
     });
 
+    // Read current scheduler property
     let { errno: l, stdout: m } = await executeCommand(
       `sh -c '[ -n "$(getprop persist.sys.azenith.custom_default_balanced_IO)" ] && getprop persist.sys.azenith.custom_default_balanced_IO || getprop persist.sys.azenith.default_balanced_IO'`
     );
@@ -1040,9 +1060,29 @@ const setIOperformance = async (c) => {
 };
 
 const loadIOperformance = async () => {
+  // List available block devices
+  const { errno: a, stdout: devices } = await executeCommand("ls /sys/block");
+  if (a !== 0) return;
+
+  const blocks = devices.trim().split(/\s+/);
+  let validBlock = null;
+
+  // Find first block that has a scheduler file
+  for (const dev of blocks) {
+    const { errno: t } = await executeCommand(`test -f /sys/block/${dev}/queue/scheduler`);
+    if (t === 0) {
+      validBlock = dev;
+      break;
+    }
+  }
+
+  if (!validBlock) return;
+
+  // Read available schedulers for the detected block
   const { errno: c, stdout: s } = await executeCommand(
-    "chmod 644 /sys/block/sda/queue/scheduler && cat /sys/block/sda/queue/scheduler"
+    `chmod 644 /sys/block/${validBlock}/queue/scheduler && cat /sys/block/${validBlock}/queue/scheduler`
   );
+
   if (c === 0) {
     const schedulers = s.trim().split(/\s+/).map(x => x.replace(/[\[\]]/g, ""));
     const select = document.getElementById("ioSchedulerPerformance");
@@ -1055,11 +1095,15 @@ const loadIOperformance = async () => {
       select.appendChild(opt);
     });
 
+    // Read the current performance scheduler from system properties
     const { errno: l, stdout: m } = await executeCommand(
-      `sh -c '[ -n "$(getprop persist.sys.azenith.custom_performance_IO)" ] && getprop persist.sys.azenith.custom_performance_IO'`
+      `sh -c '[ -n "$(getprop persist.sys.azenith.custom_performance_IO)" ] && getprop persist.sys.azenith.custom_performance_IO || getprop persist.sys.azenith.default_performance_IO'`
     );
 
-    if (l === 0) select.value = m.trim().replace(/[\[\]]/g, "");
+    if (l === 0) {
+      const current = m.trim().replace(/[\[\]]/g, "");
+      select.value = current;
+    }
   }
 };
 
@@ -1076,9 +1120,29 @@ const setIOpowersave = async (c) => {
 };
 
 const loadIOpowersave = async () => {
+  // List block devices in /sys/block
+  const { errno: a, stdout: devices } = await executeCommand("ls /sys/block");
+  if (a !== 0) return;
+
+  const blocks = devices.trim().split(/\s+/);
+  let validBlock = null;
+
+  // Find the first block that has a scheduler file
+  for (const dev of blocks) {
+    const { errno: t } = await executeCommand(`test -f /sys/block/${dev}/queue/scheduler`);
+    if (t === 0) {
+      validBlock = dev;
+      break;
+    }
+  }
+
+  if (!validBlock) return;
+
+  // Read schedulers for that block
   const { errno: c, stdout: s } = await executeCommand(
-    "chmod 644 /sys/block/sda/queue/scheduler && cat /sys/block/sda/queue/scheduler"
+    `chmod 644 /sys/block/${validBlock}/queue/scheduler && cat /sys/block/${validBlock}/queue/scheduler`
   );
+
   if (c === 0) {
     const schedulers = s.trim().split(/\s+/).map(x => x.replace(/[\[\]]/g, ""));
     const select = document.getElementById("ioSchedulerPowersave");
@@ -1091,11 +1155,15 @@ const loadIOpowersave = async () => {
       select.appendChild(opt);
     });
 
+    // Read current powersave IO scheduler property
     const { errno: l, stdout: m } = await executeCommand(
-      `sh -c '[ -n "$(getprop persist.sys.azenith.custom_powersave_IO)" ] && getprop persist.sys.azenith.custom_powersave_IO'`
+      `sh -c '[ -n "$(getprop persist.sys.azenith.custom_powersave_IO)" ] && getprop persist.sys.azenith.custom_powersave_IO || getprop persist.sys.azenith.default_powersave_IO'`
     );
 
-    if (l === 0) select.value = m.trim().replace(/[\[\]]/g, "");
+    if (l === 0) {
+      const current = m.trim().replace(/[\[\]]/g, "");
+      select.value = current;
+    }
   }
 };
 
