@@ -4,7 +4,7 @@
   },
 
   "infoTab": {
-    "title": "Informasi Dhasar",
+    "title": "# Informasi Dhasar",
     "labels": {
       "currentProfile": "Profil Saiki",
       "chipset": "Chipset",
@@ -29,7 +29,7 @@
   },
   
   "cpu": {
-    "title": "Pangaturan CPU",
+    "title": "# Pangaturan CPU",
     "default": {
       "title": "Gubernur CPU Standar",
       "desc": "Gubernur sing digunakaké kanggo profil Normal"
@@ -49,7 +49,7 @@
   },
   
   "io": {
-    "title": "Pangaturan Penjadwal I/O",
+    "title": "# Pangaturan Penjadwal I/O",
     "default": {
       "title": "Penjadwal I/O Standar",
       "desc": "Penjadwal sing digunakaké ing profil Normal"
@@ -65,7 +65,7 @@
   },
   
   "thanks": {
-    "title": "Matur nuwun!✨",
+    "title": "# Matur nuwun!✨",
     "message": "Matur nuwun wis nganggo AZenith! Aku banget ngapresiasi panjenengan. Tanpa sampeyan, modul iki ora bakal ana saiki. AZenith bakal terus ngancani sampeyan!",
     "footer": "WebUI dirancang déning @kanaochar & @Zexshia"
   },

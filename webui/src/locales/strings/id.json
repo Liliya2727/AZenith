@@ -4,15 +4,15 @@
   },
 
   "infoTab": {
-    "title": "Informasi Dasar",
+    "title": "# Info Dasar",
     "labels": {
-      "currentProfile": "Profil Saat Ini",
+      "currentProfile": "Profile Saat Ini",
       "chipset": "Chipset",
       "kernel": "Kernel",
       "androidVersion": "Versi Android"
     },
     "buttons": {
-      "changeProfile": "Ganti Profil"
+      "changeProfile": "Ganti Profile"
     },
     "loading": "Mengambil info..."
   },
@@ -20,59 +20,59 @@
   "settingsMore": {
     "additional": {
       "title": "Tambahan",
-      "description": "Pengaturan tambahan untuk meningkatkan pengalaman Anda."
+      "description": "Pengaturan tambahan untuk mengingatkan experience dalam game."
     },
     "preference": {
       "title": "Preferensi",
-      "description": "Penyesuaian atau tambahan yang diterapkan saat boot."
+      "description": "Preferensi tweak yang di apply saat booting."
     }
   },
   
     "cpu": {
-    "title": "Pengaturan CPU",
+    "title": "# Pengaturan CPU",
     "default": {
       "title": "Governor CPU Default",
-      "desc": "Governor yang digunakan pada profil Balanced"
+      "desc": "Governor yang digunakan pada mode Balanced"
     },
     "powersave": {
       "title": "Governor CPU Powersave",
-      "desc": "Governor yang digunakan pada profil Powersave"
+      "desc": "Governor yang digunakan pada mode Powersave"
     },
     "limit": {
       "title": "Limit Frekuensi CPU",
-      "desc": "Set CPU maximum frekuensi pada profil Balanced dan ECO Mode"
+      "desc": "Set batas maximum CPU frekuensi pada mode Balanced dan mode Powersave"
     },
     "litemode": {
-      "title": "Mode Lite (Mulai ulang untuk menerapkan)",
-      "desc": "Kurangi panas berlebih dengan menurunkan frekuensi CPU pada Profil Performance"
+      "title": "Mode Lite (Reboot untuk menerapkan)",
+      "desc": "Kurangi panas berlebih dengan mengurangi tweak pada mode Performance"
     }
   },
   
     "io": {
-    "title": "Pengaturan I/O Scheduler",
+    "title": "# Pengaturan I/O Scheduler",
     "default": {
       "title": "I/O Scheduler Default",
-      "desc": "Scheduler yang akan digunakan pada profil Balanced"
+      "desc": "Scheduler yang akan digunakan pada mode Balanced"
     },
     "performance": {
       "title": "I/O Scheduler Performance",
-      "desc": "Scheduler yang akan digunakan pada profil Performance"
+      "desc": "Scheduler yang akan digunakan pada mode Performance"
     },
     "powersave": {
       "title": "I/O Scheduler Powersave",
-      "desc": "Scheduler yang akan digunakan pada profil Powersave"
+      "desc": "Scheduler yang akan digunakan pada mode Powersave"
     }
   },
   
   "thanks": {
-    "title": "Terima Kasih!✨",
+    "title": "# Terima Kasih!✨",
     "message": "Terima kasih telah menggunakan AZenith! Kami sangat menghargai dukunganmu. Tanpamu, modul ini tidak akan ada hingga hari ini. AZenith akan selalu bersamamu!",
     "footer": "WebUI dibuat oleh @kanaochar & @Zexshia"
   },
   
   "preference": {
     "title": "Pengaturan Preferensi",
-    "description": "Pengaturan atau tambahan yang diterapkan saat boot (perlu reboot setelah perubahan).",
+    "description": "Pengaturan atau tambahan tweak yang diterapkan saat boot (perlu reboot setelah perubahan).",
     "schedtunes": {
       "title": "Sched Tunes",
       "desc": "Optimalkan skala frekuensi CPU dengan menyesuaikan batas up/down untuk semua kluster CPU (untuk schedutil dan schedhorizon)."
@@ -95,7 +95,7 @@
     },
     "logd": {
       "title": "Kill Logger",
-      "desc": "Nonaktifkan logging service sistem untuk mengurangi aktivitas latar belakang dan meningkatkan performa."
+      "desc": "Nonaktifkan logging service sistem untuk mengurangi aktivitas latar belakang."
     },
     "malisched": {
       "title": "GPU Mali Scheduling",
@@ -110,26 +110,26 @@
   "settingsAddi": {
     "additional": {
       "title": "Pengaturan Tambahan",
-      "description": "Pengaturan tambahan untuk meningkatkan pengalaman Anda.",
+      "description": "Pengaturan tambahan untuk meningkatkan experience dalam game.",
       "gpreload": {
         "title": "Game Preload",
-        "description": "Memuat semua pustaka yang dibutuhkan saat game dimulai untuk mengurangi waktu loading dan meminimalkan lag."
+        "description": "Memuat semua libs yang dibutuhkan saat game dimulai untuk mengurangi load dan mengurangi lag."
       },
       "memorykiller": {
         "title": "Memory Killer",
-        "description": "Menutup semua aplikasi yang berjalan di latar belakang pada Profil Performa."
+        "description": "Menutup semua aplikasi yang berjalan di latar belakang saat memasuki mode Performance."
       },
       "apppriority": {
         "title": "App Priority Control",
-        "description": "Meningkatkan prioritas CPU dan penjadwalan I/O pada Profil Performa."
+        "description": "Meningkatkan CPU Priority dan I/O Scheduling pada game di mode Performance."
       },
       "bypasscharge": {
         "title": "Bypass Charge",
-        "description": "Mengaktifkan bypass charging pada Profil Performa. Berfungsi pada sebagian besar perangkat MediaTek."
+        "description": "Mengaktifkan bypass charging pada mode Performance. Berfungsi pada sebagian besar perangkat MediaTek."
       },
       "dnd": {
         "title": "Do Not Disturb",
-        "description": "Memblokir semua notifikasi pada Profil Performa untuk meningkatkan pengalaman bermain."
+        "description": "Memblokir semua notifikasi pada mode Performance untuk meningkatkan experience dalam game."
       },
       "vsync": {
         "title": "Disable VSync",
@@ -148,10 +148,10 @@
   "settingsProfile": {
     "profiler": {
       "title": "Profiler",
-      "description": "Atur profil aktif saat ini.",
-      "balanced": "Terapkan Profil Balanced",
-      "performance": "Terapkan Profil Performance",
-      "powersave": "Terapkan ECO Mode"
+      "description": "Atur profile yang aktif saat ini.",
+      "balanced": "Terapkan mode Balanced",
+      "performance": "Terapkan mode Performance",
+      "powersave": "Terapkan mode Powersave"
     }
   },
   
@@ -180,26 +180,26 @@
     "title": "Pengaturan Modul",
     "verbose": {
       "title": "Aktifkan Log Verbose untuk AZenith",
-      "desc": "Izinkan logging detail AZenith (biarkan nonaktif jika tidak tahu fungsinya)."
+      "desc": "Izinkan AZenith untuk menglogging dengan detail (biarkan nonaktif jika tidak tahu fungsinya)."
     },
     "toast": {
-      "title": "Tampilkan Notifikasi Toast",
-      "desc": "Tampilkan notifikasi toast saat mengganti profil."
+      "title": "Tampilkan Toast Notification",
+      "desc": "Tampilkan Toast saat mengganti profile."
     },
     "disableai": {
       "title": "Nonaktifkan Auto Mode",
-      "desc": "Nonaktifkan pergantian profil otomatis saat membuka game (lewati profil performa)."
+      "desc": "Nonaktifkan pergantian profil otomatis saat membuka game."
     },
     "buttons": {
       "save": "Simpan Log",
-      "edit": "Edit Daftar Game",
+      "edit": "Edit Gamelist",
       "restart": "Inisialisasi Ulang Daemon"
     }
   },
 
   "scheme": {
     "title": "Skema Warna",
-    "description": "Atur kejenuhan layar dan warna RGB.",
+    "description": "Atur saturasi layar dan warna RGB.",
     "red": {
       "title": "# Merah"
     },
@@ -220,7 +220,7 @@
   
   "gamelist": {
     "title": "Daftar Game",
-    "description": "Aplikasi dan game yang tersimpan di sini akan mengganti Profil Game.",
+    "description": "Aplikasi dan game yang tersimpan di sini akan mengganti Profile AZenith.",
     "buttons": {
       "cancel": "Batal",
       "save": "Simpan"
@@ -228,42 +228,42 @@
   },
 
   "banner": {
-    "serviceStatus": "Ditangguhkan💤",
-    "servicePID": "Layanan Dihentikan",
+    "serviceStatus": "Tersuspend💤",
+    "servicePID": "Layanan berhenti",
     "msg": "Tidak Ada Data"
   },
   
   "randomMessages": {
     "0": "Langit hari ini cakep banget ya… kamu lihat nggak?",
     "1": "Sparkle bikin semuanya lebih ceria ✨",
-    "2": "Kamu udah usaha terbaikmu, itu udah cukup kok~",
-    "3": "Santai aja, bintang juga butuh waktu untuk bersinar.",
-    "4": "Minum hangat, tarik napas dalam… semua bakal oke.",
-    "5": "Awan lembut, hati tenang. Santai aja hari ini~",
-    "6": "Nggak perlu alasan buat senyum — cuma senyum aja~",
+    "2": "Kamu udah lakuin usaha terbaikmu, dan itu udah cukup kok~",
+    "3": "Santai aja, bintang juga masih butuh waktu untuk bersinar.",
+    "4": "Hangatkan dirimu dengan seteguk kopi, tarik napas dalam… tenang, semuanya akan baik-baik saja.",
+    "5": "Langit cerah, hati juga tenang..., nyantai dulu agh...~",
+    "6": "Nggak perlu alasan buat tersenyum, tinggal... senyum aja!~",
     "7": "Langkah kecil juga bisa bawa mimpi besar~",
-    "8": "Anginnya lembut hari ini… kayak pelukan dari dunia.",
-    "9": "Kamu kayak bunga kecil yang tumbuh di celah — cantik dan berani.",
-    "10": "Aku percaya sama kamu~ walau dunia kadang berat.",
-    "11": "Yuk kejar cahaya, walau jalannya pelan.",
-    "12": "Bintang selalu liatin… dan bangga sama kamu.",
-    "13": "Kamu lebih sparkle dari yang kamu kira ✨",
-    "14": "Kadang nggak ngapa-ngapain itu justru keberanian paling besar.",
-    "15": "Biarkan matahari mencium pipimu dan bikin khawatir pergi.",
+    "8": "Hembusan angin hari ini adem banget… kayak hembusan dari surga.",
+    "9": "Kamu tuh kayak bunga kecil yang nekat tumbuh di celah batu… rapuh tapi kuat banget.",
+    "10": "Dunia memang tidak adil, walah gitu aku tetap percaya sama kamu.",
+    "11": "Kejarlah cahaya sepelan apapun kamu berjalan.",
+    "12": "Tetaplah bangga sama dirimu, kamu lebih Dari yang kamu kira.",
+    "13": "Kamu lebih ceria dari yang kamu kira ✨",
+    "14": "Kadang nggak ngapa-ngapain itu justru bikin bosen, ayo keluar!.",
+    "15": "AJenith emang gacor apalagi dicombo sama Ste*** sama Enc***, xixixi.",
     "16": "Cahaya bulan nggak buru-buru, kamu juga nggak usah~",
-    "17": "Pegang tanganku, walau cuma di pikiran aja~",
-    "18": "Pagi lembut dimulai dengan senyum — walau setengah ngantuk.",
-    "19": "Melayang kayak awan, lembut dan bebas~",
-    "20": "Kamu kayak melodi lembut di dunia yang serba ngebut — nikmatin waktumu.",
-    "21": "Secangkir teh, kaus kaki cozy, hati yang lagi healing~",
-    "22": "Hari hujan buat mimpi-mimpi pelan di selimut~",
-    "23": "Bunga mekar diam-diam — kamu juga bakal.",
-    "24": "Langit nggak minta izin buat cantik, kamu juga nggak perlu.",
-    "25": "Kamu terbuat dari cahaya lembut dan keberanian tenang~",
-    "26": "Ngeliat bintang bukan nunda kerjaan — ini healing buat jiwa.",
-    "27": "Nggak apa punya hari tenang. Bulan juga begitu.",
-    "28": "Vibe hari ini: langit calm, teh hangat, hati lembut.",
-    "29": "Nggak perlu bersinar keras — beberapa bintang shine diam-diam ✨"
+    "17": "Holdddd myyy hannddd!? auk ah...",
+    "18": "Pagi harus semangat! walau masih agak ngantuk.",
+    "19": "Melayang kayak awan, bebas dan santai~",
+    "20": "Kamu tuh pinter, cuma males ajah.",
+    "21": "Secangkir teh, sambil nonton anime favorit~",
+    "22": "Wifi ready, device gaming ready, casan ready, tinggal ngepush!~",
+    "23": "Tumbuhlah seperti pohon, pelan tapi pasti.",
+    "24": "Login > Ajak temen > Winstreak > Tidur nyenyak.",
+    "25": "Kejarlah ilmu sampai ke negeri cyna!~",
+    "26": "Main game tanpa AZenith tuh kayak bensin dikasih etanol, enggak gacor!.",
+    "27": "Kadang hidup terasa berat, Kadang ringan, Kadang kidding..., jalanin ajah.",
+    "28": "La laa laaa, laaaaa, sudahkah kalian bersyukur hari ini?",
+    "29": "Siapa kita? Ajenit! Siapa kita? Ajenit!.. Ajenittt!??? Langgar!!!!"
   },
   
   "serviceStatus": {

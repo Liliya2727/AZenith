@@ -4,7 +4,7 @@
   },
 
   "infoTab": {
-    "title": "基本情報",
+    "title": "# 基本情報",
     "labels": {
       "currentProfile": "現在のプロファイル",
       "chipset": "チップセット",
@@ -29,7 +29,7 @@
   },
 
   "cpu": {
-    "title": "CPU 設定",
+    "title": "# CPU 設定",
     "default": {
       "title": "デフォルト CPU ガバナー",
       "desc": "通常プロファイルで使用されるガバナー"
@@ -49,7 +49,7 @@
   },
 
   "io": {
-    "title": "I/O スケジューラ設定",
+    "title": "# I/O スケジューラ設定",
     "default": {
       "title": "デフォルト I/O スケジューラ",
       "desc": "通常プロファイルで使用されるスケジューラ"
@@ -65,7 +65,7 @@
   },
 
   "thanks": {
-    "title": "ありがとう！✨",
+    "title": "# ありがとう！✨",
     "message": "AZenith をご利用いただきありがとうございます！ あなたのおかげでこのモジュールが存在しています。これからも AZenith はあなたと共に歩みます！",
     "footer": "WebUI デザイン: @kanaochar & @Zexshia"
   },
