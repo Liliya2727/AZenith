@@ -1620,7 +1620,7 @@ const setupUIListeners = () => {
     ?.addEventListener("change", (e) => setschedtunes(e.target.checked));
   document
     .getElementById("thermalcore")
-    ?.addEventListener("change", (e) => setschedtunes(e.target.checked));
+    ?.addEventListener("change", (e) => setthermalcore(e.target.checked));
   document
     .getElementById("logger")
     ?.addEventListener("change", (e) => setlogger(e.target.checked));
