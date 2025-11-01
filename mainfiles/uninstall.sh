@@ -53,7 +53,8 @@ persist.sys.azenith.custom_default_balanced_IO \
 persist.sys.azenith.custom_powersave_IO \
 persist.sys.azenith.custom_performance_IO \
 persist.sys.azenith.default_balanced_IO \
-persist.sys.azenithconf.resosettings"
+persist.sys.azenithconf.resosettings \
+persist.sys.rianixia.learning_enabled"
 for prop in $props; do
 	setprop "$prop" ""
 	resetprop --delete "$prop"
