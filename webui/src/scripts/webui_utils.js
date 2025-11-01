@@ -1541,8 +1541,8 @@ const checkthermalcore = async () => {
 const setthermalcore = async (c) => {
   await executeCommand(
     c
-      ? "setprop persist.sys.azenithconf.thermalcore 1 && sys.azenith-utilityconf setthermalcore 1"
-      : "setprop persist.sys.azenithconf.thermalcore 0 && sys.azenith-utilityconf setthermalcore 0"
+      ? "setprop persist.sys.azenithconf.thermalcore 1 && /data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setthermalcore 1"
+      : "setprop persist.sys.azenithconf.thermalcore 0 && /data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setthermalcore 0"
   );
 };
 
