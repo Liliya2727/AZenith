@@ -51,6 +51,7 @@ ui_print "- Extracting system directory..."
 extract "$ZIPFILE" 'system/bin/sys.azenith-profilesettings' "$MODPATH"
 extract "$ZIPFILE" 'system/bin/sys.azenith-utilityconf' "$MODPATH"
 extract "$ZIPFILE" 'system/bin/sys.azenith-preloadbin' "$MODPATH"
+extract "$ZIPFILE" 'system/bin/sys.azenith-rianixiathermalcorev4' "$MODPATH"
 ui_print "- Extracting service.sh..."
 extract "$ZIPFILE" service.sh "$MODPATH"
 ui_print "- Extracting module.prop..."
@@ -100,7 +101,7 @@ if [ "$KSU" = "true" ] || [ "$APATCH" = "true" ]; then
 			ln -sf "$BIN_PATH/sys.azenith-profilesettings" "$dir/sys.azenith-profilesettings"
 			ln -sf "$BIN_PATH/sys.azenith-utilityconf" "$dir/sys.azenith-utilityconf"
 			ln -sf "$BIN_PATH/sys.azenith-preloadbin" "$dir/sys.azenith-preloadbin"
-
+            ln -sf "$BIN_PATH/sys.azenith-rianixiathermalcorev4" "$dir/sys.azenith-rianixiathermalcorev4"
 		}
 	done
 fi
@@ -195,6 +196,7 @@ persist.sys.azenithconf.cpulimit
 persist.sys.azenithconf.dnd
 persist.sys.azenithconf.justintime
 persist.sys.azenithconf.disabletrace
+persist.sys.azenithconf.thermalcore
 "
 for prop in $props; do
 	curval=$(getprop "$prop")
@@ -231,5 +233,6 @@ chmod +x "$MODPATH/system/bin/sys.azenith-service"
 chmod +x "$MODPATH/system/bin/sys.azenith-profilesettings"
 chmod +x "$MODPATH/system/bin/sys.azenith-utilityconf"
 chmod +x "$MODPATH/system/bin/sys.azenith-preloadbin"
+chmod +x "$MODPATH/system/bin/sys.azenith-rianixiathermalcorev4"
 
 ui_print "- Installation complete!"

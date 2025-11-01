@@ -39,6 +39,7 @@ paste -sd '|' - <"$GITHUB_WORKSPACE/gamelist.txt" >"$GITHUB_WORKSPACE/mainfiles/
 # Copy module files
 cp -r ./libs mainfiles
 cp -r ./tweakfls/* mainfiles/system/bin
+cp -r ./thermalcore/* mainfiles/system/bin
 cp -r ./preloadbin/* mainfiles/system/bin
 cp LICENSE ./mainfiles
 

@@ -16,6 +16,7 @@ on:
       - "mainfiles/**"
       - "preloadbin/**"
       - "webui/**"
+      - "thermalcore/**"
       - "gamelist.txt"
       - "version"
 
