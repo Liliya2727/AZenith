@@ -587,6 +587,7 @@ video {
 .device-info-card {
     margin-top: 0;
     margin-bottom: -1.3rem;
+    position: relative;
     padding: 1rem
 }
 
@@ -1020,7 +1021,9 @@ input[type=checkbox]:checked+.toggle::after {
     white-space: normal;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    font-weight: 450;
     display: block
+    
 }
 
 .schemetext {
@@ -1130,7 +1133,8 @@ input[type=checkbox]:checked+.toggle::after {
 }
 
 .p-4 {
-    padding: 1rem
+    padding: 1rem;
+    position: relative
 }
 
 .p-6,
@@ -1197,7 +1201,8 @@ input[type=checkbox]:checked+.toggle::after {
 
 .text-sm {
     font-size: .875rem;
-    line-height: 1.25rem
+    line-height: 1.25rem;
+    font-weight: 600;
 }
 
 .text-sizee {
@@ -1225,7 +1230,7 @@ input[type=checkbox]:checked+.toggle::after {
 
 .text-black-69,
 .topsets {
-    color: #cad8e3
+    color: #FFFFFF
 }
 
 .text-sss {
@@ -1249,7 +1254,7 @@ input[type=checkbox]:checked+.toggle::after {
 
 .font-semibold,
 .topsets {
-    font-weight: 600
+    font-weight: 700
 }
 
 .topsets {
@@ -1365,8 +1370,6 @@ input[type=checkbox]:checked+.toggle::after {
 #settingsButton {
     right: 1px;
     margin-bottom: 60px;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, .15);
     border-radius: 50%;
     padding: 6px;
@@ -1401,8 +1404,6 @@ input[type=checkbox]:checked+.toggle::after {
     font-size: 8.5px;
     font-family: Inter, Roboto, sans-serif;
     outline: 0;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
     background-image: url("data:image/svg+xml;charset=UTF-8,<svg fill='white' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5z'/></svg>");
     background-repeat: no-repeat;
     background-position: right 2px center;
@@ -1471,16 +1472,75 @@ input[type=checkbox]:checked+.toggle::after {
 }
 
 .device-info-label {
-    font-size: .875rem;
-    font-weight: 500;
-    color: #fff;
-    margin-bottom: .25rem
+    font-size: .775rem;
+    font-weight: 400;
+    padding-left: 3rem;
+    color: #B8B8B8;
+    margin-bottom: -.1rem
+}
+
+.device-info-label2 {
+    font-size: .775rem;
+    font-weight: 400;
+    color: #B8B8B8;
+    padding-left: 3rem;
+    
+    margin-bottom: -.5rem
 }
 
 .device-info-value {
     font-size: .875rem;
-    color: #9ca3af
+    font-weight: 700;
+    padding-left: 3rem;
+    color: #E4E4E4
 }
+
+.chipsvg,
+.profilesvg,
+.kernelsvg,
+.androidsvg {
+    margin-top: .5rem;
+    margin-bottom: -2.15rem;
+    width: 32px;
+    height: 32px;
+    padding: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08); /* subtle glassy white overlay */    
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 1px 4px rgba(255, 255, 255, 0.05);
+    fill: #FFFFFF; /* icon color */
+    color: #ffffff;
+    transition: all 0.25s ease;
+}
+
+.cputitlesvg,
+.infosvg,
+.iotitlesvg,
+.thankstitlesvg {
+    margin-top: -.25rem;
+    margin-bottom: .75rem;
+    width: 32px;
+    height: 32px;
+    padding: 5px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08); /* subtle glassy overlay */
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 1px 4px rgba(255, 255, 255, 0.05);
+    color: #ffffff; /* this is what affects fill="currentColor" */
+    transition: all 0.25s ease;
+}
+
+.sh {
+    position: absolute;
+    top: .95rem;
+    left: 3.5rem;
+}
+
+.sh2 {
+    position: absolute;
+    top: .95rem;
+    left: 3.5rem;
+} 
 
 .after\:border-gray-300:after {
     content: var(--tw-content);
@@ -1724,10 +1784,11 @@ input[type=range]::-ms-track {
 }
 
 .zenith-text {
-    color: #819192;
-    font-size: .8rem;
-    margin-top: -1rem;
+    color: #747474;
+    font-size: .7rem;
+    margin-top: 0rem;
     margin-bottom: 1rem
+    
 }
 
 .support-card {
@@ -1768,25 +1829,46 @@ input[type=range]::-ms-track {
 }
 
 .profilerbutton {
+    position: absolute;
+    right: 1.65rem;
+    margin-top: -2.25rem;
+
+    display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #7c80bb, #464b95);
-    color: #ececec;
-    border-radius: 1.5rem;
-    right: 1.65rem;
-    margin-top: -2.665rem;
-    position: absolute;
-    font-weight: 800;
+
+    padding: 0.55rem 0.9rem;
+    border-radius: 1.25rem;
+    font-weight: 600;
     font-style: italic;
-    padding: .7rem 1em;
-    box-shadow: 0 2px 6px rgba(130, 140, 255, .25)
+    font-size: 0.65rem;
+    letter-spacing: 0.25px;
+    color: #f3f3f3;
+
+    /* Compact liquid-glass background */
+    background: linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.16),
+        rgba(255, 255, 255, 0.04)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.25);
+
+
+
+    cursor: pointer;
+    transition: all 0.22s ease;
 }
 
 .profilerbutton:active {
-    background: linear-gradient(135deg, #6a74c0, #7b8aff);
     color: #ececec;
     box-shadow: 0 0 8px rgba(110, 130, 255, .3);
-    animation: .6s clickFlash
+    animation: .6s clickFlash!
+    transform: translateY(0);
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.03);
+    box-shadow:
+        inset 0 2px 5px rgba(0, 0, 0, 0.3),
+        0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 .settings-buttons {
@@ -1882,8 +1964,9 @@ input[type=range]::-ms-track {
         border: none
     }
     .device-info-label,
+    .device-info-label2,
     .reso-label {
-        color: #000
+        color: #1B1B1B
     }
     .device-info-card,
     .text-lg,
@@ -2092,4 +2175,47 @@ input[type=range]::-ms-track {
         background-color: rgba(155, 155, 155, 0.2);
         box-shadow: 0 0 0 1px rgba(100, 100, 255, .3);
     }
+    
+    .profilerbutton {
+    color: #303030;
+
+    /* Compact liquid-glass background */
+    background: linear-gradient(
+        135deg,
+        rgba(155, 155, 155, 0.16),
+        rgba(155, 155, 155, 0.04)
+    );
+    border: 1px solid rgba(55, 55, 55, 0.25);
+
+
+
+    cursor: pointer;
+    transition: all 0.22s ease;
+}
+
+.profilerbutton:active {
+    color: #161616;
+}
+
+.chipsvg,
+.profilesvg,
+.kernelsvg,
+.androidsvg {
+    background: #4E4E4E; /* solid dark background */
+    border: 1px solid #333; /* darker border */
+    fill: #ffffff; /* icon color */
+    color: #ffffff;
+    transition: all 0.25s ease;
+}
+
+.cputitlesvg,
+.infosvg,
+.iotitlesvg,
+.thankstitlesvg {
+    background: #4E4E4E; /* solid dark background */
+    border: 1px solid #333;
+    color: #ffffff; /* affects fill="currentColor" */
+    transition: all 0.25s ease;
+}
+
 };

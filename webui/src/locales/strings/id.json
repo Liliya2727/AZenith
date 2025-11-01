@@ -4,7 +4,7 @@
   },
 
   "infoTab": {
-    "title": "# Info Dasar",
+    "title": "Info Dasar",
     "labels": {
       "currentProfile": "Profile Saat Ini",
       "chipset": "Chipset",
@@ -29,7 +29,7 @@
   },
   
     "cpu": {
-    "title": "# Pengaturan CPU",
+    "title": "Pengaturan CPU",
     "default": {
       "title": "Governor CPU Default",
       "desc": "Governor yang digunakan pada mode Balanced"
@@ -49,7 +49,7 @@
   },
   
     "io": {
-    "title": "# Pengaturan I/O Scheduler",
+    "title": "Pengaturan I/O Scheduler",
     "default": {
       "title": "I/O Scheduler Default",
       "desc": "Scheduler yang akan digunakan pada mode Balanced"
@@ -65,7 +65,7 @@
   },
   
   "thanks": {
-    "title": "# Terima Kasih!✨",
+    "title": "Terima Kasih!✨",
     "message": "Terima kasih telah menggunakan AZenith! Kami sangat menghargai dukunganmu. Tanpamu, modul ini tidak akan ada hingga hari ini. AZenith akan selalu bersamamu!",
     "footer": "WebUI dibuat oleh @kanaochar & @Zexshia"
   },
@@ -201,16 +201,16 @@
     "title": "Skema Warna",
     "description": "Atur saturasi layar dan warna RGB.",
     "red": {
-      "title": "# Merah"
+      "title": "Merah"
     },
     "green": {
-      "title": "# Hijau"
+      "title": "Hijau"
     },
     "blue": {
-      "title": "# Biru"
+      "title": "Biru"
     },
     "saturation": {
-      "title": "# Saturasi"
+      "title": "Saturasi"
     },
     "buttons": {
       "reset": "Atur Ulang Warna",

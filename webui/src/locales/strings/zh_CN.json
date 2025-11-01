@@ -4,7 +4,7 @@
   },
 
   "infoTab": {
-    "title": "# 基本信息",
+    "title": "基本信息",
     "labels": {
       "currentProfile": "当前配置文件",
       "chipset": "芯片组",
@@ -29,7 +29,7 @@
   },
 
   "cpu": {
-    "title": "# CPU 设置",
+    "title": "CPU 设置",
     "default": {
       "title": "默认 CPU Governor",
       "desc": "用于普通配置文件的 Governor"
@@ -49,7 +49,7 @@
   },
 
   "io": {
-    "title": "# I/O 调度器设置",
+    "title": "I/O 调度器设置",
     "default": {
       "title": "默认 I/O 调度器",
       "desc": "用于普通配置文件的调度器"
@@ -65,7 +65,7 @@
   },
 
   "thanks": {
-    "title": "# 感谢使用！✨",
+    "title": "感谢使用！✨",
     "message": "感谢您使用 AZenith！非常感谢您的支持，没有您，这个模块就不会存在。AZenith 将一直陪伴您！",
     "footer": "WebUI 设计：@kanaochar & @Zexshia"
   },
@@ -201,16 +201,16 @@
     "title": "颜色方案",
     "description": "调整屏幕饱和度与 RGB 颜色。",
     "red": {
-      "title": "# 红色"
+      "title": "红色"
     },
     "green": {
-      "title": "# 绿色"
+      "title": "绿色"
     },
     "blue": {
-      "title": "# 蓝色"
+      "title": "蓝色"
     },
     "saturation": {
-      "title": "# 饱和度"
+      "title": "饱和度"
     },
     "buttons": {
       "reset": "重置颜色设置",

@@ -4,7 +4,7 @@
   },
 
   "infoTab": {
-    "title": "# 기본 정보",
+    "title": "기본 정보",
     "labels": {
       "currentProfile": "현재 프로필",
       "chipset": "칩셋",
@@ -29,7 +29,7 @@
   },
 
   "cpu": {
-    "title": "# CPU 설정",
+    "title": "CPU 설정",
     "default": {
       "title": "기본 CPU 거버너",
       "desc": "일반 프로필에서 사용되는 거버너입니다."
@@ -49,7 +49,7 @@
   },
 
   "io": {
-    "title": "# I/O 스케줄러 설정",
+    "title": "I/O 스케줄러 설정",
     "default": {
       "title": "기본 I/O 스케줄러",
       "desc": "일반 프로필에서 사용되는 스케줄러입니다."
@@ -65,7 +65,7 @@
   },
 
   "thanks": {
-    "title": "# 감사합니다! ✨",
+    "title": "감사합니다! ✨",
     "message": "AZenith를 사용해 주셔서 감사합니다! 여러분 덕분에 이 모듈이 존재할 수 있습니다. AZenith는 항상 여러분과 함께할 것입니다!",
     "footer": "WebUI 디자인: @kanaochar & @Zexshia"
   },
@@ -201,16 +201,16 @@
     "title": "색상 스킴",
     "description": "화면의 채도 및 RGB 색상을 조정합니다.",
     "red": {
-      "title": "# 빨강"
+      "title": "빨강"
     },
     "green": {
-      "title": "# 초록"
+      "title": "초록"
     },
     "blue": {
-      "title": "# 파랑"
+      "title": "파랑"
     },
     "saturation": {
-      "title": "# 채도"
+      "title": "채도"
     },
     "buttons": {
       "reset": "색상 설정 초기화",

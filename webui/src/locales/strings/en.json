@@ -4,7 +4,7 @@
   },
 
   "infoTab": {
-    "title": "# Basic Informatio",
+    "title": "Basic Information",
     "labels": {
       "currentProfile": "Current Profile",
       "chipset": "Chipset",
@@ -29,7 +29,7 @@
   },
   
   "cpu": {
-    "title": "# CPU Settings",
+    "title": "CPU Settings",
     "default": {
       "title": "Default CPU Governor",
       "desc": "Governor that will be used on Normal profile"
@@ -49,7 +49,7 @@
   },
   
   "io": {
-    "title": "# I/O Scheduler Settings",
+    "title": "I/O Scheduler Settings",
     "default": {
       "title": "Default I/O Scheduler",
       "desc": "Scheduler that will be used on Normal profile"
@@ -65,7 +65,7 @@
   },
   
   "thanks": {
-    "title": "# Thanks!✨",
+    "title": "Thanks!✨",
     "message": "Thanks for using AZenith! I really appreciate you for using AZenith. Without you, this module wouldn't be here today. AZenith will always be with you!",
     "footer": "WebUI Designed by @kanaochar & @Zexshia"
   },
@@ -201,16 +201,16 @@
     "title": "Color Scheme",
     "description": "Adjust screen saturation and RGB colors.",
     "red": {
-      "title": "# Red"
+      "title": "Red"
     },
     "green": {
-      "title": "# Green"
+      "title": "Green"
     },
     "blue": {
-      "title": "# Blue"
+      "title": "Blue"
     },
     "saturation": {
-      "title": "# Saturation"
+      "title": "Saturation"
     },
     "buttons": {
       "reset": "Reset Color Settings",
