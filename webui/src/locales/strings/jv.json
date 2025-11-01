@@ -42,6 +42,10 @@
       "title": "Watesi Frekuensi CPU",
       "desc": "Nentokaké frekuensi maksimum CPU ing profil Seimbang utawa ECO Mode"
     },
+    "thermal": {
+      "title": "AI Thermalcore Service",
+      "desc": "Ngatur kinerja lan suhu piranti kanthi cerdas kanthi sinau saka prilaku piranti kanggo nyegah panas banget lan njaga stabilitas. (Pateni yen kinerja krasa alon ing profil performa)"
+    },
     "litemode": {
       "title": "Mode Enteng (Reboot kanggo nerapaké)",
       "desc": "Ngurangi panas kanthi nyuda frekuensi CPU ing Profil Performa"

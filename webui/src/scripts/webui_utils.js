@@ -1531,6 +1531,21 @@ const hideProfilerSettings = () => {
   }
 };
 
+const checkthermalcore = async () => {
+  let { errno: c, stdout: s } = await executeCommand(
+    "getprop persist.sys.azenithconf.thermalcore"
+  );
+  0 === c && (document.getElementById("thermalcore").checked = "1" === s.trim());
+};
+
+const setthermalcore = async (c) => {
+  await executeCommand(
+    c
+      ? "setprop persist.sys.azenithconf.thermalcore 1 && sys.azenith-utilityconf setthermalcore 1"
+      : "setprop persist.sys.azenithconf.thermalcore 0 && sys.azenith-utilityconf setthermalcore 0"
+  );
+};
+
 const setupUIListeners = () => {
   const banner = document.getElementById("Banner");
   const avatar = document.getElementById("Avatar");
@@ -1587,7 +1602,7 @@ const setupUIListeners = () => {
     ?.addEventListener("change", (e) => setdtrace(e.target.checked));
   document
     .getElementById("GPreload")
-    ?.addEventListener("change", (e) => setGPreloadStatus(e.target.checked));
+    ?.addEventListener("change", (e) => setthermalcore(e.target.checked));
   document
     .getElementById("clearbg")
     ?.addEventListener("change", (e) => setRamBoostStatus(e.target.checked));
@@ -1602,6 +1617,9 @@ const setupUIListeners = () => {
     ?.addEventListener("change", (e) => setLiteModeStatus(e.target.checked));
   document
     .getElementById("schedtunes")
+    ?.addEventListener("change", (e) => setschedtunes(e.target.checked));
+  document
+    .getElementById("thermalcore")
     ?.addEventListener("change", (e) => setschedtunes(e.target.checked));
   document
     .getElementById("logger")
@@ -1846,6 +1864,7 @@ const heavyInit = async () => {
   const heavySequential = [
     checkmalisched,
     checkAI,
+    checkthermalcore,
     checkDND,
     checkdtrace,
     checkjit,

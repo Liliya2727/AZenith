@@ -42,6 +42,10 @@
       "title": "Limit CPU Freq",
       "desc": "Set Max CPU Frequency in Balanced profile and ECO Mode"
     },
+    "thermal": {
+      "title": "AI Thermalcore Service",
+      "desc": "Intelligently manages system performance and temperature by learning device behavior to minimize overheating and maintain stability. (Turn off if you feel lag in performance profile"
+    },
     "litemode": {
       "title": "Lite Mode (Reboot to apply)",
       "desc": "Reduce Overheating by reducing CPU Frequency on Performance Profile"

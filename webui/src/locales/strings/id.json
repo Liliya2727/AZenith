@@ -42,6 +42,10 @@
       "title": "Limit Frekuensi CPU",
       "desc": "Set batas maximum CPU frekuensi pada mode Balanced dan mode Powersave"
     },
+    "thermal": {
+      "title": "AI Thermalcore Service",
+      "desc": "Mengatur kinerja dan suhu perangkat secara cerdas dengan mempelajari kebiasaan perangkat untuk mengurangi panas berlebih dan menjaga stabilitas. (Nonaktifkan jika terasa lag pada profile performance)"
+    },
     "litemode": {
       "title": "Mode Lite (Reboot untuk menerapkan)",
       "desc": "Kurangi panas berlebih dengan mengurangi tweak pada mode Performance"
