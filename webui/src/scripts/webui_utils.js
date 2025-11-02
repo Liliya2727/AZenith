@@ -736,7 +736,10 @@ const startService = async () => {
 
     const restartingDaemonToast = getTranslation("toast.restartingDaemon");
     toast(restartingDaemonToast);
-
+    
+    await executeCommand(
+      "pkill -9 -f sys.azenith.rianixiathermalcorev4"
+    );
     await executeCommand(
       "setprop persist.sys.azenith.state stopped && pkill -9 -f sys.azenith-service; su -c '/data/adb/modules/AZenith/system/bin/sys.azenith-service > /dev/null 2>&1 & disown'"
     );
