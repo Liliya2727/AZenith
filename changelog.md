@@ -3,7 +3,7 @@
 - Added ID, KR, JA, JV, and ZN translation in the WebUI
 - Added gpu mali 'power_policy' for MediaTek
 - Fix an issue where I/O Scheduler setting didn't show up in some device
-- Added ThermalCore Service
+- Added AI ThermalCore Service by: @rianixia
 - Improve I/O Sched Parser in Initialization
 - Improve Game Preload Logic, fixed ram overload if user were in game for too long
 - Fixed an issue where performance profile always reapplies if Game Preload is active
