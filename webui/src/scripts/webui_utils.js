@@ -1016,31 +1016,55 @@ const setIObalance = async (c) => {
 };
 
 const loadIObalance = async () => {
-  let { errno: c, stdout: s } = await executeCommand(
-    "cat /sys/block/mmcblk0/queue/scheduler"
-  );
-  if (c === 0) {
-    let schedulers = s.trim().split(/\s+/).map(sch => sch.replace(/[\[\]]/g, ""));
-    let select = document.getElementById("ioSchedulerBalanced");
+  // Candidate block devices
+  const blocks = ["mmcblk0", "mmcblk1", "sda", "sdb", "sdc"];
+  let validBlock = null;
 
-    select.innerHTML = "";
-
-    schedulers.forEach(sch => {
-      let opt = document.createElement("option");
-      opt.value = sch;
-      opt.textContent = sch;
-      select.appendChild(opt);
-    });
-
-    let { errno: l, stdout: m } = await executeCommand(
-      `sh -c '[ -n "$(getprop persist.sys.azenith.custom_default_balanced_IO)" ] && getprop persist.sys.azenith.custom_default_balanced_IO || getprop persist.sys.azenith.default_balanced_IO'`
-    );
-
-    if (l === 0) {
-      let current = m.trim().replace(/[\[\]]/g, "");
-      select.value = current;
+  // Find the first block that exists and has a scheduler file
+  for (const blk of blocks) {
+    const { errno } = await executeCommand(`test -e /sys/block/${blk}/queue/scheduler`);
+    if (errno === 0) {
+      validBlock = blk;
+      break;
     }
   }
+
+  if (!validBlock) {
+    console.warn("No valid block device with scheduler found");
+    return;
+  }
+
+  // Read scheduler list from detected block
+  const { errno: c, stdout: s } = await executeCommand(`cat /sys/block/${validBlock}/queue/scheduler`);
+  if (c !== 0) {
+    console.warn("Failed to read scheduler from", validBlock);
+    return;
+  }
+
+  // Populate select element
+  const select = document.getElementById("ioSchedulerBalanced");
+  if (!select) return;
+  select.innerHTML = "";
+
+  const schedulers = s.trim().split(/\s+/).map(sch => sch.replace(/[\[\]]/g, ""));
+  schedulers.forEach(sch => {
+    const opt = document.createElement("option");
+    opt.value = sch;
+    opt.textContent = sch;
+    select.appendChild(opt);
+  });
+
+  // Get currently active/custom scheduler property
+  const { errno: l, stdout: m } = await executeCommand(
+    `sh -c '[ -n "$(getprop persist.sys.azenith.custom_default_balanced_IO)" ] && getprop persist.sys.azenith.custom_default_balanced_IO || getprop persist.sys.azenith.default_balanced_IO'`
+  );
+
+  if (l === 0) {
+    const current = m.trim().replace(/[\[\]]/g, "");
+    select.value = current;
+  }
+
+  console.log(`Detected block device: ${validBlock}`);
 };
 
 const setIOperformance = async (c) => {
@@ -1058,27 +1082,55 @@ const setIOperformance = async (c) => {
 };
 
 const loadIOperformance = async () => {
-  const { errno: c, stdout: s } = await executeCommand(
-    "cat /sys/block/mmcblk0/queue/scheduler"
-  );
-  if (c === 0) {
-    const schedulers = s.trim().split(/\s+/).map(x => x.replace(/[\[\]]/g, ""));
-    const select = document.getElementById("ioSchedulerPerformance");
-    select.innerHTML = "";
+  // Candidate block devices
+  const blocks = ["mmcblk0", "mmcblk1", "sda", "sdb", "sdc"];
+  let validBlock = null;
 
-    schedulers.forEach(sch => {
-      const opt = document.createElement("option");
-      opt.value = sch;
-      opt.textContent = sch;
-      select.appendChild(opt);
-    });
-
-    const { errno: l, stdout: m } = await executeCommand(
-      `sh -c '[ -n "$(getprop persist.sys.azenith.custom_performance_IO)" ] && getprop persist.sys.azenith.custom_performance_IO'`
-    );
-
-    if (l === 0) select.value = m.trim().replace(/[\[\]]/g, "");
+  // Find the first block device that has a scheduler file
+  for (const blk of blocks) {
+    const { errno } = await executeCommand(`test -e /sys/block/${blk}/queue/scheduler`);
+    if (errno === 0) {
+      validBlock = blk;
+      break;
+    }
   }
+
+  if (!validBlock) {
+    console.warn("No valid block device with scheduler found");
+    return;
+  }
+
+  // Read available schedulers
+  const { errno: c, stdout: s } = await executeCommand(`cat /sys/block/${validBlock}/queue/scheduler`);
+  if (c !== 0) {
+    console.warn(`Failed to read scheduler from /sys/block/${validBlock}`);
+    return;
+  }
+
+  // Populate <select> options
+  const select = document.getElementById("ioSchedulerPerformance");
+  if (!select) return;
+  select.innerHTML = "";
+
+  const schedulers = s.trim().split(/\s+/).map(x => x.replace(/[\[\]]/g, ""));
+  schedulers.forEach(sch => {
+    const opt = document.createElement("option");
+    opt.value = sch;
+    opt.textContent = sch;
+    select.appendChild(opt);
+  });
+
+  // Get current scheduler (custom performance property)
+  const { errno: l, stdout: m } = await executeCommand(
+    `sh -c '[ -n "$(getprop persist.sys.azenith.custom_performance_IO)" ] && getprop persist.sys.azenith.custom_performance_IO || echo ""'`
+  );
+
+  if (l === 0) {
+    const current = m.trim().replace(/[\[\]]/g, "");
+    if (current) select.value = current;
+  }
+
+  console.log(`Detected block device: ${validBlock}`);
 };
 
 const setIOpowersave = async (c) => {
@@ -1094,27 +1146,55 @@ const setIOpowersave = async (c) => {
 };
 
 const loadIOpowersave = async () => {
-  const { errno: c, stdout: s } = await executeCommand(
-    "cat /sys/block/mmcblk0/queue/scheduler"
-  );
-  if (c === 0) {
-    const schedulers = s.trim().split(/\s+/).map(x => x.replace(/[\[\]]/g, ""));
-    const select = document.getElementById("ioSchedulerPowersave");
-    select.innerHTML = "";
+  // Candidate block devices
+  const blocks = ["mmcblk0", "mmcblk1", "sda", "sdb", "sdc"];
+  let validBlock = null;
 
-    schedulers.forEach(sch => {
-      const opt = document.createElement("option");
-      opt.value = sch;
-      opt.textContent = sch;
-      select.appendChild(opt);
-    });
-
-    const { errno: l, stdout: m } = await executeCommand(
-      `sh -c '[ -n "$(getprop persist.sys.azenith.custom_powersave_IO)" ] && getprop persist.sys.azenith.custom_powersave_IO'`
-    );
-
-    if (l === 0) select.value = m.trim().replace(/[\[\]]/g, "");
+  // Find first block device that has a scheduler file
+  for (const blk of blocks) {
+    const { errno } = await executeCommand(`test -e /sys/block/${blk}/queue/scheduler`);
+    if (errno === 0) {
+      validBlock = blk;
+      break;
+    }
   }
+
+  if (!validBlock) {
+    console.warn("No valid block device with scheduler found");
+    return;
+  }
+
+  // Read available schedulers
+  const { errno: c, stdout: s } = await executeCommand(`cat /sys/block/${validBlock}/queue/scheduler`);
+  if (c !== 0) {
+    console.warn(`Failed to read scheduler from /sys/block/${validBlock}`);
+    return;
+  }
+
+  // Populate dropdown
+  const select = document.getElementById("ioSchedulerPowersave");
+  if (!select) return;
+  select.innerHTML = "";
+
+  const schedulers = s.trim().split(/\s+/).map(x => x.replace(/[\[\]]/g, ""));
+  schedulers.forEach(sch => {
+    const opt = document.createElement("option");
+    opt.value = sch;
+    opt.textContent = sch;
+    select.appendChild(opt);
+  });
+
+  // Get current scheduler (custom powersave property)
+  const { errno: l, stdout: m } = await executeCommand(
+    `sh -c '[ -n "$(getprop persist.sys.azenith.custom_powersave_IO)" ] && getprop persist.sys.azenith.custom_powersave_IO || echo ""'`
+  );
+
+  if (l === 0) {
+    const current = m.trim().replace(/[\[\]]/g, "");
+    if (current) select.value = current;
+  }
+
+  console.log(`Detected block device for powersave: ${validBlock}`);
 };
 
 const showAdditionalSettings = async () => {
