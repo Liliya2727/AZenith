@@ -54,7 +54,8 @@ persist.sys.azenith.custom_powersave_IO \
 persist.sys.azenith.custom_performance_IO \
 persist.sys.azenith.default_balanced_IO \
 persist.sys.azenithconf.resosettings \
-persist.sys.rianixia.learning_enabled"
+persist.sys.rianixia.learning_enabled \
+persist.sys.rianixia.thermalcore-bigdata.path"
 for prop in $props; do
 	setprop "$prop" ""
 	resetprop --delete "$prop"
