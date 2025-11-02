@@ -1,3 +1,17 @@
+## AZenith 4.2
+### Changelog
+- Added ID, KR, JA, JV, and ZN translation in the WebUI
+- Added gpu mali 'power_policy' for MediaTek
+- Fix an issue where I/O Scheduler setting didn't show up in some device
+- Added ThermalCore Service
+- Improve I/O Sched Parser in Initialization
+- Improve Game Preload Logic, fixed ram overload if user were in game for too long
+- Fixed an issue where performance profile always reapplies if Game Preload is active
+- Some refining in the WebUI, make the cleaner looks
+- Fully fixed random reboot in WebUI
+- Improving log message for better readability.
+
+
 ## AZenith 4.0
 ### Changelog
 - Underscale settings now using option based on percentage
