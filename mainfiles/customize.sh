@@ -18,9 +18,7 @@ SKIPUNZIP=1
 
 # Paths
 MODULE_CONFIG="/data/adb/.config/AZenith"
-if [ -d "$AXERON" ]; then
-    MODULE_CONFIG="$MODPATH"
-fi
+[ $AXERON ] && MODULE_CONFIG="$MODPATH"
    
 device_codename=$(getprop ro.product.board)
 chip=$(getprop ro.hardware)
