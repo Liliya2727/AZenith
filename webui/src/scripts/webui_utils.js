@@ -1685,7 +1685,7 @@ const setupUIListeners = () => {
     ?.addEventListener("change", (e) => setdtrace(e.target.checked));
   document
     .getElementById("GPreload")
-    ?.addEventListener("change", (e) => setthermalcore(e.target.checked));
+    ?.addEventListener("change", (e) => setGPreloadStatus(e.target.checked));
   document
     .getElementById("clearbg")
     ?.addEventListener("change", (e) => setRamBoostStatus(e.target.checked));
