@@ -10,6 +10,8 @@
 - Some refining in the WebUI, make the cleaner looks
 - Fully fixed random reboot in WebUI
 - Improving log message for better readability.
+! 05112025
+- Fix Game Preload toggle won't checked
 
 
 ## AZenith 4.0
