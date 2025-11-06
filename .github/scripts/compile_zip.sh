@@ -48,8 +48,9 @@ find mainfiles/system/bin -maxdepth 1 -type f -name "*.sh" -exec sh -c 'mv -- "$
 
 # Parse version info to module prop
 zipName="AZenith-$version-$release_code.zip"
-zipNameExtracted="AZenith-$version-$release_code"
 echo "zipName=$zipName" >>"$GITHUB_OUTPUT"
+artifactName="${zipName%.zip}"
+echo "artifactName=$artifactName" >>"$GITHUB_OUTPUT"
 
 # Generate sha256sum for integrity checkup
 for file in "${need_integrity[@]}"; do
