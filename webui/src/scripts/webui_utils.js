@@ -931,40 +931,62 @@ const setAI = async (c) => {
   );
 };
 
+const getSu = async () => {
+  const locations = [
+    "/data/adb/ksu/bin/su",
+    "/data/adb/ap/bin/su",
+    "/system/bin/su",
+    "/system/xbin/su",
+    "su"
+  ];
+
+  for (const su of locations) {
+    const { errno } = await executeCommand(`ls ${su}`);
+    if (errno === 0) return su;
+  }
+  return null;
+};
+
+const runAsRoot = async (cmd) => {
+  const su = await getSu();
+  if (!su) {
+    toast("Root not found");
+    return;
+  }
+  return executeCommand(`${su} -c "${cmd}" >/dev/null 2>&1 &`);
+};
+
 const applyperformanceprofile = async () => {
   let { stdout: c } = await executeCommand(
     "cat /data/adb/.config/AZenith/API/current_profile"
   );
-  if ("1" === c.trim()) {
-    const alreadyPerformanceToast = getTranslation("toast.alreadyPerformance");
-    toast(alreadyPerformanceToast);
+  if (c.trim() === "1") {
+    toast(getTranslation("toast.alreadyPerformance"));
     return;
   }
-  executeCommand("su -c /data/adb/modules/AZenith/system/bin/sys.azenith-profiler 1 >/dev/null 2>&1 &");
+  await runAsRoot("sys.azenith-profiler 1");
 };
 
 const applybalancedprofile = async () => {
   let { stdout: c } = await executeCommand(
     "cat /data/adb/.config/AZenith/API/current_profile"
   );
-  if ("2" === c.trim()) {
-    const alreadyBalancedToast = getTranslation("toast.alreadyBalanced");
-    toast(alreadyBalancedToast);
+  if (c.trim() === "2") {
+    toast(getTranslation("toast.alreadyBalanced"));
     return;
   }
-  executeCommand("su -c /data/adb/modules/AZenith/system/bin/sys.azenith-profiler 2 >/dev/null 2>&1 &");
+  await runAsRoot("sys.azenith-profiler 2");
 };
 
 const applyecomode = async () => {
   let { stdout: c } = await executeCommand(
     "cat /data/adb/.config/AZenith/API/current_profile"
   );
-  if ("3" === c.trim()) {
-    const alreadyECOToast = getTranslation("toast.alreadyECO");
-    toast(alreadyECOToast);
+  if (c.trim() === "3") {
+    toast(getTranslation("toast.alreadyECO"));
     return;
   }
-  executeCommand("su -c /data/adb/modules/AZenith/system/bin/sys.azenith-profiler 3 >/dev/null 2>&1 &");
+  await runAsRoot("sys.azenith-profiler 3");
 };
 
 const checkjit = async () => {
