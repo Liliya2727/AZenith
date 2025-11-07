@@ -940,7 +940,7 @@ const applyperformanceprofile = async () => {
     toast(alreadyPerformanceToast);
     return;
   }
-  executeCommand("su -c sys.azenith-profiler 1 >/dev/null 2>&1 &");
+  executeCommand("su -c /data/adb/modules/AZenith/system/bin/sys.azenith-profiler 1 >/dev/null 2>&1 &");
 };
 
 const applybalancedprofile = async () => {
@@ -952,7 +952,7 @@ const applybalancedprofile = async () => {
     toast(alreadyBalancedToast);
     return;
   }
-  executeCommand("su -c sys.azenith-profiler 2 >/dev/null 2>&1 &");
+  executeCommand("su -c /data/adb/modules/AZenith/system/bin/sys.azenith-profiler 2 >/dev/null 2>&1 &");
 };
 
 const applyecomode = async () => {
@@ -964,7 +964,7 @@ const applyecomode = async () => {
     toast(alreadyECOToast);
     return;
   }
-  executeCommand("su -c sys.azenith-profiler 3 >/dev/null 2>&1 &");
+  executeCommand("su -c /data/adb/modules/AZenith/system/bin/sys.azenith-profiler 3 >/dev/null 2>&1 &");
 };
 
 const checkjit = async () => {
