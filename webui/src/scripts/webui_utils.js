@@ -73,21 +73,31 @@ const checkProfile = async () => {
         r
       ] || "Unknown";
 
-    // Check for Lite mode
     const { errno: c2, stdout: s2 } = await executeCommand(
       "getprop persist.sys.azenithconf.cpulimit"
     );
     if (c2 === 0 && s2.trim() === "1") l += " (Lite)";
 
+    let gamePkg = "";
+    if (r === "1") {
+      const { errno: c3, stdout: s3 } = await executeCommand(
+        "cat /data/adb/.config/AZenith/API/gameinfo"
+      );
+      if (c3 === 0) {
+        // Format: "pkg pid uid"
+        const parts = s3.trim().split(" ");
+        if (parts.length >= 1) {
+          gamePkg = parts[0];
+          l += ` — ${gamePkg}`;
+        }
+      }
+    }
+
     if (lastProfile.value === l) return;
     lastProfile = { time: now, value: l };
 
     d.textContent = l;
-
-    // Detect theme mode
     const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-
-    // Dark mode colors (original) vs light mode (darker/saturated)
     const colors = isDark
       ? {
           Performance: "#ef4444",
@@ -104,8 +114,9 @@ const checkProfile = async () => {
           Default: "#1f2937",
         };
 
-    const key = l.replace(" (Lite)", "");
+    const key = l.replace(" (Lite)", "").split(" — ")[0];
     d.style.color = colors[key] || colors.Default;
+
   } catch (m) {
     console.error("checkProfile error:", m);
   }
