@@ -18,11 +18,11 @@ TMPDIR_FOR_VERIFY="$TMPDIR/.vunzip"
 mkdir "$TMPDIR_FOR_VERIFY"
 
 abort_verify() {
-	ui_print "*********************************************************"
+	ui_print "# # # # # # # # # # # # # # # # # # # # #"
 	ui_print "! $1"
 	ui_print "! Installation aborted. The module may be corrupted."
 	ui_print "! Please re-download and try again."
-	abort "*********************************************************"
+	abort "# # # # # # # # # # # # # # # # # # # # #"
 }
 
 # extract <zip> <file> <target dir>

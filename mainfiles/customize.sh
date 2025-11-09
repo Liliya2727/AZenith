@@ -26,6 +26,26 @@ chip=$(getprop ro.hardware)
 make_node() {
 	[ ! -f "$2" ] && echo "$1" >"$2"
 }
+abort_corrupted() {
+  ui_print ""
+  ui_print "! Installation Aborted"
+  ui_print "! The AZenith package appears to be corrupted or incomplete."
+  ui_print "! Required installation files were not found."
+  ui_print ""
+  ui_print "! Please re-download the module and try again."
+  abort "# # # # # # # # # # # # # # # # # # # # #"
+}
+abort_arch() {
+  ui_print "! Installation Aborted"
+  ui_print "! Unsupported CPU Architecture Detected"
+  ui_print "! Your device architecture is not compatible with this build of AZenith."
+  ui_print "! Supported architectures:"
+  ui_print "  • arm64-v8a"
+  ui_print "  • armeabi-v7a"
+  ui_print "  • x86 / x86_64"
+  ui_print "  • riscv64"
+  abort "# # # # # # # # # # # # # # # # # # # # #"
+}
 
 # Displaybanner
 ui_print ""
@@ -75,7 +95,7 @@ case $ARCH in
 "x64") ARCH_TMP="x86_64" ;;
 "x86") ARCH_TMP="x86" ;;
 "riscv64") ARCH_TMP="riscv64" ;;
-*) abort ;;
+*) abort_arch ;;
 esac
 
 # Extract daemon
