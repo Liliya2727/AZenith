@@ -8,23 +8,23 @@
     "labels": {
       "currentProfile": "当前配置文件",
       "chipset": "芯片组",
-      "kernel": "内核",
+      "kernel": "内核版本",
       "androidVersion": "Android 版本"
     },
     "buttons": {
-      "changeProfile": "更改配置文件"
+      "changeProfile": "切换配置文件"
     },
-    "loading": "正在获取信息..."
+    "loading": "正在读取信息..."
   },
 
   "settingsMore": {
     "additional": {
       "title": "附加设置",
-      "description": "用于提升使用体验的额外设置。"
+      "description": "进一步提升使用体验的高级选项。"
     },
     "preference": {
       "title": "偏好设置",
-      "description": "在启动时应用的偏好或附加功能。"
+      "description": "在启动时自动应用的偏好功能。"
     }
   },
 
@@ -32,23 +32,23 @@
     "title": "CPU 设置",
     "default": {
       "title": "默认 CPU Governor",
-      "desc": "用于普通配置文件的 Governor"
+      "desc": "用于普通模式的 Governor。"
     },
     "powersave": {
       "title": "省电 CPU Governor",
-      "desc": "用于省电配置文件的 Governor"
+      "desc": "用于省电模式的 Governor。"
     },
     "limit": {
       "title": "限制 CPU 频率",
-      "desc": "在平衡模式和 ECO 模式下设置最大频率"
+      "desc": "在平衡模式与 ECO 模式下设置最大频率。"
     },
     "thermal": {
-      "title": "AI散热核心服务",
-      "desc": "通过学习设备的运行行为，智能管理系统性能和温度，以减少过热并保持稳定性。（如果在性能模式下感觉卡顿，请关闭此功能）"
+      "title": "AI 智能散热服务",
+      "desc": "根据设备使用情况智能调控性能与温度，降低发热并提升稳定性。（若性能模式下出现轻微卡顿，可尝试关闭）"
     },
     "litemode": {
       "title": "轻量模式（重启生效）",
-      "desc": "通过降低性能模式下的 CPU 频率减少过热。"
+      "desc": "在性能模式下降低 CPU 频率以减少发热。"
     }
   },
 
@@ -56,123 +56,123 @@
     "title": "I/O 调度器设置",
     "default": {
       "title": "默认 I/O 调度器",
-      "desc": "用于普通配置文件的调度器"
+      "desc": "用于普通模式的调度器。"
     },
     "performance": {
       "title": "性能 I/O 调度器",
-      "desc": "用于性能配置文件的调度器"
+      "desc": "用于性能模式的调度器。"
     },
     "powersave": {
       "title": "省电 I/O 调度器",
-      "desc": "用于省电配置文件的调度器"
+      "desc": "用于省电模式的调度器。"
     }
   },
 
   "thanks": {
     "title": "感谢使用！✨",
-    "message": "感谢您使用 AZenith！非常感谢您的支持，没有您，这个模块就不会存在。AZenith 将一直陪伴您！",
+    "message": "感谢您使用 AZenith！您的支持是我们持续更新的动力。愿 AZenith 始终伴您左右！",
     "footer": "WebUI 设计：@kanaochar & @Zexshia"
   },
 
   "preference": {
     "title": "偏好设置",
-    "description": "在启动时应用的偏好或附加功能（修改后需重启）。",
+    "description": "在启动时应用的功能增强选项（更改后需重启）。",
     "schedtunes": {
-      "title": "Sched Tunes",
-      "desc": "通过调整上升/下降速率限制优化所有 CPU 集群的频率调度。"
+      "title": "SchedTune 调优",
+      "desc": "优化 CPU 集群频率调度的升降速率。"
     },
     "sfl": {
-      "title": "SurfaceFlinger 延迟",
-      "desc": "优化 SurfaceFlinger，减少屏幕延迟，提高响应速度。"
+      "title": "SurfaceFlinger 延迟优化",
+      "desc": "降低显示延迟，提升系统响应速度。"
     },
     "jit": {
-      "title": "即时编译 (JIT)",
-      "desc": "启用 JIT 编译，提高应用性能。"
+      "title": "即时编译（JIT）",
+      "desc": "启用 JIT 以提升应用运行效率。"
     },
     "trace": {
       "title": "禁用 Trace",
-      "desc": "禁用内核和 Android 框架的跟踪功能。"
+      "desc": "禁用内核与框架级跟踪功能。"
     },
     "fpsged": {
-      "title": "FPSGO 与 GED 参数",
-      "desc": "使用优化后的 FPSGO 和 GED 参数。"
+      "title": "FPSGO & GED 优化",
+      "desc": "应用优化后的 FPSGO 和 GED 参数。"
     },
     "logd": {
       "title": "关闭日志系统",
-      "desc": "禁用系统日志服务，减少后台活动以提升性能。"
+      "desc": "禁用系统日志以减少后台活动并提升性能。"
     },
     "malisched": {
-      "title": "GPU Mali 调度",
-      "desc": "强制 GPU 串行执行任务，提高稳定性或降低功耗。"
+      "title": "Mali GPU 调度",
+      "desc": "强制 GPU 串行调度以增强稳定性或降低功耗。"
     },
     "dthermal": {
       "title": "禁用温控",
-      "desc": "关闭温控服务（可能导致过热）。"
+      "desc": "关闭系统温控（可能导致严重发热，请谨慎启用）。"
     }
   },
 
   "settingsAddi": {
     "additional": {
       "title": "附加设置",
-      "description": "用于提升使用体验的额外设置。",
+      "description": "提升使用体验的扩展功能。",
       "gpreload": {
         "title": "游戏预加载",
-        "description": "在启动游戏时预加载必要库文件，减少加载时间并降低卡顿。"
+        "description": "在启动游戏时预先加载必要库文件，缩短加载时间并减少卡顿。"
       },
       "memorykiller": {
         "title": "内存清理",
-        "description": "在性能模式下关闭后台运行的应用程序。"
+        "description": "在性能模式下自动关闭后台应用。"
       },
       "apppriority": {
         "title": "应用优先级控制",
-        "description": "在性能模式下提高 CPU 和 I/O 调度优先级。"
+        "description": "在性能模式下提升 CPU 与 I/O 调度优先级。"
       },
       "bypasscharge": {
         "title": "旁路充电",
-        "description": "在性能模式下启用旁路充电（适用于多数联发科设备）。"
+        "description": "在性能模式下开启旁路充电（适用于大部分联发科设备）。"
       },
       "dnd": {
         "title": "勿扰模式",
-        "description": "在性能模式下屏蔽所有通知，提升游戏体验。"
+        "description": "在性能模式下屏蔽所有通知，保持游戏沉浸体验。"
       },
       "vsync": {
         "title": "禁用 VSync",
-        "description": "禁用渲染帧率与显示刷新率同步。"
+        "description": "关闭渲染帧率与刷新率同步限制。"
       },
       "fstrim": {
-        "title": "FSTrim 分区",
+        "title": "FSTRIM 分区",
         "description": "清理未使用的存储块以优化 I/O 性能。",
-        "button": "清理"
+        "button": "立即清理"
       },
-      "customreso": "自定义分辨率设置",
-      "colorscheme": "颜色方案设置"
+      "customreso": "自定义分辨率",
+      "colorscheme": "颜色方案"
     }
   },
 
   "settingsProfile": {
     "profiler": {
       "title": "配置文件管理",
-      "description": "设置当前活动的配置文件。",
-      "balanced": "应用平衡模式",
-      "performance": "应用性能模式",
-      "powersave": "应用 ECO 模式"
+      "description": "设置当前正在使用的性能配置文件。",
+      "balanced": "切换至平衡模式",
+      "performance": "切换至性能模式",
+      "powersave": "切换至 ECO 模式"
     }
   },
 
   "settingsReso": {
     "resolution": {
-      "title": "缩放分辨率",
-      "description": "将设备虚拟分辨率设置为较小尺寸。",
+      "title": "分辨率缩放",
+      "description": "设置更低的虚拟分辨率以提升性能。",
       "low": {
-        "title": "低分辨率 (80%)",
+        "title": "低分辨率（80%）",
         "size": ""
       },
       "mid": {
-        "title": "中分辨率 (90%)",
+        "title": "中分辨率（90%）",
         "size": ""
       },
       "max": {
-        "title": "最大分辨率 (100%)",
+        "title": "原生分辨率（100%）",
         "size": ""
       },
       "cancel": "取消",
@@ -184,26 +184,26 @@
     "title": "模块设置",
     "verbose": {
       "title": "启用详细日志",
-      "desc": "启用 AZenith 的详细日志记录（不熟悉请保持关闭）。"
+      "desc": "记录更全面的调试日志（不熟悉请保持关闭）。"
     },
     "toast": {
       "title": "显示提示通知",
-      "desc": "在切换配置文件时显示提示消息。"
+      "desc": "切换配置文件时显示提示消息。"
     },
     "disableai": {
       "title": "禁用智能切换",
-      "desc": "禁用游戏启动时的自动性能模式切换。"
+      "desc": "关闭自动识别游戏并切换至性能模式的功能。"
     },
     "buttons": {
       "save": "保存日志",
       "edit": "编辑游戏列表",
-      "restart": "重新初始化守护进程"
+      "restart": "重新启动守护进程"
     }
   },
 
   "scheme": {
     "title": "颜色方案",
-    "description": "调整屏幕饱和度与 RGB 颜色。",
+    "description": "手动调节屏幕 RGB 与饱和度。",
     "red": {
       "title": "红色"
     },
@@ -217,83 +217,83 @@
       "title": "饱和度"
     },
     "buttons": {
-      "reset": "重置颜色设置",
+      "reset": "重置颜色",
       "apply": "应用"
     }
   },
 
   "gamelist": {
     "title": "游戏列表",
-    "description": "此处列出的应用或游戏将触发游戏模式。",
+    "description": "列表内的应用启动时将触发游戏模式。",
     "buttons": {
       "cancel": "取消",
       "save": "保存"
     }
   },
-  
+
   "banner": {
-    "serviceStatus": "暂停💤",
-    "servicePID": "服务已停止",
+    "serviceStatus": "已暂停 💤",
+    "servicePID": "服务未运行",
     "msg": "未获取到数据"
   },
-  
+
   "randomMessages": {
-    "0": "今天的天空真美……你注意到了吗？",
-    "1": "闪光让一切都变得更好 ✨",
-    "2": "你已经尽力了，这就足够了~",
-    "3": "休息一下也没关系。连星星也需要时间闪耀。",
+    "0": "今天的天空好温柔……你注意到了吗？",
+    "1": "一点点闪光，也能让世界变得更好 ✨",
+    "2": "你已经很努力了，这就足够了。",
+    "3": "休息一下没关系，连星星也需要时间闪耀。",
     "4": "一杯热饮，深呼吸……一切都会好起来的。",
-    "5": "柔软的云，宁静的心。今天慢慢来~",
-    "6": "你不需要理由去微笑 — 就笑吧~",
-    "7": "哪怕是小小的步伐，也能通向大大的梦想~",
-    "8": "今天的风很温柔……就像世界给你的拥抱。",
-    "9": "你就像裂缝里生长的小花——美丽又勇敢。",
-    "10": "我相信你~ 即使有时世界显得沉重。",
-    "11": "让我们追逐光明，即使道路缓慢。",
-    "12": "星星一直在看着你……它们为你感到骄傲。",
-    "13": "你比自己想象的还要闪耀 ✨",
-    "14": "有时候什么都不做，也是最勇敢的事情。",
-    "15": "让阳光亲吻你的脸颊，让烦恼消散。",
-    "16": "月光不急，你也不需要急~",
-    "17": "即使只是心里，也握住我的手~",
-    "18": "温柔的早晨从微笑开始——哪怕是困倦的微笑。",
-    "19": "像云一样漂浮，柔软而自由~",
-    "20": "在匆忙的世界里，你是一段柔和的旋律——慢慢来。",
-    "21": "一杯茶、暖袜子，还有一颗正在愈合的心~",
-    "22": "雨天是躲在被窝里轻轻做梦的日子~",
-    "23": "花静静绽放——你也会。",
-    "24": "天空不需要允许就能美丽，你也一样。",
-    "25": "你由柔和的光和安静的勇气组成~",
-    "26": "观星不是拖延——而是心灵疗愈。",
-    "27": "安静的日子也没关系。月亮也是如此。",
-    "28": "今天的氛围：平静的天空、温暖的茶、柔软的心。",
-    "29": "你不必闪耀得很响亮——有些星星在沉默中闪耀 ✨"
+    "5": "柔软的云，柔软的心。今天慢慢来吧~",
+    "6": "你不需要理由去微笑 —— 就笑吧。",
+    "7": "哪怕是小小的步伐，也能走向大梦想。",
+    "8": "今天的风很温暖……像世界给你的拥抱。",
+    "9": "你就像裂缝里开出的花——坚强又美丽。",
+    "10": "我相信你，即使有时世界让人喘不过气。",
+    "11": "我们一起追逐光，即使脚步慢一些也没关系。",
+    "12": "星星一直看着你……它们为你骄傲。",
+    "13": "你比自己想象的更加闪耀 ✨",
+    "14": "有时候不做任何事，也是种勇敢。",
+    "15": "让阳光洒在脸上，让烦恼悄悄溜走。",
+    "16": "月亮不着急，你也不必急。",
+    "17": "至少在心里……握住我的手吧。",
+    "18": "温柔的早晨从小小的微笑开始。",
+    "19": "像云一样轻轻漂浮——自由又温软。",
+    "20": "在匆忙的世界里，你是一段安静的旋律。",
+    "21": "一杯热茶、暖暖的袜子，还有慢慢愈合的心。",
+    "22": "雨天适合躲进被窝里做小小的梦。",
+    "23": "花会悄悄绽放——你也是。",
+    "24": "天空无需许可就能美丽，你也是。",
+    "25": "你由柔光和安静的勇气组成。",
+    "26": "看星星不是拖延——是心灵疗愈。",
+    "27": "安静的日子也很好，月亮也是这样过的。",
+    "28": "今天的氛围：晴朗、温茶、柔软的心。",
+    "29": "你不必闪耀得很响亮——有些星星安静发光 ✨"
   },
-  
+
   "serviceStatus": {
-    "initializing": "初始化中...\uD83C\uDF31",
-    "runningAuto": "运行中 - 自动模式\uD83C\uDF43",
-    "runningIdle": "运行中 - 空闲模式\uD83D\uDCAB",
-    "unknownProfile": "未知配置",
-    "suspended": "暂停\uD83D\uDCA4",
+    "initializing": "正在初始化中... 🌱",
+    "runningAuto": "运行中 - 自动模式 🍃",
+    "runningIdle": "运行中 - 空闲模式 ✨",
+    "unknownProfile": "未知模式",
+    "suspended": "已暂停 😴",
     "servicePID": "服务 PID: {0}"
   },
-  
+
   "toast": {
-    "fstrim": "已清理未使用的块",
-    "showcantaccess": "当前模式无法访问",
-    "savedPackages": "已保存 {0} 个程序",
+    "fstrim": "清理完成！",
+    "showcantaccess": "当前模式无法访问此功能。",
+    "savedPackages": "已保存 {0} 个应用",
     "cantRestart": "无法重启，守护进程正在初始化",
-    "serviceDead": "服务已停止，请重启！",
+    "serviceDead": "守护进程已停止，请重新启动！",
     "restartingDaemon": "正在重启守护进程...",
-    "restartFailed": "重启守护进程失败",
-    "colorSchemeSaved": "已保存配色方案设置",
-    "invalidColorScheme": "配色方案格式无效，使用安全默认值",
-    "colorSchemeNotFound": "未找到配色方案，使用默认值",
+    "restartFailed": "守护进程重启失败",
+    "colorSchemeSaved": "颜色方案已保存",
+    "invalidColorScheme": "颜色方案格式无效，已恢复安全默认值",
+    "colorSchemeNotFound": "未找到颜色方案，已使用默认值",
     "displayReset": "显示设置已重置！",
-    "alreadyPerformance": "你已经在性能模式",
-    "alreadyBalanced": "你已经在平衡模式",
-    "alreadyECO": "你已经在节能模式",
+    "alreadyPerformance": "当前已处于性能模式",
+    "alreadyBalanced": "当前已处于平衡模式",
+    "alreadyECO": "当前已处于节能模式",
     "logSaved": "日志已保存",
     "logSaveFailed": "日志保存失败",
     "unableDetectResolution": "无法检测屏幕分辨率",
