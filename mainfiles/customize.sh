@@ -231,23 +231,19 @@ if [ -z "$(getprop persist.sys.azenithconf.showtoast)" ]; then
 	setprop persist.sys.azenithconf.showtoast 1
 fi
 
-# Make sure to enable Auto Every installment and Update
-ui_print "- Enabling Auto Mode"
-setprop persist.sys.azenithconf.AIenabled 1
+if [ -z "$(getprop persist.sys.azenithconf.AIenabled)" ]; then
+    ui_print "- Enabling Auto Mode"
+    setprop persist.sys.azenithconf.AIenabled 1
+fi
 
 ui_print "- Disable Debugmode"
 setprop persist.sys.azenith.debugmode "false"
 
-# Install toast if not installed
-if pm list packages | grep -q azenith.toast; then
-	ui_print "- AZenith Toast is already installed."
-else
-	ui_print "- Extracting AZenith Toast..."
-	unzip -qo "$ZIPFILE" azenithtoast.apk -d "$MODPATH" >&2
-	ui_print "- Installing AZenith Toast..."
-	pm install "$MODPATH/azenithtoast.apk"
-	rm "$MODPATH/azenithtoast.apk"
-fi
+ui_print "- Extracting AZenith Toast..."
+extract "$ZIPFILE" azenithtoast.apk "$MODPATH"
+ui_print "- Installing AZenith Toast..."
+pm install "$MODPATH/azenithtoast.apk" > /dev/null 2>&1
+rm "$MODPATH/azenithtoast.apk"
 
 # Set Permissions
 ui_print "- Setting Permissions..."
