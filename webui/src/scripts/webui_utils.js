@@ -147,7 +147,7 @@ const checkCPUInfo = async () => {
   const cached = localStorage.getItem("soc_info");
   try {
     const rawModel = await getSoCModel();
-    const model = rawModel.replace(/\s+/g, "").toUpperCase();
+    const model = rawModel.replace(/\s+/g, "");
 
     const db = await fetchSOCDatabase();
     let displayName = db[model];
