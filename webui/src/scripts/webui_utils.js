@@ -69,8 +69,29 @@ export const loadConfigFile = async (file) => {
   try {
     const text = await file.text();
     const config = JSON.parse(text);
+    const expectedKeys = {
+      config: [
+        "justintime","disabletrace","logd","DThermal","SFL","malisched","fpsged",
+        "schedtunes","clearbg","bypasschg","APreload","iosched","cpulimit","dnd",
+        "AIenabled","vsync","freqoffset","schemeconfig","scale","showtoast",
+        "resosettings","preloadbudget","thermalcore"
+      ],
+      governors: ["custom_default_cpu_gov", "custom_powersave_cpu_gov"],
+      io: ["custom_default_balanced_IO", "custom_powersave_IO", "custom_performance_IO"]
+    };
+    for (const section of Object.keys(expectedKeys)) {
+      if (!config[section] || typeof config[section] !== "object") {
+        throw new Error(`Missing or invalid section: ${section}`);
+      }
+      for (const key of expectedKeys[section]) {
+        if (!(key in config[section])) {
+          throw new Error(`Missing key '${key}' in section '${section}'`);
+        }
+      }
+    }
 
     await applySavedConfig(config);
+
     const loadconfToast = getTranslation("toast.loadconf");
     toast(loadconfToast);
     return true;
@@ -117,6 +138,7 @@ const collectCurrentConfig = async () => {
       showtoast: await get("persist.sys.azenithconf.showtoast"),
       resosettings: await get("persist.sys.azenithconf.resosettings"),
       preloadbudget: await get("persist.sys.azenithconf.preloadbudget"),
+      thermalcore: await get("persist.sys.azenithconf.thermalcore"),
     },
 
     governors: {
@@ -167,6 +189,7 @@ const applySavedConfig = async (saved) => {
     await set("persist.sys.azenithconf.showtoast", saved.config.showtoast);
     await set("persist.sys.azenithconf.resosettings", saved.config.resosettings);
     await set("persist.sys.azenithconf.preloadbudget", saved.config.preloadbudget);
+    await set("persist.sys.azenithconf.thermalcore", saved.config.thermalcore);
   }
 
   if (saved.governors) {

@@ -198,8 +198,8 @@
       "save": "Save Logs",
       "edit": "Edit Gamelist",
       "restart": "Reinitialize Daemon",
-      "saveconf": "Save AZenith Config",
-      "loadconf": "Load AZenith Config"
+      "saveconf": "Save Config Presets",
+      "loadconf": "Load Config Presets"
     }
   },
   
@@ -282,9 +282,9 @@
   },
   
   "toast": {
-    "saveconf": "Saved config to: {0}",
-    "loadconf": "Loaded saved config from json",
-    "loadconffail": "Failed to load config, invalid json",
+    "saveconf": "Presets successfully saved to: {0}",
+    "loadconf": "Presets successfully loaded from JSON",
+    "loadconffail": "Failed to load configuration: Invalid JSON format",
     "fstrim": "Trimmed Unused Blocks",
     "showcantaccess": "Can't access in current mode",
     "savedPackages": "Saved {0} packages",
