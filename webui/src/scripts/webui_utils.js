@@ -46,7 +46,7 @@ bannerInput.addEventListener("change", async (event) => {
   const file = event.target.files[0];
   if (!file) return;
 
-  bannerLoader.style.display = "flex";
+  bannerLoader.classList.add("active");
 
   const img = new Image();
   img.src = URL.createObjectURL(file);
@@ -119,8 +119,6 @@ bannerInput.addEventListener("change", async (event) => {
     }, "image/avif");
   };
 });
-
-// On reload, loader disappears automatically since page reloads
 
 export const saveConfig = async () => {
   try {

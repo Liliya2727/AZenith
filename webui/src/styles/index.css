@@ -27,15 +27,17 @@
   z-index: 10;
   text-align: center;
 
-  /* smooth appear animation */
+  /* default invisible state */
   opacity: 0;
   transform: scale(0.96);
+  pointer-events: none;
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
 .banner-loader.active {
   opacity: 1;
   transform: scale(1);
+  pointer-events: auto;
 }
 
 .banner-loader .spinner2 {
@@ -51,13 +53,15 @@
   margin-top: 12px;
   color: white;
   font-size: 14px;
-  opacity: 0.9;
   letter-spacing: 0.5px;
 
-  /* also fade-in slightly delayed */
-  animation: fadeInText 0.4s ease forwards;
-  animation-delay: 0.15s;
   opacity: 0;
+  transform: translateY(4px);
+}
+
+.banner-loader.active .loader-text {
+  animation: fadeInText 0.35s ease forwards;
+  animation-delay: 0.12s;
 }
 
 @keyframes fadeInText {
