@@ -35,6 +35,160 @@ const executeCommand = async (cmd, cwd = null) => {
 
 window.executeCommand = executeCommand;
 
+export const saveConfig = async () => {
+  try {
+    const config = await collectCurrentConfig();
+
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .replace("T", "-")
+      .split(".")[0];
+
+    const filename = `AZenith-config-${timestamp}.json`;
+
+    const blob = new Blob([JSON.stringify(config, null, 2)], {
+      type: "application/json",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = filename;
+    a.click();
+
+    URL.revokeObjectURL(url);
+
+    return true;
+  } catch (err) {
+    console.error("saveConfig failed:", err);
+    return false;
+  }
+};
+
+export const loadConfigFile = async (file) => {
+  try {
+    const text = await file.text();
+    const config = JSON.parse(text);
+
+    await applySavedConfig(config);
+    return true;
+  } catch (err) {
+    console.error("loadConfigFile failed:", err);
+    return false;
+  }
+};
+
+const collectCurrentConfig = async () => {
+  const get = async (prop, fallback = "0") => {
+    try {
+      const out = await executeCommand(`getprop ${prop}`);
+      return (out.stdout || "").trim() || fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
+  return {
+    schemeconfig: {
+      scheme: await get("persist.sys.azenithconf.schemeconfig"),
+
+    },
+    
+    core: {
+      justintime: await get("persist.sys.azenithconf.justintime"),
+      disabletrace: await get("persist.sys.azenithconf.disabletrace"),
+      logd: await get("persist.sys.azenithconf.logd"),
+      DThermal: await get("persist.sys.azenithconf.DThermal"),
+      SFL: await get("persist.sys.azenithconf.SFL"),
+      malisched: await get("persist.sys.azenithconf.malisched"),
+      fpsged: await get("persist.sys.azenithconf.fpsged"),
+      schedtunes: await get("persist.sys.azenithconf.schedtunes"),
+      clearbg: await get("persist.sys.azenithconf.clearbg"),
+      bypasschg: await get("persist.sys.azenithconf.bypasschg"),
+      APreload: await get("persist.sys.azenithconf.APreload"),
+      iosched: await get("persist.sys.azenithconf.iosched"),
+      cpulimit: await get("persist.sys.azenithconf.cpulimit"),
+      dnd: await get("persist.sys.azenithconf.dnd"),
+      AIenabled: await get("persist.sys.azenithconf.AIenabled"),
+      vsync: await get("persist.sys.azenithconf.vsync"),
+      freqoffset: await get("persist.sys.azenithconf.freqoffset"),
+      schemeconfig: await get("persist.sys.azenithconf.schemeconfig"),
+      scale: await get("persist.sys.azenithconf.scale"),
+      showtoast: await get("persist.sys.azenithconf.showtoast"),
+      resosettings: await get("persist.sys.azenithconf.resosettings"),
+      preloadbudget: await get("persist.sys.azenithconf.preloadbudget"),
+    },
+
+    governors: {
+      custom_default_cpu_gov: await get("persist.sys.azenith.custom_default_cpu_gov"),
+      custom_game_cpu_gov: await get("persist.sys.azenith.custom_game_cpu_gov"),
+      custom_powersave_cpu_gov: await get("persist.sys.azenith.custom_powersave_cpu_gov"),
+    },
+
+    io: {
+      custom_default_balanced_IO: await get("persist.sys.azenith.custom_default_balanced_IO"),
+      custom_powersave_IO: await get("persist.sys.azenith.custom_powersave_IO"),
+      custom_performance_IO: await get("persist.sys.azenith.custom_performance_IO"),
+    }
+  };
+};
+
+const applySavedConfig = async (saved) => {
+  if (!saved || typeof saved !== "object") return;
+
+  const set = async (prop, value) => {
+    if (value === undefined || value === null) return;
+    try {
+      await executeCommand(`setprop ${prop} "${value}"`);
+    } catch (e) {
+      console.error("Failed to set:", prop, value, e);
+    }
+  };
+
+  if (saved.schemeconfig) {
+    await set("persist.sys.azenithconf.schemeconfig", saved.schemeconfig.scheme);
+  }
+
+  if (saved.core) {
+    await set("persist.sys.azenithconf.justintime", saved.core.justintime);
+    await set("persist.sys.azenithconf.disabletrace", saved.core.disabletrace);
+    await set("persist.sys.azenithconf.logd", saved.core.logd);
+    await set("persist.sys.azenithconf.DThermal", saved.core.DThermal);
+    await set("persist.sys.azenithconf.SFL", saved.core.SFL);
+    await set("persist.sys.azenithconf.malisched", saved.core.malisched);
+    await set("persist.sys.azenithconf.fpsged", saved.core.fpsged);
+    await set("persist.sys.azenithconf.schedtunes", saved.core.schedtunes);
+    await set("persist.sys.azenithconf.clearbg", saved.core.clearbg);
+    await set("persist.sys.azenithconf.bypasschg", saved.core.bypasschg);
+    await set("persist.sys.azenithconf.APreload", saved.core.APreload);
+    await set("persist.sys.azenithconf.iosched", saved.core.iosched);
+    await set("persist.sys.azenithconf.cpulimit", saved.core.cpulimit);
+    await set("persist.sys.azenithconf.dnd", saved.core.dnd);
+    await set("persist.sys.azenithconf.AIenabled", saved.core.AIenabled);
+    await set("persist.sys.azenithconf.vsync", saved.core.vsync);
+    await set("persist.sys.azenithconf.freqoffset", saved.core.freqoffset);
+    await set("persist.sys.azenithconf.schemeconfig", saved.core.schemeconfig);
+    await set("persist.sys.azenithconf.scale", saved.core.scale);
+    await set("persist.sys.azenithconf.showtoast", saved.core.showtoast);
+    await set("persist.sys.azenithconf.resosettings", saved.core.resosettings);
+    await set("persist.sys.azenithconf.preloadbudget", saved.core.preloadbudget);
+  }
+
+  if (saved.governors) {
+    await set("persist.sys.azenith.custom_default_cpu_gov", saved.governors.custom_default_cpu_gov);
+    await set("persist.sys.azenith.custom_game_cpu_gov", saved.governors.custom_game_cpu_gov);
+    await set("persist.sys.azenith.custom_powersave_cpu_gov", saved.governors.custom_powersave_cpu_gov);
+  }
+
+  if (saved.io) {
+    await set("persist.sys.azenith.custom_default_balanced_IO", saved.io.custom_default_balanced_IO);
+    await set("persist.sys.azenith.custom_powersave_IO", saved.io.custom_powersave_IO);
+    await set("persist.sys.azenith.custom_performance_IO", saved.io.custom_performance_IO);
+  }
+};
+
 const showRandomMessage = () => {
   const c = document.getElementById("msg");
   if (!c) return;
@@ -1827,6 +1981,21 @@ const setupUIListeners = () => {
   document.querySelectorAll(".reso-option")?.forEach((btn) => {
     btn.addEventListener("click", () => selectResolution(btn));
   });
+  
+  // AZenith Save and Load Config
+  document
+    .getElementById("saveconfig")
+    .onclick = async () => {
+    await saveConfig();
+  };
+
+  document
+    .getElementById("loadconfig")
+    .onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    await loadConfigFile(file);
+  };
 
   // Color scheme buttons
   document

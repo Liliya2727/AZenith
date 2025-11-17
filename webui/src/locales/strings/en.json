@@ -197,7 +197,9 @@
     "buttons": {
       "save": "Save Logs",
       "edit": "Edit Gamelist",
-      "restart": "Reinitialize Daemon"
+      "restart": "Reinitialize Daemon",
+      "saveconf": "Save AZenith Config",
+      "loadconf": "Load AZenith Config"
     }
   },
   
