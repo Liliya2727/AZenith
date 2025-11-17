@@ -234,7 +234,7 @@
   },
   
   "banner": {
-    "loader": "Processing the image..."
+    "loader": "Processing the image...",
     "serviceStatus": "Suspended💤",
     "servicePID": "Service is Stopped",
     "msg": "No Data Acquired"
