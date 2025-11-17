@@ -90,18 +90,23 @@ bannerInput.addEventListener("change", async (event) => {
       const reader = new FileReader();
       reader.onload = async () => {
         const base64 = reader.result.split(",")[1];
-
+    
         const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-
+    
         const targetFile = dark
           ? "/data/adb/modules/AZenith/webroot/webui.bannerdarkmode.avif"
           : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
-
+    
         await executeCommand(`echo "${base64}" | base64 -d > "${targetFile}"`);
+    
+        const imgToast = getTranslation("toast.chngeimg");
+        toast(imgToast);
 
-        alert("Banner updated and converted to 16:9!");
+        setTimeout(() => {
+          location.reload();
+        }, 500);
       };
-
+    
       reader.readAsDataURL(blob);
     }, "image/avif");
   };
