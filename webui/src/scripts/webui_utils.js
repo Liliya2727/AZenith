@@ -35,21 +35,18 @@ const executeCommand = async (cmd, cwd = null) => {
 
 window.executeCommand = executeCommand;
 
-const bannerBox = document.getElementById("bannerBox");
-const bannerInput = document.getElementById("bannerInput");
-
 let pressTimer = null;
-
 bannerBox.addEventListener("touchstart", () => {
   pressTimer = setTimeout(() => {
     bannerInput.click();
   }, 600);
 });
 bannerBox.addEventListener("touchend", () => clearTimeout(pressTimer));
-
 bannerInput.addEventListener("change", async (event) => {
   const file = event.target.files[0];
   if (!file) return;
+
+  bannerLoader.style.display = "flex";
 
   const img = new Image();
   img.src = URL.createObjectURL(file);
@@ -84,7 +81,10 @@ bannerInput.addEventListener("change", async (event) => {
     ctx.drawImage(img, startX, startY, cropW, cropH, 0, 0, outW, outH);
 
     canvas.toBlob(async (blob) => {
-      if (!blob) return;
+      if (!blob) {
+        bannerLoader.style.display = "none";
+        return;
+      }
 
       const reader = new FileReader();
       reader.onload = async () => {
@@ -92,12 +92,15 @@ bannerInput.addEventListener("change", async (event) => {
 
         const tmpFile = "/data/local/tmp/azenith_banner_tmp.b64";
         const outPath = "/data/local/tmp/azenith_banner_tmp.avif";
+
         await executeCommand(`rm -f "${tmpFile}" "${outPath}"`);
+
         const chunkSize = 8192;
         for (let i = 0; i < base64.length; i += chunkSize) {
           const chunk = base64.substring(i, i + chunkSize);
           await executeCommand(`echo "${chunk}" >> "${tmpFile}"`);
         }
+
         await executeCommand(`base64 -d "${tmpFile}" > "${outPath}"`);
 
         const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -116,6 +119,8 @@ bannerInput.addEventListener("change", async (event) => {
     }, "image/avif");
   };
 });
+
+// On reload, loader disappears automatically since page reloads
 
 export const saveConfig = async () => {
   try {
@@ -1924,6 +1929,9 @@ const setthermalcore = async (c) => {
 };
 
 const setupUIListeners = () => {
+  const bannerBox = document.getElementById("bannerBox");
+  const bannerInput = document.getElementById("bannerInput");
+  const bannerLoader = document.getElementById("bannerLoader");
   const banner = document.getElementById("Banner");
   const avatar = document.getElementById("Avatar");
   const scheme = document.getElementById("Scheme");
