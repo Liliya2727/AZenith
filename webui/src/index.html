@@ -53,11 +53,19 @@
       <main>
          <div class="image-container rounded-lg">
           <img id="Banner" alt="Banner" />
-          <div class="bg-displaybanner">
-            <span id="serviceStatus" class="overlay-text" data-lang="banner.serviceStatus"></span>
-            <span id="servicePID" class="overlay-textcppt" data-lang="banner.servicePID"></span>
-            <span id="msg" class="overlay-subtext" data-lang="banner.msg"></span>
-          </div>
+          <div class="bg-displaybanner" id="bannerBox">
+              <span id="serviceStatus" class="overlay-text" data-lang="banner.serviceStatus"></span>
+              <span id="servicePID" class="overlay-textcppt" data-lang="banner.servicePID"></span>
+              <span id="msg" class="overlay-subtext" data-lang="banner.msg"></span>
+            </div>
+            
+            <!-- Hidden file input -->
+            <input
+              type="file"
+              id="bannerInput"
+              accept=".jpg,.jpeg,.png,.avif"
+              style="display:none"
+            />
         </div>
          <div class="p-6">
             <div>

@@ -35,6 +35,78 @@ const executeCommand = async (cmd, cwd = null) => {
 
 window.executeCommand = executeCommand;
 
+const bannerBox = document.getElementById("bannerBox");
+const bannerInput = document.getElementById("bannerInput");
+
+let pressTimer = null;
+
+bannerBox.addEventListener("touchstart", () => {
+  pressTimer = setTimeout(() => {
+    bannerInput.click();
+  }, 600);
+});
+bannerBox.addEventListener("touchend", () => clearTimeout(pressTimer));
+
+bannerInput.addEventListener("change", async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const img = new Image();
+  img.src = URL.createObjectURL(file);
+
+  img.onload = async () => {
+    const targetRatio = 16 / 9;
+
+    let srcW = img.width;
+    let srcH = img.height;
+    let cropW = srcW;
+    let cropH = Math.floor(srcW / targetRatio);
+
+    // if height is too small → crop width instead
+    if (cropH > srcH) {
+      cropH = srcH;
+      cropW = Math.floor(srcH * targetRatio);
+    }
+
+    const startX = Math.floor((srcW - cropW) / 2);
+    const startY = Math.floor((srcH - cropH) / 2);
+
+    // Canvas output size
+    const outW = 1600; // you can adjust resolution
+    const outH = Math.floor(outW / targetRatio);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = outW;
+    canvas.height = outH;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(
+      img,
+      startX, startY, cropW, cropH,   // crop source
+      0, 0, outW, outH                // resize to output 16/9
+    );
+
+    canvas.toBlob(async (blob) => {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result.split(",")[1];
+
+        const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+        const targetFile = dark
+          ? "/data/adb/modules/AZenith/webroot/webui.bannerdarkmode.avif"
+          : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
+
+        await executeCommand(`echo "${base64}" | base64 -d > "${targetFile}"`);
+
+        alert("Banner updated and converted to 16:9!");
+      };
+
+      reader.readAsDataURL(blob);
+    }, "image/avif");
+  };
+});
+
 export const saveConfig = async () => {
   try {
     const config = await collectCurrentConfig();
