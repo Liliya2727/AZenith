@@ -15,7 +15,11 @@ export default defineConfig({
       deadCodeInjection: true,
       stringArray: true,
       stringArrayThreshold: 0.75,
-    }),
+    
+      exclude: [
+        "./src/locales/strings/*"
+      ]
+    })
   ],
   server : {
     https: true,
