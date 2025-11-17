@@ -18,6 +18,7 @@
 .banner-loader {
   position: absolute;
   inset: 0;
+  border-radius: 1.5rem;
   background: rgba(0,0,0,0.45);
   backdrop-filter: blur(6px);
   display: flex;
@@ -27,20 +28,19 @@
   z-index: 10;
   text-align: center;
 
-  /* default invisible state */
   opacity: 0;
   transform: scale(0.96);
   pointer-events: none;
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
-.banner-loader.active {
+.banner-loader.show {
   opacity: 1;
   transform: scale(1);
   pointer-events: auto;
 }
 
-.banner-loader .spinner2 {
+.banner-loader.show .spinner2 {
   width: 40px;
   height: 40px;
   border: 4px solid rgba(255,255,255,0.3);
@@ -59,7 +59,7 @@
   transform: translateY(4px);
 }
 
-.banner-loader.active .loader-text {
+.banner-loader.show .loader-text {
   animation: fadeInText 0.35s ease forwards;
   animation-delay: 0.12s;
 }
