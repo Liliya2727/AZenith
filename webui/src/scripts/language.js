@@ -24,7 +24,7 @@ let currentTranslations = null;
 
 // Dynamic imports for non-English translations
 const translationModules = import.meta.glob(
-  '../locales/strings/!(en).json',  // Exclude en.json
+  '../locales/strings/*.json',
   { eager: false }
 );
 
