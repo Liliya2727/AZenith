@@ -53,6 +53,9 @@ bannerInput.addEventListener("change", async (event) => {
 
   const img = new Image();
   img.src = URL.createObjectURL(file);
+   
+  const changeimageToast = getTranslation("toast.chngeimg");
+  toast(changeimageToast);
 
   img.onload = async () => {
     const targetRatio = 16 / 9;
@@ -62,17 +65,15 @@ bannerInput.addEventListener("change", async (event) => {
     let cropW = srcW;
     let cropH = Math.floor(srcW / targetRatio);
 
-    // if height is too small → crop width instead
     if (cropH > srcH) {
       cropH = srcH;
       cropW = Math.floor(srcH * targetRatio);
     }
 
-    const startX = Math.floor((srcW - cropW) / 2);
-    const startY = Math.floor((srcH - cropH) / 2);
+    const startX = (srcW - cropW) / 2;
+    const startY = (srcH - cropH) / 2;
 
-    // Canvas output size
-    const outW = 1600; // you can adjust resolution
+    const outW = 1600;
     const outH = Math.floor(outW / targetRatio);
 
     const canvas = document.createElement("canvas");
@@ -80,34 +81,22 @@ bannerInput.addEventListener("change", async (event) => {
     canvas.height = outH;
 
     const ctx = canvas.getContext("2d");
-    ctx.drawImage(
-      img,
-      startX, startY, cropW, cropH,   // crop source
-      0, 0, outW, outH                // resize to output 16/9
-    );
+    ctx.drawImage(img, startX, startY, cropW, cropH, 0, 0, outW, outH);
 
     canvas.toBlob(async (blob) => {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = reader.result.split(",")[1];
-    
-        const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    
-        const targetFile = dark
-          ? "/data/adb/modules/AZenith/webroot/webui.bannerdarkmode.avif"
-          : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
-    
-        await executeCommand(`echo "${base64}" | base64 -d > "${targetFile}"`);
-    
-        const imgToast = getTranslation("toast.chngeimg");
-        toast(imgToast);
+      if (!blob) return;
 
-        setTimeout(() => {
-          location.reload();
-        }, 500);
-      };
-    
-      reader.readAsDataURL(blob);
+      const tmpPath = "/data/local/tmp/azenith_banner_tmp.avif";
+      await fileSystem.writeFile(tmpPath, blob);
+
+      const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const targetFile = dark
+        ? "/data/adb/modules/AZenith/webroot/webui.bannerdarkmode.avif"
+        : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
+
+      await executeCommand(`mv "${tmpPath}" "${targetFile}"`);
+
+      location.reload();
     }, "image/avif");
   };
 });
