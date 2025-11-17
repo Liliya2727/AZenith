@@ -3,7 +3,7 @@ import mkcert from "vite-plugin-mkcert";
 import tailwind from "tailwindcss";
 import autoprefixer from "autoprefixer";
 import { ViteMinifyPlugin } from 'vite-plugin-minify'
-import obfuscator from "javascript-obfuscator";
+import obfuscator from "vite-plugin-javascript-obfuscator";
 export default defineConfig({
   root: './src',
   plugins: [
