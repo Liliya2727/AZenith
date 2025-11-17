@@ -515,7 +515,13 @@
                   <button id="saveconfig" class="bigbutton w-full" data-lang="settingsModule.buttons.saveconf"></button>
                </div>
                <div class="flex items-center justify-between mb-3">
-                  <input id="loadconfig" type="file" class="bigbutton w-full" data-lang="settingsModule.buttons.loadconf">
+                  <label for="loadconfig" class="bigbutton w-full text-center" data-lang="settingsModule.buttons.loadconf"></label>
+                   <input 
+                     id="loadconfig" 
+                     type="file" 
+                     class="hidden"
+                     accept="application/json"
+                   />
                </div>
                <div class="flex items-center justify-between mb-3">
                   <button id="savelogButton" class="bigbutton w-full" data-lang="settingsModule.buttons.save"></button>

@@ -45,7 +45,7 @@ export const saveConfig = async () => {
       .replace("T", "-")
       .split(".")[0];
 
-    const filename = `/sdcard/AZenith-config-${timestamp}.json`;
+    const filename = `/sdcard/azenith-config-${timestamp}.json`;
 
     // Convert JSON to base64 so shell can write safely
     const jsonString = JSON.stringify(config, null, 2);
@@ -87,12 +87,8 @@ const collectCurrentConfig = async () => {
   };
 
   return {
-    schemeconfig: {
-      scheme: await get("persist.sys.azenithconf.schemeconfig"),
-
-    },
-    
-    core: {
+       
+    config: {
       justintime: await get("persist.sys.azenithconf.justintime"),
       disabletrace: await get("persist.sys.azenithconf.disabletrace"),
       logd: await get("persist.sys.azenithconf.logd"),
@@ -119,7 +115,6 @@ const collectCurrentConfig = async () => {
 
     governors: {
       custom_default_cpu_gov: await get("persist.sys.azenith.custom_default_cpu_gov"),
-      custom_game_cpu_gov: await get("persist.sys.azenith.custom_game_cpu_gov"),
       custom_powersave_cpu_gov: await get("persist.sys.azenith.custom_powersave_cpu_gov"),
     },
 
@@ -143,11 +138,7 @@ const applySavedConfig = async (saved) => {
     }
   };
 
-  if (saved.schemeconfig) {
-    await set("persist.sys.azenithconf.schemeconfig", saved.schemeconfig.scheme);
-  }
-
-  if (saved.core) {
+  if (saved.config) {
     await set("persist.sys.azenithconf.justintime", saved.core.justintime);
     await set("persist.sys.azenithconf.disabletrace", saved.core.disabletrace);
     await set("persist.sys.azenithconf.logd", saved.core.logd);
@@ -174,7 +165,6 @@ const applySavedConfig = async (saved) => {
 
   if (saved.governors) {
     await set("persist.sys.azenith.custom_default_cpu_gov", saved.governors.custom_default_cpu_gov);
-    await set("persist.sys.azenith.custom_game_cpu_gov", saved.governors.custom_game_cpu_gov);
     await set("persist.sys.azenith.custom_powersave_cpu_gov", saved.governors.custom_powersave_cpu_gov);
   }
 
@@ -1986,12 +1976,18 @@ const setupUIListeners = () => {
   };
 
   document
-    .getElementById("loadconfig")
-    .onchange = async (e) => {
+    .getElementById("loadconfig").addEventListener("change", async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    await loadConfigFile(file);
-  };
+    const ok = await loadConfigFile(file);
+
+    if (ok) {
+      // Small delay so setprop finishes writing
+      setTimeout(() => {
+        location.reload();
+      }, 500);
+    }
+  });
 
   // Color scheme buttons
   document
