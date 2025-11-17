@@ -12,7 +12,7 @@ export default defineConfig({
     obfuscator({
       exclude: [
         'src/locales/strings/*',
-        'src/scripts/languange.js',
+        'src/scripts/language.js',
       ],
       compact: true,
       stringArray: true,
