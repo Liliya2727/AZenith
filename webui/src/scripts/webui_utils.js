@@ -45,21 +45,17 @@ export const saveConfig = async () => {
       .replace("T", "-")
       .split(".")[0];
 
-    const filename = `AZenith-config-${timestamp}.json`;
+    const filename = `/sdcard/AZenith-config-${timestamp}.json`;
 
-    const blob = new Blob([JSON.stringify(config, null, 2)], {
-      type: "application/json",
-    });
+    // Convert JSON to base64 so shell can write safely
+    const jsonString = JSON.stringify(config, null, 2);
+    const base64Data = btoa(jsonString);
 
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    await executeCommand(
+      `echo "${base64Data}" | base64 -d > "${filename}"`
+    );
 
-    a.href = url;
-    a.download = filename;
-    a.click();
-
-    URL.revokeObjectURL(url);
-
+    console.log("Config saved to:", filename);
     return true;
   } catch (err) {
     console.error("saveConfig failed:", err);
