@@ -10,15 +10,15 @@ export default defineConfig({
     ViteMinifyPlugin({}),
     mkcert(),
     obfuscator({
+      exclude: [
+        'src/locales/strings/*',
+        'src/scripts/languange.js',
+      ],
       compact: true,
-      controlFlowFlattening: true,
-      deadCodeInjection: true,
       stringArray: true,
       stringArrayThreshold: 0.75,
-    
-      exclude: [
-        "./src/locales/strings/*"
-      ]
+      controlFlowFlattening: false,
+      deadCodeInjection: false,
     })
   ],
   server : {
