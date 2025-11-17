@@ -53,7 +53,7 @@ bannerInput.addEventListener("change", async (event) => {
 
   const img = new Image();
   img.src = URL.createObjectURL(file);
-   
+
   const changeimageToast = getTranslation("toast.chngeimg");
   toast(changeimageToast);
 
@@ -73,7 +73,7 @@ bannerInput.addEventListener("change", async (event) => {
     const startX = (srcW - cropW) / 2;
     const startY = (srcH - cropH) / 2;
 
-    const outW = 1600;
+    const outW = 1280;
     const outH = Math.floor(outW / targetRatio);
 
     const canvas = document.createElement("canvas");
@@ -86,17 +86,33 @@ bannerInput.addEventListener("change", async (event) => {
     canvas.toBlob(async (blob) => {
       if (!blob) return;
 
-      const tmpPath = "/data/local/tmp/azenith_banner_tmp.avif";
-      await fileSystem.writeFile(tmpPath, blob);
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result.split(",")[1];
 
-      const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const targetFile = dark
-        ? "/data/adb/modules/AZenith/webroot/webui.bannerdarkmode.avif"
-        : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
+        const tmpFile = "/data/local/tmp/azenith_banner_tmp.b64";
+        const outPath = "/data/local/tmp/azenith_banner_tmp.avif";
+        await executeCommand(`rm -f "${tmpFile}" "${outPath}"`);
+        const chunkSize = 8192;
+        for (let i = 0; i < base64.length; i += chunkSize) {
+          const chunk = base64.substring(i, i + chunkSize);
+          await executeCommand(`echo "${chunk}" >> "${tmpFile}"`);
+        }
+        await executeCommand(`base64 -d "${tmpFile}" > "${outPath}"`);
 
-      await executeCommand(`mv "${tmpPath}" "${targetFile}"`);
+        const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-      location.reload();
+        const targetFile = dark
+          ? "/data/adb/modules/AZenith/webroot/webui.bannerdarkmode.avif"
+          : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
+
+        await executeCommand(`mv "${outPath}" "${targetFile}"`);
+        await executeCommand(`rm -f "${tmpFile}"`);
+
+        setTimeout(() => location.reload(), 300);
+      };
+
+      reader.readAsDataURL(blob);
     }, "image/avif");
   };
 });
