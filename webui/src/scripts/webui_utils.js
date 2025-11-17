@@ -52,7 +52,7 @@ export const saveConfig = async () => {
     const base64Data = btoa(jsonString);
 
     await executeCommand(
-      `echo "${base64Data}" | base64 -d > "${filename}"`
+      `echo "${base64Data}" > "${filename}"`
     );
 
     console.log("Config saved to:", filename);
@@ -67,8 +67,25 @@ export const saveConfig = async () => {
 
 export const loadConfigFile = async (file) => {
   try {
-    const text = await file.text();
-    const config = JSON.parse(text);
+    // Read base64 text
+    const base64Text = (await file.text()).trim();
+
+    // Decode base64 → JSON string
+    let jsonText;
+    try {
+      jsonText = atob(base64Text);
+    } catch (e) {
+      throw new Error("Base64 decode failed");
+    }
+
+    // Parse JSON
+    let config;
+    try {
+      config = JSON.parse(jsonText);
+    } catch (e) {
+      throw new Error("Invalid JSON structure");
+    }
+
     const expectedKeys = {
       config: [
         "justintime","disabletrace","logd","DThermal","SFL","malisched","fpsged",
@@ -79,10 +96,13 @@ export const loadConfigFile = async (file) => {
       governors: ["custom_default_cpu_gov", "custom_powersave_cpu_gov"],
       io: ["custom_default_balanced_IO", "custom_powersave_IO", "custom_performance_IO"]
     };
+
+    // Validate structure
     for (const section of Object.keys(expectedKeys)) {
       if (!config[section] || typeof config[section] !== "object") {
         throw new Error(`Missing or invalid section: ${section}`);
       }
+
       for (const key of expectedKeys[section]) {
         if (!(key in config[section])) {
           throw new Error(`Missing key '${key}' in section '${section}'`);
@@ -95,6 +115,7 @@ export const loadConfigFile = async (file) => {
     const loadconfToast = getTranslation("toast.loadconf");
     toast(loadconfToast);
     return true;
+
   } catch (err) {
     console.error("loadConfigFile failed:", err);
     const loadconffailToast = getTranslation("toast.loadconffail");
