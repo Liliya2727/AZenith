@@ -282,6 +282,9 @@
   },
   
   "toast": {
+    "saveconf": "Saved config to: {0}",
+    "loadconf": "Loaded saved config from json",
+    "loadconffail": "Failed to load config, invalid json",
     "fstrim": "Trimmed Unused Blocks",
     "showcantaccess": "Can't access in current mode",
     "savedPackages": "Saved {0} packages",

@@ -56,6 +56,8 @@ export const saveConfig = async () => {
     );
 
     console.log("Config saved to:", filename);
+    const saveconfToast = getTranslation("toast.saveconf", filename);
+    toast(saveconfToast);
     return true;
   } catch (err) {
     console.error("saveConfig failed:", err);
@@ -69,9 +71,13 @@ export const loadConfigFile = async (file) => {
     const config = JSON.parse(text);
 
     await applySavedConfig(config);
+    const loadconfToast = getTranslation("toast.loadconf");
+    toast(loadconfToast);
     return true;
   } catch (err) {
     console.error("loadConfigFile failed:", err);
+    const loadconffailToast = getTranslation("toast.loadconffail");
+    toast(loadconffailToast);
     return false;
   }
 };
@@ -139,28 +145,28 @@ const applySavedConfig = async (saved) => {
   };
 
   if (saved.config) {
-    await set("persist.sys.azenithconf.justintime", saved.core.justintime);
-    await set("persist.sys.azenithconf.disabletrace", saved.core.disabletrace);
-    await set("persist.sys.azenithconf.logd", saved.core.logd);
-    await set("persist.sys.azenithconf.DThermal", saved.core.DThermal);
-    await set("persist.sys.azenithconf.SFL", saved.core.SFL);
-    await set("persist.sys.azenithconf.malisched", saved.core.malisched);
-    await set("persist.sys.azenithconf.fpsged", saved.core.fpsged);
-    await set("persist.sys.azenithconf.schedtunes", saved.core.schedtunes);
-    await set("persist.sys.azenithconf.clearbg", saved.core.clearbg);
-    await set("persist.sys.azenithconf.bypasschg", saved.core.bypasschg);
-    await set("persist.sys.azenithconf.APreload", saved.core.APreload);
-    await set("persist.sys.azenithconf.iosched", saved.core.iosched);
-    await set("persist.sys.azenithconf.cpulimit", saved.core.cpulimit);
-    await set("persist.sys.azenithconf.dnd", saved.core.dnd);
-    await set("persist.sys.azenithconf.AIenabled", saved.core.AIenabled);
-    await set("persist.sys.azenithconf.vsync", saved.core.vsync);
-    await set("persist.sys.azenithconf.freqoffset", saved.core.freqoffset);
-    await set("persist.sys.azenithconf.schemeconfig", saved.core.schemeconfig);
-    await set("persist.sys.azenithconf.scale", saved.core.scale);
-    await set("persist.sys.azenithconf.showtoast", saved.core.showtoast);
-    await set("persist.sys.azenithconf.resosettings", saved.core.resosettings);
-    await set("persist.sys.azenithconf.preloadbudget", saved.core.preloadbudget);
+    await set("persist.sys.azenithconf.justintime", saved.config.justintime);
+    await set("persist.sys.azenithconf.disabletrace", saved.config.disabletrace);
+    await set("persist.sys.azenithconf.logd", saved.config.logd);
+    await set("persist.sys.azenithconf.DThermal", saved.config.DThermal);
+    await set("persist.sys.azenithconf.SFL", saved.config.SFL);
+    await set("persist.sys.azenithconf.malisched", saved.config.malisched);
+    await set("persist.sys.azenithconf.fpsged", saved.config.fpsged);
+    await set("persist.sys.azenithconf.schedtunes", saved.config.schedtunes);
+    await set("persist.sys.azenithconf.clearbg", saved.config.clearbg);
+    await set("persist.sys.azenithconf.bypasschg", saved.config.bypasschg);
+    await set("persist.sys.azenithconf.APreload", saved.config.APreload);
+    await set("persist.sys.azenithconf.iosched", saved.config.iosched);
+    await set("persist.sys.azenithconf.cpulimit", saved.config.cpulimit);
+    await set("persist.sys.azenithconf.dnd", saved.config.dnd);
+    await set("persist.sys.azenithconf.AIenabled", saved.config.AIenabled);
+    await set("persist.sys.azenithconf.vsync", saved.config.vsync);
+    await set("persist.sys.azenithconf.freqoffset", saved.config.freqoffset);
+    await set("persist.sys.azenithconf.schemeconfig", saved.config.schemeconfig);
+    await set("persist.sys.azenithconf.scale", saved.config.scale);
+    await set("persist.sys.azenithconf.showtoast", saved.config.showtoast);
+    await set("persist.sys.azenithconf.resosettings", saved.config.resosettings);
+    await set("persist.sys.azenithconf.preloadbudget", saved.config.preloadbudget);
   }
 
   if (saved.governors) {
