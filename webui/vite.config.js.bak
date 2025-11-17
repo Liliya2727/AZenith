@@ -9,13 +9,6 @@ export default defineConfig({
   plugins: [
     ViteMinifyPlugin({}),
     mkcert(),
-    obfuscator({            // JavaScript Obfuscation
-      compact: true,
-      controlFlowFlattening: true,
-      deadCodeInjection: true,
-      stringArray: true,
-      stringArrayThreshold: 0.75,
-    }),
   ],
   server : {
     https: true,
