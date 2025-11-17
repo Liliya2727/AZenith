@@ -46,7 +46,7 @@ bannerInput.addEventListener("change", async (event) => {
   const file = event.target.files[0];
   if (!file) return;
 
-  bannerLoader.classList.add("active");
+  bannerLoader.classList.add("show");
 
   const img = new Image();
   img.src = URL.createObjectURL(file);
