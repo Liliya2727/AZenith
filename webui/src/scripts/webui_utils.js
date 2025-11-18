@@ -20,8 +20,7 @@ import AvatarZenith from "/webui.avatar.avif";
 import SchemeBanner from "/webui.schemebanner.avif";
 import ResoBanner from "/webui.reso.avif";
 import { exec, toast } from "kernelsu";
-import { writeFile } from "bun:fs";
-import sharp from "sharp";
+
 const moduleInterface = window.$azenith;
 const fileInterface = window.$FILE;
 const RESO_PROP = "persist.sys.azenithconf.resosettings";
@@ -36,33 +35,30 @@ const executeCommand = async (cmd, cwd = null) => {
 };
 
 window.executeCommand = executeCommand;
-let pressTimer: NodeJS.Timeout | null = null;
 
-// Touch hold to open file picker
-bannerBox?.addEventListener("touchstart", () => {
+import { writeFile } from "bun:fs";
+import sharp from "sharp";
+let pressTimer = null;
+
+bannerBox.addEventListener("touchstart", () => {
   pressTimer = setTimeout(() => {
-    bannerInput?.click();
+    bannerInput.click();
   }, 600);
 });
-
-bannerBox?.addEventListener("touchend", () => {
-  if (pressTimer) clearTimeout(pressTimer);
-});
-
-// Handle banner file change
+bannerBox.addEventListener("touchend", () => clearTimeout(pressTimer));
 bannerInput?.addEventListener("change", async (event) => {
   const file = event.target?.files?.[0];
   if (!file) return;
 
   bannerLoader?.classList.add("show");
 
-  const changeImageToast = getTranslation("toast.chngeimg");
-  toast(changeImageToast);
-
-  const arrayBuffer = await file.arrayBuffer();
-  const inputBuffer = Buffer.from(arrayBuffer);
+  toast(getTranslation("toast.chngeimg"));
 
   try {
+    // Read the file into a buffer
+    const arrayBuffer = await file.arrayBuffer();
+    const inputBuffer = Buffer.from(arrayBuffer);
+
     // Use sharp to crop & resize to 16:9, 1280px width
     const image = sharp(inputBuffer);
     const metadata = await image.metadata();
@@ -85,18 +81,19 @@ bannerInput?.addEventListener("change", async (event) => {
       .avif()
       .toBuffer();
 
+    // Determine dark/light mode banner path
     const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const targetFile = dark
       ? "/data/adb/modules/AZenith/webroot/webui.bannerdarkmode.avif"
       : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
 
+    // Write the processed image
     await writeFile(targetFile, outputBuffer);
 
+    // Update UI
     updateBannerByTheme();
     bannerLoader?.classList.remove("show");
-
-    const imgSuccessMessage = getTranslation("toast.imgsuccess");
-    toast(imgSuccessMessage);
+    toast(getTranslation("toast.imgsuccess"));
   } catch (err) {
     console.error("Banner processing failed:", err);
     bannerLoader?.classList.remove("show");
