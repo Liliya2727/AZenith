@@ -20,11 +20,9 @@ import AvatarZenith from "/webui.avatar.avif";
 import SchemeBanner from "/webui.schemebanner.avif";
 import ResoBanner from "/webui.reso.avif";
 import { exec, toast } from "kernelsu";
-
 const moduleInterface = window.$azenith;
 const fileInterface = window.$FILE;
 const RESO_PROP = "persist.sys.azenithconf.resosettings";
-
 const executeCommand = async (cmd, cwd = null) => {
   try {
     const { errno, stdout, stderr } = await exec(cmd, cwd ? { cwd } : {});
@@ -33,71 +31,88 @@ const executeCommand = async (cmd, cwd = null) => {
     return { errno: -1, stdout: "", stderr: e.message || String(e) };
   }
 };
-
 window.executeCommand = executeCommand;
 
-import { writeFile } from "bun:fs";
-import sharp from "sharp";
-let pressTimer = null;
 
+let pressTimer = null;
 bannerBox.addEventListener("touchstart", () => {
   pressTimer = setTimeout(() => {
     bannerInput.click();
   }, 600);
 });
 bannerBox.addEventListener("touchend", () => clearTimeout(pressTimer));
-bannerInput?.addEventListener("change", async (event) => {
+bannerInput.addEventListener("change", async (event) => {
   const file = event.target?.files?.[0];
   if (!file) return;
 
   bannerLoader?.classList.add("show");
-
   toast(getTranslation("toast.chngeimg"));
 
-  try {
-    // Read the file into a buffer
-    const arrayBuffer = await file.arrayBuffer();
-    const inputBuffer = Buffer.from(arrayBuffer);
+  const img = new Image();
+  img.src = URL.createObjectURL(file);
 
-    // Use sharp to crop & resize to 16:9, 1280px width
-    const image = sharp(inputBuffer);
-    const metadata = await image.metadata();
-
+  img.onload = async () => {
     const targetRatio = 16 / 9;
-    let cropWidth = metadata.width!;
-    let cropHeight = Math.floor(cropWidth / targetRatio);
+    const canvas = document.createElement("canvas");
+    const srcW = img.width;
+    const srcH = img.height;
 
-    if (cropHeight > metadata.height!) {
-      cropHeight = metadata.height!;
-      cropWidth = Math.floor(cropHeight * targetRatio);
+    let cropW = srcW;
+    let cropH = Math.floor(cropW / targetRatio);
+    if (cropH > srcH) {
+      cropH = srcH;
+      cropW = Math.floor(cropH * targetRatio);
     }
 
-    const left = Math.floor((metadata.width! - cropWidth) / 2);
-    const top = Math.floor((metadata.height! - cropHeight) / 2);
+    const startX = (srcW - cropW) / 2;
+    const startY = (srcH - cropH) / 2;
+    const outW = 1280;
+    const outH = Math.floor(outW / targetRatio);
 
-    const outputBuffer = await image
-      .extract({ left, top, width: cropWidth, height: cropHeight })
-      .resize(1280, Math.floor(1280 / targetRatio))
-      .avif()
-      .toBuffer();
+    canvas.width = outW;
+    canvas.height = outH;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(img, startX, startY, cropW, cropH, 0, 0, outW, outH);
 
-    // Determine dark/light mode banner path
-    const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const targetFile = dark
-      ? "/data/adb/modules/AZenith/webroot/webui.bannerdarkmode.avif"
-      : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/avif")
+    );
+    if (!blob) {
+      bannerLoader?.classList.remove("show");
+      return;
+    }
 
-    // Write the processed image
-    await writeFile(targetFile, outputBuffer);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = (reader.result as string).split(",")[1];
+      const tmpFile = "/data/local/tmp/azenith_banner_tmp.b64";
+      const outPath = "/data/local/tmp/azenith_banner_tmp.avif";
 
-    // Update UI
-    updateBannerByTheme();
-    bannerLoader?.classList.remove("show");
-    toast(getTranslation("toast.imgsuccess"));
-  } catch (err) {
-    console.error("Banner processing failed:", err);
-    bannerLoader?.classList.remove("show");
-  }
+      await executeCommand(`rm -f "${tmpFile}" "${outPath}"`);
+
+      // Faster chunked write using printf and 128 KB per chunk
+      const chunkSize = 128 * 1024; // 128 KB
+      for (let i = 0; i < base64.length; i += chunkSize) {
+        const chunk = base64.substring(i, i + chunkSize);
+        await executeCommand(`printf "%s" "${chunk}" >> "${tmpFile}"`);
+      }
+
+      await executeCommand(`base64 -d "${tmpFile}" > "${outPath}"`);
+
+      const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const targetFile = dark
+        ? "/data/adb/modules/AZenith/webroot/webui.bannerdarkmode.avif"
+        : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
+
+      await executeCommand(`mv "${outPath}" "${targetFile}"`);
+      await executeCommand(`rm -f "${tmpFile}"`);
+
+      bannerLoader?.classList.remove("show");
+      toast(getTranslation("toast.imgsuccess"));
+    };
+
+    reader.readAsDataURL(blob);
+  };
 });
 
 export const saveConfig = async () => {
