@@ -52,9 +52,28 @@
       </header>
       <main>
       <div id="bottomToolbar">
-         <button class="active" id="openmain" data-lang="toolbar.main"></button>
+         <button id="openmain" data-lang="toolbar.main"></button>
          <button id="opengamelist" data-lang="toolbar.gamelist"></button>
       </div>
+        <!-- Fullscreen GameList Overlay -->
+        <div id="gameListOverlay" class="hidden fixed inset-0 z-40 flex flex-col bg-[#0d0f19]">
+          <!-- Header -->
+          <div class="flex items-center p-4 border-b border-gray-700">
+            <input
+              type="text"
+              id="gamelistSearch"
+              placeholder="Search games..."
+              class="flex-1 p-2 rounded-md bg-gray-800 text-white"
+            />
+            <button id="closeGameList" class="ml-4 px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white">
+              Close
+            </button>
+          </div>      
+          <!-- Scrollable container -->
+          <div id="gamelistContainer" class="flex-1 overflow-y-auto p-4 space-y-3">
+            <!-- Dynamic game items will be inserted here -->
+          </div>
+        </div>
          <div class="image-container rounded-lg">
           <img id="Banner" alt="Banner" />
           <div class="bg-displaybanner" id="bannerBox">
@@ -224,7 +243,7 @@
             </div>
          </div>
          <div class="p-6">
-            <div class="bg-gray-900 mt-211 mb-4 p-4 rounded-lg">
+            <div class="nga bg-gray-900 mt-211 mb-4 p-4 rounded-lg">
                <div class="flex items-center justify-between">
                   <svg class="thankstitlesvg" fill="currentColor" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" xml:space="preserve"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g> <g> <path d="M74,35h-8.7c2.5-3.9,2.3-9.1-0.8-12.3C62.8,21,60.5,20,58.1,20c-2.6,0-5.2,1.2-7.1,3.2 c-0.4,0.4-0.7,0.8-1,1.3c-0.3-0.5-0.6-0.9-1-1.3c-1.9-2.1-4.5-3.2-7.1-3.2c-2.4,0-4.6,1-6.3,2.7c-3.1,3.2-3.3,8.4-0.8,12.3H26 c-3.3,0-6,2.7-6,6v4c0,1.1,0.9,2,2,2h56c1.1,0,2-0.9,2-2v-4C80,37.7,77.3,35,74,35z M47,35L47,35c-2.1,0-5.1-0.8-6.8-2.6 c-1.5-1.6-1.7-4.2-0.3-5.5c0.7-0.7,1.4-0.8,2-0.8c1,0,2,0.5,2.7,1.3c1.7,1.9,2.4,5.1,2.4,7.1c0,0,0,0,0,0C47,34.6,47,34.8,47,35 C47,35,47,35,47,35z M59.8,32.4C58.1,34.2,55.1,35,53,35c0-0.2,0-0.4,0-0.6c0,0,0,0,0,0c0-2,0.7-5.2,2.4-7.1 c0.8-0.8,1.8-1.3,2.7-1.3c0.5,0,1.3,0.1,2,0.8C61.4,28.2,61.3,30.7,59.8,32.4z"></path> </g> <g> <path d="M74,53H53v27h17.2c3.2,0,5.8-2.6,5.8-5.8V55C76,53.9,75.1,53,74,53z"></path> </g> <g> <path d="M24,55v19c0,3.3,2.7,6,6,6h17V53H26C24.9,53,24,53.9,24,55z"></path> </g> </g> </g></svg>
                   <h2 class="sh font-semibold mb-4 text-lg text-black-69" data-lang="thanks.title"></h2>
@@ -531,9 +550,6 @@
                   <button id="savelogButton" class="bigbutton w-full" data-lang="settingsModule.buttons.save"></button>
                </div>
                <div class="flex items-center justify-between mb-3">
-                  <button id="editGamelistButton" class="bigbutton w-full" data-lang="settingsModule.buttons.edit"></button>
-               </div>
-               <div class="flex items-center justify-between mb-3">
                   <button id="startButton" class="bigbutton w-full" data-lang="settingsModule.buttons.restart"></button>
                </div>
                <div class="device-info-divider"></div>       
@@ -588,21 +604,6 @@
                <div class="scheme-actions">
                   <button id="reset-btn" class="modal-btn cancel" data-lang="scheme.buttons.reset"></button>
                   <button id="applybutton" class="modal-btn apply" data-lang="scheme.buttons.apply"></button>
-               </div>
-            </div>
-         </div>
-         <div id="gamelistModal" class="gamelist-modal">
-            <div class="gamelist-content">
-               <button class="close-btn" id="close-gamelist">&times;</button>
-               <h3 class="gamelist-title" data-lang="gamelist.title"></h3>
-               <div class="search-input-container">
-                  <p class="gamelist-desc" data-lang="gamelist.description"></p>
-                  <input type="text" id="gamelistSearch" class="gamelistsearch" placeholder="com.example.example"/>
-               </div>
-               <textarea id="gamelistInput" class="gamelist-textarea" rows="14"></textarea>
-               <div class="gamelist-buttons">
-                  <button id="cancelButton" class="modal-btn cancel" data-lang="gamelist.buttons.cancel"></button>
-                  <button id="saveGamelistButton" class="modal-btn apply" data-lang="gamelist.buttons.save"></button>
                </div>
             </div>
          </div>

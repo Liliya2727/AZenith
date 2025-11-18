@@ -19,7 +19,7 @@ import BannerLightZenith from "/webui.bannerlightmode.avif";
 import AvatarZenith from "/webui.avatar.avif";
 import SchemeBanner from "/webui.schemebanner.avif";
 import ResoBanner from "/webui.reso.avif";
-import { exec, toast } from "kernelsu";
+import { exec, toast, listPackages, getPackagesInfo } from "kernelsu";
 const moduleInterface = window.$azenith;
 const fileInterface = window.$FILE;
 const RESO_PROP = "persist.sys.azenithconf.resosettings";
@@ -32,6 +32,105 @@ const executeCommand = async (cmd, cwd = null) => {
   }
 };
 window.executeCommand = executeCommand;
+
+
+
+
+
+
+
+
+
+const openGameListBtn = document.getElementById("opengamelist");
+const mainBtn = document.getElementById("openmain");
+const closeGameListBtn = document.getElementById("closeGameList");
+const gameListOverlay = document.getElementById("gameListOverlay");
+const gamelistContainer = document.getElementById("gamelistContainer");
+const gamelistSearch = document.getElementById("gamelistSearch");
+
+let games = [];
+
+// Show gamelist overlay
+openGameListBtn.addEventListener("click", () => {
+  gameListOverlay.classList.remove("hidden");
+});
+
+// Hide overlay
+closeGameListBtn.addEventListener("click", () => {
+  gameListOverlay.classList.add("hidden");
+});
+mainBtn.addEventListener("click", () => {
+  gameListOverlay.classList.add("hidden");
+});
+
+// Render game list
+const renderGameList = (filter = "") => {
+  gamelistContainer.innerHTML = "";
+
+  games
+    .filter(
+      g =>
+        g.label.toLowerCase().includes(filter.toLowerCase()) ||
+        g.pkg.toLowerCase().includes(filter.toLowerCase())
+    )
+    .forEach((g, idx) => {
+      const item = document.createElement("div");
+      item.className = "gamelist-item";
+
+      item.innerHTML = `
+        <div class="gamelist-info">
+          <img src="${g.icon}" alt="${g.label}" />
+          <div class="gamelist-text">
+            <span class="game-label">${g.label}</span>
+            <span class="package-name">${g.pkg}</span>
+          </div>
+        </div>
+        <div class="gamelist-toggle">
+          <input type="checkbox" id="toggle-${idx}" ${g.active ? "checked" : ""} />
+        </div>
+      `;
+
+      // Toggle listener
+      const toggle = item.querySelector("input");
+      toggle.addEventListener("change", e => {
+        games[idx].active = e.target.checked;
+        console.log(`${g.label} active: ${games[idx].active}`);
+      });
+
+      gamelistContainer.appendChild(item);
+    });
+};
+
+// Filter search
+gamelistSearch.addEventListener("input", e => {
+  renderGameList(e.target.value);
+});
+
+// Load apps dynamically via KernelSU API
+const loadGameList = async () => {
+  try {
+    const userPackages = listPackages("user"); // or "all"
+    const infoList = getPackagesInfo(userPackages);
+
+    games = infoList.map(info => ({
+      icon: `ksu://icon/${info.packageName}`,
+      label: info.appLabel,
+      pkg: info.packageName,
+      active: false, // default inactive
+    }));
+
+    renderGameList();
+  } catch (err) {
+    console.error("Failed to load gamelist:", err);
+  }
+};
+
+// Initial load
+loadGameList();
+
+
+
+
 
 let pressTimer = null;
 
@@ -782,126 +881,6 @@ const GovernorPowersave = async () => {
   }
 };
 
-const hideGameListModal = () => {
-  let c = document.getElementById("gamelistModal");
-  c.classList.remove("show");
-  document.body.classList.remove("modal-open");
-  c._resizeHandler &&
-    (window.removeEventListener("resize", c._resizeHandler),
-    delete c._resizeHandler);
-};
-
-let originalGamelist = "";
-
-const showGameListModal = async () => {
-  let { errno: c, stdout: s } = await executeCommand(
-    "getprop persist.sys.azenithconf.AIenabled"
-  );
-  if (0 === c && "0" === s.trim()) {
-    const showCantAccessToast = getTranslation("toast.showcantaccess");
-    toast(showCantAccessToast);
-    return;
-  }
-
-  const r = document.getElementById("gamelistModal");
-  const d = document.getElementById("gamelistInput");
-  const searchInput = document.getElementById("gamelistSearch");
-  const l = r.querySelector(".gamelist-content");
-
-  const { errno: m, stdout: h } = await executeCommand(
-    "cat /data/adb/.config/AZenith/gamelist/gamelist.txt"
-  );
-
-  if (m === 0) {
-    const formatted = h.trim().replace(/\|/g, "\n");
-    originalGamelist = formatted;
-    d.value = formatted;
-  }
-
-  if (searchInput) {
-    searchInput.value = "";
-    searchInput.removeEventListener("input", filterGameList);
-    searchInput.addEventListener("input", filterGameList);
-  }
-
-  r.classList.add("show");
-  document.body.classList.add("modal-open");
-  setTimeout(() => d.focus(), 100);
-
-  const g = window.innerHeight;
-  const f = () => {
-    window.innerHeight < g - 150
-      ? (l.style.transform = "translateY(-10%) scale(1)")
-      : (l.style.transform = "translateY(0) scale(1)");
-  };
-
-  window.addEventListener("resize", f, { passive: true });
-  r._resizeHandler = f;
-  f();
-};
-
-const filterGameList = () => {
-  const searchTerm = document
-    .getElementById("gamelistSearch")
-    .value.toLowerCase();
-  const gamelistInput = document.getElementById("gamelistInput");
-
-  if (!searchTerm) {
-    gamelistInput.value = originalGamelist;
-    return;
-  }
-
-  const filteredList = originalGamelist
-    .split("\n")
-    .filter((line) => line.toLowerCase().includes(searchTerm))
-    .join("\n");
-
-  gamelistInput.value = filteredList;
-};
-
-const saveGameList = async () => {
-  const gamelistInput = document.getElementById("gamelistInput");
-  const searchInput = document.getElementById("gamelistSearch");
-  const searchTerm = (searchInput?.value || "").toLowerCase();
-
-  const editedLines = gamelistInput.value
-    .split("\n")
-    .map((x) => x.trim())
-    .filter(Boolean);
-
-  const originalLines = originalGamelist
-    .split("\n")
-    .map((x) => x.trim())
-    .filter(Boolean);
-
-  if (!searchTerm) {
-    const outputString = editedLines.join("|").replace(/"/g, '\\"');
-    await executeCommand(
-      `echo "${outputString}" > /data/adb/.config/AZenith/gamelist/gamelist.txt`
-    );
-    const savedPackagesToast = getTranslation("toast.savedPackages", editedLines.length);
-    toast(savedPackagesToast);
-    hideGameListModal();
-    return;
-  }
-
-  let editedIndex = 0;
-  const mergedLines = originalLines.map((line) => {
-    if (line.toLowerCase().includes(searchTerm)) {
-      const replacement = editedLines[editedIndex++]?.trim();
-      return replacement || line;
-    }
-    return line;
-  });
-
-  const outputString = mergedLines.join("|").replace(/"/g, '\\"');
-  await executeCommand(
-    `echo "${outputString}" > /data/adb/.config/AZenith/gamelist/gamelist.txt`
-  );
-  const savedPackagesToast = getTranslation("toast.savedPackages", mergedLines.length);
-  toast(savedPackagesToast);
-  hideGameListModal();
-};
 const checklogger = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenith.debugmode"
@@ -1191,11 +1170,6 @@ const setAI = async (c) => {
     c
       ? "setprop persist.sys.azenithconf.AIenabled 0"
       : "setprop persist.sys.azenithconf.AIenabled 1"
-  );
-  await executeCommand(
-    c
-      ? "mv /data/adb/.config/AZenith/gamelist/gamelist.txt /data/adb/.config/AZenith/gamelist/gamelist.bin"
-      : "mv /data/adb/.config/AZenith/gamelist/gamelist.bin /data/adb/.config/AZenith/gamelist/gamelist.txt"
   );
 };
 
@@ -1546,16 +1520,6 @@ const showPreferenceSettings = async () => {
 
 const hidePreferenceSettings = () => {
   const c = document.getElementById("preference-modal");
-  c.classList.remove("show");
-  document.body.classList.remove("modal-open");
-  if (c._resizeHandler) {
-    window.removeEventListener("resize", c._resizeHandler);
-    delete c._resizeHandler;
-  }
-};
-
-const hideGamelistSettings = () => {
-  const c = document.getElementById("gamelistModal");
   c.classList.remove("show");
   document.body.classList.remove("modal-open");
   if (c._resizeHandler) {
@@ -2142,19 +2106,6 @@ const setupUIListeners = () => {
     .getElementById("close-scheme")
     ?.addEventListener("click", hideSchemeSettings);
 
-  // Gamelist modal buttons
-  document
-    .getElementById("editGamelistButton")
-    ?.addEventListener("click", showGameListModal);
-  document
-    .getElementById("cancelButton")
-    ?.addEventListener("click", hideGameListModal);
-  document
-    .getElementById("saveGamelistButton")
-    ?.addEventListener("click", saveGameList);
-  document
-    .getElementById("close-gamelist")
-    ?.addEventListener("click", hideGamelistSettings);  
 };
 
 let loopsActive = false;
