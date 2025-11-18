@@ -94,10 +94,10 @@ bannerInput.addEventListener("change", async (event) => {
 
         await executeCommand(`rm -f "${tmpFile}" "${outPath}"`);
 
-        const chunkSize = 1024 * 1024; // 1 MB per chunk
+        const chunkSize = 16 * 1024; // 16 KB per chunk
         for (let i = 0; i < base64.length; i += chunkSize) {
           const chunk = base64.substring(i, i + chunkSize);
-          await executeCommand(`printf "%s" "${chunk}" >> "${tmpFile}"`);
+          await executeCommand(`echo -n "${chunk}" >> "${tmpFile}"`);
         }
 
         await executeCommand(`base64 -d "${tmpFile}" > "${outPath}"`);
@@ -108,6 +108,10 @@ bannerInput.addEventListener("change", async (event) => {
           : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
 
         await executeCommand(`mv "${outPath}" "${targetFile}"`);
+        const updateBannerByTheme = () => {
+          const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (banner) banner.src = isDark ? BannerDarkZenith : BannerLightZenith;
+        };
         updateBannerByTheme();
         await executeCommand(`rm -f "${tmpFile}"`);
 
