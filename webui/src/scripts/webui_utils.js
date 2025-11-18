@@ -54,8 +54,9 @@ bannerBox.addEventListener("click", triggerFilePicker);
 
 // Banner file handling
 bannerInput.addEventListener("change", async (event) => {
-  const file = (event.target).files?.[0];
-  if (!file) return;
+  const files = event.target.files;
+  if (!files || files.length === 0) return;
+  const file = files[0];
 
   bannerLoader.classList.add("show");
   toast(getTranslation("toast.chngeimg"));
@@ -63,7 +64,7 @@ bannerInput.addEventListener("change", async (event) => {
   const img = new Image();
   img.src = URL.createObjectURL(file);
 
-  img.onload = async () => {
+  img.onload = async function () {
     const targetRatio = 16 / 9;
     let srcW = img.width;
     let srcH = img.height;
@@ -88,15 +89,16 @@ bannerInput.addEventListener("change", async (event) => {
     const ctx = canvas.getContext("2d");
     ctx.drawImage(img, startX, startY, cropW, cropH, 0, 0, outW, outH);
 
-    canvas.toBlob(async (blob) => {
+    canvas.toBlob(async function (blob) {
       if (!blob) {
         bannerLoader.classList.remove("show");
         return;
       }
 
       const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = reader.result!.toString().split(",")[1];
+      reader.onload = async function () {
+        if (!reader.result) return;
+        const base64 = reader.result.toString().split(",")[1];
 
         const tmpFile = "/data/local/tmp/azenith_banner_tmp.b64";
         const outPath = "/data/local/tmp/azenith_banner_tmp.avif";
