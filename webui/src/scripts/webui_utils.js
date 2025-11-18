@@ -1937,7 +1937,7 @@ const setthermalcore = async (c) => {
 
 const setupUIListeners = () => {
   const bannerBox = document.getElementById("bannerBox");
-  const bannerInput = document.getElementById("bannerInput") as HTMLInputElement;
+  const bannerInput = document.getElementById("bannerInput");
   const bannerLoader = document.getElementById("bannerLoader");
   const banner = document.getElementById("Banner");
   const avatar = document.getElementById("Avatar");
