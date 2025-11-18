@@ -283,7 +283,8 @@
   },
   
   "toast": {
-    "chngeimg": "Please wait, WebUI will reload in a few seconds",
+    "chngeimg": "Please wait, Image will update in a few seconds",
+    "imgsuccess": "Image updated successfully!",
     "saveconf": "Presets successfully saved to: {0}",
     "loadconf": "Presets successfully loaded from JSON",
     "loadconffail": "Failed to load configuration: Invalid JSON format",

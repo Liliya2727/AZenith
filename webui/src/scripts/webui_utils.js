@@ -20,6 +20,7 @@ import AvatarZenith from "/webui.avatar.avif";
 import SchemeBanner from "/webui.schemebanner.avif";
 import ResoBanner from "/webui.reso.avif";
 import { exec, toast } from "kernelsu";
+import { writeFile } from "bun:fs";
 const moduleInterface = window.$azenith;
 const fileInterface = window.$FILE;
 const RESO_PROP = "persist.sys.azenithconf.resosettings";
@@ -42,8 +43,10 @@ bannerBox.addEventListener("touchstart", () => {
   }, 600);
 });
 bannerBox.addEventListener("touchend", () => clearTimeout(pressTimer));
+const bannerInput = document.querySelector<HTMLInputElement>("#bannerInput")!;
+const bannerLoader = document.querySelector<HTMLElement>("#bannerLoader")!;
 bannerInput.addEventListener("change", async (event) => {
-  const file = event.target.files[0];
+  const file = (event.target as HTMLInputElement).files?.[0];
   if (!file) return;
 
   bannerLoader.classList.add("show");
@@ -57,6 +60,7 @@ bannerInput.addEventListener("change", async (event) => {
   img.onload = async () => {
     const targetRatio = 16 / 9;
 
+    // Calculate crop dimensions
     let srcW = img.width;
     let srcH = img.height;
     let cropW = srcW;
@@ -77,37 +81,30 @@ bannerInput.addEventListener("change", async (event) => {
     canvas.width = outW;
     canvas.height = outH;
 
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d")!;
     ctx.drawImage(img, startX, startY, cropW, cropH, 0, 0, outW, outH);
 
-    // Convert to Blob directly
-    canvas.toBlob(async (blob) => {
-      if (!blob) {
-        bannerLoader.classList.remove("show");
-        return;
-      }
+    const blob: Blob | null = await new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/avif")
+    );
 
-      // Use ArrayBuffer to avoid Base64 overhead
-      const arrayBuffer = await blob.arrayBuffer();
-      const uint8Array = new Uint8Array(arrayBuffer);
-
-      const tmpPath = "/data/local/tmp/azenith_banner_tmp.avif";
-      await executeCommand(`rm -f "${tmpPath}"`);
-
-      // Write the binary file in one shot
-      await executeCommand(`echo -n '${Array.from(uint8Array)
-        .map((b) => `\\x${b.toString(16).padStart(2, "0")}`)
-        .join("")}' | xxd -r -p > "${tmpPath}"`);
-
-      const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const targetFile = dark
-        ? "/data/adb/modules/AZenith/webroot/webui.bannerdarkmode.avif"
-        : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
-
-      await executeCommand(`mv "${tmpPath}" "${targetFile}"`);
-
+    if (!blob) {
       bannerLoader.classList.remove("show");
-    }, "image/avif");
+      return;
+    }
+    const arrayBuffer = await blob.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+
+    const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const targetFile = dark
+      ? "/data/adb/modules/AZenith/webroot/webui.bannerdarkmode.avif"
+      : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
+
+    await writeFile(targetFile, uint8Array);
+    updateBannerByTheme();
+    bannerLoader.classList.remove("show");
+    const imgSuccessMessage = getTranslation("toast.imgsuccess");
+    toast(imgSuccessMessage);
   };
 });
 
