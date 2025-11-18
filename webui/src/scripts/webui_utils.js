@@ -33,24 +33,18 @@ const executeCommand = async (cmd, cwd = null) => {
 };
 window.executeCommand = executeCommand;
 
-
 let pressTimer = null;
+
 bannerBox.addEventListener("touchstart", () => {
   pressTimer = setTimeout(() => {
+    bannerInput.value = "";
     bannerInput.click();
-  }, 600);
+  }, 600); // 600ms for long press
 });
-bannerBox.addEventListener("touchend", () => clearTimeout(pressTimer));
 
-// Touch / click gesture handling
-const triggerFilePicker = (event) => {
-  event.preventDefault();
-  bannerInput.value = ""; // reset previous selection
-  bannerInput.click();
-};
-
-// Use touchend for long press if you want, or click for normal tap
-bannerBox.addEventListener("click", triggerFilePicker);
+bannerBox.addEventListener("touchend", () => {
+  if (pressTimer) clearTimeout(pressTimer);
+});
 
 // Banner file handling
 bannerInput.addEventListener("change", async (event) => {
@@ -119,10 +113,9 @@ bannerInput.addEventListener("change", async (event) => {
           : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
 
         await executeCommand(`mv "${outPath}" "${targetFile}"`);
-        updateBannerByTheme();
+        
         await executeCommand(`rm -f "${tmpFile}"`);
-
-        bannerLoader.classList.remove("show");
+        location.reload();
         toast(getTranslation("toast.imgsuccess"));
       };
 
