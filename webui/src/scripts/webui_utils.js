@@ -112,7 +112,7 @@ bannerInput.addEventListener("change", async (event) => {
         await executeCommand(`mv "${outPath}" "${targetFile}"`);
         await executeCommand(`rm -f "${tmpFile}"`);
 
-        setTimeout(() => location.reload(), 300);
+        bannerLoader.classList.remove("show");
       };
 
       reader.readAsDataURL(blob);
