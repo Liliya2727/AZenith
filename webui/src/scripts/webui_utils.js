@@ -108,6 +108,7 @@ bannerInput.addEventListener("change", async (event) => {
           : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
 
         await executeCommand(`mv "${outPath}" "${targetFile}"`);
+        const banner = document.getElementById("Banner");
         const updateBannerByTheme = () => {
           const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
           if (banner) banner.src = isDark ? BannerDarkZenith : BannerLightZenith;
