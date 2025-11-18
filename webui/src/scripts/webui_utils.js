@@ -41,31 +41,28 @@ window.executeCommand = executeCommand;
 
 
 
-const gameListOverlay = document.getElementById("gameListOverlay");
+// Correct element references
+const gameListOverlay = document.getElementById("gamelistmenu");
 const gamelistContainer = document.getElementById("gamelistContainer");
 const gamelistSearch = document.getElementById("gamelistSearch");
+const gameListBtn = document.getElementById("opengamelist");
+const mainBtn = document.getElementById("openmain");
 
 let games = [];
 
-// Open overlay
-openGameListBtn.addEventListener("click", () => {
-  gameListOverlay.classList.remove("hidden");
+// Show gamelist overlay
+gameListBtn.addEventListener("click", () => {
+  showGamelistSettings();
 });
 
-// Close overlay
-closeGameListBtn.addEventListener("click", () => {
-  gameListOverlay.classList.add("hidden");
-});
-
-// If main menu opens, hide game list
+// Hide when switching back to main
 mainBtn.addEventListener("click", () => {
-  gameListOverlay.classList.add("hidden");
+  hideGamelistSettings();
 });
 
-// Render the list
+// Render list
 const renderGameList = (filter = "") => {
   gamelistContainer.innerHTML = "";
-
   const f = filter.toLowerCase();
 
   games
@@ -88,7 +85,6 @@ const renderGameList = (filter = "") => {
         </div>
       `;
 
-      // Toggle
       item.querySelector("input").addEventListener("change", e => {
         games[idx].active = e.target.checked;
         console.log(`${g.label} active: ${games[idx].active}`);
@@ -98,12 +94,12 @@ const renderGameList = (filter = "") => {
     });
 };
 
-// Search bar filter
+// Search
 gamelistSearch.addEventListener("input", e => {
   renderGameList(e.target.value);
 });
 
-// Load game list from KernelSU API
+// Load packages
 const loadGameList = async () => {
   try {
     const userPackages = listPackages("user");
@@ -113,7 +109,7 @@ const loadGameList = async () => {
       icon: `ksu://icon/${info.packageName}`,
       label: info.appLabel,
       pkg: info.packageName,
-      active: false,
+      active: false
     }));
 
     renderGameList();
@@ -122,27 +118,43 @@ const loadGameList = async () => {
   }
 };
 
-loadGameList();
-
-
-const showGamelistSettings = async () => {
-  const c = document.getElementById("gamelistmenu"),
-    s = c.querySelector(".menu-container");
+// UI control
+const showGamelistSettings = () => {
   document.body.classList.add("menu-open");
-  c.classList.add("show");
-  window.addEventListener("resize", d, { passive: true });
-  c._resizeHandler = d;
-  d();
+  gameListOverlay.classList.add("show");
+
+  gameListBtn.classList.add("active");
+  mainBtn.classList.remove("active");
+
+  loadGameList();
 };
 
 const hideGamelistSettings = () => {
-  const c = document.getElementById("gamelistmenu");
-  c.classList.remove("show");
   document.body.classList.remove("menu-open");
-  if (c._resizeHandler) {
-    window.removeEventListener("resize", c._resizeHandler);
-    delete c._resizeHandler;
-  }
+  gameListOverlay.classList.remove("show");
+
+  mainBtn.classList.remove("active");
+  gameListBtn.classList.remove("active");
+};
+
+
+
+
+const showGamelistSettings = async () => {
+  const c = document.getElementById("opengamelist");
+  const m = document.getElementById("mainmenu");
+  document.body.classList.add("menu-open");
+  c.classList.add("active");
+  m.classList.remove("active")
+  loadGameList();;
+};
+
+const hideGamelistSettings = () => {
+  const c = document.getElementById("opengamelist");
+  const m = document.getElementById("mainmenu");  
+  document.body.classList.remove("menu-open");
+  m.classList.remove("active");
+  c.classList.remove("active");
 };
 
 

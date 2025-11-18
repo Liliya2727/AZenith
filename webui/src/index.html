@@ -55,26 +55,6 @@
          <button id="openmain" data-lang="toolbar.main"></button>
          <button id="opengamelist" data-lang="toolbar.gamelist"></button>
       </div>
-      
-      
-        <!-- Game List Overlay -->
-        <div id="gameListOverlay" class="gamelist-overlay hidden">
-          
-          <!-- Header -->
-          <div class="gamelist-header">
-            <input
-              type="text"
-              id="gamelistSearch"
-              placeholder="Search apps..."
-              class="gamelist-search"
-            />
-          </div>        
-          <!-- List container -->
-          <div id="gamelistContainer" class="gamelist-container"></div>
-        
-        </div>
-        
-        
          <div class="image-container rounded-lg">
           <img id="Banner" alt="Banner" />
           <div class="bg-displaybanner" id="bannerBox">
@@ -94,6 +74,19 @@
               accept=".jpg,.jpeg,.png,.avif"
               style="display:none"
             />
+        </div>
+        <!-- Game List Overlay -->
+        <div id="gamelistmenu" class="background flex flex-col min-h-screen text-white">          
+          <div class="gamelist-header">
+            <input
+              type="text"
+              id="gamelistSearch"
+              placeholder="Search apps..."
+              class="gamelist-search"
+            />
+          </div>        
+          <!-- List container -->
+          <div id="gamelistContainer" class="gamelist-container"></div>        
         </div>
          <div class="p-6">
             <div>

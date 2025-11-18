@@ -104,30 +104,6 @@
   height: 22px;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-.additional-modal,
-.preference-modal,
-.profiler-modal,
-.reso-modal,
-.scheme-modal,
-.settings-modal {
-    inset: 0;
-    -webkit-backdrop-filter: blur(4px);
-    backdrop-filter: blur(4px);
-    overflow: hidden;
-    height: 100vh
-}
-
 /* Bottom Pill Toolbar Container */
 #bottomToolbar {
   position: fixed;
@@ -166,6 +142,27 @@
 #bottomToolbar button.active {
   background-color: #141414; /* solid black for selected */
   color: #fff; /* text stays white */
+}
+
+
+
+
+
+
+
+
+
+.additional-modal,
+.preference-modal,
+.profiler-modal,
+.reso-modal,
+.scheme-modal,
+.settings-modal {
+    inset: 0;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    overflow: hidden;
+    height: 100vh
 }
 
 .banner-loader {
