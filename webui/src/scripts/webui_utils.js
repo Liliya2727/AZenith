@@ -43,13 +43,11 @@ bannerBox.addEventListener("touchstart", () => {
   }, 600);
 });
 bannerBox.addEventListener("touchend", () => clearTimeout(pressTimer));
-const bannerInput = document.querySelector<HTMLInputElement>("#bannerInput")!;
-const bannerLoader = document.querySelector<HTMLElement>("#bannerLoader")!;
-bannerInput.addEventListener("change", async (event) => {
-  const file = (event.target as HTMLInputElement).files?.[0];
+bannerInput?.addEventListener("change", async function (event) {
+  const file = event.target?.files?.[0];
   if (!file) return;
 
-  bannerLoader.classList.add("show");
+  bannerLoader?.classList.add("show");
 
   const img = new Image();
   img.src = URL.createObjectURL(file);
@@ -57,10 +55,9 @@ bannerInput.addEventListener("change", async (event) => {
   const changeimageToast = getTranslation("toast.chngeimg");
   toast(changeimageToast);
 
-  img.onload = async () => {
+  img.onload = async function () {
     const targetRatio = 16 / 9;
 
-    // Calculate crop dimensions
     let srcW = img.width;
     let srcH = img.height;
     let cropW = srcW;
@@ -81,17 +78,17 @@ bannerInput.addEventListener("change", async (event) => {
     canvas.width = outW;
     canvas.height = outH;
 
-    const ctx = canvas.getContext("2d")!;
-    ctx.drawImage(img, startX, startY, cropW, cropH, 0, 0, outW, outH);
+    const ctx = canvas.getContext("2d");
+    ctx?.drawImage(img, startX, startY, cropW, cropH, 0, 0, outW, outH);
 
-    const blob: Blob | null = await new Promise((resolve) =>
+    const blob = await new Promise((resolve) =>
       canvas.toBlob(resolve, "image/avif")
     );
-
     if (!blob) {
-      bannerLoader.classList.remove("show");
+      bannerLoader?.classList.remove("show");
       return;
     }
+
     const arrayBuffer = await blob.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
 
@@ -102,7 +99,8 @@ bannerInput.addEventListener("change", async (event) => {
 
     await writeFile(targetFile, uint8Array);
     updateBannerByTheme();
-    bannerLoader.classList.remove("show");
+
+    bannerLoader?.classList.remove("show");
     const imgSuccessMessage = getTranslation("toast.imgsuccess");
     toast(imgSuccessMessage);
   };
