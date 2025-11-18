@@ -41,58 +41,55 @@ window.executeCommand = executeCommand;
 
 
 
-const openGameListBtn = document.getElementById("opengamelist");
-const mainBtn = document.getElementById("openmain");
-const closeGameListBtn = document.getElementById("closeGameList");
 const gameListOverlay = document.getElementById("gameListOverlay");
 const gamelistContainer = document.getElementById("gamelistContainer");
 const gamelistSearch = document.getElementById("gamelistSearch");
 
 let games = [];
 
-// Show gamelist overlay
+// Open overlay
 openGameListBtn.addEventListener("click", () => {
   gameListOverlay.classList.remove("hidden");
 });
 
-// Hide overlay
+// Close overlay
 closeGameListBtn.addEventListener("click", () => {
   gameListOverlay.classList.add("hidden");
 });
+
+// If main menu opens, hide game list
 mainBtn.addEventListener("click", () => {
   gameListOverlay.classList.add("hidden");
 });
 
-// Render game list
+// Render the list
 const renderGameList = (filter = "") => {
   gamelistContainer.innerHTML = "";
 
+  const f = filter.toLowerCase();
+
   games
-    .filter(
-      g =>
-        g.label.toLowerCase().includes(filter.toLowerCase()) ||
-        g.pkg.toLowerCase().includes(filter.toLowerCase())
-    )
+    .filter(g => g.label.toLowerCase().includes(f) || g.pkg.toLowerCase().includes(f))
     .forEach((g, idx) => {
       const item = document.createElement("div");
       item.className = "gamelist-item";
 
       item.innerHTML = `
         <div class="gamelist-info">
-          <img src="${g.icon}" alt="${g.label}" />
+          <img src="${g.icon}" alt="${g.label}">
           <div class="gamelist-text">
             <span class="game-label">${g.label}</span>
             <span class="package-name">${g.pkg}</span>
           </div>
         </div>
+
         <div class="gamelist-toggle">
-          <input type="checkbox" id="toggle-${idx}" ${g.active ? "checked" : ""} />
+          <input type="checkbox" id="toggle-${idx}" ${g.active ? "checked" : ""}>
         </div>
       `;
 
-      // Toggle listener
-      const toggle = item.querySelector("input");
-      toggle.addEventListener("change", e => {
+      // Toggle
+      item.querySelector("input").addEventListener("change", e => {
         games[idx].active = e.target.checked;
         console.log(`${g.label} active: ${games[idx].active}`);
       });
@@ -101,22 +98,22 @@ const renderGameList = (filter = "") => {
     });
 };
 
-// Filter search
+// Search bar filter
 gamelistSearch.addEventListener("input", e => {
   renderGameList(e.target.value);
 });
 
-// Load apps dynamically via KernelSU API
+// Load game list from KernelSU API
 const loadGameList = async () => {
   try {
-    const userPackages = listPackages("user"); // or "all"
+    const userPackages = listPackages("user");
     const infoList = getPackagesInfo(userPackages);
 
     games = infoList.map(info => ({
       icon: `ksu://icon/${info.packageName}`,
       label: info.appLabel,
       pkg: info.packageName,
-      active: false, // default inactive
+      active: false,
     }));
 
     renderGameList();
@@ -125,8 +122,37 @@ const loadGameList = async () => {
   }
 };
 
-// Initial load
 loadGameList();
+
+
+const showGamelistSettings = async () => {
+  const c = document.getElementById("gamelistmenu"),
+    s = c.querySelector(".menu-container");
+  document.body.classList.add("menu-open");
+  c.classList.add("show");
+  window.addEventListener("resize", d, { passive: true });
+  c._resizeHandler = d;
+  d();
+};
+
+const hideGamelistSettings = () => {
+  const c = document.getElementById("gamelistmenu");
+  c.classList.remove("show");
+  document.body.classList.remove("menu-open");
+  if (c._resizeHandler) {
+    window.removeEventListener("resize", c._resizeHandler);
+    delete c._resizeHandler;
+  }
+};
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2037,6 +2063,14 @@ const setupUIListeners = () => {
   document
     .getElementById("close-profiler")
     ?.addEventListener("click", hideProfilerSettings);
+    
+    // Profile Settings
+  document
+    .getElementById("opengamelist")
+    ?.addEventListener("click", showGamelistSettings);
+  document
+    .getElementById("openmenu")
+    ?.addEventListener("click", hideGamelistSettings);
     
   // Additional Settings
   document
