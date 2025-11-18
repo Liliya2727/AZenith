@@ -47,11 +47,11 @@ bannerInput.addEventListener("change", async (event) => {
 
   bannerLoader.classList.add("show");
 
+  const changeImageToast = getTranslation("toast.chngeimg");
+  toast(changeImageToast);
+
   const img = new Image();
   img.src = URL.createObjectURL(file);
-
-  const changeimageToast = getTranslation("toast.chngeimg");
-  toast(changeimageToast);
 
   img.onload = async () => {
     const targetRatio = 16 / 9;
@@ -81,7 +81,7 @@ bannerInput.addEventListener("change", async (event) => {
 
     canvas.toBlob(async (blob) => {
       if (!blob) {
-        bannerLoader.style.display = "none";
+        bannerLoader.classList.remove("show");
         return;
       }
 
@@ -94,7 +94,7 @@ bannerInput.addEventListener("change", async (event) => {
 
         await executeCommand(`rm -f "${tmpFile}" "${outPath}"`);
 
-        const chunkSize = 128 * 1024; // 128 KB
+        const chunkSize = 1024 * 1024; // 1 MB per chunk
         for (let i = 0; i < base64.length; i += chunkSize) {
           const chunk = base64.substring(i, i + chunkSize);
           await executeCommand(`printf "%s" "${chunk}" >> "${tmpFile}"`);
@@ -103,16 +103,16 @@ bannerInput.addEventListener("change", async (event) => {
         await executeCommand(`base64 -d "${tmpFile}" > "${outPath}"`);
 
         const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-
         const targetFile = dark
           ? "/data/adb/modules/AZenith/webroot/webui.bannerdarkmode.avif"
           : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
 
         await executeCommand(`mv "${outPath}" "${targetFile}"`);
+        updateBannerByTheme();
         await executeCommand(`rm -f "${tmpFile}"`);
 
-        setTimeout(() => location.reload(), 300);
         bannerLoader.classList.remove("show");
+        toast(getTranslation("toast.imgsuccess"));
       };
 
       reader.readAsDataURL(blob);
