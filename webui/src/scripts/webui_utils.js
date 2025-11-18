@@ -85,7 +85,7 @@ bannerInput.addEventListener("change", async (event) => {
     canvas.width = outW;
     canvas.height = outH;
 
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvas.getContext("2d");
     ctx.drawImage(img, startX, startY, cropW, cropH, 0, 0, outW, outH);
 
     canvas.toBlob(async (blob) => {
