@@ -21,7 +21,6 @@ import SchemeBanner from "/webui.schemebanner.avif";
 import ResoBanner from "/webui.reso.avif";
 import { exec, toast } from "kernelsu";
 import { writeFile } from "bun:fs";
-import { writeFile } from "bun:fs";
 import sharp from "sharp";
 const moduleInterface = window.$azenith;
 const fileInterface = window.$FILE;
