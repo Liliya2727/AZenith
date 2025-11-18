@@ -54,7 +54,7 @@ bannerBox.addEventListener("click", triggerFilePicker);
 
 // Banner file handling
 bannerInput.addEventListener("change", async (event) => {
-  const file = (event.target as HTMLInputElement).files?.[0];
+  const file = (event.target).files?.[0];
   if (!file) return;
 
   bannerLoader.classList.add("show");
