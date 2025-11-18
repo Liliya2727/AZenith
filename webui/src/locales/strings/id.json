@@ -17,6 +17,11 @@
     "loading": "Mengambil info..."
   },
   
+  "toolbar": {
+    "main": "Main",
+    "gamelist": "GameList"
+  },
+  
   "settingsMore": {
     "additional": {
       "title": "Tambahan",
@@ -197,7 +202,9 @@
     "buttons": {
       "save": "Simpan Log",
       "edit": "Edit Gamelist",
-      "restart": "Inisialisasi Ulang Daemon"
+      "restart": "Inisialisasi Ulang Daemon",
+      "saveconf": "Simpan Config Preset",
+      "loadconf": "Load Config Preset"
     }
   },
 
@@ -280,6 +287,11 @@
   },
 
   "toast": {
+    "chngeimg": "Please wait, Image will update in a few seconds",
+    "imgsuccess": "Image updated successfully!",
+    "saveconf": "Presets successfully saved to: {0}",
+    "loadconf": "Presets successfully loaded from JSON",
+    "loadconffail": "Failed to load configuration: Invalid JSON format",
     "fstrim": "Blok yang tidak terpakai sudah di-trim",
     "showcantaccess": "Tidak dapat mengakses di mode saat ini",
     "savedPackages": "{0} paket berhasil disimpan",

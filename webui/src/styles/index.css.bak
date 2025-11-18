@@ -2332,7 +2332,7 @@ input[type=range]::-ms-track {
 }
 .nga {
     border: .8px solid #6881B5;
-    background-color: #DEE7FF;
+    background-color: #edf2ff;
 }
 
 }

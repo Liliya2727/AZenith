@@ -17,6 +17,11 @@
     "loading": "Getting info..."
   },
   
+  "toolbar": {
+    "main": "Main",
+    "gamelist": "GameList"
+  },
+  
   "settingsMore": {
     "additional": {
       "title": "Additional Settings",

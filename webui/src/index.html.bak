@@ -51,10 +51,6 @@
          </h1>
       </header>
       <main>
-      <div id="bottomToolbar">
-         <button id="openmain" data-lang="toolbar.main"></button>
-         <button id="opengamelist" data-lang="toolbar.gamelist"></button>
-      </div>
          <div class="image-container rounded-lg">
           <img id="Banner" alt="Banner" />
           <div class="bg-displaybanner" id="bannerBox">
