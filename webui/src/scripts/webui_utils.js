@@ -80,42 +80,33 @@ bannerInput.addEventListener("change", async (event) => {
     const ctx = canvas.getContext("2d");
     ctx.drawImage(img, startX, startY, cropW, cropH, 0, 0, outW, outH);
 
+    // Convert to Blob directly
     canvas.toBlob(async (blob) => {
       if (!blob) {
-        bannerLoader.style.display = "none";
+        bannerLoader.classList.remove("show");
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64 = reader.result.split(",")[1];
+      // Use ArrayBuffer to avoid Base64 overhead
+      const arrayBuffer = await blob.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
 
-        const tmpFile = "/data/local/tmp/azenith_banner_tmp.b64";
-        const outPath = "/data/local/tmp/azenith_banner_tmp.avif";
+      const tmpPath = "/data/local/tmp/azenith_banner_tmp.avif";
+      await executeCommand(`rm -f "${tmpPath}"`);
 
-        await executeCommand(`rm -f "${tmpFile}" "${outPath}"`);
+      // Write the binary file in one shot
+      await executeCommand(`echo -n '${Array.from(uint8Array)
+        .map((b) => `\\x${b.toString(16).padStart(2, "0")}`)
+        .join("")}' | xxd -r -p > "${tmpPath}"`);
 
-        const chunkSize = 8192;
-        for (let i = 0; i < base64.length; i += chunkSize) {
-          const chunk = base64.substring(i, i + chunkSize);
-          await executeCommand(`echo "${chunk}" >> "${tmpFile}"`);
-        }
+      const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const targetFile = dark
+        ? "/data/adb/modules/AZenith/webroot/webui.bannerdarkmode.avif"
+        : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
 
-        await executeCommand(`base64 -d "${tmpFile}" > "${outPath}"`);
+      await executeCommand(`mv "${tmpPath}" "${targetFile}"`);
 
-        const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-
-        const targetFile = dark
-          ? "/data/adb/modules/AZenith/webroot/webui.bannerdarkmode.avif"
-          : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
-
-        await executeCommand(`mv "${outPath}" "${targetFile}"`);
-        await executeCommand(`rm -f "${tmpFile}"`);
-
-        bannerLoader.classList.remove("show");
-      };
-
-      reader.readAsDataURL(blob);
+      bannerLoader.classList.remove("show");
     }, "image/avif");
   };
 });
