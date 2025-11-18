@@ -21,6 +21,8 @@ import SchemeBanner from "/webui.schemebanner.avif";
 import ResoBanner from "/webui.reso.avif";
 import { exec, toast } from "kernelsu";
 import { writeFile } from "bun:fs";
+import { writeFile } from "bun:fs";
+import sharp from "sharp";
 const moduleInterface = window.$azenith;
 const fileInterface = window.$FILE;
 const RESO_PROP = "persist.sys.azenithconf.resosettings";
@@ -35,75 +37,71 @@ const executeCommand = async (cmd, cwd = null) => {
 };
 
 window.executeCommand = executeCommand;
+let pressTimer: NodeJS.Timeout | null = null;
 
-let pressTimer = null;
-bannerBox.addEventListener("touchstart", () => {
+// Touch hold to open file picker
+bannerBox?.addEventListener("touchstart", () => {
   pressTimer = setTimeout(() => {
-    bannerInput.click();
+    bannerInput?.click();
   }, 600);
 });
-bannerBox.addEventListener("touchend", () => clearTimeout(pressTimer));
-bannerInput?.addEventListener("change", async function (event) {
+
+bannerBox?.addEventListener("touchend", () => {
+  if (pressTimer) clearTimeout(pressTimer);
+});
+
+// Handle banner file change
+bannerInput?.addEventListener("change", async (event) => {
   const file = event.target?.files?.[0];
   if (!file) return;
 
   bannerLoader?.classList.add("show");
 
-  const img = new Image();
-  img.src = URL.createObjectURL(file);
+  const changeImageToast = getTranslation("toast.chngeimg");
+  toast(changeImageToast);
 
-  const changeimageToast = getTranslation("toast.chngeimg");
-  toast(changeimageToast);
+  const arrayBuffer = await file.arrayBuffer();
+  const inputBuffer = Buffer.from(arrayBuffer);
 
-  img.onload = async function () {
+  try {
+    // Use sharp to crop & resize to 16:9, 1280px width
+    const image = sharp(inputBuffer);
+    const metadata = await image.metadata();
+
     const targetRatio = 16 / 9;
+    let cropWidth = metadata.width!;
+    let cropHeight = Math.floor(cropWidth / targetRatio);
 
-    let srcW = img.width;
-    let srcH = img.height;
-    let cropW = srcW;
-    let cropH = Math.floor(srcW / targetRatio);
-
-    if (cropH > srcH) {
-      cropH = srcH;
-      cropW = Math.floor(srcH * targetRatio);
+    if (cropHeight > metadata.height!) {
+      cropHeight = metadata.height!;
+      cropWidth = Math.floor(cropHeight * targetRatio);
     }
 
-    const startX = (srcW - cropW) / 2;
-    const startY = (srcH - cropH) / 2;
+    const left = Math.floor((metadata.width! - cropWidth) / 2);
+    const top = Math.floor((metadata.height! - cropHeight) / 2);
 
-    const outW = 1280;
-    const outH = Math.floor(outW / targetRatio);
-
-    const canvas = document.createElement("canvas");
-    canvas.width = outW;
-    canvas.height = outH;
-
-    const ctx = canvas.getContext("2d");
-    ctx?.drawImage(img, startX, startY, cropW, cropH, 0, 0, outW, outH);
-
-    const blob = await new Promise((resolve) =>
-      canvas.toBlob(resolve, "image/avif")
-    );
-    if (!blob) {
-      bannerLoader?.classList.remove("show");
-      return;
-    }
-
-    const arrayBuffer = await blob.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
+    const outputBuffer = await image
+      .extract({ left, top, width: cropWidth, height: cropHeight })
+      .resize(1280, Math.floor(1280 / targetRatio))
+      .avif()
+      .toBuffer();
 
     const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const targetFile = dark
       ? "/data/adb/modules/AZenith/webroot/webui.bannerdarkmode.avif"
       : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
 
-    await writeFile(targetFile, uint8Array);
-    updateBannerByTheme();
+    await writeFile(targetFile, outputBuffer);
 
+    updateBannerByTheme();
     bannerLoader?.classList.remove("show");
+
     const imgSuccessMessage = getTranslation("toast.imgsuccess");
     toast(imgSuccessMessage);
-  };
+  } catch (err) {
+    console.error("Banner processing failed:", err);
+    bannerLoader?.classList.remove("show");
+  }
 });
 
 export const saveConfig = async () => {
