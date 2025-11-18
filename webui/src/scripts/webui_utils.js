@@ -42,76 +42,81 @@ bannerBox.addEventListener("touchstart", () => {
 });
 bannerBox.addEventListener("touchend", () => clearTimeout(pressTimer));
 bannerInput.addEventListener("change", async (event) => {
-  const file = event.target?.files?.[0];
+  const file = event.target.files[0];
   if (!file) return;
 
-  bannerLoader?.classList.add("show");
-  toast(getTranslation("toast.chngeimg"));
+  bannerLoader.classList.add("show");
 
   const img = new Image();
   img.src = URL.createObjectURL(file);
 
+  const changeimageToast = getTranslation("toast.chngeimg");
+  toast(changeimageToast);
+
   img.onload = async () => {
     const targetRatio = 16 / 9;
-    const canvas = document.createElement("canvas");
-    const srcW = img.width;
-    const srcH = img.height;
 
+    let srcW = img.width;
+    let srcH = img.height;
     let cropW = srcW;
-    let cropH = Math.floor(cropW / targetRatio);
+    let cropH = Math.floor(srcW / targetRatio);
+
     if (cropH > srcH) {
       cropH = srcH;
-      cropW = Math.floor(cropH * targetRatio);
+      cropW = Math.floor(srcH * targetRatio);
     }
 
     const startX = (srcW - cropW) / 2;
     const startY = (srcH - cropH) / 2;
+
     const outW = 1280;
     const outH = Math.floor(outW / targetRatio);
 
+    const canvas = document.createElement("canvas");
     canvas.width = outW;
     canvas.height = outH;
-    const ctx = canvas.getContext("2d")!;
+
+    const ctx = canvas.getContext("2d");
     ctx.drawImage(img, startX, startY, cropW, cropH, 0, 0, outW, outH);
 
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/avif")
-    );
-    if (!blob) {
-      bannerLoader?.classList.remove("show");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = (reader.result as string).split(",")[1];
-      const tmpFile = "/data/local/tmp/azenith_banner_tmp.b64";
-      const outPath = "/data/local/tmp/azenith_banner_tmp.avif";
-
-      await executeCommand(`rm -f "${tmpFile}" "${outPath}"`);
-
-      // Faster chunked write using printf and 128 KB per chunk
-      const chunkSize = 128 * 1024; // 128 KB
-      for (let i = 0; i < base64.length; i += chunkSize) {
-        const chunk = base64.substring(i, i + chunkSize);
-        await executeCommand(`printf "%s" "${chunk}" >> "${tmpFile}"`);
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        bannerLoader.style.display = "none";
+        return;
       }
 
-      await executeCommand(`base64 -d "${tmpFile}" > "${outPath}"`);
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result.split(",")[1];
 
-      const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const targetFile = dark
-        ? "/data/adb/modules/AZenith/webroot/webui.bannerdarkmode.avif"
-        : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
+        const tmpFile = "/data/local/tmp/azenith_banner_tmp.b64";
+        const outPath = "/data/local/tmp/azenith_banner_tmp.avif";
 
-      await executeCommand(`mv "${outPath}" "${targetFile}"`);
-      await executeCommand(`rm -f "${tmpFile}"`);
+        await executeCommand(`rm -f "${tmpFile}" "${outPath}"`);
 
-      bannerLoader?.classList.remove("show");
-      toast(getTranslation("toast.imgsuccess"));
-    };
+        const chunkSize = 128 * 1024; // 128 KB
+        for (let i = 0; i < base64.length; i += chunkSize) {
+          const chunk = base64.substring(i, i + chunkSize);
+          await executeCommand(`printf "%s" "${chunk}" >> "${tmpFile}"`);
+        }
 
-    reader.readAsDataURL(blob);
+        await executeCommand(`base64 -d "${tmpFile}" > "${outPath}"`);
+
+        const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+        const targetFile = dark
+          ? "/data/adb/modules/AZenith/webroot/webui.bannerdarkmode.avif"
+          : "/data/adb/modules/AZenith/webroot/webui.bannerlightmode.avif";
+
+        await executeCommand(`mv "${outPath}" "${targetFile}"`);
+        await executeCommand(`rm -f "${tmpFile}"`);
+
+        setTimeout(() => location.reload(), 300);
+        bannerLoader.classList.remove("show");
+      };
+
+      reader.readAsDataURL(blob);
+    }, "image/avif");
   };
 });
 
