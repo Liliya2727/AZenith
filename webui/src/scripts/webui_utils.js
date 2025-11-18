@@ -43,7 +43,7 @@ bannerBox.addEventListener("touchstart", () => {
 bannerBox.addEventListener("touchend", () => clearTimeout(pressTimer));
 
 // Touch / click gesture handling
-const triggerFilePicker = (event: Event) => {
+const triggerFilePicker = (event) => {
   event.preventDefault();
   bannerInput.value = ""; // reset previous selection
   bannerInput.click();
