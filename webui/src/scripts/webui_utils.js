@@ -53,9 +53,13 @@ const showGameListMenu = async () => {
     main.classList.add("hidden");       
     main.classList.remove("hidden-slide"); 
 
+    // Show game list
     gameList.classList.remove("hidden");
     gameList.classList.add("active");
-    search.classList.add("show"); 
+
+    // Show search bar
+    search.classList.remove("hidden"); // <-- remove hidden first
+    search.classList.add("show");      // <-- then animate
   }, 300);
 
   setActiveToolbar("openGameList");
@@ -70,17 +74,22 @@ const showMainMenu = async () => {
   // Animate search bar out
   search.classList.remove("show");
 
+  // Wait for search animation to finish before hiding it
+  setTimeout(() => {
+    search.classList.add("hidden");   // hide completely after animation
+  }, 300);
+
   // Slide gameListMenu out
   gameList.classList.remove("active");
   gameList.classList.add("hidden-slide");
 
   // Wait for animation to finish
   setTimeout(() => {
-    gameList.classList.add("hidden");    // actually hide
+    gameList.classList.add("hidden");    
     gameList.classList.remove("hidden-slide");
 
     main.classList.remove("hidden");
-  }, 300); // match the CSS transition duration
+  }, 300);
 
   setActiveToolbar("openMain");
 };

@@ -1,6 +1,38 @@
 @import url('https://mui.kernelsu.org/internal/insets.css');
 @import url('https://mui.kernelsu.org/internal/colors.css');
 
+/* Main and GameList menu subtle fade */
+#mainMenu,
+#gameListMenu {
+  transform: translateX(0);
+  opacity: 1;
+  transition: transform 0.2s ease, opacity 0.2s ease; /* faster and lighter */
+}
+
+/* Slide out / hidden */
+#mainMenu.hidden-slide {
+  transform: translateX(-10px); /* only slight left movement */
+  opacity: 0;                   /* fade out */
+}
+
+#gameListMenu.hidden-slide {
+  transform: translateX(10px);  /* slight right movement */
+  opacity: 0;                   /* fade out */
+}
+
+/* Active / visible state */
+#gameListMenu.active {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* Active / visible state */
+.search-wrapper.show {
+  max-height: 100px; /* enough for input height */
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .meta {
   display: flex;
   flex-direction: column;
