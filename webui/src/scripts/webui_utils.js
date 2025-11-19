@@ -49,7 +49,7 @@ const setActiveToolbar = (activeId) => {
   });
 };
 
-const showMainMenu = () => {
+const showMainMenu = async () => {
   document.getElementById("mainMenu").classList.remove("hidden");
   document.getElementById("gameListMenu").classList.add("hidden");
   document.getElementById("searchWrapper").classList.add("hidden");
