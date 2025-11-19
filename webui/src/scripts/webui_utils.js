@@ -41,17 +41,47 @@ const setActiveToolbar = (activeId) => {
 };
 
 const showGameListMenu = async () => {
-  document.getElementById("mainMenu").classList.add("hidden");
-  document.getElementById("gameListMenu").classList.remove("hidden");
-  document.getElementById("searchWrapper").classList.remove("hidden"); 
+  const main = document.getElementById("mainMenu");
+  const gameList = document.getElementById("gameListMenu");
+  const search = document.getElementById("searchWrapper");
+
+  // Slide main menu out
+  main.classList.add("hidden-slide");
+
+  // Wait for slide out animation
+  setTimeout(() => {
+    main.classList.add("hidden");       
+    main.classList.remove("hidden-slide"); 
+
+    gameList.classList.remove("hidden");
+    gameList.classList.add("active");
+    search.classList.add("show"); 
+  }, 300);
+
   setActiveToolbar("openGameList");
   await loadAppList();
 };
 
 const showMainMenu = async () => {
-  document.getElementById("gameListMenu").classList.add("hidden");
-  document.getElementById("mainMenu").classList.remove("hidden");
-  document.getElementById("searchWrapper").classList.add("hidden");
+  const main = document.getElementById("mainMenu");
+  const gameList = document.getElementById("gameListMenu");
+  const search = document.getElementById("searchWrapper");
+
+  // Animate search bar out
+  search.classList.remove("show");
+
+  // Slide gameListMenu out
+  gameList.classList.remove("active");
+  gameList.classList.add("hidden-slide");
+
+  // Wait for animation to finish
+  setTimeout(() => {
+    gameList.classList.add("hidden");    // actually hide
+    gameList.classList.remove("hidden-slide");
+
+    main.classList.remove("hidden");
+  }, 300); // match the CSS transition duration
+
   setActiveToolbar("openMain");
 };
 
