@@ -2111,7 +2111,7 @@ const setupUIListeners = () => {
     .getElementById("close-profiler")
     ?.addEventListener("click", hideProfilerSettings);
     
-    // Menu Settings
+   // Menu Settings
   document
     .getElementById("openGameList")
     ?.addEventListener("click", showGameListMenu);
