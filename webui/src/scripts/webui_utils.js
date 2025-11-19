@@ -45,21 +45,23 @@ const showGameListMenu = async () => {
   const gameList = document.getElementById("gameListMenu");
   const search = document.getElementById("searchWrapper");
 
-  // Slide main menu out
+  // Fade out main menu
   main.classList.add("hidden-slide");
 
-  // Wait for slide out animation
   setTimeout(() => {
-    main.classList.add("hidden");       
-    main.classList.remove("hidden-slide"); 
+    main.classList.add("hidden");
+    main.classList.remove("hidden-slide");
 
-    // Show game list
+    // Show game list menu
     gameList.classList.remove("hidden");
     gameList.classList.add("active");
 
-    // Show search bar
-    search.classList.remove("hidden"); // <-- remove hidden first
-    search.classList.add("show");      // <-- then animate
+    // Show search bar with fade+scale animation
+    search.classList.remove("hidden");
+    requestAnimationFrame(() => {
+      search.classList.add("show");  // triggers transition
+    });
+
   }, 300);
 
   setActiveToolbar("openGameList");
@@ -74,18 +76,17 @@ const showMainMenu = async () => {
   // Animate search bar out
   search.classList.remove("show");
 
-  // Wait for search animation to finish before hiding it
+  // Hide search after fade-out finishes
   setTimeout(() => {
-    search.classList.add("hidden");   // hide completely after animation
+    search.classList.add("hidden");
   }, 300);
 
-  // Slide gameListMenu out
+  // Fade out game list menu
   gameList.classList.remove("active");
   gameList.classList.add("hidden-slide");
 
-  // Wait for animation to finish
   setTimeout(() => {
-    gameList.classList.add("hidden");    
+    gameList.classList.add("hidden");
     gameList.classList.remove("hidden-slide");
 
     main.classList.remove("hidden");

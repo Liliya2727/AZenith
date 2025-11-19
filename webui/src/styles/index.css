@@ -1,36 +1,39 @@
 @import url('https://mui.kernelsu.org/internal/insets.css');
 @import url('https://mui.kernelsu.org/internal/colors.css');
 
-/* Main and GameList menu subtle fade */
+/* Menu base state */
 #mainMenu,
 #gameListMenu {
-  transform: translateX(0);
+  opacity: 0;
+  transform: scale(0.98);  /* slightly smaller when hidden */
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+/* Active / visible state */
+#gameListMenu.active,
+#mainMenu.active {
   opacity: 1;
-  transition: transform 0.2s ease, opacity 0.2s ease; /* faster and lighter */
+  transform: scale(1); /* normal size */
 }
 
-/* Slide out / hidden */
-#mainMenu.hidden-slide {
-  transform: translateX(-10px); /* only slight left movement */
-  opacity: 0;                   /* fade out */
-}
-
+/* Hidden-slide class for fade-out */
+#mainMenu.hidden-slide,
 #gameListMenu.hidden-slide {
-  transform: translateX(10px);  /* slight right movement */
-  opacity: 0;                   /* fade out */
+  opacity: 0;
+  transform: scale(0.98);
 }
 
-/* Active / visible state */
-#gameListMenu.active {
-  transform: translateX(0);
-  opacity: 1;
+/* Search wrapper base state */
+#searchWrapper {
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
-/* Active / visible state */
-.search-wrapper.show {
-  max-height: 100px; /* enough for input height */
+/* Show state */
+#searchWrapper.show {
   opacity: 1;
-  transform: translateY(0);
+  transform: scale(1);
 }
 
 .meta {
