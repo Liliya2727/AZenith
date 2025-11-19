@@ -43,7 +43,7 @@ const setActiveToolbar = (activeId) => {
 const showGameListMenu = async () => {
   document.getElementById("mainMenu").classList.remove("active");
   document.getElementById("gameListMenu").classList.add("active");
-  document.getElementById("searchWrapper").classList.add("show");
+  document.getElementById("search-box").classList.add("show");
   setActiveToolbar("openGameList");
   await loadAppList();
 };
@@ -51,7 +51,7 @@ const showGameListMenu = async () => {
 const showMainMenu = () => {
   document.getElementById("gameListMenu").classList.remove("active");
   document.getElementById("mainMenu").classList.add("active");
-  document.getElementById("searchWrapper").classList.remove("show");
+  document.getElementById("search-box").classList.remove("show");
 
   setActiveToolbar("openMain");
 };
