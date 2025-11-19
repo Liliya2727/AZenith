@@ -41,17 +41,17 @@ const setActiveToolbar = (activeId) => {
 };
 
 const showGameListMenu = async () => {
-  document.getElementById("gameListMenu").classList.add("active");
-
-  document.getElementById("searchWrapper").classList.add("show"); 
+  document.getElementById("mainMenu").classList.add("hidden");
+  document.getElementById("gameListMenu").classList.remove("hidden");
+  document.getElementById("searchWrapper").classList.remove("hidden"); 
   setActiveToolbar("openGameList");
   await loadAppList();
 };
 
 const showMainMenu = async () => {
-  document.getElementById("mainMenu").classList.add("active");
-
-  document.getElementById("searchWrapper").classList.remove("show");
+  document.getElementById("gameListMenu").classList.add("hidden");
+  document.getElementById("mainMenu").classList.remove("hidden");
+  document.getElementById("searchWrapper").classList.add("hidden");
   setActiveToolbar("openMain");
 };
 

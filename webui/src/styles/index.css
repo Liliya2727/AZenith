@@ -1,25 +1,6 @@
 @import url('https://mui.kernelsu.org/internal/insets.css');
 @import url('https://mui.kernelsu.org/internal/colors.css');
 
-/* Base state: menus are off-screen */
-.menu-slide {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  transform: translateX(-100%); /* hidden to the right */
-  opacity: 0;
-  transition: transform 0.35s ease, opacity 0.35s ease;
-  z-index: 10;
-}
-
-/* Active state: menu visible */
-.menu-slide.active {
-  transform: translateX(0); /* slide into view */
-  opacity: 1;
-}
-
-
 .meta {
   display: flex;
   flex-direction: column;
@@ -68,11 +49,6 @@
   100% { transform: scale(1.2); opacity: 1; }
 }
 
-.search-wrapper {
-  width: 100%;
-  overflow: hidden; /* prevents content from overflowing when hidden */
-}
-
 .search-box {
   width: 100%;
   margin-top: 1rem;
@@ -90,18 +66,6 @@
   transform: translateY(-20px);
   opacity: 0;
   transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-/* Active state: visible */
-.search-wrapper.active .search-box {
-  transform: translateY(0);
-  opacity: 1;
-}
-
-#appList {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
 }
 
 .appCard {
