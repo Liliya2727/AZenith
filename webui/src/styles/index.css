@@ -1,7 +1,35 @@
 @import url('https://mui.kernelsu.org/internal/insets.css');
 @import url('https://mui.kernelsu.org/internal/colors.css');
 
-#searchWrapper { display: none; }
+/* Base state: menus are off-screen */
+.menu-slide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  transform: translateX(100%); /* hidden to the right */
+  opacity: 0;
+  transition: transform 0.35s ease, opacity 0.35s ease;
+  z-index: 10;
+}
+
+/* Active state: menu visible */
+.menu-slide.active {
+  transform: translateX(0); /* slide into view */
+  opacity: 1;
+}
+
+/* Search bar slide/fade */
+.search-wrapper {
+  transform: translateY(-20px);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.search-wrapper.show {
+  transform: translateY(0);
+  opacity: 1;
+}
 
 .meta {
   display: flex;
@@ -64,6 +92,14 @@
   color: #ddd;
   box-sizing: border-box;
   outline: none;
+}
+
+.search-wrapper {
+  display: flex;        /* default display */
+  justify-content: center; /* center the input horizontally */
+  width: 100%;
+  padding: 0.5rem 1rem;
+  box-sizing: border-box;
 }
 
 #appList {

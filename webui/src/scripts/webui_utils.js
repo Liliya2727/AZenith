@@ -34,25 +34,26 @@ const executeCommand = async (cmd, cwd = null) => {
 };
 window.executeCommand = executeCommand;
 
-const showGameListMenu = async () => {
-  document.getElementById("mainMenu").classList.add("hidden");
-  document.getElementById("gameListMenu").classList.remove("hidden");
-  document.getElementById("searchWrapper").classList.remove("hidden");
-  setActiveToolbar("openGameList");
-
-  await loadAppList(); // reusable function to render the game list
-};
-
 const setActiveToolbar = (activeId) => {
   document.querySelectorAll("#bottomToolbar button").forEach(btn => {
     btn.classList.toggle("active", btn.id === activeId);
   });
 };
 
-const showMainMenu = async () => {
-  document.getElementById("mainMenu").classList.remove("hidden");
-  document.getElementById("gameListMenu").classList.add("hidden");
-  document.getElementById("searchWrapper").classList.add("hidden");
+const showGameListMenu = async () => {
+  document.getElementById("mainMenu").classList.remove("active");
+  document.getElementById("gameListMenu").classList.add("active");
+  const search = document.getElementById("searchWrapper");
+  search.classList.add("show");
+  setActiveToolbar("openGameList");
+  await loadAppList();
+};
+
+const showMainMenu = () => {
+  document.getElementById("gameListMenu").classList.remove("active");
+  document.getElementById("mainMenu").classList.add("active");
+  const search = document.getElementById("searchWrapper");
+  search.classList.remove("show");
   setActiveToolbar("openMain");
 };
 
