@@ -1,39 +1,33 @@
 @import url('https://mui.kernelsu.org/internal/insets.css');
 @import url('https://mui.kernelsu.org/internal/colors.css');
 
-/* Menu base state */
+/* Main and GameList menu fade only */
 #mainMenu,
 #gameListMenu {
-  opacity: 0;
-  transform: scale(0.98);  /* slightly smaller when hidden */
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  opacity: 1;
+  transition: opacity 0.25s ease; /* fade duration */
+}
+
+/* Hidden / fade out */
+#mainMenu.hidden-slide,
+#gameListMenu.hidden-slide {
+  opacity: 0; /* fade out */
 }
 
 /* Active / visible state */
-#gameListMenu.active,
-#mainMenu.active {
-  opacity: 1;
-  transform: scale(1); /* normal size */
+#gameListMenu.active {
+  opacity: 1; /* fade in */
 }
 
-/* Hidden-slide class for fade-out */
-#mainMenu.hidden-slide,
-#gameListMenu.hidden-slide {
-  opacity: 0;
-  transform: scale(0.98);
-}
-
-/* Search wrapper base state */
+/* Search wrapper fade only */
 #searchWrapper {
   opacity: 0;
-  transform: scale(0.95);
-  transition: opacity 0.5s ease, transform 0.5s ease;
+  transition: opacity 0.25s ease; /* fade duration */
 }
 
-/* Show state */
+/* Active / visible state */
 #searchWrapper.show {
-  opacity: 1;
-  transform: scale(1);
+  opacity: 1; /* fade in */
 }
 
 .meta {
