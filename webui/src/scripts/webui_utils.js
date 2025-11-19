@@ -34,21 +34,26 @@ const executeCommand = async (cmd, cwd = null) => {
 };
 window.executeCommand = executeCommand;
 
-const showGamelistSettings = async () => {
-  const c = document.getElementById("opengamelist");
-  const m = document.getElementById("mainmenu");
-  document.body.classList.add("menu-open");
-  c.classList.add("active");
-  m.classList.remove("active")
-  loadGameList();;
+const showGameListMenu = async () => {
+  document.getElementById("mainMenu").classList.add("hidden");
+  document.getElementById("gameListMenu").classList.remove("hidden");
+  document.getElementById("searchWrapper").classList.remove("hidden");
+  setActiveToolbar("openGameList");
+
+  await loadAppList(); // reusable function to render the game list
 };
 
-const hideGamelistSettings = () => {
-  const c = document.getElementById("opengamelist");
-  const m = document.getElementById("mainmenu");  
-  document.body.classList.remove("menu-open");
-  m.classList.remove("active");
-  c.classList.remove("active");
+const setActiveToolbar = (activeId) => {
+  document.querySelectorAll("#bottomToolbar button").forEach(btn => {
+    btn.classList.toggle("active", btn.id === activeId);
+  });
+};
+
+const showMainMenu = () => {
+  document.getElementById("mainMenu").classList.remove("hidden");
+  document.getElementById("gameListMenu").classList.add("hidden");
+  document.getElementById("searchWrapper").classList.add("hidden");
+  setActiveToolbar("openMain");
 };
 
 const loadAppList = async () => {
@@ -2106,13 +2111,13 @@ const setupUIListeners = () => {
     .getElementById("close-profiler")
     ?.addEventListener("click", hideProfilerSettings);
     
-    // Profile Settings
+    // Menu Settings
   document
     .getElementById("opengamelist")
-    ?.addEventListener("click", showGamelistSettings);
+    ?.addEventListener("click", showGameListMenu);
   document
-    .getElementById("openmenu")
-    ?.addEventListener("click", hideGamelistSettings);
+    .getElementById("openmain")
+    ?.addEventListener("click", showMainMenu);
     
   // Additional Settings
   document

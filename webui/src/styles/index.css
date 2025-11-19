@@ -1,6 +1,9 @@
 @import url('https://mui.kernelsu.org/internal/insets.css');
 @import url('https://mui.kernelsu.org/internal/colors.css');
 
+.hidden { display: none !important; }
+#searchWrapper { display: none; }
+
 .meta {
   display: flex;
   flex-direction: column;

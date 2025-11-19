@@ -53,11 +53,13 @@
             <input type="text" id="searchInput" class="search-box" placeholder="Search apps...">
          </div>
       </header>
+      <toolbar id="bottomToolbar">
+         <button id="openmain">Main</button>
+         <button id="opengamelist">GameList</button>   
+      </toolbar>
       <main>
-      <div id="bottomToolbar">
-         <button id="openmain" data-lang="toolbar.main"></button>
-         <button id="opengamelist" data-lang="toolbar.gamelist"></button>
-      </div>
+        <!-- Game List Overlay -->
+        <div id="appList"></div>
          <div class="image-container rounded-lg">
           <img id="Banner" alt="Banner" />
           <div class="bg-displaybanner" id="bannerBox">
@@ -78,8 +80,6 @@
               style="display:none"
             />
         </div>
-        <!-- Game List Overlay -->
-        <div id="appList"></div>
          <div class="p-6">
             <div>
                <div class="device-info-card">
