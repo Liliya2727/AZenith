@@ -68,6 +68,12 @@
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
+#appList {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
 .appCard {
   display: flex;
   position: relative;
