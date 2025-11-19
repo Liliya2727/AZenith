@@ -49,6 +49,9 @@
             class="textjudul">
             AZenith火
          </h1>
+         <div class="search-wrapper">
+            <input type="text" id="searchInput" class="search-box" placeholder="Search apps...">
+         </div>
       </header>
       <main>
       <div id="bottomToolbar">
@@ -76,18 +79,7 @@
             />
         </div>
         <!-- Game List Overlay -->
-        <div id="gamelistmenu" class="background flex flex-col min-h-screen text-white">          
-          <div class="gamelist-header">
-            <input
-              type="text"
-              id="gamelistSearch"
-              placeholder="Search apps..."
-              class="gamelist-search"
-            />
-          </div>        
-          <!-- List container -->
-          <div id="gamelistContainer" class="gamelist-container"></div>        
-        </div>
+        <div id="appList"></div>
          <div class="p-6">
             <div>
                <div class="device-info-card">

@@ -19,9 +19,10 @@ import BannerLightZenith from "/webui.bannerlightmode.avif";
 import AvatarZenith from "/webui.avatar.avif";
 import SchemeBanner from "/webui.schemebanner.avif";
 import ResoBanner from "/webui.reso.avif";
-import { exec, toast, listPackages, getPackagesInfo } from "kernelsu";
+import { exec, toast, getPackagesInfo } from "kernelsu";
 const moduleInterface = window.$azenith;
 const fileInterface = window.$FILE;
+const GAMELIST_PATH = "/data/adb/.config/AZenith/gamelist/gamelist.txt";
 const RESO_PROP = "persist.sys.azenithconf.resosettings";
 const executeCommand = async (cmd, cwd = null) => {
   try {
@@ -32,113 +33,6 @@ const executeCommand = async (cmd, cwd = null) => {
   }
 };
 window.executeCommand = executeCommand;
-
-
-
-
-
-
-
-
-
-// Correct element references
-const gameListOverlay = document.getElementById("gamelistmenu");
-const gamelistContainer = document.getElementById("gamelistContainer");
-const gamelistSearch = document.getElementById("gamelistSearch");
-const gameListBtn = document.getElementById("opengamelist");
-const mainBtn = document.getElementById("openmain");
-
-let games = [];
-
-// Show gamelist overlay
-gameListBtn.addEventListener("click", () => {
-  showGamelistSettings();
-});
-
-// Hide when switching back to main
-mainBtn.addEventListener("click", () => {
-  hideGamelistSettings();
-});
-
-// Render list
-const renderGameList = (filter = "") => {
-  gamelistContainer.innerHTML = "";
-  const f = filter.toLowerCase();
-
-  games
-    .filter(g => g.label.toLowerCase().includes(f) || g.pkg.toLowerCase().includes(f))
-    .forEach((g, idx) => {
-      const item = document.createElement("div");
-      item.className = "gamelist-item";
-
-      item.innerHTML = `
-        <div class="gamelist-info">
-          <img src="${g.icon}" alt="${g.label}">
-          <div class="gamelist-text">
-            <span class="game-label">${g.label}</span>
-            <span class="package-name">${g.pkg}</span>
-          </div>
-        </div>
-
-        <div class="gamelist-toggle">
-          <input type="checkbox" id="toggle-${idx}" ${g.active ? "checked" : ""}>
-        </div>
-      `;
-
-      item.querySelector("input").addEventListener("change", e => {
-        games[idx].active = e.target.checked;
-        console.log(`${g.label} active: ${games[idx].active}`);
-      });
-
-      gamelistContainer.appendChild(item);
-    });
-};
-
-// Search
-gamelistSearch.addEventListener("input", e => {
-  renderGameList(e.target.value);
-});
-
-// Load packages
-const loadGameList = async () => {
-  try {
-    const userPackages = listPackages("user");
-    const infoList = getPackagesInfo(userPackages);
-
-    games = infoList.map(info => ({
-      icon: `ksu://icon/${info.packageName}`,
-      label: info.appLabel,
-      pkg: info.packageName,
-      active: false
-    }));
-
-    renderGameList();
-  } catch (err) {
-    console.error("Failed to load gamelist:", err);
-  }
-};
-
-// UI control
-const showGamelistSettings = () => {
-  document.body.classList.add("menu-open");
-  gameListOverlay.classList.add("show");
-
-  gameListBtn.classList.add("active");
-  mainBtn.classList.remove("active");
-
-  loadGameList();
-};
-
-const hideGamelistSettings = () => {
-  document.body.classList.remove("menu-open");
-  gameListOverlay.classList.remove("show");
-
-  mainBtn.classList.remove("active");
-  gameListBtn.classList.remove("active");
-};
-
-
-
 
 const showGamelistSettings = async () => {
   const c = document.getElementById("opengamelist");
@@ -157,18 +51,154 @@ const hideGamelistSettings = () => {
   c.classList.remove("active");
 };
 
+const loadAppList = async () => {
+  const container = document.getElementById("appList");
+  const searchInput = document.getElementById("searchInput");
+  if (!container || !searchInput) return;
 
+  container.innerHTML = `
+    <div class="loader">
+      <div class="spinner"></div>
+    </div>
+  `;
 
+  try {
+    let gamelist = await readGameList();
 
+    const res = await exec("pm list packages");
+    const stdout = res?.stdout ? String(res.stdout) : "";
 
+    const pkgList = stdout
+      .split("\n")
+      .map(line => line.replace(/^package:/, "").trim())
+      .filter(Boolean);
 
+    if (!pkgList.length) {
+      container.textContent = "No apps found.";
+      return;
+    }
 
+    let infoList = getPackagesInfo(pkgList) || [];
 
+    // Sort apps: checked apps first, then unchecked, each group A-Z
+    const sortApps = (apps) => {
+      return apps.sort((a, b) => {
+        const aChecked = gamelist.includes(a.packageName || a.pkg || "");
+        const bChecked = gamelist.includes(b.packageName || b.pkg || "");
 
+        if (aChecked && !bChecked) return -1;
+        if (!aChecked && bChecked) return 1;
 
+        const labelA = (a.appLabel || a.label || "").toLowerCase();
+        const labelB = (b.appLabel || b.label || "").toLowerCase();
+        return labelA.localeCompare(labelB);
+      });
+    };
 
+    infoList = sortApps(infoList);
 
+    const renderApps = (apps) => {
+      container.innerHTML = "";
+      for (const app of apps) {
+        const pkgName = app.packageName || app.pkg || "";
+        const label = app.appLabel || app.label || pkgName;
 
+        const card = document.createElement("div");
+        card.className = "appCard mt-211 mb-4 p-4 rounded-lg";
+
+        const icon = document.createElement("img");
+        icon.className = "appIcon";
+        icon.src = "ksu://icon/" + pkgName;
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+
+        const row = document.createElement("div");
+        row.className = "row";
+
+        const textArea = document.createElement("div");
+        textArea.className = "text-area";
+
+        const nameEl = document.createElement("div");
+        nameEl.className = "app-label";
+        nameEl.textContent = label;
+
+        const pkgEl = document.createElement("div");
+        pkgEl.className = "pkg-label";
+        pkgEl.textContent = pkgName;
+
+        textArea.appendChild(nameEl);
+        textArea.appendChild(pkgEl);
+
+        const toggle = document.createElement("div");
+        toggle.className = "toggle2";
+
+        if (gamelist.includes(pkgName)) {
+          toggle.classList.add("active");
+          toggle.dataset.state = "on";
+        } else {
+          toggle.dataset.state = "off";
+        }
+
+        toggle.onclick = async () => {
+          toggle.classList.toggle("active");
+          toggle.dataset.state =
+            toggle.classList.contains("active") ? "on" : "off";
+
+          if (toggle.dataset.state === "on") {
+            if (!gamelist.includes(pkgName)) gamelist.push(pkgName);
+          } else {
+            gamelist = gamelist.filter(p => p !== pkgName);
+          }
+
+          await writeGameList(gamelist);
+
+          // Re-sort container after toggle
+          renderApps(sortApps(infoList));
+        };
+
+        row.appendChild(textArea);
+        row.appendChild(toggle);
+        meta.appendChild(row);
+
+        card.appendChild(icon);
+        card.appendChild(meta);
+        container.appendChild(card);
+      }
+    };
+
+    renderApps(infoList);
+
+    // SEARCH LOGIC
+    searchInput.addEventListener("input", () => {
+      const searchTerm = searchInput.value.toLowerCase();
+      const filtered = infoList.filter(app => {
+        const label = (app.appLabel || app.label || "").toLowerCase();
+        const pkg = (app.packageName || app.pkg || "").toLowerCase();
+        return label.includes(searchTerm) || pkg.includes(searchTerm);
+      });
+      renderApps(sortApps(filtered));
+    });
+
+  } catch (err) {
+    console.error("Failed to load apps:", err);
+    container.textContent = "Error loading apps";
+  }
+};
+
+const readGameList = async () => {
+  await executeCommand(`touch ${GAMELIST_PATH}`);
+  const { stdout } = await executeCommand(`cat ${GAMELIST_PATH}`);
+  return stdout.trim() ? stdout.trim().split("|") : [];
+};
+
+const writeGameList = async (list) => {
+  let outputString = list.join("|");
+  if (!outputString.endsWith("|")) outputString += "|"; // ensure trailing |
+  outputString = outputString.replace(/(["\\])/g, '\\$1');
+  await executeCommand(`echo "${outputString}" > ${GAMELIST_PATH}`);
+  await executeCommand(`sync`);
+};
 
 let pressTimer = null;
 

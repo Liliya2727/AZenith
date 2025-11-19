@@ -1,107 +1,162 @@
 @import url('https://mui.kernelsu.org/internal/insets.css');
 @import url('https://mui.kernelsu.org/internal/colors.css');
 
-/* Overlay */
-.gamelist-overlay {
-  position: fixed;
-  inset: 0;
-  background: #0d0f19;
+.meta {
   display: flex;
   flex-direction: column;
-  z-index: 50;
-  color: white;
+  flex: 1;
 }
 
-/* Header with Search + Close button */
-.gamelist-header {
+.row {
+  
   display: flex;
   align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid #2a2d39;
+  width: 100%;
 }
 
-/* Search bar (custom style) */
-.gamelist-search {
-  flex: 1;
-  padding: 10px 14px;
-  background: #1c1f2b;
-  border-radius: 10px;
-  border: none;
-  color: white;
-  font-size: 15px;
+.text-area {
+  display: flex;
+  flex-direction: column;
+}
+
+.loader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 150px;
+  gap: 8px;
+}
+
+.loader span {
+  display: block;
+  width: 10px;
+  height: 10px;
+  background-color: #4caf50;
+  border-radius: 50%;
+  animation: pulse 0.6s infinite alternate;
+}
+
+.loader span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.loader span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.6); opacity: 0.4; }
+  100% { transform: scale(1.2); opacity: 1; }
+}
+
+.search-box {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 10px 10px 10px 2rem;
+  background: rgba(12, 13, 20, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 5rem;
+  font-size: 16px;
+  color: #ddd;
+  box-sizing: border-box;
   outline: none;
 }
 
-.gamelist-search::placeholder {
-  color: #7a7f90;
-}
-
-/* Close button */
-.gamelist-close {
-  margin-left: 12px;
-  padding: 8px 14px;
-  background: #2a2d39;
-  border: none;
-  border-radius: 8px;
-  color: white;
-  cursor: pointer;
-}
-.gamelist-close:hover {
-  background: #3b3f4f;
-}
-
-/* Scrollable list container */
-.gamelist-container {
-  padding: 16px;
-  overflow-y: auto;
-  flex: 1;
+#appList {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 18px;
 }
 
-/* Game item */
-.gamelist-item {
-  background: #141622;
+.appCard {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px;
-  border-radius: 14px;
+  position: relative;
+  padding: 1rem;
+  background-color: #0c0d14;
+  border: .8px solid #090d13;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35);
 }
 
-/* Left side info */
-.gamelist-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.appIcon {
+  width: 46px;
+  height: 46px;
+  border-radius: 100%;
+  margin-right: 16px;
 }
 
-/* App icon */
-.gamelist-info img {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+#appList {
+  margin-top: 2rem;
+  padding: 1rem;
+  box-sizing: border-box; 
 }
 
-/* Text */
-.gamelist-text {
-  display: flex;
-  flex-direction: column;
-}
-.game-label {
-  font-size: 16px;
-  font-weight: 600;
-}
-.package-name {
-  font-size: 13px;
-  opacity: 0.6;
+.app-label {
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    margin-top: 4px;
+
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 150px
 }
 
-/* Toggle */
-.gamelist-toggle input[type="checkbox"] {
-  width: 22px;
-  height: 22px;
+.pkg-label {
+    font-size: 10px;
+    opacity: 0.7;
+    text-align: left;
+    margin-top: 1px;
+
+    white-space: normal;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 150px
+}
+
+
+.toggle2 {
+    position: relative;
+    width: 2.75rem;
+    height: 1.5rem;
+    border-radius: 9999px;
+    background-color: #090b11;
+    border: 1px solid #161d26;
+    cursor: pointer;
+    margin-left: auto;
+    flex-shrink: 0; /* prevent flex from shrinking */
+    transition: background-color .3s, box-shadow .3s, border-color .3s;
+}
+
+/* The knob */
+.toggle2::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0.15rem;
+    transform: translateY(-50%);
+    width: 1rem;
+    height: 1rem;
+    background-color: #151920;
+    border: 1px solid #1a1a1a;
+    border-radius: 50%;
+    transition: left 0.3s, background-color 0.3s, border 0.3s, transform 0.3s;
+}
+
+/* Active state */
+.toggle2.active {
+    background: linear-gradient(135deg, #4853a0, #7c86c0);
+    box-shadow: 0 0 8px rgba(130, 150, 255, .4);
+    border-color: #a6b3ff
+}
+
+.toggle2.active::after {
+    transform: translate(1.35rem, -50%) scale(1.15);
+    background-color: #e6e9ff;
+    border: 2px solid #b5beff;
+    box-shadow: 0 0 6px rgba(180, 190, 255, .4)
 }
 
 /* Bottom Pill Toolbar Container */
