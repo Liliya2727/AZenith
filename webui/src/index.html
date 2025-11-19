@@ -483,8 +483,49 @@
                   <button id="applyreso" class="modal-btn apply" data-lang="settingsReso.resolution.apply"></button>
                </div>
             </div>
+         </div>         
+         <div id="schemeModal" class="scheme-modal">
+            <div class="scheme-container">
+               <button class="close-btn" id="close-scheme">&times;</button>
+               <h3 class="scheme-title" data-lang="scheme.title"></h3>
+               <p class="scheme-desc" data-lang="scheme.description"></p>
+               <img id="Scheme" alt="Scheme" class="scheme-image" />
+               <div class="m-3">
+                  <p class="mb-2">
+                     <span class="schemecolortitle" data-lang="scheme.red.title"></span>
+                     <input type="number" class="schemetext" id="red-value" min="0" max="1000" value="1000" />
+                  </p>
+                  <input type="range" min="0" max="1000" value="1000" id="red" class="[--range-shdw:#EA6661] range range-xs" />
+               </div>
+               <div class="m-3">
+                  <p class="mb-2">
+                     <span class="schemecolortitle" data-lang="scheme.green.title"></span>
+                     <input type="number" class="schemetext" id="green-value" min="0" max="1000" value="1000" />
+                  </p>
+                  <input type="range" min="0" max="1000" value="1000" id="green" class="[--range-shdw:#73E875] range range-xs" />
+               </div>
+               <div class="m-3">
+                  <p class="mb-2">
+                     <span class="schemecolortitle" data-lang="scheme.blue.title"></span>
+                     <input type="number" class="schemetext" id="blue-value" min="0" max="1000" value="1000" />
+                  </p>
+                  <input type="range" min="0" max="1000" value="1000" id="blue" class="[--range-shdw:#6262F4] range range-xs" />
+               </div>
+               <div class="m-3">
+                  <p class="mb-2">
+                     <span class="schemecolortitle" data-lang="scheme.saturation.title"></span>
+                     <input type="number" class="schemetext" id="saturation-value" min="0" max="2000" value="1000" />
+                  </p>
+                  <input type="range" min="0" max="2000" value="1000" id="saturation" class="[--range-shdw:#0079C8] range range-xs" />
+               </div>
+               <div class="scheme-actions">
+                  <button id="reset-btn" class="modal-btn cancel" data-lang="scheme.buttons.reset"></button>
+                  <button id="applybutton" class="modal-btn apply" data-lang="scheme.buttons.apply"></button>
+               </div>
+            </div>
          </div>
-         <div id="settingsModal" class="settings-modal">
+      </main>
+      <div id="settingsModal" class="settings-modal">
             <div class="settings-container">
                <button class="close-btn" id="close-settings">&times;</button>     
                <h3 class="settings-title" data-lang="settingsModule.title"></h3>
@@ -547,47 +588,6 @@
                </div>
             </div>
          </div>
-         <div id="schemeModal" class="scheme-modal">
-            <div class="scheme-container">
-               <button class="close-btn" id="close-scheme">&times;</button>
-               <h3 class="scheme-title" data-lang="scheme.title"></h3>
-               <p class="scheme-desc" data-lang="scheme.description"></p>
-               <img id="Scheme" alt="Scheme" class="scheme-image" />
-               <div class="m-3">
-                  <p class="mb-2">
-                     <span class="schemecolortitle" data-lang="scheme.red.title"></span>
-                     <input type="number" class="schemetext" id="red-value" min="0" max="1000" value="1000" />
-                  </p>
-                  <input type="range" min="0" max="1000" value="1000" id="red" class="[--range-shdw:#EA6661] range range-xs" />
-               </div>
-               <div class="m-3">
-                  <p class="mb-2">
-                     <span class="schemecolortitle" data-lang="scheme.green.title"></span>
-                     <input type="number" class="schemetext" id="green-value" min="0" max="1000" value="1000" />
-                  </p>
-                  <input type="range" min="0" max="1000" value="1000" id="green" class="[--range-shdw:#73E875] range range-xs" />
-               </div>
-               <div class="m-3">
-                  <p class="mb-2">
-                     <span class="schemecolortitle" data-lang="scheme.blue.title"></span>
-                     <input type="number" class="schemetext" id="blue-value" min="0" max="1000" value="1000" />
-                  </p>
-                  <input type="range" min="0" max="1000" value="1000" id="blue" class="[--range-shdw:#6262F4] range range-xs" />
-               </div>
-               <div class="m-3">
-                  <p class="mb-2">
-                     <span class="schemecolortitle" data-lang="scheme.saturation.title"></span>
-                     <input type="number" class="schemetext" id="saturation-value" min="0" max="2000" value="1000" />
-                  </p>
-                  <input type="range" min="0" max="2000" value="1000" id="saturation" class="[--range-shdw:#0079C8] range range-xs" />
-               </div>
-               <div class="scheme-actions">
-                  <button id="reset-btn" class="modal-btn cancel" data-lang="scheme.buttons.reset"></button>
-                  <button id="applybutton" class="modal-btn apply" data-lang="scheme.buttons.apply"></button>
-               </div>
-            </div>
-         </div>
-      </main>
       <div id="gameListMenu" class="hidden">
          <div id="appList"></div>
       </div>

@@ -19,18 +19,20 @@
   opacity: 1; /* fade in */
 }
 
-/* Search wrapper fade only */
-#searchWrapper {
+/* Search wrapper animation */
+.search-wrapper {
   max-height: 0;
   opacity: 0;
   transform: translateY(-20px); /* start slightly above */
   overflow: hidden;
-  transition: opacity 0.3s ease;
+  transition: max-height 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
 }
 
 /* Active / visible state */
-#searchWrapper.hidden {
-  opacity: 1; /* fade in */
+.search-wrapper.show {
+  max-height: 100px; /* enough for input height */
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .meta {
@@ -201,9 +203,8 @@
   border-radius: 9999px;
   gap: 0.5rem;
   padding: 0.25rem 0.5rem;
-  z-index: 9999; /* increase to ensure it's on top of everything */
+  z-index: 50; /* increase to ensure it's on top of everything */
   border-radius: 9999px;
-  z-index: 50;
   background-color: rgba(100, 100, 100, 0.25); /* semi-transparent black behind all pills */
   backdrop-filter: blur(10px); /* optional blur effect */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -223,7 +224,7 @@
   min-width: 6rem; /* all pills same width */
   display: flex;
   border-radius: 9999px;
-  z-index: 9999; /* increase to ensure it's on top of everything */
+  z-index: 50; /* increase to ensure it's on top of everything */
   justify-content: center;
   -webkit-tap-highlight-color: transparent;
   align-items: center;
@@ -262,7 +263,8 @@
     -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
     overflow: hidden;
-    height: 100vh
+    height: 100vh;
+    z-index: 99999;
 }
 
 .banner-loader {
