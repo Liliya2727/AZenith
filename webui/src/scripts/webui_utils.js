@@ -51,7 +51,7 @@ const showGameListMenu = async () => {
 const showMainMenu = () => {
   document.getElementById("gameListMenu").classList.remove("active");
   document.getElementById("mainMenu").classList.add("active");
-  document.getElementById("searchWrapper").classList.remove("show);
+  document.getElementById("searchWrapper").classList.remove("show");
 
   setActiveToolbar("openMain");
 };
