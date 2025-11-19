@@ -2113,10 +2113,10 @@ const setupUIListeners = () => {
     
     // Menu Settings
   document
-    .getElementById("opengamelist")
+    .getElementById("openGameList")
     ?.addEventListener("click", showGameListMenu);
   document
-    .getElementById("openmain")
+    .getElementById("openMain")
     ?.addEventListener("click", showMainMenu);
     
   // Additional Settings

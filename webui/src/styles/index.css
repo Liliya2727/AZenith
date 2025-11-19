@@ -169,8 +169,10 @@
   left: 50%;
   transform: translateX(-50%);
   display: flex;
+  border-radius: 9999px;
   gap: 0.5rem;
   padding: 0.25rem 0.5rem;
+  z-index: 9999; /* increase to ensure it's on top of everything */
   border-radius: 9999px;
   z-index: 50;
   background-color: rgba(100, 100, 100, 0.25); /* semi-transparent black behind all pills */
@@ -178,18 +180,21 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
+
 /* Buttons inside toolbar */
 #bottomToolbar button {
   background-color: transparent; /* unselected pills are transparent */
   color: #fff; /* white text */
   border: none;
   padding: 0.35rem 0.75rem;
-  border-radius: 9999px;
+
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: 500;
   min-width: 6rem; /* all pills same width */
   display: flex;
+  border-radius: 9999px;
+  z-index: 9999; /* increase to ensure it's on top of everything */
   justify-content: center;
   -webkit-tap-highlight-color: transparent;
   align-items: center;
