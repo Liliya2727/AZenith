@@ -68,6 +68,11 @@
   100% { transform: scale(1.2); opacity: 1; }
 }
 
+.search-wrapper {
+  width: 100%;
+  overflow: hidden; /* prevents content from overflowing when hidden */
+}
+
 .search-box {
   width: 100%;
   margin-top: 1rem;
@@ -81,22 +86,16 @@
   color: #ddd;
   box-sizing: border-box;
   outline: none;
+
   transform: translateY(-20px);
   opacity: 0;
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
-.search-box.show {
+/* Active state: visible */
+.search-wrapper.active .search-box {
   transform: translateY(0);
   opacity: 1;
-}
-
-.search-wrapper {
-  display: flex;        /* default display */
-  justify-content: center; /* center the input horizontally */
-  width: 100%;
-  padding: 0.5rem 1rem;
-  box-sizing: border-box;
 }
 
 #appList {
