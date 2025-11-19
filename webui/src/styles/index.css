@@ -62,10 +62,6 @@
   color: #ddd;
   box-sizing: border-box;
   outline: none;
-
-  transform: translateY(-20px);
-  opacity: 0;
-  transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
 #appList {
