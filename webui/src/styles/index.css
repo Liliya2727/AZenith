@@ -21,12 +21,15 @@
 
 /* Search wrapper fade only */
 #searchWrapper {
+  max-height: 0;
   opacity: 0;
-  transition: opacity 0.25s ease; /* fade duration */
+  transform: translateY(-20px); /* start slightly above */
+  overflow: hidden;
+  transition: opacity 0.3s ease;
 }
 
 /* Active / visible state */
-#searchWrapper.show {
+#searchWrapper.hidden {
   opacity: 1; /* fade in */
 }
 
@@ -116,7 +119,7 @@
 }
 
 #appList {
-  margin-top: 2rem;
+  margin-top: 2.5rem;
   padding: .6rem;
   box-sizing: border-box; 
 }
