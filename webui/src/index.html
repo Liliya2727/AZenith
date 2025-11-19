@@ -49,17 +49,18 @@
             class="textjudul">
             AZenith火
          </h1>
-         <div class="search-wrapper">
-            <input type="text" id="searchInput" class="search-box" placeholder="Search apps...">
+         <div id="searchWrapper" class="search-wrapper hidden">
+            <input type="text" id="searchInput" class="search-box" placeholder="Wuthering Waves...">
          </div>
       </header>
       <toolbar id="bottomToolbar">
-         <button id="openmain">Main</button>
-         <button id="opengamelist">GameList</button>   
+         <button id="openMain" class="active">Main</button>
+         <button id="openGameList">GameList</button>
       </toolbar>
       <main>
-        <!-- Game List Overlay -->
-        <div id="appList"></div>
+        <div Id="gameListMenu" class="hidden">
+          <div id="appList"></div>
+        </div>
          <div class="image-container rounded-lg">
           <img id="Banner" alt="Banner" />
           <div class="bg-displaybanner" id="bannerBox">

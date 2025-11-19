@@ -191,15 +191,23 @@
   min-width: 6rem; /* all pills same width */
   display: flex;
   justify-content: center;
+  -webkit-tap-highlight-color: transparent;
   align-items: center;
   text-align: center;
   transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
-/* Active tab styling */
+/* Remove default focus outline / highlight */
+#bottomToolbar button:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Active tab styling (slightly transparent) */
 #bottomToolbar button.active {
-  background-color: #141414; /* solid black for selected */
+  background-color: rgba(20, 20, 20, 0.6); /* dark but transparent */
   color: #fff; /* text stays white */
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.2); /* subtle glow */
 }
 
 
