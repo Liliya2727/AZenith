@@ -61,7 +61,7 @@ const updateGameStatus = async () => {
     if (!gameLine) {
       // No game running
       statusText = aiEnabled
-        ? getTranslation("serviceStatus.idleMode");
+        ? getTranslation("serviceStatus.idleMode")
         : getTranslation("serviceStatus.noApps");
     } else {
       const pkg = gameLine.split(" ")[0]; // first value is package name
