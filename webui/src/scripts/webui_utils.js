@@ -46,15 +46,17 @@ const updateGameStatus = async () => {
   if (!banner) return;
 
   try {
-    // Read active game info: "packagename pid uid"
     const gameRaw = await executeCommand(
       "cat /data/adb/.config/AZenith/API/gameinfo"
     );
-    const gameLine = gameRaw.stdout?.trim();
+    let gameLine = gameRaw.stdout?.trim();
 
-    // Check AI idle mode
+    if (!gameLine || gameLine.toLowerCase() === "null" || gameLine.toLowerCase() === "(null)") {
+      gameLine = null;
+    }
+
     const aiResult = await executeCommand("getprop persist.sys.azenithconf.AIenabled");
-    const aiEnabled = aiResult.stdout?.trim() === "1";
+    const aiEnabled = aiResult.stdout?.trim() === "0";
 
     let statusText = "";
 
@@ -68,8 +70,9 @@ const updateGameStatus = async () => {
       let label = pkg;
 
       try {
-        const info = JSON.parse(ksu.getPackageInfo(pkg));
-        label = info.appLabel || pkg;
+        // ksu.getPackagesInfo expects an array of package names
+        const infoList = JSON.parse(ksu.getPackagesInfo([pkg]));
+        if (infoList.length) label = infoList[0].appLabel || pkg;
       } catch (e) {
         console.warn("Failed to get app label for", pkg, e);
       }
@@ -88,13 +91,6 @@ const updateGameStatus = async () => {
     banner.textContent = getTranslation("serviceStatus.error");
   }
 };
-
-// Refresh every second
-setInterval(updateGameStatus, 1000);
-updateGameStatus();
-
-setInterval(updateGameStatus, 1000);
-updateGameStatus();
 
 const setActiveToolbar = (activeId) => {
   document.querySelectorAll("#bottomToolbar button").forEach(btn => {
