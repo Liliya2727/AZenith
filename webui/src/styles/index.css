@@ -8,8 +8,7 @@
   flex: 1;
 }
 
-.row {
-  
+.row {  
   display: flex;
   align-items: center;
   width: 100%;
@@ -23,13 +22,13 @@
 .search-box {
   width: 100%;
   margin-top: 1rem;
-  padding: 10px 10px 10px 2rem;
+  padding: 8px 8px 8px .8rem;
   background: rgba(12, 13, 20, 0.6);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 5rem;
-  font-size: 16px;
+  font-size: 12px;
   color: #ddd;
   box-sizing: border-box;
   outline: none;
@@ -97,11 +96,10 @@
     border: 1px solid #161d26;
     cursor: pointer;
     margin-left: auto;
-    flex-shrink: 0; /* prevent flex from shrinking */
+    flex-shrink: 0; 
     transition: background-color .3s, box-shadow .3s, border-color .3s;
 }
 
-/* The knob */
 .toggle2::after {
     content: "";
     position: absolute;
@@ -116,7 +114,7 @@
     transition: left 0.3s, background-color 0.3s, border 0.3s, transform 0.3s;
 }
 
-/* Active state */
+
 .toggle2.active {
     background: linear-gradient(135deg, #4853a0, #7c86c0);
     box-shadow: 0 0 8px rgba(130, 150, 255, .4);
@@ -130,7 +128,6 @@
     box-shadow: 0 0 6px rgba(180, 190, 255, .4)
 }
 
-/* Bottom Pill Toolbar Container */
 #bottomToolbar {
   position: fixed;
   bottom: calc(1.5rem + var(--window-inset-bottom, 0px));
@@ -140,28 +137,26 @@
   border-radius: 9999px;
   gap: 0.5rem;
   padding: 0.25rem 0.5rem;
-  z-index: 50; /* increase to ensure it's on top of everything */
+  z-index: 50;
   border-radius: 9999px;
-  background-color: rgba(100, 100, 100, 0.25); /* semi-transparent black behind all pills */
-  backdrop-filter: blur(10px); /* optional blur effect */
+  background-color: rgba(100, 100, 100, 0.25);
+  backdrop-filter: blur(10px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-
-/* Buttons inside toolbar */
 #bottomToolbar button {
-  background-color: transparent; /* unselected pills are transparent */
-  color: #fff; /* white text */
+  background-color: transparent;
+  color: #fff;
   border: none;
   padding: 0.35rem 0.75rem;
 
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: 500;
-  min-width: 6rem; /* all pills same width */
+  min-width: 6rem;
   display: flex;
   border-radius: 9999px;
-  z-index: 50; /* increase to ensure it's on top of everything */
+  z-index: 50;
   justify-content: center;
   -webkit-tap-highlight-color: transparent;
   align-items: center;
@@ -169,17 +164,15 @@
   transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
-/* Remove default focus outline / highlight */
 #bottomToolbar button:focus {
   outline: none;
   box-shadow: none;
 }
 
-/* Active tab styling (slightly transparent) */
 #bottomToolbar button.active {
-  background-color: rgba(20, 20, 20, 0.6); /* dark but transparent */
-  color: #fff; /* text stays white */
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.2); /* subtle glow */
+  background-color: rgba(20, 20, 20, 0.6);
+  color: #fff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
 }
 
 
@@ -1302,7 +1295,7 @@ input[type=checkbox]:checked+.toggle::after {
 
 .modal-btn.cancel:active {
     background-color: #444;
-    transform: scale(0.97); /* subtle press-in effect */
+    transform: scale(0.97);
 }
 
 .modal-btn.apply {
@@ -1735,10 +1728,10 @@ input[type=checkbox]:checked+.toggle::after {
     height: 32px;
     padding: 6px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.08); /* subtle glassy white overlay */    
+    background: rgba(255, 255, 255, 0.08);    
     border: 1px solid rgba(255, 255, 255, 0.15);
     box-shadow: 0 1px 4px rgba(255, 255, 255, 0.05);
-    fill: #FFFFFF; /* icon color */
+    fill: #FFFFFF;
     color: #ffffff;
     transition: all 0.25s ease;
 }
@@ -1753,10 +1746,10 @@ input[type=checkbox]:checked+.toggle::after {
     height: 32px;
     padding: 5px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.08); /* subtle glassy overlay */
+    background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.15);
     box-shadow: 0 1px 4px rgba(255, 255, 255, 0.05);
-    color: #ffffff; /* this is what affects fill="currentColor" */
+    color: #ffffff;
     transition: all 0.25s ease;
 }
 
@@ -2065,8 +2058,6 @@ input[type=range]::-ms-track {
     font-size: 0.65rem;
     letter-spacing: 0.25px;
     color: #f3f3f3;
-
-    /* Compact liquid-glass background */
     background: linear-gradient(
         135deg,
         rgba(255, 255, 255, 0.16),
@@ -2385,8 +2376,6 @@ input[type=range]::-ms-track {
     
     .profilerbutton {
     color: #303030;
-
-    /* Compact liquid-glass background */
     background: linear-gradient(
         135deg,
         rgba(155, 155, 155, 0.16),
@@ -2408,9 +2397,9 @@ input[type=range]::-ms-track {
 .profilesvg,
 .kernelsvg,
 .androidsvg {
-    background: #4E4E4E; /* solid dark background */
-    border: 1px solid #333; /* darker border */
-    fill: #ffffff; /* icon color */
+    background: #4E4E4E;
+    border: 1px solid #333;
+    fill: #ffffff;
     color: #ffffff;
     transition: all 0.25s ease;
 }
@@ -2419,11 +2408,12 @@ input[type=range]::-ms-track {
 .infosvg,
 .iotitlesvg,
 .thankstitlesvg {
-    background: #4E4E4E; /* solid dark background */
+    background: #4E4E4E;
     border: 1px solid #333;
-    color: #ffffff; /* affects fill="currentColor" */
+    color: #ffffff;
     transition: all 0.25s ease;
 }
+
 .nga {
     border: .8px solid #6881B5;
     background-color: #DEE7FF;
@@ -2441,21 +2431,17 @@ input[type=range]::-ms-track {
     border-top-color: #8E8E8E;
 
 }
-
-
     
 .toggle2 {
     background-color: #d7ddee;
     border: 1px solid #b9bceb
 }
 
-/* The knob */
 .toggle2::after {
     background-color: #adb0c9;
     border: 1px solid #8789a1
 }
 
-/* Active state */
 .toggle2.active {
     background: linear-gradient(135deg, #4853a0, #7c86c0);
     box-shadow: 0 0 8px rgba(130, 150, 255, .4);
