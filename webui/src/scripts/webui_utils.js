@@ -19,7 +19,7 @@ import BannerLightZenith from "/webui.bannerlightmode.avif";
 import AvatarZenith from "/webui.avatar.avif";
 import SchemeBanner from "/webui.schemebanner.avif";
 import ResoBanner from "/webui.reso.avif";
-import { exec, toast, getPackagesInfo } from "kernelsu";
+import { exec, toast } from "kernelsu";
 const moduleInterface = window.$azenith;
 const fileInterface = window.$FILE;
 const GAMELIST_PATH = "/data/adb/.config/AZenith/gamelist/gamelist.txt";
@@ -33,7 +33,7 @@ const executeCommand = async (cmd, cwd = null) => {
   }
 };
 window.executeCommand = executeCommand;
-
+let appListLoaded = false;
 const setActiveToolbar = (activeId) => {
   document.querySelectorAll("#bottomToolbar button").forEach(btn => {
     btn.classList.toggle("active", btn.id === activeId);
@@ -62,8 +62,7 @@ const showGameListMenu = async () => {
     search.classList.add("show");      // <-- then animate
   }, 300);
 
-  setActiveToolbar("openGameList");
-  await loadAppList();
+  setActiveToolbar("openGameList"); 
 };
 
 const showMainMenu = async () => {
@@ -92,9 +91,26 @@ const showMainMenu = async () => {
   }, 300);
 
   setActiveToolbar("openMain");
+  loadAppList();
+};
+
+const readGameList = async () => {
+  await executeCommand(`touch ${GAMELIST_PATH}`);
+  const { stdout } = await executeCommand(`cat ${GAMELIST_PATH}`);
+  return stdout.trim() ? stdout.trim().split("|") : [];
+};
+
+const writeGameList = async (list) => {
+  let outputString = list.join("|");
+  if (!outputString.endsWith("|")) outputString += "|";
+  outputString = outputString.replace(/(["\\])/g, '\\$1');
+  await executeCommand(`echo "${outputString}" > ${GAMELIST_PATH}`);
+  await executeCommand(`sync`);
 };
 
 const loadAppList = async () => {
+  if (appListLoaded) return;   // ⛔ prevent second load
+  appListLoaded = true; 
   const container = document.getElementById("appList");
   const searchInput = document.getElementById("searchInput");
   if (!container || !searchInput) return;
@@ -108,139 +124,140 @@ const loadAppList = async () => {
   try {
     let gamelist = await readGameList();
 
-    const res = await exec("pm list packages");
-    const stdout = res?.stdout ? String(res.stdout) : "";
-
-    const pkgList = stdout
-      .split("\n")
-      .map(line => line.replace(/^package:/, "").trim())
-      .filter(Boolean);
+    let pkgList = [];
+    try {
+      pkgList = JSON.parse(ksu.listAllPackages());
+    } catch {
+      const r = await exec("pm list packages");
+      pkgList = (r.stdout || "")
+        .split("\n")
+        .map(x => x.replace("package:", "").trim())
+        .filter(Boolean);
+    }
 
     if (!pkgList.length) {
       container.textContent = "No apps found.";
       return;
     }
 
-    let infoList = getPackagesInfo(pkgList) || [];
+    const infoList = JSON.parse(ksu.getPackagesInfo(JSON.stringify(pkgList)));
+    const iconList = JSON.parse(ksu.getPackagesIcons(JSON.stringify(pkgList), 100));
 
-    // Sort apps: checked apps first, then unchecked, each group A-Z
-    const sortApps = (apps) => {
-      return apps.sort((a, b) => {
-        const aChecked = gamelist.includes(a.packageName || a.pkg || "");
-        const bChecked = gamelist.includes(b.packageName || b.pkg || "");
+    const iconMap = {};
+    for (const i of iconList) iconMap[i.packageName] = i.icon || "";
 
-        if (aChecked && !bChecked) return -1;
-        if (!aChecked && bChecked) return 1;
+    const cardCache = {};
+    container.innerHTML = "";
 
-        const labelA = (a.appLabel || a.label || "").toLowerCase();
-        const labelB = (b.appLabel || b.label || "").toLowerCase();
-        return labelA.localeCompare(labelB);
-      });
-    };
+    for (const app of infoList) {
+      const pkg = app.packageName;
+      const label = app.appLabel || pkg;
 
-    infoList = sortApps(infoList);
+      const card = document.createElement("div");
+      card.className = "appCard mt-211 mb-4 p-4 rounded-lg";
+      card.dataset.pkg = pkg;
 
-    const renderApps = (apps) => {
-      container.innerHTML = "";
-      for (const app of apps) {
-        const pkgName = app.packageName || app.pkg || "";
-        const label = app.appLabel || app.label || pkgName;
+      const icon = document.createElement("img");
+      icon.className = "appIcon";
+      icon.src = iconMap[pkg];
 
-        const card = document.createElement("div");
-        card.className = "appCard mt-211 mb-4 p-4 rounded-lg";
+      const nameEl = document.createElement("div");
+      nameEl.className = "app-label";
+      nameEl.textContent = label;
 
-        const icon = document.createElement("img");
-        icon.className = "appIcon";
-        icon.src = "ksu://icon/" + pkgName;
+      const pkgEl = document.createElement("div");
+      pkgEl.className = "pkg-label";
+      pkgEl.textContent = pkg;
 
-        const meta = document.createElement("div");
-        meta.className = "meta";
+      const textArea = document.createElement("div");
+      textArea.className = "text-area";
+      textArea.appendChild(nameEl);
+      textArea.appendChild(pkgEl);
 
-        const row = document.createElement("div");
-        row.className = "row";
+      const toggle = document.createElement("div");
+      toggle.className = "toggle2";
+      toggle.dataset.pkg = pkg;
 
-        const textArea = document.createElement("div");
-        textArea.className = "text-area";
+      if (gamelist.includes(pkg)) {
+        toggle.classList.add("active");
+        toggle.dataset.state = "on";
+      } else {
+        toggle.dataset.state = "off";
+      }
 
-        const nameEl = document.createElement("div");
-        nameEl.className = "app-label";
-        nameEl.textContent = label;
+      toggle.onclick = async () => {
+        toggle.classList.toggle("active");
+        const isOn = toggle.classList.contains("active");
 
-        const pkgEl = document.createElement("div");
-        pkgEl.className = "pkg-label";
-        pkgEl.textContent = pkgName;
-
-        textArea.appendChild(nameEl);
-        textArea.appendChild(pkgEl);
-
-        const toggle = document.createElement("div");
-        toggle.className = "toggle2";
-
-        if (gamelist.includes(pkgName)) {
-          toggle.classList.add("active");
+        if (isOn) {
           toggle.dataset.state = "on";
+          if (!gamelist.includes(pkg)) gamelist.push(pkg);
         } else {
           toggle.dataset.state = "off";
+          gamelist = gamelist.filter(p => p !== pkg);
         }
 
-        toggle.onclick = async () => {
-          toggle.classList.toggle("active");
-          toggle.dataset.state =
-            toggle.classList.contains("active") ? "on" : "off";
+        searchInput.value = "";
+        Object.values(cardCache).forEach(({ card }) => {
+          card.style.display = "";
+        });
 
-          if (toggle.dataset.state === "on") {
-            if (!gamelist.includes(pkgName)) gamelist.push(pkgName);
-          } else {
-            gamelist = gamelist.filter(p => p !== pkgName);
-          }
+        await writeGameList(gamelist);
+        sortCards();
+      };
 
-          await writeGameList(gamelist);
+      const row = document.createElement("div");
+      row.className = "row";
+      row.appendChild(textArea);
+      row.appendChild(toggle);
 
-          // Re-sort container after toggle
-          renderApps(sortApps(infoList));
-        };
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.appendChild(row);
 
-        row.appendChild(textArea);
-        row.appendChild(toggle);
-        meta.appendChild(row);
+      card.appendChild(icon);
+      card.appendChild(meta);
 
-        card.appendChild(icon);
-        card.appendChild(meta);
-        container.appendChild(card);
-      }
+      container.appendChild(card);
+
+      cardCache[pkg] = { card, label, pkg };
+    }
+
+    const sortCards = () => {
+      const gameSet = new Set(gamelist);
+      const cards = Object.values(cardCache);
+
+      cards.forEach(c => {
+        c.isOn = gameSet.has(c.pkg);
+        c.sortKey = c.label.toLowerCase();
+      });
+
+      cards.sort((a, b) => {
+        if (a.isOn !== b.isOn) return a.isOn ? -1 : 1;
+        return a.sortKey.localeCompare(b.sortKey);
+      });
+
+      cards.forEach(c => container.appendChild(c.card));
     };
 
-    renderApps(infoList);
+    sortCards();
 
-    // SEARCH LOGIC
     searchInput.addEventListener("input", () => {
-      const searchTerm = searchInput.value.toLowerCase();
-      const filtered = infoList.filter(app => {
-        const label = (app.appLabel || app.label || "").toLowerCase();
-        const pkg = (app.packageName || app.pkg || "").toLowerCase();
-        return label.includes(searchTerm) || pkg.includes(searchTerm);
+      const q = searchInput.value.toLowerCase();
+
+      Object.values(cardCache).forEach(({ card, label, pkg }) => {
+        if (label.toLowerCase().includes(q) || pkg.toLowerCase().includes(q)) {
+          card.style.display = "";
+        } else {
+          card.style.display = "none";
+        }
       });
-      renderApps(sortApps(filtered));
     });
 
   } catch (err) {
     console.error("Failed to load apps:", err);
     container.textContent = "Error loading apps";
   }
-};
-
-const readGameList = async () => {
-  await executeCommand(`touch ${GAMELIST_PATH}`);
-  const { stdout } = await executeCommand(`cat ${GAMELIST_PATH}`);
-  return stdout.trim() ? stdout.trim().split("|") : [];
-};
-
-const writeGameList = async (list) => {
-  let outputString = list.join("|");
-  if (!outputString.endsWith("|")) outputString += "|"; // ensure trailing |
-  outputString = outputString.replace(/(["\\])/g, '\\$1');
-  await executeCommand(`echo "${outputString}" > ${GAMELIST_PATH}`);
-  await executeCommand(`sync`);
 };
 
 let pressTimer = null;

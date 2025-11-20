@@ -19,6 +19,8 @@
     "vite-plugin-mkcert": "^1.17.9"
   },
   "dependencies": {
-    "kernelsu": "^2.1.1"
+    "kernelsu": "^2.1.1",
+    "kernelsu-alt": "^2.1.2",
+    "webuix": "^0.0.18"
   }
 }
