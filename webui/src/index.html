@@ -589,11 +589,17 @@
             </div>
          </div>
       <div id="gameListMenu" class="hidden">
+         <div id="loading-screen">
+             <div class="loading-content">
+               <div class="spinner"></div>
+               <p id="loading-text" data-lang="loading.textgamelist"></p>
+            </div>
+         </div>
          <div id="appList"></div>
       </div>
       <toolbar id="bottomToolbar">
-         <button id="openMain" class="active">Main</button>
-         <button id="openGameList">GameList</button>
+         <button id="openMain" class="active" data-lang="toolbar.main"></button>
+         <button id="openGameList" data-lang="toolbar.gamelist"></button>
       </toolbar>
    </body>
 </html>

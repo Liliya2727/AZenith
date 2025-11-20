@@ -1,6 +1,7 @@
 {
   "loading": {
     "text": "Initializing..."
+    "textgamelist": "Fetching Applist..."
   },
 
   "infoTab": {

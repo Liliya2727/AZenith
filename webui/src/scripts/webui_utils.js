@@ -48,6 +48,7 @@ const showGameListMenu = async () => {
   main.classList.add("hidden");    
   gameList.classList.remove("hidden");
   search.classList.remove("hidden");
+  setActiveToolbar("openMain");
 };
 
 const showMainMenu = async () => {
@@ -81,18 +82,16 @@ const loadAppList = async () => {
   const searchInput = document.getElementById("searchInput");
   if (!container || !searchInput) return;
 
-  container.innerHTML = `
-    <div class="loader">
-      <div class="spinner"></div>
-    </div>
-  `;
+  const loader2 = document.getElementById("loading-screen");
+  if (loader2) loader2.classList.remove("hidden");
+  document.body.classList.add("no-scroll");
 
   try {
     let gamelist = await readGameList();
 
     let pkgList = [];
     try {
-      pkgList = JSON.parse(ksu.listAllPackages());
+      pkgList = JSON.parse(ksu.listUserPackages());
     } catch {
       const r = await exec("pm list packages");
       pkgList = (r.stdout || "")
@@ -113,7 +112,6 @@ const loadAppList = async () => {
     for (const i of iconList) iconMap[i.packageName] = i.icon || "";
 
     const cardCache = {};
-    container.innerHTML = "";
 
     for (const app of infoList) {
       const pkg = app.packageName;
@@ -223,6 +221,9 @@ const loadAppList = async () => {
   } catch (err) {
     console.error("Failed to load apps:", err);
     container.textContent = "Error loading apps";
+  } finally {
+    if (loader2) loader2.classList.add("hidden");
+    document.body.classList.remove("no-scroll");
   }
 };
 
@@ -2135,10 +2136,7 @@ const setupUIListeners = () => {
    // Menu Settings
   document
     .getElementById("openGameList")
-    ?.addEventListener("click", () => {
-      showGameListMenu();
-      loadAppList();
-    });
+    ?.addEventListener("click", showGameListMenu);
 
   document
     .getElementById("openMain")
