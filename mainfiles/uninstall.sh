@@ -65,8 +65,8 @@ done
 rm -rf /data/adb/.config/AZenith
 rm -rf /data/AZenith
 # Uninstall toast apk
-pm uninstall azenith.toast 2>/dev/null
-# Uninstaller Script
+pm uninstall --user 0 azenith.toast 2>/dev/null
+# Uninstall azenith binaries
 manager_paths="/data/adb/ap/bin /data/adb/ksu/bin"
 binaries="sys.azenith-service sys.azenith-service_log \
           sys.azenith-profilesettings sys.azenith-utilityconf \
