@@ -39,20 +39,18 @@ let lastGameCheck = { time: 0, status: "" };
 
 const updateGameStatus = async () => {
   const now = Date.now();
-  if (now - lastGameCheck.time < 1000) return; // throttle 1s
+  if (now - lastGameCheck.time < 1000) return;
   lastGameCheck.time = now;
 
   const banner = document.getElementById("gameinfo");
   if (!banner) return;
 
   try {
-    // Read game info
     const gameRaw = await executeCommand(
       "cat /data/adb/.config/AZenith/API/gameinfo"
     );
     let gameLine = (gameRaw.stdout || "").trim();
 
-    // Treat NULL, (null), or NULL 0 0 as no game running
     if (
       !gameLine ||
       ["null", "(null)", "NULL"].includes(gameLine.toUpperCase()) ||
@@ -61,7 +59,6 @@ const updateGameStatus = async () => {
       gameLine = null;
     }
 
-    // Check AI idle mode
     const aiResult = await executeCommand(
       "getprop persist.sys.azenithconf.AIenabled"
     );
@@ -70,41 +67,35 @@ const updateGameStatus = async () => {
     let statusText = "";
 
     if (!gameLine) {
-      // No game running → skip getPackagesInfo
       statusText = aiEnabled
         ? getTranslation("serviceStatus.idleMode")
         : getTranslation("serviceStatus.noApps");
     } else {
-      // Extract package name
       const pkg = gameLine.split(" ")[0]?.trim();
 
       if (!pkg || ["NULL", "null", "(null)"].includes(pkg.toUpperCase())) {
-        // Fallback if invalid pkg
         statusText = aiEnabled
           ? getTranslation("serviceStatus.idleMode")
           : getTranslation("serviceStatus.noApps");
       } else {
-        // Try to get app label safely
         let label = pkg;
 
         try {
-          const infoList = JSON.parse(ksu.getPackagesInfo([pkg])); // pass as array
+          const infoList = JSON.parse(ksu.getPackagesInfo(JSON.stringify([pkg])));
           if (Array.isArray(infoList) && infoList.length > 0) {
             label = infoList[0].appLabel || pkg;
           }
         } catch (e) {
           console.warn("Failed to get app label for", pkg, e.message || e);
-          label = pkg; // fallback
+          label = pkg;
         }
 
-        // Apply translation placeholders
         statusText = aiEnabled
-          ? getTranslation("serviceStatus.activeIdle").replace("{0}", label)
-          : getTranslation("serviceStatus.active").replace("{0}", label);
+          ? getTranslation("serviceStatus.activeIdle", label)
+          : getTranslation("serviceStatus.active", label);
       }
     }
 
-    // Update banner only if changed
     if (lastGameCheck.status !== statusText) {
       banner.textContent = statusText;
       lastGameCheck.status = statusText;
