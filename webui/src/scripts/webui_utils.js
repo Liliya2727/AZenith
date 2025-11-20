@@ -44,11 +44,11 @@ const showGameListMenu = async () => {
   const main = document.getElementById("mainMenu");
   const gameList = document.getElementById("gameListMenu");
   const search = document.getElementById("searchWrapper");
-  const container = document.getElementById("appList");
   main.classList.add("hidden");    
   gameList.classList.remove("hidden");
   search.classList.remove("hidden");
-  setActiveToolbar("openMain");
+  setActiveToolbar("openGameList");
+  await loadAppList();
 };
 
 const showMainMenu = async () => {
