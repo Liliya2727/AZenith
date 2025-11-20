@@ -45,13 +45,11 @@ const showGameListMenu = async () => {
   const gameList = document.getElementById("gameListMenu");
   const search = document.getElementById("searchWrapper");
   const container = document.getElementById("appList");
-
-  
-
   main.classList.add("hidden");    
   gameList.classList.remove("hidden");
   search.classList.remove("hidden");
   setActiveToolbar("openGameList");
+  loadAppList();
 };
 
 const showMainMenu = async () => {
@@ -61,8 +59,7 @@ const showMainMenu = async () => {
   search.classList.add("hidden");
   gameList.classList.add("hidden");    
   main.classList.remove("hidden");
-  setActiveToolbar("openMain");
-  loadAppList();
+  setActiveToolbar("openMain");  
 };
 
 const readGameList = async () => {
