@@ -46,11 +46,7 @@ const showGameListMenu = async () => {
   const search = document.getElementById("searchWrapper");
   const container = document.getElementById("appList");
 
-  container.innerHTML = `
-    <div class="loader">
-      <div class="spinner"></div>
-    </div>
-  `;
+  
 
   main.classList.add("hidden");    
   gameList.classList.remove("hidden");
@@ -84,7 +80,7 @@ const writeGameList = async (list) => {
 };
 
 const loadAppList = async () => {
-  if (appListLoaded) return;   // ⛔ prevent second load
+  if (appListLoaded) return;   
   appListLoaded = true; 
   const container = document.getElementById("appList");
   const searchInput = document.getElementById("searchInput");
