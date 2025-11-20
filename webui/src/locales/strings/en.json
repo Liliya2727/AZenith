@@ -243,7 +243,7 @@
     "loader": "Processing the image...",
     "serviceStatus": "Suspended💤",
     "servicePID": "Service is Stopped",
-    "msg": "No Data Acquired"
+    "msg": "No Data Acquired",
     "runninggame": "Peaceful! no apps is Running!"
   },
 
