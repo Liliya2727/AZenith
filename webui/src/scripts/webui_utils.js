@@ -39,57 +39,72 @@ let lastGameCheck = { time: 0, status: "" };
 
 const updateGameStatus = async () => {
   const now = Date.now();
-  if (now - lastGameCheck.time < 1000) return;
+  if (now - lastGameCheck.time < 1000) return; // throttle 1s
   lastGameCheck.time = now;
 
   const banner = document.getElementById("gameinfo");
   if (!banner) return;
 
   try {
+    // Read game info
     const gameRaw = await executeCommand(
       "cat /data/adb/.config/AZenith/API/gameinfo"
     );
-    let gameLine = gameRaw.stdout?.trim();
+    let gameLine = (gameRaw.stdout || "").trim();
 
-    // Treat NULL or (null) as no game running
-    if (!gameLine || gameLine.toLowerCase() === "null" || gameLine.toLowerCase() === "(null)") {
+    // Treat NULL, (null), or NULL 0 0 as no game running
+    if (
+      !gameLine ||
+      ["null", "(null)", "NULL"].includes(gameLine.toUpperCase()) ||
+      gameLine.toUpperCase().startsWith("NULL 0 0")
+    ) {
       gameLine = null;
     }
 
     // Check AI idle mode
-    const aiResult = await executeCommand("getprop persist.sys.azenithconf.AIenabled");
+    const aiResult = await executeCommand(
+      "getprop persist.sys.azenithconf.AIenabled"
+    );
     const aiEnabled = aiResult.stdout?.trim() === "0";
 
     let statusText = "";
 
     if (!gameLine) {
-      // No game running → skip JSON parsing
+      // No game running → skip getPackagesInfo
       statusText = aiEnabled
         ? getTranslation("serviceStatus.idleMode")
         : getTranslation("serviceStatus.noApps");
     } else {
-      // Game is running → resolve app label safely
-      const pkg = gameLine.split(" ")[0];
-      let label = pkg;
+      // Extract package name
+      const pkg = gameLine.split(" ")[0]?.trim();
 
-      try {
-        // ksu.getPackagesInfo expects an array
-        const infoList = JSON.parse(ksu.getPackagesInfo([pkg]));
-        if (Array.isArray(infoList) && infoList.length > 0) {
-          label = infoList[0].appLabel || pkg;
+      if (!pkg || ["NULL", "null", "(null)"].includes(pkg.toUpperCase())) {
+        // Fallback if invalid pkg
+        statusText = aiEnabled
+          ? getTranslation("serviceStatus.idleMode")
+          : getTranslation("serviceStatus.noApps");
+      } else {
+        // Try to get app label safely
+        let label = pkg;
+
+        try {
+          const infoList = JSON.parse(ksu.getPackagesInfo([pkg])); // pass as array
+          if (Array.isArray(infoList) && infoList.length > 0) {
+            label = infoList[0].appLabel || pkg;
+          }
+        } catch (e) {
+          console.warn("Failed to get app label for", pkg, e.message || e);
+          label = pkg; // fallback
         }
-      } catch (e) {
-        console.warn("Failed to get app label for", pkg, e.message || e);
-        // fallback to pkg
-        label = pkg;
-      }
 
-      // Use placeholder safely
-      statusText = aiEnabled
-        ? getTranslation("serviceStatus.activeIdle").replace("{0}", label)
-        : getTranslation("serviceStatus.active").replace("{0}", label);
+        // Apply translation placeholders
+        statusText = aiEnabled
+          ? getTranslation("serviceStatus.activeIdle").replace("{0}", label)
+          : getTranslation("serviceStatus.active").replace("{0}", label);
+      }
     }
 
+    // Update banner only if changed
     if (lastGameCheck.status !== statusText) {
       banner.textContent = statusText;
       lastGameCheck.status = statusText;
