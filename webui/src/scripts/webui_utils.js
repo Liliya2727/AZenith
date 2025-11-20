@@ -82,7 +82,7 @@ const loadAppList = async () => {
   const searchInput = document.getElementById("searchInput");
   if (!container || !searchInput) return;
 
-  const loader2 = document.getElementById("loading-screen");
+  const loader2 = document.getElementById("loading-screen2");
   if (loader2) loader2.classList.remove("hidden");
   document.body.classList.add("no-scroll");
 
