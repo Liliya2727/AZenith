@@ -39,7 +39,7 @@ let lastGameCheck = { time: 0, status: "" };
 
 const updateGameStatus = async () => {
   const now = Date.now();
-  if (now - lastGameCheck.time < 1000) return; // throttle 1s
+  if (now - lastGameCheck.time < 1000) return;
   lastGameCheck.time = now;
 
   const banner = document.getElementById("gameinfo");
@@ -51,35 +51,43 @@ const updateGameStatus = async () => {
     );
     let gameLine = gameRaw.stdout?.trim();
 
+    // Treat NULL or (null) as no game running
     if (!gameLine || gameLine.toLowerCase() === "null" || gameLine.toLowerCase() === "(null)") {
       gameLine = null;
     }
 
+    // Check AI idle mode
     const aiResult = await executeCommand("getprop persist.sys.azenithconf.AIenabled");
     const aiEnabled = aiResult.stdout?.trim() === "0";
 
     let statusText = "";
 
     if (!gameLine) {
-      // No game running
+      // No game running → skip JSON parsing
       statusText = aiEnabled
         ? getTranslation("serviceStatus.idleMode")
         : getTranslation("serviceStatus.noApps");
     } else {
-      const pkg = gameLine.split(" ")[0]; // first value is package name
+      // Game is running → resolve app label safely
+      const pkg = gameLine.split(" ")[0];
       let label = pkg;
 
       try {
-        // ksu.getPackagesInfo expects an array of package names
+        // ksu.getPackagesInfo expects an array
         const infoList = JSON.parse(ksu.getPackagesInfo([pkg]));
-        if (infoList.length) label = infoList[0].appLabel || pkg;
+        if (Array.isArray(infoList) && infoList.length > 0) {
+          label = infoList[0].appLabel || pkg;
+        }
       } catch (e) {
-        console.warn("Failed to get app label for", pkg, e);
+        console.warn("Failed to get app label for", pkg, e.message || e);
+        // fallback to pkg
+        label = pkg;
       }
 
+      // Use placeholder safely
       statusText = aiEnabled
-        ? getTranslation("serviceStatus.activeIdle")
-        : getTranslation("serviceStatus.active", label);
+        ? getTranslation("serviceStatus.activeIdle").replace("{0}", label)
+        : getTranslation("serviceStatus.active").replace("{0}", label);
     }
 
     if (lastGameCheck.status !== statusText) {
