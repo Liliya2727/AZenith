@@ -20,8 +20,8 @@ import AvatarZenith from "/webui.avatar.avif";
 import SchemeBanner from "/webui.schemebanner.avif";
 import ResoBanner from "/webui.reso.avif";
 import { exec, toast } from "kernelsu";
-const moduleInterface = window.$azenith;
-const fileInterface = window.$FILE;
+const moduleInterface = window.$AZenith;
+const fileInterface = window.$AZFile;
 const GAMELIST_PATH = "/data/adb/.config/AZenith/gamelist/gamelist.txt";
 const RESO_PROP = "persist.sys.azenithconf.resosettings";
 const executeCommand = async (cmd, cwd = null) => {
@@ -44,52 +44,27 @@ const showGameListMenu = async () => {
   const main = document.getElementById("mainMenu");
   const gameList = document.getElementById("gameListMenu");
   const search = document.getElementById("searchWrapper");
+  const container = document.getElementById("appList");
 
-  // Slide main menu out
-  main.classList.add("hidden-slide");
+  container.innerHTML = `
+    <div class="loader">
+      <div class="spinner"></div>
+    </div>
+  `;
 
-  // Wait for slide out animation
-  setTimeout(() => {
-    main.classList.add("hidden");       
-    main.classList.remove("hidden-slide"); 
-
-    // Show game list
-    gameList.classList.remove("hidden");
-    gameList.classList.add("active");
-
-    // Show search bar
-    search.classList.remove("hidden"); // <-- remove hidden first
-    search.classList.add("show");      // <-- then animate
-  }, 300);
-
-  setActiveToolbar("openGameList"); 
+  main.classList.add("hidden");    
+  gameList.classList.remove("hidden");
+  search.classList.remove("hidden");
+  setActiveToolbar("openGameList");
 };
 
 const showMainMenu = async () => {
   const main = document.getElementById("mainMenu");
   const gameList = document.getElementById("gameListMenu");
   const search = document.getElementById("searchWrapper");
-
-  // Animate search bar out
-  search.classList.remove("show");
-
-  // Wait for search animation to finish before hiding it
-  setTimeout(() => {
-    search.classList.add("hidden");   // hide completely after animation
-  }, 300);
-
-  // Slide gameListMenu out
-  gameList.classList.remove("active");
-  gameList.classList.add("hidden-slide");
-
-  // Wait for animation to finish
-  setTimeout(() => {
-    gameList.classList.add("hidden");    
-    gameList.classList.remove("hidden-slide");
-
-    main.classList.remove("hidden");
-  }, 300);
-
+  search.classList.add("hidden");
+  gameList.classList.add("hidden");    
+  main.classList.remove("hidden");
   setActiveToolbar("openMain");
   loadAppList();
 };
