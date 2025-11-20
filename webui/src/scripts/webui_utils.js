@@ -34,6 +34,68 @@ const executeCommand = async (cmd, cwd = null) => {
 };
 window.executeCommand = executeCommand;
 let appListLoaded = false;
+
+let lastGameCheck = { time: 0, status: "" };
+
+const updateGameStatus = async () => {
+  const now = Date.now();
+  if (now - lastGameCheck.time < 1000) return; // throttle 1s
+  lastGameCheck.time = now;
+
+  const banner = document.getElementById("gameinfo");
+  if (!banner) return;
+
+  try {
+    // Read active game info: "packagename pid uid"
+    const gameRaw = await executeCommand(
+      "cat /data/adb/.config/AZenith/API/gameinfo"
+    );
+    const gameLine = gameRaw.stdout?.trim();
+
+    // Check AI idle mode
+    const aiResult = await executeCommand("getprop persist.sys.azenithconf.AIenabled");
+    const aiEnabled = aiResult.stdout?.trim() === "1";
+
+    let statusText = "";
+
+    if (!gameLine) {
+      // No game running
+      statusText = aiEnabled
+        ? getTranslation("serviceStatus.idleMode");
+        : getTranslation("serviceStatus.noApps");
+    } else {
+      const pkg = gameLine.split(" ")[0]; // first value is package name
+      let label = pkg;
+
+      try {
+        const info = JSON.parse(ksu.getPackageInfo(pkg));
+        label = info.appLabel || pkg;
+      } catch (e) {
+        console.warn("Failed to get app label for", pkg, e);
+      }
+
+      statusText = aiEnabled
+        ? getTranslation("serviceStatus.activeIdle")
+        : getTranslation("serviceStatus.active", label);
+    }
+
+    if (lastGameCheck.status !== statusText) {
+      banner.textContent = statusText;
+      lastGameCheck.status = statusText;
+    }
+  } catch (e) {
+    console.warn("updateGameStatus error:", e);
+    banner.textContent = getTranslation("serviceStatus.error");
+  }
+};
+
+// Refresh every second
+setInterval(updateGameStatus, 1000);
+updateGameStatus();
+
+setInterval(updateGameStatus, 1000);
+updateGameStatus();
+
 const setActiveToolbar = (activeId) => {
   document.querySelectorAll("#bottomToolbar button").forEach(btn => {
     btn.classList.toggle("active", btn.id === activeId);
@@ -2240,6 +2302,7 @@ const cleanMemory = () => {
 
 const monitoredTasks = [
   { fn: checkServiceStatus, interval: 5000 },
+  { fn: updateGameStatus, interval: 5000 },
   { fn: checkProfile, interval: 5000 },
   { fn: showRandomMessage, interval: 10000 },
 ];
@@ -2298,7 +2361,7 @@ const heavyInit = async () => {
   if (loader) loader.classList.remove("hidden");
   document.body.classList.add("no-scroll");
 
-  const stage1 = [checkProfile, checkServiceStatus, showRandomMessage];
+  const stage1 = [checkProfile, checkServiceStatus, showRandomMessage, updateGameStatus];
   await Promise.all(stage1.map((fn) => fn()));
 
   const quickChecks = [    

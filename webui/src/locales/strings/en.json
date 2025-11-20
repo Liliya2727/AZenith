@@ -244,6 +244,7 @@
     "serviceStatus": "Suspended💤",
     "servicePID": "Service is Stopped",
     "msg": "No Data Acquired"
+    "runninggame": "Peaceful! no apps is Running!"
   },
 
   "randomMessages": {
@@ -285,7 +286,12 @@
     "runningIdle": "Running - Idle Mode\uD83D\uDCAB",
     "unknownProfile": "Unknown Profile",
     "suspended": "Suspended\uD83D\uDCA4",
-    "servicePID": "Service PID: {0}"
+    "servicePID": "Service PID: {0}",
+    "noApps": "Peaceful! No apps are running!",
+    "active": "Active app: {0}",
+    "idleMode": "Idle mode: no apps running!",
+    "activeIdle": "Idle mode: no apps running!",
+    "error": "Error reading game status"
   },
   
   "toast": {
