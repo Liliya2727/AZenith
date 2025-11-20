@@ -48,8 +48,6 @@ const showGameListMenu = async () => {
   main.classList.add("hidden");    
   gameList.classList.remove("hidden");
   search.classList.remove("hidden");
-  setActiveToolbar("openGameList");
-  loadAppList();
 };
 
 const showMainMenu = async () => {
@@ -2137,7 +2135,11 @@ const setupUIListeners = () => {
    // Menu Settings
   document
     .getElementById("openGameList")
-    ?.addEventListener("click", showGameListMenu);
+    ?.addEventListener("click", () => {
+      showGameListMenu();
+      loadAppList();
+    });
+
   document
     .getElementById("openMain")
     ?.addEventListener("click", showMainMenu);
