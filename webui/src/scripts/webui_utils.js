@@ -24,6 +24,19 @@ const moduleInterface = window.$AZenith;
 const fileInterface = window.$AZFile;
 const GAMELIST_PATH = "/data/adb/.config/AZenith/gamelist/gamelist.txt";
 const RESO_PROP = "persist.sys.azenithconf.resosettings";
+let lastGameCheck = { time: 0, status: "" };
+let lastProfile = { time: 0, value: "" };
+let lastServiceCheck = { time: 0, status: "", pid: "" };
+let pressTimer = null;
+let appListLoaded = false;
+let cachedSOCData = null;
+let loopsActive = false;
+let loopTimeout = null;
+let heavyInitDone = false;
+let cleaningInterval = null;
+let heavyInitTimeouts = [];
+
+// execute Command functions
 const executeCommand = async (cmd, cwd = null) => {
   try {
     const { errno, stdout, stderr } = await exec(cmd, cwd ? { cwd } : {});
@@ -33,10 +46,8 @@ const executeCommand = async (cmd, cwd = null) => {
   }
 };
 window.executeCommand = executeCommand;
-let appListLoaded = false;
 
-let lastGameCheck = { time: 0, status: "" };
-
+// Main Script
 const updateGameStatus = async () => {
   const now = Date.now();
   if (now - lastGameCheck.time < 1000) return;
@@ -298,8 +309,6 @@ const loadAppList = async () => {
     document.body.classList.remove("no-scroll");
   }
 };
-
-let pressTimer = null;
 
 bannerBox.addEventListener("touchstart", () => {
   pressTimer = setTimeout(() => {
@@ -598,7 +607,6 @@ const showRandomMessage = () => {
   }
 };
 
-let lastProfile = { time: 0, value: "" };
 const checkProfile = async () => {
   const now = Date.now();
   if (now - lastProfile.time < 5000) return;
@@ -656,7 +664,6 @@ const checkProfile = async () => {
   }
 };
 
-let cachedSOCData = null;
 const fetchSOCDatabase = async () => {
   if (!cachedSOCData) {
     try {
@@ -767,8 +774,6 @@ const getAndroidVersion = async () => {
     el.textContent = cachedVersion || "Error";
   }
 };
-
-let lastServiceCheck = { time: 0, status: "", pid: "" };
 
 const checkServiceStatus = async () => {
   const now = Date.now();
@@ -2283,12 +2288,6 @@ const setupUIListeners = () => {
     ?.addEventListener("click", hideSchemeSettings);
 
 };
-
-let loopsActive = false;
-let loopTimeout = null;
-let heavyInitDone = false;
-let cleaningInterval = null;
-let heavyInitTimeouts = [];
 
 const cancelAllTimeouts = () => {
   heavyInitTimeouts.forEach(clearTimeout);
