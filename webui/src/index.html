@@ -241,6 +241,70 @@
                   <p class="footertext" data-lang="thanks.footer"></p>
                </div>
             </div>
+         </div> 
+      </main>
+      <div id="settingsModal" class="settings-modal">
+            <div class="settings-container">
+               <button class="close-btn" id="close-settings">&times;</button>     
+               <h3 class="settings-title" data-lang="settingsModule.title"></h3>
+               <div class="device-info-divider"></div>
+               <div class="flex items-center justify-between mb-3">
+                  <label class="cursor-pointer flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="settingsModule.verbose.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="settingsModule.verbose.desc"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="logger" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <label class="cursor-pointer flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="settingsModule.toast.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="settingsModule.toast.desc"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="toast" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <label for="disableai" class="cursor-pointer inline-flex items-center w-full">
+                     <div>
+                        <p class="text-sm text-white" data-lang="settingsModule.disableai.title"></p>
+                        <small class="block text-gray-400 text-sss" data-lang="settingsModule.disableai.desc"></small>
+                     </div>
+                     <div class="ml-auto">
+                        <input type="checkbox" id="disableai" class="peer sr-only" />
+                        <div class="toggle"></div>
+                     </div>
+                  </label>
+               </div>
+               <div class="device-info-divider"></div>
+               <div class="flex items-center justify-between mb-3">
+                  <button id="savelogButton" class="bigbutton w-full" data-lang="settingsModule.buttons.save"></button>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <button id="startButton" class="bigbutton w-full" data-lang="settingsModule.buttons.restart"></button>
+               </div>
+               <div class="device-info-divider"></div>       
+               <div class="flex items-center justify-between mb-3">
+                  <button id="saveconfig" class="bigbutton w-full" data-lang="settingsModule.buttons.saveconf"></button>
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <label for="loadconfig" class="bigbutton w-full text-center" data-lang="settingsModule.buttons.loadconf"></label>
+                   <input 
+                     id="loadconfig" 
+                     type="file" 
+                     class="hidden"
+                     accept="application/json"
+                   />
+               </div>
+            </div>
          </div>
          <div id="preference-modal" class="preference-modal">
             <div class="preference-container">
@@ -528,70 +592,6 @@
                <div class="scheme-actions">
                   <button id="reset-btn" class="modal-btn cancel" data-lang="scheme.buttons.reset"></button>
                   <button id="applybutton" class="modal-btn apply" data-lang="scheme.buttons.apply"></button>
-               </div>
-            </div>
-         </div>
-      </main>
-      <div id="settingsModal" class="settings-modal">
-            <div class="settings-container">
-               <button class="close-btn" id="close-settings">&times;</button>     
-               <h3 class="settings-title" data-lang="settingsModule.title"></h3>
-               <div class="device-info-divider"></div>
-               <div class="flex items-center justify-between mb-3">
-                  <label class="cursor-pointer flex items-center w-full">
-                     <div>
-                        <p class="text-sm text-white" data-lang="settingsModule.verbose.title"></p>
-                        <small class="block text-gray-400 text-sss" data-lang="settingsModule.verbose.desc"></small>
-                     </div>
-                     <div class="ml-auto">
-                        <input type="checkbox" id="logger" class="peer sr-only" />
-                        <div class="toggle"></div>
-                     </div>
-                  </label>
-               </div>
-               <div class="flex items-center justify-between mb-3">
-                  <label class="cursor-pointer flex items-center w-full">
-                     <div>
-                        <p class="text-sm text-white" data-lang="settingsModule.toast.title"></p>
-                        <small class="block text-gray-400 text-sss" data-lang="settingsModule.toast.desc"></small>
-                     </div>
-                     <div class="ml-auto">
-                        <input type="checkbox" id="toast" class="peer sr-only" />
-                        <div class="toggle"></div>
-                     </div>
-                  </label>
-               </div>
-               <div class="flex items-center justify-between mb-3">
-                  <label for="disableai" class="cursor-pointer inline-flex items-center w-full">
-                     <div>
-                        <p class="text-sm text-white" data-lang="settingsModule.disableai.title"></p>
-                        <small class="block text-gray-400 text-sss" data-lang="settingsModule.disableai.desc"></small>
-                     </div>
-                     <div class="ml-auto">
-                        <input type="checkbox" id="disableai" class="peer sr-only" />
-                        <div class="toggle"></div>
-                     </div>
-                  </label>
-               </div>
-               <div class="device-info-divider"></div>
-               <div class="flex items-center justify-between mb-3">
-                  <button id="savelogButton" class="bigbutton w-full" data-lang="settingsModule.buttons.save"></button>
-               </div>
-               <div class="flex items-center justify-between mb-3">
-                  <button id="startButton" class="bigbutton w-full" data-lang="settingsModule.buttons.restart"></button>
-               </div>
-               <div class="device-info-divider"></div>       
-               <div class="flex items-center justify-between mb-3">
-                  <button id="saveconfig" class="bigbutton w-full" data-lang="settingsModule.buttons.saveconf"></button>
-               </div>
-               <div class="flex items-center justify-between mb-3">
-                  <label for="loadconfig" class="bigbutton w-full text-center" data-lang="settingsModule.buttons.loadconf"></label>
-                   <input 
-                     id="loadconfig" 
-                     type="file" 
-                     class="hidden"
-                     accept="application/json"
-                   />
                </div>
             </div>
          </div>
