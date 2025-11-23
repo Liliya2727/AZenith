@@ -2,6 +2,18 @@
 @import url('https://mui.kernelsu.org/internal/colors.css');
 
 
+.menu-panel {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.menu-panel.hidden {
+    opacity: 0;
+    transform: translateY(20px);
+    pointer-events: none;
+}
+
 .meta {
   display: flex;
   flex-direction: column;

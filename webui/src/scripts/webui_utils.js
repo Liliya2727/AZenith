@@ -131,6 +131,8 @@ const showGameListMenu = async () => {
   gameList.classList.remove("hidden");
   search.classList.remove("hidden");
   setActiveToolbar("openGameList");
+  gameList.scrollTop = 0;
+  document.documentElement.scrollTop = 0;
   await loadAppList();
 };
 
@@ -141,6 +143,8 @@ const showMainMenu = async () => {
   search.classList.add("hidden");
   gameList.classList.add("hidden");    
   main.classList.remove("hidden");
+  main.scrollTop = 0;
+  document.documentElement.scrollTop = 0;
   setActiveToolbar("openMain");  
 };
 
