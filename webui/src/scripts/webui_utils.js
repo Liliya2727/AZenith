@@ -127,9 +127,9 @@ const showGameListMenu = async () => {
   const main = document.getElementById("mainMenu");
   const gameList = document.getElementById("gameListMenu");
   const search = document.getElementById("searchWrapper");
-  main.classList.add("hidden");    
-  gameList.classList.remove("hidden");
-  search.classList.remove("hidden");
+  main.classList.add("kanjud");    
+  gameList.classList.remove("kanjud");
+  search.classList.remove("kanjud");
   setActiveToolbar("openGameList");
   gameList.scrollTop = 0;
   document.documentElement.scrollTop = 0;
@@ -140,9 +140,9 @@ const showMainMenu = async () => {
   const main = document.getElementById("mainMenu");
   const gameList = document.getElementById("gameListMenu");
   const search = document.getElementById("searchWrapper");
-  search.classList.add("hidden");
-  gameList.classList.add("hidden");    
-  main.classList.remove("hidden");
+  search.classList.add("kanjud");
+  gameList.classList.add("kanjud");    
+  main.classList.remove("kanjud");
   main.scrollTop = 0;
   document.documentElement.scrollTop = 0;
   setActiveToolbar("openMain");  

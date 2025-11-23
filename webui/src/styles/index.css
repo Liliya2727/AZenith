@@ -8,7 +8,7 @@
     transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
-.menu-panel.hidden {
+.menu-panel.kanjud {
     opacity: 0;
     transform: translateY(20px);
     pointer-events: none;
