@@ -128,14 +128,14 @@ const hidePanel = async (panel) => {
   panel.addEventListener(
     "transitionend",
     () => {
-      panel.style.display = "none";
+      panel.classList.add("hidden");
     },
     { once: true }
   );
 };
 
 const showPanel = async (panel) => {
-  panel.style.display = "";
+  panel.classList.remove("hidden");
   void panel.offsetWidth;
   panel.classList.remove("kanjud");
 };
