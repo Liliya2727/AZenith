@@ -10,7 +10,6 @@
 
 .menu-panel.kanjud {
     opacity: 0;
-    display: none;
     transform: translateY(20px);
     pointer-events: none;
 }

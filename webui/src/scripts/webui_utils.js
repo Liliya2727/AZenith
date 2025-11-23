@@ -123,13 +123,30 @@ const setActiveToolbar = (activeId) => {
   });
 };
 
+function hidePanel(panel) {
+  panel.classList.add("kanjud");
+  panel.addEventListener(
+    "transitionend",
+    () => {
+      panel.style.display = "none";
+    },
+    { once: true }
+  );
+}
+
+function showPanel(panel) {
+  panel.style.display = "";
+  void panel.offsetWidth;
+  panel.classList.remove("kanjud");
+}
+
 const showGameListMenu = async () => {
   const main = document.getElementById("mainMenu");
   const gameList = document.getElementById("gameListMenu");
   const search = document.getElementById("searchWrapper");
-  main.classList.add("kanjud");    
-  gameList.classList.remove("kanjud");
-  search.classList.remove("kanjud");
+  hidePanel(main);
+  showPanel(gameList);
+  showPanel(search);
   setActiveToolbar("openGameList");
   gameList.scrollTop = 0;
   document.documentElement.scrollTop = 0;
@@ -140,12 +157,12 @@ const showMainMenu = async () => {
   const main = document.getElementById("mainMenu");
   const gameList = document.getElementById("gameListMenu");
   const search = document.getElementById("searchWrapper");
-  search.classList.add("kanjud");
-  gameList.classList.add("kanjud");    
-  main.classList.remove("kanjud");
+  hidePanel(gameList);
+  hidePanel(search);
+  showPanel(main);
   main.scrollTop = 0;
   document.documentElement.scrollTop = 0;
-  setActiveToolbar("openMain");  
+  setActiveToolbar("openMain");
 };
 
 const readGameList = async () => {
