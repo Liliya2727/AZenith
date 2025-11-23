@@ -123,7 +123,7 @@ const setActiveToolbar = (activeId) => {
   });
 };
 
-function hidePanel(panel) {
+const hidePanel = async (panel) => {
   panel.classList.add("kanjud");
   panel.addEventListener(
     "transitionend",
@@ -132,13 +132,13 @@ function hidePanel(panel) {
     },
     { once: true }
   );
-}
+};
 
-function showPanel(panel) {
+const showPanel = async (panel) => {
   panel.style.display = "";
   void panel.offsetWidth;
   panel.classList.remove("kanjud");
-}
+};
 
 const showGameListMenu = async () => {
   const main = document.getElementById("mainMenu");
