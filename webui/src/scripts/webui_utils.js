@@ -152,7 +152,6 @@ const showGameListMenu = async () => {
   showPanel(search);
   setActiveToolbar("openGameList");
   gameList.scrollTop = 0;
-  document.documentElement.scrollTop = 0;
   await loadAppList();
 };
 
@@ -166,7 +165,6 @@ const showMainMenu = async () => {
   hidePanel(search);
   showPanel(main);
   main.scrollTop = 0;
-  document.documentElement.scrollTop = 0;
   setActiveToolbar("openMain");
 };
 
