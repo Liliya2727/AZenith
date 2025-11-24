@@ -150,8 +150,10 @@ const showGameListMenu = async () => {
   hidePanel(main);
   showPanel(gameList);
   showPanel(search);
+  requestAnimationFrame(() => {
+     gameList.scrollTop = 0;
+  });
   setActiveToolbar("openGameList");
-  gameList.scrollTop = 0;
   await loadAppList();
 };
 
@@ -164,7 +166,9 @@ const showMainMenu = async () => {
   hidePanel(gameList);
   hidePanel(search);
   showPanel(main);
-  main.scrollTop = 0;
+  requestAnimationFrame(() => {
+     main.scrollTop = 0;
+  });
   setActiveToolbar("openMain");
 };
 
