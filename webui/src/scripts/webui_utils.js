@@ -154,6 +154,10 @@ const showGameListMenu = async () => {
   title.classList.add("kanjud");
   avatar.classList.add("kanjud");
   setActiveToolbar("openGameList");
+  requestAnimationFrame(() => {
+    gameList.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+  });
 };
 
 const showMainMenu = async () => {
@@ -170,6 +174,10 @@ const showMainMenu = async () => {
   title.classList.remove("kanjud");
   avatar.classList.remove("kanjud");
   setActiveToolbar("openMain");
+  requestAnimationFrame(() => {
+    main.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+  });
 };
 
 const readGameList = async () => {
