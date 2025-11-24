@@ -129,7 +129,7 @@ const hidePanel = (panel) => {
   clearTimeout(panel.hideTimer);
   panel.hideTimer = setTimeout(() => {
     panel.classList.add("hidden");
-  }, 180);
+  }, 230);
 };
 
 const showPanel = (panel) => {
@@ -142,20 +142,22 @@ const showPanel = (panel) => {
 const showGameListMenu = async () => {
   if (currentScreen === "gamelist") return;
   currentScreen = "gamelist";
+  await loadAppList();
+  const cards = document.querySelectorAll(".appCard");
+  cards.forEach((card, i) => {
+    card.style.transitionDelay = `${i * 40}ms`;
+    requestAnimationFrame(() => card.classList.add("show"));
+  });
   const main = document.getElementById("mainMenu");
   const gameList = document.getElementById("gameListMenu");
   const search = document.getElementById("searchInput");
   const avatar = document.getElementById("Avatar");
-  const applist = document.getElementById("appList");
   const title = document.getElementById("textJudul");
   hidePanel(main);
   showPanel(gameList);
   showPanel(search);
   title.classList.add("kanjud");
-  avatar.classList.add("kanjud");
-  applist.classList.remove("kanjud");
   setActiveToolbar("openGameList");
-  await loadAppList();
 };
 
 const showMainMenu = async () => {
@@ -165,14 +167,12 @@ const showMainMenu = async () => {
   const gameList = document.getElementById("gameListMenu");
   const search = document.getElementById("searchInput");
   const avatar = document.getElementById("Avatar");
-  const applist = document.getElementById("appList");
   const title = document.getElementById("textJudul");
   hidePanel(gameList);
   hidePanel(search);
   showPanel(main);
   title.classList.remove("kanjud");
   avatar.classList.remove("kanjud");
-  applist.classList.add("kanjud");
   setActiveToolbar("openMain");
 };
 
@@ -233,7 +233,7 @@ const loadAppList = async () => {
       const label = app.appLabel || pkg;
 
       const card = document.createElement("div");
-      card.className = "menu-panel appCard mt-211 mb-4 p-4 rounded-lg";
+      card.className = "appCard mt-211 mb-4 p-4 rounded-lg";
       card.dataset.pkg = pkg;
 
       const icon = document.createElement("img");
