@@ -4,13 +4,15 @@
 
 .menu-panel {
     opacity: 1;
-    transform: translateY(0);
-    transition: opacity 0.25s ease, transform 0.25s ease;
+    transform: scale(1);
+    transition: 
+        opacity 0.2s ease,
+        transform 0.2s ease;
 }
 
 .menu-panel.kanjud {
     opacity: 0;
-    transform: translateY(20px);
+    transform: scale(0.95);
     pointer-events: none;
 }
 
@@ -1562,9 +1564,9 @@ input[type=checkbox]:checked+.toggle::after {
 
 .search-box {
   position: absolute;
-  width: 50%;
+  width: 10rem;
   top: 0rem;
-  padding: 8px 8px 8px .8rem;
+  padding: 8px 8px 7px .8rem;
   background: rgba(12, 13, 20, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 5rem;
@@ -1599,6 +1601,7 @@ input[type=checkbox]:checked+.toggle::after {
 .textjudul {
     margin-left: 40px;
     font-size: 1.6rem;
+    width: 8rem;
     font-weight: 800
 }
 
@@ -1630,6 +1633,7 @@ input[type=checkbox]:checked+.toggle::after {
 }
 
 .langSect {
+    width: 25%;
     appearance: none;
     border: 1px solid rgba(255, 255, 255, .15);
     right: 45px;
