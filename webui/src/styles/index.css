@@ -31,21 +31,6 @@
   flex-direction: column;
 }
 
-.search-box {
-  width: 100%;
-  margin-top: 1rem;
-  padding: 8px 8px 8px .8rem;
-  background: rgba(12, 13, 20, 0.6);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 5rem;
-  font-size: 12px;
-  color: #ddd;
-  box-sizing: border-box;
-  outline: none;
-}
-
 #appList {
   display: flex;
   flex-direction: column;
@@ -186,14 +171,6 @@
   color: #fff;
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
 }
-
-
-
-
-
-
-
-
 
 .additional-modal,
 .preference-modal,
@@ -1581,6 +1558,19 @@ input[type=checkbox]:checked+.toggle::after {
     padding-right: 1rem;
     padding-bottom: .7rem;
     padding-left: 1rem;
+}
+
+.search-box {
+  width: 50%;
+  margin-top: 0rem;
+  padding: 8px 8px 8px .8rem;
+  background: rgba(12, 13, 20, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 5rem;
+  font-size: 12px;
+  color: #ddd;
+  box-sizing: border-box;
+  outline: none;
 }
 
 .avatar-kanan {

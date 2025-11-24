@@ -150,9 +150,8 @@ const showGameListMenu = async () => {
   hidePanel(main);
   showPanel(gameList);
   showPanel(search);
-  requestAnimationFrame(() => {
-     gameList.scrollTop = 0;
-  });
+  hidePanel(title);
+  hidePanel(avatar);
   setActiveToolbar("openGameList");
   await loadAppList();
 };
@@ -163,12 +162,13 @@ const showMainMenu = async () => {
   const main = document.getElementById("mainMenu");
   const gameList = document.getElementById("gameListMenu");
   const search = document.getElementById("searchWrapper");
+  const avatar = document.getElementById("Avatar");
+  const title = document.getElementById("textJudul");
   hidePanel(gameList);
   hidePanel(search);
   showPanel(main);
-  requestAnimationFrame(() => {
-     main.scrollTop = 0;
-  });
+  showPanel(title);
+  showPanel(avatar);
   setActiveToolbar("openMain");
 };
 
