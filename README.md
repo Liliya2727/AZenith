@@ -4,9 +4,32 @@
 
 **AZenith** is a universal **AIO (All-In-One)** advanced performance module featuring AI optimization and a WebUI interface. It enhances the overall user experience while giving users full control to configure performance settings according to their preferences.
 
-![AZenith Banner](https://github.com/user-attachments/assets/904b23f2-010a-4447-bcbf-5eea41aec851)
+![AZenith Banner](https://github.com/user-attachments/assets/05268454-2874-4901-895c-e9f7097db5f4)
 
----
+## Credits
+
+### **Collaborator**
+- @kanaochar
+
+### **Sources & References**
+- @Rem01Gaming  
+- @MiAzami  
+- @KanagawaYamadaVTeacher  
+- @ShiraXblood  
+- @Laynsb 
+- @Koneko_dev 
+
+### **Preload Sources**
+- @HoyoSlave  
+- @KutuMoba  
+- @Feravolt  
+- @iamlooper  
+
+## Supported Root Managers
+
+- [APatch](https://github.com/bmax121/APatch)
+- [KernelSU](https://github.com/tiann/KernelSU)
+- [Magisk](https://github.com/topjohnwu/Magisk)  <sup>([no WebUI](https://github.com/topjohnwu/Magisk/issues/8609#event-15568590949)👀)</sup>
 
 ## AZenith for Developers
 
@@ -18,30 +41,13 @@ Introducing **ROM-Integrated AZenith** — designed for ROM developers and maint
 
 **Repository:** [RomIntegratedAZenith](https://github.com/Liliya2727/RomIntegratedAZenith)
 
----
-
-## Credits
-
-**Collaborator**
-- @kanaochar
-
-**Sources & References**
-- @Rem01Gaming  
-- @MiAzami  
-- @KanagawaYamadaVTeacher  
-- @ShiraXblood  
-- @Laynsb 
-- @Koneko_dev 
-
-**Preload Sources**
-- @HoyoSlave  
-- @KutuMoba  
-- @Feravolt  
-- @iamlooper  
-
----
-
 ## Stay Updated
 
 Follow ongoing development and future updates at  
 [@Zexshia on Telegram](https://t.me/ZeshArch)
+
+
+## License
+
+This module is open-sourced under the Apache License 2.0, allowing developers to use, modify, and integrate AZenith freely while maintaining proper attribution.
+The Apache 2.0 license ensures transparency, collaborative improvement, and protection for both contributors and users.
