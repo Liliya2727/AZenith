@@ -233,7 +233,7 @@ const loadAppList = async () => {
       const label = app.appLabel || pkg;
 
       const card = document.createElement("div");
-      card.className = "appCard mt-211 mb-4 p-4 rounded-lg";
+      card.className = "menu-panel appCard mt-211 mb-4 p-4 rounded-lg";
       card.dataset.pkg = pkg;
 
       const icon = document.createElement("img");
