@@ -1561,8 +1561,9 @@ input[type=checkbox]:checked+.toggle::after {
 }
 
 .search-box {
+  position: absolute;
   width: 50%;
-  margin-top: 0rem;
+  top: 0rem;
   padding: 8px 8px 8px .8rem;
   background: rgba(12, 13, 20, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -1574,9 +1575,9 @@ input[type=checkbox]:checked+.toggle::after {
 }
 
 .avatar-kanan {
-    margin-top: 2px;
-    width: 30px;
-    height: 30px;
+    margin-top: 0px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     -o-object-fit: cover;
     object-fit: cover;

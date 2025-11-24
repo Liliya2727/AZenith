@@ -146,14 +146,14 @@ const showGameListMenu = async () => {
   currentScreen = "gamelist";
   const main = document.getElementById("mainMenu");
   const gameList = document.getElementById("gameListMenu");
-  const search = document.getElementById("searchWrapper");
+  const search = document.getElementById("searchInput");
   const avatar = document.getElementById("Avatar");
   const title = document.getElementById("textJudul");
   hidePanel(main);
   showPanel(gameList);
   showPanel(search);
   hidePanel(title);
-  hidePanel(avatar);
+  avatar.classList.add("kanjud");
   setActiveToolbar("openGameList");
   await loadAppList();
 };
@@ -163,14 +163,14 @@ const showMainMenu = async () => {
   currentScreen = "main";
   const main = document.getElementById("mainMenu");
   const gameList = document.getElementById("gameListMenu");
-  const search = document.getElementById("searchWrapper");
+  const search = document.getElementById("searchInput");
   const avatar = document.getElementById("Avatar");
   const title = document.getElementById("textJudul");
   hidePanel(gameList);
   hidePanel(search);
   showPanel(main);
   showPanel(title);
-  showPanel(avatar);
+  avatar.classList.remove("kanjud");
   setActiveToolbar("openMain");
 };
 
