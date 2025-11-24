@@ -124,18 +124,16 @@ const setActiveToolbar = (activeId) => {
   });
 };
 
-const hidePanel = async (panel) => {
+const hidePanel = (panel) => {
   panel.classList.add("kanjud");
-  panel.addEventListener(
-    "transitionend",
-    () => {
-      panel.classList.add("hidden");
-    },
-    { once: true }
-  );
+  clearTimeout(panel.hideTimer);
+  panel.hideTimer = setTimeout(() => {
+    panel.classList.add("hidden");
+  }, 180);
 };
 
-const showPanel = async (panel) => {
+const showPanel = (panel) => {
+  clearTimeout(panel.hideTimer);
   panel.classList.remove("hidden");
   void panel.offsetWidth;
   panel.classList.remove("kanjud");
