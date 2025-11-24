@@ -152,6 +152,7 @@ const showGameListMenu = async () => {
   showPanel(gameList);
   showPanel(search);
   title.classList.add("kanjud");
+  avatar.classList.add("kanjud");
   setActiveToolbar("openGameList");
 };
 
