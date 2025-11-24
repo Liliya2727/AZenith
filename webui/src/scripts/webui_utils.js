@@ -1674,7 +1674,7 @@ const loadIOpowersave = async () => {
 };
 
 const showAdditionalSettings = async () => {
-  const c = document.getElementById("additional-modal"),
+  const c = document.getElementById("additional-modal");
   const s = c.querySelector(".additional-container");
   document.body.classList.add("modal-open");
   c.classList.add("show");
@@ -1707,7 +1707,7 @@ const hideAdditionalSettings = () => {
 };
 
 const showPreferenceSettings = async () => {
-  const c = document.getElementById("preference-modal"),
+  const c = document.getElementById("preference-modal");
   const s = c.querySelector(".preference-container");
   document.body.classList.add("modal-open");
   c.classList.add("show");
@@ -2020,7 +2020,7 @@ const hideResoSettings = () => {
 };
 
 const showSettings = async () => {
-  const c = document.getElementById("settingsModal"),
+  const c = document.getElementById("settingsModal");
   const s = c.querySelector(".settings-container");
   document.body.classList.add("modal-open");
   c.classList.add("show");
@@ -2073,7 +2073,7 @@ const hideSettings = () => {
   }
 
 const showProfilerSettings = async () => {
-  const c = document.getElementById("profilermodal"),
+  const c = document.getElementById("profilermodal");
   const s = c.querySelector(".profiler-container");
   document.body.classList.add("modal-open");
   c.classList.add("show");
