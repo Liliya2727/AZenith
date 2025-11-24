@@ -147,6 +147,8 @@ const showGameListMenu = async () => {
   const main = document.getElementById("mainMenu");
   const gameList = document.getElementById("gameListMenu");
   const search = document.getElementById("searchWrapper");
+  const avatar = document.getElementById("Avatar");
+  const title = document.getElementById("textJudul");
   hidePanel(main);
   showPanel(gameList);
   showPanel(search);
