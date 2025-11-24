@@ -152,7 +152,7 @@ const showGameListMenu = async () => {
   hidePanel(main);
   showPanel(gameList);
   showPanel(search);
-  hidePanel(title);
+  title.classList.add("kanjud");
   avatar.classList.add("kanjud");
   setActiveToolbar("openGameList");
   await loadAppList();
@@ -169,7 +169,7 @@ const showMainMenu = async () => {
   hidePanel(gameList);
   hidePanel(search);
   showPanel(main);
-  showPanel(title);
+  title.classList.remove("kanjud");
   avatar.classList.remove("kanjud");
   setActiveToolbar("openMain");
 };
