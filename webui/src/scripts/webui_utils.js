@@ -35,6 +35,7 @@ let loopTimeout = null;
 let heavyInitDone = false;
 let cleaningInterval = null;
 let heavyInitTimeouts = [];
+let currentScreen = "main"; 
 
 // execute Command functions
 const executeCommand = async (cmd, cwd = null) => {
@@ -141,6 +142,8 @@ const showPanel = async (panel) => {
 };
 
 const showGameListMenu = async () => {
+  if (currentScreen === "gamelist") return;
+  currentScreen = "gamelist";
   const main = document.getElementById("mainMenu");
   const gameList = document.getElementById("gameListMenu");
   const search = document.getElementById("searchWrapper");
@@ -154,6 +157,8 @@ const showGameListMenu = async () => {
 };
 
 const showMainMenu = async () => {
+  if (currentScreen === "main") return;
+  currentScreen = "main";
   const main = document.getElementById("mainMenu");
   const gameList = document.getElementById("gameListMenu");
   const search = document.getElementById("searchWrapper");
