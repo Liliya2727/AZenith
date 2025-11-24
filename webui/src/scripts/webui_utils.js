@@ -142,12 +142,7 @@ const showPanel = (panel) => {
 const showGameListMenu = async () => {
   if (currentScreen === "gamelist") return;
   currentScreen = "gamelist";
-  await loadAppList();
-  const cards = document.querySelectorAll(".appCard");
-  cards.forEach((card, i) => {
-    card.style.transitionDelay = `${i * 40}ms`;
-    requestAnimationFrame(() => card.classList.add("show"));
-  });
+  loadAppList();
   const main = document.getElementById("mainMenu");
   const gameList = document.getElementById("gameListMenu");
   const search = document.getElementById("searchInput");
@@ -1276,19 +1271,21 @@ const showColorScheme = async () => {
   document.body.classList.add("modal-open");
   c.classList.add("show");
 
-  const originalHeight = window.innerHeight;
-
-  const resizeHandler = () => {
-    if (!s) return;
-    window.innerHeight < originalHeight - 150
-      ? (s.style.transform = "translateY(-10%) scale(1)")
-      : (s.style.transform = "translateY(0) scale(1)");
+  s.style.transition = "none";
+  s.style.transform = "translateY(20px) scale(0.98)";
+  void s.offsetWidth;
+  s.style.transition = "transform 0.25s ease, opacity 0.25s ease";
+  s.style.opacity = "1";
+  const r = window.innerHeight;
+  const d = () => {
+    s.style.transform =
+      window.innerHeight < r - 150
+        ? "translateY(-10%) scale(1)"
+        : "translateY(0) scale(1)";
   };
-
-  window.addEventListener("resize", resizeHandler, { passive: true });
-  c._resizeHandler = resizeHandler;
-
-  resizeHandler();
+  requestAnimationFrame(() => d());
+  window.addEventListener("resize", d, { passive: true });
+  c._resizeHandler = d;
 };
 
 const hidecolorscheme = () => {
@@ -1678,10 +1675,15 @@ const loadIOpowersave = async () => {
 
 const showAdditionalSettings = async () => {
   const c = document.getElementById("additional-modal"),
-    s = c.querySelector(".additional-container");
+  const s = c.querySelector(".additional-container");
   document.body.classList.add("modal-open");
   c.classList.add("show");
 
+  s.style.transition = "none";
+  s.style.transform = "translateY(20px) scale(0.98)";
+  void s.offsetWidth;
+  s.style.transition = "transform 0.25s ease, opacity 0.25s ease";
+  s.style.opacity = "1";
   const r = window.innerHeight;
   const d = () => {
     s.style.transform =
@@ -1689,9 +1691,9 @@ const showAdditionalSettings = async () => {
         ? "translateY(-10%) scale(1)"
         : "translateY(0) scale(1)";
   };
+  requestAnimationFrame(() => d());
   window.addEventListener("resize", d, { passive: true });
   c._resizeHandler = d;
-  d();
 };
 
 const hideAdditionalSettings = () => {
@@ -1706,10 +1708,15 @@ const hideAdditionalSettings = () => {
 
 const showPreferenceSettings = async () => {
   const c = document.getElementById("preference-modal"),
-    s = c.querySelector(".preference-container");
+  const s = c.querySelector(".preference-container");
   document.body.classList.add("modal-open");
   c.classList.add("show");
 
+  s.style.transition = "none";
+  s.style.transform = "translateY(20px) scale(0.98)";
+  void s.offsetWidth;
+  s.style.transition = "transform 0.25s ease, opacity 0.25s ease";
+  s.style.opacity = "1";
   const r = window.innerHeight;
   const d = () => {
     s.style.transform =
@@ -1717,9 +1724,9 @@ const showPreferenceSettings = async () => {
         ? "translateY(-10%) scale(1)"
         : "translateY(0) scale(1)";
   };
+  requestAnimationFrame(() => d());
   window.addEventListener("resize", d, { passive: true });
   c._resizeHandler = d;
-  d();
 };
 
 const hidePreferenceSettings = () => {
@@ -1985,16 +1992,21 @@ const showCustomResolution = async () => {
 
   await detectResolution();
 
+  s.style.transition = "none";
+  s.style.transform = "translateY(20px) scale(0.98)";
+  void s.offsetWidth;
+  s.style.transition = "transform 0.25s ease, opacity 0.25s ease";
+  s.style.opacity = "1";
   const r = window.innerHeight;
   const d = () => {
-    window.innerHeight < r - 150
-      ? (s.style.transform = "translateY(-10%) scale(1)")
-      : (s.style.transform = "translateY(0) scale(1)");
+    s.style.transform =
+      window.innerHeight < r - 150
+        ? "translateY(-10%) scale(1)"
+        : "translateY(0) scale(1)";
   };
-
+  requestAnimationFrame(() => d());
   window.addEventListener("resize", d, { passive: true });
   c._resizeHandler = d;
-  d();
 };
 
 const hideResoSettings = () => {
@@ -2009,10 +2021,15 @@ const hideResoSettings = () => {
 
 const showSettings = async () => {
   const c = document.getElementById("settingsModal"),
-    s = c.querySelector(".settings-container");
+  const s = c.querySelector(".settings-container");
   document.body.classList.add("modal-open");
   c.classList.add("show");
 
+  s.style.transition = "none";
+  s.style.transform = "translateY(20px) scale(0.98)";
+  void s.offsetWidth;
+  s.style.transition = "transform 0.25s ease, opacity 0.25s ease";
+  s.style.opacity = "1";
   const r = window.innerHeight;
   const d = () => {
     s.style.transform =
@@ -2020,9 +2037,9 @@ const showSettings = async () => {
         ? "translateY(-10%) scale(1)"
         : "translateY(0) scale(1)";
   };
+  requestAnimationFrame(() => d());
   window.addEventListener("resize", d, { passive: true });
   c._resizeHandler = d;
-  d();
 };
 
 const hideSettings = () => {
@@ -2057,10 +2074,15 @@ const hideSettings = () => {
 
 const showProfilerSettings = async () => {
   const c = document.getElementById("profilermodal"),
-    s = c.querySelector(".profiler-container");
+  const s = c.querySelector(".profiler-container");
   document.body.classList.add("modal-open");
   c.classList.add("show");
 
+  s.style.transition = "none";
+  s.style.transform = "translateY(20px) scale(0.98)";
+  void s.offsetWidth;
+  s.style.transition = "transform 0.25s ease, opacity 0.25s ease";
+  s.style.opacity = "1";
   const r = window.innerHeight;
   const d = () => {
     s.style.transform =
@@ -2068,9 +2090,9 @@ const showProfilerSettings = async () => {
         ? "translateY(-10%) scale(1)"
         : "translateY(0) scale(1)";
   };
+  requestAnimationFrame(() => d());
   window.addEventListener("resize", d, { passive: true });
   c._resizeHandler = d;
-  d();
 };
 
 const hideProfilerSettings = () => {
