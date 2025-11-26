@@ -10,6 +10,7 @@
       "currentProfile": "Current Profile",
       "chipset": "Chipset",
       "kernel": "Kernel",
+      "device": "Device",
       "androidVersion": "Android Version"
     },
     "buttons": {

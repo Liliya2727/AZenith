@@ -49,6 +49,63 @@ const executeCommand = async (cmd, cwd = null) => {
 window.executeCommand = executeCommand;
 
 // Main Script
+const fetchDeviceDatabase = async () => {
+  if (!window.cachedDeviceData) {
+    try {
+      window.cachedDeviceData = await (await fetch("webui.device.json")).json();
+    } catch {
+      window.cachedDeviceData = {};
+    }
+  }
+  return window.cachedDeviceData;
+};
+
+const getDeviceBoardProp = async () => {
+  const { errno, stdout } = await executeCommand("getprop ro.product.board");
+
+  if (errno === 0 && stdout.trim()) {
+    return stdout.trim();
+  }
+
+  return "UnknownDevice";
+};
+
+const checkDeviceInfo = async () => {
+  const cacheKey = "device_info_cache";
+  const cached = localStorage.getItem(cacheKey);
+
+  try {
+    const raw = await getDeviceBoardProp();
+    const model = raw.replace(/\s+/g, "");
+
+    const db = await fetchDeviceDatabase();
+
+    let displayName = db[model];
+
+    // Partial matching fallback (same as SOC script)
+    if (!displayName) {
+      for (let i = model.length; i >= 4; i--) {
+        const partial = model.substring(0, i);
+        if (db[partial]) {
+          displayName = db[partial];
+          break;
+        }
+      }
+    }
+
+    if (!displayName) displayName = model;
+
+    document.getElementById("deviceinfo").textContent = displayName;
+
+    if (cached !== displayName) {
+      localStorage.setItem(cacheKey, displayName);
+    }
+
+  } catch (e) {
+    document.getElementById("deviceinfo").textContent = cached || "Error";
+  }
+};
+
 const updateGameStatus = async () => {
   const now = Date.now();
   if (now - lastGameCheck.time < 1000) return;
