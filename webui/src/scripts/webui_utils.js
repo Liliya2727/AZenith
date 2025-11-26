@@ -80,16 +80,18 @@ const checkDeviceInfo = async () => {
 
     const db = await fetchDeviceDatabase();
 
-    let displayName = model[db];
+    let displayName = Object.keys(db).find(
+      key => db[key].replace(/\s+/g, "") === model
+    );
 
     // Partial match fallback
     if (!displayName) {
       for (let i = model.length; i >= 4; i--) {
         const partial = model.substring(0, i);
-        if (db[partial]) {
-          displayName = db[partial];
-          break;
-        }
+        displayName = Object.keys(db).find(
+          key => db[key].replace(/\s+/g, "").startsWith(partial)
+        );
+        if (displayName) break;
       }
     }
 
