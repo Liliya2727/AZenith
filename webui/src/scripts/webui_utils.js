@@ -2490,7 +2490,7 @@ const heavyInit = async () => {
   if (loader) loader.classList.remove("hidden");
   document.body.classList.add("no-scroll");
 
-  const stage1 = [checkProfile, checkServiceStatus, showRandomMessage, updateGameStatus];
+  const stage1 = [checkProfile, checkDeviceInfo, checkServiceStatus, showRandomMessage, updateGameStatus];
   await Promise.all(stage1.map((fn) => fn()));
 
   const quickChecks = [    
@@ -2550,6 +2550,7 @@ const heavyInit = async () => {
 setupUIListeners();
 heavyInit();
 checkCPUInfo();
+checkDeviceInfo();
 checkKernelVersion();
 getAndroidVersion();    
 
