@@ -30,6 +30,7 @@ let lastServiceCheck = { time: 0, status: "", pid: "" };
 let pressTimer = null;
 let appListLoaded = false;
 let cachedSOCData = null;
+let cachedDeviceData = null;
 let loopsActive = false;
 let loopTimeout = null;
 let heavyInitDone = false;
@@ -71,39 +72,40 @@ const getDeviceBoardProp = async () => {
 };
 
 const checkDeviceInfo = async () => {
-  const cacheKey = "device_info_cache";
-  const cached = localStorage.getItem(cacheKey);
+  const cached = localStorage.getItem("device_info");
 
   try {
     const raw = await getDeviceBoardProp();
-    const model = raw.replace(/\s+/g, "");
+    const model = raw.replace(/\s+/g, "").toLowerCase();
 
     const db = await fetchDeviceDatabase();
 
+    const normalize = str =>
+      str.toLowerCase().replace(/\s+/g, "");
+
     let displayName = Object.keys(db).find(
-      key => db[key].replace(/\s+/g, "") === model
+      key => normalize(db[key]) === model
     );
 
-    // Partial match fallback
     if (!displayName) {
-      for (let i = model.length; i >= 4; i--) {
+      for (let i = model.length; i >= 3; i--) {
         const partial = model.substring(0, i);
         displayName = Object.keys(db).find(
-          key => db[key].replace(/\s+/g, "").startsWith(partial)
+          key => normalize(db[key]).startsWith(partial)
         );
         if (displayName) break;
       }
     }
 
-    if (!displayName) displayName = model;
+    if (!displayName) displayName = raw;
 
     document.getElementById("deviceInfo").textContent = displayName;
 
     if (cached !== displayName) {
-      localStorage.setItem(cacheKey, displayName);
+      localStorage.setItem("device_info", displayName);
     }
 
-  } catch (e) {
+  } catch {
     document.getElementById("deviceInfo").textContent = cached || "Error";
   }
 };
