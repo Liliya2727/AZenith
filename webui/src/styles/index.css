@@ -1601,7 +1601,7 @@ input[type=checkbox]:checked+.toggle::after {
 .textjudul {
     margin-left: 40px;
     font-size: 1.6rem;
-    width: 8rem;
+    width: 12rem;
     font-weight: 800
 }
 
