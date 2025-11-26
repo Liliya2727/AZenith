@@ -50,14 +50,14 @@ window.executeCommand = executeCommand;
 
 // Main Script
 const fetchDeviceDatabase = async () => {
-  if (!window.cachedDeviceData) {
+  if (!cachedDeviceData) {
     try {
-      window.cachedDeviceData = await (await fetch("webui.device.json")).json();
+      cachedDeviceData = await (await fetch("webui.device.json")).json();
     } catch {
-      window.cachedDeviceData = {};
+      cachedDeviceData = {};
     }
   }
-  return window.cachedDeviceData;
+  return cachedDeviceData;
 };
 
 const getDeviceBoardProp = async () => {
@@ -80,7 +80,7 @@ const checkDeviceInfo = async () => {
 
     const db = await fetchDeviceDatabase();
 
-    let displayName = db[model];
+    let displayName = model[db];
 
     // Partial match fallback
     if (!displayName) {
@@ -93,13 +93,10 @@ const checkDeviceInfo = async () => {
       }
     }
 
-    // If still nothing → show raw model
     if (!displayName) displayName = model;
 
-    // write to UI
     document.getElementById("deviceInfo").textContent = displayName;
 
-    // update cache
     if (cached !== displayName) {
       localStorage.setItem(cacheKey, displayName);
     }
