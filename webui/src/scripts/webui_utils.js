@@ -82,7 +82,7 @@ const checkDeviceInfo = async () => {
 
     let displayName = db[model];
 
-    // Partial matching fallback (same as SOC script)
+    // Partial match fallback
     if (!displayName) {
       for (let i = model.length; i >= 4; i--) {
         const partial = model.substring(0, i);
@@ -93,16 +93,19 @@ const checkDeviceInfo = async () => {
       }
     }
 
+    // If still nothing → show raw model
     if (!displayName) displayName = model;
 
-    document.getElementById("deviceInfo").textContent = displayName;
+    // write to UI
+    document.getElementById("deviceinfo").textContent = displayName;
 
+    // update cache
     if (cached !== displayName) {
       localStorage.setItem(cacheKey, displayName);
     }
 
   } catch (e) {
-    document.getElementById("deviceInfo").textContent = cached || "Error";
+    document.getElementById("deviceinfo").textContent = cached || "Error";
   }
 };
 
