@@ -97,7 +97,7 @@ const checkDeviceInfo = async () => {
     if (!displayName) displayName = model;
 
     // write to UI
-    document.getElementById("deviceinfo").textContent = displayName;
+    document.getElementById("deviceInfo").textContent = displayName;
 
     // update cache
     if (cached !== displayName) {
@@ -105,7 +105,7 @@ const checkDeviceInfo = async () => {
     }
 
   } catch (e) {
-    document.getElementById("deviceinfo").textContent = cached || "Error";
+    document.getElementById("deviceInfo").textContent = cached || "Error";
   }
 };
 
