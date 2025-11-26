@@ -95,14 +95,14 @@ const checkDeviceInfo = async () => {
 
     if (!displayName) displayName = model;
 
-    document.getElementById("deviceinfo").textContent = displayName;
+    document.getElementById("deviceInfo").textContent = displayName;
 
     if (cached !== displayName) {
       localStorage.setItem(cacheKey, displayName);
     }
 
   } catch (e) {
-    document.getElementById("deviceinfo").textContent = cached || "Error";
+    document.getElementById("deviceInfo").textContent = cached || "Error";
   }
 };
 
