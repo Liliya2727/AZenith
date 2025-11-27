@@ -1684,7 +1684,7 @@ input[type=checkbox]:checked+.toggle::after {
 }
 
 .selector2 {
-    width: 25%;
+    width: 30%;
     appearance: none;
     border: 1px solid rgba(255, 255, 255, 0.12);
     
@@ -2501,7 +2501,7 @@ input[type=range]::-ms-track {
 }
 
 .selector2 {
-    width: 25%;
+    width: 30%;
     appearance: none;
     border: 1px solid rgba(255, 255, 255, 0.12);
     
