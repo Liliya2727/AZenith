@@ -9,12 +9,18 @@
       "currentProfile": "現在のプロファイル",
       "chipset": "チップセット",
       "kernel": "カーネル",
+      "device": "デパイス",
       "androidVersion": "Android バージョン"
     },
     "buttons": {
       "changeProfile": "プロファイルを変更"
     },
     "loading": "情報を取得中..."
+  },
+  
+  "toolbar": {
+    "main": "メイン",
+    "gamelist": "ゲームリスト"
   },
 
   "settingsMore": {
@@ -234,7 +240,8 @@
   "banner": {
     "serviceStatus": "停止中💤",
     "servicePID": "サービスは停止しています",
-    "msg": "データが取得できません"
+    "msg": "データが取得できません",
+    "runninggame": "平和です！実行中のアプリはありません!"
   },
   
   "randomMessages": {
@@ -271,15 +278,25 @@
   },
 
   "serviceStatus": {
-    "initializing": "初期化中…\uD83C\uDF31",
-    "runningAuto": "実行中 - 自動モード\uD83C\uDF43",
-    "runningIdle": "実行中 - アイドルモード\uD83D\uDCAB",
+    "initializing": "初期化しています...\uD83C\uDF31",
+    "runningAuto": "稼働中 - 自動モード\uD83C\uDF43",
+    "runningIdle": "稼働中 - アイドルモード\uD83D\uDCAB",
     "unknownProfile": "不明なプロファイル",
-    "suspended": "停止中\uD83D\uDCA4",
-    "servicePID": "サービス PID: {0}"
+    "suspended": "一時停止中\uD83D\uDCA4",
+    "servicePID": "サービスPID: {0}",
+    "noApps": "平和です！実行中のアプリはありません！",
+    "active": "アクティブなアプリ: {0}",
+    "idleMode": "アイドルモード：実行中のアプリはありません！",
+    "activeIdle": "アイドルモード：実行中のアプリはありません！",
+    "error": "ゲーム状態の読み取りエラー"
   },
 
   "toast": {
+    "chngeimg": "しばらくお待ちください。画像は数秒後に更新されます",
+    "imgsuccess": "画像が正常に更新されました！",
+    "saveconf": "プリセットが正常に保存されました: {0}",
+    "loadconf": "プリセットがJSONから正常に読み込まれました",
+    "loadconffail": "設定の読み込みに失敗しました：JSON形式が無効です",
     "fstrim": "未使用ブロックをトリムしました",
     "showcantaccess": "現在のモードではアクセスできません",
     "savedPackages": "{0} 件のパッケージを保存しました",
