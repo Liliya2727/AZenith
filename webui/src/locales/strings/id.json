@@ -9,6 +9,7 @@
       "currentProfile": "Profile Saat Ini",
       "chipset": "Chipset",
       "kernel": "Kernel",
+      "device": "Perangkat",
       "androidVersion": "Versi Android"
     },
     "buttons": {
@@ -24,11 +25,11 @@
   
   "settingsMore": {
     "additional": {
-      "title": "Tambahan",
+      "title": "Pengaturan Tambahan",
       "description": "Pengaturan tambahan untuk mengingatkan experience dalam game."
     },
     "preference": {
-      "title": "Preferensi",
+      "title": "Pengaturan Preferensi",
       "description": "Preferensi tweak yang di apply saat booting."
     }
   },
@@ -146,7 +147,7 @@
       },
       "fstrim": {
         "title": "FSTrim Partition",
-        "description": "Membersihkan blok tidak terpakai di partisi sistem untuk mengoptimalkan kinerja I/O dan mengurangi beban penyimpanan.",
+        "description": "Membersihkan blok tidak terpakai di partisi sistem untuk mengoptimalkan kinerja I/O.",
         "button": "Trim"
       },
       "customreso": "Atur Kustom Resolusi",
@@ -241,7 +242,8 @@
   "banner": {
     "serviceStatus": "Tersuspend💤",
     "servicePID": "Layanan berhenti",
-    "msg": "Tidak Ada Data"
+    "msg": "Tidak Ada Data",
+    "runninggame": "Tidak ada Aplikasi yang berjalan!"
   },
   
   "randomMessages": {
@@ -283,7 +285,11 @@
     "runningIdle": "Running - Idle Mode\uD83D\uDCAB",
     "unknownProfile": "Profil nggak dikenal",
     "suspended": "Suspended\uD83D\uDCA4",
-    "servicePID": "Service PID: {0}"
+    "servicePID": "Service PID: {0}",
+    "active": "App aktif: {0}",
+    "idleMode": "Idle mode: tidak ada app berjalan!",
+    "activeIdle": "Idle mode: tidak ada app berjalan!",
+    "error": "Kesalahan membaca game status"
   },
 
   "toast": {

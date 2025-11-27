@@ -51,7 +51,7 @@
     },
     "thermal": {
       "title": "AI Thermalcore Service",
-      "desc": "Intelligently manages system performance and temperature by learning device behavior to minimize overheating and maintain stability. (Turn off if you feel lag in performance profile)"
+      "desc": "Intelligently manages system performance and temperature by learning device behavior to minimize heating. (Turn off if you feel lag in performance profile)"
     },
     "litemode": {
       "title": "Lite Mode (Reboot to apply)",

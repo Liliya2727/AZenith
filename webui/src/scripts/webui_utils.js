@@ -1740,7 +1740,7 @@ const loadIOpowersave = async () => {
     if (current) select.value = current;
   }
 
-  console.log(`Detected block device for powersave: ${validBlock}`);
+  console.log(`Detected block device: ${validBlock}`);
 };
 
 const showAdditionalSettings = async () => {

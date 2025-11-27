@@ -1480,7 +1480,7 @@ input[type=checkbox]:checked+.toggle::after {
 }
 
 .text-sss {
-    max-width: 200px
+    max-width: 180px
 }
 
 .text-hsss {
@@ -2230,13 +2230,19 @@ input[type=range]::-ms-track {
 
 @media (prefers-color-scheme:light) {
     .smallbutton {
-        background-color: #e9ecf9;
-        color: #303030
+        
+        color: #303030;
+        box-shadow: 
+        0 5px 9px rgba(80, 100, 160, .25),
+        0 -3px 5px rgba(80, 100, 160, .15);
     }
     .smallbutton:active {
-        background-color: #2a2f3e;
-        color: #e4e8ff;
-        border-color: #3b4360
+    background-color: rgba(240, 240, 245, 0.65);
+    color: #20222b;
+    border-color: rgba(90, 90, 110, 0.35);
+    box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.18),
+    inset 0 0 4px rgba(255, 255, 255, 0.08);
     }
     .background {
         background: #f3f6ff;
@@ -2479,9 +2485,9 @@ input[type=range]::-ms-track {
     outline: none;
     cursor: pointer;
 
-    box-shadow:
-    0 4px 10px rgba(0, 0, 0, 0.18),
-    inset 0 0 4px rgba(255, 255, 255, 0.08);
+    box-shadow: 
+        0 5px 9px rgba(80, 100, 160, .25),
+        0 -3px 5px rgba(80, 100, 160, .15);
 
     transition:
         border-color .25s ease,
@@ -2526,8 +2532,9 @@ input[type=range]::-ms-track {
     cursor: pointer;
 
     box-shadow: 
-        0 5px 12px rgba(0, 0, 0, 0.35),
-        inset 0 0 5px rgba(255, 255, 255, 0.015);
+        0 5px 9px rgba(80, 100, 160, .25),
+        0 -3px 5px rgba(80, 100, 160, .15);
+    border: none
 
     transition:
         border-color .25s ease,
