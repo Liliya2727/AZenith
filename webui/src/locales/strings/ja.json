@@ -1,6 +1,7 @@
 {
   "loading": {
-    "text": "初期化中..."
+    "text": "初期化中...",
+    "textgamelist": "アプリ一覧を取得中..."
   },
 
   "infoTab": {
@@ -203,7 +204,9 @@
     "buttons": {
       "save": "ログを保存",
       "edit": "ゲームリストを編集",
-      "restart": "デーモンを再初期化"
+      "restart": "デーモンを再初期化",
+      "saveconf": "プリセット設定を保存",
+      "loadconf": "プリセット設定を読み込み"
     }
   },
 
@@ -228,16 +231,8 @@
     }
   },
 
-  "gamelist": {
-    "title": "ゲームリスト",
-    "description": "ここにリストされたアプリまたはゲームはゲームプロファイルを起動します。",
-    "buttons": {
-      "cancel": "キャンセル",
-      "save": "保存"
-    }
-  },
-
   "banner": {
+    "loader": "画像を処理しています...",
     "serviceStatus": "停止中💤",
     "servicePID": "サービスは停止しています",
     "msg": "データが取得できません",
