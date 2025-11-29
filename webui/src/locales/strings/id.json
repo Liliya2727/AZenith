@@ -1,6 +1,7 @@
 {
   "loading": {
-  "text": "Menginisialisasi..."
+    "text": "Menginisialisasi...",
+    "textgamelist": "Membuat applist..."
   },
 
   "infoTab": {
@@ -229,17 +230,9 @@
       "apply": "Terapkan"
     }
   },
-  
-  "gamelist": {
-    "title": "Daftar Game",
-    "description": "Aplikasi dan game yang tersimpan di sini akan mengganti Profile AZenith.",
-    "buttons": {
-      "cancel": "Batal",
-      "save": "Simpan"
-    }
-  },
 
   "banner": {
+    "loader": "Memproses gambar...",
     "serviceStatus": "Tersuspend💤",
     "servicePID": "Layanan berhenti",
     "msg": "Tidak Ada Data",
@@ -286,6 +279,7 @@
     "unknownProfile": "Profil nggak dikenal",
     "suspended": "Suspended\uD83D\uDCA4",
     "servicePID": "Service PID: {0}",
+    "noApps": "Tidak ada Aplikasi yang berjalan!",
     "active": "App aktif: {0}",
     "idleMode": "Idle mode: tidak ada app berjalan!",
     "activeIdle": "Idle mode: tidak ada app berjalan!",

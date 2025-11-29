@@ -231,15 +231,6 @@
     }
   },
   
-  "gamelist": {
-    "title": "Game List",
-    "description": "Any apps and games listed here will trigger the Game Profile.",
-    "buttons": {
-      "cancel": "Cancel",
-      "save": "Save"
-    }
-  },
-  
   "banner": {
     "loader": "Processing the image...",
     "serviceStatus": "Suspended💤",

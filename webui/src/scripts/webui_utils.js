@@ -2503,8 +2503,13 @@ const heavyInit = async () => {
   if (loader) loader.classList.remove("hidden");
   document.body.classList.add("no-scroll");
 
-  const stage1 = [checkProfile, checkDeviceInfo, checkServiceStatus, showRandomMessage, updateGameStatus];
-  await Promise.all(stage1.map((fn) => fn()));
+  const loops = [
+    checkProfile, 
+    checkServiceStatus, 
+    showRandomMessage, 
+    updateGameStatus,
+  ];
+  await Promise.all(loops.map((fn) => fn()));
 
   const quickChecks = [    
     loadCpuGovernors,
@@ -2518,6 +2523,7 @@ const heavyInit = async () => {
 
   const heavyAsync = [
     checkCPUInfo,
+    checkDeviceInfo,
     checkKernelVersion,
     getAndroidVersion,
     checkfpsged,
