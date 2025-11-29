@@ -256,8 +256,9 @@ const writeGameList = async (list) => {
 };
 
 const loadAppList = async () => {
-  if (appListLoaded) return;   
-  appListLoaded = true; 
+  if (appListLoaded) return;
+  appListLoaded = true;
+
   const container = document.getElementById("appList");
   const searchInput = document.getElementById("searchInput");
   if (!container || !searchInput) return;
@@ -273,7 +274,7 @@ const loadAppList = async () => {
     try {
       pkgList = JSON.parse(ksu.listUserPackages());
     } catch {
-      const r = await exec("pm list packages");
+      const r = await exec("pm list packages -3");
       pkgList = (r.stdout || "")
         .split("\n")
         .map(x => x.replace("package:", "").trim())
@@ -285,17 +286,25 @@ const loadAppList = async () => {
       return;
     }
 
-    const infoList = JSON.parse(ksu.getPackagesInfo(JSON.stringify(pkgList)));
-    const iconList = JSON.parse(ksu.getPackagesIcons(JSON.stringify(pkgList), 100));
+    let ksuSupported = true;
+    let infoList = [];
+    let iconMap = {};
 
-    const iconMap = {};
-    for (const i of iconList) iconMap[i.packageName] = i.icon || "";
+    try {
+      infoList = JSON.parse(ksu.getPackagesInfo(JSON.stringify(pkgList)));
+      const iconList = JSON.parse(ksu.getPackagesIcons(JSON.stringify(pkgList), 100));
+      for (const i of iconList) iconMap[i.packageName] = i.icon || "";
+    } catch {
+      ksuSupported = false;
+    }
 
     const cardCache = {};
 
-    for (const app of infoList) {
-      const pkg = app.packageName;
-      const label = app.appLabel || pkg;
+    for (const app of (ksuSupported ? infoList : pkgList)) {
+      const pkg = ksuSupported ? app.packageName : app;
+      const label = ksuSupported ? (app.appLabel || pkg) : pkg;
+
+      const iconSrc = ksuSupported ? (iconMap[pkg] || "") : "ksu://icon/" + pkg;
 
       const card = document.createElement("div");
       card.className = "appCard mt-211 mb-4 p-4 rounded-lg";
@@ -303,7 +312,7 @@ const loadAppList = async () => {
 
       const icon = document.createElement("img");
       icon.className = "appIcon";
-      icon.src = iconMap[pkg];
+      icon.src = iconSrc;
 
       const nameEl = document.createElement("div");
       nameEl.className = "app-label";
