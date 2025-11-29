@@ -304,15 +304,14 @@ const loadAppList = async () => {
       const pkg = ksuSupported ? app.packageName : app;
       const label = ksuSupported ? (app.appLabel || pkg) : pkg;
 
-      const iconSrc = ksuSupported ? (iconMap[pkg] || "") : "ksu://icon/" + pkg;
-
       const card = document.createElement("div");
       card.className = "appCard mt-211 mb-4 p-4 rounded-lg";
       card.dataset.pkg = pkg;
 
       const icon = document.createElement("img");
       icon.className = "appIcon";
-      icon.src = iconSrc;
+      icon.src = ksuSupported ? (iconMap[pkg] || "") : "";
+      if (!ksuSupported) icon.style.display = "none";
 
       const nameEl = document.createElement("div");
       nameEl.className = "app-label";
@@ -408,7 +407,6 @@ const loadAppList = async () => {
     });
 
   } catch (err) {
-    console.error("Failed to load apps:", err);
     container.textContent = "Error loading apps";
   } finally {
     if (loader2) loader2.classList.add("hidden");
