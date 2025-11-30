@@ -63,6 +63,8 @@ const executeCommand = async (cmd, cwd = null) => {
 window.executeCommand = executeCommand;
 
 // Main Script
+const normalize = s => s.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+
 const fetchDeviceDatabase = async () => {
   if (!cachedDeviceData) {
     try {
@@ -82,47 +84,42 @@ const execProp = async prop => {
 const collectProps = async () => {
   const set = new Set();
   for (const prop of DEVICE_PROPS) {
-    const val = await execProp(prop);
-    if (val) set.add(val);
+    const v = await execProp(prop);
+    if (v) set.add(v);
   }
   const fp = await execProp("ro.build.fingerprint");
   if (fp.includes("/")) set.add(fp.split("/")[2].split(":")[0]);
   return [...set];
 };
 
-const normalize = s => s.toLowerCase().replace(/[^a-z0-9]+/g, "_");
-
 const findMatch = (props, db) => {
   const normProps = props.map(normalize);
-  const entries = Object.entries(db).map(([k, v]) => ({
-    key: k,
-    raw: v,
-    norm: normalize(v)
-  }));
-  for (const n of normProps) {
-    const match = entries.find(e => e.norm === n);
-    if (match) return match.raw;
+  for (const [friendly, identifier] of Object.entries(db)) {
+    const n = normalize(identifier);
+    if (normProps.includes(n)) return friendly;
   }
-  for (const n of normProps) {
-    const match = entries.find(e => e.norm.startsWith(n) || n.startsWith(e.norm));
-    if (match) return match.raw;
+  for (const [friendly, identifier] of Object.entries(db)) {
+    const n = normalize(identifier);
+    if (normProps.some(p => p.startsWith(n) || n.startsWith(p))) return friendly;
   }
   return props.sort((a, b) => b.length - a.length)[0] || "Unknown Device";
 };
 
-const storeProp = async value => {
-  await executeCommand(`setprop ${DEVICE_PROP} "${value}"`);
+const storeProp = async v => {
+  await executeCommand(`setprop ${DEVICE_PROP} "${v}"`);
 };
 
 const checkDeviceInfo = async () => {
   const saved = await execProp(DEVICE_PROP);
-  if (saved) {
+  if (saved && saved !== "") {
     document.getElementById("deviceInfo").textContent = saved;
     return;
   }
+
   const db = await fetchDeviceDatabase();
   const props = await collectProps();
   const result = findMatch(props, db);
+
   await storeProp(result);
   document.getElementById("deviceInfo").textContent = result;
 };
