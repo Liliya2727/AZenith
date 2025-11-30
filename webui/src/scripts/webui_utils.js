@@ -24,6 +24,18 @@ const moduleInterface = window.$AZenith;
 const fileInterface = window.$AZFile;
 const GAMELIST_PATH = "/data/adb/.config/AZenith/gamelist/gamelist.txt";
 const RESO_PROP = "persist.sys.azenithconf.resosettings";
+const DEVICE_PROPS = [
+  "ro.product.vendor_dlkm.device",
+  "ro.product.vendor.device",
+  "ro.product.system.device",
+  "ro.product.odm.device",
+  "ro.product.product.device",
+  "ro.product.board",
+  "ro.product.device",
+  "ro.product.model",
+  "ro.product.vendor.model",
+  "ro.product.system.model"
+];
 let lastGameCheck = { time: 0, status: "" };
 let lastProfile = { time: 0, value: "" };
 let lastServiceCheck = { time: 0, status: "", pid: "" };
@@ -61,53 +73,57 @@ const fetchDeviceDatabase = async () => {
   return cachedDeviceData;
 };
 
-const getDeviceBoardProp = async () => {
-  const { errno, stdout } = await executeCommand("getprop ro.product.board");
+const execProp = async prop => {
+  const { stdout } = await executeCommand(`getprop persist.sys.azenith.device`);
+  return stdout.trim();
+};
 
-  if (errno === 0 && stdout.trim()) {
-    return stdout.trim();
+const collectProps = async () => {
+  const set = new Set();
+  for (const prop of DEVICE_PROPS) {
+    const val = await execProp(prop);
+    if (val) set.add(val);
   }
+  const fp = await execProp("ro.build.fingerprint");
+  if (fp.includes("/")) set.add(fp.split("/")[2].split(":")[0]);
+  return [...set];
+};
 
-  return "UnknownDevice";
+const normalize = s => s.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+
+const findMatch = (props, db) => {
+  const normProps = props.map(normalize);
+  const entries = Object.entries(db).map(([k, v]) => ({
+    key: k,
+    raw: v,
+    norm: normalize(v)
+  }));
+  for (const n of normProps) {
+    const match = entries.find(e => e.norm === n);
+    if (match) return match.raw;
+  }
+  for (const n of normProps) {
+    const match = entries.find(e => e.norm.startsWith(n) || n.startsWith(e.norm));
+    if (match) return match.raw;
+  }
+  return props.sort((a, b) => b.length - a.length)[0] || "Unknown Device";
+};
+
+const storeProp = async value => {
+  await executeCommand(`setprop persist.sys.azenith.device "${value}"`);
 };
 
 const checkDeviceInfo = async () => {
-  const cached = localStorage.getItem("device_info");
-
-  try {
-    const raw = await getDeviceBoardProp();
-    const model = raw.replace(/\s+/g, "").toLowerCase();
-
-    const db = await fetchDeviceDatabase();
-
-    const normalize = str =>
-      str.toLowerCase().replace(/\s+/g, "");
-
-    let displayName = Object.keys(db).find(
-      key => normalize(db[key]) === model
-    );
-
-    if (!displayName) {
-      for (let i = model.length; i >= 3; i--) {
-        const partial = model.substring(0, i);
-        displayName = Object.keys(db).find(
-          key => normalize(db[key]).startsWith(partial)
-        );
-        if (displayName) break;
-      }
-    }
-
-    if (!displayName) displayName = raw;
-
-    document.getElementById("deviceInfo").textContent = displayName;
-
-    if (cached !== displayName) {
-      localStorage.setItem("device_info", displayName);
-    }
-
-  } catch {
-    document.getElementById("deviceInfo").textContent = cached || "Error";
+  const saved = await execProp(PROP_KEY);
+  if (saved) {
+    document.getElementById("deviceInfo").textContent = saved;
+    return;
   }
+  const db = await fetchDeviceDatabase();
+  const props = await collectProps();
+  const result = findMatch(props, db);
+  await storeProp(result);
+  document.getElementById("deviceInfo").textContent = result;
 };
 
 const updateGameStatus = async () => {
