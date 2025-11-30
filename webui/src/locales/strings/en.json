@@ -226,7 +226,7 @@
       "title": "Saturation"
     },
     "buttons": {
-      "reset": "Reset Color Settings",
+      "reset": "Reset",
       "apply": "Apply"
     }
   },

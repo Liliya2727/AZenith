@@ -1,6 +1,7 @@
 {
   "loading": {
     "text": "Nginitialisasi..."
+    "textgamelist": "Nggawe dhaptar aplikasi..."
   },
 
   "infoTab": {
@@ -222,21 +223,13 @@
       "title": "Saturasi"
     },
     "buttons": {
-      "reset": "Balèkaké Setelan Warna",
+      "reset": "Balèkaké",
       "apply": "Terapaké"
     }
   },
   
-  "gamelist": {
-    "title": "Daftar Game",
-    "description": "Aplikasi utawa game ing kéné bakal ngaktifaké Profil Game.",
-    "buttons": {
-      "cancel": "Batal",
-      "save": "Simpen"
-    }
-  },
-  
   "banner": {
+    "loader": "Ngolah gambar...",
     "serviceStatus": "Ditangguhkan💤",
     "servicePID": "Layanan Mati",
     "msg": "Data durung ana",
