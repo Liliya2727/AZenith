@@ -143,14 +143,14 @@
   padding: 0.25rem 0.5rem;
   outline: none;
   z-index: 50;
-  background-color: rgba(100, 100, 100, 0.25);
-  backdrop-filter: blur(15px);
+  background-color: color-mix(in srgb, var(--surfaceContainerHigh, rgba(100, 100, 100, 0.25)) 65%, rgba(100, 100, 100, 0.25));
+  backdrop-filter: blur(10px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 #bottomToolbar button {
   background-color: transparent;
-  color:var(--onSurface, #fff);
+  color: var(--onSurfaceVariant, #fff);
   border: none;
   padding: 0.35rem 0.75rem;
   cursor: pointer;
@@ -172,7 +172,8 @@
 }
 
 #bottomToolbar button.active {
-  background-color: rgba(20, 20, 20, 0.6);
+  color: var(--inverseOnSurface, #fff);
+  background-color: color-mix(in srgb, var(--primary, rgba(20, 20, 20, 0.6)) 70%, rgba(55, 55, 55, 0.9)); 
   transform: scale(1.08);
   outline: none;
   box-shadow: 0 0 12px rgba(255,255,255,0.18);
@@ -1780,12 +1781,12 @@ input[type=checkbox]:checked+.toggle::after {
 }
 
 .device-info-divider {
-    border-bottom:1px solid color-mix(in srgb,var(--outline) 12%, transparent);
+    border-bottom:1px solid color-mix(in srgb,var(--outline, #12141f) 12%, transparent);
     margin: .5rem 0
 }
 
 .device-info-divider2 {
-    border-bottom:1px solid color-mix(in srgb,var(--outline) 12%, transparent);
+    border-bottom:1px solid color-mix(in srgb,var(--outline, #12141f) 12%, transparent);
     margin: 1.5rem 0 .5rem
 }
 
@@ -2315,7 +2316,7 @@ input[type=range]::-ms-track {
     }
     .device-info-divider,
     .device-info-divider2 {
-        border-bottom:1px solid color-mix(in srgb,var(--outline) 12%, transparent);
+        border-bottom:1px solid color-mix(in srgb,var(--outline, #d2ddff) 12%, transparent);
     }
     .toggle {
         background-color:var(--surfaceContainerLow, #d7ddee);
@@ -2330,7 +2331,7 @@ input[type=range]::-ms-track {
         color:var(--onSurface, #545454)
     }
     .image-container img {
-        filter: brightness(1) blur(0px);
+        filter: brightness(.8) blur(0px);
         box-shadow:
             0 6px 14px var(--surfaceVariant, rgba(80,100,160,.22)),
             0 -2px 6px var(--surfaceVariant, rgba(80,100,160,.12));
@@ -2446,7 +2447,7 @@ input[type=range]::-ms-track {
     .backdrop-blur-md {
         -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
-        background-color: color-mix(in srgb, var(--surfaceContainerHighest) 30%, rgba(255, 255, 255, 0.6));
+        background-color: color-mix(in srgb, var(--surfaceContainerHigh) 30%, rgba(255, 255, 255, 0.6));
     }
     .textver {
         color: #ededed;
@@ -2671,20 +2672,17 @@ input[type=range]::-ms-track {
 }
 
 #bottomToolbar {
-  background-color: rgba(55, 55, 55, 0.45);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background-color: color-mix(in srgb, var(--surfaceContainerHigh) 65%, rgba(55, 55, 55, 0.45));
+  backdrop-filter: blur(10px);  
 }
 
 #bottomToolbar button {
-  color:var(--inverseOnSurface, #fff);
-  
+  color: var(--onSurfaceVariant);
 }
 
 #bottomToolbar button.active {
-  color:var(--onSurface, #fff);
-  background-color: rgba(255, 255, 255, 0.3);
-  
+  color: var(--inverseOnSurface, #fff);
+  background-color: color-mix(in srgb, var(--onPrimaryContainer, rgba(55, 55, 55, 0.9)) 70%, rgba(55, 55, 55, 0.9)); 
 }
 
 .app-label {
