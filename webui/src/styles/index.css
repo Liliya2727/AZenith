@@ -2518,6 +2518,7 @@ input[type=range]::-ms-track {
 }
 
 .profilerbutton:active {
+    box-shadow:
             0 6px 14px var(--surfaceVariant, rgba(80,100,160,.22)),
             0 -2px 6px var(--surfaceVariant, rgba(80,100,160,.12));
     transform: scale(0.96);
