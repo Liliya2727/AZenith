@@ -24,6 +24,7 @@ const moduleInterface = window.$AZenith;
 const fileInterface = window.$AZFile;
 const GAMELIST_PATH = "/data/adb/.config/AZenith/gamelist/gamelist.txt";
 const RESO_PROP = "persist.sys.azenithconf.resosettings";
+const DEVICE_PROP = "persist.sys.azenith.device";
 const DEVICE_PROPS = [
   "ro.product.vendor_dlkm.device",
   "ro.product.vendor.device",
@@ -74,7 +75,7 @@ const fetchDeviceDatabase = async () => {
 };
 
 const execProp = async prop => {
-  const { stdout } = await executeCommand(`getprop persist.sys.azenith.device`);
+  const { stdout } = await executeCommand(`getprop ${prop}`);
   return stdout.trim();
 };
 
@@ -110,11 +111,11 @@ const findMatch = (props, db) => {
 };
 
 const storeProp = async value => {
-  await executeCommand(`setprop persist.sys.azenith.device "${value}"`);
+  await executeCommand(`setprop ${DEVICE_PROP} "${value}"`);
 };
 
 const checkDeviceInfo = async () => {
-  const saved = await execProp(PROP_KEY);
+  const saved = await execProp(DEVICE_PROP);
   if (saved) {
     document.getElementById("deviceInfo").textContent = saved;
     return;
