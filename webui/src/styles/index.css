@@ -1790,7 +1790,7 @@ input[type=checkbox]:checked+.toggle::after {
 }
 
 .device-info-label {
-    font-size: .775rem;
+    font-size: .655rem;
     font-weight: 400;
     padding-left: 3rem;
     color:var(--onSurface, #B8B8B8);
@@ -1798,7 +1798,7 @@ input[type=checkbox]:checked+.toggle::after {
 }
 
 .device-info-label2 {
-    font-size: .775rem;
+    font-size: .655rem;
     font-weight: 400;
     color:var(--onSurface, #B8B8B8);
     padding-left: 3rem;
@@ -1819,8 +1819,8 @@ input[type=checkbox]:checked+.toggle::after {
 .androidsvg {
     margin-top: .5rem;
     margin-bottom: -2.15rem;
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     padding: 4px;
     border-radius: 50%;
     background:var(--surfaceContainerHighest, #2C2C33);    
@@ -1835,8 +1835,8 @@ input[type=checkbox]:checked+.toggle::after {
 .thankstitlesvg {
     margin-top: -.25rem;
     margin-bottom: .75rem;
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     padding: 4px;
     border-radius: 50%;
     background:var(--primary, #CCCAEC); 
@@ -1847,13 +1847,13 @@ input[type=checkbox]:checked+.toggle::after {
 
 .sh {
     position: absolute;
-    top: .95rem;
+    top: .85rem;
     left: 3.5rem;
 }
 
 .sh2 {
     position: absolute;
-    top: .95rem;
+    top: .75rem;
     left: 3.5rem;
 } 
 
