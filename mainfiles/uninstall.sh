@@ -17,51 +17,21 @@
 #
 
 # Remove Persistent Properties
-props="persist.sys.azenith.state \
-persist.sys.azenith.debugmode \
-persist.sys.azenith.service \
-persist.sys.azenithconf.justintime \
-persist.sys.azenithconf.disabletrace \
-persist.sys.azenithconf.logd \
-persist.sys.azenithconf.DThermal \
-persist.sys.azenithconf.SFL \
-persist.sys.azenithconf.malisched \
-persist.sys.azenithconf.fpsged \
-persist.sys.azenithconf.schedtunes \
-persist.sys.azenithconf.clearbg \
-persist.sys.azenithconf.bypasschg \
-persist.sys.azenithconf.APreload \
-persist.sys.azenithconf.iosched \
-persist.sys.azenithconf.cpulimit \
-persist.sys.azenithconf.dnd \
-persist.sys.azenithconf.AIenabled \
-persist.sys.azenithdebug.soctype \
-persist.sys.azenithconf.vsync \
-persist.sys.azenithconf.freqoffset \
-persist.sys.azenithconf.schemeconfig \
-persist.sys.azenithdebug.freqlist \
-persist.sys.azenithdebug.vsynclist \
-persist.sys.azenith.custom_default_cpu_gov \
-persist.sys.azenith.custom_game_cpu_gov \
-persist.sys.azenith.custom_powersave_cpu_gov \
-persist.sys.azenith.default_cpu_gov \
-persist.sys.azenithconf.scale \
-persist.sys.azenithconf.hgsize \
-persist.sys.azenithconf.wdsize \
-persist.sys.azenithconf.showtoast \
-persist.sys.azenith.custom_default_balanced_IO \
-persist.sys.azenith.custom_powersave_IO \
-persist.sys.azenith.custom_performance_IO \
-persist.sys.azenith.default_balanced_IO \
-persist.sys.azenithconf.resosettings \
-persist.sys.rianixia.learning_enabled \
-persist.sys.rianixia.thermalcore-bigdata.path \
-persist.sys.azenithconf.preloadbudget \
-persist.sys.azenith.device "
+props=$(getprop | grep "persist.sys.azenith" | awk -F'[][]' '{print $2}' | sed 's/:.*//')
 for prop in $props; do
 	setprop "$prop" ""
 	resetprop --delete "$prop"
 done
+
+# AI Thermal Properties
+propsrn="\
+persist.sys.rianixia.learning_enabled \
+persist.sys.rianixia.thermalcore-bigdata.path "
+for prop in $propsrn; do
+	setprop "$prop" ""
+	resetprop --delete "$prop"
+done
+
 # Uninstall module directories
 rm -rf /data/adb/.config/AZenith
 rm -rf /data/AZenith
