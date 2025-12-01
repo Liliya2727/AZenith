@@ -23,7 +23,7 @@ for prop in $props; do
 	resetprop --delete "$prop"
 done
 
-# AI Thermal Properties
+# Remove AI Thermal Properties
 propsrn="\
 persist.sys.rianixia.learning_enabled \
 persist.sys.rianixia.thermalcore-bigdata.path "
@@ -32,12 +32,15 @@ for prop in $propsrn; do
 	resetprop --delete "$prop"
 done
 
-# Uninstall module directories
-rm -rf /data/adb/.config/AZenith
-rm -rf /data/AZenith
-# Uninstall toast apk
+# Remove module directories
+rm -rf "/data/adb/.config/AZenith"
+rm -rf "/data/AZenith"
+rm -rf "/data/local/tmp/module.avatar.webp"
+
+# Remove toast apk
 pm uninstall --user 0 azenith.toast 2>/dev/null
-# Uninstall azenith binaries
+
+# Remove azenith binaries
 manager_paths="/data/adb/ap/bin /data/adb/ksu/bin"
 binaries="sys.azenith-service sys.azenith-service_log \
           sys.azenith-profilesettings sys.azenith-utilityconf \
