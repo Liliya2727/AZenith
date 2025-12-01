@@ -1854,7 +1854,7 @@ input[type=checkbox]:checked+.toggle::after {
 
 .sh2 {
     position: absolute;
-    top: .75rem;
+    top: .87rem;
     left: 3.5rem;
 } 
 
@@ -2113,6 +2113,7 @@ input[type=range]::-ms-track {
 
 .profilerbutton,
 .smallbutton {
+    width: 30%;
     display: inline-flex;
     font-size: .75rem;
     box-shadow: inset 0 0 0 transparent;

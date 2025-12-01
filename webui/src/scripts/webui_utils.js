@@ -757,10 +757,8 @@ const checkProfile = async () => {
 
     d.textContent = l;
 
-    // Detect theme mode
     const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-    // Dark mode colors (original) vs light mode (darker/saturated)
     const colors = isDark
       ? {
           Performance: "#ef4444",
