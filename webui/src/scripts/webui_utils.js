@@ -20,6 +20,8 @@ import AvatarZenith from "/webui.avatar.avif";
 import SchemeBanner from "/webui.schemebanner.avif";
 import ResoBanner from "/webui.reso.avif";
 import { exec, toast } from "kernelsu";
+import { wrapInputStream, PackageManagerInterface } from "webuix";
+const stream =
 const moduleInterface = window.$AZenith;
 const fileInterface = window.$AZFile;
 const GAMELIST_PATH = "/data/adb/.config/AZenith/gamelist/gamelist.txt";
@@ -285,9 +287,19 @@ const loadAppList = async () => {
     let gamelist = await readGameList();
 
     let pkgList = [];
+    let ksuSupported = true;
+    let infoList = [];
+    let iconMap = {};
+
     try {
       pkgList = JSON.parse(ksu.listUserPackages());
+      infoList = JSON.parse(ksu.getPackagesInfo(JSON.stringify(pkgList)));
+      const iconList = JSON.parse(ksu.getPackagesIcons(JSON.stringify(pkgList), 100));
+      for (const i of iconList) iconMap[i.packageName] = i.icon || "";
     } catch {
+     
+      ksuSupported = false;
+
       const r = await exec("pm list packages -3");
       pkgList = (r.stdout || "")
         .split("\n")
@@ -300,62 +312,72 @@ const loadAppList = async () => {
       return;
     }
 
-    let ksuSupported = true;
-    let infoList = [];
-    let iconMap = {};
-
-    try {
-      infoList = JSON.parse(ksu.getPackagesInfo(JSON.stringify(pkgList)));
-      const iconList = JSON.parse(ksu.getPackagesIcons(JSON.stringify(pkgList), 100));
-      for (const i of iconList) iconMap[i.packageName] = i.icon || "";
-    } catch {
-      ksuSupported = false;
-    }
-
     const cardCache = {};
 
     for (const app of (ksuSupported ? infoList : pkgList)) {
       const pkg = ksuSupported ? app.packageName : app;
-      const label = ksuSupported ? (app.appLabel || pkg) : pkg;
-
-      const iconSrc = ksuSupported ? (iconMap[pkg] || "") : "ksu://icon/" + pkg;
-
+      let label = ksuSupported ? (app.appLabel || pkg) : pkg;
+      let iconSrc = ksuSupported ? (iconMap[pkg] || "") : "";
+    
+      // Fallback using $packageManager
+      if (!ksuSupported && typeof window.$packageManager !== "undefined") {
+        try {
+          const appInfoStream = window.$packageManager.getApplicationInfo(pkg, 0, 0);
+          if (appInfoStream) {
+            // Convert the info stream to object
+            const infoBuffer = await Ce(appInfoStream).then(r => r.arrayBuffer());
+            const infoText = new TextDecoder().decode(infoBuffer);
+            const info = JSON.parse(infoText);
+            label = (typeof info.getLabel === "function" ? info.getLabel() : info.label) || info.appName || pkg;
+          }
+    
+          const iconStream = window.$packageManager.getApplicationIcon(pkg, 0, 0);
+          if (iconStream) {
+            const buffer = await wrapInputStream(iconStream).then(r => r.arrayBuffer());
+            iconSrc = "data:image/png;base64," + Ne(buffer);
+          }
+        } catch (err) {
+          console.warn("Failed to get info/icon for", pkg, err);
+        }
+      }
+    
+      // Create the card
       const card = document.createElement("div");
       card.className = "appCard mt-211 mb-4 p-4 rounded-lg";
       card.dataset.pkg = pkg;
-
+    
       const icon = document.createElement("img");
       icon.className = "appIcon";
       icon.src = iconSrc;
-
+    
       const nameEl = document.createElement("div");
       nameEl.className = "app-label";
       nameEl.textContent = label;
-
+    
       const pkgEl = document.createElement("div");
       pkgEl.className = "pkg-label";
       pkgEl.textContent = pkg;
-
+    
       const textArea = document.createElement("div");
       textArea.className = "text-area";
       textArea.appendChild(nameEl);
       textArea.appendChild(pkgEl);
-
+    
       const toggle = document.createElement("div");
       toggle.className = "toggle2";
       toggle.dataset.pkg = pkg;
-
+    
       if (gamelist.includes(pkg)) {
         toggle.classList.add("active");
         toggle.dataset.state = "on";
       } else {
         toggle.dataset.state = "off";
       }
-
+    
       toggle.onclick = async () => {
         toggle.classList.toggle("active");
         const isOn = toggle.classList.contains("active");
-
+    
         if (isOn) {
           toggle.dataset.state = "on";
           if (!gamelist.includes(pkg)) gamelist.push(pkg);
@@ -363,30 +385,27 @@ const loadAppList = async () => {
           toggle.dataset.state = "off";
           gamelist = gamelist.filter(p => p !== pkg);
         }
-
+    
         searchInput.value = "";
-        Object.values(cardCache).forEach(({ card }) => {
-          card.style.display = "";
-        });
-
+        Object.values(cardCache).forEach(({ card }) => (card.style.display = ""));
+    
         await writeGameList(gamelist);
         sortCards();
       };
-
+    
       const row = document.createElement("div");
       row.className = "row";
       row.appendChild(textArea);
       row.appendChild(toggle);
-
+    
       const meta = document.createElement("div");
       meta.className = "meta";
       meta.appendChild(row);
-
+    
       card.appendChild(icon);
       card.appendChild(meta);
-
+    
       container.appendChild(card);
-
       cardCache[pkg] = { card, label, pkg };
     }
 
@@ -411,13 +430,8 @@ const loadAppList = async () => {
 
     searchInput.addEventListener("input", () => {
       const q = searchInput.value.toLowerCase();
-
       Object.values(cardCache).forEach(({ card, label, pkg }) => {
-        if (label.toLowerCase().includes(q) || pkg.toLowerCase().includes(q)) {
-          card.style.display = "";
-        } else {
-          card.style.display = "none";
-        }
+        card.style.display = label.toLowerCase().includes(q) || pkg.toLowerCase().includes(q) ? "" : "none";
       });
     });
 
