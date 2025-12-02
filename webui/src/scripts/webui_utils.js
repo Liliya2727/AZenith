@@ -298,18 +298,11 @@ const loadAppList = async () => {
 
     let pkgList = [];
     let ksuSupported = true;
-    let infoList = [];
-    let iconMap = {};
 
     try {
       pkgList = JSON.parse(ksu.listUserPackages());
-      infoList = JSON.parse(ksu.getPackagesInfo(JSON.stringify(pkgList)));
-      const iconList = JSON.parse(ksu.getPackagesIcons(JSON.stringify(pkgList), 100));
-      for (const i of iconList) iconMap[i.packageName] = i.icon || "";
     } catch {
-     
       ksuSupported = false;
-
       const r = await exec("pm list packages -3");
       pkgList = (r.stdout || "")
         .split("\n")
@@ -322,114 +315,127 @@ const loadAppList = async () => {
       return;
     }
 
-    const cardCache = {};
+    let labelMap = {};
+    if (ksuSupported) {
+      try {
+        const infoList = JSON.parse(ksu.getPackagesInfo(JSON.stringify(pkgList)));
+        for (const i of infoList) {
+          labelMap[i.packageName] = i.appLabel || i.label || i.packageName;
+        }
+      } catch {
+        console.warn("KSU labels failed");
+      }
+    }
 
-    for (const app of (ksuSupported ? infoList : pkgList)) {
-      const pkg = ksuSupported ? app.packageName : app;
-      let label = ksuSupported ? (app.appLabel || app.label || pkg) : pkg;
-      let iconSrc = ksuSupported ? (iconMap[pkg] || "") : "";
-    
-      if (typeof window.$packageManager !== "undefined") {
-        try {
-          if (!label || label === pkg) {
+    if (typeof window.$packageManager !== "undefined") {
+      for (const pkg of pkgList) {
+        if (!labelMap[pkg]) {
+          try {
             const appInfo = await window.$packageManager.getApplicationInfo(pkg, 0, 0);
             if (appInfo) {
-              label = (typeof appInfo.getLabel === "function" ? appInfo.getLabel() : appInfo.label)
-                    || appInfo.appName
-                    || pkg;
+              labelMap[pkg] = (typeof appInfo.getLabel === "function"
+                ? appInfo.getLabel()
+                : appInfo.label) || appInfo.appName || pkg;
             }
-          }
-    
-          if (!iconSrc) {
+          } catch {}
+        }
+      }
+    }
+
+    pkgList.forEach(pkg => {
+      if (!labelMap[pkg]) labelMap[pkg] = pkg;
+    });
+
+    let iconMap = {};
+
+    if (ksuSupported) {
+      try {
+        const icons = JSON.parse(ksu.getPackagesIcons(JSON.stringify(pkgList), 100));
+        for (const i of icons) iconMap[i.packageName] = i.icon || "";
+      } catch {
+        console.warn("KSU icons failed");
+      }
+    }
+
+    if (typeof window.$packageManager !== "undefined") {
+      for (const pkg of pkgList) {
+        if (!iconMap[pkg]) {
+          try {
             const iconStream = await window.$packageManager.getApplicationIcon(pkg, 0, 0);
             if (iconStream) {
               const buffer = await wrapInputStream(iconStream).then(r => r.arrayBuffer());
-              const uint8 = new Uint8Array(buffer);
-              let b64 = "";
-              for (let i = 0; i < uint8.length; i++) b64 += String.fromCharCode(uint8[i]);
-              iconSrc = "data:image/png;base64," + btoa(b64);
+              iconMap[pkg] =
+                "data:image/png;base64," + btoa(String.fromCharCode(...new Uint8Array(buffer)));
             }
-          }
-    
-        } catch (err) {
-          console.warn("Fallback failed for", pkg, err);
+          } catch {}
         }
       }
-    
-      // Create the card
+    }
+
+    const cardCache = {};
+
+    for (const pkg of pkgList) {
       const card = document.createElement("div");
       card.className = "appCard mt-211 mb-4 p-4 rounded-lg";
       card.dataset.pkg = pkg;
-    
+
       const icon = document.createElement("img");
       icon.className = "appIcon";
-      icon.src = iconSrc;
-    
+      icon.src = iconMap[pkg] || "";
+
       const nameEl = document.createElement("div");
       nameEl.className = "app-label";
-      nameEl.textContent = label;
-    
+      nameEl.textContent = labelMap[pkg];
+
       const pkgEl = document.createElement("div");
       pkgEl.className = "pkg-label";
       pkgEl.textContent = pkg;
-    
+
       const textArea = document.createElement("div");
       textArea.className = "text-area";
       textArea.appendChild(nameEl);
       textArea.appendChild(pkgEl);
-    
+
       const toggle = document.createElement("div");
       toggle.className = "toggle2";
       toggle.dataset.pkg = pkg;
-    
-      if (gamelist.includes(pkg)) {
-        toggle.classList.add("active");
-        toggle.dataset.state = "on";
-      } else {
-        toggle.dataset.state = "off";
-      }
-    
+      toggle.dataset.state = gamelist.includes(pkg) ? "on" : "off";
+      if (toggle.dataset.state === "on") toggle.classList.add("active");
+
       toggle.onclick = async () => {
         toggle.classList.toggle("active");
         const isOn = toggle.classList.contains("active");
-    
-        if (isOn) {
-          toggle.dataset.state = "on";
-          if (!gamelist.includes(pkg)) gamelist.push(pkg);
-        } else {
-          toggle.dataset.state = "off";
-          gamelist = gamelist.filter(p => p !== pkg);
-        }
-    
-        searchInput.value = "";
-        Object.values(cardCache).forEach(({ card }) => (card.style.display = ""));
-    
+        toggle.dataset.state = isOn ? "on" : "off";
+
+        if (isOn && !gamelist.includes(pkg)) gamelist.push(pkg);
+        if (!isOn) gamelist = gamelist.filter(p => p !== pkg);
+
         await writeGameList(gamelist);
         sortCards();
       };
-    
+
       const row = document.createElement("div");
       row.className = "row";
       row.appendChild(textArea);
       row.appendChild(toggle);
-    
+
       const meta = document.createElement("div");
       meta.className = "meta";
       meta.appendChild(row);
-    
+
       card.appendChild(icon);
       card.appendChild(meta);
-    
+
       container.appendChild(card);
-      cardCache[pkg] = { card, label, pkg };
+      cardCache[pkg] = { card, label: labelMap[pkg], pkg };
     }
 
     const sortCards = () => {
-      const gameSet = new Set(gamelist);
+      const set = new Set(gamelist);
       const cards = Object.values(cardCache);
 
       cards.forEach(c => {
-        c.isOn = gameSet.has(c.pkg);
+        c.isOn = set.has(c.pkg);
         c.sortKey = c.label.toLowerCase();
       });
 
@@ -454,7 +460,7 @@ const loadAppList = async () => {
     console.error("Failed to load apps:", err);
     container.textContent = "Error loading apps";
   } finally {
-    if (loader2) loader2.classList.add("hidden");
+    loader2?.classList.add("hidden");
     document.body.classList.remove("no-scroll");
   }
 };
