@@ -290,19 +290,16 @@ const loadAppList = async () => {
   if (!container || !searchInput) return;
 
   const loader2 = document.getElementById("loading-screen2");
-  if (loader2) loader2.classList.remove("hidden");
+  loader2?.classList.remove("hidden");
   document.body.classList.add("no-scroll");
 
   try {
     let gamelist = await readGameList();
-
     let pkgList = [];
-    let ksuSupported = true;
-
     try {
       pkgList = JSON.parse(ksu.listUserPackages());
-    } catch {
-      ksuSupported = false;
+    } catch (e) {
+      console.warn("KSU package list failed, fallback");
       const r = await exec("pm list packages -3");
       pkgList = (r.stdout || "")
         .split("\n")
@@ -316,15 +313,14 @@ const loadAppList = async () => {
     }
 
     let labelMap = {};
-    if (ksuSupported) {
-      try {
-        const infoList = JSON.parse(ksu.getPackagesInfo(JSON.stringify(pkgList)));
-        for (const i of infoList) {
-          labelMap[i.packageName] = i.appLabel || i.label || i.packageName;
-        }
-      } catch {
-        console.warn("KSU labels failed");
+
+    try {
+      const infoList = JSON.parse(ksu.getPackagesInfo(JSON.stringify(pkgList)));
+      for (const i of infoList) {
+        labelMap[i.packageName] = i.appLabel || i.label || i.packageName;
       }
+    } catch {
+      console.warn("KSU labels unavailable");
     }
 
     if (typeof window.$packageManager !== "undefined") {
@@ -333,9 +329,12 @@ const loadAppList = async () => {
           try {
             const appInfo = await window.$packageManager.getApplicationInfo(pkg, 0, 0);
             if (appInfo) {
-              labelMap[pkg] = (typeof appInfo.getLabel === "function"
-                ? appInfo.getLabel()
-                : appInfo.label) || appInfo.appName || pkg;
+              labelMap[pkg] =
+                (typeof appInfo.getLabel === "function"
+                  ? appInfo.getLabel()
+                  : appInfo.label) ||
+                appInfo.appName ||
+                pkg;
             }
           } catch {}
         }
@@ -347,14 +346,12 @@ const loadAppList = async () => {
     });
 
     let iconMap = {};
-
-    if (ksuSupported) {
-      try {
-        const icons = JSON.parse(ksu.getPackagesIcons(JSON.stringify(pkgList), 100));
-        for (const i of icons) iconMap[i.packageName] = i.icon || "";
-      } catch {
-        console.warn("KSU icons failed");
-      }
+    
+    try {
+      const icons = JSON.parse(ksu.getPackagesIcons(JSON.stringify(pkgList), 96));
+      for (const i of icons) iconMap[i.packageName] = i.icon || "";
+    } catch {
+      console.warn("KSU icons unavailable");
     }
 
     if (typeof window.$packageManager !== "undefined") {
@@ -365,7 +362,8 @@ const loadAppList = async () => {
             if (iconStream) {
               const buffer = await wrapInputStream(iconStream).then(r => r.arrayBuffer());
               iconMap[pkg] =
-                "data:image/png;base64," + btoa(String.fromCharCode(...new Uint8Array(buffer)));
+                "data:image/png;base64," +
+                btoa(String.fromCharCode(...new Uint8Array(buffer)));
             }
           } catch {}
         }
@@ -469,14 +467,13 @@ bannerBox.addEventListener("touchstart", () => {
   pressTimer = setTimeout(() => {
     bannerInput.value = "";
     bannerInput.click();
-  }, 600); // 600ms for long press
+  }, 600); 
 });
 
 bannerBox.addEventListener("touchend", () => {
   if (pressTimer) clearTimeout(pressTimer);
 });
 
-// Banner file handling
 bannerInput.addEventListener("change", async (event) => {
   const files = event.target.files;
   if (!files || files.length === 0) return;
