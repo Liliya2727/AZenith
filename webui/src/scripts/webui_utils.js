@@ -171,11 +171,24 @@ const updateGameStatus = async () => {
         try {
           const infoList = JSON.parse(ksu.getPackagesInfo(JSON.stringify([pkg])));
           if (Array.isArray(infoList) && infoList.length > 0) {
-            label = infoList[0].appLabel || pkg;
+            label = infoList[0].appLabel || infoList[0].label || infoList[0].appName || pkg;
           }
         } catch (e) {
-          console.warn("Failed to get app label for", pkg, e.message || e);
-          label = pkg;
+          console.warn("ksu.getPackagesInfo failed for", pkg, e.message || e);
+
+          if (typeof window.$packageManager !== "undefined") {
+            try {
+              const appInfo = await window.$packageManager.getApplicationInfo(pkg, 0, 0);
+              if (appInfo) {
+                label = (typeof appInfo.getLabel === "function" ? appInfo.getLabel() : appInfo.label)
+                        || appInfo.appName
+                        || pkg;
+              }
+            } catch (err) {
+              console.warn("Failed to get app label via webuix API for", pkg, err);
+              label = pkg;
+            }
+          }
         }
 
         statusText = aiEnabled
