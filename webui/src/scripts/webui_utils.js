@@ -467,7 +467,7 @@ const loadAppList = async () => {
     loader2?.classList.add("hidden");
     document.body.classList.remove("no-scroll");
   }
-};'
+};
 
 bannerBox.addEventListener("touchstart", () => {
   pressTimer = setTimeout(() => {
