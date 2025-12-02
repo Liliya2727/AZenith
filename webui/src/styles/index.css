@@ -20,6 +20,25 @@
   background-color:color-mix(in srgb, var(--onSurface, rgba(255, 255, 255, 0.05)) 30%, transparent);
 }
 
+.sth2 {
+  
+  margin-top: -1.5rem;
+  margin-bottom: 99rem;
+  margin-left: -.5rem;
+  margin-right: -.5rem;
+  padding-top: 10px;
+  padding-left: .5rem;
+  
+  padding-bottom: 15px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background-color 0.25s ease
+}
+
+.sth2:active {
+  background-color:color-mix(in srgb, var(--onSurface, rgba(255, 255, 255, 0.05)) 30%, transparent);
+}
+
 .menu-panel {
     opacity: 1;
     transform: scale(1);
