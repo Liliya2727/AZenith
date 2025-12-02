@@ -346,27 +346,45 @@ const loadAppList = async () => {
     });
 
     let iconMap = {};
-    
-    try {
-      const icons = JSON.parse(ksu.getPackagesIcons(JSON.stringify(pkgList), 96));
-      for (const i of icons) iconMap[i.packageName] = i.icon || "";
-    } catch {
-      console.warn("KSU icons unavailable");
-    }
 
-    if (typeof window.$packageManager !== "undefined") {
-      for (const pkg of pkgList) {
-        if (!iconMap[pkg]) {
-          try {
-            const iconStream = await window.$packageManager.getApplicationIcon(pkg, 0, 0);
-            if (iconStream) {
-              const buffer = await wrapInputStream(iconStream).then(r => r.arrayBuffer());
-              iconMap[pkg] =
-                "data:image/png;base64," +
-                btoa(String.fromCharCode(...new Uint8Array(buffer)));
-            }
-          } catch {}
+    const ksuBasedIcon = (pkg) => {
+      iconMap[pkg] = "ksu://icon/" + pkg;
+    };
+    
+    const ksuBasedApi = (pkg) => {
+      try {
+        const result = JSON.parse(ksu.getPackagesIcons(JSON.stringify([pkg]), 96));
+        if (result && result.length > 0 && result[0].icon) {
+          iconMap[pkg] = result[0].icon;
+          return true;
         }
+      } catch {}
+      return false;
+    };
+    
+    const wbxBasedApi = async (pkg) => {
+      if (typeof window.$packageManager === "undefined") return false;
+      try {
+        const iconStream = await window.$packageManager.getApplicationIcon(pkg, 0, 0);
+        if (iconStream) {
+          const buffer = await wrapInputStream(iconStream).then(r => r.arrayBuffer());
+          iconMap[pkg] =
+            "data:image/png;base64," +
+            btoa(String.fromCharCode(...new Uint8Array(buffer)));
+          return true;
+        }
+      } catch {}
+      return false;
+    };
+    
+    for (const pkg of pkgList) {
+      ksuBasedIcon(pkg);
+    }
+    
+    for (const pkg of pkgList) {
+      if (!iconMap[pkg] || iconMap[pkg] === "") {
+        if (ksuBasedApi(pkg)) continue;
+        await wbxBasedApi(pkg);
       }
     }
 
