@@ -320,24 +320,25 @@ const loadAppList = async () => {
     
       if (!ksuSupported && typeof window.$packageManager !== "undefined") {
         try {
-         
-          const appInfo = window.$packageManager.getApplicationInfo(pkg, 0, 0);
+          const [appInfo, iconStream] = await Promise.all([
+            window.$packageManager.getApplicationInfo(pkg, 0, 0),
+            window.$packageManager.getApplicationIcon(pkg, 0, 0)
+          ]);
+        
           if (appInfo) {
-            
-            label = (typeof appInfo.getLabel === "function" ? appInfo.getLabel() : appInfo.label) 
-                    || appInfo.appName 
+            label = (typeof appInfo.getLabel === "function" ? appInfo.getLabel() : appInfo.label)
+                    || appInfo.appName
                     || pkg;
           }
-    
-          const iconStream = window.$packageManager.getApplicationIcon(pkg, 0, 0);
+        
           if (iconStream) {
-            const buffer = await wrapInputStream(iconStream)
-                                  .then(r => r.arrayBuffer());
+            const buffer = await wrapInputStream(iconStream).then(r => r.arrayBuffer());
             const uint8 = new Uint8Array(buffer);
             let b64 = "";
             for (let i = 0; i < uint8.length; i++) b64 += String.fromCharCode(uint8[i]);
             iconSrc = "data:image/png;base64," + btoa(b64);
           }
+        
         } catch (err) {
           console.warn("Failed to get info/icon for", pkg, err);
         }
