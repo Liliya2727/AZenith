@@ -173,9 +173,7 @@ const updateGameStatus = async () => {
           if (Array.isArray(infoList) && infoList.length > 0) {
             label = infoList[0].appLabel || infoList[0].label || infoList[0].appName || pkg;
           }
-        } catch (e) {
-          console.warn("ksu.getPackagesInfo failed for", pkg, e.message || e);
-
+        } catch (e) {          
           if (typeof window.$packageManager !== "undefined") {
             try {
               const appInfo = await window.$packageManager.getApplicationInfo(pkg, 0, 0);
@@ -185,7 +183,7 @@ const updateGameStatus = async () => {
                         || pkg;
               }
             } catch (err) {
-              console.warn("Failed to get app label via webuix API for", pkg, err);
+              console.warn("Failed to get app label", pkg, err);
               label = pkg;
             }
           }
