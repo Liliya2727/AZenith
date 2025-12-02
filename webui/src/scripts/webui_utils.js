@@ -326,32 +326,33 @@ const loadAppList = async () => {
 
     for (const app of (ksuSupported ? infoList : pkgList)) {
       const pkg = ksuSupported ? app.packageName : app;
-      let label = ksuSupported ? (app.appLabel || pkg) : pkg;
+      let label = ksuSupported ? (app.appLabel || app.label || pkg) : pkg;
       let iconSrc = ksuSupported ? (iconMap[pkg] || "") : "";
     
-      if (!ksuSupported && typeof window.$packageManager !== "undefined") {
+      if (typeof window.$packageManager !== "undefined") {
         try {
-          const [appInfo, iconStream] = await Promise.all([
-            window.$packageManager.getApplicationInfo(pkg, 0, 0),
-            window.$packageManager.getApplicationIcon(pkg, 0, 0)
-          ]);
-        
-          if (appInfo) {
-            label = (typeof appInfo.getLabel === "function" ? appInfo.getLabel() : appInfo.label)
+          if (!label || label === pkg) {
+            const appInfo = await window.$packageManager.getApplicationInfo(pkg, 0, 0);
+            if (appInfo) {
+              label = (typeof appInfo.getLabel === "function" ? appInfo.getLabel() : appInfo.label)
                     || appInfo.appName
                     || pkg;
+            }
           }
-        
-          if (iconStream) {
-            const buffer = await wrapInputStream(iconStream).then(r => r.arrayBuffer());
-            const uint8 = new Uint8Array(buffer);
-            let b64 = "";
-            for (let i = 0; i < uint8.length; i++) b64 += String.fromCharCode(uint8[i]);
-            iconSrc = "data:image/png;base64," + btoa(b64);
+    
+          if (!iconSrc) {
+            const iconStream = await window.$packageManager.getApplicationIcon(pkg, 0, 0);
+            if (iconStream) {
+              const buffer = await wrapInputStream(iconStream).then(r => r.arrayBuffer());
+              const uint8 = new Uint8Array(buffer);
+              let b64 = "";
+              for (let i = 0; i < uint8.length; i++) b64 += String.fromCharCode(uint8[i]);
+              iconSrc = "data:image/png;base64," + btoa(b64);
+            }
           }
-        
+    
         } catch (err) {
-          console.warn("Failed to get info/icon for", pkg, err);
+          console.warn("Fallback failed for", pkg, err);
         }
       }
     
