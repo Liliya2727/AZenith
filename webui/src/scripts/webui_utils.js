@@ -318,13 +318,12 @@ const loadAppList = async () => {
       let label = ksuSupported ? (app.appLabel || pkg) : pkg;
       let iconSrc = ksuSupported ? (iconMap[pkg] || "") : "";
     
-      // Fallback using $packageManager
       if (!ksuSupported && typeof window.$packageManager !== "undefined") {
         try {
           const appInfoStream = window.$packageManager.getApplicationInfo(pkg, 0, 0);
           if (appInfoStream) {
             // Convert the info stream to object
-            const infoBuffer = await Ce(appInfoStream).then(r => r.arrayBuffer());
+            const infoBuffer = await wrapInputStream(appInfoStream).then(r => r.arrayBuffer());
             const infoText = new TextDecoder().decode(infoBuffer);
             const info = JSON.parse(infoText);
             label = (typeof info.getLabel === "function" ? info.getLabel() : info.label) || info.appName || pkg;
