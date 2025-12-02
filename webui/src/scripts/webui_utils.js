@@ -281,6 +281,58 @@ const writeGameList = async (list) => {
   await executeCommand(`sync`);
 };
 
+async function loadIconLazy(pkg, imgElement) {
+  if (!imgElement) return;
+
+  const applyLoadedStyle = () => {
+    imgElement.style.opacity = "1";
+    const wrap = imgElement.closest(".app-icon-wrapper");
+    if (wrap) {
+      wrap.style.backgroundColor = "transparent";
+      wrap.style.boxShadow = "none";
+      const placeholder = wrap.querySelector(".app-icon-placeholder");
+      if (placeholder) placeholder.style.display = "none";
+    }
+  };
+
+  const tryKsuProtocol = () => {
+    imgElement.onerror = tryKsuBase64;
+    imgElement.onload = applyLoadedStyle;
+    imgElement.src = `ksu://icon/${pkg}`;
+  };
+
+  const tryKsuBase64 = () => {
+    try {
+      const res = JSON.parse(ksu.getPackagesIcons(JSON.stringify([pkg]), 96));
+      if (res?.length && res[0].icon) {
+        imgElement.onerror = tryWbx;
+        imgElement.onload = applyLoadedStyle;
+        imgElement.src = res[0].icon;
+        return;
+      }
+    } catch {}
+    tryWbx();
+  };
+
+  const tryWbx = async () => {
+    if (!window.$packageManager) return;
+
+    try {
+      const stream = await window.$packageManager.getApplicationIcon(pkg, 0, 0);
+      if (!stream) return;
+      const buffer = await wrapInputStream(stream).then(r => r.arrayBuffer());
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+
+      imgElement.onload = applyLoadedStyle;
+      imgElement.src = `data:image/png;base64,${base64}`;
+    } catch {
+
+    }
+  };
+
+  tryKsuProtocol();
+}
+
 const loadAppList = async () => {
   if (appListLoaded) return;
   appListLoaded = true;
@@ -395,9 +447,19 @@ const loadAppList = async () => {
       card.className = "appCard mt-211 mb-4 p-4 rounded-lg";
       card.dataset.pkg = pkg;
 
+      const iconWrapper = document.createElement("div");
+      iconWrapper.className = "app-icon-wrapper";
+        
+      const placeholder = document.createElement("div");
+      placeholder.className = "app-icon-placeholder";
+       
       const icon = document.createElement("img");
-      icon.className = "appIcon";
-      icon.src = iconMap[pkg] || "";
+      icon.className = "app-icon";
+      icon.dataset.package = pkg;
+      icon.style.opacity = "0";
+        
+      iconWrapper.appendChild(placeholder);
+      iconWrapper.appendChild(icon);
 
       const nameEl = document.createElement("div");
       nameEl.className = "app-label";
@@ -439,12 +501,19 @@ const loadAppList = async () => {
       meta.className = "meta";
       meta.appendChild(row);
 
-      card.appendChild(icon);
+      card.appendChild(iconWrapper);
       card.appendChild(meta);
 
       container.appendChild(card);
       cardCache[pkg] = { card, label: labelMap[pkg], pkg };
     }
+    
+    setTimeout(() => {
+      for (const pkg of pkgList) {
+        const img = document.querySelector(`.app-icon[data-package="${pkg}"]`);
+        if (img) loadIconLazy(pkg, img);
+      }
+    }, 50);
 
     const sortCards = () => {
       const set = new Set(gamelist);
