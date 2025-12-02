@@ -281,58 +281,6 @@ const writeGameList = async (list) => {
   await executeCommand(`sync`);
 };
 
-async function loadIconLazy(pkg, imgElement) {
-  if (!imgElement) return;
-
-  const applyLoadedStyle = () => {
-    imgElement.style.opacity = "1";
-    const wrap = imgElement.closest(".app-icon-wrapper");
-    if (wrap) {
-      wrap.style.backgroundColor = "transparent";
-      wrap.style.boxShadow = "none";
-      const placeholder = wrap.querySelector(".app-icon-placeholder");
-      if (placeholder) placeholder.style.display = "none";
-    }
-  };
-
-  const tryKsuProtocol = () => {
-    imgElement.onerror = tryKsuBase64;
-    imgElement.onload = applyLoadedStyle;
-    imgElement.src = `ksu://icon/${pkg}`;
-  };
-
-  const tryKsuBase64 = () => {
-    try {
-      const res = JSON.parse(ksu.getPackagesIcons(JSON.stringify([pkg]), 96));
-      if (res?.length && res[0].icon) {
-        imgElement.onerror = tryWbx;
-        imgElement.onload = applyLoadedStyle;
-        imgElement.src = res[0].icon;
-        return;
-      }
-    } catch {}
-    tryWbx();
-  };
-
-  const tryWbx = async () => {
-    if (!window.$packageManager) return;
-
-    try {
-      const stream = await window.$packageManager.getApplicationIcon(pkg, 0, 0);
-      if (!stream) return;
-      const buffer = await wrapInputStream(stream).then(r => r.arrayBuffer());
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
-
-      imgElement.onload = applyLoadedStyle;
-      imgElement.src = `data:image/png;base64,${base64}`;
-    } catch {
-
-    }
-  };
-
-  tryKsuProtocol();
-}
-
 const loadAppList = async () => {
   if (appListLoaded) return;
   appListLoaded = true;
@@ -399,44 +347,32 @@ const loadAppList = async () => {
 
     let iconMap = {};
 
-    const ksuBasedIcon = (pkg) => {
-      iconMap[pkg] = "ksu://icon/" + pkg;
-    };
-    
-    const ksuBasedApi = (pkg) => {
-      try {
-        const result = JSON.parse(ksu.getPackagesIcons(JSON.stringify([pkg]), 96));
-        if (result && result.length > 0 && result[0].icon) {
-          iconMap[pkg] = result[0].icon;
-          return true;
-        }
-      } catch {}
-      return false;
-    };
-    
-    const wbxBasedApi = async (pkg) => {
-      if (typeof window.$packageManager === "undefined") return false;
-      try {
-        const iconStream = await window.$packageManager.getApplicationIcon(pkg, 0, 0);
-        if (iconStream) {
-          const buffer = await wrapInputStream(iconStream).then(r => r.arrayBuffer());
-          iconMap[pkg] =
-            "data:image/png;base64," +
-            btoa(String.fromCharCode(...new Uint8Array(buffer)));
-          return true;
-        }
-      } catch {}
-      return false;
-    };
-    
     for (const pkg of pkgList) {
-      ksuBasedIcon(pkg);
+      iconMap[pkg] = `ksu://icon/${pkg}`;
     }
+
+    try {
+      const icons = JSON.parse(ksu.getPackagesIcons(JSON.stringify(pkgList), 96));
+      for (const i of icons) {
+        if (i.icon) iconMap[i.packageName] = i.icon;
+      }
+    } catch {
+      console.warn("KSU Base64 Icons Failed");
+    }
+
+    if (typeof window.$packageManager !== "undefined") {
+      for (const pkg of pkgList) {
+        if (!iconMap[pkg] || iconMap[pkg].startsWith("ksu://icon")) {
+          try {
+            const stream = await window.$packageManager.getApplicationIcon(pkg, 0, 0);
+            if (stream) {
+              const buffer = await wrapInputStream(stream).then(r => r.arrayBuffer());
+              const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
     
-    for (const pkg of pkgList) {
-      if (!iconMap[pkg] || iconMap[pkg] === "") {
-        if (ksuBasedApi(pkg)) continue;
-        await wbxBasedApi(pkg);
+              iconMap[pkg] = `data:image/png;base64,${base64}`;
+            }
+          } catch {}
+        }
       }
     }
 
@@ -447,19 +383,9 @@ const loadAppList = async () => {
       card.className = "appCard mt-211 mb-4 p-4 rounded-lg";
       card.dataset.pkg = pkg;
 
-      const iconWrapper = document.createElement("div");
-      iconWrapper.className = "app-icon-wrapper";
-        
-      const placeholder = document.createElement("div");
-      placeholder.className = "app-icon-placeholder";
-       
       const icon = document.createElement("img");
-      icon.className = "app-icon";
-      icon.dataset.package = pkg;
-      icon.style.opacity = "0";
-        
-      iconWrapper.appendChild(placeholder);
-      iconWrapper.appendChild(icon);
+      icon.className = "appIcon";
+      icon.src = iconMap[pkg] || "";
 
       const nameEl = document.createElement("div");
       nameEl.className = "app-label";
@@ -501,19 +427,12 @@ const loadAppList = async () => {
       meta.className = "meta";
       meta.appendChild(row);
 
-      card.appendChild(iconWrapper);
+      card.appendChild(icon);
       card.appendChild(meta);
 
       container.appendChild(card);
       cardCache[pkg] = { card, label: labelMap[pkg], pkg };
     }
-    
-    setTimeout(() => {
-      for (const pkg of pkgList) {
-        const img = document.querySelector(`.app-icon[data-package="${pkg}"]`);
-        if (img) loadIconLazy(pkg, img);
-      }
-    }, 50);
 
     const sortCards = () => {
       const set = new Set(gamelist);
@@ -548,7 +467,7 @@ const loadAppList = async () => {
     loader2?.classList.add("hidden");
     document.body.classList.remove("no-scroll");
   }
-};
+};'
 
 bannerBox.addEventListener("touchstart", () => {
   pressTimer = setTimeout(() => {
