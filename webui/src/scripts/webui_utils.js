@@ -270,6 +270,17 @@ const writeGameList = async (list) => {
   await executeCommand(`sync`);
 };
 
+function arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    const chunkSize = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode(...chunk);
+    }
+    return btoa(binary);
+}
+
 const loadAppList = async () => {
   if (appListLoaded) return;
   appListLoaded = true;
@@ -319,24 +330,32 @@ const loadAppList = async () => {
       let iconSrc = ksuSupported ? (iconMap[pkg] || "") : "";
     
       if (!ksuSupported && typeof window.$packageManager !== "undefined") {
-        try {
-          const appInfoStream = window.$packageManager.getApplicationInfo(pkg, 0, 0);
-          if (appInfoStream) {
-            // Convert the info stream to object
-            const infoBuffer = await wrapInputStream(appInfoStream).then(r => r.arrayBuffer());
-            const infoText = new TextDecoder().decode(infoBuffer);
-            const info = JSON.parse(infoText);
-            label = (typeof info.getLabel === "function" ? info.getLabel() : info.label) || info.appName || pkg;
-          }
-    
-          const iconStream = window.$packageManager.getApplicationIcon(pkg, 0, 0);
-          if (iconStream) {
-            const buffer = await wrapInputStream(iconStream).then(r => r.arrayBuffer());
-            iconSrc = "data:image/png;base64," + Ne(buffer);
-          }
-        } catch (err) {
-          console.warn("Failed to get info/icon for", pkg, err);
-        }
+        let label = pkg;
+            try {
+                if (typeof window.$packageManager !== "undefined") {
+                    const appInfoStream = window.$packageManager.getApplicationInfo(pkg, 0, 0);
+                    if (appInfoStream) {
+                        const infoBuffer = await wrapInputStream(appInfoStream).then(r => r.arrayBuffer());
+                        const infoText = new TextDecoder().decode(infoBuffer);
+                        const info = JSON.parse(infoText);
+                        label = info.label || info.appName || pkg;
+                    }
+                }
+            } catch (err) {
+                console.warn("Failed to get app info for", pkg, err);
+            }    
+        let iconSrc = "";
+            try {
+                if (typeof window.$packageManager !== "undefined") {
+                    const iconStream = window.$packageManager.getApplicationIcon(pkg, 0, 0);
+                    if (iconStream) {
+                        const buffer = await wrapInputStream(iconStream).then(r => r.arrayBuffer());
+                        iconSrc = "data:image/png;base64," + arrayBufferToBase64(buffer);
+                    }
+                }
+            } catch (err) {
+                console.warn("Failed to get icon for", pkg, err);
+            }
       }
     
       // Create the card
