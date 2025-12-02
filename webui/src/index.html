@@ -9,7 +9,7 @@
     <script type="module" src="scripts/language.js"></script>
 </head>
    <body class="background flex flex-col min-h-screen text-white">
-      <div id="loading-screen">
+      <div id="loading-screen" class="hidden">
          <div class="loading-content">
             <div class="spinner"></div>
             <p id="loading-text" data-lang="loading.text"></p>
@@ -24,6 +24,7 @@
       <header class="backdrop-blur-md toptiga sticky top-0 z-50">
          <div style="position: relative">
             <select id="languageSelector" class="langSect"></select>
+            <svg class="svgKontl2" fill='currentColor' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5z'/></svg>
             <button id="settingsButton">
                <svg
                   width="64px"
@@ -84,8 +85,7 @@
          <div class="p-6">
             <div>
                <div class="device-info-card">
-                  <svg class="infosvg" width="64px" height="64px" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g clip-path="url(#clip0_429_11160)"> <circle cx="12" cy="11.9999" r="9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></circle> <rect fill="currentColor" x="12" y="8" width="0.01" height="0.01" stroke="currentColor" stroke-width="3.75" stroke-linejoin="round"></rect> <path color="currentColor" d="M12 12V16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path> </g> <defs> <clipPath id="clip0_429_11160"> <rect width="24" height="24" color="currentColor"></rect> </clipPath> </defs> </g></svg>
-                  <h2 class="sh2 font-semibold mb-4 text-lg text-black-69" data-lang="infoTab.title"></h2>
+                  
                   <div class="device-info-divider"></div>
                   <div class="device-info-row">
                   <svg class="profilesvg" fill="#000000" width="64px" height="64px" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <title>fire-symbol</title> <path d="M16 1c-3.282 15.79-13.125 17.366 0 28.418 13.126-11.053 3.282-12.628 0-28.418zM7.797 10.463c-1.641 4.736-4.922 7.919-4.922 12.656s6.562 7.881 11.485 7.881c-9.844-7.896-6.563-12.643-6.563-20.537zM24.203 10.463c0 7.895 3.282 12.642-6.562 20.537 4.922 0 11.485-3.144 11.485-7.881s-3.282-7.92-4.922-12.656z"></path> </g></svg>
@@ -121,22 +121,30 @@
                </div>
             </div>
          </div> 
-         <div class="settings-buttons">
-            <button id="show-additional-settings" class="settings-card">
-               <div class="settings-text">
-                  <h2 data-lang="settingsMore.additional.title"></h2>
-                  <small data-lang="settingsMore.additional.description"></small>
+         
+         <div class="p-6">
+            <div class="bg-gray-900 mt-277 mb-4 p-4 rounded-lg">
+               <div class="flex items-center justify-between">
+                  <svg class="cputitlesvg" fill="currentColor" height="64px" width="64px" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 472.616 472.616" xml:space="preserve"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g> <g> <path fill="currentColor" d="M464.923,85.602l-14.934,14.935l-59.8,59.801l-63.796-14.115L312.28,82.426l59.8-59.801l14.934-14.933 c-45.791-16.479-98.959-6.514-135.65,30.177c-33.283,33.282-44.543,80.128-34.075,122.728l-0.2-0.199L19.702,357.784 c-26.27,26.27-26.27,68.861,0,95.131c26.27,26.269,68.86,26.269,95.13,0L312.218,255.53l-0.202-0.202 c42.6,10.468,89.446-0.791,122.73-34.073C471.438,184.564,481.4,131.392,464.923,85.602z M89.377,425.645 c-11.709,11.709-30.694,11.709-42.404,0c-11.71-11.711-11.71-30.696,0-42.406c11.71-11.709,30.695-11.709,42.404,0 C101.087,394.948,101.087,413.934,89.377,425.645z"></path> </g> </g> </g></svg>
+                                    <h2 class="sh font-semibold mb-4 text-lg text-black-69" data-lang="settingsMore.title"></h2>
                </div>
-               <span class="settings-arrow">&rsaquo;</span>
-            </button>
-            <button id="show-preference-settings" class="settings-card">
-               <div class="settings-text">
-                  <h2 data-lang="settingsMore.preference.title"></h2>
-                  <small data-lang="settingsMore.preference.description"></small>
+               <div id="show-additional-settings" class="sth flex items-center justify-between mb-3">
+                  <div>
+                     <p class="text-sm text-white" data-lang="settingsMore.additional.title"></p>
+                     <small class="block text-gray-400 text-sss" data-lang="settingsMore.additional.description"></small>
+                  </div>
+                  <span class="settings-arrow">&rsaquo;</span>
                </div>
-               <span class="settings-arrow">&rsaquo;</span>
-            </button>
+               <div id="show-preference-settings" class="sth flex items-center justify-between mb-3">
+                  <div>
+                     <p class="text-sm text-white" data-lang="settingsMore.preference.title"></p>
+                     <small class="block text-gray-400 text-sss" data-lang="settingsMore.preference.description"></small>
+                  </div>
+                  <span class="settings-arrow">&rsaquo;</span>
+               </div>
+            </div>
          </div>
+                  
          <div class="p-6">
             <div class="bg-gray-900 mt-277 mb-4 p-4 rounded-lg">
                <div class="flex items-center justify-between">
@@ -151,6 +159,7 @@
                   <select id="cpuGovernor" class="selector2">
                      <option value="schedutil" selected></option>
                   </select>
+                  <svg class="svgKontl" fill='currentColor' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5z'/></svg>
                </div>
                <div class="flex items-center justify-between mb-3">
                   <div>
@@ -160,6 +169,7 @@
                   <select id="GovernorPowersave" class="selector2">
                      <option value="powersave" selected></option>
                   </select>
+                  <svg class="svgKontl" fill='currentColor' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5z'/></svg>
                </div>
                <div class="flex items-center justify-between mb-3">
                   <div>
@@ -169,6 +179,7 @@
                   <select id="cpuFreq" class="selector2">
                      <option value="100" selected>OFF</option>
                   </select>
+                  <svg class="svgKontl" fill='currentColor' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5z'/></svg>
                </div>
                <div class="flex items-center justify-between mb-3">
                   <label for="LiteMode" class="cursor-pointer flex items-center w-full">
@@ -211,6 +222,7 @@
                      class="selector2">
                      <option value="none" selected></option>
                   </select>
+                  <svg class="svgKontl" fill='currentColor' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5z'/></svg>
                </div>
                <div class="flex items-center justify-between mb-3">
                   <div>
@@ -221,6 +233,7 @@
                      class="selector2">
                      <option value="none" selected></option>
                   </select>
+                  <svg class="svgKontl" fill='currentColor' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5z'/></svg>
                </div>
                <div class="flex items-center justify-between mb-3">
                   <div>
@@ -231,6 +244,7 @@
                      class="selector2">
                      <option value="none" selected></option>
                   </select>
+                  <svg class="svgKontl" fill='currentColor' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5z'/></svg>
                </div>
             </div>
          </div>
@@ -488,6 +502,7 @@
                      class="selector2">
                      <option value="OFF" selected>OFF</option>
                   </select>
+                  <svg class="svgKontlContainer" fill='currentColor' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5z'/></svg>
                </div>
                <div class="flex items-center justify-between mb-3">
                   <div>
