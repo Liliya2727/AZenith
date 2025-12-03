@@ -336,8 +336,7 @@ const loadAppList = async () => {
                 appInfo.appName ||
                 pkg;
               }
-            } catch (err) {
-          }
+            } catch {}
         }
       }
     }
@@ -372,6 +371,7 @@ const loadAppList = async () => {
               iconSrc = "data:image/png;base64," + btoa(b64);
             }        
           } catch (err) {   
+          console.warn("Failed to get info/icon for", pkg, err);
         }
       }
     }
