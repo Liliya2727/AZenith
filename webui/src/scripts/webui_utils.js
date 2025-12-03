@@ -381,7 +381,9 @@ const loadAppList = async () => {
 
       const icon = document.createElement("img");
       icon.className = "appIcon";
-      icon.src = iconMap[pkg] || "";
+      icon.dataset.src = iconMap[pkg];
+      icon.src = ""; 
+      icon.classList.add("lazy-icon");
 
       const nameEl = document.createElement("div");
       nameEl.className = "app-label";
@@ -448,6 +450,25 @@ const loadAppList = async () => {
     };
 
     sortCards();
+    
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const img = entry.target;
+          if (img.dataset.src && !img.loaded) {
+            img.src = img.dataset.src;
+            img.loaded = true;
+            img.classList.add("loaded"); // trigger animation
+          }
+          observer.unobserve(img);
+        }
+      });
+    }, { rootMargin: "100px" });
+    
+    Object.values(cardCache).forEach(({ card }) => {
+      const img = card.querySelector(".lazy-icon");
+      observer.observe(img);
+    });
 
     searchInput.addEventListener("input", () => {
       const q = searchInput.value.toLowerCase();
