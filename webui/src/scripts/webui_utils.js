@@ -338,9 +338,9 @@ const loadAppList = async () => {
             }
           } catch (err) {
             console.warn("Failed to get info/icon for", pkg, err);
+          }
         }
       }
-    }
     }
 
     pkgList.forEach(pkg => {
