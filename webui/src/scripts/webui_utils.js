@@ -344,26 +344,34 @@ const loadAppList = async () => {
 
     let iconMap = {};
 
+    for (const pkg of pkgList) {
+      iconMap[pkg] = `ksu://icon/${pkg}`;
+    }
+
     try {
       const icons = JSON.parse(ksu.getPackagesIcons(JSON.stringify(pkgList), 96));
       for (const i of icons) {
         if (i.icon) iconMap[i.packageName] = i.icon;
       }
-    } catch {}
-    
+    } catch {
+      
+    }
+
     if (typeof window.$packageManager !== "undefined") {
       for (const pkg of pkgList) {
-        try {
+        if (!iconMap[pkg] || iconMap[pkg].startsWith("ksu://icon")) {
+          try {
           const iconStream = window.$packageManager.getApplicationIcon(pkg, 0, 0);
-          const buffer = await wrapInputStream(iconStream).then(r => r.arrayBuffer());
-          const uint8 = new Uint8Array(buffer);
-          let b64 = "";
-          for (let i = 0; i < uint8.length; i++) b64 += String.fromCharCode(uint8[i]);
-          iconMap[pkg] = "data:image/png;base64," + btoa(b64);
-        } catch {}
+            const buffer = await wrapInputStream(iconStream).then(r => r.arrayBuffer());
+            const uint8 = new Uint8Array(buffer);
+            let b64 = "";
+            for (let i = 0; i < uint8.length; i++) b64 += String.fromCharCode(uint8[i]);
+            iconMap[pkg] = "data:image/png;base64," + btoa(b64);
+          } catch {}
+        }
       }
     }
-    
+
     const cardCache = {};
 
     for (const pkg of pkgList) {
