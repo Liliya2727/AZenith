@@ -1,8 +1,39 @@
 @import url('https://mui.kernelsu.org/internal/insets.css');
 @import url('https://mui.kernelsu.org/internal/colors.css');
 
-.sth {
-  
+.spoof-textarea {
+    width: 100%;
+    height: auto;
+    resize: none;
+    padding: .75rem;
+    border: .5px solid #0e141e;
+    outline: 0;
+    background-color: #09090a;
+    color: #e0e0e0;
+    border-radius: 1.5rem;
+    font-size: .85rem
+}
+
+.searchspoof {
+    width: 100%;
+    max-width: 330px;
+    padding: 8px 16px;
+    font-size: 14px;
+    color: #fff;
+    background-color: #09090a;
+    margin-bottom: 1rem;
+    border: .5px solid #0e141e;
+    border-radius: 100px;
+    transition: border-color .9s, box-shadow .9s;
+    outline: 0
+}
+
+.searchspoof:focus {
+    border-color: #7fa9ff;
+    outline: #7FA9FF solid .7px
+}
+
+.sth {  
   margin-top: -.7rem;
   margin-bottom: 99rem;
   margin-left: -.5rem;
