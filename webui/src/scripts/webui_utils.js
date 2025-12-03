@@ -2234,39 +2234,6 @@ const hideProfilerSettings = () => {
   }
 };
 
-const showSpoofSettings = async () => {
-  const c = document.getElementById("spoofmodal");
-  const s = c.querySelector(".spoof-container");
-  document.body.classList.add("modal-open");
-  c.classList.add("show");
-
-  s.style.transition = "none";
-  s.style.transform = "translateY(20px) scale(0.98)";
-  void s.offsetWidth;
-  s.style.transition = "transform 0.25s ease, opacity 0.25s ease";
-  s.style.opacity = "1";
-  const r = window.innerHeight;
-  const d = () => {
-    s.style.transform =
-      window.innerHeight < r - 150
-        ? "translateY(-10%) scale(1)"
-        : "translateY(0) scale(1)";
-  };
-  requestAnimationFrame(() => d());
-  window.addEventListener("resize", d, { passive: true });
-  c._resizeHandler = d;
-};
-
-const hideSpoofSettings = () => {
-  const c = document.getElementById("spoofmodal");
-  c.classList.remove("show");
-  document.body.classList.remove("modal-open");
-  if (c._resizeHandler) {
-    window.removeEventListener("resize", c._resizeHandler);
-    delete c._resizeHandler;
-  }
-};
-
 const checkthermalcore = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.thermalcore"
@@ -2426,15 +2393,7 @@ const setupUIListeners = () => {
     .getElementById("close-profiler")
     ?.addEventListener("click", hideProfilerSettings);
     
-  // Spoof Settings
-  document
-    .getElementById("openspoof")
-    ?.addEventListener("click", showSpoofSettings);
-  document
-    .getElementById("close-spoof")
-    ?.addEventListener("click", hideSpoofSettings);
-    
-  // Menu Settings
+   // Menu Settings
   document
     .getElementById("openGameList")
     ?.addEventListener("click", showGameListMenu);

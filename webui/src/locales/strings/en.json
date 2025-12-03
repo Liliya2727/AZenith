@@ -4,12 +4,6 @@
     "textgamelist": "Fetching Applist..."
   },
   
-  "spoof": {
-    "title": "AZenith Spoofer",
-    "desc": "Spoof your device and chipset name",
-    "titlepick": "Not Set"
-  },
-
   "infoTab": {
     "title": "Basic Information",
     "labels": {
@@ -89,7 +83,6 @@
   },
   
   "preference": {
-    "spoofing" : "Spoof Settings",
     "title": "Preference Settings",
     "description": "Preference settings or addons that are applied on boot (requires reboot after changes).",
     "schedtunes": {
