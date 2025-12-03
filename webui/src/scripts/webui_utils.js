@@ -303,6 +303,17 @@ const detectIconMime = (buffer) => {
     return "image/png";
 };
 
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const img = entry.target;
+      const pkg = img.dataset.pkg;
+      img.src = iconMap[pkg] || "";
+      observer.unobserve(img);
+    }
+  });
+});
+
 const loadAppList = async () => {
   if (appListLoaded) return;
   appListLoaded = true;
