@@ -336,7 +336,7 @@ const loadAppList = async () => {
                 appInfo.appName ||
                 pkg;
             }
-          } catch {}
+          } catch (err) {}
         }
       }
     }
