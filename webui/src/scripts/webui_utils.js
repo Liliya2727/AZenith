@@ -337,6 +337,7 @@ const loadAppList = async () => {
                 pkg;
             }
           } catch (err) {
+            console.warn("Failed to get info/icon for", pkg, err);
         }
       }
     }
