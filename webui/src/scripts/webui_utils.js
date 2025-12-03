@@ -281,231 +281,191 @@ const writeGameList = async (list) => {
   await executeCommand(`sync`);
 };
 
-const encodeBase64 = (buffer) => {
-    const bytes = new Uint8Array(buffer);
-    let binary = "";
-    const chunkSize = 0x8000; // 32KB
-    for (let i = 0; i < bytes.length; i += chunkSize) {
-        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-    }
-    return btoa(binary);
-};
-
-const detectIconMime = (buffer) => {
-    const b = new Uint8Array(buffer);
-    if (b[0] === 0x89 && b[1] === 0x50) return "image/png";
-    if (b[0] === 0xFF && b[1] === 0xD8) return "image/jpeg";
-    if (b[0] === 0x52 && b[1] === 0x49 && b[8] === 0x57 && b[9] === 0x45) return "image/webp";
-    return "image/png";
-};
-
-const loadIcon = async (img, pkg) => {
-    img.src = `ksu://icon/${pkg}`;
-
-    img.onload = () => {
-        img.style.opacity = "1";
-        const wrapper = img.closest(".app-icon-wrapper");
-        const placeholder = wrapper?.querySelector(".app-icon-placeholder");
-        if (wrapper) {
-            wrapper.style.background = "transparent";
-            wrapper.style.boxShadow = "none";
-        }
-        if (placeholder) placeholder.style.display = "none";
-    };
-
-    img.onerror = async () => {
-        if (typeof window.$packageManager !== "undefined") {
-            try {
-                const stream = await window.$packageManager.getApplicationIcon(pkg, 0, 0);
-                const buffer = await wrapInputStream(stream).then(r => r.arrayBuffer());
-                const mime = detectIconMime(buffer);
-                const base64 = encodeBase64(buffer);
-                img.src = `data:${mime};base64,${base64}`;
-            } catch (err) {
-                console.warn("Fallback icon failed for", pkg, err);
-            }
-        }
-    };
-};
-
 const loadAppList = async () => {
-    if (appListLoaded) return;
-    appListLoaded = true;
+  if (appListLoaded) return;
+  appListLoaded = true;
 
-    const container = document.getElementById("appList");
-    const searchInput = document.getElementById("searchInput");
-    if (!container || !searchInput) return;
+  const container = document.getElementById("appList");
+  const searchInput = document.getElementById("searchInput");
+  if (!container || !searchInput) return;
 
-    const loader2 = document.getElementById("loading-screen2");
-    loader2?.classList.remove("hidden");
-    document.body.classList.add("no-scroll");
+  const loader2 = document.getElementById("loading-screen2");
+  loader2?.classList.remove("hidden");
+  document.body.classList.add("no-scroll");
+
+  try {
+    let gamelist = await readGameList();
+    let pkgList = [];
+    try {
+      pkgList = JSON.parse(ksu.listUserPackages());
+    } catch (e) {
+      console.warn("KSU package list failed, fallback");
+      const r = await exec("pm list packages -3");
+      pkgList = (r.stdout || "")
+        .split("\n")
+        .map(x => x.replace("package:", "").trim())
+        .filter(Boolean);
+    }
+
+    if (!pkgList.length) {
+      container.textContent = "No apps found.";
+      return;
+    }
+
+    let labelMap = {};
 
     try {
-        let gamelist = await readGameList();
-        let pkgList = [];
-
-        try {
-            pkgList = JSON.parse(ksu.listUserPackages());
-        } catch {
-            console.warn("KSU package list failed, fallback");
-            const r = await exec("pm list packages -3");
-            pkgList = (r.stdout || "")
-                .split("\n")
-                .map(x => x.replace("package:", "").trim())
-                .filter(Boolean);
-        }
-
-        if (!pkgList.length) {
-            container.textContent = "No apps found.";
-            return;
-        }
-
-        let labelMap = {};
-        try {
-            const infoList = JSON.parse(ksu.getPackagesInfo(JSON.stringify(pkgList)));
-            for (const i of infoList) {
-                labelMap[i.packageName] = i.appLabel || i.label || i.packageName;
-            }
-        } catch {
-            console.warn("KSU labels unavailable");
-        }
-
-        if (typeof window.$packageManager !== "undefined") {
-            for (const pkg of pkgList) {
-                if (!labelMap[pkg]) {
-                    try {
-                        const appInfo = await window.$packageManager.getApplicationInfo(pkg, 0, 0);
-                        if (appInfo) {
-                            labelMap[pkg] =
-                                (typeof appInfo.getLabel === "function" ? appInfo.getLabel() : appInfo.label) ||
-                                appInfo.appName ||
-                                pkg;
-                        }
-                    } catch {}
-                }
-            }
-        }
-        pkgList.forEach(pkg => {
-            if (!labelMap[pkg]) labelMap[pkg] = pkg;
-        });
-
-        const cardCache = {};
-
-        for (const pkg of pkgList) {
-            const card = document.createElement("div");
-            card.className = "appCard mt-211 mb-4 p-4 rounded-lg";
-            card.dataset.pkg = pkg;
-
-            const iconWrapper = document.createElement("div");
-            iconWrapper.className = "app-icon-wrapper";
-            iconWrapper.style.width = "64px";
-            iconWrapper.style.height = "64px";
-            iconWrapper.style.borderRadius = "12px";
-            iconWrapper.style.background = "#444";
-            iconWrapper.style.display = "flex";
-            iconWrapper.style.alignItems = "center";
-            iconWrapper.style.justifyContent = "center";
-
-            const icon = document.createElement("img");
-            icon.className = "appIcon";
-            icon.dataset.package = pkg;
-            icon.style.opacity = "0";
-            icon.style.transition = "opacity 0.3s ease";
-
-            const placeholder = document.createElement("div");
-            placeholder.className = "app-icon-placeholder";
-            placeholder.style.width = "32px";
-            placeholder.style.height = "32px";
-            placeholder.style.background = "#666";
-            placeholder.style.borderRadius = "50%";
-
-            iconWrapper.appendChild(icon);
-            iconWrapper.appendChild(placeholder);
-
-            // App label + package
-            const nameEl = document.createElement("div");
-            nameEl.className = "app-label";
-            nameEl.textContent = labelMap[pkg];
-
-            const pkgEl = document.createElement("div");
-            pkgEl.className = "pkg-label";
-            pkgEl.textContent = pkg;
-
-            const textArea = document.createElement("div");
-            textArea.className = "text-area";
-            textArea.appendChild(nameEl);
-            textArea.appendChild(pkgEl);
-
-            // Toggle
-            const toggle = document.createElement("div");
-            toggle.className = "toggle2";
-            toggle.dataset.pkg = pkg;
-            toggle.dataset.state = gamelist.includes(pkg) ? "on" : "off";
-            if (toggle.dataset.state === "on") toggle.classList.add("active");
-
-            toggle.onclick = async () => {
-                toggle.classList.toggle("active");
-                const isOn = toggle.classList.contains("active");
-                toggle.dataset.state = isOn ? "on" : "off";
-
-                if (isOn && !gamelist.includes(pkg)) gamelist.push(pkg);
-                if (!isOn) gamelist = gamelist.filter(p => p !== pkg);
-
-                await writeGameList(gamelist);
-                sortCards();
-            };
-
-            const row = document.createElement("div");
-            row.className = "row";
-            row.appendChild(textArea);
-            row.appendChild(toggle);
-
-            const meta = document.createElement("div");
-            meta.className = "meta";
-            meta.appendChild(row);
-
-            card.appendChild(iconWrapper);
-            card.appendChild(meta);
-
-            container.appendChild(card);
-            cardCache[pkg] = { card, label: labelMap[pkg], pkg };
-
-            loadIcon(icon, pkg);
-        }
-
-        const sortCards = () => {
-            const set = new Set(gamelist);
-            const cards = Object.values(cardCache);
-
-            cards.forEach(c => {
-                c.isOn = set.has(c.pkg);
-                c.sortKey = c.label.toLowerCase();
-            });
-
-            cards.sort((a, b) => {
-                if (a.isOn !== b.isOn) return a.isOn ? -1 : 1;
-                return a.sortKey.localeCompare(b.sortKey);
-            });
-
-            cards.forEach(c => container.appendChild(c.card));
-        };
-
-        sortCards();
-
-        searchInput.addEventListener("input", () => {
-            const q = searchInput.value.toLowerCase();
-            Object.values(cardCache).forEach(({ card, label, pkg }) => {
-                card.style.display = label.toLowerCase().includes(q) || pkg.toLowerCase().includes(q) ? "" : "none";
-            });
-        });
-
-    } catch (err) {
-        console.error("Failed to load apps:", err);
-        container.textContent = "Error loading apps";
-    } finally {
-        loader2?.classList.add("hidden");
-        document.body.classList.remove("no-scroll");
+      const infoList = JSON.parse(ksu.getPackagesInfo(JSON.stringify(pkgList)));
+      for (const i of infoList) {
+        labelMap[i.packageName] = i.appLabel || i.label || i.packageName;
+      }
+    } catch {
+      console.warn("KSU labels unavailable");
     }
+
+    if (typeof window.$packageManager !== "undefined") {
+      for (const pkg of pkgList) {
+        if (!labelMap[pkg]) {
+          try {
+            const appInfo = await window.$packageManager.getApplicationInfo(pkg, 0, 0);
+            if (appInfo) {
+              labelMap[pkg] =
+                (typeof appInfo.getLabel === "function"
+                  ? appInfo.getLabel()
+                  : appInfo.label) ||
+                appInfo.appName ||
+                pkg;
+            }
+          } catch {}
+        }
+      }
+    }
+
+    pkgList.forEach(pkg => {
+      if (!labelMap[pkg]) labelMap[pkg] = pkg;
+    });
+
+    let iconMap = {};
+
+    for (const pkg of pkgList) {
+      iconMap[pkg] = `ksu://icon/${pkg}`;
+    }
+
+    try {
+      const icons = JSON.parse(ksu.getPackagesIcons(JSON.stringify(pkgList), 96));
+      for (const i of icons) {
+        if (i.icon) iconMap[i.packageName] = i.icon;
+      }
+    } catch {
+      console.warn("KSU Base64 Icons Failed");
+    }
+
+    if (typeof window.$packageManager !== "undefined") {
+      for (const pkg of pkgList) {
+        if (!iconMap[pkg] || iconMap[pkg].startsWith("ksu://icon")) {
+          try {
+              const buffer = await wrapInputStream(iconStream).then(r => r.arrayBuffer());
+              const uint8 = new Uint8Array(buffer);
+              let b64 = "";
+              for (let i = 0; i < uint8.length; i++) b64 += String.fromCharCode(uint8[i]);
+              iconSrc = "data:image/png;base64," + btoa(b64);
+            }        
+          } catch {}
+        }
+      }
+    }
+
+    const cardCache = {};
+
+    for (const pkg of pkgList) {
+      const card = document.createElement("div");
+      card.className = "appCard mt-211 mb-4 p-4 rounded-lg";
+      card.dataset.pkg = pkg;
+
+      const icon = document.createElement("img");
+      icon.className = "appIcon";
+      icon.src = iconMap[pkg] || "";
+
+      const nameEl = document.createElement("div");
+      nameEl.className = "app-label";
+      nameEl.textContent = labelMap[pkg];
+
+      const pkgEl = document.createElement("div");
+      pkgEl.className = "pkg-label";
+      pkgEl.textContent = pkg;
+
+      const textArea = document.createElement("div");
+      textArea.className = "text-area";
+      textArea.appendChild(nameEl);
+      textArea.appendChild(pkgEl);
+
+      const toggle = document.createElement("div");
+      toggle.className = "toggle2";
+      toggle.dataset.pkg = pkg;
+      toggle.dataset.state = gamelist.includes(pkg) ? "on" : "off";
+      if (toggle.dataset.state === "on") toggle.classList.add("active");
+
+      toggle.onclick = async () => {
+        toggle.classList.toggle("active");
+        const isOn = toggle.classList.contains("active");
+        toggle.dataset.state = isOn ? "on" : "off";
+
+        if (isOn && !gamelist.includes(pkg)) gamelist.push(pkg);
+        if (!isOn) gamelist = gamelist.filter(p => p !== pkg);
+
+        await writeGameList(gamelist);
+        sortCards();
+      };
+
+      const row = document.createElement("div");
+      row.className = "row";
+      row.appendChild(textArea);
+      row.appendChild(toggle);
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.appendChild(row);
+
+      card.appendChild(icon);
+      card.appendChild(meta);
+
+      container.appendChild(card);
+      cardCache[pkg] = { card, label: labelMap[pkg], pkg };
+    }
+
+    const sortCards = () => {
+      const set = new Set(gamelist);
+      const cards = Object.values(cardCache);
+
+      cards.forEach(c => {
+        c.isOn = set.has(c.pkg);
+        c.sortKey = c.label.toLowerCase();
+      });
+
+      cards.sort((a, b) => {
+        if (a.isOn !== b.isOn) return a.isOn ? -1 : 1;
+        return a.sortKey.localeCompare(b.sortKey);
+      });
+
+      cards.forEach(c => container.appendChild(c.card));
+    };
+
+    sortCards();
+
+    searchInput.addEventListener("input", () => {
+      const q = searchInput.value.toLowerCase();
+      Object.values(cardCache).forEach(({ card, label, pkg }) => {
+        card.style.display = label.toLowerCase().includes(q) || pkg.toLowerCase().includes(q) ? "" : "none";
+      });
+    });
+
+  } catch (err) {
+    console.error("Failed to load apps:", err);
+    container.textContent = "Error loading apps";
+  } finally {
+    loader2?.classList.add("hidden");
+    document.body.classList.remove("no-scroll");
+  }
 };
 
 bannerBox.addEventListener("touchstart", () => {
