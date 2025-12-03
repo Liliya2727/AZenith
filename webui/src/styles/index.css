@@ -73,22 +73,15 @@
 
 .lazy-icon {
   opacity: 0;
-  filter: blur(6px);
-  transition: opacity .4s ease, filter .4s ease;
+  filter: blur(1px);
+  transition: opacity .4s ease, filter .45s ease;
+  animation: skeleton-pulse 1.2s infinite alternate;
 }
 
 .lazy-icon.loaded {
   opacity: 1;
   filter: blur(0);
-}
-
-.lazy-icon:not(.loaded) {
-  animation: skeleton-pulse 1.2s infinite alternate;
-}
-
-@keyframes skeleton-pulse {
-  from { opacity: .2; }
-  to { opacity: .5; }
+  animation: none;
 }
 
 #appList {
