@@ -341,6 +341,7 @@ const loadAppList = async () => {
         }
       }
     }
+    }
 
     pkgList.forEach(pkg => {
       if (!labelMap[pkg]) labelMap[pkg] = pkg;
