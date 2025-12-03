@@ -335,9 +335,8 @@ const loadAppList = async () => {
                   : appInfo.label) ||
                 appInfo.appName ||
                 pkg;
-              }
-            } catch {
-          }
+            }
+          } catch {}
         }
       }
     }
@@ -365,6 +364,7 @@ const loadAppList = async () => {
       for (const pkg of pkgList) {
         if (!iconMap[pkg] || iconMap[pkg].startsWith("ksu://icon")) {
           try {
+            const iconStream = window.$packageManager.getApplicationIcon(pkg, 0, 0);
             const buffer = await wrapInputStream(iconStream).then(r => r.arrayBuffer());
             const uint8 = new Uint8Array(buffer);
             let b64 = "";
@@ -376,7 +376,7 @@ const loadAppList = async () => {
         }
       }
     }
-    
+
     const cardCache = {};
 
     for (const pkg of pkgList) {
