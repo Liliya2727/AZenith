@@ -426,6 +426,10 @@
                      </div>
                   </label>
                </div>
+               <div class="device-info-divider"></div>
+               <div class="flex items-center justify-between mb-3">
+                  <button id="openspoof" class="bigbutton w-full" data-lang="preference.spoofing"></button>
+               </div>
             </div>
          </div>
          <div id="additional-modal" class="additional-modal">
@@ -523,7 +527,7 @@
          <div id="profilermodal" class="profiler-modal">
             <div class="profiler-container">
                <button class="close-btn" id="close-profiler">&times;</button>
-               <h3 class="profiler-title" data-lang="settingsProfile.profiler.title">Profiler</h3>
+               <h3 class="profiler-title" data-lang="settingsProfile.profiler.title"></h3>
                <p class="profiler-desc" data-lang="settingsProfile.profiler.description"></p>
                <div class="device-info-divider"></div>
                <div class="flex items-center justify-between mb-3">
@@ -537,6 +541,29 @@
                </div>
             </div>
          </div>
+         <div id="AZenith Spoofer" class="spoof-modal">
+            <div class="spoof-container">
+               <button class="close-btn" id="close-spoof">&times;</button>
+               <h3 class="spoof-title" data-lang="spoof.title"></h3>
+               <p class="spoof-desc" data-lang="spoof.description"></p>
+               <div class="flex items-center justify-between mb-3">
+                  <div>
+                     <input type="text" id="devicesearch" class="searchspoof" placeholder="Infinix GT 10..."/>
+                     <textarea id="deviceInput" class="spoof-textarea" rows="4"></textarea>
+                     <p class="text-sm text-white" data-lang="spoof.titlepick"></p>
+                     <small id="devicepicked" class="spoofPicked"></small>
+                  </div>                  
+               </div>                               
+               <div class="flex items-center justify-between mb-3">
+                  <div>
+                     <input type="text" id="chipsetsearch" class="searchspoof" placeholder="Mediatek..."/>
+                     <textarea id="chipsetInput" class="spoof-textarea" rows="4"></textarea>
+                     <p class="text-sm text-white" data-lang="spoof.titlepick"></p>
+                     <small id="chipsetpicked" class="spoofPicked"></small>
+                  </div>                  
+               </div>                       
+            </div>
+         </div>         
          <div id="resomodal" class="reso-modal">
             <div class="reso-container">
                <button class="close-btn" id="close-reso">&times;</button>
