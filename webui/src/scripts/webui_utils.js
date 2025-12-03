@@ -336,7 +336,8 @@ const loadAppList = async () => {
                 appInfo.appName ||
                 pkg;
               }
-            } catch {}
+            } catch {
+          }
         }
       }
     }
@@ -364,20 +365,18 @@ const loadAppList = async () => {
       for (const pkg of pkgList) {
         if (!iconMap[pkg] || iconMap[pkg].startsWith("ksu://icon")) {
           try {
-              const buffer = await wrapInputStream(iconStream).then(r => r.arrayBuffer());
-              const uint8 = new Uint8Array(buffer);
-              let b64 = "";
-              for (let i = 0; i < uint8.length; i++) b64 += String.fromCharCode(uint8[i]);
-              iconSrc = "data:image/png;base64," + btoa(b64);
-            }        
-          } catch (err) {   
-          console.warn("Failed to get info/icon for", pkg, err);
+            const buffer = await wrapInputStream(iconStream).then(r => r.arrayBuffer());
+            const uint8 = new Uint8Array(buffer);
+            let b64 = "";
+            for (let i = 0; i < uint8.length; i++) b64 += String.fromCharCode(uint8[i]);
+            iconMap[pkg] = "data:image/png;base64," + btoa(b64);
+          } catch (err) {
+            console.warn("Failed to get info/icon for", pkg, err);
+          }
         }
       }
     }
     
-    
-
     const cardCache = {};
 
     for (const pkg of pkgList) {
