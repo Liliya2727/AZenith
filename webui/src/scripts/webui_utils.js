@@ -281,6 +281,28 @@ const writeGameList = async (list) => {
   await executeCommand(`sync`);
 };
 
+const encodeBase64 = (buffer) => {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    const chunkSize = 0x8000;
+
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+
+    return btoa(binary);
+};
+
+const detectIconMime = (buffer) => {
+    const b = new Uint8Array(buffer);
+
+    if (b[0] === 0x89 && b[1] === 0x50) return "image/png";
+    if (b[0] === 0xFF && b[1] === 0xD8) return "image/jpeg";
+    if (b[0] === 0x52 && b[1] === 0x49 && b[8] === 0x57 && b[9] === 0x45) return "image/webp";
+
+    return "image/png";
+};
+
 const loadAppList = async () => {
   if (appListLoaded) return;
   appListLoaded = true;
@@ -364,14 +386,18 @@ const loadAppList = async () => {
       for (const pkg of pkgList) {
         if (!iconMap[pkg] || iconMap[pkg].startsWith("ksu://icon")) {
           try {
-            const stream = await window.$packageManager.getApplicationIcon(pkg, 0, 0);
-            if (stream) {
-              const buffer = await wrapInputStream(stream).then(r => r.arrayBuffer());
-              const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
-    
-              iconMap[pkg] = `data:image/png;base64,${base64}`;
-            }
-          } catch {}
+              const stream = await window.$packageManager.getApplicationIcon(pkg, 0, 0);
+              if (stream) {
+                  const buffer = await wrapInputStream(stream).then(r => r.arrayBuffer());
+        
+                  const mime = detectIconMime(buffer);
+                  const base64 = encodeBase64(buffer);
+        
+                  iconMap[pkg] = `data:${mime};base64,${base64}`;
+              }
+          } catch (err) {
+              console.warn("Fallback triggered for: ", pkg, err);
+          }
         }
       }
     }
@@ -385,7 +411,9 @@ const loadAppList = async () => {
 
       const icon = document.createElement("img");
       icon.className = "appIcon";
-      icon.src = iconMap[pkg] || "";
+      icon.dataset.pkg = pkg;
+      icon.src = "";
+      observer.observe(icon);
 
       const nameEl = document.createElement("div");
       nameEl.className = "app-label";

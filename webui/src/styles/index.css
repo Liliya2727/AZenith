@@ -2172,8 +2172,8 @@ input[type=range]::-ms-track {
 }
 
 .nga {
-    border:1px solid var(--outline,  #6881B5);
-    background-color:var(--surfaceBright, #0D0F19);
+    border:.1px solid var(--outline,  #6881B5);
+    background-color:var(--surfaceContainer, #12141b);
 }
 
 .support-card h2 {
