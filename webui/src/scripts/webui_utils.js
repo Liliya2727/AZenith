@@ -335,9 +335,8 @@ const loadAppList = async () => {
                   : appInfo.label) ||
                 appInfo.appName ||
                 pkg;
-            }
-          } catch (err) {
-            console.warn("Failed to get info/icon for", pkg, err);
+              }
+            } catch (err) {
           }
         }
       }
@@ -372,10 +371,12 @@ const loadAppList = async () => {
               for (let i = 0; i < uint8.length; i++) b64 += String.fromCharCode(uint8[i]);
               iconSrc = "data:image/png;base64," + btoa(b64);
             }        
-          } catch {}
+          } catch (err) {   
         }
       }
     }
+    
+    
 
     const cardCache = {};
 
