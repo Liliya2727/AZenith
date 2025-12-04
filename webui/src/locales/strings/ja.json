@@ -25,6 +25,7 @@
   },
 
   "settingsMore": {
+    "title": "チューニング設定",
     "additional": {
       "title": "追加設定",
       "description": "体験を向上させるための追加設定です。"

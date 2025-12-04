@@ -20,10 +20,11 @@
   
   "toolbar": {
     "main": "Utama",
-    "gamelist": "Permainan"
+    "gamelist": "Aplikasi"
   },
   
   "settingsMore": {
+    "title": "Pangaturan Tweak",
     "additional": {
       "title": "Pangaturan Tambahan",
       "description": "Pangaturan tambahan kanggo ningkataké pengalamanmu."
