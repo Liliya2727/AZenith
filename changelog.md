@@ -16,6 +16,8 @@
 - Added Custom Banner (same compatibility as load config)
 - Update Chipset Name recognition databases with 900+ Entries
 - Added Device Name recognition databases with 3000+ Entries
+- Saved applist now doesn't replace the old one after updating azenith
+- Refactor uninstaller script
 
 
 ## AZenith 4.2
