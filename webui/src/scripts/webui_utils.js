@@ -408,12 +408,15 @@ const loadAppList = async () => {
         toggle.classList.toggle("active");
         const isOn = toggle.classList.contains("active");
         toggle.dataset.state = isOn ? "on" : "off";
-
+        
         if (isOn && !gamelist.includes(pkg)) gamelist.push(pkg);
         if (!isOn) gamelist = gamelist.filter(p => p !== pkg);
-
+        
         await writeGameList(gamelist);
         sortCards();
+        
+        searchInput.value = "";
+        searchInput.dispatchEvent(new Event("input"));
       };
 
       const row = document.createElement("div");
