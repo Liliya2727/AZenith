@@ -38,19 +38,6 @@ const DEVICE_PROPS = [
   "ro.product.vendor.model",
   "ro.product.system.model"
 ];
-const SOC_PROP = "persist.sys.azenith.soc";
-const SOC_PROPS = [
-  "ro.soc.model",
-  "ro.hardware.chipname",
-  "ro.board.platform",
-  "ro.product.board",
-  "ro.chipname",
-  "ro.hardware",
-  "ro.mediatek.platform",
-  "ro.vendor.soc.model",
-  "ro.vendor.soc.model.part_name",
-  "ro.vendor.soc.model.external_name"
-];
 let lastGameCheck = { time: 0, status: "" };
 let lastProfile = { time: 0, value: "" };
 let lastServiceCheck = { time: 0, status: "", pid: "" };
@@ -136,69 +123,6 @@ const checkDeviceInfo = async () => {
 
   await storeProp(result);
   document.getElementById("deviceInfo").textContent = result;
-};
-
-const fetchSOCDatabase = async () => {
-  if (!cachedSOCData) {
-    try {
-      cachedSOCData = await (await fetch("webui.soclist.json")).json();
-    } catch {
-      cachedSOCData = {};
-    }
-  }
-  return cachedSOCData;
-};
-
-const collectSOCProps = async () => {
-  const set = new Set();
-  for (const prop of SOC_PROPS) {
-    const v = await execProp(prop);
-    if (v) set.add(v);
-  }
-  return [...set];
-};
-
-const findSOCMatch = (props, db) => {
-  const normProps = props.map(normalize);
-
-  for (const [friendly, identifier] of Object.entries(db)) {
-    const n = normalize(identifier);
-    if (normProps.includes(n)) return friendly;
-  }
-
-  for (const [friendly, identifier] of Object.entries(db)) {
-    const n = normalize(identifier);
-    if (normProps.some(p => p.startsWith(n) || n.startsWith(p))) {
-      return friendly;
-    }
-  }
-
-  return props.sort((a, b) => b.length - a.length)[0] || "Unknown SoC";
-};
-
-const storeSOCProp = async value => {
-  await executeCommand(`setprop ${SOC_PROP} "${value}"`);
-};
-
-const checkCPUInfo = async () => {
-  const saved = await execProp(SOC_PROP);
-  if (saved && saved !== "") {
-    document.getElementById("cpuInfo").textContent = saved;
-    return;
-  }
-
-  const db = await fetchSOCDatabase();
-  const props = await collectSOCProps();
-
-  const result = findSOCMatch(props, db);
-
-  await storeSOCProp(result);
-  document.getElementById("cpuInfo").textContent = result;
-
-  showFPSGEDIfMediatek();
-  showMaliSchedIfMediatek();
-  showBypassIfMTK();
-  showThermalIfMTK();
 };
 
 const updateGameStatus = async () => {
@@ -914,6 +838,98 @@ const checkProfile = async () => {
   } catch (m) {
     console.error("checkProfile error:", m);
   }
+};
+
+const fetchSOCDatabase = async () => {
+  if (!cachedSOCData) {
+    try {
+      cachedSOCData = await (await fetch("webui.soclist.json")).json();
+    } catch {
+      cachedSOCData = {};
+    }
+  }
+  return cachedSOCData;
+};
+
+const getPropValue = async (prop) => {
+  const { errno, stdout } = await executeCommand(`getprop ${prop}`);
+  if (errno === 0 && stdout.trim()) return stdout.trim();
+  return "";
+};
+
+const getSoCModel = async () => {
+  const props = [
+    "ro.soc.model"
+  ];
+
+  for (const p of props) {
+    const v = await getPropValue(p);
+    if (v) return v;
+  }
+  return "";
+};
+
+const getAllProps = async () => {
+  const props = [
+    "ro.soc.model",
+    "ro.hardware.chipname",
+    "ro.board.platform",
+    "ro.product.board",
+    "ro.chipname",
+    "ro.hardware",
+    "ro.mediatek.platform",
+    "ro.vendor.soc.model",
+    "ro.vendor.soc.model.part_name",
+    "ro.vendor.soc.model.external_name",
+  ];
+  let out = "";
+  for (const p of props) {
+    const v = await getPropValue(p);
+    if (v) out += " " + v;
+  }
+  return out.replace(/\s+/g, "");
+};
+
+const findClosestMatch = (input, db) => {
+  const lowerInput = input.toLowerCase();
+  let best = { key: null, score: 0 };
+  for (const key in db) {
+    const lowerKey = key.toLowerCase();
+    let len = Math.min(lowerInput.length, lowerKey.length);
+    let score = 0;
+    for (let i = 0; i < len; i++) {
+      if (lowerInput[i] !== lowerKey[i]) break;
+      score++;
+    }
+    if (score > best.score) best = { key, score };
+  }
+  return best.key;
+};
+
+const checkCPUInfo = async () => {
+  const cached = localStorage.getItem("soc_info");
+  try {
+    const db = await fetchSOCDatabase();
+    let model = (await getSoCModel()).replace(/\s+/g, "");
+    let display = db[model];
+
+    if (!display) {
+      const allProps = await getAllProps();
+      const closest = findClosestMatch(allProps, db);
+      display = closest ? db[closest] : (model || allProps);
+    }
+
+    document.getElementById("cpuInfo").textContent = display;
+    if (cached !== display) localStorage.setItem("soc_info", display);
+
+  } catch {
+    document.getElementById("cpuInfo").textContent = cached || "Error";
+  }
+
+  showFPSGEDIfMediatek();
+  showMaliSchedIfMediatek();
+  showBypassIfMTK();
+  showThermalIfMTK();
 };
 
 const checkKernelVersion = async () => {
