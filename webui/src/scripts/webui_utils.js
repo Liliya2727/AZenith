@@ -159,45 +159,21 @@ const collectSOCProps = async () => {
 };
 
 const findSOCMatch = (props, db) => {
-  if (!props.length) return "Unknown SoC";
-
-  const normProps = props.map(p => p.trim());
-
-  const sortedByLength = [...normProps].sort((a, b) => b.length - a.length);
-  const longest = sortedByLength[0];
-  const longestNorm = normalize(longest);
+  const normProps = props.map(normalize);
 
   for (const [friendly, identifier] of Object.entries(db)) {
-    const idNorm = normalize(identifier);
-    if (longestNorm.includes(idNorm) || idNorm.includes(longestNorm)) {
+    const n = normalize(identifier);
+    if (normProps.includes(n)) return friendly;
+  }
+
+  for (const [friendly, identifier] of Object.entries(db)) {
+    const n = normalize(identifier);
+    if (normProps.some(p => p.startsWith(n) || n.startsWith(p))) {
       return friendly;
     }
   }
 
-  const countMap = {};
-  for (const p of normProps) {
-    const base = p.replace(/[^0-9a-z]/gi, "").toLowerCase();
-    countMap[base] = (countMap[base] || 0) + 1;
-  }
-
-  const mostFrequent = Object.entries(countMap)
-    .sort((a, b) => b[1] - a[1])[0][0];
-
-  for (const [friendly, identifier] of Object.entries(db)) {
-    const idNorm = normalize(identifier);
-    if (mostFrequent.includes(idNorm) || idNorm.includes(mostFrequent)) {
-      return friendly;
-    }
-  }
-
-  for (const [friendly, identifier] of Object.entries(db)) {
-    const idNorm = normalize(identifier);
-    if (normProps.some(p => normalize(p).includes(idNorm))) {
-      return friendly;
-    }
-  }
-
-  return longest || "Unknown SoC";
+  return props.sort((a, b) => b.length - a.length)[0] || "Unknown SoC";
 };
 
 const storeSOCProp = async value => {
