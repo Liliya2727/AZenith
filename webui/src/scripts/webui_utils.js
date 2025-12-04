@@ -857,16 +857,13 @@ const getPropValue = async (prop) => {
   return "";
 };
 
-const getSoCModel = async () => {
-  const props = [
-    "ro.soc.model"
-  ];
+const setPropValue = async (prop, value) => {
+  await executeCommand(`setprop ${prop} "${value}"`);
+};
 
-  for (const p of props) {
-    const v = await getPropValue(p);
-    if (v) return v;
-  }
-  return "";
+const getSoCModel = async () => {
+  const v = await getPropValue("ro.soc.model");
+  return v || "";
 };
 
 const getAllProps = async () => {
@@ -907,6 +904,17 @@ const findClosestMatch = (input, db) => {
 };
 
 const checkCPUInfo = async () => {
+  const cachedProp = await getPropValue("persist.sys.azenith.soc");
+  if (cachedProp) {
+    document.getElementById("cpuInfo").textContent = cachedProp;
+    localStorage.setItem("soc_info", cachedProp);
+    showFPSGEDIfMediatek();
+    showMaliSchedIfMediatek();
+    showBypassIfMTK();
+    showThermalIfMTK();
+    return;
+  }
+
   const cached = localStorage.getItem("soc_info");
   try {
     const db = await fetchSOCDatabase();
@@ -921,6 +929,8 @@ const checkCPUInfo = async () => {
 
     document.getElementById("cpuInfo").textContent = display;
     if (cached !== display) localStorage.setItem("soc_info", display);
+
+    await setPropValue("persist.sys.azenith.soc", display);
 
   } catch {
     document.getElementById("cpuInfo").textContent = cached || "Error";
