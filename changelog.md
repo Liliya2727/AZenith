@@ -1,3 +1,23 @@
+## AZenith 4.3
+### Changelog
+- Implement native parsing for dumpsys and dropped grep and awk filter
+- Improve App Process detection by switching from /proc/{}/cmdline to dumpsys activity activities for more accurate PID detections
+- Reduced Daemon loops from 5s all condition to 2s and 700ms in-game
+- Adjusted Performance Profiles in Lite mode to minimize lag in game scenario
+- Fully rewrite the game preload logic... preloaded all apk files with budget 500MB
+- Fixed an issue where the profiler settings did not trigger the Profile changes
+- Update WebUI with a cleaner, and modern layout
+- Added support for Monet(Material You) Dynamic Color via Webuix/KSU API
+- Reworked Applist settings
+- Added Save and Load Config/Presets, Supported in: 
+   • KernelSU 2.1.1 
+   • KernelSU Next CI/Upcoming Updates
+   • KowSU
+- Added Custom Banner (same compatibility as load config)
+- Update Chipset Name recognition databases with 900+ Entries
+- Added Device Name recognition databases with 3000+ Entries
+
+
 ## AZenith 4.2
 ### Changelog
 - Added ID, KR, JA, JV, and ZN translation in the WebUI
@@ -10,7 +30,6 @@
 - Some refining in the WebUI, make the cleaner looks
 - Fully fixed random reboot in WebUI
 - Improving log message for better readability.
-! 05112025
 - Fix Game Preload toggle won't checked
 
 
