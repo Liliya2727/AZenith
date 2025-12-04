@@ -38,6 +38,19 @@ const DEVICE_PROPS = [
   "ro.product.vendor.model",
   "ro.product.system.model"
 ];
+const SOC_PROP = "persist.sys.azenith.soc";
+const SOC_PROPS = [
+  "ro.soc.model",
+  "ro.hardware.chipname",
+  "ro.board.platform",
+  "ro.product.board",
+  "ro.chipname",
+  "ro.hardware",
+  "ro.mediatek.platform",
+  "ro.vendor.soc.model",
+  "ro.vendor.soc.model.part_name",
+  "ro.vendor.soc.model.external_name"
+];
 let lastGameCheck = { time: 0, status: "" };
 let lastProfile = { time: 0, value: "" };
 let lastServiceCheck = { time: 0, status: "", pid: "" };
@@ -123,6 +136,93 @@ const checkDeviceInfo = async () => {
 
   await storeProp(result);
   document.getElementById("deviceInfo").textContent = result;
+};
+
+const fetchSOCDatabase = async () => {
+  if (!cachedSOCData) {
+    try {
+      cachedSOCData = await (await fetch("webui.soclist.json")).json();
+    } catch {
+      cachedSOCData = {};
+    }
+  }
+  return cachedSOCData;
+};
+
+const collectSOCProps = async () => {
+  const set = new Set();
+  for (const prop of SOC_PROPS) {
+    const v = await execProp(prop);
+    if (v) set.add(v);
+  }
+  return [...set];
+};
+
+const findSOCMatch = (props, db) => {
+  if (!props.length) return "Unknown SoC";
+
+  const normProps = props.map(p => p.trim());
+
+  const sortedByLength = [...normProps].sort((a, b) => b.length - a.length);
+  const longest = sortedByLength[0];
+  const longestNorm = normalize(longest);
+
+  for (const [friendly, identifier] of Object.entries(db)) {
+    const idNorm = normalize(identifier);
+    if (longestNorm.includes(idNorm) || idNorm.includes(longestNorm)) {
+      return friendly;
+    }
+  }
+
+  const countMap = {};
+  for (const p of normProps) {
+    const base = p.replace(/[^0-9a-z]/gi, "").toLowerCase();
+    countMap[base] = (countMap[base] || 0) + 1;
+  }
+
+  const mostFrequent = Object.entries(countMap)
+    .sort((a, b) => b[1] - a[1])[0][0];
+
+  for (const [friendly, identifier] of Object.entries(db)) {
+    const idNorm = normalize(identifier);
+    if (mostFrequent.includes(idNorm) || idNorm.includes(mostFrequent)) {
+      return friendly;
+    }
+  }
+
+  for (const [friendly, identifier] of Object.entries(db)) {
+    const idNorm = normalize(identifier);
+    if (normProps.some(p => normalize(p).includes(idNorm))) {
+      return friendly;
+    }
+  }
+
+  return longest || "Unknown SoC";
+};
+
+const storeSOCProp = async value => {
+  await executeCommand(`setprop ${SOC_PROP} "${value}"`);
+};
+
+const checkCPUInfo = async () => {
+  const saved = await execProp(SOC_PROP);
+  if (saved && saved !== "") {
+    document.getElementById("cpuInfo").textContent = saved;
+    return;
+  }
+
+  const db = await fetchSOCDatabase();
+  const props = await collectSOCProps();
+
+  const result = findSOCMatch(props, db);
+
+  await storeSOCProp(result);
+  document.getElementById("cpuInfo").textContent = result;
+
+  showFPSGEDIfMediatek();
+  showMaliSchedIfMediatek();
+  showBypassIfMTK();
+  showThermalIfMTK();
 };
 
 const updateGameStatus = async () => {
@@ -838,73 +938,6 @@ const checkProfile = async () => {
   } catch (m) {
     console.error("checkProfile error:", m);
   }
-};
-
-const fetchSOCDatabase = async () => {
-  if (!cachedSOCData) {
-    try {
-      cachedSOCData = await (await fetch("webui.soclist.json")).json();
-    } catch {
-      cachedSOCData = {};
-    }
-  }
-  return cachedSOCData;
-};
-
-const getSoCModel = async () => {
-  const props = [
-    "ro.soc.model",
-    "ro.hardware.chipname",
-    "ro.board.platform",
-    "ro.product.board",
-    "ro.chipname",
-    "ro.mediatek.platform",
-  ];
-
-  for (const prop of props) {
-    const { errno, stdout } = await executeCommand(`getprop ${prop}`);
-    if (errno === 0 && stdout.trim()) {
-      return stdout.trim();
-    }
-  }
-
-  return "Unknown SoC";
-};
-
-const checkCPUInfo = async () => {
-  const cached = localStorage.getItem("soc_info");
-  try {
-    const rawModel = await getSoCModel();
-    const model = rawModel.replace(/\s+/g, "");
-
-    const db = await fetchSOCDatabase();
-    let displayName = db[model];
-
-    if (!displayName) {
-      for (let i = model.length; i >= 6; i--) {
-        const partial = model.substring(0, i);
-        if (db[partial]) {
-          displayName = db[partial];
-          break;
-        }
-      }
-    }
-
-    if (!displayName) displayName = model;
-
-    document.getElementById("cpuInfo").textContent = displayName;
-
-    if (cached !== displayName) {
-      localStorage.setItem("soc_info", displayName);
-    }
-  } catch {
-    document.getElementById("cpuInfo").textContent = cached || "Error";
-  }
-
-  showFPSGEDIfMediatek();
-  showMaliSchedIfMediatek();
-  showBypassIfMTK();
-  showThermalIfMTK();
 };
 
 const checkKernelVersion = async () => {
