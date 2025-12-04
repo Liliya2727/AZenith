@@ -1759,6 +1759,7 @@ input[type=checkbox]:checked+.toggle::after {
 .langSect {
   width: 25%;
   appearance: none;
+  background-color: color-mix(in srgb, var(--surfaceContainerHigh, #1a1b22) 45%, transparent);
   border: 1px solid color-mix(in srgb, var(--outlineVariant, #d4d4d4) 35%, transparent);
   right: 45px;
   color: var(--onSurface, #e6e6e6);
