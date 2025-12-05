@@ -1,5 +1,8 @@
 ## AZenith 4.3
-### Changelog
+### Changelog - CI 1070-b60aaa9
+- Fix data in Device Recognition Files
+
+### Changelog - CI 1061-1cd43a4
 - Implement native parsing for dumpsys and dropped grep and awk filter
 - Improve App Process detection by switching from /proc/{}/cmdline to dumpsys activity activities for more accurate PID detections
 - Reduced Daemon loops from 5s all condition to 2s and 700ms in-game
