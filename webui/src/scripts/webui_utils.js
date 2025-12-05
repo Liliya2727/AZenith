@@ -106,22 +106,12 @@ const findMatch = (props, db) => {
   return props.sort((a, b) => b.length - a.length)[0] || "Unknown Device";
 };
 
-const storeProp = async v => {
-  await executeCommand(`setprop ${DEVICE_PROP} "${v}"`);
-};
-
 const checkDeviceInfo = async () => {
-  const saved = await execProp(DEVICE_PROP);
-  if (saved && saved !== "") {
-    document.getElementById("deviceInfo").textContent = saved;
-    return;
-  }
 
   const db = await fetchDeviceDatabase();
   const props = await collectProps();
   const result = findMatch(props, db);
 
-  await storeProp(result);
   document.getElementById("deviceInfo").textContent = result;
 };
 
@@ -904,16 +894,6 @@ const findClosestMatch = (input, db) => {
 };
 
 const checkCPUInfo = async () => {
-  const cachedProp = await getPropValue("persist.sys.azenith.soc");
-  if (cachedProp) {
-    document.getElementById("cpuInfo").textContent = cachedProp;
-    localStorage.setItem("soc_info", cachedProp);
-    showFPSGEDIfMediatek();
-    showMaliSchedIfMediatek();
-    showBypassIfMTK();
-    showThermalIfMTK();
-    return;
-  }
 
   const cached = localStorage.getItem("soc_info");
   try {
@@ -930,7 +910,6 @@ const checkCPUInfo = async () => {
     document.getElementById("cpuInfo").textContent = display;
     if (cached !== display) localStorage.setItem("soc_info", display);
 
-    await setPropValue("persist.sys.azenith.soc", display);
 
   } catch {
     document.getElementById("cpuInfo").textContent = cached || "Error";
