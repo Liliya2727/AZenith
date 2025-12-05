@@ -25,7 +25,7 @@ const moduleInterface = window.$AZenith;
 const fileInterface = window.$AZFile;
 const GAMELIST_PATH = "/data/adb/.config/AZenith/gamelist/gamelist.txt";
 const RESO_PROP = "persist.sys.azenithconf.resosettings";
-const DEVICE_PROP = "persist.sys.azenith.device";
+const DEVICE_PROP = "sys.azenith.device";
 const DEVICE_PROPS = [
   "ro.product.vendor_dlkm.device",
   "ro.product.vendor.device",
@@ -106,12 +106,22 @@ const findMatch = (props, db) => {
   return props.sort((a, b) => b.length - a.length)[0] || "Unknown Device";
 };
 
+const storeProp = async v => {
+  await executeCommand(`setprop ${DEVICE_PROP} "${v}"`);
+};
+
 const checkDeviceInfo = async () => {
+  const saved = await execProp(DEVICE_PROP);
+  if (saved && saved !== "") {
+    document.getElementById("deviceInfo").textContent = saved;
+    return;
+  }
 
   const db = await fetchDeviceDatabase();
   const props = await collectProps();
   const result = findMatch(props, db);
 
+  await storeProp(result);
   document.getElementById("deviceInfo").textContent = result;
 };
 
@@ -894,6 +904,16 @@ const findClosestMatch = (input, db) => {
 };
 
 const checkCPUInfo = async () => {
+  const cachedProp = await getPropValue("sys.azenith.soc");
+  if (cachedProp) {
+    document.getElementById("cpuInfo").textContent = cachedProp;
+    localStorage.setItem("soc_info", cachedProp);
+    showFPSGEDIfMediatek();
+    showMaliSchedIfMediatek();
+    showBypassIfMTK();
+    showThermalIfMTK();
+    return;
+  }
 
   const cached = localStorage.getItem("soc_info");
   try {
@@ -910,6 +930,7 @@ const checkCPUInfo = async () => {
     document.getElementById("cpuInfo").textContent = display;
     if (cached !== display) localStorage.setItem("soc_info", display);
 
+    await setPropValue("sys.azenith.soc", display);
 
   } catch {
     document.getElementById("cpuInfo").textContent = cached || "Error";
