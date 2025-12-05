@@ -871,7 +871,6 @@ const getAllProps = async () => {
     "ro.soc.model",
     "ro.hardware.chipname",
     "ro.board.platform",
-    "ro.product.board",
     "ro.chipname",
     "ro.hardware",
     "ro.mediatek.platform",
