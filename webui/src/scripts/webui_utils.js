@@ -864,7 +864,7 @@ const socProps = [
   "ro.vendor.soc.model.external_name"
 ];
 
-const normalize = (s) => s.replace(/\s+/g, "").toLowerCase();
+const nrmlz = (s) => s.replace(/\s+/g, "").toLowerCase();
 
 const getAllSoCProps = async () => {
   const out = [];
@@ -881,7 +881,7 @@ const getAllSoCProps = async () => {
 const getMostFrequentValue = (arr) => {
   const count = {};
   arr.forEach(v => {
-    const key = normalize(v);
+    const key = nrmlz(v);
     count[key] = (count[key] || 0) + 1;
   });
 
@@ -923,7 +923,7 @@ const checkCPUInfo = async () => {
 
     let match = null;
     for (const key in db) {
-      if (normalize(key) === chosen) {
+      if (nrmlz(key) === chosen) {
         match = db[key];
         break;
       }
@@ -933,7 +933,7 @@ const checkCPUInfo = async () => {
       for (let i = chosen.length; i >= 4 && !match; i--) {
         const part = chosen.substring(0, i);
         for (const key in db) {
-          if (normalize(key).startsWith(part)) {
+          if (nrmlz(key).startsWith(part)) {
             match = db[key];
             break;
           }
