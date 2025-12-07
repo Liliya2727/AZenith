@@ -909,12 +909,10 @@ const getPropSoC = async () => {
   return [...new Set(out)];
 };
 
-// Fetch SoC Database
-let cachedSOCData = null;
 const fetchSOCDatabase = async () => {
   if (!cachedSOCData) {
     try {
-      cachedSOCData = await (await fetch("webui.soclist.json")).json();
+      cachedSOCData = await (await fetch("webui.json")).json();
     } catch {
       cachedSOCData = {};
     }
