@@ -841,7 +841,7 @@ const checkProfile = async () => {
 };
 
 // Executes a shell command
-const sh = async (cmd) => await execRootCommand(cmd);
+const sh = async (cmd) => await executeCommand(cmd);
 
 // Read a file safely
 const readFile = async (path) => {
@@ -912,7 +912,7 @@ const getPropSoC = async () => {
 const fetchSOCDatabase = async () => {
   if (!cachedSOCData) {
     try {
-      cachedSOCData = await (await fetch("webui.json")).json();
+      cachedSOCData = await (await fetch("webui.soclist.json")).json();
     } catch {
       cachedSOCData = {};
     }
