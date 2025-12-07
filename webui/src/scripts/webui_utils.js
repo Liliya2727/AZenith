@@ -840,75 +840,6 @@ const checkProfile = async () => {
   }
 };
 
-// Executes a shell command
-const sh = async (cmd) => await executeCommand(cmd);
-
-// Read a file safely
-const readFile = async (path) => {
-  const out = await sh(`cat ${path} 2>/dev/null`);
-  return out?.trim() || "";
-};
-
-// readprop wrapper
-const getProp = async (p) => (await sh(`getprop ${p}`)).trim();
-
-// Detect CPU max frequency
-const getCpuMaxFrequency = async () => {
-  let maxFreq = 0;
-  for (let i = 0; i < 12; i++) {
-    const v = parseInt(await readFile(`/sys/devices/system/cpu/cpu${i}/cpufreq/cpuinfo_max_freq`));
-    if (v > maxFreq) maxFreq = v;
-  }
-  return maxFreq;
-};
-
-// Extract SoC ID
-const getSocId = async () => {
-  const candidates = [
-    "/sys/devices/soc0/soc_id",
-    "/sys/devices/system/soc/soc0/id",
-    "/sys/devices/platform/soc/soc0/id"
-  ];
-  for (const p of candidates) {
-    const v = await readFile(p);
-    if (v) return v.replace(/\s+/g, "");
-  }
-  return "";
-};
-
-// Parse /proc/cpuinfo
-const getCpuInfo = async () => {
-  const text = await readFile("/proc/cpuinfo");
-  let model = "", hardware = "";
-  for (const line of text.split("\n")) {
-    const low = line.toLowerCase();
-    if (low.startsWith("model name")) model = line.split(":")[1]?.trim();
-    if (low.startsWith("hardware")) hardware = line.split(":")[1]?.trim();
-  }
-  return { model, hardware };
-};
-
-const getPropSoC = async () => {
-  const keys = [
-    "ro.soc.model",
-    "ro.hardware.chipname",
-    "ro.board.platform",
-    "ro.product.board",
-    "ro.chipname",
-    "ro.hardware",
-    "ro.mediatek.platform",
-    "ro.vendor.soc.model",
-    "ro.vendor.soc.model.part_name",
-    "ro.vendor.soc.model.external_name"
-  ];
-  const out = [];
-  for (const k of keys) {
-    const v = await getProp(k);
-    if (v) out.push(v.replace(/\s+/g, ""));
-  }
-  return [...new Set(out)];
-};
-
 const fetchSOCDatabase = async () => {
   if (!cachedSOCData) {
     try {
@@ -920,56 +851,106 @@ const fetchSOCDatabase = async () => {
   return cachedSOCData;
 };
 
-const findClosestMatch = (input, db) => {
-  const lowInput = input.toLowerCase();
-  let best = { key: null, score: 0 };
+const socProps = [
+  "ro.soc.model",
+  "ro.hardware.chipname",
+  "ro.board.platform",
+  "ro.product.board",
+  "ro.chipname",
+  "ro.hardware",
+  "ro.mediatek.platform",
+  "ro.vendor.soc.model",
+  "ro.vendor.soc.model.part_name",
+  "ro.vendor.soc.model.external_name"
+];
 
-  for (const key in db) {
-    const lowKey = key.toLowerCase();
-    let score = 0;
-    let len = Math.min(lowInput.length, lowKey.length);
+const normalize = (s) => s.replace(/\s+/g, "").toLowerCase();
 
-    for (let i = 0; i < len; i++) {
-      if (lowInput[i] !== lowKey[i]) break;
-      score++;
+const getAllSoCProps = async () => {
+  const out = [];
+  for (const prop of socProps) {
+    const { errno, stdout } = await executeCommand(`getprop ${prop}`);
+    if (errno === 0) {
+      const v = stdout.trim();
+      if (v) out.push(v);
     }
-    if (score > best.score) best = { key, score };
   }
-  return best.key;
+  return out.length ? out : ["UnknownSoC"];
 };
 
-const detectSOC = async () => {
-  const db = await fetchSOCDatabase();
-  const socid = await getSocId();
-  const { model, hardware } = await getCpuInfo();
-  const props = await getPropSoC();
+const getMostFrequentValue = (arr) => {
+  const count = {};
+  arr.forEach(v => {
+    const key = normalize(v);
+    count[key] = (count[key] || 0) + 1;
+  });
 
-  let candidates = [];
-
-  if (socid) candidates.push(socid);
-  if (model) candidates.push(model.replace(/\s+/g, ""));
-  if (hardware) candidates.push(hardware.replace(/\s+/g, ""));
-  candidates.push(...props);
-
-  for (const c of candidates) {
-    if (db[c]) return `${db[c].VENDOR} ${db[c].NAME}`;
+  let maxFreq = 0;
+  for (const k in count) {
+    if (count[k] > maxFreq) maxFreq = count[k];
   }
 
-  let joined = candidates.join("").toLowerCase();
-  const closest = findClosestMatch(joined, db);
-  if (closest && db[closest]) {
-    return `${db[closest].VENDOR} ${db[closest].NAME}`;
+  const freqKeys = Object.keys(count).filter(k => count[k] === maxFreq);
+  let longest = freqKeys[0];
+
+  for (const k of freqKeys) {
+    if (k.length > longest.length) longest = k;
   }
 
-  return "Unknown SoC";
+  return longest;
 };
 
 const checkCPUInfo = async () => {
-  const result = await detectSOC();
-  document.getElementById("cpuInfo").textContent = result;
+  const cachedLocal = localStorage.getItem("soc_info");
 
-  await sh(`setprop sys.azenith.soc "${result}"`);
-  localStorage.setItem("soc_info", result);
+  try {
+    const { errno: azErr, stdout: azOut } = await executeCommand(`getprop sys.azenith.soc`);
+
+    if (azErr === 0 && azOut.trim()) {
+      const soc = azOut.trim();
+      document.getElementById("cpuInfo").textContent = soc;
+      if (cachedLocal !== soc) localStorage.setItem("soc_info", soc);
+      showFPSGEDIfMediatek();
+      showMaliSchedIfMediatek();
+      showBypassIfMTK();
+      showThermalIfMTK();
+      return;
+    }
+
+    const allValues = await getAllSoCProps();
+    const chosen = getMostFrequentValue(allValues);
+    const db = await fetchSOCDatabase();
+
+    let match = null;
+    for (const key in db) {
+      if (normalize(key) === chosen) {
+        match = db[key];
+        break;
+      }
+    }
+
+    if (!match) {
+      for (let i = chosen.length; i >= 4 && !match; i--) {
+        const part = chosen.substring(0, i);
+        for (const key in db) {
+          if (normalize(key).startsWith(part)) {
+            match = db[key];
+            break;
+          }
+        }
+      }
+    }
+
+    const displayName = match ? `${match.VENDOR} ${match.NAME}` : chosen;
+
+    document.getElementById("cpuInfo").textContent = displayName;
+    if (cachedLocal !== displayName) localStorage.setItem("soc_info", displayName);
+
+    await executeCommand(`setprop sys.azenith.soc "${displayName}"`);
+
+  } catch {
+    document.getElementById("cpuInfo").textContent = cachedLocal || "Error";
+  }
 
   showFPSGEDIfMediatek();
   showMaliSchedIfMediatek();
