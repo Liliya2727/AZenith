@@ -252,7 +252,7 @@ int main(int argc, char* argv[]) {
             toast("Applying Performance Profile");
             set_priority(game_pid);
             run_profiler(PERFORMANCE_PROFILE);
-            system("setprop debug.hwui.target_cpu_time_percent 90");
+
             char preload_active[PROP_VALUE_MAX] = {0};
             __system_property_get("persist.sys.azenithconf.APreload", preload_active);
             if (strcmp(preload_active, "1") == 0) {
@@ -268,7 +268,7 @@ int main(int argc, char* argv[]) {
             log_zenith(LOG_INFO, "Applying ECO Mode");
             toast("Applying Eco Mode");
             run_profiler(ECO_MODE);
-            system("setprop debug.hwui.target_cpu_time_percent 30");
+
         } else {
             // Bail out if we already on normal profile
             if (cur_mode == BALANCED_PROFILE)
@@ -283,7 +283,7 @@ int main(int argc, char* argv[]) {
                 is_initialize_complete = true;
             }
             run_profiler(BALANCED_PROFILE);
-            system("setprop debug.hwui.target_cpu_time_percent 30");
+
         }
     }
 
