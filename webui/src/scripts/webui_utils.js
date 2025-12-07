@@ -958,6 +958,28 @@ const checkCPUInfo = async () => {
   showThermalIfMTK();
 };
 
+const checkKernelVersion = async () => {
+  let cachedKernel = localStorage.getItem("kernel_version");
+
+  try {
+    const { errno, stdout } = await executeCommand("uname -r");
+    const el = document.getElementById("kernelInfo");
+
+    if (errno === 0 && stdout.trim()) {
+      const version = stdout.trim();
+      el.textContent = version;
+
+      if (cachedKernel !== version) {
+        localStorage.setItem("kernel_version", version);
+      }
+    } else {
+      el.textContent = cachedKernel || "Unknown Kernel";
+    }
+  } catch {
+    el.textContent = cachedKernel || "Error";
+  }
+};
+
 const getAndroidVersion = async () => {
   let cachedVersion = localStorage.getItem("android_version");
 
