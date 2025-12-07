@@ -840,6 +840,77 @@ const checkProfile = async () => {
   }
 };
 
+// Executes a shell command
+const sh = async (cmd) => await execRootCommand(cmd);
+
+// Read a file safely
+const readFile = async (path) => {
+  const out = await sh(`cat ${path} 2>/dev/null`);
+  return out?.trim() || "";
+};
+
+// readprop wrapper
+const getProp = async (p) => (await sh(`getprop ${p}`)).trim();
+
+// Detect CPU max frequency
+const getCpuMaxFrequency = async () => {
+  let maxFreq = 0;
+  for (let i = 0; i < 12; i++) {
+    const v = parseInt(await readFile(`/sys/devices/system/cpu/cpu${i}/cpufreq/cpuinfo_max_freq`));
+    if (v > maxFreq) maxFreq = v;
+  }
+  return maxFreq;
+};
+
+// Extract SoC ID
+const getSocId = async () => {
+  const candidates = [
+    "/sys/devices/soc0/soc_id",
+    "/sys/devices/system/soc/soc0/id",
+    "/sys/devices/platform/soc/soc0/id"
+  ];
+  for (const p of candidates) {
+    const v = await readFile(p);
+    if (v) return v.replace(/\s+/g, "");
+  }
+  return "";
+};
+
+// Parse /proc/cpuinfo
+const getCpuInfo = async () => {
+  const text = await readFile("/proc/cpuinfo");
+  let model = "", hardware = "";
+  for (const line of text.split("\n")) {
+    const low = line.toLowerCase();
+    if (low.startsWith("model name")) model = line.split(":")[1]?.trim();
+    if (low.startsWith("hardware")) hardware = line.split(":")[1]?.trim();
+  }
+  return { model, hardware };
+};
+
+const getPropSoC = async () => {
+  const keys = [
+    "ro.soc.model",
+    "ro.hardware.chipname",
+    "ro.board.platform",
+    "ro.product.board",
+    "ro.chipname",
+    "ro.hardware",
+    "ro.mediatek.platform",
+    "ro.vendor.soc.model",
+    "ro.vendor.soc.model.part_name",
+    "ro.vendor.soc.model.external_name"
+  ];
+  const out = [];
+  for (const k of keys) {
+    const v = await getProp(k);
+    if (v) out.push(v.replace(/\s+/g, ""));
+  }
+  return [...new Set(out)];
+};
+
+// Fetch SoC Database
+let cachedSOCData = null;
 const fetchSOCDatabase = async () => {
   if (!cachedSOCData) {
     try {
@@ -851,50 +922,17 @@ const fetchSOCDatabase = async () => {
   return cachedSOCData;
 };
 
-const getPropValue = async (prop) => {
-  const { errno, stdout } = await executeCommand(`getprop ${prop}`);
-  if (errno === 0 && stdout.trim()) return stdout.trim();
-  return "";
-};
-
-const setPropValue = async (prop, value) => {
-  await executeCommand(`setprop ${prop} "${value}"`);
-};
-
-const getSoCModel = async () => {
-  const v = await getPropValue("ro.soc.model");
-  return v || "";
-};
-
-const getAllProps = async () => {
-  const props = [
-    "ro.soc.model",
-    "ro.hardware.chipname",
-    "ro.board.platform",
-    "ro.chipname",
-    "ro.hardware",
-    "ro.mediatek.platform",
-    "ro.vendor.soc.model",
-    "ro.vendor.soc.model.part_name",
-    "ro.vendor.soc.model.external_name",
-  ];
-  let out = "";
-  for (const p of props) {
-    const v = await getPropValue(p);
-    if (v) out += " " + v;
-  }
-  return out.replace(/\s+/g, "");
-};
-
 const findClosestMatch = (input, db) => {
-  const lowerInput = input.toLowerCase();
+  const lowInput = input.toLowerCase();
   let best = { key: null, score: 0 };
+
   for (const key in db) {
-    const lowerKey = key.toLowerCase();
-    let len = Math.min(lowerInput.length, lowerKey.length);
+    const lowKey = key.toLowerCase();
     let score = 0;
+    let len = Math.min(lowInput.length, lowKey.length);
+
     for (let i = 0; i < len; i++) {
-      if (lowerInput[i] !== lowerKey[i]) break;
+      if (lowInput[i] !== lowKey[i]) break;
       score++;
     }
     if (score > best.score) best = { key, score };
@@ -902,65 +940,43 @@ const findClosestMatch = (input, db) => {
   return best.key;
 };
 
+const detectSOC = async () => {
+  const db = await fetchSOCDatabase();
+  const socid = await getSocId();
+  const { model, hardware } = await getCpuInfo();
+  const props = await getPropSoC();
+
+  let candidates = [];
+
+  if (socid) candidates.push(socid);
+  if (model) candidates.push(model.replace(/\s+/g, ""));
+  if (hardware) candidates.push(hardware.replace(/\s+/g, ""));
+  candidates.push(...props);
+
+  for (const c of candidates) {
+    if (db[c]) return `${db[c].VENDOR} ${db[c].NAME}`;
+  }
+
+  let joined = candidates.join("").toLowerCase();
+  const closest = findClosestMatch(joined, db);
+  if (closest && db[closest]) {
+    return `${db[closest].VENDOR} ${db[closest].NAME}`;
+  }
+
+  return "Unknown SoC";
+};
+
 const checkCPUInfo = async () => {
-  const cachedProp = await getPropValue("sys.azenith.soc");
-  if (cachedProp) {
-    document.getElementById("cpuInfo").textContent = cachedProp;
-    localStorage.setItem("soc_info", cachedProp);
-    showFPSGEDIfMediatek();
-    showMaliSchedIfMediatek();
-    showBypassIfMTK();
-    showThermalIfMTK();
-    return;
-  }
+  const result = await detectSOC();
+  document.getElementById("cpuInfo").textContent = result;
 
-  const cached = localStorage.getItem("soc_info");
-  try {
-    const db = await fetchSOCDatabase();
-    let model = (await getSoCModel()).replace(/\s+/g, "");
-    let display = db[model];
-
-    if (!display) {
-      const allProps = await getAllProps();
-      const closest = findClosestMatch(allProps, db);
-      display = closest ? db[closest] : (model || allProps);
-    }
-
-    document.getElementById("cpuInfo").textContent = display;
-    if (cached !== display) localStorage.setItem("soc_info", display);
-
-    await setPropValue("sys.azenith.soc", display);
-
-  } catch {
-    document.getElementById("cpuInfo").textContent = cached || "Error";
-  }
+  await sh(`setprop sys.azenith.soc "${result}"`);
+  localStorage.setItem("soc_info", result);
 
   showFPSGEDIfMediatek();
   showMaliSchedIfMediatek();
   showBypassIfMTK();
   showThermalIfMTK();
-};
-
-const checkKernelVersion = async () => {
-  let cachedKernel = localStorage.getItem("kernel_version");
-
-  try {
-    const { errno, stdout } = await executeCommand("uname -r");
-    const el = document.getElementById("kernelInfo");
-
-    if (errno === 0 && stdout.trim()) {
-      const version = stdout.trim();
-      el.textContent = version;
-
-      if (cachedKernel !== version) {
-        localStorage.setItem("kernel_version", version);
-      }
-    } else {
-      el.textContent = cachedKernel || "Unknown Kernel";
-    }
-  } catch {
-    el.textContent = cachedKernel || "Error";
-  }
 };
 
 const getAndroidVersion = async () => {
