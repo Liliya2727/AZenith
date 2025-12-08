@@ -230,8 +230,6 @@ int main(int argc, char* argv[]) {
             mlbb_is_running = handle_mlbb(gamestart);
 
         if (is_initialize_complete && gamestart && get_screenstate() && mlbb_is_running != MLBB_RUN_BG) {
-            // Preload on loop
-
             // Bail out if we already on performance profile
             if (!need_profile_checkup && cur_mode == PERFORMANCE_PROFILE)
                 continue;
