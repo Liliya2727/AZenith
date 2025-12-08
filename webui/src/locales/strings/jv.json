@@ -8,8 +8,10 @@
     "title": "Informasi Dhasar",
     "labels": {
       "currentProfile": "Profil Saiki",
+      "moduleVersion": "Versi AZenith",
       "chipset": "Chipset",
       "kernel": "Kernel",
+      "device": "Perangkat",
       "androidVersion": "Versi Android"
     },
     "buttons": {
@@ -204,7 +206,9 @@
     "buttons": {
       "save": "Simpen Log",
       "edit": "Sunting Daftar Game",
-      "restart": "Mulihké Dæmon"
+      "restart": "Mulihké Dæmon",
+      "saveconf": "Simpen Pangaturan Preset",
+      "loadconf": "Muat Pangaturan Preset"
     }
   },
   
@@ -293,9 +297,6 @@
     "fstrim": "Blok sing ora kepakai wis di-trim",
     "showcantaccess": "Ora bisa diakses ing mode saiki",
     "savedPackages": "{0} paket kasil disimpen",
-    "fstrim": "Blok sing ora digunakake wis dibersihake",
-    "showcantaccess": "Ora bisa diakses ing mode saiki",
-    "savedPackages": "{0} paket wis disimpen",
     "cantRestart": "Ora bisa Restart, Daemon lagi inisialisasi",
     "serviceDead": "Layanan mati, mangga reboot!",
     "restartingDaemon": "Ngulang Daemon...",

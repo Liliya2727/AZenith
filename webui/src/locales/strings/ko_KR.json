@@ -8,6 +8,7 @@
     "title": "기본 정보",
     "labels": {
       "currentProfile": "현재 프로필",
+      "moduleVersion": "AZenith 버전",
       "chipset": "칩셋",
       "kernel": "커널",
       "device": "장치",

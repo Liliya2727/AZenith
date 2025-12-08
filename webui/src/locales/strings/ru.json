@@ -8,6 +8,7 @@
     "title": "Основная информация",
     "labels": {
       "currentProfile": "Текущий профиль",
+      "moduleVersion": "Версия AZenith",
       "chipset": "Чипсет",
       "kernel": "Ядро",
       "device": "Устройство",
