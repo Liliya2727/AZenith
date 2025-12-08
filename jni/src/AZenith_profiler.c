@@ -63,7 +63,7 @@ char* get_gamestart(void) {
         return NULL;
     }
 
-    char buf[4096];
+    char buf[32768];
     size_t n = fread(buf, 1, sizeof(buf) - 1, fp);
     fclose(fp);
 
