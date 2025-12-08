@@ -1221,7 +1221,7 @@ input[type=checkbox]:checked+.toggle::after {
     justify-content: center;
     background: rgba(0, 0, 0, 0.7);
     transition: opacity .3s;
-    padding-top: 3vh
+    padding-top: 7vh
 }
 
 .reso-image,
