@@ -64,6 +64,18 @@ const executeCommand = async (cmd, cwd = null) => {
 window.executeCommand = executeCommand;
 
 // Main Script
+const checkModuleVersion = async () => {
+  try {
+    const { errno: c, stdout: s } = await executeCommand(
+      "echo 'Version :' && grep \"version=\" /data/adb/modules/AZenith/module.prop | awk -F'=' '{print $2}'"
+    );
+
+    if (c === 0) {
+      document.getElementById("moduleVer").textContent = s.trim();
+    }
+  } catch {}
+};
+
 const normalize = s => s.toLowerCase().replace(/[^a-z0-9]+/g, "_");
 
 const fetchDeviceDatabase = async () => {
@@ -2645,6 +2657,7 @@ const heavyInit = async () => {
   const heavyAsync = [
     checkCPUInfo,
     checkDeviceInfo,
+    checkModuleVersion,
     checkKernelVersion,
     getAndroidVersion,
     checkfpsged,
@@ -2692,5 +2705,6 @@ heavyInit();
 checkCPUInfo();
 checkDeviceInfo();
 checkKernelVersion();
-getAndroidVersion();    
+getAndroidVersion();
+checkModuleVersion();
 

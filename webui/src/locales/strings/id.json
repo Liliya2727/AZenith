@@ -8,6 +8,7 @@
     "title": "Info Dasar",
     "labels": {
       "currentProfile": "Profile Saat Ini",
+      "moduleVersion": "Versi AZenith",
       "chipset": "Chipset",
       "kernel": "Kernel",
       "device": "Perangkat",

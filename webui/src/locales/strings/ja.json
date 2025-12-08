@@ -8,6 +8,7 @@
     "title": "基本情報",
     "labels": {
       "currentProfile": "現在のプロファイル",
+      "moduleVersion": "AZenith バージョン",
       "chipset": "チップセット",
       "kernel": "カーネル",
       "device": "デパイス",

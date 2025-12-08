@@ -8,6 +8,7 @@
     "title": "基础信息",
     "labels": {
       "currentProfile": "当前配置文件",
+      "moduleVersion": "AZenith 版本",
       "chipset": "芯片组",
       "kernel": "内核",
       "device": "设备",
