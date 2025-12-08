@@ -67,7 +67,7 @@ window.executeCommand = executeCommand;
 const checkModuleVersion = async () => {
   try {
     const { errno: c, stdout: s } = await executeCommand(
-      "echo 'Version :' && grep \"version=\" /data/adb/modules/AZenith/module.prop | awk -F'=' '{print $2}'"
+      "echo 'grep \"version=\" /data/adb/modules/AZenith/module.prop | awk -F'=' '{print $2}'"
     );
 
     if (c === 0) {
