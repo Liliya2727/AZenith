@@ -1611,7 +1611,7 @@ const findProfiler = async () => {
 const runProfiler = async (mode) => {
   const p = await findProfiler();
   if (!p) return;
-  await executeCommand(`su -c "${p} ${mode}"`);
+  await executeCommand(`su -c "${p} ${mode}" >/dev/null 2>&1 &`);
 };
 
 const applyperformanceprofile = async () => {
