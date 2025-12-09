@@ -50,6 +50,7 @@ let loopTimeout = null;
 let heavyInitDone = false;
 let cleaningInterval = null;
 let heavyInitTimeouts = [];
+let profilerPathCache = null;
 let currentScreen = "main"; 
 
 // execute Command functions
@@ -1586,6 +1587,33 @@ const setAI = async (c) => {
   );
 };
 
+const findProfiler = async () => {
+  if (profilerPathCache) return profilerPathCache;
+  let { stdout } = await executeCommand("which sys.azenith-profiler");
+  if (stdout.trim()) {
+    profilerPathCache = stdout.trim();
+    return profilerPathCache;
+  }
+  const commonPaths = [
+    "/data/adb/modules/AZenith/system/bin/sys.azenith-profiler",    
+  ];
+  for (const p of commonPaths) {
+    let { errno } = await executeCommand(`ls ${p}`);
+    if (errno === 0) {
+      profilerPathCache = p;
+      return p;
+    }
+  }
+  toast("Profiler binary not found");
+  return null;
+};
+
+const runProfiler = async (mode) => {
+  const p = await findProfiler();
+  if (!p) return;
+  await executeCommand(`su -c "${p} ${mode}"`);
+};
+
 const applyperformanceprofile = async () => {
   let { stdout: c } = await executeCommand(
     "cat /data/adb/.config/AZenith/API/current_profile"
@@ -1594,7 +1622,7 @@ const applyperformanceprofile = async () => {
     toast(getTranslation("toast.alreadyPerformance"));
     return;
   }
-  await executeCommand("/data/adb/modules/AZenith/system/bin/sys.azenith-profiler 1");
+  await runProfiler("1");
 };
 
 const applybalancedprofile = async () => {
@@ -1605,7 +1633,7 @@ const applybalancedprofile = async () => {
     toast(getTranslation("toast.alreadyBalanced"));
     return;
   }
-  await executeCommand("/data/adb/modules/AZenith/system/bin/sys.azenith-profiler 2");
+  await runProfiler("2");
 };
 
 const applyecomode = async () => {
@@ -1616,7 +1644,7 @@ const applyecomode = async () => {
     toast(getTranslation("toast.alreadyECO"));
     return;
   }
-  await executeCommand("/data/adb/modules/AZenith/system/bin/sys.azenith-profiler 3");
+  await runProfiler("3");
 };
 
 const checkjit = async () => {
