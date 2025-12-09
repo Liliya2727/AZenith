@@ -1586,31 +1586,6 @@ const setAI = async (c) => {
   );
 };
 
-const getSu = async () => {
-  const locations = [
-    "/data/adb/ksu/bin/su",
-    "/data/adb/ap/bin/su",
-    "/system/bin/su",
-    "/system/xbin/su",
-    "su"
-  ];
-
-  for (const su of locations) {
-    const { errno } = await executeCommand(`ls ${su}`);
-    if (errno === 0) return su;
-  }
-  return null;
-};
-
-const runAsRoot = async (cmd) => {
-  const su = await getSu();
-  if (!su) {
-    toast("Root not found");
-    return;
-  }
-  return executeCommand(`${su} -c "${cmd}" >/dev/null 2>&1 &`);
-};
-
 const applyperformanceprofile = async () => {
   let { stdout: c } = await executeCommand(
     "cat /data/adb/.config/AZenith/API/current_profile"
@@ -1619,7 +1594,7 @@ const applyperformanceprofile = async () => {
     toast(getTranslation("toast.alreadyPerformance"));
     return;
   }
-  await runAsRoot("sys.azenith-profiler 1");
+  await executeCommand("/data/adb/modules/AZenith/system/bin/sys.azenith-profiler 1");
 };
 
 const applybalancedprofile = async () => {
@@ -1630,7 +1605,7 @@ const applybalancedprofile = async () => {
     toast(getTranslation("toast.alreadyBalanced"));
     return;
   }
-  await runAsRoot("sys.azenith-profiler 2");
+  await executeCommand("/data/adb/modules/AZenith/system/bin/sys.azenith-profiler 2");
 };
 
 const applyecomode = async () => {
@@ -1641,7 +1616,7 @@ const applyecomode = async () => {
     toast(getTranslation("toast.alreadyECO"));
     return;
   }
-  await runAsRoot("sys.azenith-profiler 3");
+  await executeCommand("/data/adb/modules/AZenith/system/bin/sys.azenith-profiler 3");
 };
 
 const checkjit = async () => {
