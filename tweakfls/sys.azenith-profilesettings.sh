@@ -1980,53 +1980,36 @@ initialize() {
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
     if [ "$DTHERMAL_STATE" -eq 1 ]; then
     dlog "Applying Disable Thermal"   
-		propfile() {
-			while read -r key value; do
-				resetprop -n "$key" "$value"
-				echo "[$(date)] Reset $key to $value"
-			done <<EOF
-debug.thermal.throttle.support no
-ro.vendor.mtk_thermal_2_0 0
-persist.thermal_config.mitigation 0
-ro.mtk_thermal_monitor.enabled false
-ro.vendor.tran.hbm.thermal.temp.clr 49000
-ro.vendor.tran.hbm.thermal.temp.trig 46000
-vendor.thermal.link_ready 0
-dalvik.vm.dexopt.thermal-cutoff 0
-persist.vendor.thermal.engine.enable 0
-persist.vendor.thermal.config 0
-EOF
-		}
-
+		
 		thermal() {
 			find /system/etc/init /vendor/etc/init /odm/etc/init -type f 2>/dev/null | xargs grep -h "^service" | awk '{print $2}' | grep thermal
 		}
 
 		for svc in $(thermal); do
 			stop "$svc"
-		done
-
-		# Freeze all running thermal processes
-		for pid in $(pgrep thermal); do
-			kill -SIGSTOP "$pid"
-		done
-
-		# Clear init.svc_ properties only if they exist
-		for prop in $(getprop | awk -F '[][]' '/init\.svc_/ {print $2}'); do
-			if [ -n "$prop" ]; then
-				resetprop -n "$prop" ""
-			fi
-		done
-
-		for dead in \
-			android.hardware.thermal-service.mediatek android.hardware.thermal@2.0-service.mtk; do
-			stop "$dead"
-			pid=$(pidof "$dead")
-			if [ -n "$pid" ]; then
-				kill -SIGSTOP "$pid"
-			fi
-		done
-
+		done		
+                
+        debug_pid_props=$(getprop | grep -i 'debug_pid.*thermal' | awk -F'[][]' '{print $2}' | sed 's/:.*//')        
+        for pid in $debug_pid_props; do
+            resetprop -n "$pid" 0
+        done
+         
+        boot_time_props=$(getprop | grep -i 'boottime.*thermal' | awk -F'[][]' '{print $2}' | sed 's/:.*//')        
+        for btm in $boot_time_props; do
+            resetprop -n "$btm" 0
+        done
+        
+        # Suspend all thermal service
+        for thrm in $(ps -e | grep -i "thermal" | awk '{print $9}'); do
+            pkill -9 "$thrm"
+        done		
+		
+		# Remove thermal-related props
+        props=$(getprop | grep -i 'thermal.*running' | awk -F'[][]' '{print $2}' | sed 's/:.*//')
+        for prop in $props; do
+            resetprop -n "$prop" suspended
+        done
+        
 		# Disable thermal zones
 		chmod 644 /sys/class/thermal/thermal_zone*/mode
 		for zone in /sys/class/thermal/thermal_zone*/mode; do
