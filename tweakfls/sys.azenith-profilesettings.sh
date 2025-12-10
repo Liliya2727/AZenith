@@ -28,12 +28,6 @@ LOGFILE="$CONFIGPATH/debug/AZenith.log"
 list_logger="logd traced statsd tcpdump cnss_diag subsystem_ramdump charge_logger wlan_logging"
 curprofile=$(<"$CONFIGPATH/API/current_profile")
 POLICIES=$(ls /sys/devices/system/cpu/cpufreq | grep policy)
-BYPASSPATHLIST="
-    MTK_BYPASS_CHARGER:/sys/devices/platform/charger/bypass_charger
-    MTK_CURRENT_CMD:/proc/mtk_battery_cmd/current_cmd
-    TRAN_AICHG:/sys/devices/platform/charger/tran_aichg_disable_charger
-    MTK_DISABLE_CHARGER:/sys/devices/platform/mt-battery/disable_charger
-"        
 
 # Properties
 LIMITER=$(getprop persist.sys.azenithconf.freqoffset | sed -e 's/Disabled/100/' -e 's/%//g')
@@ -2035,6 +2029,20 @@ EOF
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
     # INITIALIZE BYPASS CHARGING PATH 
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+    # source bypass variables
+    source $MODDIR/bypasschg
+    # detect bypass variables
+    BYPASSPATHLIST="$(
+        set | while IFS='=' read -r var val; do
+            case "$var" in
+                *_ON|*_OFF) continue ;;
+            esac
+    
+            case "$val" in
+                /*) echo "$var:$val" ;;
+            esac
+        done
+    )"
     if [ -z "$BYPASSPATH" ]; then    
     supported=0
         while IFS=":" read -r name path; do

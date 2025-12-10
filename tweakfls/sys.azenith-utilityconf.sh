@@ -177,12 +177,14 @@ disablevsync() {
 
 # Bypass Charge
 enableBypass() {
+    source $MODDIR/bypasschg
     key="$BYPASSPATH"
     val="${key}_ON"
     zeshia "$(eval echo \${$val})" "$(eval echo \${$key})"
 }
 
 disableBypass() {
+    source $MODDIR/bypasschg
     key="$BYPASSPATH"
     val="${key}_OFF"
     zeshia "$(eval echo \${$val})" "$(eval echo \${$key})"
