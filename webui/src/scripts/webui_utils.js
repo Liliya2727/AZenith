@@ -868,11 +868,11 @@ const socProps = [
   "ro.soc.model",
   "ro.hardware.chipname",
   "ro.board.platform",
-  "ro.product.board",
   "ro.chipname",
   "ro.hardware",
   "ro.mediatek.platform",
   "ro.vendor.soc.model",
+  "ro.vendor.qti.soc_name",
   "ro.vendor.soc.model.part_name",
   "ro.vendor.soc.model.external_name"
 ];
