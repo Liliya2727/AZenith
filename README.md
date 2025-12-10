@@ -26,7 +26,9 @@
 - @iamlooper  
 
 ## Supported Root Managers
-
+- [KernelSU-Next](https://github.com/KernelSU-Next/KernelSU-Next)
+- [SukiSU-Ultra](https://github.com/SukiSU-Ultra/SukiSU-Ultra)
+- [KowSU](https://github.com/KOWX712/KernelSU)
 - [APatch](https://github.com/bmax121/APatch)
 - [KernelSU](https://github.com/tiann/KernelSU)
 - [Magisk](https://github.com/topjohnwu/Magisk)  <sup>([no WebUI](https://github.com/topjohnwu/Magisk/issues/8609#event-15568590949)👀)</sup>
