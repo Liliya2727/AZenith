@@ -90,6 +90,10 @@
       "title": "Sched Tunes",
       "desc": "Optimize CPU frequency scaling for all CPU clusters by adjusting up/down rate limits (for schedutil and schedhorizon)."
     },
+    "walttunes": {
+      "title": "Walt Governor Tunes",
+      "desc": "Optimize WALT governor parameters for faster and smoother CPU scheduling (for WALT Governor)."
+    },
     "sfl": {
       "title": "SurfaceFlinger Latency",
       "desc": "Tweak SurfaceFlinger to reduce screen latency and improve responsiveness."

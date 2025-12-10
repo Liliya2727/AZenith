@@ -925,7 +925,7 @@ const checkCPUInfo = async () => {
       if (cachedLocal !== soc) localStorage.setItem("soc_info", soc);
       showFPSGEDIfMediatek();
       showMaliSchedIfMediatek();
-      showBypassIfMTK();
+      showWaltIfSnapdragon();
       showThermalIfMTK();
       return;
     }
@@ -967,7 +967,7 @@ const checkCPUInfo = async () => {
 
   showFPSGEDIfMediatek();
   showMaliSchedIfMediatek();
-  showBypassIfMTK();
+  showWaltIfSnapdragon();
   showThermalIfMTK();
 };
 
@@ -1125,11 +1125,21 @@ const setBypassChargeStatus = async (c) => {
       : "setprop persist.sys.azenithconf.bypasschg 0"
   );
 };
-const showBypassIfMTK = () => {
-  const soc = (localStorage.getItem("soc_info") || "").toLowerCase();
-  const ZepassDiv = document.getElementById("Zepass-container");
-  if (ZepassDiv) {
-    ZepassDiv.style.display = soc.includes("mediatek") ? "flex" : "none";
+
+const hideBypassIfUnsupported = async () => {
+  const { stdout } = await executeCommand(
+    "getprop persist.sys.azenithconf.bypasspath"
+  );
+
+  const value = stdout.trim();
+  const bypassDiv = document.getElementById("Zepass-container");
+
+  if (!bypassDiv) return;
+
+  if (value === "UNSUPPORTED" || value === "") {
+    bypassDiv.style.display = "none";
+  } else {
+    bypassDiv.style.display = "flex";
   }
 };
 
@@ -1195,9 +1205,34 @@ const checkschedtunes = async () => {
 const setschedtunes = async (c) => {
   await executeCommand(
     c
-      ? "setprop persist.sys.azenithconf.schedtunes 1"
+      ? "setprop persist.sys.azenithconf.schedtunes 1 && setprop persist.sys.azenithconf.walttunes 0"
       : "setprop persist.sys.azenithconf.schedtunes 0"
   );
+  checkwalt();
+};
+
+const checkwalt = async () => {
+  let { errno: c, stdout: s } = await executeCommand(
+    "getprop persist.sys.azenithconf.walttunes"
+  );
+  0 === c && (document.getElementById("walttunes").checked = "1" === s.trim());
+};
+
+const setwalt = async (c) => {
+  await executeCommand(
+    c
+      ? "setprop persist.sys.azenithconf.walttunes 1 && setprop persist.sys.azenithconf.schedtunes 0"
+      : "setprop persist.sys.azenithconf.walttunes 0"
+  );
+  checkschedtunes();
+};
+
+const showWaltIfSnapdragon = () => {
+  const soc = (localStorage.getItem("soc_info") || "").toLowerCase();
+  const thermalDiv = document.getElementById("walt-container");
+  if (thermalDiv) {
+    thermalDiv.style.display = soc.includes("snapdragon") ? "flex" : "none";
+  }
 };
 
 const checkiosched = async () => {
@@ -2411,6 +2446,9 @@ const setupUIListeners = () => {
     .getElementById("schedtunes")
     ?.addEventListener("change", (e) => setschedtunes(e.target.checked));
   document
+    .getElementById("walttunes")
+    ?.addEventListener("change", (e) => setwalt(e.target.checked));
+  document
     .getElementById("thermalcore")
     ?.addEventListener("change", (e) => setthermalcore(e.target.checked));
   document
@@ -2683,6 +2721,7 @@ const heavyInit = async () => {
     loadVsyncValue,
     checkBypassChargeStatus,
     checkschedtunes,
+    checkwalt,
     checkSFL,
     checkKillLog,
     checklogger,
