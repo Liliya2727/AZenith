@@ -2711,6 +2711,7 @@ const heavyInit = async () => {
   await Promise.all(heavyAsync.map((fn) => fn()));
 
   const heavySequential = [
+    hideBypassIfUnsupported,
     checkmalisched,
     checkAI,
     checkthermalcore,
