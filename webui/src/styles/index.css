@@ -218,8 +218,8 @@
 }
 
 #bottomToolbar button.active {
-  color: var(--inverseOnSurface, #fff);
-  background-color: color-mix(in srgb, var(--primary, rgba(20, 20, 20, 0.6)) 70%, rgba(55, 55, 55, 0.9)); 
+  color: var(--inverseOnSurface, #000);
+  background-color: color-mix(in srgb, var(--primary, #CCCAEC) 70%, rgba(55, 55, 55, 0.9)); 
   transform: scale(1.08);
   outline: none;
   box-shadow: 0 0 12px rgba(255,255,255,0.18);
@@ -976,6 +976,7 @@ input[type=checkbox]:checked+.toggle::after {
     box-shadow: 0 0 10px var(--surfaceVariant, rgba(180, 190, 255, .45));
 }
 
+
 .bg-displaybanner {
     position: absolute;
     z-index: 150;
@@ -984,30 +985,30 @@ input[type=checkbox]:checked+.toggle::after {
     border-top-right-radius: 1.5rem;
     border-bottom-left-radius: 0rem;
     border-bottom-right-radius: 0rem;
-    
-    background: color-mix(in srgb, var(--tonalSurface) 60%, transparent);
 
+    background: color-mix(
+        in srgb,
+        var(--tonalSurface, #12141b) 60%,
+        transparent
+    );
 
     color: #fff;
-    
+
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    transition: box-shadow .3s, transform .2s
+    transition: box-shadow .3s, transform .2s;
 }
 
 .image-container {
     overflow: hidden;
     margin: 1rem .9rem 0;
-    
 }
 
 .image-container img {
-
     width: 100%;
     height: 100%;
-    
     -o-object-fit: cover;
     object-fit: cover;
     -o-object-position: center;
@@ -1015,14 +1016,16 @@ input[type=checkbox]:checked+.toggle::after {
     aspect-ratio: 16 / 9;
     object-position: center;
     display: block;
+
     mask-image: linear-gradient(
-    to bottom,
-    rgb(from var(--tonalSurface) r g b / 1) 55%,
-    rgb(from var(--tonalSurface) r g b / 0.50) 75%,
-    rgb(from var(--tonalSurface) r g b / 0.30) 80%,
-    rgb(from var(--tonalSurface) r g b / 0.15) 87%,
-    transparent 100%
-);
+        to bottom,
+        rgb(from var(--tonalSurface, #12141b) r g b / 1) 55%,
+        rgb(from var(--tonalSurface, #12141b) r g b / 0.50) 75%,
+        rgb(from var(--tonalSurface, #12141b) r g b / 0.30) 80%,
+        rgb(from var(--tonalSurface, #12141b) r g b / 0.15) 87%,
+        transparent 100%
+    );
+}
     
 }
 
@@ -2262,7 +2265,7 @@ input[type=range]::-ms-track {
     width: 30%;
     height: 2.2rem;
 
-    margin-top: -2.10rem;
+    margin-top: -2.2rem;
 
     display: flex;
     align-items: center;
