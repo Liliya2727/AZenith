@@ -26,21 +26,39 @@
  *                      selecting profiles, and sending log messages.
  ***********************************************************************************/
 void print_help() {
-    printf("AZenith Daemon CLI by @Zexshia\n");
-    printf("Usage:\n");
-    printf("  sys.azenith-service --run\n");
-    printf("      Start AZenith daemon\n\n");
+    printf(
+        "AZenith Daemon CLI  (by @Zexshia)\n"
+        "---------------------------------------\n"
+        "Usage: sys.azenith-service <command> [options]\n\n"
 
-    printf("  sys.azenith-service --profile <1|2|3>\n");
-    printf("      Apply AZenith Profile manually\n");
-    printf("      1 = Performance\n");
-    printf("      2 = Balanced\n");
-    printf("      3 = Eco Mode\n\n");
+        "Commands:\n"
+        "  --run\n"
+        "      Start the AZenith daemon.\n\n"
 
-    printf("  sys.azenith-service --log <TAG> <LEVEL> <MESSAGE>\n");
-    printf("      Write log through AZenith logging service\n");
-    printf("      Usage: --log <TAG> <LEVEL> <MESSAGE>\n");
-    printf("      Levels: 0=DEBUG, 1=INFO, 2=WARN, 3=ERROR, 4=FATAL\n");
+        "  --profile <1|2|3>\n"
+        "      Apply a preset AZenith performance profile.\n"
+        "        1 : Performance\n"
+        "        2 : Balanced\n"
+        "        3 : Eco Mode\n\n"
+
+        "  --log <TAG> <LEVEL> <MESSAGE>\n"
+        "      Write a log entry via the AZenith logging service.\n"
+        "      LEVEL values:\n"
+        "        0 : DEBUG\n"
+        "        1 : INFO\n"
+        "        2 : WARN\n"
+        "        3 : ERROR\n"
+        "        4 : FATAL\n\n"
+
+        "  --help\n"
+        "      Show this help message.\n\n"
+
+        "Examples:\n"
+        "  sys.azenith-service --run\n"
+        "  sys.azenith-service --profile 2\n"
+        "  sys.azenith-service --log ServiceInit 1 \"Daemon started\"\n"
+        "  sys.azenith-service --help\n"
+    );
 }
 
 /***********************************************************************************
@@ -57,8 +75,8 @@ void print_help() {
  *                          3 = Eco Mode
  ***********************************************************************************/
 int handle_profile(int argc, char** argv) {
-    if (argc < 3) {
-        fprintf(stderr, "Missing profile number.\n");
+    if (argc < 3 || !argv[2] || !argv[2][0]) {
+        fprintf(stderr, "ERROR: Missing profile number. Use --profile <1|2|3>\n");
         return 1;
     }
 
@@ -66,7 +84,9 @@ int handle_profile(int argc, char** argv) {
     __system_property_get("persist.sys.azenithconf.AIenabled", ai_state);
 
     if (!strcmp(ai_state, "1")) {
-        fprintf(stderr, "ERROR: Auto mode enabled. Manual profile blocked.\n");
+        fprintf(stderr,
+            "ERROR: Auto Mode is enabled.\n"
+            "       Manual profile selection is blocked.\n");
         return 1;
     }
 
@@ -113,24 +133,41 @@ int handle_profile(int argc, char** argv) {
  ***********************************************************************************/
 int handle_log(int argc, char** argv) {
     if (argc < 5) {
-        fprintf(stderr, "Usage: --log <TAG> <LEVEL> <MESSAGE>\n");
-        fprintf(stderr, "Levels: 0=DEBUG, 1=INFO, 2=WARN, 3=ERROR, 4=FATAL\n");
+        fprintf(stderr,
+            "Usage: --log <TAG> <LEVEL> <MESSAGE>\n"
+            "Levels: 0=DEBUG, 1=INFO, 2=WARN, 3=ERROR, 4=FATAL\n");
         return 1;
     }
 
-    int level = atoi(argv[3]);
+    const char *tag = argv[2];
+    const char *level_str = argv[3];
+
+    int level = atoi(level_str);
     if (level < LOG_DEBUG || level > LOG_FATAL) {
-        fprintf(stderr, "Invalid log level (0..4)\n");
+        fprintf(stderr, "ERROR: Invalid log level '%s' (valid 0..4)\n", level_str);
         return 1;
     }
 
-    char message[1024] = {0};
+    char message[1024];
+    message[0] = '\0';
+
+    size_t remaining = sizeof(message);
     for (int i = 4; i < argc; i++) {
-        strcat(message, argv[i]);
-        if (i != argc - 1)
-            strcat(message, " ");
+        size_t written = snprintf(
+            message + strlen(message),
+            remaining,
+            "%s%s",
+            argv[i],
+            (i == argc - 1) ? "" : " "
+        );
+        if (written >= remaining) {
+            fprintf(stderr, "ERROR: Log message too long.\n");
+            return 1;
+        }
+        remaining -= written;
     }
 
-    external_log(level, argv[2], message);
+    /* Send the log */
+    external_log(level, tag, message);
     return 0;
 }
