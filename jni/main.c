@@ -43,6 +43,10 @@ int main(int argc, char* argv[]) {
     if (!strcmp(argv[1], "--log") || !strcmp(argv[1], "-l")) {
         return handle_log(argc, argv);
     }
+    
+    if (!strcmp(argv[1], "--verboselog") || !strcmp(argv[1], "-vl")) {
+        return handle_verboselog(argc, argv);
+    }
 
     if (!strcmp(argv[1], "--run") || !strcmp(argv[1], "-r")) {
 

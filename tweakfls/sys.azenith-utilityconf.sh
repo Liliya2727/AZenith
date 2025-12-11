@@ -48,21 +48,19 @@ MTK_DISABLE_CHARGER_OFF="0"
 # Logging Functions
 AZLog() {
     if [ "$DEBUGMODE" = "true" ]; then
-        local timestamp message log_tag
-        timestamp=$(date +"%Y-%m-%d %H:%M:%S.%3N")
+        local message log_tag log_level        
         message="$1"
-        log_tag="AZenith"
-        echo "$timestamp I $log_tag: $message" >>"$LOGFILEV"
-        log -t "$log_tag" "$message"
+        log_tag="AZenith_VerboseLog"
+        log_level="0"
+        sys.azenith-service --verboselog $log_tag $log_level $message
     fi
 }
 dlog() {
-	local message log_tag
+	local message log_tag log_level
 	message="$1"
-	timestamp=$(date +"%Y-%m-%d %H:%M:%S.%3N")
 	log_tag="AZenith_Utility"
-	echo "$timestamp I $log_tag: $message" >>"$LOGFILE"
-    log -t "$log_tag" "$message"
+	log_level="1"
+    sys.azenith-service --log $log_tag $log_level $message
 }
 
 # Apply Functions

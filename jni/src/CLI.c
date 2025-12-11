@@ -32,29 +32,31 @@ void print_help() {
         "Usage: sys.azenith-service [options]\n"
         "\n"
         "Options:\n"
-        "     -r, --run      Start the AZenith daemon\n"
+        "     -r, --run      Start AZenith daemon service\n"
         "\n"
         "     -p, --profile <1|2|3>\n" 
-        "                    Apply performance profile\n"
+        "                    Apply AZenith profiles via CLI\n"
         "                    1 : Performance\n"
         "                    2 : Balanced\n"
         "                    3 : Eco Mode\n"
         "\n"
         "     -l, --log <TAG> <LEVEL> <MSG>\n"     
-        "                    Write a log entry via logging service\n"
+        "                    Write a log message via AZenith logging service\n"
         "                    LEVEL values:\n"
         "                    0 : DEBUG\n"
         "                    1 : INFO\n"
         "                    2 : WARN\n"
         "                    3 : ERROR\n"
         "                    4 : FATAL\n"
+        "     -vl, --verboselog <TAG> <LEVEL> <MSG>\n"
+        "                    Write a verbose log message via AZenith logging service\n"
         "\n"
         "     -h, --help     Display this help message and exit\n"
         "\n"
         "Examples:\n"
         "     sys.azenith-service --run\n"
-        "     sys.azenith-service -p/--profile 2\n"
-        "     sys.azenith-service -h\n"
+        "     sys.azenith-service --profile 2\n"
+        "     sys.azenith-service --help\n"
     );
 }
 
@@ -166,5 +168,62 @@ int handle_log(int argc, char** argv) {
 
     /* Send the log */
     external_log(level, tag, message);
+    return 0;
+}
+
+/***********************************************************************************
+ * Function Name      : handle_verboselog
+ * Inputs             : argc - number of CLI arguments
+ *                      argv - array of CLI argument strings
+ * Returns            : int - 0 on success, non-zero on failure
+ * Description        : Handles the --log command. Validates log level (0..4),
+ *                      concatenates the message arguments into a single string,
+ *                      and forwards the formatted log entry to the external log
+ *                      handler.
+ *                      Log Levels:
+ *                          0 = DEBUG
+ *                          1 = INFO
+ *                          2 = WARN
+ *                          3 = ERROR
+ *                          4 = FATAL
+ ***********************************************************************************/
+int handle_verboselog(int argc, char** argv) {
+    if (argc < 5) {
+        fprintf(stderr,
+            "Usage: --log <TAG> <LEVEL> <MESSAGE>\n"
+            "Levels: 0=DEBUG, 1=INFO, 2=WARN, 3=ERROR, 4=FATAL\n");
+        return 1;
+    }
+
+    const char *tag = argv[2];
+    const char *level_str = argv[3];
+
+    int level = atoi(level_str);
+    if (level < LOG_DEBUG || level > LOG_FATAL) {
+        fprintf(stderr, "ERROR: Invalid log level '%s' (valid 0..4)\n", level_str);
+        return 1;
+    }
+
+    char message[1024];
+    message[0] = '\0';
+
+    size_t remaining = sizeof(message);
+    for (int i = 4; i < argc; i++) {
+        size_t written = snprintf(
+            message + strlen(message),
+            remaining,
+            "%s%s",
+            argv[i],
+            (i == argc - 1) ? "" : " "
+        );
+        if (written >= remaining) {
+            fprintf(stderr, "ERROR: Log message too long.\n");
+            return 1;
+        }
+        remaining -= written;
+    }
+
+    /* Send the log */
+    external_vlog(level, tag, message);
     return 0;
 }

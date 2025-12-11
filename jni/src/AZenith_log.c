@@ -116,3 +116,16 @@ void external_log(LogLevel level, const char* tag, const char* message) {
     char* timestamp = timern();
     write2file(LOG_FILE, true, true, "%s %s %s: %s\n", timestamp, level_str[level], tag, message);
 }
+
+/***********************************************************************************
+ * Function Name      : external_log
+ * Inputs             : level - Log level (0-4)
+ *                      tag - Custom log tag
+ *                      message - Log message
+ * Returns            : None
+ * Description        : External logging interface for other applications
+ ***********************************************************************************/
+void external_vlog(LogLevel level, const char* tag, const char* message) {
+    char* timestamp = timern();
+    write2file(LOG_VFILE, true, true, "%s %s %s: %s\n", timestamp, level_str[level], tag, message);
+}

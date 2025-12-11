@@ -25,6 +25,7 @@
 #define NOTIFY_TITLE "AZenith"
 #define LOG_TAG "AZenith"
 #define LOG_FILE "/data/adb/.config/AZenith/debug/AZenith.log"
+#define LOG_VFILE "/data/adb/.config/AZenith/debug/AZenithVerbose.log"
 #define LOG_FILE_PRELOAD "/data/adb/.config/AZenith/preload/AZenithPR.log"
 #define PROFILE_MODE "/data/adb/.config/AZenith/API/current_profile"
 #define GAME_INFO "/data/adb/.config/AZenith/API/gameinfo"
@@ -79,6 +80,7 @@ extern pid_t game_pid;
 void print_help();
 int handle_profile(int argc, char** argv);
 int handle_log(int argc, char** argv);
+int handle_vlog(int argc, char** argv);
 
 // Misc Utilities
 extern void GamePreload(const char* package);
@@ -107,6 +109,7 @@ int write2file(const char* filename, const bool append, const bool use_flock, co
 void log_preload(LogLevel level, const char* message, ...);
 void log_zenith(LogLevel level, const char* message, ...);
 void external_log(LogLevel level, const char* tag, const char* message);
+void external_vlog(LogLevel level, const char* tag, const char* message);
 
 // Utilities
 void set_priority(const pid_t pid);
