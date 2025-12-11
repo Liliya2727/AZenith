@@ -90,8 +90,11 @@ int handle_profile(int argc, char** argv) {
     }
 
     const char* profile = argv[2];
-
-    if (!strcmp(profile, "1")) {
+    
+    if (!strcmp(profile, "0")) {
+        log_zenith(LOG_WARN, "WARN: Cannot Apply Profile 0 (Initialize)");
+        printf("WARN: Cannot Apply Profile 0 (Initialize)\n");                
+    } else if (!strcmp(profile, "1")) {
         log_zenith(LOG_INFO, "Applying Performance Profile via execute");
         toast("Applying Performance Profile");
         run_profiler(PERFORMANCE_PROFILE);
