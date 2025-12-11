@@ -21,8 +21,6 @@
 # Path
 MODDIR=${0%/*}
 CONFIGPATH="/data/adb/.config/AZenith"
-LOGFILEV="$CONFIGPATH/debug/AZenithVerbose.log"
-LOGFILE="$CONFIGPATH/debug/AZenith.log"
 
 # Properties
 DEBUGMODE="$(getprop persist.sys.azenith.debugmode)"
@@ -50,7 +48,7 @@ AZLog() {
     if [ "$DEBUGMODE" = "true" ]; then
         local message log_tag log_level        
         message="$1"
-        log_tag="AZenith_VerboseLog"
+        log_tag="AZLog"
         log_level="0"
         sys.azenith-service --verboselog $log_tag $log_level $message
     fi
