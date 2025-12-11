@@ -26,89 +26,94 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    // Expose logging interface for other modules
-    char* base_name = basename(argv[0]);
-    if (strcmp(base_name, "sys.azenith-service_log") == 0) {
-        if (argc < 3) {
-            fprintf(stderr, "Usage: sys.azenith-service_log <TAG> <LEVEL> <MESSAGE>\n");
-            fprintf(stderr, "Levels: 0=DEBUG, 1=INFO, 2=WARN, 3=ERROR, 4=FATAL\n");
-            return EXIT_FAILURE;
+    if (argc > 1) {
+
+        if (!strcmp(argv[1], "--help") || !strcmp(argv[1], "-h")) {
+            printf("AZenith Daemon CLI by @Zexshia\n");
+            printf("Usage:\n");
+            printf("  sys.azenith-service --run\n");
+            printf("      Start daemon\n\n");
+
+            printf("  sys.azenith-service --profile <1|2|3>\n");
+            printf("      Apply manual profile\n");
+            printf("      1 = Performance\n");
+            printf("      2 = Balanced\n");
+            printf("      3 = Eco Mode\n\n");
+
+            printf("  sys.azenith-service --log <TAG> <LEVEL> <MESSAGE>\n");
+            printf("      Write log through AZenith logging service\n");
+            printf("      LEVEL = 0..4\n\n");
+
+            return 0;
         }
 
-        // Parse log level
-        int level = atoi(argv[2]);
-        if (level < LOG_DEBUG || level > LOG_FATAL) {
-            fprintf(stderr, "Invalid log level. Use 0-4.\n");
-            return EXIT_FAILURE;
+        if (!strcmp(argv[1], "--log") || !strcmp(argv[1], "-l")) {
+            if (argc < 5) {
+                fprintf(stderr, "Usage: --log <TAG> <LEVEL> <MESSAGE>\n");
+                return 1;
+            }
+
+            int level = atoi(argv[3]);
+            if (level < LOG_DEBUG || level > LOG_FATAL) {
+                fprintf(stderr, "Invalid log level (0..4)\n");
+                return 1;
+            }
+
+            char message[1024] = {0};
+            for (int i = 4; i < argc; i++) {
+                strcat(message, argv[i]);
+                if (i != argc - 1)
+                    strcat(message, " ");
+            }
+
+            external_log(level, argv[2], message);
+            return 0;
         }
 
-        // Combine message arguments
-        size_t message_len = 0;
-        for (int i = 3; i < argc; i++) {
-            message_len += strlen(argv[i]) + 1;
+        if (!strcmp(argv[1], "--profile") || !strcmp(argv[1], "-p")) {
+            if (argc < 3) {
+                fprintf(stderr, "Missing profile number.\n");
+                return 1;
+            }
+
+            char ai_state[PROP_VALUE_MAX] = {0};
+            __system_property_get("persist.sys.azenithconf.AIenabled", ai_state);
+            if (!strcmp(ai_state, "1")) {
+                fprintf(stderr, "ERROR: Auto mode enabled. Manual profile blocked.\n");
+                return 1;
+            }
+
+            const char* profile = argv[2];
+
+            if (!strcmp(profile, "1")) {
+                run_profiler(PERFORMANCE_PROFILE);
+                printf("Performance profile applied.\n");
+            } else if (!strcmp(profile, "2")) {
+                run_profiler(BALANCED_PROFILE);
+                printf("Balanced profile applied.\n");
+            } else if (!strcmp(profile, "3")) {
+                run_profiler(ECO_MODE);
+                printf("Eco Mode applied.\n");
+            } else {
+                fprintf(stderr, "Invalid profile number.\n");
+                return 1;
+            }
+
+            return 0;
         }
 
-        char message[message_len];
-        message[0] = '\0';
-
-        for (int i = 3; i < argc; i++) {
-            strcat(message, argv[i]);
-            if (i < argc - 1)
-                strcat(message, " ");
+        if (!strcmp(argv[1], "--run") || !strcmp(argv[1], "-r")) {
+        
         }
 
-        external_log(level, argv[1], message);
-        return EXIT_SUCCESS;
+        else {
+            fprintf(stderr, "Unknown option: %s\nUse --help\n", argv[1]);
+            return 1;
+        }
     }
 
     ProfileMode cur_mode = PERFCOMMON;
-    // Expose profiler interface
-    if (strcmp(base_name, "sys.azenith-profiler") == 0) {
-        if (argc < 2) {
-            fprintf(stderr, "Usage: sys.azenith-profiler <1|2|3>\n");
-            fprintf(stderr, "Usage: 1 = Performance, 2 = Balanced, 3 = Eco Mode\n");
-            return EXIT_FAILURE;
-        }
-
-        const char* profile = argv[1];
-
-        // Check properties to prevent execution in auto mode
-        char ai_state[PROP_VALUE_MAX] = {0};
-        __system_property_get("persist.sys.azenithconf.AIenabled", ai_state);
-
-        if (strcmp(ai_state, "1") == 0) {
-            log_zenith(LOG_WARN, "Can't apply profile in current mode");
-            fprintf(stderr, "\033[31mERROR:\033[0m Cannot apply profile manually while auto mode is enabled.\n");
-            return EXIT_FAILURE;
-        }
-
-        if (strcmp(profile, "1") == 0) {
-            log_zenith(LOG_INFO, "Applying Performance Profile via execute");
-            toast("Applying Performance Profile");
-            run_profiler(PERFORMANCE_PROFILE);
-            cur_mode = PERFORMANCE_PROFILE;
-            fprintf(stderr, "Applying Performance Profile\n");
-            return EXIT_SUCCESS;
-        } else if (strcmp(profile, "2") == 0) {
-            log_zenith(LOG_INFO, "Applying Balanced Profile via execute");
-            toast("Applying Balanced Profile");
-            run_profiler(BALANCED_PROFILE);
-            cur_mode = BALANCED_PROFILE;
-            fprintf(stderr, "Applying Balanced Profile\n");
-            return EXIT_SUCCESS;
-        } else if (strcmp(profile, "3") == 0) {
-            log_zenith(LOG_INFO, "Applying Eco Mode via execute");
-            toast("Applying Eco Mode");
-            run_profiler(ECO_MODE);
-            cur_mode = ECO_MODE;
-            fprintf(stderr, "Applying Eco Mode\n");
-            return EXIT_SUCCESS;
-        } else {
-            fprintf(stderr, "Invalid profile. Use: 1 | 2 | 3\n");
-            return EXIT_FAILURE;
-        }
-    }
-
+   
     // Make sure only one instance is running
     if (check_running_state() == 1) {
         fprintf(stderr, "\033[31mERROR:\033[0m Another instance of Daemon is already running!\n");

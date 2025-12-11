@@ -103,8 +103,6 @@ ui_print "- Extracting sys.azenith-service for $ARCH_TMP"
 extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-service" "$TMPDIR"
 cp "$TMPDIR"/libs/"$ARCH_TMP"/* "$MODPATH/system/bin"
 BIN_PATH="/data/adb/modules/AZenith/system/bin"
-ln -sf "$MODPATH/system/bin/sys.azenith-service" "$MODPATH/system/bin/sys.azenith-service_log"
-ln -sf "$MODPATH/system/bin/sys.azenith-service" "$MODPATH/system/bin/sys.azenith-profiler"
 rm -rf "$TMPDIR/libs"
 ui_print "- Installing for Arch : $ARCH_TMP"
 
@@ -120,8 +118,6 @@ if [ "$KSU" = "true" ] || [ "$APATCH" = "true" ]; then
 		[ -d "$dir" ] && {
 			ui_print "- Creating symlink in $dir"
 			ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-service"
-			ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-service_log"
-			ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-profiler"
 			ln -sf "$BIN_PATH/sys.azenith-profilesettings" "$dir/sys.azenith-profilesettings"
 			ln -sf "$BIN_PATH/sys.azenith-utilityconf" "$dir/sys.azenith-utilityconf"
 			ln -sf "$BIN_PATH/sys.azenith-preloadbin" "$dir/sys.azenith-preloadbin"
