@@ -1622,33 +1622,6 @@ const setAI = async (c) => {
   );
 };
 
-const findProfiler = async () => {
-  if (profilerPathCache) return profilerPathCache;
-  let { stdout } = await executeCommand("which sys.azenith-profiler");
-  if (stdout.trim()) {
-    profilerPathCache = stdout.trim();
-    return profilerPathCache;
-  }
-  const commonPaths = [
-    "/data/adb/modules/AZenith/system/bin/sys.azenith-profiler",    
-  ];
-  for (const p of commonPaths) {
-    let { errno } = await executeCommand(`ls ${p}`);
-    if (errno === 0) {
-      profilerPathCache = p;
-      return p;
-    }
-  }
-  toast("Profiler binary not found");
-  return null;
-};
-
-const runProfiler = async (mode) => {
-  const p = await findProfiler();
-  if (!p) return;
-  await executeCommand(`su -c "${p} ${mode}" >/dev/null 2>&1 &`);
-};
-
 const applyperformanceprofile = async () => {
   let { stdout: c } = await executeCommand(
     "cat /data/adb/.config/AZenith/API/current_profile"
@@ -1657,7 +1630,7 @@ const applyperformanceprofile = async () => {
     toast(getTranslation("toast.alreadyPerformance"));
     return;
   }
-  await runProfiler("1");
+  await executeCommand("/data/adb/modules/AZenith/system/bin/sys.azenith-service --profile 1");
 };
 
 const applybalancedprofile = async () => {
@@ -1668,7 +1641,7 @@ const applybalancedprofile = async () => {
     toast(getTranslation("toast.alreadyBalanced"));
     return;
   }
-  await runProfiler("2");
+  await executeCommand("/data/adb/modules/AZenith/system/bin/sys.azenith-service --profile 2");
 };
 
 const applyecomode = async () => {
@@ -1679,7 +1652,7 @@ const applyecomode = async () => {
     toast(getTranslation("toast.alreadyECO"));
     return;
   }
-  await runProfiler("3");
+  await executeCommand("/data/adb/modules/AZenith/system/bin/sys.azenith-service --profile 3");
 };
 
 const checkjit = async () => {
