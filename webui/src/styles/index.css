@@ -1026,8 +1026,6 @@ input[type=checkbox]:checked+.toggle::after {
         transparent 100%
     );
 }
-    
-}
 
 .bg-displaybanner:active {
     transform: scale(1.01);
