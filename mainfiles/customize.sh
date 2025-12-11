@@ -102,7 +102,6 @@ esac
 ui_print "- Extracting sys.azenith-service for $ARCH_TMP"
 extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-service" "$TMPDIR"
 cp "$TMPDIR"/libs/"$ARCH_TMP"/* "$MODPATH/system/bin"
-BIN_PATH="/data/adb/modules/AZenith/system/bin"
 rm -rf "$TMPDIR/libs"
 ui_print "- Installing for Arch : $ARCH_TMP"
 
