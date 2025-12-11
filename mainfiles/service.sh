@@ -28,4 +28,4 @@ if [ -z "$(getprop persist.sys.azenith.state)" ] || { [ "$(getprop persist.sys.a
 fi
 
 # Run Daemon
-sys.azenith-service
+sys.azenith-service --run
