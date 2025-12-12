@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Rem01Gaming
+ * Copyright (C) 2024-2025 Rem01Gaming x Zexshia
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -156,6 +156,33 @@ doorprize:
     systemv("setprop persist.sys.azenith.service \"\"");
     systemv("setprop persist.sys.azenith.state stopped");
     exit(EXIT_FAILURE);
+}
+
+/***********************************************************************************
+ * Function Name      : check_module_version
+ * Inputs             : None
+ * Returns            : None
+ * Description        : Compares version inside module.prop with daemon version.
+ ***********************************************************************************/
+void check_module_version(void) {
+    char DAEMON_VERSION[MAX_LINE] = {0};
+    
+    snprintf(DAEMON_VERSION, sizeof(DAEMON_VERSION), "%s", MODULE_VERSION);
+
+    int ret = systemv(
+        "grep -q '^version=%s$' %s",
+        DAEMON_VERSION,
+        MODULE_PROP
+    );
+
+    if (ret != 0) [[clang::unlikely]] {
+        log_zenith(LOG_FATAL,
+                   "AZenith version mismatch with daemon version! please reinstall the module!");
+        notify("AZenith version mismatch with daemon version! please reinstall the module!");
+        systemv("setprop persist.sys.azenith.service \"\"");
+        systemv("setprop persist.sys.azenith.state stopped");
+        exit(EXIT_FAILURE);
+    }
 }
 
 /***********************************************************************************

@@ -21,6 +21,7 @@ import SchemeBanner from "/webui.schemebanner.avif";
 import ResoBanner from "/webui.reso.avif";
 import { exec, toast } from "kernelsu";
 import { wrapInputStream, PackageManagerInterface } from "webuix";
+const WEBUI_VERSION = ".placeholder"
 const moduleInterface = window.$AZenith;
 const fileInterface = window.$AZFile;
 const GAMELIST_PATH = "/data/adb/.config/AZenith/gamelist/gamelist.txt";
@@ -71,10 +72,39 @@ const checkModuleVersion = async () => {
       "grep \"version=\" /data/adb/modules/AZenith/module.prop | awk -F'=' '{print $2}'"
     );
 
-    if (c === 0) {
-      document.getElementById("moduleVer").textContent = s.trim();
+    if (c !== 0) return;
+
+    const moduleVersion = s.trim();
+
+    const el = document.getElementById("moduleVer");
+    if (el) el.textContent = moduleVersion;
+
+    if (moduleVersion !== WEBUI_VERSION) {
+      console.error(
+        `[AZenith] WebUI blocked due to version mismatch: WebUI=${WEBUI_VERSION}, Module=${moduleVersion}`
+      );
+
+      const loadingText = document.getElementById("loading-text");
+      const loadingScreen = document.getElementById("loading-screen");
+
+      if (loadingText) {
+        loadingText.textContent =
+          `⚠ Version mismatch detected.\n` +
+          `WebUI: ${WEBUI_VERSION}\n` +
+          `Module: ${moduleVersion}\n` +
+          `Please update or reinstall to continue.`;
+      }
+
+      if (loadingScreen) {
+        loadingScreen.classList.remove("hidden");
+      }
+
+      throw new Error("WebUI version mismatch — stopping initialization.");
     }
-  } catch {}
+  } catch (err) {
+    console.error("Failed to check module version:", err);
+    throw err; 
+  }
 };
 
 const normalize = s => s.toLowerCase().replace(/[^a-z0-9]+/g, "_");
@@ -2722,5 +2752,5 @@ checkCPUInfo();
 checkDeviceInfo();
 checkKernelVersion();
 getAndroidVersion();
-checkModuleVersion();
+
 

@@ -55,7 +55,9 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
+        // Check Module Integrity
         is_kanged();
+        check_module_version();
 
         if (daemon(0, 0)) {
             log_zenith(LOG_FATAL, "Unable to daemonize service");

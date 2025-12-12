@@ -14,6 +14,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+
 #define LOOP_INTERVAL_MS 700
 #define LOOP_INTERVAL_SEC 2
 #define MAX_DATA_LENGTH 1024
@@ -22,8 +23,10 @@
 #define MAX_PATH_LENGTH 256
 #define MAX_LINE 512
 #define MAX_PACKAGE 128
+
 #define NOTIFY_TITLE "AZenith"
 #define LOG_TAG "AZenith"
+
 #define LOG_FILE "/data/adb/.config/AZenith/debug/AZenith.log"
 #define LOG_VFILE "/data/adb/.config/AZenith/debug/AZenithVerbose.log"
 #define LOG_FILE_PRELOAD "/data/adb/.config/AZenith/preload/AZenithPR.log"
@@ -32,6 +35,7 @@
 #define GAMELIST "/data/adb/.config/AZenith/gamelist/gamelist.txt"
 #define MODULE_PROP "/data/adb/modules/AZenith/module.prop"
 #define MODULE_UPDATE "/data/adb/modules/AZenith/update"
+#define MODULE_VERSION ".placeholder"
 
 #define MY_PATH                                                                                                                    \
     "PATH=/system/bin:/system/xbin:/data/adb/ap/bin:/data/adb/ksu/bin:/data/adb/magisk:/debug_ramdisk:/sbin:/sbin/su:/su/bin:/su/" \
@@ -95,6 +99,7 @@ void setspid(void);
 bool return_true(void);
 bool return_false(void);
 void runthermalcore(void);
+void check_module_version(void);
 
 // Shell and Command execution
 char* execute_command(const char* format, ...);
