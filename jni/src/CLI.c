@@ -28,6 +28,7 @@
 void print_help() {
     printf(
         "AZenith Daemon CLI (by @Zexshia)\n"
+        "Version: %s\n"
         "\n"
         "Usage: sys.azenith-service [options]\n"
         "\n"
@@ -57,6 +58,7 @@ void print_help() {
         "     sys.azenith-service --run\n"
         "     sys.azenith-service --profile 2\n"
         "     sys.azenith-service --help\n"
+        ,MODULE_VERSION
     );
 }
 
