@@ -146,7 +146,7 @@
     border: 1px solid var(--outlineVariant, rgba(255, 255, 255, 0.12));
     border-radius: 9999px;
     cursor: pointer;
-    transition: background-color .25s ease, box-shadow .25s ease, transform .35s cubic-bezier(.34,1.56,.64,1);
+    transition: background-color .25s ease, transform .35s cubic-bezier(.34,1.56,.64,1);
 }
 
 .toggle2::after {
@@ -155,27 +155,29 @@
     top: 50%;
     left: .15rem;
     transform: translateY(-50%);
-    width: 1rem;
-    height: 1rem;
+    width: .95rem;
+    height: .95rem;
     background-color:var(--outlineVariant, #151920);
     border: 1px solid var(--outlineVariant, #1a1a1a);
     border-radius: 9999px;
-    transition: transform .35s cubic-bezier(.34,1.56,.64,1), background-color .25s ease, border-color .25s ease, box-shadow .25s ease;
+    transition: transform .35s cubic-bezier(.34,1.56,.64,1), background-color .25s ease, border-color .25s ease;
 }
 
 
 .toggle2.active {
-    background: linear-gradient(135deg, var(--primary, #4853a0), var(--onPrimaryContainer, #7c86c0));
-    box-shadow: 0 0 10px var(--surfaceVariant, rgba(130, 150, 255, .5));
-    border-color:var(--onPrimaryContainer, #a6b3ff);
-    transform: scale(1.02);
+    background: linear-gradient(
+        135deg,
+        var(--primary, #4853a0),
+        var(--onPrimaryContainer, #7c86c0)
+    );
+    border-color: var(--onPrimaryContainer, #a6b3ff);
+    transform: scale(1);
 }
 
 .toggle2.active::after {
-    transform: translate(1.45rem, -50%) scale(1.17);
-    background-color:var(--onPrimary, #e6e9ff);
+    transform: translate(1.5rem, -50%) scale(1.15);
+    background-color: var(--onPrimary, #e6e9ff);
     border: 2px solid var(--onPrimary, #b5beff);
-    box-shadow: 0 0 10px var(--surfaceVariant, rgba(180, 190, 255, .45));
 }
 
 #bottomToolbar {
@@ -942,40 +944,46 @@ video {
 .toggle {
     position: relative;
     width: 2.9rem;
-    background-color:var(--surfaceContainer, #090b11);
+    height: 1.45rem;
+    background-color: var(--surfaceContainer, #090b11);
     border: 1px solid var(--outlineVariant, rgba(255, 255, 255, 0.12));
     border-radius: 9999px;
-    transition: background-color .25s ease, box-shadow .25s ease, transform .35s cubic-bezier(.34,1.56,.64,1);
+    transition: background-color .25s ease,
+                border-color .25s ease,
+                transform .35s cubic-bezier(.34,1.56,.64,1);
 }
 
 .toggle::after {
     content: "";
     position: absolute;
     top: 50%;
-    left: .15rem;
+    left: .18rem;
     transform: translateY(-50%);
-    width: 1rem;
-    height: 1rem;
-    background-color:var(--outlineVariant, #151920);
-    border: 1px solid var(--outlineVariant, #1a1a1a);
+    width: .95rem;
+    height: .95rem;
+    background-color: var(--outlineVariant, #151920);
+    border: 1px solid var(--outlineVariant, #20242c);
     border-radius: 9999px;
-    transition: transform .35s cubic-bezier(.34,1.56,.64,1), background-color .25s ease, border-color .25s ease, box-shadow .25s ease;
+    transition: transform .35s cubic-bezier(.34,1.56,.64,1),
+                background-color .25s ease,
+                border-color .25s ease;
 }
 
-input[type=checkbox]:checked+.toggle {
-    background: linear-gradient(135deg, var(--primary, #4853a0), var(--onPrimaryContainer, #7c86c0));
-    box-shadow: 0 0 10px var(--surfaceVariant, rgba(130, 150, 255, .5));
-    border-color:var(--onPrimaryContainer, #a6b3ff);
-    transform: scale(1.02);
+input[type=checkbox]:checked + .toggle {
+    background: linear-gradient(
+        135deg,
+        var(--primary, #4853a0),
+        var(--onPrimaryContainer, #7c86c0)
+    );
+    border-color: var(--onPrimaryContainer, #a6b3ff);
+    transform: scale(1);
 }
 
-input[type=checkbox]:checked+.toggle::after {
-    transform: translate(1.45rem, -50%) scale(1.17);
-    background-color:var(--onPrimary, #e6e9ff);
+input[type=checkbox]:checked + .toggle::after {
+    transform: translate(1.5rem, -50%) scale(1.15);
+    background-color: var(--onPrimary, #e6e9ff);
     border: 2px solid var(--onPrimary, #b5beff);
-    box-shadow: 0 0 10px var(--surfaceVariant, rgba(180, 190, 255, .45));
 }
-
 
 .bg-displaybanner {
     position: absolute;
@@ -1111,11 +1119,9 @@ input[type=checkbox]:checked+.toggle::after {
     padding: 1.5rem;
     width: 90%;
     background-color:var(--tonalSurface, #12141b);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, .45);
     max-width: 500px;
     transform: scale(.95);
-    transition: transform .3s;
-    box-shadow: 0 10px 25px #0006
+    transition: transform .3s;    
 }
 
 .additional-modal.show .additional-container,
@@ -1223,7 +1229,7 @@ input[type=checkbox]:checked+.toggle::after {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.5);
     transition: opacity .3s
 }
 
@@ -1439,12 +1445,10 @@ input[type=checkbox]:checked+.toggle::after {
     margin-bottom: 0;
     border-radius: 6rem;
     border: none;
-    box-shadow: 0 3px 10px var(--surfaceVariant, rgba(130, 140, 255, .25));
 }
 
 .bigbutton:active {
-    background: linear-gradient(135deg, var(--onPrimaryContainer, #7c86c0), var(--primary, #4853a0));
-    box-shadow: 0 0 8px var(--surfaceVariant, rgba(110, 130, 255, .3));
+    background: linear-gradient(135deg, var(--onPrimaryContainer, #7c86c0), var(--primary, #4853a0));    
     transform: scale(0.99);
 }
 
@@ -1999,8 +2003,8 @@ input[type=checkbox]:checked+.toggle::after {
     display: flex;
     justify-content: center;
     align-items: center;
-    background: #000000e6;
-    opacity: 1;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 1;    
     transition: opacity .75s ease-in-out
 }
 
@@ -2012,18 +2016,18 @@ input[type=checkbox]:checked+.toggle::after {
     position: absolute;
     top: 50%;
     left: 50%;
+    font-weight: 600;
     transform: translate(-50%, -50%)
 }
 
 .spinner,
 .spinnerg {
-  width: 50px;
-  height: 50px;
+  width: 40px;
+  height: 40px;
   border: 4px solid transparent;
-  border-top-color: var(--primary);
+  border-top-color: var(--surfaceTint);
   border-radius: 50%;
-  animation: spin .9s linear infinite, pulseColor 2.5s ease-in-out infinite;
-  filter: drop-shadow(0 0 6px rgba(0,0,0,0.25));
+  animation: spin .9s linear infinite, pulseColor 1.5s ease-in-out infinite;
 }
 
 .no-scroll {
