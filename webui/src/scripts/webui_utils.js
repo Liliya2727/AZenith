@@ -21,7 +21,7 @@ import SchemeBanner from "/webui.schemebanner.avif";
 import ResoBanner from "/webui.reso.avif";
 import { exec, toast } from "kernelsu";
 import { wrapInputStream, PackageManagerInterface } from "webuix";
-const WEBUI_VERSION = ".placeholder"
+const WEBUI_VERSION = ".placeholder";
 const moduleInterface = window.$AZenith;
 const fileInterface = window.$AZFile;
 const GAMELIST_PATH = "/data/adb/.config/AZenith/gamelist/gamelist.txt";
