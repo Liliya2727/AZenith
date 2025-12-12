@@ -54,6 +54,21 @@ int main(int argc, char* argv[]) {
             fprintf(stderr, "\033[31mERROR:\033[0m Another instance of Daemon is already running!\n");
             return 1;
         }
+        
+        // Sanity check for dumpsys
+        if (access("/system/bin/dumpsys", F_OK) != 0) {
+            fprintf(stderr, "\033[31mFATAL ERROR:\033[0m /system/bin/dumpsys: inaccessible or not found\n");
+            log_encore(LOG_FATAL, "/system/bin/dumpsys: inaccessible or not found");
+            notify("Something wrong happening in the daemon, please check module log.");
+            exit(EXIT_FAILURE);
+        }
+    
+        if (is_file_empty("/system/bin/dumpsys") == 1) {
+            fprintf(stderr, "\033[31mFATAL ERROR:\033[0m /system/bin/dumpsys was tampered by kill logger module.\n");
+            log_encore(LOG_FATAL, "/system/bin/dumpsys was tampered by kill logger module");
+            notify("Please remove your stupid kill logger module.");
+            exit(EXIT_FAILURE);
+        }
 
         // Check Module Integrity
         is_kanged();
@@ -65,7 +80,7 @@ int main(int argc, char* argv[]) {
             systemv("setprop persist.sys.azenith.state stopped");
             return 1;
         }
-
+                        
         signal(SIGINT,  sighandler);
         signal(SIGTERM, sighandler);
 

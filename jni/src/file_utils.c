@@ -101,3 +101,33 @@ int check_running_state(void) {
     pclose(fp);
     return 0;
 }
+
+/***********************************************************************************
+ * Function Name      : is_file_empty
+ * Inputs             : /path/to/filename
+ * Returns            : 1 if file not found
+ *                      0 if file found
+ * Description        : check if file is present or not
+ ***********************************************************************************/
+int is_file_empty(const char *filename) {
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        perror("fopen failed");
+        return -1;
+    }
+    
+    int ch = fgetc(file);
+    if (ch == EOF) {
+        if (feof(file)) {
+            fclose(file);
+            return 1;
+        } else {
+            perror("fgetc failed");
+            fclose(file);
+            return -1;
+        }
+    }
+    
+    fclose(file);
+    return 0;
+}
