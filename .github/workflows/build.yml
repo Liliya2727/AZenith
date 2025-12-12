@@ -34,6 +34,10 @@ jobs:
         uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 0
+      
+      - name: add module verify
+        id: verifyModule
+        run: bash .github/scripts/verify.sh
 
       - name: NDK Setup
         uses: nttld/setup-ndk@v1.5.0
