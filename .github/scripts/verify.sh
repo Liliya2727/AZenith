@@ -12,8 +12,13 @@ cd "$GITHUB_WORKSPACE" || {
 	exit 1
 }
 
+
 # Write module version to daemon and webui
 version="$(cat version)"
 release_code="$(git rev-list HEAD --count)-$(git rev-parse --short HEAD)-release"
-sed -i "s|#define MODULE_VERSION \".placeholder\"|#define MODULE_VERSION \"$version ($release_code)\"|" jni/include/AZenith.h
-sed -i "s|const WEBUI_VERSION = \".placeholder\";|const WEBUI_VERSION = \"$version ($release_code)\";|" webui/src/scripts/webui_utils.js
+echo "start sending AZenith version: $version ($release_code) to WebUI and Daemon"
+sed -i "s|#define MODULE_VERSION \".*\"|#define MODULE_VERSION \"$version ($release_code)\"|" jni/include/AZenith.h
+sed -i 's#const WEBUI_VERSION = ".*";#const WEBUI_VERSION = "'"$version ($release_code)"'";#' webui/src/scripts/webui_utils.js
+
+echo "$(cat webui/src/scripts/webui_utils.js | grep WEBUI_VERSION)"
+echo "$(cat jni/include/AZenith.h | grep MODULE_VERSION)"
