@@ -66,32 +66,253 @@ const executeCommand = async (cmd, cwd = null) => {
 window.executeCommand = executeCommand;
 
 // Main Script
+const setGPUMaliDefault = async (c) => {
+  const s = "/data/adb/.config/AZenith",
+        r = `${s}/API/current_profile`;
+
+  await executeCommand(
+    `setprop persist.sys.azenith.custom_default_gpumali_gov ${c}`
+  );
+
+  const { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
+  if (d === 0 && l.trim() === "2") {
+    await executeCommand(
+      `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsGPUMali ${c}`
+    );
+  }
+};
+
+const loadGPUMaliDefault = async () => {
+  const { errno: c, stdout: s } = await executeCommand(
+    "sh -c 'ls /sys/devices/platform/soc/*.mali/devfreq/*.mali/available_governors 2>/dev/null | head -n 1'"
+  );
+  if (c !== 0 || !s.trim()) return;
+
+  const path = s.trim();
+
+  const { errno: r, stdout: g } = await executeCommand(
+    `chmod 644 ${path} && cat ${path}`
+  );
+  if (r !== 0) return;
+
+  const select = document.getElementById("gpuMaliDefault");
+  if (!select) return;
+
+  select.innerHTML = "";
+  g.trim().split(/\s+/).forEach((gov) => {
+    const opt = document.createElement("option");
+    opt.value = gov;
+    opt.textContent = gov;
+    select.appendChild(opt);
+  });
+
+  const { errno: l, stdout: m } = await executeCommand(
+    `sh -c '[ -n "$(getprop persist.sys.azenith.custom_default_gpumali_gov)" ] && getprop persist.sys.azenith.custom_default_gpumali_gov || getprop persist.sys.azenith.default_gpumali_gov'`
+  );
+  if (l === 0 && m.trim()) select.value = m.trim();
+};
+
+const setGPUMaliPowersave = async (c) => {
+  const s = "/data/adb/.config/AZenith",
+        r = `${s}/API/current_profile`;
+
+  await executeCommand(
+    `setprop persist.sys.azenith.custom_powersave_gpumali_gov ${c}`
+  );
+
+  const { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
+  if (d === 0 && l.trim() === "3") {
+    await executeCommand(
+      `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsGPUMali ${c}`
+    );
+  }
+};
+
+const loadGPUMaliPowersave = async () => {
+  const { errno: c, stdout: s } = await executeCommand(
+    "sh -c 'ls /sys/devices/platform/soc/*.mali/devfreq/*.mali/available_governors 2>/dev/null | head -n 1'"
+  );
+  if (c !== 0 || !s.trim()) return;
+
+  const path = s.trim();
+
+  const { errno: r, stdout: g } = await executeCommand(
+    `chmod 644 ${path} && cat ${path}`
+  );
+  if (r !== 0) return;
+
+  const select = document.getElementById("gpuMaliPowersave");
+  if (!select) return;
+
+  select.innerHTML = "";
+  g.trim().split(/\s+/).forEach((gov) => {
+    const opt = document.createElement("option");
+    opt.value = gov;
+    opt.textContent = gov;
+    select.appendChild(opt);
+  });
+
+  const { errno: l, stdout: m } = await executeCommand(
+    `sh -c '[ -n "$(getprop persist.sys.azenith.custom_powersave_gpumali_gov)" ] && getprop persist.sys.azenith.custom_powersave_gpumali_gov'`
+  );
+  if (l === 0 && m.trim()) select.value = m.trim();
+};
+
+const setGPUMaliPerformance = async (c) => {
+  const s = "/data/adb/.config/AZenith",
+        r = `${s}/API/current_profile`;
+
+  await executeCommand(
+    `setprop persist.sys.azenith.custom_performance_gpumali_gov ${c}`
+  );
+
+  const { errno: d, stdout: l } = await executeCommand(`cat ${r}`);
+  if (d === 0 && l.trim() === "1") {
+    await executeCommand(
+      `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsGPUMali ${c}`
+    );
+  }
+};
+
+const loadGPUMaliPerformance = async () => {
+  const { errno: c, stdout: s } = await executeCommand(
+    "sh -c 'ls /sys/devices/platform/soc/*.mali/devfreq/*.mali/available_governors 2>/dev/null | head -n 1'"
+  );
+  if (c !== 0 || !s.trim()) return;
+
+  const path = s.trim();
+
+  const { errno: r, stdout: g } = await executeCommand(
+    `chmod 644 ${path} && cat ${path}`
+  );
+  if (r !== 0) return;
+
+  const select = document.getElementById("gpuMaliPerformance");
+  if (!select) return;
+
+  select.innerHTML = "";
+  g.trim().split(/\s+/).forEach((gov) => {
+    const opt = document.createElement("option");
+    opt.value = gov;
+    opt.textContent = gov;
+    select.appendChild(opt);
+  });
+
+  const { errno: l, stdout: m } = await executeCommand(
+    `sh -c '[ -n "$(getprop persist.sys.azenith.custom_performance_gpumali_gov)" ] && getprop persist.sys.azenith.custom_performance_gpumali_gov'`
+  );
+  if (l === 0 && m.trim()) select.value = m.trim();
+};
+
+const checkGPUMaliCompatibility = async () => {
+  const { stdout } = await executeCommand(
+    "getprop sys.azenith.maligovsupport"
+  );
+
+  const value = stdout.trim();
+  const maliCard = document.getElementById("maliCard");
+  if (!maliCard) return;
+
+  if (value === "1") {
+    maliCard.classList.remove("hidden");
+    await loadGPUMaliDefault();
+    await loadGPUMaliPowersave();
+    await loadGPUMaliPerformance();
+  } else {
+    maliCard.classList.add("hidden");
+  }
+};
+
+const checkWebUISupport = async () => {
+  const loadingText = document.getElementById("loading-text");
+  const loadingScreen = document.getElementById("loading-screen");
+
+  try {
+    if (typeof ksu !== "undefined" && typeof ksu.getPackagesInfo === "function") {
+      const res = ksu.getPackagesInfo(JSON.stringify(["android"]));
+      const list = JSON.parse(res || "[]");
+
+      if (Array.isArray(list) && list.length > 0) {
+        return;
+      }
+    }
+  } catch (_) {}
+
+  try {
+    if (typeof window.$packageManager !== "undefined") {
+      const app = await window.$packageManager.getApplicationInfo("android",0,0);
+      if (app) {
+        return;
+      }
+    }
+  } catch (_) {}
+
+  if (loadingText) {
+    loadingText.textContent =
+      "⚠ WebUI is not supported in this app\n\n" +
+      "Try using WebuiX apk or MMRL apk";
+  }
+
+  if (loadingScreen) {
+    loadingScreen.classList.remove("hidden");
+  }
+
+  throw new Error("WebUI not supported");
+};
+
+const checkServiceRunning = async () => {
+  const loadingText = document.getElementById("loading-text");
+  const loadingScreen = document.getElementById("loading-screen");
+
+  try {
+    const { errno, stdout } = await executeCommand(
+      "/system/bin/pidof sys.azenith-service"
+    );
+
+    const pid = (stdout || "").trim();
+
+    if (errno !== 0 || !pid) {
+      if (loadingText) {
+        loadingText.textContent =
+          "AZenith daemon is not running.\n\n" +
+          "Please reboot your device or Run:\n" +
+          "sys.azenith-service --run";
+      }
+
+      if (loadingScreen) {
+        loadingScreen.classList.remove("hidden");
+      }
+
+      throw new Error("AZenith daemon not running");
+    }
+
+    return;
+
+  } catch (err) {
+    console.error("Service check failed:", err);
+    throw err;
+  }
+};
+
 const checkModuleVersion = async () => {
   try {
     const { errno: c, stdout: s } = await executeCommand(
-      "grep \"version=\" /data/adb/modules/AZenith/module.prop | awk -F'=' '{print $2}'"
+      "/data/adb/modules/AZenith/system/bin/sys.azenith-service --version"
     );
 
     if (c !== 0) return;
 
     const moduleVersion = s.trim();
 
-    const el = document.getElementById("moduleVer");
-    if (el) el.textContent = moduleVersion;
-
     if (moduleVersion !== WEBUI_VERSION) {
-      console.error(
-        `[AZenith] WebUI blocked due to version mismatch: WebUI=${WEBUI_VERSION}, Module=${moduleVersion}`
-      );
-
       const loadingText = document.getElementById("loading-text");
       const loadingScreen = document.getElementById("loading-screen");
 
       if (loadingText) {
         loadingText.textContent =
           `⚠ Version mismatch detected.\n` +
-          `WebUI: ${WEBUI_VERSION}\n` +
-          `Module: ${moduleVersion}\n` +
+          `WebUI version doesn't match with\n` +
+          `current Daemon version\n` +
           `Please update or reinstall to continue.`;
       }
 
@@ -101,9 +322,13 @@ const checkModuleVersion = async () => {
 
       throw new Error("WebUI version mismatch — stopping initialization.");
     }
+
+    const el = document.getElementById("moduleVer");
+    if (el) el.textContent = moduleVersion;
+
   } catch (err) {
     console.error("Failed to check module version:", err);
-    throw err; 
+    throw err;
   }
 };
 
@@ -255,7 +480,7 @@ const setActiveToolbar = (activeId) => {
 };
 
 const hidePanel = (panel) => {
-  panel.classList.add("kanjud");
+  panel.classList.add("showAnim");
   clearTimeout(panel.hideTimer);
   panel.hideTimer = setTimeout(() => {
     panel.classList.add("hidden");
@@ -266,25 +491,58 @@ const showPanel = (panel) => {
   clearTimeout(panel.hideTimer);
   panel.classList.remove("hidden");
   void panel.offsetWidth;
-  panel.classList.remove("kanjud");
+  panel.classList.remove("showAnim");
+};
+
+const showCards = (container) => {
+  const cards = Array.from(container.querySelectorAll(".appCard"));
+
+  cards.forEach(card => {
+    clearTimeout(card.hideTimer);
+    card.classList.add("hidden");
+    card.classList.add("showAnim");
+  });
+
+  cards.forEach((card, i) => {
+    setTimeout(() => {
+      card.classList.remove("hidden");
+      requestAnimationFrame(() => card.classList.remove("showAnim"));
+    }, i * 40);
+  });
+};
+
+const hideCards = (container) => {
+  const cards = container.querySelectorAll(".appCard");
+  cards.forEach(card => {
+    card.classList.add("showAnim"); 
+    clearTimeout(card.hideTimer);
+    card.hideTimer = setTimeout(() => card.classList.add("hidden"), 230);
+  });
 };
 
 const showGameListMenu = async () => {
   if (currentScreen === "gamelist") return;
   currentScreen = "gamelist";
-  loadAppList();
+  loadAppList(); 
+
   const main = document.getElementById("mainMenu");
   const gameList = document.getElementById("gameListMenu");
   const search = document.getElementById("searchInput");
   const avatar = document.getElementById("Avatar");
   const title = document.getElementById("textJudul");
+
   hidePanel(main);
   showPanel(gameList);
   showPanel(search);
-  title.classList.add("kanjud");
-  avatar.classList.add("kanjud");
+
+  title.classList.add("showAnim");
+  avatar.classList.add("showAnim");
+
+  showCards(gameList);
+
   setActiveToolbar("openGameList");
-  requestAnimationFrame(() => {
+
+  requestAnimationFrame(() => {    
     gameList.scrollTop = 0;
     document.documentElement.scrollTop = 0;
   });
@@ -293,17 +551,23 @@ const showGameListMenu = async () => {
 const showMainMenu = async () => {
   if (currentScreen === "main") return;
   currentScreen = "main";
+
   const main = document.getElementById("mainMenu");
   const gameList = document.getElementById("gameListMenu");
   const search = document.getElementById("searchInput");
   const avatar = document.getElementById("Avatar");
   const title = document.getElementById("textJudul");
+
+  hideCards(gameList);
   hidePanel(gameList);
   hidePanel(search);
+
   showPanel(main);
-  title.classList.remove("kanjud");
-  avatar.classList.remove("kanjud");
+  title.classList.remove("showAnim");
+  avatar.classList.remove("showAnim");
+
   setActiveToolbar("openMain");
+
   requestAnimationFrame(() => {
     main.scrollTop = 0;
     document.documentElement.scrollTop = 0;
@@ -324,10 +588,11 @@ const writeGameList = async (list) => {
   await executeCommand(`sync`);
 };
 
-const loadAppList = async () => {
-  if (appListLoaded) return;
-  appListLoaded = true;
+let cachedPkgList = [];
+let cachedLabelMap = {};
+let cachedIconMap = {};
 
+const loadAppList = async () => {
   const container = document.getElementById("appList");
   const searchInput = document.getElementById("searchInput");
   if (!container || !searchInput) return;
@@ -338,193 +603,206 @@ const loadAppList = async () => {
 
   try {
     let gamelist = await readGameList();
-    let pkgList = [];
-    try {
-      pkgList = JSON.parse(ksu.listUserPackages());
-    } catch (e) {      
-      const r = await exec("pm list packages -3");
-      pkgList = (r.stdout || "")
-        .split("\n")
-        .map(x => x.replace("package:", "").trim())
-        .filter(Boolean);
-    }
 
-    if (!pkgList.length) {
-      container.textContent = "No apps found.";
-      return;
-    }
-
-    let labelMap = {};
-
-    try {
-      const infoList = JSON.parse(ksu.getPackagesInfo(JSON.stringify(pkgList)));
-      for (const i of infoList) {
-        labelMap[i.packageName] = i.appLabel || i.label || i.packageName;
+    if (!appListLoaded) {
+      let pkgList = [];
+      try {
+        pkgList = JSON.parse(ksu.listUserPackages());
+      } catch {
+        const r = await exec("pm list packages -3");
+        pkgList = (r.stdout || "")
+          .split("\n")
+          .map(x => x.replace("package:", "").trim())
+          .filter(Boolean);
       }
-    } catch {}
 
-    if (typeof window.$packageManager !== "undefined") {
-      for (const pkg of pkgList) {
-        if (!labelMap[pkg]) {
-          try {
-            const appInfo = await window.$packageManager.getApplicationInfo(pkg, 0, 0);
-            if (appInfo) {
-              labelMap[pkg] =
-                (typeof appInfo.getLabel === "function"
-                  ? appInfo.getLabel()
-                  : appInfo.label) ||
-                appInfo.appName ||
-                pkg;
-            }
-          } catch {}
+      if (!pkgList.length) {
+        container.textContent = "No apps found.";
+        return;
+      }
+
+      const labelMap = {};
+      try {
+        const infoList = JSON.parse(ksu.getPackagesInfo(JSON.stringify(pkgList)));
+        infoList.forEach(i => {
+          labelMap[i.packageName] = i.appLabel || i.label || i.packageName;
+        });
+      } catch {}
+
+      if (window.$packageManager) {
+        for (const pkg of pkgList) {
+          if (!labelMap[pkg]) {
+            try {
+              const appInfo = await window.$packageManager.getApplicationInfo(pkg, 0, 0);
+              labelMap[pkg] = (appInfo?.getLabel?.() || appInfo?.label || appInfo?.appName || pkg);
+            } catch {}
+          }
         }
       }
-    }
 
-    pkgList.forEach(pkg => {
-      if (!labelMap[pkg]) labelMap[pkg] = pkg;
-    });
+      pkgList.forEach(p => labelMap[p] ||= p);
 
-    let iconMap = {};
+      const iconMap = {};
+      pkgList.forEach(p => (iconMap[p] = `ksu://icon/${p}`));
 
-    for (const pkg of pkgList) {
-      iconMap[pkg] = `ksu://icon/${pkg}`;
-    }
+      try {
+        const icons = JSON.parse(ksu.getPackagesIcons(JSON.stringify(pkgList), 96));
+        icons.forEach(i => i.icon && (iconMap[i.packageName] = i.icon));
+      } catch {}
 
-    try {
-      const icons = JSON.parse(ksu.getPackagesIcons(JSON.stringify(pkgList), 96));
-      for (const i of icons) {
-        if (i.icon) iconMap[i.packageName] = i.icon;
-      }
-    } catch {
-      
-    }
-
-    if (typeof window.$packageManager !== "undefined") {
-      for (const pkg of pkgList) {
-        if (!iconMap[pkg] || iconMap[pkg].startsWith("ksu://icon")) {
-          try {
-          const iconStream = window.$packageManager.getApplicationIcon(pkg, 0, 0);
-            const buffer = await wrapInputStream(iconStream).then(r => r.arrayBuffer());
-            const uint8 = new Uint8Array(buffer);
-            let b64 = "";
-            for (let i = 0; i < uint8.length; i++) b64 += String.fromCharCode(uint8[i]);
-            iconMap[pkg] = "data:image/png;base64," + btoa(b64);
-          } catch {}
+      if (typeof window.$packageManager !== "undefined") {
+        for (const pkg of pkgList) {
+          if (!iconMap[pkg] || iconMap[pkg].startsWith("ksu://icon")) {
+            try {
+              const iconStream = await window.$packageManager.getApplicationIcon(pkg, 0, 0);
+              const buffer = await wrapInputStream(iconStream).then(r => r.arrayBuffer());
+              const uint8 = new Uint8Array(buffer);
+              let b64 = "";
+              for (let i = 0; i < uint8.length; i++) b64 += String.fromCharCode(uint8[i]);
+              iconMap[pkg] = "data:image/png;base64," + btoa(b64);
+            } catch {}
+          }
         }
       }
+
+      cachedPkgList = pkgList;
+      cachedLabelMap = labelMap;
+      cachedIconMap = iconMap;
+      appListLoaded = true;
     }
+
+    const checkedCards = cachedPkgList.filter(pkg => gamelist.includes(pkg));
+    const uncheckedCards = cachedPkgList.filter(pkg => !gamelist.includes(pkg));
+
+    const sortByLabel = list => list.sort((a, b) =>
+      cachedLabelMap[a].toLowerCase().localeCompare(cachedLabelMap[b].toLowerCase())
+    );
+
+    const sortedChecked = sortByLabel(checkedCards);
+    const sortedUnchecked = sortByLabel(uncheckedCards);
+
+    const finalList = [...sortedChecked, ...sortedUnchecked];
+
+    container.innerHTML = finalList.map(pkg => `
+      <div class="common-card appCard bg-tonalSurface showAnim hidden" data-pkg="${pkg}">
+        <img class="appIcon lazy-icon" data-src="${cachedIconMap[pkg]}" src="">
+        <div class="meta">
+          <div class="row">
+            <div class="text-area">
+              <div class="app-label">${cachedLabelMap[pkg]}</div>
+              <div class="pkg-label">${pkg}</div>
+            </div>
+            <div class="toggle2 ${gamelist.includes(pkg) ? "active" : ""}"
+                 data-pkg="${pkg}"
+                 data-state="${gamelist.includes(pkg) ? "on" : "off"}"></div>
+          </div>
+        </div>
+      </div>
+    `).join("");
 
     const cardCache = {};
+    container.querySelectorAll(".appCard").forEach(card => {
+      const pkg = card.dataset.pkg;
+      cardCache[pkg] = { card, label: cachedLabelMap[pkg], pkg };
+      card.classList.add("hidden");
+    });
 
-    for (const pkg of pkgList) {
-      const card = document.createElement("div");
-      card.className = "appCard mt-211 mb-4 p-4 rounded-lg";
-      card.dataset.pkg = pkg;
+    const cards = finalList.map(pkg => cardCache[pkg].card);
+    requestAnimationFrame(() => {
+      cards.forEach((card, i) => {
+        setTimeout(() => {
+          card.classList.remove("hidden");
+          card.classList.add("showAnim");
+          requestAnimationFrame(() => card.classList.remove("showAnim"));
+        }, i * 40);
+      });
+    });
 
-      const icon = document.createElement("img");
-      icon.className = "appIcon";
-      icon.dataset.src = iconMap[pkg];
-      icon.src = ""; 
-      icon.classList.add("lazy-icon");
-
-      const nameEl = document.createElement("div");
-      nameEl.className = "app-label";
-      nameEl.textContent = labelMap[pkg];
-
-      const pkgEl = document.createElement("div");
-      pkgEl.className = "pkg-label";
-      pkgEl.textContent = pkg;
-
-      const textArea = document.createElement("div");
-      textArea.className = "text-area";
-      textArea.appendChild(nameEl);
-      textArea.appendChild(pkgEl);
-
-      const toggle = document.createElement("div");
-      toggle.className = "toggle2";
-      toggle.dataset.pkg = pkg;
-      toggle.dataset.state = gamelist.includes(pkg) ? "on" : "off";
-      if (toggle.dataset.state === "on") toggle.classList.add("active");
-
+    container.querySelectorAll(".toggle2").forEach(toggle => {
+      const pkg = toggle.dataset.pkg;
       toggle.onclick = async () => {
         toggle.classList.toggle("active");
-        const isOn = toggle.classList.contains("active");
-        toggle.dataset.state = isOn ? "on" : "off";
-        
-        if (isOn && !gamelist.includes(pkg)) gamelist.push(pkg);
-        if (!isOn) gamelist = gamelist.filter(p => p !== pkg);
-        
+        const on = toggle.classList.contains("active");
+
+        toggle.dataset.state = on ? "on" : "off";
+        if (on && !gamelist.includes(pkg)) gamelist.push(pkg);
+        if (!on) gamelist = gamelist.filter(p => p !== pkg);
+
+        const card = cardCache[pkg].card;
+        card.classList.add("showAnim");
+        setTimeout(() => card.classList.remove("showAnim"), 120);
+
         await writeGameList(gamelist);
         sortCards();
-        
+
         searchInput.value = "";
         searchInput.dispatchEvent(new Event("input"));
       };
-
-      const row = document.createElement("div");
-      row.className = "row";
-      row.appendChild(textArea);
-      row.appendChild(toggle);
-
-      const meta = document.createElement("div");
-      meta.className = "meta";
-      meta.appendChild(row);
-
-      card.appendChild(icon);
-      card.appendChild(meta);
-
-      container.appendChild(card);
-      cardCache[pkg] = { card, label: labelMap[pkg], pkg };
-    }
+    });
 
     const sortCards = () => {
       const set = new Set(gamelist);
-      const cards = Object.values(cardCache);
-
-      cards.forEach(c => {
+      const cardsArr = Object.values(cardCache);
+      const positions = new Map();
+      cardsArr.forEach(c => positions.set(c.card, c.card.getBoundingClientRect()));
+      cardsArr.forEach(c => {
         c.isOn = set.has(c.pkg);
         c.sortKey = c.label.toLowerCase();
       });
-
-      cards.sort((a, b) => {
-        if (a.isOn !== b.isOn) return a.isOn ? -1 : 1;
-        return a.sortKey.localeCompare(b.sortKey);
+      cardsArr.sort((a, b) =>
+        a.isOn !== b.isOn ? (a.isOn ? -1 : 1) : a.sortKey.localeCompare(b.sortKey)
+      );
+      cardsArr.forEach(c => container.appendChild(c.card));
+      cardsArr.forEach(c => {
+        const first = positions.get(c.card);
+        const last = c.card.getBoundingClientRect();
+        if (!first) return;
+        const dx = first.left - last.left;
+        const dy = first.top - last.top;
+        c.card.style.transform = `translate(${dx}px, ${dy}px)`;
+        c.card.style.transition = "none";
+        requestAnimationFrame(() => {
+          c.card.style.transition = "";
+          c.card.style.transform = "";
+        });
       });
-
-      cards.forEach(c => container.appendChild(c.card));
     };
 
-    sortCards();
-    
+    searchInput.oninput = () => {
+      const q = searchInput.value.toLowerCase();
+      Object.values(cardCache).forEach(({ card, label, pkg }) => {
+        const match = label.toLowerCase().includes(q) || pkg.toLowerCase().includes(q);
+        if (match) {
+          clearTimeout(card.hideTimer);
+          card.classList.remove("hidden");
+          card.classList.add("showAnim");
+          requestAnimationFrame(() => card.classList.remove("showAnim"));
+        } else {
+          card.classList.add("showAnim");
+          clearTimeout(card.hideTimer);
+          card.hideTimer = setTimeout(() => card.classList.add("hidden"), 230);
+        }
+      });
+    };
+
     const observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const img = entry.target;
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          const img = e.target;
           if (img.dataset.src && !img.loaded) {
             img.src = img.dataset.src;
             img.loaded = true;
-            img.classList.add("loaded"); // trigger animation
+            img.classList.add("loaded");
           }
           observer.unobserve(img);
         }
       });
     }, { rootMargin: "100px" });
-    
-    Object.values(cardCache).forEach(({ card }) => {
-      const img = card.querySelector(".lazy-icon");
-      observer.observe(img);
-    });
 
-    searchInput.addEventListener("input", () => {
-      const q = searchInput.value.toLowerCase();
-      Object.values(cardCache).forEach(({ card, label, pkg }) => {
-        card.style.display = label.toLowerCase().includes(q) || pkg.toLowerCase().includes(q) ? "" : "none";
-      });
-    });
+    container.querySelectorAll(".lazy-icon").forEach(img => observer.observe(img));
 
-  } catch (err) {
-    console.error("Failed to load apps:", err);
+  } catch (e) {
+    console.error(e);
     container.textContent = "Error loading apps";
   } finally {
     loader2?.classList.add("hidden");
@@ -1280,14 +1558,6 @@ const setiosched = async (c) => {
   );
 };
 
-const applyFSTRIM = async () => {
-  await executeCommand(
-    "/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf FSTrim"
-  );
-  const fstrimToast = getTranslation("toast.fstrim");
-  toast(fstrimToast);
-};
-
 const setDefaultCpuGovernor = async (c) => {
   let s = "/data/adb/.config/AZenith",
     r = `${s}/API/current_profile`;
@@ -1476,7 +1746,7 @@ const startService = async () => {
       "pkill -9 -f sys.azenith.rianixiathermalcorev4"
     );
     await executeCommand(
-      "setprop persist.sys.azenith.state stopped && pkill -9 -f sys.azenith-service; su -c '/data/adb/modules/AZenith/system/bin/sys.azenith-service > /dev/null 2>&1 & disown'"
+      "setprop persist.sys.azenith.state stopped && pkill -9 -f sys.azenith-service; su -c '/data/adb/modules/AZenith/system/bin/sys.azenith-service -r > /dev/null 2>&1 & disown'"
     );
 
     await checkServiceStatus();
@@ -1712,6 +1982,21 @@ const setdtrace = async (c) => {
     c
       ? "setprop persist.sys.azenithconf.disabletrace 1"
       : "setprop persist.sys.azenithconf.disabletrace 0"
+  );
+};
+
+const checkfstrim = async () => {
+  let { errno: c, stdout: s } = await executeCommand(
+    "getprop persist.sys.azenithconf.fstrim"
+  );
+  0 === c && (document.getElementById("FSTrim").checked = "1" === s.trim());
+};
+
+const setfstrim = async (c) => {
+  await executeCommand(
+    c
+      ? "setprop persist.sys.azenithconf.fstrim 1"
+      : "setprop persist.sys.azenithconf.fstrim 0"
   );
 };
 
@@ -2412,9 +2697,11 @@ const setupUIListeners = () => {
     .getElementById("applypowersave")
     ?.addEventListener("click", applyecomode);
   document.getElementById("savelogButton")?.addEventListener("click", savelog);
-  document.getElementById("FSTrim")?.addEventListener("click", applyFSTRIM);
 
   // Toggle Switches
+  document
+    .getElementById("FSTrim")
+    ?.addEventListener("change", (e) => setfstrim(e.target.checked));
   document
     .getElementById("fpsged")
     ?.addEventListener("change", (e) => setfpsged(e.target.checked));
@@ -2497,6 +2784,17 @@ const setupUIListeners = () => {
   document
     .getElementById("disablevsync")
     ?.addEventListener("change", (e) => setVsyncValue(e.target.value));
+  
+  // Select GPU Gov  
+  document
+    .getElementById("gpuMaliDefault")
+    ?.addEventListener("change", (e) => setGPUMaliDefault(e.target.value));
+  document
+    .getElementById("gpuMaliPerformance")
+    ?.addEventListener("change", (e) => setGPUMaliPerformance(e.target.value));
+  document
+    .getElementById("gpuMaliPowersave")
+    ?.addEventListener("change", (e) => setGPUMaliPowersave(e.target.value));  
 
   // Open settings
   document
@@ -2678,17 +2976,22 @@ const heavyInit = async () => {
 
   const loader = document.getElementById("loading-screen");
   if (loader) loader.classList.remove("hidden");
-  document.body.classList.add("no-scroll");
+  document.body.classList.add("no-scroll");  
 
   const loops = [
     checkProfile, 
     checkServiceStatus, 
     showRandomMessage, 
-    updateGameStatus,
+    updateGameStatus,    
   ];
   await Promise.all(loops.map((fn) => fn()));
+  
+  await checkWebUISupport();
+  await checkServiceRunning();
+  await checkModuleVersion();
 
-  const quickChecks = [    
+  const quickChecks = [
+    checkGPUMaliCompatibility,
     loadCpuGovernors,
     loadCpuFreq,    
     loadIObalance,
@@ -2701,7 +3004,6 @@ const heavyInit = async () => {
   const heavyAsync = [
     checkCPUInfo,
     checkDeviceInfo,
-    checkModuleVersion,
     checkKernelVersion,
     getAndroidVersion,
     checkfpsged,
@@ -2722,6 +3024,7 @@ const heavyInit = async () => {
     checkdtrace,
     checkjit,
     checktoast,
+    checkfstrim,
     loadVsyncValue,
     checkBypassChargeStatus,
     checkschedtunes,

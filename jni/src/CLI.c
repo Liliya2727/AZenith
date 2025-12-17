@@ -52,6 +52,8 @@ void print_help() {
         "     -vl, --verboselog <TAG> <LEVEL> <MSG>\n"
         "                    Write a verbose log message via AZenith logging service\n"
         "\n"
+        "     -V, --version  Show AZenith current version\n"
+        "\n"
         "     -h, --help     Display this help message and exit\n"
         "\n"
         "Examples:\n"
@@ -231,4 +233,31 @@ int handle_verboselog(int argc, char** argv) {
     /* Send the log */
     external_vlog(level, tag, message);
     return 0;
+}
+
+/***********************************************************************************
+ * Function Name      : printversion
+ * Inputs             : None
+ * Returns            : None
+ * Description        : Show current AZenith daemon version
+ ***********************************************************************************/
+void printversion() {
+    printf("%s\n", MODULE_VERSION);
+}
+
+/***********************************************************************************
+ * Function Name      : require_daemon_running
+ * Inputs             : None
+ * Returns            : None
+ * Description        : block CLI execution if daemon is not running
+ ***********************************************************************************/
+int require_daemon_running(void) {
+    if (!check_running_state()) {
+        fprintf(stderr,
+            "\033[31mERROR:\033[0m AZenith daemon is not running.\n"
+            "Run: sys.azenith-service --run\n"
+        );
+        return 0;
+    }
+    return 1;
 }

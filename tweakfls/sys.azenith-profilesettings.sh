@@ -52,6 +52,7 @@ VSYNCVALUE="$(getprop persist.sys.azenithconf.vsync)"
 BYPASSPROPS="persist.sys.azenithconf.bypasspath"
 BYPASSPATH="$(getprop persist.sys.azenithconf.bypasspath)"
 WALT_STATE="$(getprop persist.sys.azenithconf.walttunes)"
+MALI_COMP="$(getprop sys.azenith.maligovsupport)"
 
 # Logging Functions
 AZLog() {
@@ -92,22 +93,8 @@ zeshia() {
         [ "$lock" = "true" ] && chmod 444 "$path" 2>/dev/null
         return
     fi
-
-    local current
-    current="$(cat "$path" 2>/dev/null)"
-
-    if [ "$current" = "$value" ]; then
-        AZLog "Set /$pathname to $value"
-    else
-        echo "$value" >"$path" 2>/dev/null
-        current="$(cat "$path" 2>/dev/null)"
-
-        if [ "$current" = "$value" ]; then
-            AZLog "Set /$pathname to $value (after retry)"
-        else
-            AZLog "Failed to set /$pathname to $value"
-        fi
-    fi
+    
+    AZLog "Set /$pathname to $value"    
 
     [ "$lock" = "true" ] && chmod 444 "$path" 2>/dev/null
 }
@@ -255,15 +242,20 @@ setfreqppm() {
 }
 
 clear_background_apps() {
-    invisible_pkgs=$(dumpsys window displays | grep "Task{" | grep "visible=false" | sed -n 's/.*A=[0-9]*:\([^ ]*\).*/\1/p' | sort -u)    
+    visible_pkgs=$(dumpsys window displays | grep "Task{" | grep "visible=true" | sed -n 's/.*A=[0-9]*:\([^ ]*\).*/\1/p' | sort -u)
+    invisible_pkgs=$(dumpsys window displays | grep "Task{" | grep "visible=false" | sed -n 's/.*A=[0-9]*:\([^ ]*\).*/\1/p' | sort -u)
     exclude="(com.android.systemui|com.android.settings|android|system)"
-    
+
     for pkg in $invisible_pkgs; do
+        if echo "$visible_pkgs" | grep -qFx "$pkg"; then
+            continue
+        fi
         if ! echo "$pkg" | grep -Eq "$exclude"; then
             am force-stop "$pkg" 2>/dev/null
             AZLog "Stopped app: $pkg"
         fi
-    done    
+    done
+
     dlog "Cleared background apps"
 }
 
@@ -449,6 +441,14 @@ get_biggest_cluster() {
         fi
     done
     echo "$target"
+}
+
+setsGPUMali() {
+    MALI=/sys/devices/platform/soc/*.mali
+    MALI_GOV=$MALI/devfreq/*.mali/governor
+	chmod 644 $MALI_GOV
+	echo "$1" | tee $MALI_GOV
+	chmod 444 $MALI_GOV
 }
 
 ###############################################
@@ -1079,6 +1079,27 @@ performance_profile() {
 	else
 		setsIO "$default_iosched" && dlog "Applying I/O scheduler to : $default_iosched"
 	fi
+	
+	if [ "$MALI_COMP" -eq 1 ]; then
+    	# Load Default GPU Mali Gov
+    	load_default_gpumaligov() {
+    		if [ -n "$(getprop persist.sys.azenith.custom_default_gpumali_gov)" ]; then
+    			getprop persist.sys.azenith.custom_default_gpumali_gov
+    		elif [ -n "$(getprop persist.sys.azenith.default_gpumali_gov)" ]; then
+    			getprop persist.sys.azenith.default_gpumali_gov
+    		else
+    			echo "dummy"
+    		fi
+    	}
+    	# Apply Game GPU Mali Gov
+    	default_maligov=$(load_default_gpumaligov)
+    	if [ -n "$(getprop persist.sys.azenith.custom_performance_gpumali_gov)" ]; then
+    		game_maligov=$(getprop persist.sys.azenith.custom_performance_gpumali_gov)
+    		setsGPUMali "$game_maligov" && dlog "Applying GPU Mali Governor to : $game_maligov"
+    	else
+    		setsGPUMali "$default_maligov" && dlog "Applying GPU Mali Governor to : $default_maligov"
+    	fi
+    fi
 
 	# Set DND Mode
 	if [ "$DND_STATE" -eq 1 ]; then
@@ -1088,7 +1109,6 @@ performance_profile() {
     # Bypass Charge
 	if [ "$BYPASSCHG_STATE" -eq 1 ]; then
 		sys.azenith-utilityconf enableBypass
-		dlog "Bypass Charge Enabled"
 	fi
 	
 	# Fix Target OPP Index
@@ -1224,6 +1244,22 @@ balanced_profile() {
 	default_iosched=$(load_default_iosched)
 	setsIO "$default_iosched"
 	dlog "Applying I/O scheduler to : $default_iosched"
+	
+	if [ "$MALI_COMP" -eq 1 ]; then
+    	# Load Default GPU Mali Gov
+    	load_default_gpumaligov() {
+    		if [ -n "$(getprop persist.sys.azenith.custom_default_gpumali_gov)" ]; then
+    			getprop persist.sys.azenith.custom_default_gpumali_gov
+    		elif [ -n "$(getprop persist.sys.azenith.default_gpumali_gov)" ]; then
+    			getprop persist.sys.azenith.default_gpumali_gov
+    		else
+    			echo "dummy"
+    		fi
+    	}
+    	# Apply GPU Mali Gov
+    	default_maligov=$(load_default_gpumaligov)
+        setsGPUMali "$default_maligov" && dlog "Applying GPU Mali Governor to : $default_maligov"
+    fi
 		
 	# Disable DND
 	if [ "$DND_STATE" -eq 1 ]; then
@@ -1233,7 +1269,6 @@ balanced_profile() {
     # Bypass Charge
 	if [ "$BYPASSCHG_STATE" -eq 1 ]; then
 		sys.azenith-utilityconf disableBypass
-		dlog "Bypass Charge Disabled"
 	fi
 
 	# Limit cpu freq
@@ -1350,6 +1385,19 @@ eco_mode() {
 	powersave_iosched=$(load_powersave_iosched)
 	setsIO "$powersave_iosched"
 	dlog "Applying I/O scheduler to : $powersave_iosched"
+	if [ "$MALI_COMP" -eq 1 ]; then
+    	# Load Default GPU Mali Gov
+    	load_powersave_gpumaligov() {
+    		if [ -n "$(getprop persist.sys.azenith.custom_powersave_gpumali_gov)" ]; then
+    			getprop persist.sys.azenith.custom_powersave_gpumali_gov
+    		else
+    			echo "dummy"
+    		fi
+    	}
+    	# Apply GPU Mali Gov
+    	powersave_maligov=$(load_powersave_gpumaligov)
+        setsGPUMali "$powersave_maligov" && dlog "Applying GPU Mali Governor to : $powersave_maligov"
+    fi
 	
 	# Limit cpu freq
 	if [ -d /proc/ppm ]; then
@@ -1367,7 +1415,6 @@ eco_mode() {
 	# Bypass Charge
 	if [ "$BYPASSCHG_STATE" -eq 1 ]; then
 		sys.azenith-utilityconf disableBypass
-		dlog "Bypass Charge Disabled"
 	fi
 	
 	# Power level settings
@@ -1463,6 +1510,37 @@ initialize() {
 	# Disable compaction_proactiveness
 	zeshia 0 /proc/sys/vm/compaction_proactiveness
 	zeshia 255 /proc/sys/kernel/sched_lib_mask_force
+	
+	MALI=/sys/devices/platform/soc/*.mali
+    MALI_GOV=$MALI/devfreq/*.mali/governor
+    
+    if ls $MALI_GOV >/dev/null 2>&1; then
+        setprop sys.azenith.maligovsupport "1"
+    
+        chmod 644 $MALI_GOV
+        defaultgpumali_gov=$(cat $MALI_GOV)
+        setprop persist.sys.azenith.default_gpumali_gov "$defaultgpumali_gov"
+    
+        dlog "Default GPU Mali governor detected: $defaultgpumali_gov"
+    
+        custom_gov=$(getprop persist.sys.azenith.custom_default_gpumali_gov)
+        [ -n "$custom_gov" ] && defaultgpumali_gov="$custom_gov"
+    
+        dlog "Using GPU Mali governor: $defaultgpumali_gov"
+    
+        chmod 644 $MALI_GOV
+        echo "$defaultgpumali_gov" | tee $MALI_GOV >/dev/null
+        chmod 444 $MALI_GOV
+    
+        [ -z "$(getprop persist.sys.azenith.custom_powersave_gpumali_gov)" ] \
+            && setprop persist.sys.azenith.custom_powersave_gpumali_gov "$defaultgpumali_gov"
+        [ -z "$(getprop persist.sys.azenith.custom_performance_gpumali_gov)" ] \
+            && setprop persist.sys.azenith.custom_performance_gpumali_gov "$defaultgpumali_gov"
+    
+        dlog "Parsing GPU Mali Governor complete"
+    else
+        setprop sys.azenith.maligovsupport "0"
+    fi
 
 	CPU="/sys/devices/system/cpu/cpu0/cpufreq"
 	chmod 644 "$CPU/scaling_governor"
@@ -1568,72 +1646,82 @@ initialize() {
     # JIT COMPILE
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	if [ "$JUSTINTIME_STATE" -eq 1 ]; then
-    dlog "Applying JIT Compiler"
-		for app in $(cmd package list packages | cut -f 2 -d ":"); do
-			{
-				echo "$app | $(cmd package compile -m speed-profile "$app")"
-				AZLog "$app | Success"
-			} &
-		done
-		disown
-	fi
+        dlog "Applying JIT Compiler"
+    
+        cmd package list packages -3 | cut -f 2 -d ":" | while IFS= read -r pkg; do
+            (
+                cmd package compile -m speed-profile "$pkg"
+                AZLog "$pkg | Success"
+            ) &
+        done
+    
+        wait
+    fi
 		
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
     # SCHED TUNES
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	if [ "$SCHEDTUNES_STATE" -eq 1 ]; then
-    dlog "Applying Schedtunes for Schedutil and Schedhorizon"
-		settunes() {
-			local policy_path="$1"
-
-			# Check if the policy path exists
-			if [ ! -d "$policy_path" ]; then
-				AZLog "Skipped: $policy_path (not available)"
-				return
-			fi
-
-			# Read available frequencies
-			local available_freqs=$(cat "$policy_path/scaling_available_frequencies" 2>/dev/null)
-			if [ -z "$available_freqs" ]; then
-				AZLog "Skipped: No available frequencies for $policy_path"
-				return
-			fi
-
-			# Select the 6 highest frequencies
-			local selected_freqs=$(echo "$available_freqs" | tr ' ' '\n' | sort -rn | head -n 6 | tr '\n' ' ' | sed 's/ $//')
-
-			# Generate up_delay values dynamically
-			local num_freqs=$(echo "$selected_freqs" | wc -w)
-			local up_delay=""
-			for i in $(seq 1 $num_freqs); do
-				up_delay="$up_delay $((50 * i))"
-			done
-			up_delay=$(echo "$up_delay" | sed 's/^ //')
-
-			# Define universal rate values
-			local up_rate=7500
-			local down_rate=14000
-
-			# Check for schedhorizon and schedutil paths
-			local schedhorizon_path="$policy_path/schedhorizon"
-			local schedutil_path="$policy_path/schedutil"
-
-			if [ -d "$schedhorizon_path" ]; then
-				zeshia "$up_delay" "$schedhorizon_path/up_delay"
-				zeshia "$selected_freqs" "$schedhorizon_path/efficient_freq"
-				zeshia "$up_rate" "$schedhorizon_path/up_rate_limit_us"
-				zeshia "$down_rate" "$schedhorizon_path/down_rate_limit_us"
-			fi
-
-			if [ -d "$schedutil_path" ]; then
-				zeshia "$up_rate" "$schedutil_path/up_rate_limit_us"
-				zeshia "$down_rate" "$schedutil_path/down_rate_limit_us"
-			fi
-		}
-		for policy in /sys/devices/system/cpu/cpufreq/policy*; do
-			settunes "$policy"
-		done
-	fi
+        dlog "Applying Schedtunes for Schedutil and Schedhorizon"
+    
+        settunes() {
+            local policy_path="$1"
+    
+            [ ! -d "$policy_path" ] && return
+    
+            local freqs
+            freqs="$(cat "$policy_path/scaling_available_frequencies" 2>/dev/null)"
+            [ -z "$freqs" ] && return
+    
+            local selected_freqs
+            selected_freqs="$(echo "$freqs" | tr ' ' '\n' | sort -rn | head -n 6 | tr '\n' ' ' | sed 's/ $//')"
+    
+            local num
+            num="$(echo "$selected_freqs" | wc -w)"
+    
+            local up_delay=""
+            for i in $(seq 1 "$num"); do
+                up_delay="$up_delay $((50 * i))"
+            done
+            up_delay="${up_delay# }"
+    
+            local up_rate=6500
+            local down_rate=12000
+            local rate_limit=7000
+    
+            local schedhorizon="$policy_path/schedhorizon"
+            local schedutil="$policy_path/schedutil"
+    
+            if [ -d "$schedhorizon" ]; then
+                [ -f "$schedhorizon/up_delay" ] && zeshia "$up_delay" "$schedhorizon/up_delay"
+                [ -f "$schedhorizon/efficient_freq" ] && zeshia "$selected_freqs" "$schedhorizon/efficient_freq"
+    
+                if [ -f "$schedhorizon/up_rate_limit_us" ]; then
+                    zeshia "$up_rate" "$schedhorizon/up_rate_limit_us"
+                elif [ -f "$schedhorizon/rate_limit_us" ]; then
+                    zeshia "$rate_limit" "$schedhorizon/rate_limit_us"
+                fi
+    
+                if [ -f "$schedhorizon/down_rate_limit_us" ]; then
+                    zeshia "$down_rate" "$schedhorizon/down_rate_limit_us"
+                fi
+            fi
+    
+            if [ -d "$schedutil" ]; then
+                if [ -f "$schedutil/up_rate_limit_us" ]; then
+                    zeshia "$up_rate" "$schedutil/up_rate_limit_us"
+                elif [ -f "$schedutil/rate_limit_us" ]; then
+                    zeshia "$rate_limit" "$schedutil/rate_limit_us"
+                fi
+    
+                [ -f "$schedutil/down_rate_limit_us" ] && zeshia "$down_rate" "$schedutil/down_rate_limit_us"
+            fi
+        }
+    
+        for policy in /sys/devices/system/cpu/cpufreq/policy*; do
+            settunes "$policy"
+        done
+    fi
 
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
     # WALT TUNING
@@ -1975,87 +2063,90 @@ initialize() {
     # DISABLE THERMAL
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
     if [ "$DTHERMAL_STATE" -eq 1 ]; then
-    dlog "Applying Disable Thermal"   
-		
-		thermal() {
-			find /system/etc/init /vendor/etc/init /odm/etc/init -type f 2>/dev/null | xargs grep -h "^service" | awk '{print $2}' | grep thermal
-		}
-
-		for svc in $(thermal); do
-			stop "$svc"
-		done		
-                
-        debug_pid_props=$(getprop | grep -i 'debug_pid.*thermal' | awk -F'[][]' '{print $2}' | sed 's/:.*//')        
-        for pid in $debug_pid_props; do
-            resetprop -n "$pid" 0
-        done
-         
-        boot_time_props=$(getprop | grep -i 'boottime.*thermal' | awk -F'[][]' '{print $2}' | sed 's/:.*//')        
-        for btm in $boot_time_props; do
-            resetprop -n "$btm" 0
-        done
+    
+        list_thermal_services() {
+            find /system/etc/init /vendor/etc/init /odm/etc/init -type f 2>/dev/null \
+            | xargs grep -h "^service" \
+            | awk '{print $2}' \
+            | grep -i thermal
+        }
         
-        # Suspend all thermal service
-        for thrm in $(ps -e | grep -i "thermal" | awk '{print $9}'); do
-            pkill -9 "$thrm"
-        done		
-		
-		# Remove thermal-related props
-        props=$(getprop | grep -i 'thermal.*running' | awk -F'[][]' '{print $2}' | sed 's/:.*//')
-        for prop in $props; do
-            resetprop -n "$prop" suspended
-        done
-        
-		# Disable thermal zones
-		chmod 644 /sys/class/thermal/thermal_zone*/mode
-		for zone in /sys/class/thermal/thermal_zone*/mode; do
-			[ -f "$zone" ] && echo "disabled" >"$zone"
-		done
-
-		for zone2 in /sys/class/thermal/thermal_zone*/policy; do
-			[ -f "$zone2" ] && echo "userspace" >"$zone2"
-		done
-
-		# Disable GPU Power Limitations
-		if [ -f "/proc/gpufreq/gpufreq_power_limited" ]; then
-			for setting in ignore_batt_oc ignore_batt_percent ignore_low_batt ignore_thermal_protect ignore_pbm_limited; do
-				echo "$setting 1" >/proc/gpufreq/gpufreq_power_limited
-			done
-		fi
-
-		# Set CPU limits based on max frequency
-		if [ -f /sys/devices/virtual/thermal/thermal_message/cpu_limits ]; then
-			for cpu in 0 2 4 6 7; do
-				maxfreq_path="/sys/devices/system/cpu/cpu$cpu/cpufreq/cpuinfo_max_freq"
-				if [ -f "$maxfreq_path" ]; then
-					maxfreq=$(cat "$maxfreq_path")
-					[ -n "$maxfreq" ] && [ "$maxfreq" -gt 0 ] && echo "cpu$cpu $maxfreq" >/sys/devices/virtual/thermal/thermal_message/cpu_limits
-				fi
-			done
-		fi
-
-		# Disable PPM (Power Policy Manager) Limits
-		if [ -d /proc/ppm ]; then
-			if [ -f /proc/ppm/policy_status ]; then
-				for idx in $(grep -E 'FORCE_LIMIT|PWR_THRO|THERMAL' /proc/ppm/policy_status | awk -F'[][]' '{print $2}'); do
-					echo "$idx 0" >/proc/ppm/policy_status
-				done
-			fi
-		fi
-
-		# Hide and disable monitoring of thermal zones
-		find /sys/devices/virtual/thermal -type f -exec chmod 000 {} +
-
-		# Disable Thermal Stats
-		cmd thermalservice override-status 0
-
-		# Disable Battery Overcharge Thermal Throttling
-		if [ -f "/proc/mtk_batoc_throttling/battery_oc_protect_stop" ]; then
-			echo "stop 1" >/proc/mtk_batoc_throttling/battery_oc_protect_stop
-		fi
-
-		AZLog "Thermal service Disabled"
-	fi
+        kill_thermald() {
+            pkill -f thermald
+        }
+    
+        stop_thermal_services() {
+            for svc in $(list_thermal_services); do
+                stop "$svc" 2>/dev/null
+            done
+        }
+    
+        reset_thermal_props() {
+            getprop | grep -iE 'init.svc.thermal*|thermal-cutoff|ro.vendor.*thermal|debug.thermal.*|debug_pid.*thermal|boottime.*thermal|thermal.*running' \
+            | awk -F'[][]' '{print $2}' | sed 's/:.*//' \
+            | while read -r prop; do
+                resetprop -n "$prop" suspended
+            done
+        }
+    
+        kill_thermal_processes() {
+            ps -A | grep -iE 'thermal-engine|thermald|mtk_thermal' \
+            | awk '{print $2}' \
+            | while read -r pid; do
+                kill -9 "$pid" 2>/dev/null
+            done
+        }                
+    
+        disable_thermal_zones() {
+            for f in /sys/class/thermal/thermal_zone*/mode; do
+                [ -f "$f" ] && zeshia "disabled" "$f"
+            done
+            for f in /sys/class/thermal/thermal_zone*/policy; do
+                [ -f "$f" ] && zeshia "userspace" "$f"
+            done
+        }
+    
+        disable_gpu_thermal() {
+            local gpu_limit="/proc/gpufreq/gpufreq_power_limited"
+            [ -f "$gpu_limit" ] || return
+            for k in ignore_batt_oc ignore_batt_percent ignore_low_batt ignore_thermal_protect ignore_pbm_limited; do
+                zeshia "$k 1" "$gpu_limit"
+            done
+        }
+    
+        disable_ppm_limits() {
+            local ppm="/proc/ppm/policy_status"
+            [ -f "$ppm" ] || return
+            grep -E 'FORCE_LIMIT|PWR_THRO|THERMAL' "$ppm" \
+            | awk -F'[][]' '{print $2}' \
+            | while read -r idx; do
+                zeshia "$idx 0" "$ppm"
+            done
+        }
+    
+        restrict_thermal_monitoring() {
+            chmod 000 /sys/devices/virtual/thermal/thermal_zone*/temp 2>/dev/null
+            chmod 000 /sys/devices/virtual/thermal/thermal_zone*/trip_point_* 2>/dev/null
+        }
+    
+        disable_battery_oc() {
+            local batoc="/proc/mtk_batoc_throttling/battery_oc_protect_stop"
+            [ -f "$batoc" ] && zeshia "stop 1" "$batoc"
+        }
+    
+        kill_thermald
+        stop_thermal_services
+        reset_thermal_props
+        kill_thermal_processes
+        disable_thermal_zones
+        disable_gpu_thermal
+        disable_ppm_limits
+        restrict_thermal_monitoring
+        cmd thermalservice override-status 0
+        disable_battery_oc
+    
+        AZLog "Thermal is disabled"
+    fi
 	
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
     # DISABLE TRACE

@@ -36,29 +36,20 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    if (!strcmp(argv[1], "--profile") || !strcmp(argv[1], "-p")) {
-        return handle_profile(argc, argv);
-    }
-
-    if (!strcmp(argv[1], "--log") || !strcmp(argv[1], "-l")) {
-        return handle_log(argc, argv);
-    }
-    
-    if (!strcmp(argv[1], "--verboselog") || !strcmp(argv[1], "-vl")) {
-        return handle_verboselog(argc, argv);
-    }
-
     if (!strcmp(argv[1], "--run") || !strcmp(argv[1], "-r")) {
 
         if (check_running_state() == 1) {
-            fprintf(stderr, "\033[31mERROR:\033[0m Another instance of Daemon is already running!\n");
+            fprintf(stderr,
+                "\033[31mERROR:\033[0m Daemon is already running!\n"
+            );
             return 1;
         }
-        
+
         systemv("rm -f /data/adb/.config/AZenith/debug/AZenith.log");
         systemv("rm -f /data/adb/.config/AZenith/debug/AZenithVerbose.log");
         systemv("rm -f /data/adb/.config/AZenith/preload/AZenithPR.log");
-        
+
+               
         // Sanity check for dumpsys
         if (access("/system/bin/dumpsys", F_OK) != 0) {
             fprintf(stderr, "\033[31mFATAL ERROR:\033[0m /system/bin/dumpsys: inaccessible or not found\n");
@@ -115,6 +106,10 @@ int main(int argc, char* argv[]) {
         __system_property_get("persist.sys.azenithconf.AIenabled", prev_ai_state);
 
         while (1) {
+            runtask();
+            // Check Module Integrity
+            is_kanged();
+            check_module_version();
             if (cur_mode == PERFORMANCE_PROFILE) {
                 usleep(LOOP_INTERVAL_MS * 1000);
             } else {
@@ -246,8 +241,31 @@ int main(int argc, char* argv[]) {
         }
 
         return 0;
+    }    
+
+    if (!require_daemon_running()) {
+        return 1;
     }
 
-    fprintf(stderr, "Unknown option: %s\nUse --help\n", argv[1]);
+    if (!strcmp(argv[1], "--profile") || !strcmp(argv[1], "-p")) {
+        return handle_profile(argc, argv);
+    }
+
+    if (!strcmp(argv[1], "--log") || !strcmp(argv[1], "-l")) {
+        return handle_log(argc, argv);
+    }
+
+    if (!strcmp(argv[1], "--verboselog") || !strcmp(argv[1], "-vl")) {
+        return handle_verboselog(argc, argv);
+    }
+    
+    if (!strcmp(argv[1], "--version") || !strcmp(argv[1], "-V")) {
+        printversion();
+        return 0;
+    }
+
+    fprintf(stderr,
+        "\033[31mERROR:\033[0m Unknown command: %s\n", argv[1]
+    );
     return 1;
 }

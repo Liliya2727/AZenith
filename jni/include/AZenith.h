@@ -15,6 +15,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#define TASK_INTERVAL_SEC (12 * 60 * 60)
 #define LOOP_INTERVAL_MS 700
 #define LOOP_INTERVAL_SEC 2
 #define MAX_DATA_LENGTH 1024
@@ -82,6 +83,8 @@ extern pid_t game_pid;
 
 // CLI
 void print_help();
+void printversion();
+int require_daemon_running(void);
 int handle_profile(int argc, char** argv);
 int handle_log(int argc, char** argv);
 int handle_verboselog(int argc, char** argv);
@@ -100,6 +103,7 @@ bool return_true(void);
 bool return_false(void);
 void runthermalcore(void);
 void check_module_version(void);
+void runtask(void);
 
 // Shell and Command execution
 char* execute_command(const char* format, ...);
