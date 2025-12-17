@@ -61,6 +61,22 @@
     }
   },
   
+  "gpumali": {
+    "title": "GPU Mali Settings",
+    "default": {
+      "title": "Default GPU Governor",
+      "desc": "Governor that will be used on Normal profile"
+    },
+    "powersave": {
+      "title": "Powersave GPU Governor",
+      "desc": "Governor that will be used on Powersave profile"
+    },
+    "performance": {
+      "title": "Performance GPU Governor",
+      "desc": "Governor that will be used on Powersave profile"
+    }
+  },
+  
   "io": {
     "title": "I/O Scheduler Settings",
     "default": {
@@ -280,8 +296,8 @@
 
   "serviceStatus": {
     "initializing": "Initializing...\uD83C\uDF31",
-    "runningAuto": "Running - Auto Mode\uD83C\uDF43",
-    "runningIdle": "Running - Idle Mode\uD83D\uDCAB",
+    "runningAuto": "Alive\uD83C\uDF43",
+    "runningIdle": "Alive\uD83D\uDCAB",
     "unknownProfile": "Unknown Profile",
     "suspended": "Suspended\uD83D\uDCA4",
     "servicePID": "Service PID: {0}",
