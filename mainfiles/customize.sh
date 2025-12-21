@@ -79,9 +79,9 @@ ui_print "- Extracting module.prop..."
 extract "$ZIPFILE" module.prop "$MODPATH"
 ui_print "- Extracting uninstall.sh..."
 extract "$ZIPFILE" uninstall.sh "$MODPATH"
-if ! ls "$MODULE_CONFIG/gamelist/"gamelist.* >/dev/null 2>&1; then
+if [ ! -f "$MODULE_CONFIG/gamelist/azenithApplist.json" ]; then
     ui_print "- Extracting gamelist.txt..."
-    extract "$ZIPFILE" gamelist.txt "$MODULE_CONFIG/gamelist"
+    extract "$ZIPFILE" azenithApplist.json "$MODULE_CONFIG/gamelist"
 fi
 ui_print "- Extracting module icon..."
 extract "$ZIPFILE" module.avatar.webp "/data/local/tmp"

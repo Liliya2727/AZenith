@@ -22,7 +22,7 @@ need_integrity=(
 	"mainfiles/module.prop"
     "mainfiles/module.avatar.webp"
     "mainfiles/module.banner.avif"
-	"mainfiles/gamelist.txt"
+	"mainfiles/azenithApplist.json"
     "mainfiles/azenithtoast.apk"
 )
 
@@ -33,14 +33,12 @@ release_code="$(git rev-list HEAD --count)-$(git rev-parse --short HEAD)-release
 sed -i "s/version=.*/version=$version ($release_code)/" mainfiles/module.prop
 sed -i "s/versionCode=.*/versionCode=$version_code/" mainfiles/module.prop
 
-# Compile Gamelist
-paste -sd '|' - <"$GITHUB_WORKSPACE/gamelist.txt" >"$GITHUB_WORKSPACE/mainfiles/gamelist.txt"
-
 # Copy module files
 cp -r ./libs mainfiles
 cp -r ./tweakfls/* mainfiles/system/bin
 cp -r ./thermalcore/* mainfiles/system/bin
 cp -r ./preloadbin/* mainfiles/system/bin
+cp -r azenithApplist.json ./mainfiles
 cp LICENSE ./mainfiles
 
 # Remove .sh extension from scripts
