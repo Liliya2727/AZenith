@@ -17,7 +17,7 @@ on:
       - "preloadbin/**"
       - "webui/**"
       - "thermalcore/**"
-      - "gamelist.txt"
+      - "azenithApplist.json"
       - "version"
 
 # Allow only one concurrent build workflows

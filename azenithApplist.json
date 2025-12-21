@@ -1,0 +1,90 @@
+{
+  "com.mobile.legends": {
+    "perf_lite_mode": "default",
+    "dnd_on_gaming": "default",
+    "app_priority": "default",
+    "game_preload": "default",
+    "refresh_rate": "default",
+    "renderer": "default"
+  },
+  "com.netease.yysls": {
+    "perf_lite_mode": "default",
+    "dnd_on_gaming": "default",
+    "app_priority": "default",
+    "game_preload": "default",
+    "refresh_rate": "default",
+    "renderer": "default"
+  },
+  "com.kurogame.wutheringwaves.global": {
+    "perf_lite_mode": "default",
+    "dnd_on_gaming": "default",
+    "app_priority": "default",
+    "game_preload": "default",
+    "refresh_rate": "default",
+    "renderer": "default"
+  },
+  "com.HoYoverse.hkrpgoversea": {
+    "perf_lite_mode": "default",
+    "dnd_on_gaming": "default",
+    "app_priority": "default",
+    "game_preload": "default",
+    "refresh_rate": "default",
+    "renderer": "default"
+  },
+  "com.bluepoch.m.en.reverse1999": {
+    "perf_lite_mode": "default",
+    "dnd_on_gaming": "default",
+    "app_priority": "default",
+    "game_preload": "default",
+    "refresh_rate": "default",
+    "renderer": "default"
+  },
+  "com.nexon.bluearchive": {
+    "perf_lite_mode": "default",
+    "dnd_on_gaming": "default",
+    "app_priority": "default",
+    "game_preload": "default",
+    "refresh_rate": "default",
+    "renderer": "default"
+  },
+  "com.sega.ColorfulStage.en": {
+    "perf_lite_mode": "default",
+    "dnd_on_gaming": "default",
+    "app_priority": "default",
+    "game_preload": "default",
+    "refresh_rate": "default",
+    "renderer": "default"
+  },
+  "com.serenityforge.dokidokiliteratureclub": {
+    "perf_lite_mode": "default",
+    "dnd_on_gaming": "default",
+    "app_priority": "default",
+    "game_preload": "default",
+    "refresh_rate": "default",
+    "renderer": "default"
+  },
+  "com.YoStarEN.StellaSora": {
+    "perf_lite_mode": "default",
+    "dnd_on_gaming": "default",
+    "app_priority": "default",
+    "game_preload": "default",
+    "refresh_rate": "default",
+    "renderer": "default"
+  },
+  "com.cygames.umamusume": {
+    "perf_lite_mode": "default",
+    "dnd_on_gaming": "default",
+    "app_priority": "default",
+    "game_preload": "default",
+    "refresh_rate": "default",
+    "renderer": "default"
+  },
+  "com.FFhouse.ImoutoToIchaLoveSeikatsu": {
+    "perf_lite_mode": "default",
+    "dnd_on_gaming": "default",
+    "app_priority": "default",
+    "game_preload": "default",
+    "refresh_rate": "default",
+    "renderer": "default"
+  }
+}
