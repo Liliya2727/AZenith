@@ -1622,6 +1622,40 @@ const hideBypassIfUnsupported = async () => {
   }
 };
 
+const loadBypassCheck = async () => {
+  const card = document.getElementById("ZepassCheck");
+  const title = document.getElementById("bypasschecktitle");
+  const desc = document.getElementById("bypasscheckdesc");
+
+  if (!card || !title || !desc) return;
+
+  let value = "";
+
+  try {
+    const { errno, stdout } = await executeCommand(
+      "getprop persist.sys.azenithconf.bypasspath"
+    );
+    if (errno === 0) value = stdout.trim();
+  } catch (_) {}
+
+  if (!value) {
+    title.textContent = "Can't Use Bypass Charge";
+    desc.textContent =
+      "Check bypass charge compatibility to use this feature! Connect to charger > Restart Service > Wait until initializing is done and reopen WebUI";
+    card.style.display = "flex";
+    return;
+  }
+
+  if (value === "UNSUPPORTED") {
+    title.textContent = "Bypass Charge Unsupported";
+    desc.textContent = "Your device doesn't support bypass charging";
+    card.style.display = "flex";
+    return;
+  }
+
+  card.style.display = "none";
+};
+
 const checkLiteModeStatus = async () => {
   let { errno: c, stdout: s } = await executeCommand(
     "getprop persist.sys.azenithconf.cpulimit"
@@ -3282,6 +3316,7 @@ const heavyInit = async () => {
     loadCurRenderer,
     loadRRValue,
     checkBypassChargeStatus,
+    loadBypassCheck,
     checkschedtunes,
     checkwalt,
     checkSFL,
