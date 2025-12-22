@@ -565,15 +565,26 @@
                </div>               
                <div class="flex items-center justify-between mb-3">
                   <div>
-                     <p class="text-label text-onSurface" data-lang="settingsAddi.additional.vsync.title"></p>
-                     <small class="text-desc text-onSurface" data-lang="settingsAddi.additional.vsync.description"></small>
+                     <p class="text-label text-onSurface" data-lang="settingsAddi.additional.refreshr.title"></p>
+                     <small class="text-desc text-onSurface" data-lang="settingsAddi.additional.refreshr.description"></small>
                   </div>
-                  <select id="disablevsync"
+                  <select id="setrr"
                      class="selector2">
                      <option value="OFF" selected>OFF</option>
                   </select>
                   <svg class="common-arrowsvgContainer" fill='currentColor' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5z'/></svg>
-               </div>               
+               </div>
+               <div class="flex items-center justify-between mb-3">
+                  <div>
+                     <p class="text-label text-onSurface" data-lang="settingsAddi.additional.renderer.title"></p>
+                     <small class="text-desc text-onSurface" data-lang="settingsAddi.additional.renderer.description"></small>
+                  </div>
+                  <select id="renderer"
+                     class="selector2">
+                     <option value="Device Default" selected>Device Default</option>
+                  </select>
+                  <svg class="common-arrowsvgContainer" fill='currentColor' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5z'/></svg>
+               </div>
                <div class="divider"></div>
                <div class="flex items-center justify-between mb-3">
                   <button id="customreso" class="bigbutton w-full" data-lang="settingsAddi.additional.customreso"></button>
@@ -680,6 +691,19 @@
          </div>
       <div id="gameListMenu" class="fade-anim showAnim hidden">         
          <div id="appList"></div>
+      </div>
+         <div id="appSettingsModal" class="app-modal hidden">
+            <div class="app-modal-content bg-tonalSurface">
+               <div class="app-modal-header">
+               <img id="appModalIcon" />
+               <div class="app-modal-info">
+               <div id="appModalLabel"></div>
+               <div id="appModalPkg"></div>
+            </div>
+            </div>        
+            <div id="appModalSettings"></div>        
+            <button id="closeAppModal" class="modal-close" data-lang="scheme.buttons.apply"></button>
+         </div>
       </div>
       <toolbar id="bottomToolbar">
          <button id="openMain" class="active" data-lang="toolbar.main"></button>

@@ -275,11 +275,11 @@
   },
   
   "serviceStatus": {
-    "initializing": "Initializing...\uD83C\uDF31",
-    "runningAuto": "Running - Auto Mode\uD83C\uDF43",
-    "runningIdle": "Running - Idle Mode\uD83D\uDCAB",
+    "initializing": "Initializing...",
+    "runningAuto": "Alive",
+    "runningIdle": "Sealed",
     "unknownProfile": "Profil nggak dikenal",
-    "suspended": "Suspended\uD83D\uDCA4",
+    "suspended": "Suspended",
     "servicePID": "Service PID: {0}",
     "noApps": "Tidak ada Aplikasi yang berjalan!",
     "active": "App aktif: {0}",

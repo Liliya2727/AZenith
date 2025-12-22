@@ -24,7 +24,7 @@ import { wrapInputStream, PackageManagerInterface } from "webuix";
 const WEBUI_VERSION = ".placeholder";
 const moduleInterface = window.$AZenith;
 const fileInterface = window.$AZFile;
-const GAMELIST_PATH = "/data/adb/.config/AZenith/gamelist/gamelist.txt";
+const GAMELIST_PATH = "/data/adb/.config/AZenith/gamelist/azenithApplist.json";
 const RESO_PROP = "persist.sys.azenithconf.resosettings";
 const DEVICE_PROP = "sys.azenith.device";
 const DEVICE_PROPS = [
@@ -38,6 +38,32 @@ const DEVICE_PROPS = [
   "ro.product.model",
   "ro.product.vendor.model",
   "ro.product.system.model"
+];
+const PERAPP_SETTINGS = {
+  perf_lite_mode: "default",
+  dnd_on_gaming: "default",
+  app_priority: "default",
+  game_preload: "default",
+  refresh_rate: "default",
+  renderer: "default",
+};
+
+const PERAPP_SCHEMA = [
+  { key: "perf_lite_mode", label: "Performance Lite Mode", type: "tri" },
+  { key: "dnd_on_gaming", label: "Do Not Disturb", type: "tri" },
+  { key: "app_priority", label: "App Priority", type: "tri" },
+  { key: "game_preload", label: "Game Preload", type: "tri" },
+  {
+    key: "renderer",
+    label: "Renderer",
+    type: "enum",
+    options: ["default", "skiagl", "vulkan"]
+  },
+  {
+    key: "refresh_rate",
+    label: "Refresh Rate",
+    type: "enum-dynamic"
+  }
 ];
 let lastGameCheck = { time: 0, status: "" };
 let lastProfile = { time: 0, value: "" };
@@ -575,17 +601,130 @@ const showMainMenu = async () => {
 };
 
 const readGameList = async () => {
+  await executeCommand(`mkdir -p $(dirname ${GAMELIST_PATH})`);
   await executeCommand(`touch ${GAMELIST_PATH}`);
   const { stdout } = await executeCommand(`cat ${GAMELIST_PATH}`);
-  return stdout.trim() ? stdout.trim().split("|") : [];
+  if (!stdout.trim()) return {};
+  try {
+    const data = JSON.parse(stdout);
+    Object.keys(data).forEach(pkg => {
+      data[pkg] = { ...PERAPP_SETTINGS, ...data[pkg] };
+    });
+    return data;
+  } catch {
+    return {};
+  }
 };
 
-const writeGameList = async (list) => {
-  let outputString = list.join("|");
-  if (!outputString.endsWith("|")) outputString += "|";
-  outputString = outputString.replace(/(["\\])/g, '\\$1');
-  await executeCommand(`echo "${outputString}" > ${GAMELIST_PATH}`);
-  await executeCommand(`sync`);
+const writeGameList = async (data) => {
+  const json = JSON.stringify(data, null, 2).replace(/(["\\])/g, '\\$1');
+  await executeCommand(`echo "${json}" > ${GAMELIST_PATH}`);
+};
+
+let cachedRefreshRates = null;
+
+const getSupportedRefreshRates = async () => {
+  if (cachedRefreshRates) return cachedRefreshRates;
+
+  const rates = new Set();
+
+  try {
+    const { stdout } = await executeCommand(`dumpsys display`);
+    const regex = /fps=([\d.]+)/g;
+    let match;
+    while ((match = regex.exec(stdout)) !== null) {
+      rates.add(Math.round(parseFloat(match[1])));
+    }
+  } catch {}
+
+  if (!rates.size) rates.add(60);
+
+  const baseRates = [60, 90, 120, 144];
+  const supportedRates = baseRates.filter(v => rates.has(v));
+
+  cachedRefreshRates = ["default", ...supportedRates];
+  return cachedRefreshRates;
+};
+
+const openPerAppSettings = async (pkg, gamelist) => {
+  const modal = document.getElementById("appSettingsModal");
+  const list = document.getElementById("appModalSettings");
+
+  document.body.classList.add("modal-open");
+  const cfg = gamelist[pkg];
+  if (!cfg) return;
+
+  document.getElementById("appModalIcon").src = cachedIconMap[pkg];
+  document.getElementById("appModalLabel").textContent = cachedLabelMap[pkg];
+  document.getElementById("appModalPkg").textContent = pkg;
+
+  const rows = [];
+
+  for (const s of PERAPP_SCHEMA) {
+    const value = cfg[s.key] ?? "default";
+
+    if (s.type === "tri") {
+      rows.push(`
+        <div class="settingRow">
+          <span>${s.label}</span>
+          <div class="optionGroup" data-key="${s.key}">
+            ${["false","default","true"].map(v => `
+              <button class="optionBtn ${value === v ? "active" : ""}" data-value="${v}">
+                ${v.charAt(0).toUpperCase() + v.slice(1)}
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      `);
+    }
+
+    if (s.type === "enum") {
+      rows.push(`
+        <div class="settingRow">
+          <span>${s.label}</span>
+          <div class="optionGroup" data-key="${s.key}">
+            ${s.options.map(v => `
+              <button class="optionBtn ${value === v ? "active" : ""}" data-value="${v}">
+                ${v === "default" ? "Default" : v}
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      `);
+    }
+
+    if (s.type === "enum-dynamic") {
+      const options = await getSupportedRefreshRates();
+      rows.push(`
+        <div class="settingRow">
+          <span>${s.label}</span>
+          <div class="optionGroup" data-key="${s.key}">
+            ${options.map(v => `
+              <button class="optionBtn ${String(value) === String(v) ? "active" : ""}" data-value="${v}">
+                ${v === "default" ? "Default" : `${v} Hz`}
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      `);
+    }
+  }
+
+  list.innerHTML = rows.join("");
+
+  list.querySelectorAll(".optionGroup").forEach(group => {
+    const key = group.dataset.key;
+    group.querySelectorAll(".optionBtn").forEach(btn => {
+      btn.onclick = async () => {
+        group.querySelectorAll(".optionBtn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        cfg[key] = btn.dataset.value;
+        await writeGameList(gamelist);
+      };
+    });
+  });
+
+  modal.classList.remove("hidden");
 };
 
 let cachedPkgList = [];
@@ -634,7 +773,7 @@ const loadAppList = async () => {
           if (!labelMap[pkg]) {
             try {
               const appInfo = await window.$packageManager.getApplicationInfo(pkg, 0, 0);
-              labelMap[pkg] = (appInfo?.getLabel?.() || appInfo?.label || appInfo?.appName || pkg);
+              labelMap[pkg] = appInfo?.getLabel?.() || appInfo?.label || appInfo?.appName || pkg;
             } catch {}
           }
         }
@@ -643,14 +782,14 @@ const loadAppList = async () => {
       pkgList.forEach(p => labelMap[p] ||= p);
 
       const iconMap = {};
-      pkgList.forEach(p => (iconMap[p] = `ksu://icon/${p}`));
+      pkgList.forEach(p => iconMap[p] = `ksu://icon/${p}`);
 
       try {
-        const icons = JSON.parse(ksu.getPackagesIcons(JSON.stringify(pkgList), 96));
+        const icons = JSON.parse(ksu.getPackagesIcons(JSON.stringify(pkgList), 256));
         icons.forEach(i => i.icon && (iconMap[i.packageName] = i.icon));
       } catch {}
 
-      if (typeof window.$packageManager !== "undefined") {
+      if (window.$packageManager) {
         for (const pkg of pkgList) {
           if (!iconMap[pkg] || iconMap[pkg].startsWith("ksu://icon")) {
             try {
@@ -671,17 +810,18 @@ const loadAppList = async () => {
       appListLoaded = true;
     }
 
-    const checkedCards = cachedPkgList.filter(pkg => gamelist.includes(pkg));
-    const uncheckedCards = cachedPkgList.filter(pkg => !gamelist.includes(pkg));
+    const checkedCards = cachedPkgList.filter(pkg => pkg in gamelist);
+    const uncheckedCards = cachedPkgList.filter(pkg => !(pkg in gamelist));
 
-    const sortByLabel = list => list.sort((a, b) =>
-      cachedLabelMap[a].toLowerCase().localeCompare(cachedLabelMap[b].toLowerCase())
-    );
+    const sortByLabel = list =>
+      list.sort((a, b) =>
+        cachedLabelMap[a].toLowerCase().localeCompare(cachedLabelMap[b].toLowerCase())
+      );
 
-    const sortedChecked = sortByLabel(checkedCards);
-    const sortedUnchecked = sortByLabel(uncheckedCards);
-
-    const finalList = [...sortedChecked, ...sortedUnchecked];
+    const finalList = [
+      ...sortByLabel(checkedCards),
+      ...sortByLabel(uncheckedCards),
+    ];
 
     container.innerHTML = finalList.map(pkg => `
       <div class="common-card appCard bg-tonalSurface showAnim hidden" data-pkg="${pkg}">
@@ -692,9 +832,9 @@ const loadAppList = async () => {
               <div class="app-label">${cachedLabelMap[pkg]}</div>
               <div class="pkg-label">${pkg}</div>
             </div>
-            <div class="toggle2 ${gamelist.includes(pkg) ? "active" : ""}"
+            <div class="toggle2 ${gamelist[pkg] ? "active" : ""}"
                  data-pkg="${pkg}"
-                 data-state="${gamelist.includes(pkg) ? "on" : "off"}"></div>
+                 data-state="${gamelist[pkg] ? "on" : "off"}"></div>
           </div>
         </div>
       </div>
@@ -705,7 +845,14 @@ const loadAppList = async () => {
       const pkg = card.dataset.pkg;
       cardCache[pkg] = { card, label: cachedLabelMap[pkg], pkg };
       card.classList.add("hidden");
+      card.onclick = (e) => {
+        if (e.target.closest(".toggle2")) return;
+        if (!gamelist[pkg]) return;
+        openPerAppSettings(pkg, gamelist);
+      };
     });
+    
+    
 
     const cards = finalList.map(pkg => cardCache[pkg].card);
     requestAnimationFrame(() => {
@@ -723,10 +870,13 @@ const loadAppList = async () => {
       toggle.onclick = async () => {
         toggle.classList.toggle("active");
         const on = toggle.classList.contains("active");
-
         toggle.dataset.state = on ? "on" : "off";
-        if (on && !gamelist.includes(pkg)) gamelist.push(pkg);
-        if (!on) gamelist = gamelist.filter(p => p !== pkg);
+
+        if (on) {
+          gamelist[pkg] ||= { ...PERAPP_SETTINGS };
+        } else {
+          delete gamelist[pkg];
+        }
 
         const card = cardCache[pkg].card;
         card.classList.add("showAnim");
@@ -741,12 +891,12 @@ const loadAppList = async () => {
     });
 
     const sortCards = () => {
-      const set = new Set(gamelist);
+      const activeSet = new Set(Object.keys(gamelist));
       const cardsArr = Object.values(cardCache);
       const positions = new Map();
       cardsArr.forEach(c => positions.set(c.card, c.card.getBoundingClientRect()));
       cardsArr.forEach(c => {
-        c.isOn = set.has(c.pkg);
+        c.isOn = activeSet.has(c.pkg);
         c.sortKey = c.label.toLowerCase();
       });
       cardsArr.sort((a, b) =>
@@ -808,6 +958,18 @@ const loadAppList = async () => {
     loader2?.classList.add("hidden");
     document.body.classList.remove("no-scroll");
   }
+};
+
+const closeAppModal = () => {
+  const modal = document.getElementById("appSettingsModal");
+  if (modal.classList.contains("closing")) return;
+  document.body.classList.remove("modal-open");
+  modal.classList.add("closing");
+
+  setTimeout(() => {
+    modal.classList.remove("closing");
+    modal.classList.add("hidden");
+  }, 180);
 };
 
 bannerBox.addEventListener("touchstart", () => {
@@ -953,7 +1115,7 @@ export const loadConfigFile = async (file) => {
       config: [
         "justintime","disabletrace","logd","DThermal","SFL","malisched","fpsged",
         "schedtunes","clearbg","bypasschg","APreload","iosched","cpulimit","dnd",
-        "AIenabled","vsync","freqoffset","schemeconfig","scale","showtoast",
+        "AIenabled","renderer","freqoffset","schemeconfig","scale","showtoast",
         "resosettings","preloadbudget","thermalcore"
       ],
       governors: ["custom_default_cpu_gov", "custom_powersave_cpu_gov"],
@@ -1015,7 +1177,7 @@ const collectCurrentConfig = async () => {
       cpulimit: await get("persist.sys.azenithconf.cpulimit"),
       dnd: await get("persist.sys.azenithconf.dnd"),
       AIenabled: await get("persist.sys.azenithconf.AIenabled"),
-      vsync: await get("persist.sys.azenithconf.vsync"),
+      renderer: await get("persist.sys.azenithconf.renderer"),
       freqoffset: await get("persist.sys.azenithconf.freqoffset"),
       schemeconfig: await get("persist.sys.azenithconf.schemeconfig"),
       scale: await get("persist.sys.azenithconf.scale"),
@@ -1066,7 +1228,7 @@ const applySavedConfig = async (saved) => {
     await set("persist.sys.azenithconf.cpulimit", saved.config.cpulimit);
     await set("persist.sys.azenithconf.dnd", saved.config.dnd);
     await set("persist.sys.azenithconf.AIenabled", saved.config.AIenabled);
-    await set("persist.sys.azenithconf.vsync", saved.config.vsync);
+    await set("persist.sys.azenithconf.renderer", saved.config.renderer);
     await set("persist.sys.azenithconf.freqoffset", saved.config.freqoffset);
     await set("persist.sys.azenithconf.schemeconfig", saved.config.schemeconfig);
     await set("persist.sys.azenithconf.scale", saved.config.scale);
@@ -1102,7 +1264,7 @@ const showRandomMessage = () => {
   if (message) {
     c.textContent = message;
   } else {
-    c.textContent = ""; // fallback if translation not loaded
+    c.textContent = "";
   }
 };
 
@@ -1114,23 +1276,31 @@ const checkProfile = async () => {
     const { errno: c, stdout: s } = await executeCommand(
       "cat /data/adb/.config/AZenith/API/current_profile"
     );
-
     if (c !== 0) return;
+
     const r = s.trim();
     const d = document.getElementById("CurProfile");
     if (!d) return;
 
+    // Base profile name
     let l =
-      { 0: "Initializing...", 1: "Performance", 2: "Balanced", 3: "ECO Mode" }[
-        r
-      ] || "Unknown";
+      {
+        0: "Initializing...",
+        1: "Performance",
+        2: "Balanced",
+        3: "ECO Mode",
+      }[r] || "Unknown";
 
-    // Check for Lite mode
-    const { errno: c2, stdout: s2 } = await executeCommand(
-      "getprop persist.sys.azenithconf.cpulimit"
-    );
-    if (c2 === 0 && s2.trim() === "1") l += " (Lite)";
+    if (r === "1") {
+      const { errno: c2, stdout: s2 } = await executeCommand(
+        "getprop persist.sys.azenithconf.litemode"
+      );
+      if (c2 === 0 && s2.trim() === "1") {
+        l += " (Lite)";
+      }
+    }
 
+    // Prevent unnecessary DOM update
     if (lastProfile.value === l) return;
     lastProfile = { time: now, value: l };
 
@@ -1156,8 +1326,9 @@ const checkProfile = async () => {
 
     const key = l.replace(" (Lite)", "");
     d.style.color = colors[key] || colors.Default;
-  } catch (m) {
-    console.error("checkProfile error:", m);
+
+  } catch (err) {
+    console.error("checkProfile error:", err);
   }
 };
 
@@ -1325,7 +1496,7 @@ const getAndroidVersion = async () => {
 
 const checkServiceStatus = async () => {
   const now = Date.now();
-  if (now - lastServiceCheck.time < 1000) return; // 1s throttle
+  if (now - lastServiceCheck.time < 1000) return;
   lastServiceCheck.time = now;
 
   const r = document.getElementById("serviceStatus");
@@ -1333,7 +1504,7 @@ const checkServiceStatus = async () => {
   if (!r || !d) return;
 
   try {
-    // Get PID immediately
+    // Get PID 
     const { errno: pidErr, stdout: pidOut } = await executeCommand(
       "/system/bin/toybox pidof sys.azenith-service"
     );
@@ -1643,30 +1814,108 @@ const setlogger = async (c) => {
   );
 };
 
-const setVsyncValue = async (c) => {
-  await executeCommand(`setprop persist.sys.azenithconf.vsync ${c}`);
+const setRRValue = async (c) => {
   await executeCommand(
-    `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf disablevsync ${c}`
+    `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setrefreshrates ${c}`
   );
 };
 
-const loadVsyncValue = async () => {
-  let { errno: c, stdout: s } = await executeCommand(
-    "getprop persist.sys.azenithdebug.vsynclist"
-  );
-  if (0 === c) {
-    let r = s.trim().split(/\s+/),
-      d = document.getElementById("disablevsync");
-    (d.innerHTML = ""),
-      r.forEach((c) => {
-        let s = document.createElement("option");
-        (s.value = c), (s.textContent = c), d.appendChild(s);
-      });
-    let { errno: l, stdout: m } = await executeCommand(
-      `sh -c '[ -n "$(getprop persist.sys.azenithconf.vsync)" ] && getprop persist.sys.azenithconf.vsync'`
-    );
-    0 === l && (d.value = m.trim());
+const loadRRValue = async () => {
+  const select = document.getElementById("setrr");
+  if (!select) return;
+
+  select.innerHTML = "";
+
+  const defOpt = document.createElement("option");
+  defOpt.value = "default";
+  defOpt.textContent = "System Default";
+  select.appendChild(defOpt);
+
+  let maxRate = 60;
+
+  try {
+    const { stdout } = await executeCommand("dumpsys display");
+
+    const regex = /fps=([\d.]+)/g;
+    const rates = new Set();
+    let match;
+
+    while ((match = regex.exec(stdout)) !== null) {
+      rates.add(Math.round(parseFloat(match[1])));
+    }
+
+    if (rates.size) {
+      maxRate = Math.max(...rates);
+    }
+  } catch (_) {
+    maxRate = 60;
   }
+  
+  const baseRates = [60, 90, 120, 144];
+
+  const supportedRates = baseRates.filter(v => v <= maxRate);
+
+  supportedRates.forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = String(v);
+    opt.textContent = `${v} Hz`;
+    select.appendChild(opt);
+  });
+
+  try {
+    const { errno, stdout } = await executeCommand(
+      `cmd display get-displays | grep -oE "renderFrameRate [0-9.]+" | awk '{print int($2+0.5)}'`
+    );
+
+    if (errno === 0) {
+      const val = stdout.trim();
+      if ([...select.options].some(o => o.value === val)) {
+        select.value = val;
+      }
+    }
+  } catch (_) {}
+};
+
+const setCurRenderer = async (c) => {
+  await executeCommand(`setprop persist.sys.azenithconf.renderer ${c}`)
+  await executeCommand(
+    `/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setrender ${c}`
+  );
+};
+
+const loadCurRenderer = async () => {
+  const select = document.getElementById("renderer");
+  if (!select) return;
+
+  select.innerHTML = "";
+
+  const defOpt = document.createElement("option");
+  defOpt.value = "default";
+  defOpt.textContent = "System Default";
+  select.appendChild(defOpt);
+
+  const renderers = ["vulkan", "skiagl"];
+
+  renderers.forEach(r => {
+    const opt = document.createElement("option");
+    opt.value = r;
+    opt.textContent = r.toUpperCase();
+    select.appendChild(opt);
+  });
+
+  try {
+    const { errno, stdout } = await executeCommand(
+      `sh -c '[ -n "$(getprop persist.sys.azenithconf.renderer)" ] && getprop persist.sys.azenithconf.renderer'`
+    );
+
+    if (errno === 0) {
+      const val = stdout.trim();
+
+      if ([...select.options].some(o => o.value === val)) {
+        select.value = val;
+      }
+    }
+  } catch (_) {}
 };
 
 const setCpuFreqOffsets = async (c) => {
@@ -2782,8 +3031,11 @@ const setupUIListeners = () => {
     .getElementById("cpuFreq")
     ?.addEventListener("change", (e) => setCpuFreqOffsets(e.target.value));
   document
-    .getElementById("disablevsync")
-    ?.addEventListener("change", (e) => setVsyncValue(e.target.value));
+    .getElementById("setrr")
+    ?.addEventListener("change", (e) => setRRValue(e.target.value));
+  document
+    .getElementById("renderer")
+    ?.addEventListener("change", (e) => setCurRenderer(e.target.value));
   
   // Select GPU Gov  
   document
@@ -2869,6 +3121,8 @@ const setupUIListeners = () => {
     .onclick = async () => {
     await saveConfig();
   };
+
+  document.getElementById("closeAppModal").onclick = closeAppModal;
 
   document
     .getElementById("loadconfig").addEventListener("change", async (e) => {
@@ -3025,7 +3279,8 @@ const heavyInit = async () => {
     checkjit,
     checktoast,
     checkfstrim,
-    loadVsyncValue,
+    loadCurRenderer,
+    loadRRValue,
     checkBypassChargeStatus,
     checkschedtunes,
     checkwalt,
@@ -3055,5 +3310,3 @@ checkCPUInfo();
 checkDeviceInfo();
 checkKernelVersion();
 getAndroidVersion();
-
-

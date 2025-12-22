@@ -56,7 +56,7 @@
       "desc": "Intelligently manages system performance and temperature by learning device behavior to minimize heating. (Turn off if you feel lag in performance profile)"
     },
     "litemode": {
-      "title": "Lite Mode (Reboot to apply)",
+      "title": "Performance Lite Mode",
       "desc": "Reduce Overheating by reducing CPU Frequency on Performance Profile"
     }
   },
@@ -164,9 +164,13 @@
         "title": "Do Not Disturb",
         "description": "Block all notifications on Performance Profile to enhance gaming experience."
       },
-      "vsync": {
-        "title": "Disable VSync",
-        "description": "Disable synchronization between rendering frame rate and display refresh rate."
+      "refreshr": {
+        "title": "Set Refresh Rate",
+        "description": "Set current device Refresh Rates."        
+      },
+      "renderer": {
+        "title": "Set Renderer",
+        "description": "Set preferred renderer engine."
       },
       "fstrim": {
         "title": "FSTrim Partition",
@@ -295,11 +299,11 @@
   },
 
   "serviceStatus": {
-    "initializing": "Initializing...\uD83C\uDF31",
-    "runningAuto": "Alive\uD83C\uDF43",
-    "runningIdle": "Alive\uD83D\uDCAB",
+    "initializing": "Initializing...",
+    "runningAuto": "Alive",
+    "runningIdle": "Sealed",
     "unknownProfile": "Unknown Profile",
-    "suspended": "Suspended\uD83D\uDCA4",
+    "suspended": "Suspended",
     "servicePID": "Service PID: {0}",
     "noApps": "Peaceful! No apps are running!",
     "active": "Active app: {0}",
