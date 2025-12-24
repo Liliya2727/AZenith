@@ -375,5 +375,5 @@ int main(int argc, char* argv[]) {
     fprintf(stderr,
         "\033[31mERROR:\033[0m Unknown command: %s\n", argv[1]
     );
-    return 1;
+    return 1; 
 }
