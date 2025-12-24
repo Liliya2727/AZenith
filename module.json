@@ -1,0 +1,16 @@
+{
+    "metamodule": false,
+    "summary": "Universal auto Performance modules to enhance\n gaming experience while preserving daily usability",
+    "sourceUrl": "https://github.com/KernelSU-Modules-Repo/AZenith": [
+        {
+            "type": "add",
+            "name": "Zexshia",
+            "link": "https://github.com/Liliya2727"
+        },
+        {
+            "type": "add",
+            "name": "Kanaochar",
+            "link": "https://github.com/kanaodnd"
+        }                
+    ]
+}
