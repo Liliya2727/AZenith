@@ -92,6 +92,11 @@ const executeCommand = async (cmd, cwd = null) => {
 window.executeCommand = executeCommand;
 
 // Main Script
+const idle = () =>
+  new Promise(r =>
+    (window.requestIdleCallback || setTimeout)(r, 50)
+  );
+  
 const setGPUMaliDefault = async (c) => {
   const s = "/data/adb/.config/AZenith",
         r = `${s}/API/current_profile`;
@@ -125,7 +130,10 @@ const loadGPUMaliDefault = async () => {
   if (!select) return;
 
   select.innerHTML = "";
-  g.trim().split(/\s+/).forEach((gov) => {
+
+  g.trim().split(/\s+/).forEach(gov => {
+    if (gov.startsWith("apu")) return;
+
     const opt = document.createElement("option");
     opt.value = gov;
     opt.textContent = gov;
@@ -135,7 +143,12 @@ const loadGPUMaliDefault = async () => {
   const { errno: l, stdout: m } = await executeCommand(
     `sh -c '[ -n "$(getprop persist.sys.azenith.custom_default_gpumali_gov)" ] && getprop persist.sys.azenith.custom_default_gpumali_gov || getprop persist.sys.azenith.default_gpumali_gov'`
   );
-  if (l === 0 && m.trim()) select.value = m.trim();
+  if (l === 0 && m.trim()) {
+    const val = m.trim();
+    if ([...select.options].some(o => o.value === val)) {
+      select.value = val;
+    }
+  }
 };
 
 const setGPUMaliPowersave = async (c) => {
@@ -171,7 +184,10 @@ const loadGPUMaliPowersave = async () => {
   if (!select) return;
 
   select.innerHTML = "";
-  g.trim().split(/\s+/).forEach((gov) => {
+
+  g.trim().split(/\s+/).forEach(gov => {
+    if (gov.startsWith("apu")) return;
+
     const opt = document.createElement("option");
     opt.value = gov;
     opt.textContent = gov;
@@ -181,7 +197,13 @@ const loadGPUMaliPowersave = async () => {
   const { errno: l, stdout: m } = await executeCommand(
     `sh -c '[ -n "$(getprop persist.sys.azenith.custom_powersave_gpumali_gov)" ] && getprop persist.sys.azenith.custom_powersave_gpumali_gov'`
   );
-  if (l === 0 && m.trim()) select.value = m.trim();
+
+  if (l === 0 && m.trim()) {
+    const val = m.trim();
+    if ([...select.options].some(o => o.value === val)) {
+      select.value = val;
+    }
+  }
 };
 
 const setGPUMaliPerformance = async (c) => {
@@ -217,7 +239,10 @@ const loadGPUMaliPerformance = async () => {
   if (!select) return;
 
   select.innerHTML = "";
-  g.trim().split(/\s+/).forEach((gov) => {
+
+  g.trim().split(/\s+/).forEach(gov => {
+    if (gov.startsWith("apu")) return;
+
     const opt = document.createElement("option");
     opt.value = gov;
     opt.textContent = gov;
@@ -227,7 +252,13 @@ const loadGPUMaliPerformance = async () => {
   const { errno: l, stdout: m } = await executeCommand(
     `sh -c '[ -n "$(getprop persist.sys.azenith.custom_performance_gpumali_gov)" ] && getprop persist.sys.azenith.custom_performance_gpumali_gov'`
   );
-  if (l === 0 && m.trim()) select.value = m.trim();
+
+  if (l === 0 && m.trim()) {
+    const val = m.trim();
+    if ([...select.options].some(o => o.value === val)) {
+      select.value = val;
+    }
+  }
 };
 
 const checkGPUMaliCompatibility = async () => {
@@ -428,38 +459,33 @@ const updateGameStatus = async () => {
   if (!banner) return;
 
   try {
-    const gameRaw = await executeCommand(
-      "cat /data/adb/.config/AZenith/API/gameinfo"
-    );
-    let gameLine = (gameRaw.stdout || "").trim();
-
-    if (
-      !gameLine ||
-      ["null", "(null)", "NULL"].includes(gameLine.toUpperCase()) ||
-      gameLine.toUpperCase().startsWith("NULL 0 0")
-    ) {
-      gameLine = null;
-    }
-
     const aiResult = await executeCommand(
       "getprop persist.sys.azenithconf.AIenabled"
     );
-    const aiEnabled = aiResult.stdout?.trim() === "0";
+    const aiEnabled = aiResult.stdout?.trim() !== "0"; 
 
     let statusText = "";
 
-    if (!gameLine) {
-      statusText = aiEnabled
-        ? getTranslation("serviceStatus.idleMode")
-        : getTranslation("serviceStatus.noApps");
+    if (aiEnabled) {
+      statusText = getTranslation("serviceStatus.noApps");
     } else {
-      const pkg = gameLine.split(" ")[0]?.trim();
+      const gameRaw = await executeCommand(
+        "cat /data/adb/.config/AZenith/API/gameinfo"
+      );
+      let gameLine = (gameRaw.stdout || "").trim();
 
-      if (!pkg || ["NULL", "null", "(null)"].includes(pkg.toUpperCase())) {
-        statusText = aiEnabled
-          ? getTranslation("serviceStatus.idleMode")
-          : getTranslation("serviceStatus.noApps");
+      if (
+        !gameLine ||
+        ["null", "(null)", "NULL"].includes(gameLine.toUpperCase()) ||
+        gameLine.toUpperCase().startsWith("NULL 0 0")
+      ) {
+        gameLine = null;
+      }
+
+      if (!gameLine) {
+        statusText = getTranslation("serviceStatus.idleMode");
       } else {
+        const pkg = gameLine.split(" ")[0]?.trim() || "";
         let label = pkg;
 
         try {
@@ -467,7 +493,7 @@ const updateGameStatus = async () => {
           if (Array.isArray(infoList) && infoList.length > 0) {
             label = infoList[0].appLabel || infoList[0].label || infoList[0].appName || pkg;
           }
-        } catch (e) {          
+        } catch {
           if (typeof window.$packageManager !== "undefined") {
             try {
               const appInfo = await window.$packageManager.getApplicationInfo(pkg, 0, 0);
@@ -476,16 +502,11 @@ const updateGameStatus = async () => {
                         || appInfo.appName
                         || pkg;
               }
-            } catch (err) {
-              console.warn("Failed to get app label", pkg, err);
-              label = pkg;
-            }
+            } catch {}
           }
         }
 
-        statusText = aiEnabled
-          ? getTranslation("serviceStatus.activeIdle", label)
-          : getTranslation("serviceStatus.active", label);
+        statusText = getTranslation("serviceStatus.activeIdle", label);
       }
     }
 
@@ -1860,11 +1881,6 @@ const loadRRValue = async () => {
 
   select.innerHTML = "";
 
-  const defOpt = document.createElement("option");
-  defOpt.value = "default";
-  defOpt.textContent = "System Default";
-  select.appendChild(defOpt);
-
   let maxRate = 60;
 
   try {
@@ -1925,7 +1941,7 @@ const loadCurRenderer = async () => {
 
   const defOpt = document.createElement("option");
   defOpt.value = "default";
-  defOpt.textContent = "System Default";
+  defOpt.textContent = "Default";
   select.appendChild(defOpt);
 
   const renderers = ["vulkan", "skiagl"];
@@ -2494,17 +2510,25 @@ const loadIOpowersave = async () => {
   console.log(`Detected block device: ${validBlock}`);
 };
 
+let isAdditionalLoaded = false;
+
 const showAdditionalSettings = async () => {
   const c = document.getElementById("additional-modal");
   const s = c.querySelector(".additional-container");
+
   document.body.classList.add("modal-open");
   c.classList.add("show");
 
+  // animasi dulu (UI prioritas)
   s.style.transition = "none";
+  s.style.opacity = "0";
   s.style.transform = "translateY(20px) scale(0.98)";
   void s.offsetWidth;
+
   s.style.transition = "transform 0.25s ease, opacity 0.25s ease";
   s.style.opacity = "1";
+  s.style.transform = "translateY(0) scale(1)";
+
   const r = window.innerHeight;
   const d = () => {
     s.style.transform =
@@ -2512,9 +2536,27 @@ const showAdditionalSettings = async () => {
         ? "translateY(-10%) scale(1)"
         : "translateY(0) scale(1)";
   };
-  requestAnimationFrame(() => d());
+  requestAnimationFrame(d);
   window.addEventListener("resize", d, { passive: true });
   c._resizeHandler = d;
+
+  // logic cuma jalan 1x
+  if (isAdditionalLoaded) return;
+  isAdditionalLoaded = true;
+
+  // jalan berurutan = stabil + no spike
+  for (const fn of [
+    hideBypassIfUnsupported,
+    checkDND,
+    checkfstrim,
+    checkBypassChargeStatus,
+    loadBypassCheck,
+    checkRamBoost,
+    detectResolution,
+    loadColorSchemeSettings
+  ]) {
+    try { await fn(); } catch {}
+  }
 };
 
 const hideAdditionalSettings = () => {
@@ -2527,17 +2569,24 @@ const hideAdditionalSettings = () => {
   }
 };
 
+let isPreferenceLoaded = false;
+
 const showPreferenceSettings = async () => {
   const c = document.getElementById("preference-modal");
   const s = c.querySelector(".preference-container");
+
   document.body.classList.add("modal-open");
   c.classList.add("show");
 
   s.style.transition = "none";
   s.style.transform = "translateY(20px) scale(0.98)";
+  s.style.opacity = "0";
   void s.offsetWidth;
+
   s.style.transition = "transform 0.25s ease, opacity 0.25s ease";
   s.style.opacity = "1";
+  s.style.transform = "translateY(0) scale(1)";
+
   const r = window.innerHeight;
   const d = () => {
     s.style.transform =
@@ -2545,9 +2594,21 @@ const showPreferenceSettings = async () => {
         ? "translateY(-10%) scale(1)"
         : "translateY(0) scale(1)";
   };
-  requestAnimationFrame(() => d());
+  requestAnimationFrame(d);
   window.addEventListener("resize", d, { passive: true });
   c._resizeHandler = d;
+
+  if (isPreferenceLoaded) return;
+  isPreferenceLoaded = true;
+
+  for (const fn of [
+    checkfpsged, checkDThermal, checkiosched,
+    checkGPreload, checkmalisched, checkjit,
+    checkdtrace, checkKillLog, checkschedtunes,
+    checkwalt, checkSFL
+  ]) {
+    try { await fn(); } catch {}
+  }
 };
 
 const hidePreferenceSettings = () => {
@@ -2840,27 +2901,44 @@ const hideResoSettings = () => {
   }
 };
 
+let isSettingsLoaded = false;
+
 const showSettings = async () => {
   const c = document.getElementById("settingsModal");
-  const s = c.querySelector(".settings-container");
+  const s = c?.querySelector(".settings-container");
+  if (!c || !s) return;
+
   document.body.classList.add("modal-open");
   c.classList.add("show");
 
   s.style.transition = "none";
+  s.style.opacity = "0";
   s.style.transform = "translateY(20px) scale(0.98)";
-  void s.offsetWidth;
-  s.style.transition = "transform 0.25s ease, opacity 0.25s ease";
-  s.style.opacity = "1";
-  const r = window.innerHeight;
-  const d = () => {
+
+  requestAnimationFrame(() => {
+    s.style.transition = "transform 0.25s ease, opacity 0.25s ease";
+    s.style.opacity = "1";
+    s.style.transform = "translateY(0) scale(1)";
+  });
+
+  const baseH = window.innerHeight;
+  const resize = () => {
     s.style.transform =
-      window.innerHeight < r - 150
+      window.innerHeight < baseH - 150
         ? "translateY(-10%) scale(1)"
         : "translateY(0) scale(1)";
   };
-  requestAnimationFrame(() => d());
-  window.addEventListener("resize", d, { passive: true });
-  c._resizeHandler = d;
+  window.addEventListener("resize", resize, { passive: true });
+  c._resizeHandler = resize;
+
+  if (isSettingsLoaded) return;
+  isSettingsLoaded = true;
+
+  for (const fn of [
+    checkAI, checktoast, checklogger    
+  ]) {
+    try { await fn(); } catch {}
+  }  
 };
 
 const hideSettings = () => {
@@ -3165,7 +3243,6 @@ const setupUIListeners = () => {
     const ok = await loadConfigFile(file);
 
     if (ok) {
-      // Small delay so setprop finishes writing
       setTimeout(() => {
         location.reload();
       }, 500);
@@ -3255,6 +3332,8 @@ const observeVisibility = () => {
   });
 };
 
+const delay = (ms) => new Promise(r => setTimeout(r, ms));
+
 const heavyInit = async () => {
   if (heavyInitDone) return;
   heavyInitDone = true;
@@ -3266,74 +3345,28 @@ const heavyInit = async () => {
   if (loader) loader.classList.remove("hidden");
   document.body.classList.add("no-scroll");  
 
-  const loops = [
-    checkProfile, 
-    checkServiceStatus, 
-    showRandomMessage, 
-    updateGameStatus,    
-  ];
-  await Promise.all(loops.map((fn) => fn()));
-  
-  await checkWebUISupport();
-  await checkServiceRunning();
-  await checkModuleVersion();
+  await Promise.all([
+    checkProfile(),    
+    showRandomMessage(),
+    updateGameStatus(),
+  ]);
 
-  const quickChecks = [
-    checkGPUMaliCompatibility,
-    loadCpuGovernors,
-    loadCpuFreq,    
-    loadIObalance,
-    loadIOperformance,
-    loadIOpowersave,
-    GovernorPowersave,
-  ];
-  await Promise.all(quickChecks.map((fn) => fn()));
+  [
+    checkWebUISupport, checkServiceStatus, checkServiceRunning, 
+    checkModuleVersion, checkCPUInfo, checkDeviceInfo, checkKernelVersion, getAndroidVersion
+  ].forEach(fn => fn().catch(()=>{}));
 
-  const heavyAsync = [
-    checkCPUInfo,
-    checkDeviceInfo,
-    checkKernelVersion,
-    getAndroidVersion,
-    checkfpsged,
-    checkLiteModeStatus,
-    checkDThermal,
-    checkiosched,
-    checkGPreload,
-    loadColorSchemeSettings,
-  ];
-  await Promise.all(heavyAsync.map((fn) => fn()));
-
-  const heavySequential = [
-    hideBypassIfUnsupported,
-    checkmalisched,
-    checkAI,
-    checkthermalcore,
-    checkDND,
-    checkdtrace,
-    checkjit,
-    checktoast,
-    checkfstrim,
-    loadCurRenderer,
-    loadRRValue,
-    checkBypassChargeStatus,
-    loadBypassCheck,
-    checkschedtunes,
-    checkwalt,
-    checkSFL,
-    checkKillLog,
-    checklogger,
-    checkRamBoost,
-    detectResolution,
-  ];
-  for (const fn of heavySequential) {
-    await fn();
-  }
-
-  startMonitoringLoops();
-  observeVisibility();
+  await Promise.all([
+    checkGPUMaliCompatibility, loadCpuGovernors, loadCpuFreq, 
+    loadIObalance, loadIOperformance, loadIOpowersave, GovernorPowersave,
+    loadCurRenderer, loadRRValue, checkLiteModeStatus, checkthermalcore
+  ].map(fn => fn().catch(()=>{})));      
 
   if (loader) loader.classList.add("hidden");
   document.body.classList.remove("no-scroll");
+
+  startMonitoringLoops();
+  observeVisibility();
 
   cleaningInterval = setInterval(cleanMemory, 15000);
 };
@@ -3341,7 +3374,3 @@ const heavyInit = async () => {
 // Event Listeners
 setupUIListeners();
 heavyInit();
-checkCPUInfo();
-checkDeviceInfo();
-checkKernelVersion();
-getAndroidVersion();
