@@ -28,8 +28,9 @@ need_integrity=(
 
 # Version info
 version="$(cat version)"
+version_type="$(cat version_type)"
 version_code="$(git rev-list HEAD --count)"
-release_code="$(git rev-list HEAD --count)-$(git rev-parse --short HEAD)-release"
+release_code="$(git rev-list HEAD --count)-$(git rev-parse --short HEAD)-$version_type"
 sed -i "s/version=.*/version=$version ($release_code)/" mainfiles/module.prop
 sed -i "s/versionCode=.*/versionCode=$version_code/" mainfiles/module.prop
 
