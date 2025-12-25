@@ -19,6 +19,7 @@ on:
       - "thermalcore/**"
       - "azenithApplist.json"
       - "version"
+      - "version_type"
 
 # Allow only one concurrent build workflows
 concurrency:
