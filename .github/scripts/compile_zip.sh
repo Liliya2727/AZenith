@@ -23,7 +23,7 @@ need_integrity=(
     "mainfiles/module.avatar.webp"
     "mainfiles/module.banner.avif"
 	"mainfiles/azenithApplist.json"
-    "mainfiles/azenithtoast.apk"
+    "mainfiles/AZenith.apk"
 )
 
 # Version info
@@ -41,6 +41,13 @@ cp -r ./thermalcore/* mainfiles/system/bin
 cp -r ./preloadbin/* mainfiles/system/bin
 cp -r azenithApplist.json ./mainfiles
 cp LICENSE ./mainfiles
+if [ -f "./app/build/outputs/apk/release/app-release.apk" ]; then
+    cp "./app/build/outputs/apk/release/app-release.apk" "mainfiles/AZenith.apk"
+    echo "APK copied to mainfiles successfully."
+else
+    echo "Warning: Compiled APK not found!"
+fi
+
 
 # Remove .sh extension from scripts
 find mainfiles/system/bin -maxdepth 1 -type f -name "*.sh" -exec sh -c 'mv -- "$0" "${0%.sh}"' {} \;
