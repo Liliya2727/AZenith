@@ -35,10 +35,9 @@ done
 # Remove module directories
 rm -rf "/data/adb/.config/AZenith"
 rm -rf "/data/AZenith"
-rm -rf "/data/local/tmp/module.avatar.webp"
 
 # Remove toast apk
-pm uninstall --user 0 azenith.toast 2>/dev/null
+pm uninstall --user 0 zx.azenith 2>/dev/null
 
 # Remove azenith binaries
 manager_paths="/data/adb/ap/bin /data/adb/ksu/bin"
