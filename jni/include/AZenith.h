@@ -104,7 +104,7 @@ int handle_verboselog(int argc, char** argv);
 extern void GamePreload(const char* package);
 void sighandler(const int signal);
 char* trim_newline(char* string);
-void notify(const char* message);
+void notify(const char* title, const char* fmt, const char* chrono, int timeout_ms, ...);
 void toast(const char* message);
 void is_kanged(void);
 void checkstate(void);

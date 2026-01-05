@@ -39,22 +39,27 @@ static time_t last_task_run = 0;
 
 /***********************************************************************************
  * Function Name      : notify
- * Inputs             : message (char *) - Message to display
+ * Inputs             : 
  * Returns            : None
  * Description        : Push a notification.
  ***********************************************************************************/
-void notify(const char* message) {
-    int exit = systemv("su -lp 2000 -c \"/system/bin/cmd notification post "
-                       "-t '%s' "
-                       "-i file:///data/local/tmp/module.avatar.webp "
-                       "-I file:///data/local/tmp/module.avatar.webp "
-                       "'AZenith' '%s'\" >/dev/null",
-                       NOTIFY_TITLE, message);
+void notify(const char* title, const char* fmt, const char* chrono, int timeout_ms, ...) {
+    char message[512];
+    va_list args;
+    va_start(args, timeout_ms);
+    vsnprintf(message, sizeof(message), fmt, args);
+    va_end(args);
 
-    if (exit != 0) [[clang::unlikely]] {
-        log_zenith(LOG_ERROR, "Unable to post push notification, message: %s", message);
+    if (timeout_ms > 0) {
+        systemv("su -c \"am start -n zx.azenith/.MainActivity -e notifytitle '%s' -e notifytext '%s' -e chrono %s -e timeout %d\"", 
+                title, message, chrono, timeout_ms);
+    } else {
+        systemv("su -c \"am start -n zx.azenith/.MainActivity -e notifytitle '%s' -e notifytext '%s' -e chrono %s\"", 
+                title, message, chrono);
     }
 }
+
+
 
 /***********************************************************************************
  * Function Name      : timern
@@ -120,20 +125,18 @@ char* timern(void) {
 void toast(const char* message) {
     char val[PROP_VALUE_MAX] = {0};
     if (__system_property_get("persist.sys.azenithconf.showtoast", val) > 0) {
-        if (val[0] == '1') {
-            // Show toast
-            int exit = systemv("su -lp 2000 -c \"/system/bin/am start -a android.intent.action.MAIN "
-                               "-e toasttext '%s' -n azenith.toast/.MainActivity >/dev/null 2>&1\"",
+        if (val[0] == '1') {            
+            
+            int exit = systemv("su -c \"/system/bin/am start --user 0 -n zx.azenith/.MainActivity -e toasttext '%s' >/dev/null 2>&1\"",
                                message);
 
             if (exit != 0) [[clang::unlikely]] {
                 log_zenith(LOG_WARN, "Unable to show toast message: %s", message);
             }
-            sleep(2);
-            systemv("am force-stop azenith.toast");
         }
     }
 }
+
 
 /***********************************************************************************
  * Function Name      : is_kanged
@@ -154,7 +157,7 @@ void is_kanged(void) {
 
 doorprize:
     log_zenith(LOG_FATAL, "Module modified by 3rd party, exiting.");
-    notify("Trying to rename me?");
+    notify("Daemon Error", "Trying to rename me?", "false", 0);
     systemv("setprop persist.sys.azenith.service \"\"");
     systemv("setprop persist.sys.azenith.state stopped");
     exit(EXIT_FAILURE);
@@ -180,7 +183,7 @@ void check_module_version(void) {
     if (ret != 0) [[clang::unlikely]] {
         log_zenith(LOG_FATAL,
                    "AZenith version mismatch with daemon version! please reinstall the module!");
-        notify("AZenith version mismatch, please reinstall!");
+        notify("Daemon Error", "AZenith version mismatch, please reinstall!", "false", 0);
         systemv("setprop persist.sys.azenith.service \"\"");
         systemv("setprop persist.sys.azenith.state stopped");
         exit(EXIT_FAILURE);
@@ -258,8 +261,8 @@ void runthermalcore(void) {
     char thermalcore[PROP_VALUE_MAX] = {0};
     __system_property_get("persist.sys.azenithconf.thermalcore", thermalcore);
     if (strcmp(thermalcore, "1") == 0) {
-        systemv("sys.azenith-rianixiathermalcorev4 &");
-        FILE* fp = popen("pidof sys.azenith-rianixiathermalcorev4", "r");
+        systemv("sys.azenith-rianixiathermalcore &");
+        FILE* fp = popen("pidof sys.azenith-rianixiathermalcore", "r");
         if (fp == NULL) {
             perror("pidof failed");
             log_zenith(LOG_INFO, "Failed to run Thermalcore service");
@@ -298,7 +301,8 @@ void runtask(void) {
     if ((now.tv_sec - last_task_run) >= TASK_INTERVAL_SEC) {
         last_task_run = now.tv_sec;
         log_zenith(LOG_INFO, "Executing scheduled task, next task will be run in next 12h");
-        notify("12 hours passed — AZenith doing its routine check. All good.");
+        notify("Daemon Info", "12 hours passed — AZenith doing its routine check. All good.", "false", 0);
+        
         systemv("sys.azenith-utilityconf FSTrim");
     }
 }
