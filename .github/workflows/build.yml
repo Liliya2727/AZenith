@@ -11,6 +11,7 @@ on:
     paths:
       - ".github/workflows/build.yml"
       - ".github/scripts/**"
+      - "app/**"
       - "jni/**"
       - "tweakfls/**"
       - "mainfiles/**"
@@ -40,6 +41,19 @@ jobs:
         id: verifyModule
         run: bash .github/scripts/verify.sh
 
+      - name: set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Build APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease
+        env:
+          KS_PWD: ${{ secrets.KEYSTORE_PASSWORD }}
+                    
       - name: NDK Setup
         uses: nttld/setup-ndk@v1.5.0
         with:
