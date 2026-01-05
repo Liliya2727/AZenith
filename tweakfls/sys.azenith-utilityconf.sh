@@ -128,17 +128,17 @@ setsIO() {
 setthermalcore() {
     local state="$1"
     if [ "$state" -eq 1 ]; then
-        sys.azenith-rianixiathermalcorev4 &
+        sys.azenith-rianixiathermalcore &
         sleep 1
         local pid
-        pid="$(pgrep -f sys.azenith-rianixiathermalcorev4)"
+        pid="$(pgrep -f sys.azenith-rianixiathermalcore)"
         if [ -n "$pid" ]; then
             dlog "Starting Thermalcore Service with pid $pid"
         else
             dlog "Thermalcore service started but PID not found"
         fi
     else
-        pkill -9 -f sys.azenith-rianixiathermalcorev4 >/dev/null 2>&1
+        pkill -9 -f sys.azenith-rianixiathermalcore >/dev/null 2>&1
         dlog "Stopped Thermalcore service"
     fi
 }
