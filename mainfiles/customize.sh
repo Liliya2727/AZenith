@@ -72,7 +72,7 @@ ui_print "- Extracting system directory..."
 extract "$ZIPFILE" 'system/bin/sys.azenith-profilesettings' "$MODPATH"
 extract "$ZIPFILE" 'system/bin/sys.azenith-utilityconf' "$MODPATH"
 extract "$ZIPFILE" 'system/bin/sys.azenith-preloadbin' "$MODPATH"
-extract "$ZIPFILE" 'system/bin/sys.azenith-rianixiathermalcorev4' "$MODPATH"
+extract "$ZIPFILE" 'system/bin/sys.azenith-rianixiathermalcore' "$MODPATH"
 ui_print "- Extracting service.sh..."
 extract "$ZIPFILE" service.sh "$MODPATH"
 ui_print "- Extracting module.prop..."
@@ -83,8 +83,6 @@ if [ ! -f "$MODULE_CONFIG/gamelist/azenithApplist.json" ]; then
     ui_print "- Extracting gamelist.txt..."
     extract "$ZIPFILE" azenithApplist.json "$MODULE_CONFIG/gamelist"
 fi
-ui_print "- Extracting module icon..."
-extract "$ZIPFILE" module.avatar.webp "/data/local/tmp"
 ui_print "- Extracting module banner..."
 extract "$ZIPFILE" module.banner.avif "$MODPATH"
 
@@ -120,7 +118,7 @@ if [ "$KSU" = "true" ] || [ "$APATCH" = "true" ]; then
 			ln -sf "$BIN_PATH/sys.azenith-profilesettings" "$dir/sys.azenith-profilesettings"
 			ln -sf "$BIN_PATH/sys.azenith-utilityconf" "$dir/sys.azenith-utilityconf"
 			ln -sf "$BIN_PATH/sys.azenith-preloadbin" "$dir/sys.azenith-preloadbin"
-            ln -sf "$BIN_PATH/sys.azenith-rianixiathermalcorev4" "$dir/sys.azenith-rianixiathermalcorev4"
+            ln -sf "$BIN_PATH/sys.azenith-rianixiathermalcore" "$dir/sys.azenith-rianixiathermalcore"
 		}
 	done
 fi
@@ -240,18 +238,24 @@ ui_print "- Disable Debugmode"
 setprop persist.sys.azenith.debugmode "false"
 
 ui_print "- Extracting AZenith Toast..."
-extract "$ZIPFILE" azenithtoast.apk "$MODPATH"
-ui_print "- Installing AZenith Toast..."
-pm install "$MODPATH/azenithtoast.apk" > /dev/null 2>&1
-rm "$MODPATH/azenithtoast.apk"
+extract "$ZIPFILE" AZenith.apk "$MODPATH"
+ui_print "- Installing AZenith apk..."
+pm install "$MODPATH/AZenith.apk" > /dev/null 2>&1
+rm "$MODPATH/AZenith.apk"
+
+# Remove old module files
+ui_print "- Cleaning old files"
+rm -rf "/data/local/tmp/module.avatar.webp"
+pm uninstall --user 0 azenith.toast 2>/dev/null
 
 # Set Permissions
 ui_print "- Setting Permissions..."
+pm grant zx.azenith android.permission.POST_NOTIFICATIONS
 set_perm_recursive "$MODPATH/system/bin" 0 2000 0777 0777
 chmod +x "$MODPATH/system/bin/sys.azenith-service"
 chmod +x "$MODPATH/system/bin/sys.azenith-profilesettings"
 chmod +x "$MODPATH/system/bin/sys.azenith-utilityconf"
 chmod +x "$MODPATH/system/bin/sys.azenith-preloadbin"
-chmod +x "$MODPATH/system/bin/sys.azenith-rianixiathermalcorev4"
+chmod +x "$MODPATH/system/bin/sys.azenith-rianixiathermalcore"
 
 ui_print "- Installation complete!"
