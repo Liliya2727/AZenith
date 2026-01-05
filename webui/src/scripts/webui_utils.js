@@ -462,60 +462,71 @@ const updateGameStatus = async () => {
     const aiResult = await executeCommand(
       "getprop persist.sys.azenithconf.AIenabled"
     );
-    const aiEnabled = aiResult.stdout?.trim() !== "0"; 
+    const aiEnabled = aiResult.stdout?.trim() === "1";
+
+    const gameRaw = await executeCommand(
+      "cat /data/adb/.config/AZenith/API/gameinfo"
+    );
+
+    const rawLine = gameRaw.stdout?.trim();
+    let gamePkg = null;
+
+    if (rawLine) {
+      const parts = rawLine.split(/\s+/);
+      const name = parts[0];
+
+      if (!/^\(?null\)?$/i.test(name)) {
+        gamePkg = name;
+      }
+    }
 
     let statusText = "";
 
-    if (aiEnabled) {
-      statusText = getTranslation("serviceStatus.noApps");
+    if (!gamePkg) {
+      statusText = aiEnabled
+        ? getTranslation("serviceStatus.noApps")
+        : getTranslation("serviceStatus.idleMode");
     } else {
-      const gameRaw = await executeCommand(
-        "cat /data/adb/.config/AZenith/API/gameinfo"
-      );
-      let gameLine = (gameRaw.stdout || "").trim();
+      const pkg = gamePkg;
+      let label = pkg;
 
-      if (
-        !gameLine ||
-        ["null", "(null)", "NULL"].includes(gameLine.toUpperCase()) ||
-        gameLine.toUpperCase().startsWith("NULL 0 0")
-      ) {
-        gameLine = null;
-      }
-
-      if (!gameLine) {
-        statusText = getTranslation("serviceStatus.idleMode");
-      } else {
-        const pkg = gameLine.split(" ")[0]?.trim() || "";
-        let label = pkg;
-
-        try {
-          const infoList = JSON.parse(ksu.getPackagesInfo(JSON.stringify([pkg])));
-          if (Array.isArray(infoList) && infoList.length > 0) {
-            label = infoList[0].appLabel || infoList[0].label || infoList[0].appName || pkg;
-          }
-        } catch {
-          if (typeof window.$packageManager !== "undefined") {
-            try {
-              const appInfo = await window.$packageManager.getApplicationInfo(pkg, 0, 0);
-              if (appInfo) {
-                label = (typeof appInfo.getLabel === "function" ? appInfo.getLabel() : appInfo.label)
-                        || appInfo.appName
-                        || pkg;
-              }
-            } catch {}
-          }
+      try {
+        const infoList = JSON.parse(
+          ksu.getPackagesInfo(JSON.stringify([pkg]))
+        );
+        const info = infoList?.[0];
+        if (info) {
+          label =
+            info.appLabel ||
+            info.label ||
+            info.appName ||
+            pkg;
         }
-
-        statusText = getTranslation("serviceStatus.activeIdle", label);
+      } catch {
+        if (window.$packageManager) {
+          try {
+            const appInfo =
+              await window.$packageManager.getApplicationInfo(pkg, 0, 0);
+            if (appInfo) {
+              label =
+                (typeof appInfo.getLabel === "function"
+                  ? appInfo.getLabel()
+                  : appInfo.label) ||
+                appInfo.appName ||
+                pkg;
+            }
+          } catch {}
+        }
       }
+
+      statusText = getTranslation("serviceStatus.active", label);
     }
 
     if (lastGameCheck.status !== statusText) {
       banner.textContent = statusText;
       lastGameCheck.status = statusText;
     }
-  } catch (e) {
-    console.warn("updateGameStatus error:", e);
+  } catch {
     banner.textContent = getTranslation("serviceStatus.error");
   }
 };
@@ -669,9 +680,36 @@ const getSupportedRefreshRates = async () => {
 
 const openPerAppSettings = async (pkg, gamelist) => {
   const modal = document.getElementById("appSettingsModal");
+  const content = modal.querySelector(".app-modal-content");
   const list = document.getElementById("appModalSettings");
+  if (!modal || !content || !list) return;
 
   document.body.classList.add("modal-open");
+  modal.classList.remove("hidden", "closing");
+
+  // reset (no animation)
+  content.style.transition = "none";
+  content.style.opacity = "0";
+  content.style.transform = "translateY(20px) scale(.98)";
+  void content.offsetHeight;
+
+  // animate in
+  content.style.transition =
+    "opacity .25s ease, transform .25s cubic-bezier(0.16,1,0.3,1)";
+  content.style.opacity = "1";
+  content.style.transform = "translateY(0) scale(1)";
+
+  const baseH = window.innerHeight;
+  const resize = () => {
+    content.style.transform =
+      window.innerHeight < baseH - 150
+        ? "translateY(-8px) scale(1)"
+        : "translateY(0) scale(1)";
+  };
+
+  window.addEventListener("resize", resize, { passive: true });
+  modal._resizeHandler = resize;
+
   const cfg = gamelist[pkg];
   if (!cfg) return;
 
@@ -691,7 +729,7 @@ const openPerAppSettings = async (pkg, gamelist) => {
           <div class="optionGroup" data-key="${s.key}">
             ${["false","default","true"].map(v => `
               <button class="optionBtn ${value === v ? "active" : ""}" data-value="${v}">
-                ${v.charAt(0).toUpperCase() + v.slice(1)}
+                ${v[0].toUpperCase() + v.slice(1)}
               </button>
             `).join("")}
           </div>
@@ -744,8 +782,6 @@ const openPerAppSettings = async (pkg, gamelist) => {
       };
     });
   });
-
-  modal.classList.remove("hidden");
 };
 
 let cachedPkgList = [];
@@ -2140,7 +2176,6 @@ const hidecolorscheme = () => {
   if (!c) return; // exit if modal not found
 
   c.classList.remove("show");
-  document.body.classList.remove("modal-open");
   const colorSchemeSavedToast = getTranslation("toast.colorSchemeSaved");
   toast(colorSchemeSavedToast);
 
@@ -2547,6 +2582,7 @@ const showAdditionalSettings = async () => {
   // jalan berurutan = stabil + no spike
   for (const fn of [
     hideBypassIfUnsupported,
+    checkGPreload,
     checkDND,
     checkfstrim,
     checkBypassChargeStatus,
@@ -2603,7 +2639,7 @@ const showPreferenceSettings = async () => {
 
   for (const fn of [
     checkfpsged, checkDThermal, checkiosched,
-    checkGPreload, checkmalisched, checkjit,
+    checkmalisched, checkjit,
     checkdtrace, checkKillLog, checkschedtunes,
     checkwalt, checkSFL
   ]) {
@@ -2624,7 +2660,6 @@ const hidePreferenceSettings = () => {
 const hideSchemeSettings = () => {
   const c = document.getElementById("schemeModal");
   c.classList.remove("show");
-  document.body.classList.remove("modal-open");
   if (c._resizeHandler) {
     window.removeEventListener("resize", c._resizeHandler);
     delete c._resizeHandler;
@@ -2894,7 +2929,6 @@ const showCustomResolution = async () => {
 const hideResoSettings = () => {
   const c = document.getElementById("resomodal");
   c.classList.remove("show");
-  document.body.classList.remove("modal-open");
   if (c._resizeHandler) {
     window.removeEventListener("resize", c._resizeHandler);
     delete c._resizeHandler;
@@ -3344,6 +3378,10 @@ const heavyInit = async () => {
   const loader = document.getElementById("loading-screen");
   if (loader) loader.classList.remove("hidden");
   document.body.classList.add("no-scroll");  
+  
+  await checkWebUISupport();
+  await checkServiceRunning();
+  await checkModuleVersion();
 
   await Promise.all([
     checkProfile(),    
@@ -3352,8 +3390,8 @@ const heavyInit = async () => {
   ]);
 
   [
-    checkWebUISupport, checkServiceStatus, checkServiceRunning, 
-    checkModuleVersion, checkCPUInfo, checkDeviceInfo, checkKernelVersion, getAndroidVersion
+    checkServiceStatus,
+    checkCPUInfo, checkDeviceInfo, checkKernelVersion, getAndroidVersion
   ].forEach(fn => fn().catch(()=>{}));
 
   await Promise.all([
