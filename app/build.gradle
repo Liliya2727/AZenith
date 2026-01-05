@@ -1,0 +1,55 @@
+plugins {
+    alias(libs.plugins.android.application)
+}
+
+android {
+    signingConfigs {
+        release {
+            storeFile file("azenith.jks") 
+            storePassword System.getenv("KS_PWD")
+            keyAlias "azenith_key"
+            keyPassword System.getenv("KS_PWD")
+        }
+    }
+        
+    namespace 'zx.azenith'
+    compileSdk 35 // Stable standard
+
+    defaultConfig {
+        applicationId 'zx.azenith'
+        minSdk 21
+        targetSdk 34
+        versionCode (Placeholder)
+        versionName 'Placeholder'
+    }
+
+    // Set this to false for smaller size (you have no UI)
+    buildFeatures {
+        viewBinding false 
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    
+}
+
+dependencies {
+    
+}
