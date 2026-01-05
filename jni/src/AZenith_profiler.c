@@ -89,7 +89,9 @@ char* get_gamestart(GameOptions* options) {
     buf[size] = '\0';
 
     // Find package key in JSON
-    char* entry = strstr(buf, pkg);
+    char key[256];
+    snprintf(key, sizeof(key), "\"%s\"", pkg);
+    char* entry = strstr(buf, key);
     if (!entry) {
         free(buf);
         free(pkg);
