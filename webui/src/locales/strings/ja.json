@@ -11,7 +11,7 @@
       "moduleVersion": "AZenith バージョン",
       "chipset": "チップセット",
       "kernel": "カーネル",
-      "device": "デパイス",
+      "device": "デバイス",
       "androidVersion": "Android バージョン"
     },
     "buttons": {
