@@ -19,8 +19,8 @@ SKIPUNZIP=1
 # Paths
 MODULE_CONFIG="/data/adb/.config/AZenith"
    
-device_codename=$(getprop ro.product.board)
-chip=$(getprop ro.hardware)
+device_codename=$(resetprop ro.product.board)
+chip=$(resetprop ro.hardware)
 
 # Create File
 make_node() {
@@ -126,38 +126,38 @@ fi
 # Apply Tweaks Based on Chipset
 ui_print "- Checking device soc"
 chipset=$(grep -i 'hardware' /proc/cpuinfo | uniq | cut -d ':' -f2 | sed 's/^[ \t]*//')
-[ -z "$chipset" ] && chipset="$(getprop ro.board.platform) $(getprop ro.hardware)"
+[ -z "$chipset" ] && chipset="$(resetprop ro.board.platform) $(resetprop ro.hardware)"
 
 case "$(echo "$chipset" | tr '[:upper:]' '[:lower:]')" in
 *mt* | *MT*)
 	soc="MediaTek"
 	ui_print "- Applying Tweaks for $soc"
-	setprop persist.sys.azenithdebug.soctype 1
+	resetprop -n persist.sys.azenithdebug.soctype 1
 	;;
 *sm* | *qcom* | *SM* | *QCOM* | *Qualcomm* | *sdm* | *snapdragon*)
 	soc="Snapdragon"
 	ui_print "- Applying Tweaks for $soc"
-	setprop persist.sys.azenithdebug.soctype 2
+	resetprop -n persist.sys.azenithdebug.soctype 2
 	;;
 *exynos* | *Exynos* | *EXYNOS* | *universal* | *samsung* | *erd* | *s5e*)
 	soc="Exynos"
 	ui_print "- Applying Tweaks for $soc"
-	setprop persist.sys.azenithdebug.soctype 3
+	resetprop -n persist.sys.azenithdebug.soctype 3
 	;;
 *Unisoc* | *unisoc* | *ums*)
 	soc="Unisoc"
 	ui_print "- Applying Tweaks for $soc"
-	setprop persist.sys.azenithdebug.soctype 4
+	resetprop -n persist.sys.azenithdebug.soctype 4
 	;;
 *gs* | *Tensor* | *tensor*)
 	soc="Tensor"
 	ui_print "- Applying Tweaks for $soc"
-	setprop persist.sys.azenithdebug.soctype 5
+	resetprop -n persist.sys.azenithdebug.soctype 5
 	;;
 *)
 	soc="Unknown"
 	ui_print "- Applying Tweaks for $chipset"
-	setprop persist.sys.azenithdebug.soctype 0
+	resetprop -n persist.sys.azenithdebug.soctype 0
 	;;
 esac
 
@@ -169,31 +169,24 @@ esac
 # 5) Tensor
 # 0) Unknown
 
-# Extract Webui
-ui_print "- Extracting WebUI"
-mkdir -p "$MODPATH/webroot"
-unzip -o "$ZIPFILE" "webroot/*" -d "$TMPDIR" >&2
-cp -r "$TMPDIR/webroot/"* "$MODPATH/webroot/"
-rm -rf "$TMPDIR/webroot"
-
 # Make Properties
 ui_print "- Setting UP AZenith Properties"
-setprop persist.sys.azenithdebug.freqlist "Disabled 90% 80% 70% 60% 50% 40%"
-setprop persist.sys.azenithdebug.vsynclist "Disabled 60hz 90hz 120hz"
+resetprop -n persist.sys.azenithdebug.freqlist "Disabled 90% 80% 70% 60% 50% 40%"
+resetprop -n persist.sys.azenithdebug.vsynclist "Disabled 60hz 90hz 120hz"
 
 # Set default freqoffset if not set
-if [ -z "$(getprop persist.sys.azenithconf.freqoffset)" ]; then
-	setprop persist.sys.azenithconf.freqoffset "Disabled"
+if [ -z "$(resetprop persist.sys.azenithconf.freqoffset)" ]; then
+	resetprop -n persist.sys.azenithconf.freqoffset "Disabled"
 fi
 
 # Set default vsync config if not set
-if [ -z "$(getprop persist.sys.azenithconf.vsync)" ]; then
-	setprop persist.sys.azenithconf.vsync "Disabled"
+if [ -z "$(resetprop persist.sys.azenithconf.vsync)" ]; then
+	resetprop -n persist.sys.azenithconf.vsync "Disabled"
 fi
 
 # Set default color scheme if not set
-if [ -z "$(getprop persist.sys.azenithconf.schemeconfig)" ]; then
-	setprop persist.sys.azenithconf.schemeconfig "1000 1000 1000 1000"
+if [ -z "$(resetprop persist.sys.azenithconf.schemeconfig)" ]; then
+	resetprop -n persist.sys.azenithconf.schemeconfig "1000 1000 1000 1000"
 fi
 
 # Set config properties to use
@@ -216,26 +209,26 @@ persist.sys.azenithconf.disabletrace
 persist.sys.azenithconf.thermalcore
 "
 for prop in $props; do
-	curval=$(getprop "$prop")
+	curval=$(resetprop "$prop")
 	if [ -z "$curval" ]; then
-		setprop "$prop" 0
+		resetprop -n "$prop" 0
 	fi
 done
-if [ -z "$(getprop persist.sys.azenithconf.showtoast)" ]; then
-	setprop persist.sys.azenithconf.showtoast 1
+if [ -z "$(resetprop persist.sys.azenithconf.showtoast)" ]; then
+	resetprop -n persist.sys.azenithconf.showtoast 1
 fi
 
-if [ -z "$(getprop persist.sys.azenithconf.preloadbudget)" ]; then
-    setprop persist.sys.azenithconf.preloadbudget 500M
+if [ -z "$(resetprop persist.sys.azenithconf.preloadbudget)" ]; then
+    resetprop -n persist.sys.azenithconf.preloadbudget 500M
 fi
 
-if [ -z "$(getprop persist.sys.azenithconf.AIenabled)" ]; then
+if [ -z "$(resetprop persist.sys.azenithconf.AIenabled)" ]; then
     ui_print "- Enabling Auto Mode"
-    setprop persist.sys.azenithconf.AIenabled 1
+    resetprop -n persist.sys.azenithconf.AIenabled 1
 fi
 
 ui_print "- Disable Debugmode"
-setprop persist.sys.azenith.debugmode "false"
+resetprop -n persist.sys.azenith.debugmode "false"
 
 ui_print "- Extracting AZenith Toast..."
 extract "$ZIPFILE" AZenith.apk "$MODPATH"
@@ -246,7 +239,7 @@ rm "$MODPATH/AZenith.apk"
 # Remove old module files
 ui_print "- Cleaning old files"
 rm -rf "/data/local/tmp/module.avatar.webp"
-pm uninstall --user 0 azenith.toast 2>/dev/null
+pm uninstall azenith.toast > /dev/null 2>&1
 
 # Set Permissions
 ui_print "- Setting Permissions..."

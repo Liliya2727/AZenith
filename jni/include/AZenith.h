@@ -29,6 +29,7 @@
 #define NOTIFY_TITLE "AZenith"
 #define LOG_TAG "AZenith"
 
+#define LOCK_FILE "/data/adb/.config/AZenith/API/.lock"
 #define LOG_FILE "/data/adb/.config/AZenith/debug/AZenith.log"
 #define LOG_VFILE "/data/adb/.config/AZenith/debug/AZenithVerbose.log"
 #define LOG_FILE_PRELOAD "/data/adb/.config/AZenith/preload/AZenithPR.log"
@@ -104,7 +105,7 @@ int handle_verboselog(int argc, char** argv);
 extern void GamePreload(const char* package);
 void sighandler(const int signal);
 char* trim_newline(char* string);
-void notify(const char* title, const char* fmt, const char* chrono, int timeout_ms, ...);
+void notify(const char* title, const char* fmt, bool chrono, int timeout_ms, ...);
 void toast(const char* message);
 void is_kanged(void);
 void checkstate(void);

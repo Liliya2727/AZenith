@@ -11,25 +11,23 @@ on:
     paths:
       - ".github/workflows/build.yml"
       - ".github/scripts/**"
-      - "app/**"
+      - "manager/**"
       - "jni/**"
       - "tweakfls/**"
       - "mainfiles/**"
       - "preloadbin/**"
-      - "webui/**"
       - "thermalcore/**"
       - "azenithApplist.json"
       - "version"
       - "version_type"
 
-# Allow only one concurrent build workflows
 concurrency:
   group: build
   cancel-in-progress: true
 
 jobs:
   build:
-    name: Build Flashable Zip
+    name: Build AZenith
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -37,41 +35,31 @@ jobs:
         with:
           fetch-depth: 0
       
-      - name: add module verify
-        id: verifyModule
+      - name: Verify Module
         run: bash .github/scripts/verify.sh
-
-      - name: set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Build APK
-        run: |
-          chmod +x ./gradlew
-          ./gradlew assembleRelease
-        env:
-          KS_PWD: ${{ secrets.KEYSTORE_PASSWORD }}
-                    
+  
       - name: NDK Setup
         uses: nttld/setup-ndk@v1.5.0
         with:
           ndk-version: r29
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2.0.2
-
       - name: Build AZenith JNI
         run: ndk-build
 
-      - name: Building WebRoots
-        working-directory: ./webui
-        run: |
-          bun install
-          bun run build
-          cp -r ./dist/* ../mainfiles/webroot
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: "21"
+          distribution: temurin
 
+      - name: Build Manager APK
+        working-directory: ./manager
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean assembleRelease
+        env:
+          KS_PWD: ${{ secrets.KEYSTORE_PASSWORD }}
+                    
       - name: Compile Flashable Zip
         id: compileZip
         run: bash .github/scripts/compile_zip.sh
@@ -83,22 +71,23 @@ jobs:
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
           COMMIT_URL: ${{ github.event.head_commit.url }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          TITLE: AZenith
+          TITLE: AZenithNext
         run: |
-          if [ ! -z "${{ secrets.CHAT_ID }}" ] && [ ! -z "${{ secrets.BOT_TOKEN }}" ]; then
+          if [ -n "$CHAT_ID" ] && [ -n "$BOT_TOKEN" ]; then
             export VERSION=$(git rev-list --count HEAD)
-            bash .github/scripts/telebot.sh ${{ steps.compileZip.outputs.zipName }}
+            bash .github/scripts/telebot.sh "${{ steps.compileZip.outputs.zipName }}"
           else
-            echo "Telegram bot token or chatid is undefined, please add it to repository secrets!"
+            echo "Telegram bot token or chatid is undefined!"
             exit 1
           fi
 
-      - name: Unzip AZenith Package
+      - name: Prepare Artifact
         run: |
-          unzip ${{ steps.compileZip.outputs.zipName }} -d extracted
+          mkdir -p extracted
+          unzip "${{ steps.compileZip.outputs.zipName }}" -d extracted
 
       - name: Upload Build Artifact
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.compileZip.outputs.artifactName }}
-          path: extracted/**
+          path: extracted/

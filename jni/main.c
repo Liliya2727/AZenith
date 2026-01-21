@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
 
     if (!strcmp(argv[1], "--run") || !strcmp(argv[1], "-r")) {
 
-        if (check_running_state() == 1) {
+        if (check_running_state() != 0) {
             fprintf(stderr,
                 "\033[31mERROR:\033[0m Daemon is already running!\n"
             );
@@ -49,7 +49,9 @@ int main(int argc, char* argv[]) {
         systemv("rm -f /data/adb/.config/AZenith/debug/AZenith.log");
         systemv("rm -f /data/adb/.config/AZenith/debug/AZenithVerbose.log");
         systemv("rm -f /data/adb/.config/AZenith/preload/AZenithPR.log");        
-        systemv("su -c \"/system/bin/am start --user 0 -n zx.azenith/.MainActivity -e clearall true >/dev/null 2>&1\"");
+        systemv("su -c \"am broadcast -a zx.azenith.ACTION_MANAGE "
+                "-n zx.azenith/.receiver.ZenithReceiver "
+                "--ez clearall true >/dev/null 2>&1\"");
 
 
                
@@ -57,7 +59,7 @@ int main(int argc, char* argv[]) {
         if (access("/system/bin/dumpsys", F_OK) != 0) {
             fprintf(stderr, "\033[31mFATAL ERROR:\033[0m /system/bin/dumpsys: inaccessible or not found\n");
             log_zenith(LOG_FATAL, "/system/bin/dumpsys: inaccessible or not found");
-            notify("Daemon Error", "Something wrong happening in the daemon, please check module log.", "false", 0);
+            notify("Daemon Error", "Something wrong happening in the daemon, please check module log.", false, 0);
 
             exit(EXIT_FAILURE);
         }
@@ -65,7 +67,7 @@ int main(int argc, char* argv[]) {
         if (is_file_empty("/system/bin/dumpsys") == 1) {
             fprintf(stderr, "\033[31mFATAL ERROR:\033[0m /system/bin/dumpsys was tampered by kill logger module.\n");
             log_zenith(LOG_FATAL, "/system/bin/dumpsys was tampered by kill logger module");
-            notify("Daemon Error", "Please remove your stupid kill logger module.", "false", 0);
+            notify("Daemon Error", "Please remove your stupid kill logger module.", false, 0);
             exit(EXIT_FAILURE);
         }
         
@@ -102,7 +104,7 @@ int main(int argc, char* argv[]) {
 
         systemv("setprop persist.sys.rianixia.learning_enabled true");
         systemv("setprop persist.sys.azenith.state running");
-        notify("Initializing...", "Starting AZenith service...", "false", 0);
+        notify("Initializing...", "Starting AZenith service...", false, 0);
 
         systemv("setprop persist.sys.rianixia.thermalcore-bigdata.path /data/adb/.config/AZenith/debug");
         runthermalcore();
@@ -125,7 +127,7 @@ int main(int argc, char* argv[]) {
             // Handle case when module gets updated
             if (access(MODULE_UPDATE, F_OK) == 0) [[clang::unlikely]] {
                 log_zenith(LOG_INFO, "Module update detected, exiting.");
-                notify("Module Update", "Please reboot your device to complete module update.", "false", 0);
+                notify("Module Update", "Please reboot your device to complete module update.", false, 0);
                 systemv("setprop persist.sys.azenith.service \"\"");
                 systemv("setprop persist.sys.azenith.state stopped");
                 break;
@@ -159,7 +161,7 @@ int main(int argc, char* argv[]) {
                     toast("Applying Balanced Profile");
                     cur_mode = BALANCED_PROFILE;
                     run_profiler(BALANCED_PROFILE);
-                    notify("Balanced Profile", "System is now at Optimal state", "false", 0);
+                    notify("Balanced Profile", "System is now at Optimal state", false, 0);
                 }
     
                 if (strcmp(prev_ai_state, "0") == 0 && strcmp(ai_state, "1") == 0) {
@@ -167,7 +169,7 @@ int main(int argc, char* argv[]) {
                     toast("Applying Balanced Profile");
                     cur_mode = BALANCED_PROFILE;
                     run_profiler(BALANCED_PROFILE);
-                    notify("Balanced Profile", "System is now at Optimal state", "false", 0);
+                    notify("Balanced Profile", "System is now at Optimal state", false, 0);
                 }
                 strcpy(prev_ai_state, ai_state);
                 // Skip applying if enabled
@@ -279,9 +281,10 @@ int main(int argc, char* argv[]) {
                 }
                                                 
                 run_profiler(PERFORMANCE_PROFILE);
-                notify("Performance Profile", "Running at : %s", "false", 0, gamestart);
+                notify("Performance Profile", "Running at : %s", false, 0, gamestart);
                       
                 if (IS_TRUE(opts.game_preload)) {
+                    notify("AZenith Preload", "Preloading Complete at : %s", true, 10000, gamestart);
                     GamePreload(gamestart);
                 } else if (IS_FALSE(opts.game_preload)) {
                     // do nothing
@@ -289,7 +292,7 @@ int main(int argc, char* argv[]) {
                     char preload_active[PROP_VALUE_MAX] = {0};
                     __system_property_get("persist.sys.azenithconf.APreload", preload_active);
                     if (strcmp(preload_active, "1") == 0) {
-                        notify("AZenith Preload", "Preloading Complete at : %s", "true", 10000, gamestart);
+                        notify("AZenith Preload", "Preloading Complete at : %s", true, 10000, gamestart);
                         GamePreload(gamestart);
                     }
                 }
@@ -320,7 +323,7 @@ int main(int argc, char* argv[]) {
                     dnd_enabled = false;
                 }
                 run_profiler(ECO_MODE);
-                notify("ECO Mode", "System is now at Endurance state", "false", 0);
+                notify("ECO Mode", "System is now at Endurance state", false, 0);
             } else {
                 // Bail out if we already on normal profile
                 if (cur_mode == BALANCED_PROFILE)
@@ -348,11 +351,11 @@ int main(int argc, char* argv[]) {
                     dnd_enabled = false;
                 }
                 if (!is_initialize_complete) {
-                    notify("Daemon Info", "AZenith is running successfully", "false", 60000);
+                    notify("Daemon Info", "AZenith is running successfully", false, 60000);
                     is_initialize_complete = true;
                 }
                 run_profiler(BALANCED_PROFILE);
-                notify("Balanced Profile", "System is now at Optimal state", "false", 0);
+                notify("Balanced Profile", "System is now at Optimal state", false, 0);
     
             }
         }

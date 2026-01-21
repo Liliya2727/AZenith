@@ -17,14 +17,14 @@
 #
 
 # Wait for boot to Complete
-while [ "$(getprop sys.boot_completed)" != "1" ]; do
+while [ "$(resetprop sys.boot_completed)" != "1" ]; do
 	sleep 40
 done
 
 # Refresh daemon state
-if [ -z "$(getprop persist.sys.azenith.state)" ] || { [ "$(getprop persist.sys.azenith.state)" = "running" ] && [ -z "$(/system/bin/toybox pidof sys.azenith-service)" ]; }; then
-    setprop persist.sys.azenith.state stopped
-    setprop persist.sys.azenith.service ""
+if [ -z "$(resetprop persist.sys.azenith.state)" ] || { [ "$(resetprop persist.sys.azenith.state)" = "running" ] && [ -z "$(/system/bin/toybox pidof sys.azenith-service)" ]; }; then
+    resetprop -n persist.sys.azenith.state stopped
+    resetprop -n persist.sys.azenith.service ""
 fi
 
 # Run Daemon

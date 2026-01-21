@@ -171,6 +171,13 @@ setrefreshrates() {
     dlog "Set current refresh rates to: $1hz"
 }
 
+restartservice() {
+    pkill -9 -f sys.azenith.rianixiathermalcore
+    pkill -9 -f sys.azenith-service
+    setprop persist.sys.azenith.state stopped
+    /data/adb/modules/AZenith/system/bin/sys.azenith-service -r > /dev/null 2>&1 & disown
+}
+
 setrender() {
     case "$1" in
         vulkan)

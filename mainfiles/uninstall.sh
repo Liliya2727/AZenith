@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/system/bin/sh
 
 #
 # Copyright (C) 2024-2025 Zexshia
@@ -17,9 +17,8 @@
 #
 
 # Remove Persistent Properties
-props=$(getprop | grep "persist.sys.azenith" | awk -F'[][]' '{print $2}' | sed 's/:.*//')
+props=$(resetprop | grep "persist.sys.azenith" | awk -F'[][]' '{print $2}' | sed 's/:.*//')
 for prop in $props; do
-	setprop "$prop" ""
 	resetprop --delete "$prop"
 done
 
@@ -28,7 +27,6 @@ propsrn="\
 persist.sys.rianixia.learning_enabled \
 persist.sys.rianixia.thermalcore-bigdata.path "
 for prop in $propsrn; do
-	setprop "$prop" ""
 	resetprop --delete "$prop"
 done
 
@@ -37,7 +35,7 @@ rm -rf "/data/adb/.config/AZenith"
 rm -rf "/data/AZenith"
 
 # Remove toast apk
-pm uninstall --user 0 zx.azenith 2>/dev/null
+pm uninstall zx.azenith 2>/dev/null
 
 # Remove azenith binaries
 manager_paths="/data/adb/ap/bin /data/adb/ksu/bin"

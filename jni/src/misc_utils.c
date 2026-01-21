@@ -43,19 +43,32 @@ static time_t last_task_run = 0;
  * Returns            : None
  * Description        : Push a notification.
  ***********************************************************************************/
-void notify(const char* title, const char* fmt, const char* chrono, int timeout_ms, ...) {
+void notify(const char* title, const char* fmt, bool chrono, int timeout_ms, ...) {
     char message[512];
     va_list args;
     va_start(args, timeout_ms);
     vsnprintf(message, sizeof(message), fmt, args);
     va_end(args);
 
+    // Sesuaikan Action & Component sesuai AndroidManifest.xml
+    const char* action = "zx.azenith.ACTION_MANAGE";
+    const char* component = "zx.azenith/.receiver.ZenithReceiver";
+    
+    // Perintah dasar broadcast eksplisit
     if (timeout_ms > 0) {
-        systemv("su -c \"am start -n zx.azenith/.MainActivity -e notifytitle '%s' -e notifytext '%s' -e chrono %s -e timeout %d\"", 
-                title, message, chrono, timeout_ms);
+        systemv("su -c \"am broadcast -a %s -n %s "
+                "--es notifytitle '%s' --es notifytext '%s' "
+                "--ez chrono_bool %s --es timeout '%d' "
+                ">/dev/null 2>&1\"", 
+                action, component, title, message, 
+                chrono ? "true" : "false", timeout_ms);
     } else {
-        systemv("su -c \"am start -n zx.azenith/.MainActivity -e notifytitle '%s' -e notifytext '%s' -e chrono %s\"", 
-                title, message, chrono);
+        systemv("su -c \"am broadcast -a %s -n %s "
+                "--es notifytitle '%s' --es notifytext '%s' "
+                "--ez chrono_bool %s "
+                ">/dev/null 2>&1\"", 
+                action, component, title, message, 
+                chrono ? "true" : "false");
     }
 }
 
@@ -124,19 +137,26 @@ char* timern(void) {
  ***********************************************************************************/
 void toast(const char* message) {
     char val[PROP_VALUE_MAX] = {0};
-    if (__system_property_get("persist.sys.azenithconf.showtoast", val) > 0) {
-        if (val[0] == '1') {            
-            
-            int exit = systemv("su -c \"/system/bin/am start --user 0 -n zx.azenith/.MainActivity -e toasttext '%s' >/dev/null 2>&1\"",
-                               message);
+    
+    // Cek property konfigurasi
+    if (__system_property_get("persist.sys.azenithconf.showtoast", val) > 0 && val[0] == '1') {
+        
+        // -a: Action (zx.azenith.ACTION_MANAGE)
+        // -n: Component (package/path.class) -> zx.azenith/.receiver.ZenithReceiver
+        // -f 0x01000000: FLAG_RECEIVER_INCLUDE_BACKGROUND agar tembus batasan Android baru
+        
+        int exit = systemv("su -c \"am broadcast "
+                           "-a zx.azenith.ACTION_MANAGE "
+                           "-n zx.azenith/.receiver.ZenithReceiver "
+                           "--es toasttext '%s' "
+                           ">/dev/null 2>&1\"",
+                           message);
 
-            if (exit != 0) [[clang::unlikely]] {
-                log_zenith(LOG_WARN, "Unable to show toast message: %s", message);
-            }
+        if (exit != 0) [[clang::unlikely]] {
+            log_zenith(LOG_WARN, "Unable to send toast broadcast: %s", message);
         }
     }
 }
-
 
 /***********************************************************************************
  * Function Name      : is_kanged

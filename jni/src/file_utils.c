@@ -80,25 +80,17 @@ int write2file(const char* filename, const bool append, const bool use_flock, co
  * Description        : check if daemon is already running
  ***********************************************************************************/
 int check_running_state(void) {
-    char state[64] = {0};
-
-    FILE* fp = popen("getprop persist.sys.azenith.state", "r");
-    if (!fp) {
-        perror("popen");
+    int fd = open(LOCK_FILE, O_WRONLY | O_CREAT, 0644);
+    if (fd == -1) {
+        perror("open");
         return -1;
     }
 
-    if (fgets(state, sizeof(state), fp) != NULL) {
-        size_t len = strlen(state);
-        if (len > 0 && state[len - 1] == '\n')
-            state[len - 1] = '\0';
-
-        if (strcmp(state, "running") == 0) {
-            pclose(fp);
-            return 1;
-        }
+    if (flock(fd, LOCK_EX | LOCK_NB) == -1) {
+        close(fd);
+        return -1;
     }
-    pclose(fp);
+
     return 0;
 }
 
