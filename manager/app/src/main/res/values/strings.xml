@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">AZenith</string>
+    <string name="about_source_code"><![CDATA[View source code at %1$s<br/>Join our %2$s channel]]></string>
+</resources>
