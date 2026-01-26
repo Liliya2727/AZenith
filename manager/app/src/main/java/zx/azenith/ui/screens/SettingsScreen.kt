@@ -70,19 +70,19 @@ fun SettingsScreen(navController: NavController) {
             // --- SECTION: FEATURES ---
             item { SettingsSectionTitle("Features") }
             item {
-                // State nullable untuk mencegah flicker saat load
+                // State nullable
                 var stateToast by remember { mutableStateOf<Boolean?>(null) }
                 var autoMode by remember { mutableStateOf<Boolean?>(null) }
                 var debugMode by remember { mutableStateOf<Boolean?>(null) }
 
-                // Load state dari system properties
+                // Load state system properties
                 LaunchedEffect(Unit) {
                     stateToast = Shell.cmd("getprop persist.sys.azenithconf.showtoast").exec().out.firstOrNull()?.trim() == "1"
                     autoMode = Shell.cmd("getprop persist.sys.azenithconf.AIenabled").exec().out.firstOrNull()?.trim() == "0"
                     debugMode = Shell.cmd("getprop persist.sys.azenith.debugmode").exec().out.firstOrNull()?.trim() == "true"
                 }
 
-                // Hanya tampilkan jika semua state sudah loaded
+                // View Load State
                 if (stateToast != null && autoMode != null && debugMode != null) {
                     ExpressiveList(
                         content = listOf(
@@ -122,7 +122,7 @@ fun SettingsScreen(navController: NavController) {
                         )
                     )
                 } else {
-                    // Loading state - tampilkan placeholder atau skeleton
+                    // Loading state
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
