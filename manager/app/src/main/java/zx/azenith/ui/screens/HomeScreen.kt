@@ -54,6 +54,7 @@ import androidx.compose.ui.text.TextStyle
 import zx.azenith.ui.util.*
 import androidx.compose.material.icons.rounded.*
 import coil.compose.AsyncImage
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,7 +65,6 @@ fun HomeScreen() {
     val uriHandler = LocalUriHandler.current
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
 
-    // --- LOGIKA SISTEM MODULAR ---
     val serviceInfo by produceState(initialValue = "Suspended" to "") {
         value = RootUtils.getServiceStatus()
     }
@@ -74,10 +74,13 @@ fun HomeScreen() {
     val rootStatus by produceState(initialValue = false) {
         value = RootUtils.isRootGranted()
     }
+    
+    val moduleInstalled by produceState(initialValue = false) {
+        value = RootUtils.isModuleInstalled()
+    }
 
     val listState = rememberLazyListState()
 
-    // Setiap kali masuk ke screen ini, scroll ke index 0
     LaunchedEffect(Unit) {
         listState.scrollToItem(0)
     }
@@ -95,26 +98,34 @@ fun HomeScreen() {
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Mengirimkan status dan pid asli ke Banner
-            item { 
-                BannerCard(status = serviceInfo.first, pid = serviceInfo.second) { } 
+            item {
+                BannerCard(
+                    status = if (!moduleInstalled)
+                        stringResource(R.string.module_not_installed)
+                    else
+                        serviceInfo.first,
+                    pid = serviceInfo.second
+                ) { }
             }
-
+            
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     InfoTile(
-                        Modifier.weight(1f), 
-                        Icons.Default.Bolt, 
-                        "Current Profile", 
-                        currentProfile, 
-                        highlight = (currentProfile != "Unknown" && currentProfile != "Initializing")
+                        Modifier.weight(1f),
+                        Icons.Default.Bolt,
+                        stringResource(R.string.current_profile),
+                        currentProfile,
+                        highlight = (currentProfile != stringResource(R.string.status_initializing))
                     ) {}
                     
                     InfoTile(
-                        Modifier.weight(1f), 
-                        Icons.Default.Security, 
-                        "Root Access", 
-                        if (rootStatus) "Granted" else "Not Granted", 
+                        Modifier.weight(1f),
+                        Icons.Default.Security,
+                        stringResource(R.string.root_access),
+                        if (rootStatus)
+                            stringResource(R.string.root_granted)
+                        else
+                            stringResource(R.string.root_not_granted),
                         highlight = false
                     ) {}
                 }
@@ -131,8 +142,7 @@ fun HomeScreen() {
 fun BannerCard(status: String, pid: String, onClick: () -> Unit) {
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
-    
-    // Ambil URI custom banner jika ada
+
     val customBannerUri = remember { context.getHeaderImage() }
 
     Card(
@@ -145,7 +155,6 @@ fun BannerCard(status: String, pid: String, onClick: () -> Unit) {
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box {
-            // LOGIKA GAMBAR: Jika ada custom URI, gunakan AsyncImage. Jika tidak, pakai Default.
             if (customBannerUri != null) {
                 AsyncImage(
                     model = customBannerUri,
@@ -162,8 +171,6 @@ fun BannerCard(status: String, pid: String, onClick: () -> Unit) {
                 )
             }
                         
-
-            // Overlay Gradient (Agar teks tetap terbaca jelas)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -183,30 +190,32 @@ fun BannerCard(status: String, pid: String, onClick: () -> Unit) {
                     .padding(start = 24.dp, bottom = 20.dp),
                 horizontalAlignment = Alignment.Start
             ) {
-                // Perbaikan Sintaksis Surface di sini
                 Surface(
-                    color = if (status == "Alive") colorScheme.secondaryContainer 
-                            else colorScheme.errorContainer, // Gunakan errorContainer agar lebih aman
+                    color = when {
+                        status == stringResource(R.string.module_not_installed) ->
+                            colorScheme.errorContainer
+                        status == stringResource(R.string.status_alive) ->
+                            colorScheme.secondaryContainer
+                        else ->
+                            colorScheme.errorContainer
+                    },
                     shape = CircleShape
                 ) {
                     Text(
                         text = status,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = if (status == "Alive") colorScheme.onSecondaryContainer 
-                                else colorScheme.onErrorContainer
+                        fontWeight = FontWeight.Bold
                     )
                 }
 
-                if (status == "Alive") {
+                if (status == stringResource(R.string.status_alive)) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Surface(
                         color = colorScheme.secondaryContainer,
                         shape = CircleShape
                     ) {
                         Text(
-                            text = "PID: $pid",
+                            text = stringResource(R.string.pid_format, pid),
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
@@ -225,7 +234,6 @@ fun BannerCard(status: String, pid: String, onClick: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeTopAppBar(scrollBehavior: TopAppBarScrollBehavior) {
-    // TopAppBar bawaan otomatis menangani transisi warna kontainer saat scroll
     TopAppBar(
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -244,16 +252,15 @@ fun HomeTopAppBar(scrollBehavior: TopAppBarScrollBehavior) {
                 }
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    "AZenith火",
+                    text = stringResource(R.string.app_name_styled),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold
                 )
             }
         },
-        // Ini kuncinya: Warna status bar akan mengikuti warna yang diatur di sini
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface, // Warna awal
-            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer // Warna saat scroll
+            containerColor = MaterialTheme.colorScheme.surface,
+            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
         scrollBehavior = scrollBehavior,
         windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
@@ -267,7 +274,6 @@ fun DeviceInfoCard() {
     var isExpanded by remember { mutableStateOf(false) }
     val uname = Os.uname()
 
-    // State untuk menyimpan data agar tidak di-load berulang kali saat recomposition
     val kernelVer = remember { uname.release }
     val selinux = remember { getSELinuxStatus() }
     val appVer = remember { getAppVersion(context) }
@@ -287,25 +293,37 @@ fun DeviceInfoCard() {
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                SmallLeadingIcon(Icons.Outlined.Info) // Gunakan Outlined ala KSU
+                SmallLeadingIcon(Icons.Outlined.Info)
                 Spacer(Modifier.width(12.dp))
-                Text("Device Info", modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.device_info), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Icon(if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
             }
 
             Spacer(Modifier.height(8.dp))
 
-            // INFO UTAMA (Real Data)
-            DeviceInfoRow("Kernel Version", kernelVer)
-            DeviceInfoRow("Device Name", "${Build.MANUFACTURER} ${Build.MODEL}")
-            DeviceInfoRow("AZenith Version", appVer)
+            DeviceInfoRow(
+                stringResource(R.string.kernel_version),
+                kernelVer
+            )
+            
+            DeviceInfoRow(
+                stringResource(R.string.device_name),
+                "${Build.MANUFACTURER} ${Build.MODEL}"
+            )
+            
+            DeviceInfoRow(
+                stringResource(R.string.azenith_version),
+                appVer
+            )
 
-            // INFO TAMBAHAN (Sembunyi)
             if (isExpanded) {
-                DeviceInfoRow("Fingerprint", Build.FINGERPRINT)
-                DeviceInfoRow("SELinux Status", selinux)
-                DeviceInfoRow("Instruction Sets", Build.SUPPORTED_ABIS.joinToString(", "))
-                DeviceInfoRow("Android Version", "${Build.VERSION.RELEASE} API${Build.VERSION.SDK_INT}")
+                DeviceInfoRow(stringResource(R.string.fingerprint), Build.FINGERPRINT)
+                DeviceInfoRow(stringResource(R.string.selinux_status), selinux)
+                DeviceInfoRow(stringResource(R.string.instruction_sets), Build.SUPPORTED_ABIS.joinToString(", "))
+                DeviceInfoRow(
+                    stringResource(R.string.android_version),
+                    "${Build.VERSION.RELEASE} API${Build.VERSION.SDK_INT}"
+                )
             }
         }
     }
@@ -318,7 +336,7 @@ fun DeviceInfoRow(title: String, value: String) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 6.dp) // LEBIH MEPET
+            .padding(horizontal = 24.dp, vertical = 6.dp)
     ) {
         Text(
             title,
@@ -357,15 +375,15 @@ fun InfoTile(
         shape = RoundedCornerShape(20.dp)
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp) // ✅ padding dikurangi
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
         ) {
             Icon(
                 icon,
                 contentDescription = null,
                 tint = colorScheme.primary,
-                modifier = Modifier.size(20.dp) // icon sedikit lebih kecil
+                modifier = Modifier.size(20.dp)
             )
-            Spacer(Modifier.height(4.dp)) // ✅ jarak antara icon & label dikurangi
+            Spacer(Modifier.height(4.dp))
             Text(
                 label,
                 style = MaterialTheme.typography.labelSmall,
@@ -403,7 +421,7 @@ fun LearnMoreCard(onClick: () -> Unit) {
                 Spacer(Modifier.width(12.dp))
 
                 Text(
-                    "Learn More",
+                    stringResource(R.string.learn_more),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = colorScheme.onSurface
@@ -413,7 +431,7 @@ fun LearnMoreCard(onClick: () -> Unit) {
             Spacer(Modifier.height(10.dp))
 
             Text(
-                "Documentation, source code, changelogs, and detailed explanations about how AZenith works under the hood. Learn how features are implemented and how to customize them safely.",
+                stringResource(R.string.learn_more_desc),
                 style = MaterialTheme.typography.bodyMedium,
                 color = colorScheme.onSurfaceVariant
             )
@@ -441,17 +459,17 @@ fun SupportCard(onClick: () -> Unit) {
                 SmallLeadingIcon(Icons.Default.Favorite)
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    "Support Us",
+                    stringResource(R.string.support_us),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = colorScheme.onSurfaceVariant
                 )
             }
 
-            Spacer(Modifier.height(10.dp)) // jarak teks dikurangi
+            Spacer(Modifier.height(10.dp))
 
             Text(
-                "Help support development and keep AZenith improving.",
+                stringResource(R.string.support_us_desc),
                 style = MaterialTheme.typography.bodyMedium,
                 color = colorScheme.onSurfaceVariant
             )
