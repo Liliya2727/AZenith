@@ -27,6 +27,7 @@ import com.topjohnwu.superuser.Shell
 import zx.azenith.BuildConfig
 import zx.azenith.R
 import zx.azenith.ui.component.*
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,6 +36,8 @@ fun SettingsScreen(navController: NavController) {
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val aboutDialog = rememberCustomDialog { AboutDialog(it) }
+    val restartToastText = stringResource(R.string.toast_restarting_service)
+    val logSavedToastText = stringResource(R.string.toast_log_saved)
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -51,15 +54,14 @@ fun SettingsScreen(navController: NavController) {
                 end = 16.dp
             )
         ) {
-            // --- SECTION: PERSONALIZATION ---
-            item { SettingsSectionTitle("Personalization") }
+            item { SettingsSectionTitle(stringResource(R.string.section_personalization)) }
             item {
                 ExpressiveList(
                     content = listOf {
                         ExpressiveListItem(
                             onClick = { navController.navigate("color_palette") },
-                            headlineContent = { Text("Theme") },
-                            supportingContent = { Text("Customize colors and accent") },
+                            headlineContent = { Text(stringResource(R.string.theme)) },
+                            supportingContent = { Text(stringResource(R.string.theme_desc)) },
                             leadingContent = { Icon(Icons.Filled.Palette, null) },
                             trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
                         )
@@ -67,8 +69,7 @@ fun SettingsScreen(navController: NavController) {
                 )
             }
 
-            // --- SECTION: FEATURES ---
-            item { SettingsSectionTitle("Features") }
+           item { SettingsSectionTitle(stringResource(R.string.section_features)) }
             item {
                 // State nullable
                 var stateToast by remember { mutableStateOf<Boolean?>(null) }
@@ -137,8 +138,7 @@ fun SettingsScreen(navController: NavController) {
                 }
             }
 
-            // --- SECTION: OTHERS ---
-            item { SettingsSectionTitle("Others") }
+            item { SettingsSectionTitle(stringResource(R.string.section_others)) }
             item {
                 ExpressiveList(
                     content = listOf(
@@ -148,11 +148,15 @@ fun SettingsScreen(navController: NavController) {
                                     Shell.cmd(                               
                                         "/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf restartservice"
                                     ).submit { result ->
-                                        if (result.isSuccess) Toast.makeText(context, "Restarting Service", Toast.LENGTH_SHORT).show()
+                                        if (result.isSuccess) Toast.makeText(
+                                            context,
+                                            restartToastText,
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
                                 },
-                                headlineContent = { Text("Restart Service") },
-                                supportingContent = { Text("Re-initialize Daemon processes") },
+                                headlineContent = { Text(stringResource(R.string.restart_service)) },
+                                supportingContent = { Text(stringResource(R.string.restart_service_desc)) },
                                 leadingContent = { Icon(Icons.Filled.RestartAlt, null) },
                                 trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
                             )
@@ -161,11 +165,15 @@ fun SettingsScreen(navController: NavController) {
                             ExpressiveListItem(
                                 onClick = {
                                     Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf saveLog").submit { result ->
-                                        if (result.isSuccess) Toast.makeText(context, "Log saved to /sdcard/AZenith.log", Toast.LENGTH_LONG).show()
+                                        if (result.isSuccess) Toast.makeText(
+                                            context,
+                                            logSavedToastText,
+                                            Toast.LENGTH_LONG
+                                        ).show()
                                     }
                                 },
-                                headlineContent = { Text("Save Log") },
-                                supportingContent = { Text("Export debug logs to /sdcard") },
+                                headlineContent = { Text(stringResource(R.string.save_log)) },
+                                supportingContent = { Text(stringResource(R.string.save_log_desc)) },
                                 leadingContent = { Icon(Icons.Filled.Save, null) },
                                 trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
                             )
@@ -174,15 +182,16 @@ fun SettingsScreen(navController: NavController) {
                 )
             }
 
-            // --- SECTION: ABOUT ---
-            item { SettingsSectionTitle("About") }
+            item { SettingsSectionTitle(stringResource(R.string.section_about)) }
             item {
                 ExpressiveList(
                     content = listOf {
                         ExpressiveListItem(
                             onClick = { aboutDialog.show() },
-                            headlineContent = { Text("About AZenith") },
-                            supportingContent = { Text("Version ${BuildConfig.VERSION_NAME}") },
+                            headlineContent = { Text(stringResource(R.string.about_azenith)) },
+                            supportingContent = {
+                                Text(stringResource(R.string.version_format, BuildConfig.VERSION_NAME))
+                            },
                             leadingContent = { Icon(Icons.Filled.ContactPage, null) }
                         )
                     }
@@ -192,7 +201,6 @@ fun SettingsScreen(navController: NavController) {
     }
 }
 
-// Mengubah nama agar tidak konflik dengan file lain
 @Composable
 fun SettingsSectionTitle(text: String) {
     Text(
@@ -228,7 +236,11 @@ fun SettingsScreenTopAppBar(scrollBehavior: TopAppBarScrollBehavior) {
                     )
                 }
                 Spacer(Modifier.width(12.dp))
-                Text("Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                Text(
+                    stringResource(R.string.settings),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(

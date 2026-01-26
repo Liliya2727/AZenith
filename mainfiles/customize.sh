@@ -18,7 +18,6 @@ SKIPUNZIP=1
 
 # Paths
 MODULE_CONFIG="/data/adb/.config/AZenith"
-   
 device_codename=$(resetprop ro.product.board)
 chip=$(resetprop ro.hardware)
 
@@ -132,32 +131,32 @@ case "$(echo "$chipset" | tr '[:upper:]' '[:lower:]')" in
 *mt* | *MT*)
 	soc="MediaTek"
 	ui_print "- Applying Tweaks for $soc"
-	resetprop -n persist.sys.azenithdebug.soctype 1
+	resetprop -p persist.sys.azenithdebug.soctype 1
 	;;
 *sm* | *qcom* | *SM* | *QCOM* | *Qualcomm* | *sdm* | *snapdragon*)
 	soc="Snapdragon"
 	ui_print "- Applying Tweaks for $soc"
-	resetprop -n persist.sys.azenithdebug.soctype 2
+	resetprop -p persist.sys.azenithdebug.soctype 2
 	;;
 *exynos* | *Exynos* | *EXYNOS* | *universal* | *samsung* | *erd* | *s5e*)
 	soc="Exynos"
 	ui_print "- Applying Tweaks for $soc"
-	resetprop -n persist.sys.azenithdebug.soctype 3
+	resetprop -p persist.sys.azenithdebug.soctype 3
 	;;
 *Unisoc* | *unisoc* | *ums*)
 	soc="Unisoc"
 	ui_print "- Applying Tweaks for $soc"
-	resetprop -n persist.sys.azenithdebug.soctype 4
+	resetprop -p persist.sys.azenithdebug.soctype 4
 	;;
 *gs* | *Tensor* | *tensor*)
 	soc="Tensor"
 	ui_print "- Applying Tweaks for $soc"
-	resetprop -n persist.sys.azenithdebug.soctype 5
+	resetprop -p persist.sys.azenithdebug.soctype 5
 	;;
 *)
 	soc="Unknown"
 	ui_print "- Applying Tweaks for $chipset"
-	resetprop -n persist.sys.azenithdebug.soctype 0
+	resetprop -p persist.sys.azenithdebug.soctype 0
 	;;
 esac
 
@@ -171,22 +170,22 @@ esac
 
 # Make Properties
 ui_print "- Setting UP AZenith Properties"
-resetprop -n persist.sys.azenithdebug.freqlist "Disabled 90% 80% 70% 60% 50% 40%"
-resetprop -n persist.sys.azenithdebug.vsynclist "Disabled 60hz 90hz 120hz"
+resetprop -p persist.sys.azenithdebug.freqlist "Disabled 90% 80% 70% 60% 50% 40%"
+resetprop -p persist.sys.azenithdebug.vsynclist "Disabled 60hz 90hz 120hz"
 
 # Set default freqoffset if not set
-if [ -z "$(resetprop persist.sys.azenithconf.freqoffset)" ]; then
-	resetprop -n persist.sys.azenithconf.freqoffset "Disabled"
+if [ -z "$(getprop persist.sys.azenithconf.freqoffset)" ]; then
+	resetprop -p persist.sys.azenithconf.freqoffset "Disabled"
 fi
 
 # Set default vsync config if not set
-if [ -z "$(resetprop persist.sys.azenithconf.vsync)" ]; then
-	resetprop -n persist.sys.azenithconf.vsync "Disabled"
+if [ -z "$(getprop persist.sys.azenithconf.vsync)" ]; then
+	resetprop -p persist.sys.azenithconf.vsync "Disabled"
 fi
 
 # Set default color scheme if not set
-if [ -z "$(resetprop persist.sys.azenithconf.schemeconfig)" ]; then
-	resetprop -n persist.sys.azenithconf.schemeconfig "1000 1000 1000 1000"
+if [ -z "$(getprop persist.sys.azenithconf.schemeconfig)" ]; then
+	resetprop -p persist.sys.azenithconf.schemeconfig "1000 1000 1000 1000"
 fi
 
 # Set config properties to use
@@ -211,24 +210,24 @@ persist.sys.azenithconf.thermalcore
 for prop in $props; do
 	curval=$(resetprop "$prop")
 	if [ -z "$curval" ]; then
-		resetprop -n "$prop" 0
+		resetprop -p "$prop" 0
 	fi
 done
-if [ -z "$(resetprop persist.sys.azenithconf.showtoast)" ]; then
-	resetprop -n persist.sys.azenithconf.showtoast 1
+if [ -z "$(getprop persist.sys.azenithconf.showtoast)" ]; then
+	resetprop -p persist.sys.azenithconf.showtoast 1
 fi
 
-if [ -z "$(resetprop persist.sys.azenithconf.preloadbudget)" ]; then
-    resetprop -n persist.sys.azenithconf.preloadbudget 500M
+if [ -z "$(getprop persist.sys.azenithconf.preloadbudget)" ]; then
+    resetprop -p persist.sys.azenithconf.preloadbudget 500M
 fi
 
-if [ -z "$(resetprop persist.sys.azenithconf.AIenabled)" ]; then
+if [ -z "$(getprop persist.sys.azenithconf.AIenabled)" ]; then
     ui_print "- Enabling Auto Mode"
-    resetprop -n persist.sys.azenithconf.AIenabled 1
+    resetprop -p persist.sys.azenithconf.AIenabled 1
 fi
 
 ui_print "- Disable Debugmode"
-resetprop -n persist.sys.azenith.debugmode "false"
+resetprop -p persist.sys.azenith.debugmode "false"
 
 ui_print "- Extracting AZenith Toast..."
 extract "$ZIPFILE" AZenith.apk "$MODPATH"

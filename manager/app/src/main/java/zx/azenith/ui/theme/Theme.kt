@@ -5,13 +5,12 @@ import android.content.Context
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
-import androidx.compose.runtime.* // PENTING: Untuk remember, mutableStateOf, DisposableEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowInsetsControllerCompat
 import com.materialkolor.rememberDynamicColorScheme
 
-// Mode warna untuk pengaturan aplikasi
 enum class ColorMode(val value: Int) {
     SYSTEM(3), LIGHT(4), DARK(5), DARKAMOLED(6);
 
@@ -48,10 +47,8 @@ fun AZenithTheme(
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
     
-    // State reaktif
     var themeState by remember { mutableStateOf(ThemeController.getAppSettings(context)) }
 
-    // Listener SharedPreferences agar warna berubah instan tanpa recreate/flicker
     DisposableEffect(prefs) {
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
             themeState = ThemeController.getAppSettings(context)
@@ -90,23 +87,15 @@ fun AZenithTheme(
         else -> if (darkTheme) darkColorScheme() else expressiveLightColorScheme()
     }
 
-    // SideEffect untuk mengatur warna icon Status Bar & Nav Bar
-    // Pastikan ini di dalam AZenithTheme, setelah variabel darkTheme didefinisikan
     val view = androidx.compose.ui.platform.LocalView.current
     
     LaunchedEffect(darkTheme) {
         val window = (context as? Activity)?.window ?: return@LaunchedEffect
-        
-        // 1. Beritahu sistem bahwa kita menangani warna ikon sendiri
         val controller = WindowInsetsControllerCompat(window, view)
         
-        // 2. Logika kontras:
-        // Jika darkTheme = TRUE (Mode Gelap), isAppearanceLight harus FALSE agar ikon jadi PUTIH
-        // Jika darkTheme = FALSE (Mode Terang), isAppearanceLight harus TRUE agar ikon jadi HITAM
         controller.isAppearanceLightStatusBars = !darkTheme
         controller.isAppearanceLightNavigationBars = !darkTheme
     }
-
 
     MaterialExpressiveTheme(
         colorScheme = colorScheme,
@@ -120,8 +109,8 @@ fun AZenithTheme(
 @ReadOnlyComposable
 fun isInDarkTheme(themeMode: Int): Boolean {
     return when (themeMode) {
-        4 -> false  // Light
-        5, 6 -> true   // Dark / Amoled
+        4 -> false
+        5, 6 -> true
         else -> isSystemInDarkTheme()
     }
 }

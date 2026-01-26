@@ -22,10 +22,7 @@ import org.json.JSONObject
 import zx.azenith.ui.util.AppConfig
 import java.text.Collator
 import java.util.Locale
-
-// ... other imports
-import androidx.compose.ui.text.input.TextFieldValue // ADD THIS IMPORT
-
+import androidx.compose.ui.text.input.TextFieldValue
 
 class ApplistViewmodel : ViewModel() {
 
@@ -55,14 +52,13 @@ class ApplistViewmodel : ViewModel() {
     }
 
     var isRefreshing by mutableStateOf(false)
-    var showSystemApps by mutableStateOf(false) // Bisa dihubungkan ke SharedPreferences
+    var showSystemApps by mutableStateOf(false)
     
     var searchTextFieldValue by mutableStateOf(TextFieldValue(""))
         private set
     
     private val searchQueryString: String get() = searchTextFieldValue.text
     
-    // Properti pembantu untuk logika filter (mengambil teks saja)
     val searchQuery: String get() = searchTextFieldValue.text
     
     fun updateSearch(newValue: TextFieldValue) {
@@ -73,12 +69,10 @@ class ApplistViewmodel : ViewModel() {
         searchTextFieldValue = TextFieldValue("")
     }
 
-
     private val configPath = "/data/adb/.config/AZenith/gamelist/azenithApplist.json"
 
-    // Logic filter mirip KSU menggunakan derivedStateOf untuk performa
     val filteredApps by derivedStateOf {
-        val query = searchQueryString.lowercase() // Use the helper string here
+        val query = searchQueryString.lowercase()
         synchronized(appsLock) {
             apps.filter { app ->
                 val matchesSearch = app.label.lowercase().contains(query) || 
@@ -100,15 +94,12 @@ class ApplistViewmodel : ViewModel() {
             isRefreshing = true
             val pm = context.packageManager
 
-            // 1. Ambil list rekomendasi
             val gameList = try {
                 context.assets.open("gamelist.txt").bufferedReader().useLines { it.toSet() }
             } catch (e: Exception) { emptySet() }
 
-            // 2. Ambil list enabled dari JSON
             val enabledList = getEnabledPackages()
 
-            // 3. Ambil PackageInfo (Gunakan flag yang tepat agar ApplicationInfo terbawa)
             val installed = pm.getInstalledPackages(PackageManager.GET_META_DATA)
 
             val loadedApps = installed.map { pkg ->
@@ -129,7 +120,6 @@ class ApplistViewmodel : ViewModel() {
         }
     }
 
-    // Fungsi refresh status config tanpa scan ulang APK (Cepat)
     fun refreshAppConfigStatus() {
         viewModelScope.launch(Dispatchers.IO) {
             val enabledList = getEnabledPackages()

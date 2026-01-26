@@ -17,18 +17,14 @@ import com.topjohnwu.superuser.io.SuFileOutputStream
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
-
 class AppSettingsViewModel : ViewModel() {
     private val configPath = "/data/adb/.config/AZenith/gamelist/azenithApplist.json"
     private val jsonHandler = Json { 
         prettyPrint = true
         ignoreUnknownKeys = true 
-        encodeDefaults = true // <--- TAMBAHKAN INI
+        encodeDefaults = true
     }
 
-
-    
-    
     var fullConfig by mutableStateOf<Map<String, AppConfig>>(emptyMap())
         private set
 
@@ -53,8 +49,6 @@ class AppSettingsViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val file = SuFile(configPath)
-                
-                // Pastikan folder parent ada
                 val parent = file.parentFile
                 if (parent != null && !parent.exists()) {
                     parent.mkdirs()
@@ -62,7 +56,6 @@ class AppSettingsViewModel : ViewModel() {
 
                 val jsonString = jsonHandler.encodeToString(newMap)
                 
-                // Tulis menggunakan SuFileOutputStream
                 SuFileOutputStream.open(file).use { outputStream ->
                     outputStream.write(jsonString.toByteArray())
                 }
@@ -74,12 +67,11 @@ class AppSettingsViewModel : ViewModel() {
         }
     }
 
-    // Fungsi toggleMasterSwitch dan updateSetting tetap sama...
     fun toggleMasterSwitch(packageName: String, isEnabled: Boolean) {
         val newMap = fullConfig.toMutableMap()
         if (isEnabled) {
             if (!newMap.containsKey(packageName)) {
-                newMap[packageName] = AppConfig() // Semua default
+                newMap[packageName] = AppConfig()
             }
         } else {
             newMap.remove(packageName)

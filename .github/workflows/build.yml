@@ -71,7 +71,7 @@ jobs:
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
           COMMIT_URL: ${{ github.event.head_commit.url }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          TITLE: AZenithNext
+          TITLE: AZenith
         run: |
           if [ -n "$CHAT_ID" ] && [ -n "$BOT_TOKEN" ]; then
             export VERSION=$(git rev-list --count HEAD)

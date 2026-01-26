@@ -47,12 +47,12 @@ import zx.azenith.ui.component.AppIconImage
 import zx.azenith.ui.viewmodel.ApplistViewmodel
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalFocusManager
-import zx.azenith.ui.screens.AppSettingsScreen
-import androidx.navigation.NavController // GANTI INI
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -67,7 +67,6 @@ fun ApplistScreen(navController: NavController) {
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val pullToRefreshState = rememberPullToRefreshState()
     
-    // Sinkronkan preferences dengan ViewModel saat pertama kali load
     val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
     LaunchedEffect(Unit) {
         viewModel.showSystemApps = prefs.getBoolean("show_system_apps", false)
@@ -93,7 +92,6 @@ fun ApplistScreen(navController: NavController) {
         }
     }
 
-    // Trigger refresh status config saat screen balik fokus (RESUMED)
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -116,9 +114,8 @@ fun ApplistScreen(navController: NavController) {
                     isSearchMode = it 
                     if (!it) viewModel.clearSearch() 
                 },
-                searchQuery = viewModel.searchTextFieldValue, // Pass from ViewModel
-                onSearchChange = { viewModel.updateSearch(it) }, // Update ViewModel
-                
+                searchQuery = viewModel.searchTextFieldValue,
+                onSearchChange = { viewModel.updateSearch(it) },
                 showSystemApps = viewModel.showSystemApps,
                 onToggleSystem = { newValue ->
                     viewModel.showSystemApps = newValue
@@ -131,11 +128,7 @@ fun ApplistScreen(navController: NavController) {
     ) { innerPadding ->
         Box(
             modifier = Modifier
-                .padding(
-                    PaddingValues(
-                        top = innerPadding.calculateTopPadding()
-                    )
-                )
+                .padding(PaddingValues(top = innerPadding.calculateTopPadding()))
                 .fillMaxSize()
                 .pullToRefresh(
                     state = pullToRefreshState,
@@ -143,18 +136,12 @@ fun ApplistScreen(navController: NavController) {
                     onRefresh = { viewModel.loadApps(context, forceRefresh = true) }
                 )
         ) {
-            // GUNAKAN viewModel.filteredApps (Logika filter sudah di dalam ViewModel)
             val appsToDisplay = viewModel.filteredApps
             
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = 16.dp,
-                    bottom = 16.dp,
-                    start = 16.dp,
-                    end = 16.dp
-                )
+                contentPadding = PaddingValues(16.dp)
             ) {
                 itemsIndexed(
                     items = appsToDisplay, 
@@ -188,9 +175,6 @@ fun ApplistScreen(navController: NavController) {
     }
 }
 
-
-
-// ... Fungsi AppListItem, ApplistTopAppBar, dan LabelText tetap sama seperti kodemu ...
 @Composable
 fun AppListItem(
     app: ApplistViewmodel.AppInfo,
@@ -205,22 +189,13 @@ fun AppListItem(
         onClick = { navController.navigate("app_settings/${app.packageName}") }
     ) {
         Row(
-            modifier = Modifier.padding(
-                start = 24.dp,  // Pengganti horizontal
-                end = 24.dp,    // Pengganti horizontal
-                top = 16.dp,
-                bottom = 16.dp
-            ),
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // --- GUNAKAN KOMPONEN INI, JANGAN ASYNCIMAGE MANUAL ---
             AppIconImage(
                 packageName = app.packageName,
                 size = 55.dp
             )
-
-
-            // -------------------------------------------------------
 
             Spacer(modifier = Modifier.width(16.dp))
 
@@ -242,24 +217,24 @@ fun AppListItem(
                 
                 Row(modifier = Modifier.padding(top = 4.dp)) {
                     if (app.isEnabledInConfig) {
-                        LabelText("ENABLED", Color(0xFF4CAF50))
+                        LabelText(
+                            text = stringResource(R.string.label_enabled),
+                            color = Color(0xFF4CAF50)
+                        )
                     } else {
-                        LabelText("DISABLED", MaterialTheme.colorScheme.error)
+                        LabelText(stringResource(R.string.label_disabled), MaterialTheme.colorScheme.error)
                     }
-
                     if (app.isRecommended) {
-                        LabelText("RECOMMENDED", MaterialTheme.colorScheme.primary)
+                        LabelText(stringResource(R.string.label_recommended), MaterialTheme.colorScheme.primary)
                     }
-
                     if (app.isSystem) {
-                        LabelText("SYSTEM", MaterialTheme.colorScheme.secondary)
+                        LabelText(stringResource(R.string.label_system), MaterialTheme.colorScheme.secondary)
                     }
                 }
             }
         }
     }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -287,14 +262,12 @@ fun ApplistTopAppBar(
                     TextField(
                         value = searchQuery,
                         onValueChange = onSearchChange,
-                        placeholder = { Text("Search apps...") },
+                        placeholder = { Text(stringResource(R.string.search_apps)) },
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
                             .focusRequester(focusRequester),
-                        textStyle = LocalTextStyle.current.copy(
-                            textDirection = TextDirection.Ltr
-                        ),
+                        textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Ltr),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
                             unfocusedContainerColor = Color.Transparent,
@@ -319,7 +292,7 @@ fun ApplistTopAppBar(
                         }
                         Spacer(Modifier.width(12.dp))
                         Text(
-                            "Applist",
+                            text = stringResource(R.string.applist_title),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -330,29 +303,27 @@ fun ApplistTopAppBar(
         navigationIcon = {
             if (isSearchMode) {
                 IconButton(onClick = { onSearchModeChange(false) }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.cd_back))
                 }
             }
         },
         actions = {
             if (!isSearchMode) {
                 IconButton(onClick = { onSearchModeChange(true) }) {
-                    Icon(Icons.Default.Search, "Search")
+                    Icon(Icons.Default.Search, stringResource(R.string.cd_search))
                 }
             }
-            
             IconButton(onClick = { menuExpanded = true }) {
-                Icon(Icons.Default.MoreVert, "Menu")
+                Icon(Icons.Default.MoreVert, stringResource(R.string.cd_menu))
             }
-            
             DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                 DropdownMenuItem(
-                    text = { Text("Refresh") },
+                    text = { Text(stringResource(R.string.menu_refresh)) },
                     onClick = { onRefresh(); menuExpanded = false },
                     leadingIcon = { Icon(Icons.Default.Refresh, null) }
                 )
                 DropdownMenuItem(
-                    text = { Text("Show System Apps") },
+                    text = { Text(stringResource(R.string.menu_show_system_apps)) },
                     trailingIcon = { Checkbox(showSystemApps, null) },
                     onClick = { onToggleSystem(!showSystemApps); menuExpanded = false }
                 )
