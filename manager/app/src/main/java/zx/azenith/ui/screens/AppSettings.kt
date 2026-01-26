@@ -47,7 +47,6 @@ import zx.azenith.ui.viewmodel.ApplistViewmodel
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.navigation.NavController
-import zx.azenith.ui.screens.ApplistScreen
 import zx.azenith.ui.viewmodel.AppSettingsViewModel
 import zx.azenith.ui.component.ExpressiveList
 import zx.azenith.ui.component.ExpressiveListItem
@@ -55,12 +54,8 @@ import zx.azenith.ui.component.ExpressiveSwitchItem
 import zx.azenith.ui.component.ExpressiveDropdownItem
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,7 +63,6 @@ fun AppSettingsScreen(
     navController: NavController, 
     packageName: String?,
     viewModel: AppSettingsViewModel = viewModel(),
-    // Tambahkan ini agar tidak Unresolved reference
     appListViewModel: ApplistViewmodel = viewModel() 
 ) {
     val context = LocalContext.current
@@ -81,7 +75,6 @@ fun AppSettingsScreen(
     val config = viewModel.fullConfig[packageName]
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
 
-    // PINDAHKAN KE SINI (Di dalam fungsi Composable)
     var localMasterOn by remember(config != null) { mutableStateOf(config != null) }
 
     val booleanModes = listOf("Default", "On", "Off")
@@ -94,7 +87,6 @@ fun AppSettingsScreen(
         else -> 0
     }
     
-    // Refresh otomatis saat keluar dari screen
     DisposableEffect(Unit) {
         onDispose {
             appListViewModel.loadApps(context, forceRefresh = true)
@@ -105,7 +97,6 @@ fun AppSettingsScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { 
             AppSettingsTopAppBar(scrollBehavior) { 
-                // Perbaikan Syntax: Gunakan kurung kurawal atau pisahkan dengan baris baru
                 appListViewModel.loadApps(context, forceRefresh = true) 
                 navController.popBackStack() 
             } 
@@ -142,7 +133,6 @@ fun AppSettingsScreen(
                     enter = expandVertically(animationSpec = tween(400)) + fadeIn(),
                     exit = shrinkVertically(animationSpec = tween(400)) + fadeOut()
                 ) {
-                    // Gunakan path lengkap jika import bermasalah
                     val displayConfig = config ?: zx.azenith.ui.util.AppConfig() 
                     
                     Column {
@@ -155,7 +145,7 @@ fun AppSettingsScreen(
                                         icon = Icons.Rounded.Speed,
                                         title = "Perf Lite Mode",
                                         summary = "Reduce heating by reducing CPU frequency",
-                                        items = booleanModes, // Pastikan parameter ini ada
+                                        items = booleanModes,
                                         selectedIndex = getBoolIndex(displayConfig.perf_lite_mode),
                                         onItemSelected = { index ->
                                             val value = listOf("default", "true", "false")[index]
@@ -260,7 +250,6 @@ fun AppHeader(appDetails: Triple<String, android.graphics.drawable.Drawable?, St
             .padding(vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // App Icon
         Surface(
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceVariant,
@@ -276,7 +265,6 @@ fun AppHeader(appDetails: Triple<String, android.graphics.drawable.Drawable?, St
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // App Label
         Text(
             text = appDetails.first,
             style = MaterialTheme.typography.headlineSmall,
@@ -284,7 +272,6 @@ fun AppHeader(appDetails: Triple<String, android.graphics.drawable.Drawable?, St
             textAlign = TextAlign.Center
         )
 
-        // Package Name
         Text(
             text = packageName ?: "Unknown Package",
             style = MaterialTheme.typography.bodyMedium,
@@ -292,7 +279,6 @@ fun AppHeader(appDetails: Triple<String, android.graphics.drawable.Drawable?, St
             modifier = Modifier.padding(top = 4.dp)
         )
 
-        // Version Tag
         Surface(
             color = MaterialTheme.colorScheme.secondaryContainer,
             shape = CircleShape,

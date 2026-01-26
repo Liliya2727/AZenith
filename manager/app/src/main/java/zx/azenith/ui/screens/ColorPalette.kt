@@ -1,6 +1,6 @@
 package zx.azenith.ui.screens
 
-import android.app.Activity // TAMBAHKAN INI
+import android.app.Activity
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
@@ -30,9 +30,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role // TAMBAHKAN INI
-import androidx.compose.ui.semantics.role // TAMBAHKAN INI
-import androidx.compose.ui.semantics.semantics // TAMBAHKAN INI
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
@@ -64,7 +64,6 @@ private val keyColorOptions = listOf(
     Color(0xFF795548).toArgb(),
 )
 
-
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ColorPaletteScreen(navController: NavController) {
@@ -75,7 +74,6 @@ fun ColorPaletteScreen(navController: NavController) {
         mutableStateOf(context.getHeaderImage() != null)
     }
     
-    // ... di dalam ColorPaletteScreen ...
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
     
     val cropLauncher = rememberLauncherForActivityResult(
@@ -94,23 +92,19 @@ fun ColorPaletteScreen(navController: NavController) {
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let { sourceUri ->
-            // Buat file temporary untuk hasil crop
             val destinationUri = Uri.fromFile(File(context.cacheDir, "temp_banner_${System.currentTimeMillis()}.jpg"))
             
-            // Konfigurasi UCrop
             val uCrop = UCrop.of(sourceUri, destinationUri)
-                .withAspectRatio(20f, 9f) // Kunci di 20:9
+                .withAspectRatio(20f, 9f)
                 .withOptions(UCrop.Options().apply {
                     setHideBottomControls(false)
-                    setFreeStyleCropEnabled(false) // User tidak bisa ubah rasio
+                    setFreeStyleCropEnabled(false)
                 })
     
             cropLauncher.launch(uCrop.getIntent(context))
         }
     }
 
-
-    // State lokal agar UI berubah secara reaktif tanpa flicker
     var currentColorMode by remember { 
         mutableStateOf(ThemeController.getAppSettings(context).colorMode) 
     }
@@ -137,10 +131,8 @@ fun ColorPaletteScreen(navController: NavController) {
         ) {
             val isDark = currentColorMode.getDarkThemeValue(isSystemInDarkTheme())
             
-            // Preview Card ala Device Settings
             ThemePreviewCard(keyColor = currentKeyColor, isDark = isDark)
 
-            // Section: Accent Color
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     "Accent Color",
@@ -157,7 +149,6 @@ fun ColorPaletteScreen(navController: NavController) {
                 ) {
                     Spacer(modifier = Modifier.width(8.dp))
                     
-                    // Button Dynamic (Monet/System)
                     ColorButton(
                         color = Color.Unspecified,
                         isSelected = currentKeyColor == 0,
@@ -183,7 +174,6 @@ fun ColorPaletteScreen(navController: NavController) {
                 }
             }
 
-            // Section: Theme Mode
             Column(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -248,7 +238,7 @@ fun ColorPaletteScreen(navController: NavController) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
                 ) {
-                    val headerOptions = listOf(false, true) // false = default, true = custom
+                    val headerOptions = listOf(false, true)
 
                     headerOptions.forEachIndexed { index, isCustom ->
                         ToggleButton(
@@ -301,7 +291,6 @@ fun ColorPaletteScreen(navController: NavController) {
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PaletteTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit) {
@@ -325,7 +314,6 @@ fun PaletteTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit
         )
     )
 }
-
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -351,17 +339,14 @@ private fun ThemePreviewCard(keyColor: Int, isDark: Boolean) {
             shadowElevation = 2.dp
         ) {
             Column {
-                // Header Preview
                 Box(modifier = Modifier.height(40.dp).fillMaxWidth().padding(horizontal = 12.dp), contentAlignment = Alignment.CenterStart) {
                     Text("AZenith", style = MaterialTheme.typography.labelSmall, color = colorScheme.onSurfaceVariant)
                 }
-                // Content Preview
                 Column(modifier = Modifier.weight(1f).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Surface(color = colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth().height(32.dp), shape = RoundedCornerShape(8.dp)) {}
                     Surface(color = colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth().height(20.dp), shape = RoundedCornerShape(6.dp)) {}
                     Surface(color = colorScheme.surfaceColorAtElevation(1.dp), modifier = Modifier.fillMaxWidth().height(60.dp), shape = RoundedCornerShape(12.dp)) {}
                 }
-                // Bottom Nav Preview
                 Surface(color = colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth().height(36.dp)) {
                     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceAround, verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Home, null, tint = colorScheme.primary, modifier = Modifier.size(16.dp))
@@ -372,7 +357,6 @@ private fun ThemePreviewCard(keyColor: Int, isDark: Boolean) {
         }
     }
 }
-
 
 @Composable
 private fun ColorButton(color: Color, isSelected: Boolean, isDark: Boolean, onClick: () -> Unit) {

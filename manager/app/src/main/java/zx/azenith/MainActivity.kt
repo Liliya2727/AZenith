@@ -60,6 +60,10 @@ fun MainScreen() {
     val rootStatus by produceState(initialValue = false) {
         value = RootUtils.isRootGranted()
     }
+    
+    val moduleInstalled by produceState(initialValue = false) {
+        value = RootUtils.isModuleInstalled()
+    }
 
     val navItems = remember {
         listOf(
@@ -76,13 +80,13 @@ fun MainScreen() {
 
     Scaffold(
         bottomBar = {
-            if (rootStatus && !isLandscape && currentRoute in bottomBarRoutes) {
+            if (rootStatus && moduleInstalled && !isLandscape && currentRoute in bottomBarRoutes) {
                 BottomBar(navController, navItems, currentRoute)
             }
         }
     ) { innerPadding ->
         Row(modifier = Modifier.fillMaxSize()) {
-            if (rootStatus && isLandscape && currentRoute in bottomBarRoutes) {
+            if (rootStatus && moduleInstalled && isLandscape && currentRoute in bottomBarRoutes) {
                 SideBar(navController, navItems, currentRoute)
             }
 
