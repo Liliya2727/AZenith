@@ -71,54 +71,71 @@ fun SettingsScreen(navController: NavController) {
 
            item { SettingsSectionTitle(stringResource(R.string.section_features)) }
             item {
-                
-                var stateToast by remember { mutableStateOf(false) }
-                var autoMode by remember { mutableStateOf(false) }
-                var debugMode by remember { mutableStateOf(false) }
+                // State nullable
+                var stateToast by remember { mutableStateOf<Boolean?>(null) }
+                var autoMode by remember { mutableStateOf<Boolean?>(null) }
+                var debugMode by remember { mutableStateOf<Boolean?>(null) }
 
+                // Load state system properties
                 LaunchedEffect(Unit) {
                     stateToast = Shell.cmd("getprop persist.sys.azenithconf.showtoast").exec().out.firstOrNull()?.trim() == "1"
                     autoMode = Shell.cmd("getprop persist.sys.azenithconf.AIenabled").exec().out.firstOrNull()?.trim() == "0"
                     debugMode = Shell.cmd("getprop persist.sys.azenith.debugmode").exec().out.firstOrNull()?.trim() == "true"
                 }
 
-                ExpressiveList(
-                    content = listOf(
-                        {
-                            ExpressiveSwitchItem(
-                                icon = Icons.Filled.Notifications,
-                                title = stringResource(R.string.show_toast),
-                                checked = stateToast,
-                                onCheckedChange = { isChecked ->
-                                    stateToast = isChecked
-                                    Shell.cmd("setprop persist.sys.azenithconf.showtoast ${if (isChecked) "1" else "0"}").submit()
-                                }
-                            )
-                        },
-                        {
-                            ExpressiveSwitchItem(
-                                icon = Icons.Filled.Assistant,
-                                title = stringResource(R.string.disable_auto_mode),
-                                checked = autoMode,
-                                onCheckedChange = { isChecked ->
-                                    autoMode = isChecked
-                                    Shell.cmd("setprop persist.sys.azenithconf.AIenabled ${if (isChecked) "0" else "1"}").submit()
-                                }
-                            )
-                        },
-                        {
-                            ExpressiveSwitchItem(
-                                icon = Icons.Filled.BugReport,
-                                title = stringResource(R.string.allow_verbose_log),
-                                checked = debugMode,
-                                onCheckedChange = { isChecked ->
-                                    debugMode = isChecked
-                                    Shell.cmd("setprop persist.sys.azenith.debugmode ${if (isChecked) "true" else "false"}").submit()
-                                }
-                            )
-                        }
+                // View Load State
+                if (stateToast != null && autoMode != null && debugMode != null) {
+                    ExpressiveList(
+                        content = listOf(
+                            {
+                                ExpressiveSwitchItem(
+                                    icon = Icons.Filled.Notifications,
+                                    title = "Show toast notification",
+                                    checked = stateToast!!,
+                                    onCheckedChange = { isChecked ->
+                                        stateToast = isChecked
+                                        Shell.cmd("setprop persist.sys.azenithconf.showtoast ${if (isChecked) "1" else "0"}").submit()
+                                    }
+                                )
+                            },
+                            {
+                                ExpressiveSwitchItem(
+                                    icon = Icons.Filled.Assistant,
+                                    title = "Disable auto mode",
+                                    checked = autoMode!!,
+                                    onCheckedChange = { isChecked ->
+                                        autoMode = isChecked
+                                        Shell.cmd("setprop persist.sys.azenithconf.AIenabled ${if (isChecked) "0" else "1"}").submit()
+                                    }
+                                )
+                            },
+                            {
+                                ExpressiveSwitchItem(
+                                    icon = Icons.Filled.BugReport,
+                                    title = "Allow Daemon to Verbose log",
+                                    checked = debugMode!!,
+                                    onCheckedChange = { isChecked ->
+                                        debugMode = isChecked
+                                        Shell.cmd("setprop persist.sys.azenith.debugmode ${if (isChecked) "true" else "false"}").submit()
+                                    }
+                                )
+                            }
+                        )
                     )
-                )
+                } else {
+                    // Loading state
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            strokeWidth = 3.dp
+                        )
+                    }
+                }
             }
 
             item { SettingsSectionTitle(stringResource(R.string.section_others)) }
