@@ -38,6 +38,7 @@ void run_profiler(const int profile) {
     }
 
     write2file(PROFILE_MODE, false, false, "%d\n", profile);
+    write2file(PROFILE_MODE_APP, false, false, "%d\n", profile);
     (void)systemv("sys.azenith-profilesettings %d", profile);
 }
 

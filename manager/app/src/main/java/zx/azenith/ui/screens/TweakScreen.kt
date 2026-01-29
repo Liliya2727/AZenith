@@ -68,10 +68,10 @@ fun TweakScreen() {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
-                top = innerPadding.calculateTopPadding() + 16.dp,
-                bottom = 16.dp,
+                top = innerPadding.calculateTopPadding(),
                 start = 16.dp,
-                end = 16.dp
+                end = 16.dp,
+                bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {

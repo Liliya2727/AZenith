@@ -141,7 +141,11 @@ fun ApplistScreen(navController: NavController) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp)
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                )
             ) {
                 itemsIndexed(
                     items = appsToDisplay, 
@@ -149,8 +153,8 @@ fun ApplistScreen(navController: NavController) {
                 ) { index, app ->
                     val shape = when {
                         appsToDisplay.size == 1 -> RoundedCornerShape(20.dp)
-                        index == 0 -> RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = 4.dp, bottomEnd = 4.dp)
-                        index == appsToDisplay.lastIndex -> RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 20.dp, bottomEnd = 20.dp)
+                        index == 0 -> RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp, bottomStart = 4.dp, bottomEnd = 4.dp)
+                        index == appsToDisplay.lastIndex -> RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 26.dp, bottomEnd = 26.dp)
                         else -> RoundedCornerShape(4.dp)
                     }
                     

@@ -11,22 +11,53 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
+import android.os.FileObserver
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
 
 object RootUtils {
-    private const val PROFILE_PATH = "/data/adb/.config/AZenith/API/current_profile"
     private const val MODULE_DIR = "/data/adb/modules/AZenith"
+    private const val API_DIR_PATH = "/data/data/zx.azenith/API"
+    private const val PROFILE_FILE_NAME = "current_profile"
+    private const val PROFILE_PATH = "$API_DIR_PATH/$PROFILE_FILE_NAME"
 
-    fun observeProfile(): Flow<String> = flow {
-        var lastContent = ""
-        while (true) {
-            val currentContent = getCurrentProfile()
-            if (currentContent != lastContent) {
-                emit(currentContent)
-                lastContent = currentContent
-            }
-            delay(2000) 
+    fun observeProfile(): Flow<String> = callbackFlow {
+        // Emit data awal
+        trySend(getCurrentProfile())
+
+        val apiDir = File(API_DIR_PATH)
+        
+        // Buat folder jika belum ada agar observer tidak error
+        if (!apiDir.exists()) {
+            Shell.cmd("mkdir -p $API_DIR_PATH && chmod 755 $API_DIR_PATH").exec()
         }
+
+        // Pantau folder menggunakan constructor File (A10+)
+        // Kita pantau MODIFY (isi berubah) dan CREATE (file diganti/dibuat ulang)
+        val observer = object : FileObserver(apiDir, MODIFY or CREATE or MOVED_TO) {
+            override fun onEvent(event: Int, path: String?) {
+                if (path == PROFILE_FILE_NAME) {
+                    trySend(getCurrentProfile())
+                }
+            }
+        }
+
+        observer.startWatching()
+        awaitClose { observer.stopWatching() }
     }.flowOn(Dispatchers.IO)
+
+    fun getCurrentProfile(): String {
+        val result = Shell.cmd("cat $PROFILE_PATH").exec()
+        val content = if (result.isSuccess) result.out.firstOrNull()?.trim() else null
+        
+        return when (content) {
+            "0" -> "Initializing..."
+            "1" -> "Performance"
+            "2" -> "Balanced"
+            "3" -> "ECO Mode"
+            else -> "Unknown"
+        }
+    }
     
     fun observeServiceStatus(): Flow<Pair<String, String>> = flow {
         var lastStatus: Pair<String, String>? = null
@@ -39,19 +70,6 @@ object RootUtils {
             delay(2000)
         }
     }.flowOn(Dispatchers.IO)
-
-    fun getCurrentProfile(): String {
-        val result = Shell.cmd("cat $PROFILE_PATH").exec()
-        val content = if (result.isSuccess) result.out.firstOrNull()?.trim() else null
-        
-        return when (content) {
-            "0" -> "Initializing"
-            "1" -> "Performance"
-            "2" -> "Balanced"
-            "3" -> "ECO Mode"
-            else -> "Unknown"
-        }
-    }
     
     fun isRootGranted(): Boolean {
         return Shell.getShell().isRoot
@@ -72,3 +90,4 @@ object RootUtils {
         }
     }
 }
+

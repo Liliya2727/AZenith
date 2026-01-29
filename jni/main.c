@@ -36,6 +36,11 @@ int main(int argc, char* argv[]) {
         print_help();
         return 0;
     }
+    
+    if (!strcmp(argv[1], "--appactivity") || !strcmp(argv[1], "-actv")) {
+        openAppMainActivity();
+        return 0;
+    }
 
     if (!strcmp(argv[1], "--run") || !strcmp(argv[1], "-r")) {
 
@@ -52,6 +57,7 @@ int main(int argc, char* argv[]) {
         systemv("su -c \"am broadcast -a zx.azenith.ACTION_MANAGE "
                 "-n zx.azenith/.receiver.ZenithReceiver "
                 "--ez clearall true >/dev/null 2>&1\"");
+        systemv("touch %s", PROFILE_MODE_APP);
 
 
                

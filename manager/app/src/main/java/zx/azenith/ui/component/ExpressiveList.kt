@@ -47,7 +47,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 
-private val largeCorner = 20.dp
+private val largeCorner = 26.dp
 private val smallCorner = 4.dp
 
 private val topShape = RoundedCornerShape(
@@ -373,4 +373,44 @@ fun ExpressiveCheckboxItem(
         },
         supportingContent = summary?.let { { Text(it) } }
     )
+}
+
+@Composable
+fun ExpressiveColumn(
+    modifier: Modifier = Modifier,
+    title: String = "",
+    content: List<@Composable () -> Unit>,
+) {
+    if (content.isEmpty()) return
+
+    Column(modifier = modifier) {
+        if (title.isNotEmpty()) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+            )
+        }
+        Column(
+            modifier = Modifier.clip(
+                if (content.size == 1) singleShape else RoundedCornerShape(largeCorner)
+            ),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            content.forEachIndexed { index, itemContent ->
+                val shape = when {
+                    content.size == 1 -> singleShape
+                    index == 0 -> topShape
+                    index == content.size - 1 -> bottomShape
+                    else -> middleShape
+                }
+                Column(
+                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp), shape)
+                ) {
+                    itemContent()
+                }
+            }
+        }
+    }
 }

@@ -34,6 +34,7 @@
 #define LOG_VFILE "/data/adb/.config/AZenith/debug/AZenithVerbose.log"
 #define LOG_FILE_PRELOAD "/data/adb/.config/AZenith/preload/AZenithPR.log"
 #define PROFILE_MODE "/data/adb/.config/AZenith/API/current_profile"
+#define PROFILE_MODE_APP "/data/data/zx.azenith/API/current_profile"
 #define GAME_INFO "/data/adb/.config/AZenith/API/gameinfo"
 #define GAMELIST "/data/adb/.config/AZenith/gamelist/azenithApplist.json"
 #define MODULE_PROP "/data/adb/modules/AZenith/module.prop"
@@ -96,6 +97,7 @@ extern pid_t game_pid;
 // CLI
 void print_help();
 void printversion();
+void openAppMainActivity();
 int require_daemon_running(void);
 int handle_profile(int argc, char** argv);
 int handle_log(int argc, char** argv);
