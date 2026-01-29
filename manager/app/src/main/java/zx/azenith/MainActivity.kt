@@ -101,10 +101,9 @@ fun MainScreen() {
             NavHost(
                 navController = navController,
                 startDestination = "home",
-                modifier = Modifier.weight(
+                modifier = Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface),
-                )
+                    .background(MaterialTheme.colorScheme.surface),                
                 enterTransition = {
                     if (targetState.destination.route !in bottomBarRoutes) {
                         slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(400))
