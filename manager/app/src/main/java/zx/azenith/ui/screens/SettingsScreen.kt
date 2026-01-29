@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import android.content.pm.PackageManager
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
@@ -16,6 +17,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import android.content.ComponentName
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -29,6 +33,14 @@ import zx.azenith.R
 import zx.azenith.ui.component.*
 import androidx.compose.ui.res.stringResource
 
+fun isLauncherIconEnabled(context: Context): Boolean {
+    val pkg = context.packageManager
+    // Path harus sesuai dengan android:name di activity-alias
+    val componentName = ComponentName(context.packageName, "${context.packageName}.Launcher")
+    val state = pkg.getComponentEnabledSetting(componentName)
+    return state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(navController: NavController) {
@@ -38,7 +50,10 @@ fun SettingsScreen(navController: NavController) {
     val aboutDialog = rememberCustomDialog { AboutDialog(it) }
     val restartToastText = stringResource(R.string.toast_restarting_service)
     val logSavedToastText = stringResource(R.string.toast_log_saved)
-
+    var isLauncherVisible by rememberSaveable { 
+        mutableStateOf(isLauncherIconEnabled(context)) 
+    }
+    
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { SettingsScreenTopAppBar(scrollBehavior) },
@@ -49,9 +64,9 @@ fun SettingsScreen(navController: NavController) {
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
-                bottom = 16.dp,
                 start = 16.dp,
-                end = 16.dp
+                end = 16.dp,
+                bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
             )
         ) {
             item { SettingsSectionTitle(stringResource(R.string.section_personalization)) }
@@ -90,7 +105,7 @@ fun SettingsScreen(navController: NavController) {
                             {
                                 ExpressiveSwitchItem(
                                     icon = Icons.Filled.Notifications,
-                                    title = "Show toast notification",
+                                    title = stringResource(R.string.show_toast),
                                     checked = stateToast!!,
                                     onCheckedChange = { isChecked ->
                                         stateToast = isChecked
@@ -101,7 +116,7 @@ fun SettingsScreen(navController: NavController) {
                             {
                                 ExpressiveSwitchItem(
                                     icon = Icons.Filled.Assistant,
-                                    title = "Disable auto mode",
+                                    title = stringResource(R.string.disable_auto_mode),
                                     checked = autoMode!!,
                                     onCheckedChange = { isChecked ->
                                         autoMode = isChecked
@@ -112,7 +127,7 @@ fun SettingsScreen(navController: NavController) {
                             {
                                 ExpressiveSwitchItem(
                                     icon = Icons.Filled.BugReport,
-                                    title = "Allow Daemon to Verbose log",
+                                    title = stringResource(R.string.allow_verbose_log),
                                     checked = debugMode!!,
                                     onCheckedChange = { isChecked ->
                                         debugMode = isChecked
@@ -142,6 +157,26 @@ fun SettingsScreen(navController: NavController) {
             item {
                 ExpressiveList(
                     content = listOf(
+                        {
+                            ExpressiveSwitchItem(
+                                icon = Icons.Rounded.AddHome,
+                                title = stringResource(R.string.show_icon),
+                                checked = isLauncherVisible,
+                                onCheckedChange = { isChecked ->
+                                    isLauncherVisible = isChecked
+                                    val pkg = context.packageManager
+                                    val componentName = ComponentName(context.packageName, "${context.packageName}.Launcher")
+                                    
+                                    val newState = if (isChecked) {
+                                        PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                                    } else {
+                                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                                    }
+                                    
+                                    pkg.setComponentEnabledSetting(componentName, newState, PackageManager.DONT_KILL_APP)
+                                }
+                            )
+                        },
                         {
                             ExpressiveListItem(
                                 onClick = {

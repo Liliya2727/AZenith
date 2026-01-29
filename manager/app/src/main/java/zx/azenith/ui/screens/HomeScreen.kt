@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+
 package zx.azenith.ui.screens
 
 import android.os.Build
@@ -39,6 +41,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import zx.azenith.R
+import zx.azenith.ui.component.*
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -54,9 +57,10 @@ import androidx.compose.ui.text.TextStyle
 import zx.azenith.ui.util.*
 import androidx.compose.material.icons.rounded.*
 import coil.compose.AsyncImage
+import com.topjohnwu.superuser.Shell
+import android.widget.Toast
 import androidx.compose.ui.res.stringResource
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen() {
     val view = LocalView.current
@@ -68,9 +72,10 @@ fun HomeScreen() {
     val serviceInfo by produceState(initialValue = "Suspended" to "") {
         value = RootUtils.getServiceStatus()
     }
-    val currentProfile by produceState(initialValue = "Initializing") {
-        value = RootUtils.getCurrentProfile()
-    }
+    // Mengamati perubahan Flow secara otomatis
+    val currentProfile by RootUtils.observeProfile()
+        .collectAsState(initial = "Initializing...")
+    
     val rootStatus by produceState(initialValue = false) {
         value = RootUtils.isRootGranted()
     }
@@ -80,63 +85,91 @@ fun HomeScreen() {
     }
 
     val listState = rememberLazyListState()
+    
+    var showProfileDialog by remember { mutableStateOf(false) } // Tambahkan state ini
+    var autoMode by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        // Gunakan string agar lebih aman saat pengecekan prop
+        autoMode = Shell.cmd("getprop persist.sys.azenithconf.AIenabled").exec().out.firstOrNull()?.trim()
+    }
 
     LaunchedEffect(Unit) {
         listState.scrollToItem(0)
     }
     
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = { HomeTopAppBar(scrollBehavior = scrollBehavior) },
-        containerColor = MaterialTheme.colorScheme.surface 
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                top = innerPadding.calculateTopPadding(),
-                bottom = 16.dp, start = 16.dp, end = 16.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item {
-                BannerCard(
-                    status = if (!moduleInstalled)
-                        stringResource(R.string.module_not_installed)
-                    else
-                        serviceInfo.first,
-                    pid = serviceInfo.second
-                ) { }
-            }
-            
-            item {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    InfoTile(
-                        Modifier.weight(1f),
-                        Icons.Default.Bolt,
-                        stringResource(R.string.current_profile),
-                        currentProfile,
-                        highlight = (currentProfile != stringResource(R.string.status_initializing))
-                    ) {}
-                    
-                    InfoTile(
-                        Modifier.weight(1f),
-                        Icons.Default.Security,
-                        stringResource(R.string.root_access),
-                        if (rootStatus)
-                            stringResource(R.string.root_granted)
+    ProfileDialog(
+        show = showProfileDialog,
+        onDismiss = { showProfileDialog = false },
+        onProfile = { profileReason ->
+            Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service -p $profileReason").submit()
+            Toast.makeText(context, "Applying Selected Profile", Toast.LENGTH_SHORT).show()
+        }
+    )
+    
+    MaterialExpressiveTheme {
+        Scaffold(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            topBar = { HomeTopAppBar(scrollBehavior = scrollBehavior) },
+            containerColor = MaterialTheme.colorScheme.surface 
+        ) { innerPadding ->
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = innerPadding.calculateTopPadding(),
+                    start = 16.dp,
+                    end = 16.dp,
+                    bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                ),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item {
+                    BannerCard(
+                        status = if (!moduleInstalled)
+                            stringResource(R.string.module_not_installed)
                         else
-                            stringResource(R.string.root_not_granted),
-                        highlight = false
-                    ) {}
+                            serviceInfo.first,
+                        pid = serviceInfo.second
+                    ) { }
                 }
+                
+                
+                item {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        InfoTile(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Rounded.Token,
+                            label = stringResource(R.string.current_profile),
+                            value = currentProfile,
+                            highlight = (currentProfile != stringResource(R.string.status_initializing)),
+                            showArrow = autoMode == "0" // Panah muncul jika AI mati
+                        ) {
+                            if (autoMode == "0") {
+                                showProfileDialog = true // Trigger dialog muncul
+                            } else {
+                                //
+                            }
+                        }
+                        
+                        InfoTile(
+                            Modifier.weight(1f),
+                            Icons.Rounded.Security,
+                            stringResource(R.string.root_access),
+                            if (rootStatus)
+                                stringResource(R.string.root_granted)
+                            else
+                                stringResource(R.string.root_not_granted),
+                            highlight = false
+                        ) {}
+                    }
+                }
+                item { DeviceInfoCard() }
+                item { SupportCard { uriHandler.openUri("https://t.me/ZeshArch") } }
+                item { LearnMoreCard { uriHandler.openUri("https://github.com/Liliya2727/AZenith") } }
             }
-            item { DeviceInfoCard() }
-            item { SupportCard { uriHandler.openUri("https://t.me/ZeshArch") } }
-            item { LearnMoreCard { uriHandler.openUri("https://github.com/Liliya2727/AZenith") } }
         }
     }
 }
-
 
 @Composable
 fun BannerCard(status: String, pid: String, onClick: () -> Unit) {
@@ -149,9 +182,9 @@ fun BannerCard(status: String, pid: String, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(20 / 9f)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(26.dp))
             .clickable { onClick() },
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box {
@@ -279,7 +312,7 @@ fun DeviceInfoCard() {
     val appVer = remember { getAppVersion(context) }
 
     Surface(
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(26.dp),
         color = colorScheme.surfaceColorAtElevation(1.dp),
         onClick = { isExpanded = !isExpanded }
     ) {
@@ -296,7 +329,7 @@ fun DeviceInfoCard() {
                 SmallLeadingIcon(Icons.Outlined.Info)
                 Spacer(Modifier.width(12.dp))
                 Text(stringResource(R.string.device_info), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Icon(if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
+                Icon(if (isExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, null)
             }
 
             Spacer(Modifier.height(8.dp))
@@ -360,49 +393,43 @@ fun InfoTile(
     label: String,
     value: String,
     highlight: Boolean,
+    showArrow: Boolean = false, // Parameter baru
     onClick: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
     Surface(
         modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(26.dp))
             .clickable { onClick() },
-        color = if (highlight)
-            colorScheme.secondaryContainer
-        else
-            colorScheme.surfaceColorAtElevation(1.dp),
-        shape = RoundedCornerShape(20.dp)
+        color = if (highlight) colorScheme.secondaryContainer else colorScheme.surfaceColorAtElevation(1.dp),
+        shape = RoundedCornerShape(26.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = colorScheme.primary,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                label,
-                style = MaterialTheme.typography.labelSmall,
-                color = colorScheme.onSurfaceVariant
-            )
-            Text(
-                value,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = colorScheme.onSurface
-            )
+        Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+            Column {
+                Icon(icon, null, tint = colorScheme.primary, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.height(4.dp))
+                Text(label, style = MaterialTheme.typography.labelSmall, color = colorScheme.onSurfaceVariant)
+                Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = colorScheme.onSurface)
+            }
+            
+            if (showArrow) {
+                Icon(
+                    Icons.Rounded.ChevronRight,
+                    contentDescription = null,
+                    modifier = Modifier.align(Alignment.CenterEnd).size(20.dp),
+                    tint = colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
 
+
 @Composable
 fun LearnMoreCard(onClick: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(26.dp)
 
     Surface(
         shape = shape,
@@ -416,7 +443,7 @@ fun LearnMoreCard(onClick: () -> Unit) {
             modifier = Modifier.padding(24.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                SmallLeadingIcon(Icons.Default.Info)
+                SmallLeadingIcon(Icons.Rounded.Info)
 
                 Spacer(Modifier.width(12.dp))
 
@@ -428,7 +455,7 @@ fun LearnMoreCard(onClick: () -> Unit) {
                 )
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(14.dp))
 
             Text(
                 stringResource(R.string.learn_more_desc),
@@ -442,7 +469,7 @@ fun LearnMoreCard(onClick: () -> Unit) {
 @Composable
 fun SupportCard(onClick: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(26.dp)
 
     Surface(
         shape = shape,
@@ -456,7 +483,7 @@ fun SupportCard(onClick: () -> Unit) {
             modifier = Modifier.padding(24.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                SmallLeadingIcon(Icons.Default.Favorite)
+                SmallLeadingIcon(Icons.Rounded.Favorite)
                 Spacer(Modifier.width(12.dp))
                 Text(
                     stringResource(R.string.support_us),
@@ -466,7 +493,7 @@ fun SupportCard(onClick: () -> Unit) {
                 )
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(14.dp))
 
             Text(
                 stringResource(R.string.support_us_desc),
@@ -488,7 +515,7 @@ fun SettingRow(title: String, subtitle: String) {
             Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = colorScheme.onSurfaceVariant)
         }
-        Icon(Icons.Default.ChevronRight, null, tint = colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+        Icon(Icons.Rounded.ChevronRight, null, tint = colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
     }
 }
 
@@ -496,7 +523,7 @@ fun SettingRow(title: String, subtitle: String) {
 fun SmallLeadingIcon(icon: ImageVector) {
     val cs = MaterialTheme.colorScheme
     Surface(
-        shape = CircleShape,
+        shape = RoundedCornerShape(12.dp),
         color = cs.primary.copy(alpha = 0.12f),
         modifier = Modifier.size(32.dp)
     ) {
