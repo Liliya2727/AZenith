@@ -189,7 +189,7 @@ fun BottomNavBar(
     ) {
         Surface(
             modifier = Modifier
-                .widthIn(max = 500.dp)
+                .widthIn(max = 390.dp)
                 .fillMaxWidth(),
             shape = RoundedCornerShape(28.dp),
             color = MaterialTheme.colorScheme.surfaceContainer,
