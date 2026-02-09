@@ -1,33 +1,36 @@
 [versions]
 # Engine dari KernelSU (Bleeding Edge)
-agp = "8.13.2"
-kotlin = "2.3.0"
+agp = "9.0.0"
+kotlin = "2.3.10"
 ksp = "2.3.0-1.0.27"
 compose-bom = "2025.01.00"
-kotlinxSerialization = "1.6.3"
+kotlinxSerialization = "1.10.0"
+library = "1.2.1"
 
 # UI & Library
-material3 = "1.5.0-alpha11"
-activity-compose = "1.12.2"
+material3 = "1.5.0-alpha13"
+activity-compose = "1.12.3"
 lifecycle = "2.10.0"
-navigation = "2.9.6"
+navigation = "2.9.7"
 
 # Security & Glassmorphism
 stringfog = "5.1.0"
 stringfogXor = "5.0.0"
-haze = "1.3.0"
+haze = "1.7.1"
 
 coil-compose = "2.7.0"
 appiconloader-coil = "1.5.0"
 ucrop = "2.2.11-native"
 appcompat = "1.7.1"
-androidx-transition = "1.7.0-rc01"
+androidx-transition = "1.7.0"
 lifecycleViewModel = "2.7.0"
 
 # Tools
 libsu = "6.0.0"
 
 [libraries]
+ansi-library = { module = "com.github.Fox2Code.AndroidANSI:library", version.ref = "library" }
+ansi-library-ktx = { module = "com.github.Fox2Code.AndroidANSI:library-ktx", version.ref = "library" }
 androidx-transition = { group = "androidx.transition", name = "transition", version.ref = "androidx-transition" }
 androidx-compose-animation = { group = "androidx.compose.animation", name = "animation" }
 androidx-compose-animation-core = { group = "androidx.compose.animation", name = "animation-core" }
@@ -75,4 +78,4 @@ agp-app = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 stringfog = { id = "stringfog", version.ref = "stringfog" }
-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version = "1.9.0" } 
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version = "2.3.10" } 
