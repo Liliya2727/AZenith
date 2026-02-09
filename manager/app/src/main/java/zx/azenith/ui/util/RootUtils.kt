@@ -52,12 +52,17 @@ object RootUtils {
         
         return when (content) {
             "0" -> "Initializing..."
-            "1" -> "Performance"
+            "1" -> {
+                val liteProp = Shell.cmd("getprop persist.sys.azenithconf.litemode").exec()
+                val isLite = liteProp.out.firstOrNull()?.trim() == "1"                
+                if (isLite) "PerfLite" else "Performance"
+            }
             "2" -> "Balanced"
             "3" -> "ECO Mode"
             else -> "Unknown"
         }
     }
+
     
     fun observeServiceStatus(): Flow<Pair<String, String>> = flow {
         var lastStatus: Pair<String, String>? = null
