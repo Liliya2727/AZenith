@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2024-2025 Zexshia
+# Copyright (C) 2026-2027 Zexshia
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -170,7 +170,7 @@ esac
 # 5) Tensor
 # 0) Unknown
 
-# Make Properties
+# Make Properties Metadata
 ui_print "- Setting UP AZenith Properties"
 resetprop -p persist.sys.azenithdebug.freqlist "Disabled 90% 80% 70% 60% 50% 40%"
 resetprop -p persist.sys.azenithdebug.vsynclist "Disabled 60hz 90hz 120hz"
@@ -188,6 +188,10 @@ fi
 # Set default color scheme if not set
 if [ -z "$(getprop persist.sys.azenithconf.schemeconfig)" ]; then
 	resetprop -p persist.sys.azenithconf.schemeconfig "1000 1000 1000 1000"
+fi
+
+if [ -z "$(getprop persist.sys.azenithconf.bypasspath)" ]; then
+	resetprop -p persist.sys.azenithconf.bypasspafh "UNSUPPORTED"
 fi
 
 # Set config properties to use
