@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,6 +16,7 @@
 
 #include <AZenith.h>
 #include <libgen.h>
+
 char* gamestart = NULL;
 pid_t game_pid = 0;
 GameOptions opts;
@@ -104,7 +105,9 @@ int main(int argc, char* argv[]) {
         ProfileMode cur_mode = PERFCOMMON;
         static bool dnd_enabled = false;
         static int saved_refresh_rate = -1;
-        
+        static time_t screen_off_timer = 0;
+        static bool bypass_applied = false; 
+
         log_zenith(LOG_INFO, "Daemon started as PID %d", getpid());
         setspid();
 
@@ -141,11 +144,14 @@ int main(int argc, char* argv[]) {
     
             // Check module state
             checkstate();
-    
+            
+            // Simpan status layar asli ke variabel
+            int real_screen_state = get_screenstate(); 
+
             char freqoffset[PROP_VALUE_MAX] = {0};
             __system_property_get("persist.sys.azenithconf.freqoffset", freqoffset);
             if (strstr(freqoffset, "Disabled") == NULL) {
-                if (get_screenstate()) {
+                if (real_screen_state) { // Gunakan status layar asli untuk freqoffset
                     if (cur_mode == PERFORMANCE_PROFILE) {
                         // No exec
                     } else if (cur_mode == BALANCED_PROFILE) {
@@ -155,6 +161,54 @@ int main(int argc, char* argv[]) {
                     }
                 } else {
                     // Screen Off
+                }
+            }
+            
+            char bypass_path_prop[PROP_VALUE_MAX] = {0};
+            __system_property_get("persist.sys.azenithconf.bypasspath", bypass_path_prop);
+            
+            if (strcmp(bypass_path_prop, "UNSUPPORTED") != 0 && strlen(bypass_path_prop) > 0) {
+                if (cur_mode == PERFORMANCE_PROFILE) {
+                    char bypass_toggle[PROP_VALUE_MAX] = {0};
+                    __system_property_get("persist.sys.azenithconf.bypasschg", bypass_toggle);
+    
+                    // Get the threshold from property, default to 0 if not set
+                    char threshold_prop[PROP_VALUE_MAX] = {0};
+                    __system_property_get("persist.sys.azenithconf.bypasschgthreshold", threshold_prop);
+                    int threshold = (strlen(threshold_prop) > 0) ? atoi(threshold_prop) : 0;
+    
+                    int current_battery = get_battery_level();
+    
+                    if (strcmp(bypass_toggle, "1") == 0 && is_charging()) {
+                        // CONDITION: Only enable if battery is ABOVE or EQUAL to threshold
+                        if (current_battery >= threshold) {
+                            int current_ma = read_current_ma();
+                            if (current_ma > 10) {
+                                enable_bypass_logic();
+                                if (!bypass_applied) {
+                                    log_zenith(LOG_INFO, "Bypass Enabled: Battery (%d%%) >= Threshold (%d%%)", current_battery, threshold);
+                                    bypass_applied = true;
+                                }
+                            }
+                        } else {
+                            // Battery is too low, safety disable
+                            if (bypass_applied) {
+                                log_zenith(LOG_INFO, "Bypass Disabled: Battery (%d%%) dropped below threshold (%d%%)", current_battery, threshold);
+                                disable_bypass();
+                                bypass_applied = false;
+                            }
+                        }
+                    } else {
+                        if (bypass_applied) {
+                            disable_bypass();
+                            bypass_applied = false;
+                        }
+                    }
+                } else {
+                    if (bypass_applied) {
+                        disable_bypass();
+                        bypass_applied = false;
+                    }
                 }
             }
     
@@ -183,7 +237,7 @@ int main(int argc, char* argv[]) {
                     continue;
                 }
             }
-    
+                
             // Only fetch gamestart when user not in-game
             // prevent overhead from dumpsys commands.
             if (!gamestart) {                
@@ -199,8 +253,40 @@ int main(int argc, char* argv[]) {
 
             if (gamestart)
                 mlbb_is_running = handle_mlbb(gamestart);
-    
-            if (is_initialize_complete && gamestart && get_screenstate() && mlbb_is_running != MLBB_RUN_BG) {
+      
+            int effective_screen_state = real_screen_state;
+
+            if (cur_mode == PERFORMANCE_PROFILE) {
+                if (real_screen_state == 0) {
+                    // if screen off
+                    if (screen_off_timer == 0) {
+                        screen_off_timer = time(NULL);
+                        log_zenith(LOG_INFO, "Screen OFF detected: Grace period started (10s)...");
+                    }
+
+                    // Check time difference
+                    double seconds_passed = difftime(time(NULL), screen_off_timer);
+                    if (seconds_passed < 10.0) {
+                        effective_screen_state = 1; 
+                    } else {
+
+                        if (screen_off_timer != -1) {
+                             log_zenith(LOG_INFO, "Screen OFF Grace period ended. Dropping Performance Profile.");
+                             screen_off_timer = -1;
+                        }
+                    }
+                } else {
+                    if (screen_off_timer != 0 && screen_off_timer != -1) {
+                        log_zenith(LOG_INFO, "Screen ON detected within grace period. Keeping Performance Profile.");
+                    }
+                    screen_off_timer = 0; // Reset timer if screen is on
+                }
+            } else {
+                // Reset timer if not in performance profile
+                screen_off_timer = 0;
+            }
+
+            if (is_initialize_complete && gamestart && effective_screen_state && mlbb_is_running != MLBB_RUN_BG) {
                 // Bail out if we already on performance profile
                 if (!need_profile_checkup && cur_mode == PERFORMANCE_PROFILE)
                     continue;
@@ -379,6 +465,10 @@ int main(int argc, char* argv[]) {
 
     if (!strcmp(argv[1], "--log") || !strcmp(argv[1], "-l")) {
         return handle_log(argc, argv);
+    }
+    
+    if (!strcmp(argv[1], "--checkbypasschg") || !strcmp(argv[1], "-cbc")) {
+        return check_bypass_compatibility();
     }
 
     if (!strcmp(argv[1], "--verboselog") || !strcmp(argv[1], "-vl")) {
