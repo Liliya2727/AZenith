@@ -1,7 +1,7 @@
 #!/system/bin/sh
 
 #
-# Copyright (C) 2024-2025 Zexshia
+# Copyright (C) 2026-2027 Zexshia
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1093,12 +1093,7 @@ performance_profile() {
     		setsGPUMali "$default_maligov" && dlog "Applying GPU Mali Governor to : $default_maligov"
     	fi
     fi	
-
-    # Bypass Charge
-	if [ "$BYPASSCHG_STATE" -eq 1 ]; then
-		sys.azenith-utilityconf enableBypass
-	fi
-	
+    
 	# Fix Target OPP Index
 	if [ -d /proc/ppm ]; then
 	    setgamefreqppm 
@@ -1249,10 +1244,6 @@ balanced_profile() {
         setsGPUMali "$default_maligov" && dlog "Applying GPU Mali Governor to : $default_maligov"
     fi
 			
-    # Bypass Charge
-	if [ "$BYPASSCHG_STATE" -eq 1 ]; then
-		sys.azenith-utilityconf disableBypass
-	fi
 
 	# Limit cpu freq
 	if [ -d /proc/ppm ]; then
@@ -1388,11 +1379,6 @@ eco_mode() {
 	    setfreq
 	fi
 	dlog "Set CPU freq to low Frequencies"
-	
-	# Bypass Charge
-	if [ "$BYPASSCHG_STATE" -eq 1 ]; then
-		sys.azenith-utilityconf disableBypass
-	fi
 	
 	# Power level settings
 	for pl in /sys/devices/system/cpu/perf; do
@@ -2165,11 +2151,6 @@ initialize() {
         done
     fi
     
-    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-    # INITIALIZE BYPASS CHARGING PATH 
-    # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-    sys.azenith-utilityconf checkBypass
-       
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #  
     # APPLY DISABLE VSYNC IF AVAILABLE
 	sys.azenith-utilityconf disablevsync $VSYNCVALUE

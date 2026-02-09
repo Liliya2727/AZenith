@@ -1,7 +1,7 @@
 #!/system/bin/sh
 
 #
-# Copyright (C) 2024-2025 Zexshia
+# Copyright (C) 2026-2027 Zexshia
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,33 +24,7 @@ CONFIGPATH="/data/adb/.config/AZenith"
 
 # Properties
 DEBUGMODE="$(getprop persist.sys.azenith.debugmode)"
-BYPASSPATH="$(getprop persist.sys.azenithconf.bypasspath)"
-BYPASSPROPS="persist.sys.azenithconf.bypasspath"
 FSTRIM_STATE="$(getprop persist.sys.azenithconf.fstrim)"
-
-# Bypass Charging Path
-MTK_BYPASS_CHARGER="/sys/devices/platform/charger/bypass_charger"
-MTK_BYPASS_CHARGER_ON="1"
-MTK_BYPASS_CHARGER_OFF="0"
-
-MTK_CURRENT_CMD="/proc/mtk_battery_cmd/current_cmd"
-MTK_CURRENT_CMD_ON="0 1"
-MTK_CURRENT_CMD_OFF="0 0"
-
-TRAN_AICHG="/sys/devices/platform/charger/tran_aichg_disable_charger"
-TRAN_AICHG_ON="1"
-TRAN_AICHG_OFF="0"
-
-MTK_DISABLE_CHARGER="/sys/devices/platform/mt-battery/disable_charger"
-MTK_DISABLE_CHARGER_ON="1"
-MTK_DISABLE_CHARGER_OFF="0"
-
-BYPASSPATHLIST="
-    MTK_BYPASS_CHARGER:/sys/devices/platform/charger/bypass_charger
-    MTK_CURRENT_CMD:/proc/mtk_battery_cmd/current_cmd
-    TRAN_AICHG:/sys/devices/platform/charger/tran_aichg_disable_charger
-    MTK_DISABLE_CHARGER:/sys/devices/platform/mt-battery/disable_charger
-"        
 
 # Logging Functions
 AZLog() {
@@ -166,9 +140,7 @@ disableDND() {
 }
 
 setrefreshrates() {
-    settings put system peak_refresh_rate $1
-    settings put system min_refresh_rate $1.0
-    dlog "Set current refresh rates to: $1hz"
+    service call SurfaceFlinger 1035 i32 $1
 }
 
 restartservice() {
@@ -192,135 +164,6 @@ setrender() {
             ;;
     esac
     dlog "Set current renderer to: $1"
-}
-
-# Read current ampere
-read_current_ma() {
-    for f in \
-        /sys/class/power_supply/battery/current_now \
-        /sys/class/power_supply/battery/BatteryAverageCurrent \
-        /sys/class/power_supply/battery/input_current_now \
-        /sys/class/power_supply/usb/current_now; do
-
-        [ -r "$f" ] || continue
-
-        val=$(cat "$f" 2>/dev/null)
-        val=${val#-}
-        [ -z "$val" ] && continue
-
-        if [ "$val" -gt 1000 ]; then
-            echo $((val / 1000))
-        else
-            echo "$val"
-        fi
-        return
-    done
-
-    echo 9999
-}
-
-# Check charging state
-ischarging() {
-    case "$(cat /sys/class/power_supply/battery/status 2>/dev/null)" in
-        Charging|Full) return 0 ;;
-        *) return 1 ;;
-    esac
-}
-
-# Bypass Charge
-enableBypass() {
-    if ! ischarging; then
-        dlog "Skipping bypass charge: device not charging"
-        return 0
-    fi
-
-    key="$BYPASSPATH"
-    val="${key}_ON"
-    path="$(eval echo \${$key})"
-    onval="$(eval echo \${$val})"
-
-    max_try=5
-    try=0
-
-    while [ "$try" -lt "$max_try" ]; do
-        try=$((try + 1))
-
-        zeshia "$onval" "$path"
-        sleep 1
-
-        cur_val="$(cat "$path" 2>/dev/null)"
-        cur_ma="$(read_current_ma)"
-
-        AZLog "Bypass check [$try]: path=$cur_val current=${cur_ma}mA"
-
-        if [ "$cur_val" = "$onval" ] && [ "$cur_ma" -le 10 ]; then
-            dlog "Bypass active, current ${cur_ma}mA"
-            return 0
-        fi
-
-        sleep 1
-    done
-
-    dlog "Bypass failed after $max_try retries (current ${cur_ma}mA)"
-    return 1
-}
-
-disableBypass() {
-    key="$BYPASSPATH"
-    val="${key}_OFF"
-    zeshia "$(eval echo \${$val})" "$(eval echo \${$key})"
-    dlog "Bypass charge disabled"
-}
-
-checkBypass() {
-    if ! ischarging; then
-        dlog "Skipping bypass compatibility check: device not charging"
-        return 0
-    fi
-
-    [ -n "$BYPASSPATH" ] && {
-        dlog "Bypass Charging path already set: $BYPASSPATH"
-        return 0
-    }
-
-    supported=0
-
-    while IFS=":" read -r name path; do
-        [ -z "$name" ] && continue
-
-        name="${name//[[:space:]]/}"
-        path="${path//[[:space:]]/}"
-
-        [ ! -e "$path" ] && continue
-
-        on_key="${name}_ON"
-        off_key="${name}_OFF"
-        on_val="$(eval echo \${$on_key})"
-        off_val="$(eval echo \${$off_key})"
-
-        dlog "Testing bypass charging path: $name"
-
-        zeshia "$on_val" "$path"
-        sleep 1
-
-        cur_ma="$(read_current_ma)"
-        dlog "Charging current: ${cur_ma}mA"
-
-        zeshia "$off_val" "$path"
-        sleep 1
-
-        if [ "$cur_ma" -lt 10 ]; then
-            dlog "Bypass Charging SUPPORTED via $name"
-            setprop "$BYPASSPROPS" "$name"
-            BYPASSPATH="$name"
-            supported=1
-            return 0
-        fi
-    done <<< "$BYPASSPATHLIST"
-
-    dlog "Bypass Charging unsupported: no effective path found"
-    setprop "$BYPASSPROPS" "UNSUPPORTED"
-    return 1
 }
 
 saveLog() {
