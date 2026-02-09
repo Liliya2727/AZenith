@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package zx.azenith.ui.screens
 
 import android.content.Context
@@ -8,6 +24,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import android.content.pm.PackageManager
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -84,7 +102,7 @@ fun SettingsScreen(navController: NavController) {
                 )
             }
 
-           item { SettingsSectionTitle(stringResource(R.string.section_features)) }
+            item { SettingsSectionTitle(stringResource(R.string.section_features)) }
             item {
                 // State nullable
                 var stateToast by remember { mutableStateOf<Boolean?>(null) }
@@ -254,34 +272,56 @@ fun SettingsSectionTitle(text: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreenTopAppBar(scrollBehavior: TopAppBarScrollBehavior) {
-    TopAppBar(
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.avatar),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
+    val colorScheme = MaterialTheme.colorScheme
+
+    val smoothGradient = Brush.verticalGradient(
+        0.0f to colorScheme.surface,
+        0.4f to colorScheme.surface.copy(alpha = 0.9f),
+        0.5f to colorScheme.surface.copy(alpha = 0.8f),
+        0.6f to colorScheme.surface.copy(alpha = 0.7f),
+        0.7f to colorScheme.surface.copy(alpha = 0.5f),
+        0.8f to colorScheme.surface.copy(alpha = 0.4f),
+        0.9f to colorScheme.surface.copy(alpha = 0.3f),
+        1.0f to Color.Transparent 
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(smoothGradient)
+            .statusBarsPadding()
+    ) {
+        TopAppBar(
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(colorScheme.surfaceVariant)
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.avatar),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        stringResource(R.string.settings),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
                     )
                 }
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    stringResource(R.string.settings),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
-        ),
-        scrollBehavior = scrollBehavior
-    )
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+                scrolledContainerColor = Color.Transparent
+            ),
+            scrollBehavior = scrollBehavior,
+            windowInsets = WindowInsets(0, 0, 0, 0)
+        )
+    }
 }
+
