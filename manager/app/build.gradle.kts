@@ -7,7 +7,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.agp.app)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
     id("kotlin-parcelize")
 }
@@ -60,13 +59,6 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
-    }
-
-    applicationVariants.all {
-        outputs.forEach {
-            val output = it as BaseVariantOutputImpl
-            output.outputFileName = "AZenith_${versionName}_${versionCode}-$name.apk"
-        }
     }
 
     packaging {
@@ -130,4 +122,6 @@ dependencies {
     implementation(libs.androidx.transition)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.ansi.library)
+    implementation(libs.ansi.library.ktx)
 }
