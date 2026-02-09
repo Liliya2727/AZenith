@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package zx.azenith.ui.screens
 
 import android.content.Context
@@ -5,6 +21,7 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -55,6 +72,7 @@ import zx.azenith.ui.component.ExpressiveDropdownItem
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.animation.core.tween
+import zx.azenith.ui.util.getSupportedRefreshRates
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,7 +97,7 @@ fun AppSettingsScreen(
 
     val booleanModes = listOf("Default", "On", "Off")
     val rendererModes = listOf("Default", "Vulkan", "SkiaGL")
-    val refreshModes = listOf("Default", "60", "90", "120", "144")
+    val dynamicRefreshModes = remember { getSupportedRefreshRates(context) }
 
     fun getBoolIndex(v: String?): Int = when(v) {
         "true" -> 1
@@ -104,7 +122,10 @@ fun AppSettingsScreen(
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = innerPadding,
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding(),
+                bottom = 20.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             item { AppHeader(appDetails, packageName) }
@@ -168,7 +189,7 @@ fun AppSettingsScreen(
                                 },
                                 {
                                     ExpressiveDropdownItem(
-                                        icon = Icons.Rounded.PriorityHigh,
+                                        icon = Icons.Rounded.SwapVerticalCircle,
                                         title = "App Priority",
                                         summary = "Increase I/O scheduling priority",
                                         items = booleanModes,
@@ -194,13 +215,14 @@ fun AppSettingsScreen(
                                 },
                                 {
                                     ExpressiveDropdownItem(
-                                        icon = Icons.Rounded.Refresh,
+                                        icon = Icons.Rounded.WebStories,
                                         title = "Refresh Rate",
                                         summary = "Set preferred Display refresh rates",
-                                        items = refreshModes,
-                                        selectedIndex = refreshModes.indexOf(displayConfig.refresh_rate).coerceAtLeast(0),
+                                        items = dynamicRefreshModes,
+                                        selectedIndex = dynamicRefreshModes.indexOf(displayConfig.refresh_rate).coerceAtLeast(0),
                                         onItemSelected = { index ->
-                                            packageName?.let { viewModel.updateSetting(it, "refresh_rate", refreshModes[index]) }
+                                            val value = dynamicRefreshModes[index]
+                                            packageName?.let { viewModel.updateSetting(it, "refresh_rate", value) }
                                         }
                                     )
                                 },
@@ -210,7 +232,7 @@ fun AppSettingsScreen(
                                         title = "Renderer",
                                         summary = "Set preferred rendering engine",
                                         items = rendererModes,
-                                        selectedIndex = rendererModes.indexOf(displayConfig.renderer.replaceFirstChar { it.uppercase() }).coerceAtLeast(0),
+                                        selectedIndex = rendererModes.indexOfFirst { it.equals(displayConfig.renderer, ignoreCase = true) }.coerceAtLeast(0),
                                         onItemSelected = { index ->
                                             val value = rendererModes[index].lowercase()
                                             packageName?.let { viewModel.updateSetting(it, "renderer", value) }
@@ -311,23 +333,45 @@ fun getAppDetails(context: android.content.Context, packageName: String?): Tripl
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AppSettingsTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit) {
-    TopAppBar(
-        title = { 
-            Text(
-                text = "App Settings",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            ) 
-        },
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-            }
-        },
-        scrollBehavior = scrollBehavior,
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
+    val colorScheme = MaterialTheme.colorScheme
+
+    val smoothGradient = Brush.verticalGradient(
+        0.0f to colorScheme.surface,
+        0.4f to colorScheme.surface.copy(alpha = 0.9f),
+        0.5f to colorScheme.surface.copy(alpha = 0.8f),
+        0.6f to colorScheme.surface.copy(alpha = 0.7f),
+        0.7f to colorScheme.surface.copy(alpha = 0.5f),
+        0.8f to colorScheme.surface.copy(alpha = 0.4f),
+        0.9f to colorScheme.surface.copy(alpha = 0.3f),
+        1.0f to Color.Transparent 
     )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(smoothGradient)
+            .statusBarsPadding()
+    ) {
+        TopAppBar(
+            title = { 
+                Text(
+                    text = "App Settings",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                ) 
+            },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+            },
+            scrollBehavior = scrollBehavior,
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+                scrolledContainerColor = Color.Transparent
+            ),
+            windowInsets = WindowInsets(0, 0, 0, 0)
+        )
+    }
 }
+

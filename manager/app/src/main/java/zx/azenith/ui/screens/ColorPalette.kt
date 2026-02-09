@@ -1,9 +1,28 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+
 package zx.azenith.ui.screens
 
 import android.app.Activity
 import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.*
@@ -52,7 +71,11 @@ import com.yalantis.ucrop.UCrop
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale 
 import java.io.File
-
+// TAMBAHKAN IMPORT INI JIKA BELUM ADA
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Arrangement
+    
 private val keyColorOptions = listOf(
     Color(0xFF1A73E8).toArgb(),
     Color(0xFFEA4335).toArgb(),
@@ -64,7 +87,6 @@ private val keyColorOptions = listOf(
     Color(0xFF795548).toArgb(),
 )
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ColorPaletteScreen(navController: NavController) {
     val context = LocalContext.current
@@ -116,206 +138,235 @@ fun ColorPaletteScreen(navController: NavController) {
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             PaletteTopAppBar(
-                scrollBehavior = scrollBehavior,
+                scrollBehavior,
                 onBack = { navController.popBackStack() }
             )
         },
-        contentWindowInsets = WindowInsets(0, 0, 0, 0)
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.surface // Pastikan ini ada agar gradien terlihat menyatu
+    ) { innerPadding -> // Perhatikan tanda kurung ini
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding(),
+                bottom = 20.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            val isDark = currentColorMode.getDarkThemeValue(isSystemInDarkTheme())
-            
-            ThemePreviewCard(keyColor = currentKeyColor, isDark = isDark)
+            // Gunakan 'item' untuk membungkus Composable di dalam LazyColumn
+            item {
+                val isDark = currentColorMode.getDarkThemeValue(isSystemInDarkTheme())
+                ThemePreviewCard(keyColor = currentKeyColor, isDark = isDark)
+            }
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    "Accent Color",
-                    modifier = Modifier.padding(horizontal = 20.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    
-                    ColorButton(
-                        color = Color.Unspecified,
-                        isSelected = currentKeyColor == 0,
-                        isDark = isDark,
-                        onClick = {
-                            currentKeyColor = 0
-                            prefs.edit { putInt("key_color", 0) }
-                        }
+            item {
+                val isDark = currentColorMode.getDarkThemeValue(isSystemInDarkTheme())
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Accent Color",
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
                     )
-
-                    keyColorOptions.forEach { colorInt ->
+                    
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        
                         ColorButton(
-                            color = Color(colorInt),
-                            isSelected = currentKeyColor == colorInt,
+                            color = Color.Unspecified,
+                            isSelected = currentKeyColor == 0,
                             isDark = isDark,
                             onClick = {
-                                currentKeyColor = colorInt
-                                prefs.edit { putInt("key_color", colorInt) }
+                                currentKeyColor = 0
+                                prefs.edit { putInt("key_color", 0) }
                             }
                         )
+
+                        keyColorOptions.forEach { colorInt ->
+                            ColorButton(
+                                color = Color(colorInt),
+                                isSelected = currentKeyColor == colorInt,
+                                isDark = isDark,
+                                onClick = {
+                                    currentKeyColor = colorInt
+                                    prefs.edit { putInt("key_color", colorInt) }
+                                }
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
                 }
             }
 
-            Column(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    "Appearance",
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
-                val options = listOf(
-                    ColorMode.SYSTEM, ColorMode.LIGHT, ColorMode.DARK, ColorMode.DARKAMOLED
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+            item {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    options.forEachIndexed { index, mode ->
-                        ToggleButton(
-                            checked = currentColorMode == mode,
-                            onCheckedChange = { checked ->
-                                if (checked) {
-                                    currentColorMode = mode
-                                    prefs.edit { putInt("color_mode", mode.value) }
-                                }
-                            },
-                            modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
-                            shapes = when (index) {
-                                0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                                options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                            },
-                        ) {
-                            Icon(
-                                imageVector = when (mode) {
-                                    ColorMode.SYSTEM -> Icons.Filled.Brightness4
-                                    ColorMode.LIGHT -> Icons.Filled.Brightness7
-                                    ColorMode.DARK -> Icons.Filled.Brightness3
-                                    ColorMode.DARKAMOLED -> Icons.Filled.Brightness1
+                    Text(
+                        "Appearance",
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    val options = listOf(
+                        ColorMode.SYSTEM, ColorMode.LIGHT, ColorMode.DARK, ColorMode.DARKAMOLED
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+                    ) {
+                        options.forEachIndexed { index, mode ->
+                            ToggleButton(
+                                checked = currentColorMode == mode,
+                                onCheckedChange = { checked ->
+                                    if (checked) {
+                                        currentColorMode = mode
+                                        prefs.edit { putInt("color_mode", mode.value) }
+                                    }
                                 },
-                                contentDescription = mode.name
-                            )
+                                modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
+                                shapes = when (index) {
+                                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                    options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                                },
+                            ) {
+                                Icon(
+                                    imageVector = when (mode) {
+                                        ColorMode.SYSTEM -> Icons.Filled.Brightness4
+                                        ColorMode.LIGHT -> Icons.Filled.Brightness7
+                                        ColorMode.DARK -> Icons.Filled.Brightness3
+                                        ColorMode.DARKAMOLED -> Icons.Filled.Brightness1
+                                    },
+                                    contentDescription = mode.name
+                                )
+                            }
                         }
                     }
                 }
             }
             
-            Column(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    "Banner",
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+            item {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val headerOptions = listOf(false, true)
+                    Text(
+                        "Banner",
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+                    ) {
+                        val headerOptions = listOf(false, true)
 
-                    headerOptions.forEachIndexed { index, isCustom ->
-                        ToggleButton(
-                            checked = hasCustomHeader == isCustom,
-                            onCheckedChange = { checked ->
-                                if (!checked) return@ToggleButton
+                        headerOptions.forEachIndexed { index, isCustom ->
+                            ToggleButton(
+                                checked = hasCustomHeader == isCustom,
+                                onCheckedChange = { checked ->
+                                    if (!checked) return@ToggleButton
 
-                                if (isCustom) {
-                                    hasCustomHeader = true
-                                    imagePicker.launch(arrayOf("image/*"))
-                                } else {
-                                    context.clearHeaderImage()
-                                    hasCustomHeader = false
+                                    if (isCustom) {
+                                        hasCustomHeader = true
+                                        imagePicker.launch(arrayOf("image/*"))
+                                    } else {
+                                        context.clearHeaderImage()
+                                        hasCustomHeader = false
+                                    }
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .semantics { role = Role.RadioButton },
+                                shapes = when (index) {
+                                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                    headerOptions.lastIndex ->
+                                        ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                                 }
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .semantics { role = Role.RadioButton },
-                            shapes = when (index) {
-                                0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                                headerOptions.lastIndex ->
-                                    ButtonGroupDefaults.connectedTrailingButtonShapes()
-                                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                            }
-                        ) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    imageVector = if (isCustom)
-                                        Icons.Filled.Image
-                                    else
-                                        Icons.Filled.Restore,
-                                    contentDescription = null
-                                )
-                                Text(
-                                    text = if (isCustom)
-                                        "Custom"
-                                    else
-                                        "Default"
-                                )
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = if (isCustom)
+                                            Icons.Filled.Image
+                                        else
+                                            Icons.Filled.Restore,
+                                        contentDescription = null
+                                    )
+                                    Text(
+                                        text = if (isCustom)
+                                            "Custom"
+                                        else
+                                            "Default"
+                                    )
+                                }
                             }
-                        }
-                    }                
+                        }                
+                    }
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
+            item { Spacer(modifier = Modifier.height(24.dp)) }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PaletteTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit) {
-    TopAppBar(
-        title = { 
-            Text(
-                text = "Theme",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            ) 
-        },
-        navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-            }
-        },
-        scrollBehavior = scrollBehavior,
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
+    val colorScheme = MaterialTheme.colorScheme
+
+    val smoothGradient = Brush.verticalGradient(
+        0.0f to colorScheme.surface,
+        0.4f to colorScheme.surface.copy(alpha = 0.9f),
+        0.5f to colorScheme.surface.copy(alpha = 0.8f),
+        0.6f to colorScheme.surface.copy(alpha = 0.7f),
+        0.7f to colorScheme.surface.copy(alpha = 0.5f),
+        0.8f to colorScheme.surface.copy(alpha = 0.4f),
+        0.9f to colorScheme.surface.copy(alpha = 0.3f),
+        1.0f to Color.Transparent 
     )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(smoothGradient)
+            .statusBarsPadding()
+    ) {
+        TopAppBar(
+            title = { 
+                Text(
+                    text = "Theme",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                ) 
+            },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+            },        
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+                scrolledContainerColor = Color.Transparent
+            ),
+            scrollBehavior = scrollBehavior,
+            windowInsets = WindowInsets(0, 0, 0, 0)
+        )
+    }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ThemePreviewCard(keyColor: Int, isDark: Boolean) {
     val context = LocalContext.current

@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 @file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 
 package zx.azenith.ui.screens
@@ -262,43 +278,67 @@ fun BannerCard(status: String, pid: String, onClick: () -> Unit) {
 }
 
 
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeTopAppBar(scrollBehavior: TopAppBarScrollBehavior) {
-    TopAppBar(
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
+    val colorScheme = MaterialTheme.colorScheme
+    
+    val smoothGradient = Brush.verticalGradient(
+        0.0f to colorScheme.surface,
+        0.4f to colorScheme.surface.copy(alpha = 0.9f),
+        0.5f to colorScheme.surface.copy(alpha = 0.8f),
+        0.6f to colorScheme.surface.copy(alpha = 0.7f),
+        0.7f to colorScheme.surface.copy(alpha = 0.5f),
+        0.8f to colorScheme.surface.copy(alpha = 0.4f),
+        0.9f to colorScheme.surface.copy(alpha = 0.3f),
+        1.0f to Color.Transparent 
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            // Gunakan statusBarsPadding agar gradien membungkus area jam/baterai
+            .background(smoothGradient)
+            .statusBarsPadding() 
+    ) {
+        TopAppBar(
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 8.dp)
                 ) {
-                    Image(
-                        painter = painterResource(R.drawable.avatar),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(colorScheme.surfaceVariant)
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.avatar),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = stringResource(R.string.app_name_styled),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
                     )
                 }
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    text = stringResource(R.string.app_name_styled),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
-        ),
-        scrollBehavior = scrollBehavior,
-        windowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
-    )
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+                scrolledContainerColor = Color.Transparent,
+            ),
+            scrollBehavior = scrollBehavior,
+            // Matikan insets bawaan karena kita sudah pakai statusBarsPadding() di Box
+            windowInsets = WindowInsets(0, 0, 0, 0)
+        )
+    }
 }
+
 
 @Composable
 fun DeviceInfoCard() {
@@ -436,7 +476,7 @@ fun LearnMoreCard(onClick: () -> Unit) {
         color = colorScheme.surfaceColorAtElevation(1.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .clip(shape) // ⬅️ WAJIB
+            .clip(shape) 
             .clickable { onClick() }
     ) {
         Column(
