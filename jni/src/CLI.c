@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Zexshia
+ * Copyright (C) 2026-2027 Zexshia
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -100,6 +100,13 @@ int handle_profile(int argc, char** argv) {
         printf("WARN: Cannot Apply Profile 0 (Initialize)\n");                
     } else if (!strcmp(profile, "1")) {
         log_zenith(LOG_INFO, "Applying Performance Profile via execute");
+        char lite_prop[PROP_VALUE_MAX] = {0};
+        __system_property_get("persist.sys.azenithconf.cpulimit", lite_prop);
+        if (strcmp(lite_prop, "1") == 0) {
+             systemv("setprop persist.sys.azenithconf.litemode 1");                 
+        } else {
+             systemv("setprop persist.sys.azenithconf.litemode 0");
+        }
         run_profiler(PERFORMANCE_PROFILE);
         notify("Performance Profile", "System is now at Powerful state", "false", 0);
         printf("Applying Performance Profile\n");        
