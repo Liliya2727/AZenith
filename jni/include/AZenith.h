@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
@@ -14,10 +15,12 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include <errno.h>
+#include <stdarg.h>
 
 
 #define TASK_INTERVAL_SEC (12 * 60 * 60)
-#define LOOP_INTERVAL_MS 700
+#define LOOP_INTERVAL_MS 1000
 #define LOOP_INTERVAL_SEC 2
 #define MAX_DATA_LENGTH 1024
 #define MAX_COMMAND_LENGTH 600
@@ -85,6 +88,14 @@ typedef enum : char {
     MLBB_RUNNING
 } MLBBState;
 
+typedef struct {
+    const char* name;
+    const char* path;
+    const char* on_val;
+    const char* off_val;
+} BypassNode;
+
+extern BypassNode bypass_list[]; 
 extern char* gamestart;
 extern char* custom_log_tag;
 extern pid_t game_pid;
@@ -93,6 +104,15 @@ extern pid_t game_pid;
  * If you're here for function comments, you
  * are in the wrong place.
  */
+
+// Bypass Charging
+int echo_to_file(const char* path, const char* value, int lock);
+int is_charging();
+int read_current_ma();
+void disable_bypass();
+int enable_bypass_logic();
+int check_bypass_compatibility();
+int get_battery_level();
 
 // CLI
 void print_help();
@@ -132,6 +152,7 @@ int is_file_empty(const char *filename);
 
 // system
 void log_preload(LogLevel level, const char* message, ...);
+void log_verbose(LogLevel level, const char* message, ...);
 void log_zenith(LogLevel level, const char* message, ...);
 void external_log(LogLevel level, const char* tag, const char* message);
 void external_vlog(LogLevel level, const char* tag, const char* message);
