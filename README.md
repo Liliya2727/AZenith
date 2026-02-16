@@ -18,7 +18,7 @@
 ## 📖 Short Documentation (Quick Guide)
 ### Core Features
 * **Auto Profiles:** Seamlessly switches performance profiles when a game is detected.
-* **Manual Profiles:**You can turn off Auto Profile and toggle profile manually: **Performance**, **Balanced**, or **ECO Mode**. To use manual profiles, go to `AZenith Settings > Disable Auto Mode`.
+* **Manual Profiles:** You can turn off Auto Profile and toggle profile manually: **Performance**, **Balanced**, or **ECO Mode**. To use manual profiles, go to `AZenith Settings > Disable Auto Mode`.
 * **Game Preload:** Preload game libs right after the games open.
 * **Custom CPU Governors:** Custom Default CPU Governor based on your preference.
 * **Custom I/O Scheduler:** Custom Default I/O Scheduler based on your preference.
