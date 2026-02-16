@@ -1,7 +1,7 @@
 #!/system/bin/sh
 
 #
-# Copyright (C) 2024-2025 Zexshia
+# Copyright (C) 2026-2027 Zexshia
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,10 +34,13 @@ done
 rm -rf "/data/adb/.config/AZenith"
 rm -rf "/data/AZenith"
 
-# Remove toast apk
+# Add remove flag to module directories
+touch "/data/adb/modules/AZenith/remove"
+
+# Remove apk
 pm uninstall zx.azenith 2>/dev/null
 
-# Remove azenith binaries
+# Unlink AZenith binaries
 manager_paths="/data/adb/ap/bin /data/adb/ksu/bin"
 binaries="sys.azenith-service sys.azenith-service_log \
           sys.azenith-profilesettings sys.azenith-utilityconf \
@@ -46,6 +49,6 @@ for dir in $manager_paths; do
 	[ -d "$dir" ] || continue
 	for remove in $binaries; do
 		link="$dir/$remove"
-		rm -f "$link"
+		unlink "$link"
 	done
 done
