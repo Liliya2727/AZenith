@@ -72,6 +72,16 @@ fun SettingsScreen(navController: NavController) {
         mutableStateOf(isLauncherIconEnabled(context)) 
     }
     
+    val uninstallDialog = rememberConfirmDialog(
+        onConfirm = {
+            Shell.cmd("sh /data/adb/modules/AZenith/uninstall.sh").submit()
+        },
+        onDismiss = {
+
+        }
+    )
+
+
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { SettingsScreenTopAppBar(scrollBehavior) },
@@ -228,6 +238,21 @@ fun SettingsScreen(navController: NavController) {
                                 headlineContent = { Text(stringResource(R.string.save_log)) },
                                 supportingContent = { Text(stringResource(R.string.save_log_desc)) },
                                 leadingContent = { Icon(Icons.Filled.Save, null) },
+                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                            )
+                        },
+                        {
+                            ExpressiveListItem(
+                                onClick = {
+                                    uninstallDialog.showConfirm(
+                                        title = "Uninstall",
+                                        content = "Module will be uninstalled. This action will remove AZenith files and requires a reboot to take effect. Do you want to proceed?",
+                                        confirm = "Yes",
+                                        dismiss = "No"
+                                    )
+                                },
+                                headlineContent = { Text(stringResource(R.string.uninstall)) },
+                                leadingContent = { Icon(Icons.Filled.Delete, null) },
                                 trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
                             )
                         }
