@@ -46,6 +46,16 @@ abort_arch() {
   abort "# # # # # # # # # # # # # # # # # # # # #"
 }
 
+installation_complete() {
+  ui_print "- Installation Success!"
+  ui_print "- AZenith has been successfully installed."
+  ui_print " "
+  ui_print "- Thank you for choosing AZenith!"
+  ui_print "- Please reboot your device."
+  ui_print "- Open Manager from action.sh, don't forget to grant root access."
+  ui_print " "
+}
+
 # Displaybanner
 ui_print ""
 ui_print "              AZenith              "
@@ -81,7 +91,7 @@ extract "$ZIPFILE" module.prop "$MODPATH"
 ui_print "- Extracting uninstall.sh..."
 extract "$ZIPFILE" uninstall.sh "$MODPATH"
 if [ ! -f "$MODULE_CONFIG/gamelist/azenithApplist.json" ]; then
-    ui_print "- Extracting gamelist.txt..."
+    ui_print "- Extracting Applist.json..."
     extract "$ZIPFILE" azenithApplist.json "$MODULE_CONFIG/gamelist"
 fi
 ui_print "- Extracting module banner..."
@@ -170,19 +180,14 @@ esac
 # 5) Tensor
 # 0) Unknown
 
-# Make Properties Metadata
-ui_print "- Setting UP AZenith Properties"
-resetprop -p persist.sys.azenithdebug.freqlist "Disabled 90% 80% 70% 60% 50% 40%"
-resetprop -p persist.sys.azenithdebug.vsynclist "Disabled 60hz 90hz 120hz"
-
-# Set default freqoffset if not set
+# Set default freqoffset
 if [ -z "$(getprop persist.sys.azenithconf.freqoffset)" ]; then
 	resetprop -p persist.sys.azenithconf.freqoffset "Disabled"
 fi
 
-# Set default vsync config if not set
-if [ -z "$(getprop persist.sys.azenithconf.vsync)" ]; then
-	resetprop -p persist.sys.azenithconf.vsync "Disabled"
+# Set default renderer
+if [ -z "$(getprop persist.sys.azenithconf.renderer)" ]; then
+	resetprop -p persist.sys.azenithconf.renderer "Default"
 fi
 
 # Set default color scheme if not set
@@ -190,9 +195,27 @@ if [ -z "$(getprop persist.sys.azenithconf.schemeconfig)" ]; then
 	resetprop -p persist.sys.azenithconf.schemeconfig "1000 1000 1000 1000"
 fi
 
+# Initiate bypasspath default value
 if [ -z "$(getprop persist.sys.azenithconf.bypasspath)" ]; then
-	resetprop -p persist.sys.azenithconf.bypasspafh "UNSUPPORTED"
+	resetprop -p persist.sys.azenithconf.bypasspath "UNSUPPORTED"
 fi
+
+# Daemon Configurations
+if [ -z "$(getprop persist.sys.azenithconf.showtoast)" ]; then
+	resetprop -p persist.sys.azenithconf.showtoast 1
+fi
+
+if [ -z "$(getprop persist.sys.azenithconf.preloadbudget)" ]; then
+    resetprop -p persist.sys.azenithconf.preloadbudget 500M
+fi
+
+if [ -z "$(getprop persist.sys.azenithconf.AIenabled)" ]; then
+    ui_print "- Enabling Auto Mode"
+    resetprop -p persist.sys.azenithconf.AIenabled 1
+fi
+
+ui_print "- Disable Debugmode"
+resetprop -p persist.sys.azenith.debugmode "false"
 
 # Set config properties to use
 ui_print "- Setting config properties..."
@@ -219,32 +242,20 @@ for prop in $props; do
 		resetprop -p "$prop" 0
 	fi
 done
-if [ -z "$(getprop persist.sys.azenithconf.showtoast)" ]; then
-	resetprop -p persist.sys.azenithconf.showtoast 1
-fi
 
-if [ -z "$(getprop persist.sys.azenithconf.preloadbudget)" ]; then
-    resetprop -p persist.sys.azenithconf.preloadbudget 500M
-fi
-
-if [ -z "$(getprop persist.sys.azenithconf.AIenabled)" ]; then
-    ui_print "- Enabling Auto Mode"
-    resetprop -p persist.sys.azenithconf.AIenabled 1
-fi
-
-ui_print "- Disable Debugmode"
-resetprop -p persist.sys.azenith.debugmode "false"
-
-ui_print "- Extracting AZenith Toast..."
+# Install Manager Apk
 extract "$ZIPFILE" AZenith.apk "$MODPATH"
 ui_print "- Installing AZenith apk..."
 pm install "$MODPATH/AZenith.apk" > /dev/null 2>&1
 rm "$MODPATH/AZenith.apk"
 
-# Remove old module files
-ui_print "- Cleaning old files"
-rm -rf "/data/local/tmp/module.avatar.webp"
-pm uninstall azenith.toast > /dev/null 2>&1
+# Remove old module files if available
+ui_print "- Cleaning old files..."
+[ -f "/data/local/tmp/module.avatar.webp" ] && rm -f "/data/local/tmp/module.avatar.webp"
+if pm list packages | grep -q "azenith.toast"; then
+    ui_print "- Uninstalling old components"
+    pm uninstall --user 0 azenith.toast > /dev/null 2>&1
+fi
 
 # Set Permissions
 ui_print "- Setting Permissions..."
@@ -256,4 +267,4 @@ chmod +x "$MODPATH/system/bin/sys.azenith-utilityconf"
 chmod +x "$MODPATH/system/bin/sys.azenith-preloadbin"
 chmod +x "$MODPATH/system/bin/sys.azenith-rianixiathermalcore"
 
-ui_print "- Installation complete!"
+installation_complete

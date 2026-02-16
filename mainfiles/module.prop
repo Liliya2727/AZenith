@@ -4,5 +4,5 @@ version=
 versionCode=
 author=@Zexshia X @kanaochar
 description=One, Two, Three! AZenith has arrived!
-updateJson=
+updateJson=https://raw.githubusercontent.com/Liliya2727/Antares/main/update.json
 banner=module.banner.avif
