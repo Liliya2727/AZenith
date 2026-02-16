@@ -41,10 +41,17 @@
     <string name="section_about">About</string>
     <string name="section_addons">Addons</string>
     <string name="section_rateandrender">Refresh rate and Renderer</string>
-    
+    <string name="section_CPUSettings">CPU Settings</string>
+      
     <string name="refreshrates">Refresh Rate</string>
+    <string name="schemecolor">Screen Color Scheme</string>
+    <string name="schemecolordesc">Adjust screen color Saturation and RGB Strength</string>
     <string name="renderengine">Current Render</string>
     <string name="bcharging">Bypass Charging</string>
+    <string name="prefs">Preferenced Settings</string>
+    <string name="section_prefstweaks">Preferenced Tweak</string>
+    <string name="uninstall">Uninstall</string>
+    <string name="prefsdesc">Addons tweak that applied on boot</string>
     
     <string name="bcharging_desc">Configure AZenith Bypass Charging</string>
     <string name="Profile_Select">Profile Select</string>
