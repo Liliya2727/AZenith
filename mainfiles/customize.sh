@@ -47,13 +47,12 @@ abort_arch() {
 }
 
 installation_complete() {
-  ui_print "- Installation Success!"
-  ui_print "- AZenith has been successfully installed."
-  ui_print " "
+  ui_print "- AZenith has been successfully installed"
   ui_print "- Thank you for choosing AZenith!"
   ui_print "- Please reboot your device."
-  ui_print "- Open Manager from action.sh, don't forget to grant root access."
-  ui_print " "
+  ui_print "- Open Manager from action.sh"
+  ui_print "- Don't forget to grant root access."
+  ui_print "# # # # # # # # # # # # # # # # # # # # #"
 }
 
 # Displaybanner
