@@ -33,6 +33,7 @@ done
 # Remove module directories
 rm -rf "/data/adb/.config/AZenith"
 rm -rf "/data/AZenith"
+rm -rf "/data/data/zx.azenith"
 
 # Add remove flag to module directories
 touch "/data/adb/modules/AZenith/remove"
@@ -42,9 +43,9 @@ pm uninstall zx.azenith 2>/dev/null
 
 # Unlink AZenith binaries
 manager_paths="/data/adb/ap/bin /data/adb/ksu/bin"
-binaries="sys.azenith-service sys.azenith-service_log \
+binaries="sys.azenith-service \
           sys.azenith-profilesettings sys.azenith-utilityconf \
-          sys.azenith-preloadbin sys.azenith-rianixiathermalcorev4"
+          sys.azenith-preloadbin sys.azenith-rianixiathermalcore"
 for dir in $manager_paths; do
 	[ -d "$dir" ] || continue
 	for remove in $binaries; do
