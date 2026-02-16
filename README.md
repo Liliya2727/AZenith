@@ -28,7 +28,7 @@
 ---
 
 ## 📦 Installation
-This is a **Magisk Module**, so you must install it via your preferred Root Manager.
+This is a **Magisk Module**, so you must install it via your preferred Root Manager. All Root Managers is Supported
 
 ---
 
