@@ -107,7 +107,8 @@ int main(int argc, char* argv[]) {
         static int saved_refresh_rate = -1;
         static time_t screen_off_timer = 0;
         static bool bypass_applied = false; 
-
+        static char saved_renderer[PROP_VALUE_MAX] = {0};        
+        
         log_zenith(LOG_INFO, "Daemon started as PID %d", getpid());
         setspid();
 
@@ -141,17 +142,24 @@ int main(int argc, char* argv[]) {
                 systemv("setprop persist.sys.azenith.state stopped");
                 break;
             }
+            
+            // Handle case when module gets removed
+            if (access(MODULE_REMOVE, F_OK) == 0) [[clang::unlikely]] {
+                log_zenith(LOG_INFO, "Module is removed, exiting.");
+                notify("Module Removed", "Please reboot your device to complete module uninstallation.", false, 0);
+                break;
+            }
     
             // Check module state
             checkstate();
             
-            // Simpan status layar asli ke variabel
+            // Save screen status
             int real_screen_state = get_screenstate(); 
 
             char freqoffset[PROP_VALUE_MAX] = {0};
             __system_property_get("persist.sys.azenithconf.freqoffset", freqoffset);
             if (strstr(freqoffset, "Disabled") == NULL) {
-                if (real_screen_state) { // Gunakan status layar asli untuk freqoffset
+                if (real_screen_state) { 
                     if (cur_mode == PERFORMANCE_PROFILE) {
                         // No exec
                     } else if (cur_mode == BALANCED_PROFILE) {
@@ -243,12 +251,24 @@ int main(int argc, char* argv[]) {
             if (!gamestart) {                
                 gamestart = get_gamestart(&opts);                
             } else if (game_pid != 0 && kill(game_pid, 0) == -1) [[clang::unlikely]] {
-                log_zenith(LOG_INFO, "Game %s exited, resetting profile...", gamestart);
-                game_pid = 0;
-                free(gamestart);
-                gamestart = get_gamestart(&opts);
-                // Force profile recheck to make sure new game session get boosted
-                need_profile_checkup = true;
+                // Jika game_pid tidak ditemukan (karena keluar atau renderer restart)
+                log_zenith(LOG_INFO, "Game PID %d lost, checking for exit or restart...", game_pid);
+                
+                // Coba cek apakah gamestart masih aktif di foreground
+                pid_t check_pid = (mlbb_is_running == MLBB_RUNNING) ? mlbb_pid : pidof(gamestart);
+                
+                if (check_pid != 0) {
+                    // Game masih ada (mungkin baru restart karena renderer), update PID saja
+                    game_pid = check_pid;
+                    log_zenith(LOG_INFO, "Game restarted/recovered with new PID: %d", game_pid);
+                } else {
+                    // Game benar-benar keluar
+                    log_zenith(LOG_INFO, "Game %s exited, resetting profile...", gamestart);
+                    game_pid = 0;
+                    free(gamestart);
+                    gamestart = get_gamestart(&opts);
+                    need_profile_checkup = true;
+                }
             }
 
             if (gamestart)
@@ -290,21 +310,7 @@ int main(int argc, char* argv[]) {
                 // Bail out if we already on performance profile
                 if (!need_profile_checkup && cur_mode == PERFORMANCE_PROFILE)
                     continue;
-    
-                // Get PID and check if the game is "real" running program
-                // Handle weird behavior of MLBB
-                game_pid = (mlbb_is_running == MLBB_RUNNING) ? mlbb_pid : pidof(gamestart);
-                if (game_pid == 0) [[clang::unlikely]] {
-                    log_zenith(LOG_ERROR, "Unable to fetch PID of %s", gamestart);
-                    free(gamestart);
-                    gamestart = NULL;
-                    continue;
-                }
-                
-                cur_mode = PERFORMANCE_PROFILE;
-                need_profile_checkup = false;
-                log_zenith(LOG_INFO, "Applying performance profile for %s", gamestart);
-                toast("Applying Performance Profile");                                
+                                     
 
                 if (IS_TRUE(opts.perf_lite_mode)) {
                     systemv("setprop persist.sys.azenithconf.litemode 1");
@@ -320,27 +326,24 @@ int main(int argc, char* argv[]) {
                     }
                 }
                 
-                if (strcmp(opts.renderer, "vulkan") == 0) {
-                    systemv("sys.azenith-utilityconf setrender skiavk");
-                } else if (strcmp(opts.renderer, "skiagl") == 0) {
-                    systemv("sys.azenith-utilityconf setrender skiagl");
+                bool is_renderer_changing = false;
+
+                if (!IS_DEFAULT(opts.renderer)) {
+                    // Simpan hasil return (true jika restart, false jika aman)
+                    is_renderer_changing = apply_smart_renderer(opts.renderer, gamestart, saved_renderer);
                 } else {
-                    // Do Nothing
-                }               
-                
-                if (IS_TRUE(opts.app_priority)) {
-                    set_priority(game_pid);
-                } else if (IS_FALSE(opts.app_priority)) {
-                    // do nothing
-                } else {
-                    char val[PROP_VALUE_MAX] = {0};
-                    if (__system_property_get("persist.sys.azenithconf.iosched", val) > 0) {
-                        if (val[0] == '1') {
-                        set_priority(game_pid);
-                        }
+                    char global_renderer[PROP_VALUE_MAX] = {0};
+                    __system_property_get("persist.sys.azenithconf.renderer", global_renderer);
+                    if (strcmp(global_renderer, "default") != 0) {
+                        is_renderer_changing = apply_smart_renderer(global_renderer, gamestart, saved_renderer);
                     }
                 }
-                                                
+
+                if (is_renderer_changing) {
+                    log_zenith(LOG_INFO, "Renderer changing applied");
+                    sleep(5);
+                }
+                         
                 if (IS_TRUE(opts.dnd_on_gaming)) {                   
                     systemv("sys.azenith-utilityconf enableDND");
                     dnd_enabled = true;
@@ -355,21 +358,50 @@ int main(int argc, char* argv[]) {
                     }
                 }
                                 
+                // --- BAGIAN REFACTOR REFRESH RATE ---
                 if (!IS_DEFAULT(opts.refresh_rate)) {
                     int rr = atoi(opts.refresh_rate);
                 
                     if (rr >= 60 && rr <= 144) {
-                
+                        // Simpan refresh rate asli sebelum diubah (untuk restore nantinya)
                         if (saved_refresh_rate < 0) {
                             saved_refresh_rate = get_current_refresh_rate();
-                            log_zenith(LOG_INFO, "Saved refresh rate: %d", saved_refresh_rate);
+                            log_zenith(LOG_INFO, "Current system refresh rate saved: %d", saved_refresh_rate);
                         }
                 
-                        systemv("sys.azenith-utilityconf setrefreshrates %d", rr);
+                        // Panggil fungsi logika cerdas yang baru dibuat
+                        apply_dynamic_refresh_rate(rr);
                     }
-                
                 } else {
                     // do nothing
+                }
+                
+                // Get PID and check if the game is "real" running program
+                // Handle weird behavior of MLBB
+                game_pid = (mlbb_is_running == MLBB_RUNNING) ? mlbb_pid : pidof(gamestart);
+                if (game_pid == 0) [[clang::unlikely]] {
+                    log_zenith(LOG_ERROR, "Unable to fetch PID of %s", gamestart);
+                    free(gamestart);
+                    gamestart = NULL;
+                    continue;
+                }
+                
+                cur_mode = PERFORMANCE_PROFILE;
+                need_profile_checkup = false;
+                log_zenith(LOG_INFO, "Applying performance profile for %s", gamestart);
+                toast("Applying Performance Profile");          
+                
+                if (IS_TRUE(opts.app_priority)) {
+                    set_priority(game_pid);
+                } else if (IS_FALSE(opts.app_priority)) {
+                    // do nothing
+                } else {
+                    char val[PROP_VALUE_MAX] = {0};
+                    if (__system_property_get("persist.sys.azenithconf.iosched", val) > 0) {
+                        if (val[0] == '1') {
+                        set_priority(game_pid);
+                        }
+                    }
                 }
                                                 
                 run_profiler(PERFORMANCE_PROFILE);
@@ -397,22 +429,27 @@ int main(int argc, char* argv[]) {
                 need_profile_checkup = false;
                 log_zenith(LOG_INFO, "Applying ECO Mode");
                 toast("Applying Eco Mode");
-                char renderer[PROP_VALUE_MAX] = {0};
-                __system_property_get("persist.sys.azenithconf.renderer", renderer);                
-                if (strcmp(renderer, "vulkan") == 0) {
-                    systemv("sys.azenith-utilityconf setrender skiavk");
-                    
-                } else {
-                    systemv("sys.azenith-utilityconf setrender skiagl");
-                    
-                }           
                 if (saved_refresh_rate > 0) {
-                    systemv("sys.azenith-utilityconf setrefreshrates %d", saved_refresh_rate);
+                    apply_dynamic_refresh_rate(saved_refresh_rate);
                     saved_refresh_rate = -1;
                 }   
                 if (dnd_enabled) {
                     systemv("sys.azenith-utilityconf disableDND");
                     dnd_enabled = false;
+                }
+                if (strlen(saved_renderer) > 0) {
+                    char current_now[PROP_VALUE_MAX] = {0};
+                    __system_property_get("debug.hwui.renderer", current_now);
+                
+                    // Jika renderer saat ini beda dengan yang asli, kembalikan!
+                    if (strcmp(current_now, saved_renderer) != 0) {
+                        log_zenith(LOG_INFO, "Restoring original system renderer: %s", saved_renderer);
+                        systemv("sys.azenith-utilityconf setrender %s", saved_renderer);
+ 
+                    }
+                    
+                    // Reset variabel agar tidak menjalankan perintah setprop terus-menerus di setiap loop
+                    memset(saved_renderer, 0, sizeof(saved_renderer));
                 }
                 run_profiler(ECO_MODE);
                 notify("ECO Mode", "System is now at Endurance state", false, 0);
@@ -424,18 +461,9 @@ int main(int argc, char* argv[]) {
                 cur_mode = BALANCED_PROFILE;               
                 need_profile_checkup = false;
                 log_zenith(LOG_INFO, "Applying Balanced profile");
-                toast("Applying Balanced profile");  
-                char renderer[PROP_VALUE_MAX] = {0};
-                __system_property_get("persist.sys.azenithconf.renderer", renderer);                
-                if (strcmp(renderer, "vulkan") == 0) {
-                    systemv("sys.azenith-utilityconf setrender skiavk");
-                    
-                } else {
-                    systemv("sys.azenith-utilityconf setrender skiagl");
-                    
-                }              
+                toast("Applying Balanced profile");
                 if (saved_refresh_rate > 0) {
-                    systemv("sys.azenith-utilityconf setrefreshrates %d", saved_refresh_rate);
+                    apply_dynamic_refresh_rate(saved_refresh_rate);
                     saved_refresh_rate = -1;
                 }
                 if (dnd_enabled) {
@@ -445,6 +473,19 @@ int main(int argc, char* argv[]) {
                 if (!is_initialize_complete) {
                     notify("Daemon Info", "AZenith is running successfully", false, 60000);
                     is_initialize_complete = true;
+                }
+                if (strlen(saved_renderer) > 0) {
+                    char current_now[PROP_VALUE_MAX] = {0};
+                    __system_property_get("debug.hwui.renderer", current_now);
+                
+                    // Jika renderer saat ini beda dengan yang asli, kembalikan!
+                    if (strcmp(current_now, saved_renderer) != 0) {
+                        log_zenith(LOG_INFO, "Restoring original system renderer: %s", saved_renderer);
+                        systemv("sys.azenith-utilityconf setrender %s", saved_renderer);
+                    }
+                    
+                    // Reset variabel agar tidak menjalankan perintah setprop terus-menerus di setiap loop
+                    memset(saved_renderer, 0, sizeof(saved_renderer));
                 }
                 run_profiler(BALANCED_PROFILE);
                 notify("Balanced Profile", "System is now at Optimal state", false, 0);

@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,7 +24,7 @@ static time_t last_task_run = 0;
  * Inputs             : str (char *) - string to trim newline from
  * Returns            : char * - string without newline
  * Description        : Trims a newline character at the end of a string if
- *                      present.
+ * present.
  ***********************************************************************************/
 [[gnu::always_inline]] char* trim_newline(char* string) {
     if (string == NULL)
@@ -39,7 +39,7 @@ static time_t last_task_run = 0;
 
 /***********************************************************************************
  * Function Name      : notify
- * Inputs             : 
+ * Inputs             : const char* title, const char* fmt, bool chrono, int timeout
  * Returns            : None
  * Description        : Push a notification.
  ***********************************************************************************/
@@ -50,37 +50,33 @@ void notify(const char* title, const char* fmt, bool chrono, int timeout_ms, ...
     vsnprintf(message, sizeof(message), fmt, args);
     va_end(args);
 
-    // Sesuaikan Action & Component sesuai AndroidManifest.xml
     const char* action = "zx.azenith.ACTION_MANAGE";
     const char* component = "zx.azenith/.receiver.ZenithReceiver";
-    
-    // Perintah dasar broadcast eksplisit
+
     if (timeout_ms > 0) {
         systemv("su -c \"am broadcast -a %s -n %s "
                 "--es notifytitle '%s' --es notifytext '%s' "
                 "--ez chrono_bool %s --es timeout '%d' "
-                ">/dev/null 2>&1\"", 
-                action, component, title, message, 
+                ">/dev/null 2>&1\"",
+                action, component, title, message,
                 chrono ? "true" : "false", timeout_ms);
     } else {
         systemv("su -c \"am broadcast -a %s -n %s "
                 "--es notifytitle '%s' --es notifytext '%s' "
                 "--ez chrono_bool %s "
-                ">/dev/null 2>&1\"", 
-                action, component, title, message, 
+                ">/dev/null 2>&1\"",
+                action, component, title, message,
                 chrono ? "true" : "false");
     }
 }
-
-
 
 /***********************************************************************************
  * Function Name      : timern
  * Inputs             : None
  * Returns            : char * - pointer to a statically allocated string
- *                      with the formatted time.
+ * with the formatted time.
  * Description        : Generates a timestamp with the format
- *                      [YYYY-MM-DD HH:MM:SS.milliseconds].
+ * [YYYY-MM-DD HH:MM:SS.milliseconds].
  ***********************************************************************************/
 char* timern(void) {
     static char timestamp[64];
@@ -103,7 +99,6 @@ char* timern(void) {
         return timestamp;
     }
 
-    // Append milliseconds
     snprintf(timestamp + strlen(timestamp), sizeof(timestamp) - strlen(timestamp), ".%03ld", tv.tv_usec / 1000);
 
     return timestamp;
@@ -125,7 +120,6 @@ char* timern(void) {
         break;
     }
 
-    // Exit gracefully
     _exit(EXIT_SUCCESS);
 }
 
@@ -137,14 +131,9 @@ char* timern(void) {
  ***********************************************************************************/
 void toast(const char* message) {
     char val[PROP_VALUE_MAX] = {0};
-    
-    // Cek property konfigurasi
+
     if (__system_property_get("persist.sys.azenithconf.showtoast", val) > 0 && val[0] == '1') {
-        
-        // -a: Action (zx.azenith.ACTION_MANAGE)
-        // -n: Component (package/path.class) -> zx.azenith/.receiver.ZenithReceiver
-        // -f 0x01000000: FLAG_RECEIVER_INCLUDE_BACKGROUND agar tembus batasan Android baru
-        
+
         int exit = systemv("su -c \"am broadcast "
                            "-a zx.azenith.ACTION_MANAGE "
                            "-n zx.azenith/.receiver.ZenithReceiver "
@@ -191,7 +180,7 @@ doorprize:
  ***********************************************************************************/
 void check_module_version(void) {
     char DAEMON_VERSION[MAX_LINE] = {0};
-    
+
     snprintf(DAEMON_VERSION, sizeof(DAEMON_VERSION), "%s", MODULE_VERSION);
 
     int ret = systemv(
@@ -322,16 +311,130 @@ void runtask(void) {
         last_task_run = now.tv_sec;
         log_zenith(LOG_INFO, "Executing scheduled task, next task will be run in next 12h");
         notify("Daemon Info", "12 hours passed — AZenith doing its routine check. All good.", "false", 0);
-        
+
         systemv("sys.azenith-utilityconf FSTrim");
     }
 }
 
+/***********************************************************************************
+ * Function Name      : apply_smart_renderer
+ * Inputs             : target_type, pkg, saved_ref
+ * Returns            : bool - true if renderer switched
+ * Description        : Checks current renderer and switches if necessary
+ ***********************************************************************************/
+bool apply_smart_renderer(const char* target_type, const char* pkg, char* saved_ref) {
+    if (target_type == NULL || strcmp(target_type, "default") == 0 || strlen(target_type) == 0) return false;
+
+    char current_renderer[PROP_VALUE_MAX] = {0};
+    __system_property_get("debug.hwui.renderer", current_renderer);
+
+    if (strlen(saved_ref) == 0) {
+        strncpy(saved_ref, current_renderer, PROP_VALUE_MAX - 1);
+    }
+
+    const char* real_target = strcmp(target_type, "vulkan") == 0 ? "skiavk" : "skiagl";
+
+    if (strcmp(current_renderer, real_target) != 0) {
+        log_zenith(LOG_INFO, "Renderer mismatch for %s. Switching to %s...", pkg, real_target);
+
+        systemv("sys.azenith-utilityconf setrender %s", real_target);
+
+        systemv("am force-stop %s && am start -n $(cmd package resolve-activity --brief %s | tail -n 1)", pkg, pkg);
+
+        return true;
+    }
+    return false;
+}
+
+/***********************************************************************************
+ * Function Name      : get_max_refresh_rate
+ * Inputs             : None
+ * Returns            : int - Max Refresh Rate in Hz
+ * Description        : Detects max hardware refresh rate via dumpsys
+ ***********************************************************************************/
+int get_max_refresh_rate(void) {
+    const char* cmd = "dumpsys display | grep -oE \"fps=[0-9.]+|refreshRate=[0-9.]+\" | grep -oE \"[0-9.]+\" | sort -rn | head -n1";
+
+    FILE *fp = popen(cmd, "r");
+    if (!fp) {
+        log_zenith(LOG_WARN, "Failed to execute dumpsys for RR detection");
+        return 60;
+    }
+
+    char buf[32] = {0};
+    float max_rr_f = 60.0f;
+
+    if (fgets(buf, sizeof(buf), fp)) {
+        max_rr_f = atof(buf);
+    }
+    pclose(fp);
+
+    int max_rr = (int)(max_rr_f + 0.5f);
+    if (max_rr <= 0) max_rr = 60;
+
+    log_zenith(LOG_INFO, "Detected Hardware Max Refresh Rate: %dHz", max_rr);
+    return max_rr;
+}
+
+/***********************************************************************************
+ * Function Name      : apply_dynamic_refresh_rate
+ * Inputs             : target_rr (int)
+ * Returns            : None
+ * Description        : Calculates and applies refresh rate mode based on target
+ ***********************************************************************************/
+void apply_dynamic_refresh_rate(int target_rr) {
+    int max_hw = get_max_refresh_rate();
+
+    int steps[] = {165, 144, 120, 90, 60};
+    int num_steps = sizeof(steps) / sizeof(steps[0]);
+
+    int max_idx = -1;
+    int target_idx = -1;
+
+    for (int i = 0; i < num_steps; i++) {
+        if (max_hw >= steps[i]) {
+            max_idx = i;
+            break;
+        }
+    }
+
+    for (int i = 0; i < num_steps; i++) {
+        if (target_rr >= steps[i]) {
+            target_idx = i;
+            break;
+        }
+    }
+
+    int mode_to_apply = 0;
+    if (max_idx != -1 && target_idx != -1) {
+        mode_to_apply = target_idx - max_idx;
+    }
+
+    if (mode_to_apply < 0) mode_to_apply = 0;
+
+    log_zenith(LOG_INFO, "DynamicRR: MaxHW %dHz, Target %dHz -> Applying Mode %d",
+               max_hw, target_rr, mode_to_apply);
+
+    systemv("sys.azenith-utilityconf setrefreshrates %d", mode_to_apply);
+}
+
+/***********************************************************************************
+ * Function Name      : skip_space
+ * Inputs             : p (char *)
+ * Returns            : char * - pointer to first non-space character
+ * Description        : Skips whitespace characters in a string
+ ***********************************************************************************/
 char* skip_space(char* p) {
     while (*p && isspace(*p)) p++;
     return p;
 }
 
+/***********************************************************************************
+ * Function Name      : extract_string_value
+ * Inputs             : dest, key_pos, max_len
+ * Returns            : None
+ * Description        : Extracts value from key: "value" string format
+ ***********************************************************************************/
 void extract_string_value(char* dest, const char* key_pos, size_t max_len) {
     if (!key_pos) {
         strncpy(dest, "default", max_len-1);
@@ -364,6 +467,12 @@ void extract_string_value(char* dest, const char* key_pos, size_t max_len) {
     dest[len] = '\0';
 }
 
+/***********************************************************************************
+ * Function Name      : get_current_refresh_rate
+ * Inputs             : None
+ * Returns            : int - Current Refresh Rate in Hz
+ * Description        : Retrieves current render frame rate
+ ***********************************************************************************/
 int get_current_refresh_rate(void) {
     FILE *fp = popen(
         "cmd display get-displays | "

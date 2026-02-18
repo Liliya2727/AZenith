@@ -42,6 +42,7 @@
 #define GAMELIST "/data/adb/.config/AZenith/gamelist/azenithApplist.json"
 #define MODULE_PROP "/data/adb/modules/AZenith/module.prop"
 #define MODULE_UPDATE "/data/adb/modules/AZenith/update"
+#define MODULE_REMOVE "/data/adb/modules/AZenith/remove"
 #define MODULE_VERSION ".placeholder"
 #define IS_TRUE(v)    ((v) && strcmp((v), "true") == 0)
 #define IS_FALSE(v)   ((v) && strcmp((v), "false") == 0)
@@ -139,6 +140,9 @@ void runthermalcore(void);
 void check_module_version(void);
 void runtask(void);
 int get_current_refresh_rate(void);
+void apply_dynamic_refresh_rate(int target_rr);
+int get_max_refresh_rate(void);
+bool apply_smart_renderer(const char* target_type, const char* pkg, char* saved_ref);
 
 // Shell and Command execution
 char* execute_command(const char* format, ...);
