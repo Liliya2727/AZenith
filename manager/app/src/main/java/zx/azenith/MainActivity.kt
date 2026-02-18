@@ -55,15 +55,16 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val isFromTile = intent.action == "android.service.quicksettings.action.QS_TILE_PREFERENCES"
         setContent {
             AZenithTheme {
-                MainScreen()
+                MainScreen(isFromTile)
             }
         }
     }
 }
-
-
+    
+    
 val ExpressiveShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
     small = RoundedCornerShape(12.dp),
@@ -82,8 +83,17 @@ data class NavItem(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(isFromTile: Boolean = false) {
     val navController = rememberNavController()
+    LaunchedEffect(isFromTile) {
+        if (isFromTile) {
+            navController.navigate("bypasschg") {
+                popUpTo("home") { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+    }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -154,8 +164,10 @@ fun MainScreen() {
                 composable("tweaks") { TweakScreen(navController) }
                 composable("settings") { SettingsScreen(navController) }
                 composable("color_palette") { ColorPaletteScreen(navController) }
+                composable("colorscheme") { ColorSchemeSettings(navController) }
                 composable("bypasschg") { BypassChargeScreen(navController) }
                 composable("bypasschg_check") { BypassChargeCheckScreen(navController) }
+                composable("preferenced") { PreferenceTweakScreen(navController) }
                 composable(
                     route = "app_settings/{pkg}",
                     arguments = listOf(navArgument("pkg") { type = NavType.StringType })
