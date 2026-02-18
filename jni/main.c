@@ -107,7 +107,8 @@ int main(int argc, char* argv[]) {
         static int saved_refresh_rate = -1;
         static time_t screen_off_timer = 0;
         static bool bypass_applied = false; 
-        static char saved_renderer[PROP_VALUE_MAX] = {0};        
+        static char saved_renderer[PROP_VALUE_MAX] = {0};
+        static char last_freqoffset[PROP_VALUE_MAX] = "Initial"; 
         
         log_zenith(LOG_INFO, "Daemon started as PID %d", getpid());
         setspid();
@@ -155,23 +156,26 @@ int main(int argc, char* argv[]) {
             
             // Save screen status
             int real_screen_state = get_screenstate(); 
-
+            
             char freqoffset[PROP_VALUE_MAX] = {0};
-            __system_property_get("persist.sys.azenithconf.freqoffset", freqoffset);
-            if (strstr(freqoffset, "Disabled") == NULL) {
+            __system_property_get("persist.sys.azenithconf.freqoffset", freqoffset);            
+            if (strcmp(freqoffset, "Disabled") == 0) {
+                if (strcmp(last_freqoffset, "Disabled") != 0) {
+                    systemv("sys.azenith-profilesettings applyfreqbalance");
+                }
+            } 
+            else {
                 if (real_screen_state) { 
                     if (cur_mode == PERFORMANCE_PROFILE) {
                         // No exec
-                    } else if (cur_mode == BALANCED_PROFILE) {
-                        systemv("sys.azenith-profilesettings applyfreqbalance");
-                    } else if (cur_mode == ECO_MODE) {
+                    } else if (cur_mode == BALANCED_PROFILE || cur_mode == ECO_MODE) {
                         systemv("sys.azenith-profilesettings applyfreqbalance");
                     }
-                } else {
-                    // Screen Off
                 }
             }
             
+            strcpy(last_freqoffset, freqoffset);
+
             char bypass_path_prop[PROP_VALUE_MAX] = {0};
             __system_property_get("persist.sys.azenithconf.bypasspath", bypass_path_prop);
             

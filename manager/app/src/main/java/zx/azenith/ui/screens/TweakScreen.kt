@@ -179,13 +179,13 @@ fun TweakScreen(navController: NavController) {
         }
     }
     
-    // Inisialisasi langsung agar tidak ada selisih nilai saat komposisi pertama (mencegah animasi slide)
     val initialOffset = remember {
-        val saved = PropertyUtils.get("persist.sys.azenithconf.freqoffset", "0")
+        val saved = PropertyUtils.get("persist.sys.azenithconf.freqoffset", "Disabled")
         when (saved) {
             "90" -> 1f; "80" -> 2f; "70" -> 3f; "60" -> 4f; "50" -> 5f; "40" -> 6f; else -> 0f
         }
     }
+    
     var freqOffsetIndex by remember { mutableStateOf(initialOffset) }
     val offsetLabels = listOf("Disabled", "90%", "80%", "70%", "60%", "50%", "40%")
     
@@ -362,24 +362,23 @@ fun TweakScreen(navController: NavController) {
                                                 )
                                             }
                                             
-                                            // Badge nilai aktif
                                             Surface(
-                                                color = if (freqOffsetIndex == 0f) colorScheme.surfaceVariant else colorScheme.primaryContainer,
+                                                color = if (freqOffsetIndex.roundToInt() == 0) colorScheme.surfaceVariant else colorScheme.primaryContainer,
                                                 shape = RoundedCornerShape(12.dp)
                                             ) {
                                                 Text(
-                                                    text = offsetLabels[freqOffsetIndex.toInt()],
+                                                    text = offsetLabels[freqOffsetIndex.roundToInt()],
                                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                                     style = MaterialTheme.typography.labelMedium,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = if (freqOffsetIndex == 0f) colorScheme.onSurfaceVariant else colorScheme.onPrimaryContainer
+                                                    color = if (freqOffsetIndex.roundToInt() == 0) colorScheme.onSurfaceVariant else colorScheme.onPrimaryContainer
                                                 )
                                             }
                                         }
-                            
+                                    
                                         Spacer(modifier = Modifier.height(24.dp))
-                            
-                                        // Custom Progress Bar (Mirip BypassCharge)
+                                    
+                                        // Progress Bar
                                         Box(
                                             modifier = Modifier.fillMaxWidth(),
                                             contentAlignment = Alignment.BottomCenter
@@ -405,23 +404,23 @@ fun TweakScreen(navController: NavController) {
                                                     )
                                             )
                                         }
-                            
+                                    
                                         Spacer(modifier = Modifier.height(4.dp))
-                            
+                                    
                                         Slider(
                                             value = freqOffsetIndex,
                                             onValueChange = { newValue -> 
                                                 freqOffsetIndex = newValue
                                             },
                                             onValueChangeFinished = {
-                                                val index = freqOffsetIndex.toInt()
-                                                // Logika mapping: Index 0 -> "0", Index 1 -> "90", dst.
-                                                val propValue = if (index == 0) "0" else offsetLabels[index].replace("%", "")
+                                                val index = freqOffsetIndex.roundToInt()
+                                                // Perbaikan: Jika index 0, set ke "Disabled"
+                                                val propValue = if (index == 0) "Disabled" else offsetLabels[index].replace("%", "")
                                                 
                                                 PropertyUtils.set("persist.sys.azenithconf.freqoffset", propValue)
                                             },
                                             valueRange = 0f..6f,
-                                            steps = 5, // 0, 1, 2, 3, 4, 5, 6 (Total 7 posisi)
+                                            steps = 5, 
                                             colors = SliderDefaults.colors(
                                                 thumbColor = colorScheme.primary,
                                                 activeTrackColor = Color.Transparent,
@@ -429,7 +428,7 @@ fun TweakScreen(navController: NavController) {
                                             ),
                                             modifier = Modifier.fillMaxWidth().height(32.dp)
                                         )
-                            
+                                    
                                         Row(
                                             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                                             horizontalArrangement = Arrangement.SpaceBetween
