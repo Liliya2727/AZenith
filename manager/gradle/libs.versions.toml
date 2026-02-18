@@ -8,8 +8,8 @@ kotlinxSerialization = "1.10.0"
 library = "1.2.1"
 
 # UI & Library
-material3 = "1.5.0-alpha13"
-activity-compose = "1.12.3"
+material3 = "1.5.0-alpha14"
+activity-compose = "1.13.0-alpha01"
 lifecycle = "2.10.0"
 navigation = "2.9.7"
 
@@ -23,7 +23,7 @@ appiconloader-coil = "1.5.0"
 ucrop = "2.2.11-native"
 appcompat = "1.7.1"
 androidx-transition = "1.7.0"
-lifecycleViewModel = "2.7.0"
+lifecycleViewModel = "2.10.0"
 
 # Tools
 libsu = "6.0.0"
