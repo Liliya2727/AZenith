@@ -1,5 +1,9 @@
-## AZenith 4.3
-### Changelog
+## AZenith 4.5
+### Changelog - CI 1213-57ff2ab
+- Fix initiate logic on Limit Freq slider 
+- Added flag to restore normal frequencies when limit freq is Disabled
+
+### Changelog - CI 1210-b24daOd
 - Migrate manager from WebUI to Manager APP
 - Improved Bypass Charging logic, and added Compatibility Checks, Go to `Tweak Settings > Bypass Charging > Compatibility Check.`
 - Added Per-Apps Tweak Settings
