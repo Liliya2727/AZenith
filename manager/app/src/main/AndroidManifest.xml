@@ -16,6 +16,17 @@
         android:label="@string/app_name"
         android:theme="@style/Theme.AZenith"> 
         
+        <service
+            android:name=".BypassChgTileService"
+            android:icon="@drawable/bypasschgicon"
+            android:label="Bypass Charge"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+                
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:screenOrientation="portrait"
@@ -27,6 +38,10 @@
             android:enabled="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
             </intent-filter>
         </activity>
     
@@ -48,7 +63,6 @@
                 <action android:name="zx.azenith.ACTION_MANAGE" />
             </intent-filter>
         </receiver>
-
 
     </application>
 </manifest>
