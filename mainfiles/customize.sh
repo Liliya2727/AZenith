@@ -234,6 +234,7 @@ persist.sys.azenithconf.dnd
 persist.sys.azenithconf.justintime
 persist.sys.azenithconf.disabletrace
 persist.sys.azenithconf.thermalcore
+persist.sys.azenithconf.walttunes
 "
 for prop in $props; do
 	curval=$(resetprop "$prop")
