@@ -19,7 +19,7 @@
 # Remove Persistent Properties
 props=$(resetprop | grep "persist.sys.azenith" | awk -F'[][]' '{print $2}' | sed 's/:.*//')
 for prop in $props; do
-	resetprop --delete "$prop"
+	resetprop -p --delete "$prop"
 done
 
 # Remove AI Thermal Properties
@@ -27,7 +27,7 @@ propsrn="\
 persist.sys.rianixia.learning_enabled \
 persist.sys.rianixia.thermalcore-bigdata.path "
 for prop in $propsrn; do
-	resetprop --delete "$prop"
+	resetprop -p --delete "$prop"
 done
 
 # Remove module directories
