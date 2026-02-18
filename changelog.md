@@ -1,4 +1,18 @@
 ## AZenith 4.3
+### Changelog
+- Migrate manager from WebUI to Manager APP
+- Improved Bypass Charging logic, and added Compatibility Checks, Go to `Tweak Settings > Bypass Charging > Compatibility Check.`
+- Added Per-Apps Tweak Settings
+- Fix a bug where `JIT Compiler` causing screen freeze at Startup
+- Refactoring Disable Thermal Script
+- Added more nodes for Bypass Charge
+- Improved Daemon flow and fixes some Bugs
+  • Added 10s wait after screen off in `Performance Profile` 
+  • Adjusted Polling Interval to 1s
+  • Revert Daemon state use properties, and use .lock file instead
+
+
+## AZenith 4.3
 ### Changelog - CI 1070-b60aaa9
 - Fix data in Device Recognition Files
 
