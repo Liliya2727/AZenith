@@ -127,7 +127,7 @@ fun BypassChargeScreen(navController: NavController) {
                     top = 24.dp + innerPadding.calculateTopPadding(),
                     start = 16.dp,
                     end = 16.dp,
-                    bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                    bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                 ),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
