@@ -216,6 +216,71 @@ fun ExpressiveListItem(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ExpressiveListItemHighlight(
+    onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
+    headlineContent: @Composable () -> Unit,
+    // 1. Tambahkan parameter containerColor dengan default value (misal Transparan atau Surface)
+    containerColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Transparent, 
+    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier,
+    supportingContent: @Composable (() -> Unit)? = null,
+    leadingContent: @Composable (() -> Unit)? = null,
+    trailingContent: @Composable (() -> Unit)? = null,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            // 2. Pasang background SEBELUM clickable dan padding agar warnanya mengisi seluruh baris
+            .background(containerColor) 
+            .let {
+                if (onClick != null || onLongClick != null) {
+                    it.combinedClickable(onClick = onClick ?: {}, onLongClick = onLongClick)
+                } else {
+                    it
+                }
+            }
+            .then(modifier)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (leadingContent != null) {
+            Box(
+                modifier = Modifier.padding(end = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                leadingContent()
+            }
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(vertical = 8.dp)
+        ) {
+            headlineContent()
+            if (supportingContent != null) {
+                CompositionLocalProvider(
+                    LocalContentColor provides MaterialTheme.colorScheme.outline
+                ) {
+                    ProvideTextStyle(value = MaterialTheme.typography.bodySmall) {
+                        supportingContent()
+                    }
+                }
+            }
+        }
+        if (trailingContent != null) {
+            Box(
+                modifier = Modifier.padding(start = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                ProvideTextStyle(value = MaterialTheme.typography.bodySmall) {
+                    trailingContent()
+                }
+            }
+        }
+    }
+}
 
 
 @Composable
@@ -255,7 +320,7 @@ fun ExpressiveSwitchItem(
 
 @Composable
 fun ExpressiveDropdownItem(
-    icon: ImageVector,
+    icon: ImageVector? = null,
     title: String,
     summary: String? = null,
     items: List<String>,
@@ -278,12 +343,7 @@ fun ExpressiveDropdownItem(
         } else {
             Modifier
         },
-        leadingContent = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null
-            )
-        },
+        leadingContent = icon?.let { { Icon(it, title) } },
         headlineContent = { Text(text = title) },
         supportingContent = summary?.let { { Text(it) } },
         trailingContent = {

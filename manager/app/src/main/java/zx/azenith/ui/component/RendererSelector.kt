@@ -48,14 +48,13 @@ private data class RendererOption(
 
 @Composable
 private fun getRendererOptions(): List<RendererOption> {
-    
-    val options = mutableListOf(
+    return listOf(
+        RendererOption(R.string.Renderer_Default, "Default", Icons.Rounded.SettingsBackupRestore),
         RendererOption(R.string.Renderer_Vulkan, "vulkan", Icons.Rounded.Layers),
         RendererOption(R.string.Renderer_SkiaGL, "skiagl", Icons.Rounded.Layers),
     )
-
-    return options
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
