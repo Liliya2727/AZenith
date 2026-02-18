@@ -17,7 +17,6 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        // [FIX] Ganti petik satu ke petik dua di URL Jitpack
         maven { url = uri("https://jitpack.io") }
     }
 }
