@@ -41,11 +41,9 @@ BYPASSCHG_STATE="$(getprop persist.sys.azenithconf.bypasschg)"
 DISTRACE_STATE="$(getprop persist.sys.azenithconf.disabletrace)"
 CLEARAPPS="$(getprop persist.sys.azenithconf.clearbg)"
 LITEMODE="$(getprop persist.sys.azenithconf.litemode)"
-VSYNCVALUE="$(getprop persist.sys.azenithconf.vsync)"
 BYPASSPROPS="persist.sys.azenithconf.bypasspath"
 BYPASSPATH="$(getprop persist.sys.azenithconf.bypasspath)"
 WALT_STATE="$(getprop persist.sys.azenithconf.walttunes)"
-MALI_COMP="$(getprop sys.azenith.maligovsupport)"
 
 # Logging Functions
 AZLog() {
@@ -1072,27 +1070,6 @@ performance_profile() {
 	else
 		setsIO "$default_iosched" && dlog "Applying I/O scheduler to : $default_iosched"
 	fi
-	
-	if [ "$MALI_COMP" -eq 1 ]; then
-    	# Load Default GPU Mali Gov
-    	load_default_gpumaligov() {
-    		if [ -n "$(getprop persist.sys.azenith.custom_default_gpumali_gov)" ]; then
-    			getprop persist.sys.azenith.custom_default_gpumali_gov
-    		elif [ -n "$(getprop persist.sys.azenith.default_gpumali_gov)" ]; then
-    			getprop persist.sys.azenith.default_gpumali_gov
-    		else
-    			echo "dummy"
-    		fi
-    	}
-    	# Apply Game GPU Mali Gov
-    	default_maligov=$(load_default_gpumaligov)
-    	if [ -n "$(getprop persist.sys.azenith.custom_performance_gpumali_gov)" ]; then
-    		game_maligov=$(getprop persist.sys.azenith.custom_performance_gpumali_gov)
-    		setsGPUMali "$game_maligov" && dlog "Applying GPU Mali Governor to : $game_maligov"
-    	else
-    		setsGPUMali "$default_maligov" && dlog "Applying GPU Mali Governor to : $default_maligov"
-    	fi
-    fi	
     
 	# Fix Target OPP Index
 	if [ -d /proc/ppm ]; then
@@ -1227,23 +1204,6 @@ balanced_profile() {
 	default_iosched=$(load_default_iosched)
 	setsIO "$default_iosched"
 	dlog "Applying I/O scheduler to : $default_iosched"
-	
-	if [ "$MALI_COMP" -eq 1 ]; then
-    	# Load Default GPU Mali Gov
-    	load_default_gpumaligov() {
-    		if [ -n "$(getprop persist.sys.azenith.custom_default_gpumali_gov)" ]; then
-    			getprop persist.sys.azenith.custom_default_gpumali_gov
-    		elif [ -n "$(getprop persist.sys.azenith.default_gpumali_gov)" ]; then
-    			getprop persist.sys.azenith.default_gpumali_gov
-    		else
-    			echo "dummy"
-    		fi
-    	}
-    	# Apply GPU Mali Gov
-    	default_maligov=$(load_default_gpumaligov)
-        setsGPUMali "$default_maligov" && dlog "Applying GPU Mali Governor to : $default_maligov"
-    fi
-			
 
 	# Limit cpu freq
 	if [ -d /proc/ppm ]; then
@@ -1358,19 +1318,6 @@ eco_mode() {
 	powersave_iosched=$(load_powersave_iosched)
 	setsIO "$powersave_iosched"
 	dlog "Applying I/O scheduler to : $powersave_iosched"
-	if [ "$MALI_COMP" -eq 1 ]; then
-    	# Load Default GPU Mali Gov
-    	load_powersave_gpumaligov() {
-    		if [ -n "$(getprop persist.sys.azenith.custom_powersave_gpumali_gov)" ]; then
-    			getprop persist.sys.azenith.custom_powersave_gpumali_gov
-    		else
-    			echo "dummy"
-    		fi
-    	}
-    	# Apply GPU Mali Gov
-    	powersave_maligov=$(load_powersave_gpumaligov)
-        setsGPUMali "$powersave_maligov" && dlog "Applying GPU Mali Governor to : $powersave_maligov"
-    fi
 	
 	# Limit cpu freq
 	if [ -d /proc/ppm ]; then
@@ -1473,37 +1420,6 @@ initialize() {
 	# Disable compaction_proactiveness
 	zeshia 0 /proc/sys/vm/compaction_proactiveness
 	zeshia 255 /proc/sys/kernel/sched_lib_mask_force
-	
-	MALI=/sys/devices/platform/soc/*.mali
-    MALI_GOV=$MALI/devfreq/*.mali/governor
-    
-    if ls $MALI_GOV >/dev/null 2>&1; then
-        setprop sys.azenith.maligovsupport "1"
-    
-        chmod 644 $MALI_GOV
-        defaultgpumali_gov=$(cat $MALI_GOV)
-        setprop persist.sys.azenith.default_gpumali_gov "$defaultgpumali_gov"
-    
-        dlog "Default GPU Mali governor detected: $defaultgpumali_gov"
-    
-        custom_gov=$(getprop persist.sys.azenith.custom_default_gpumali_gov)
-        [ -n "$custom_gov" ] && defaultgpumali_gov="$custom_gov"
-    
-        dlog "Using GPU Mali governor: $defaultgpumali_gov"
-    
-        chmod 644 $MALI_GOV
-        echo "$defaultgpumali_gov" | tee $MALI_GOV >/dev/null
-        chmod 444 $MALI_GOV
-    
-        [ -z "$(getprop persist.sys.azenith.custom_powersave_gpumali_gov)" ] \
-            && setprop persist.sys.azenith.custom_powersave_gpumali_gov "$defaultgpumali_gov"
-        [ -z "$(getprop persist.sys.azenith.custom_performance_gpumali_gov)" ] \
-            && setprop persist.sys.azenith.custom_performance_gpumali_gov "$defaultgpumali_gov"
-    
-        dlog "Parsing GPU Mali Governor complete"
-    else
-        setprop sys.azenith.maligovsupport "0"
-    fi
 
 	CPU="/sys/devices/system/cpu/cpu0/cpufreq"
 	chmod 644 "$CPU/scaling_governor"
@@ -1573,19 +1489,6 @@ initialize() {
     [ -z "$(getprop persist.sys.azenith.custom_performance_IO)" ] && setprop persist.sys.azenith.custom_performance_IO "$default_io"    
     dlog "Parsing IO Scheduler complete"
 
-	RESO_PROP="persist.sys.azenithconf.resosettings"
-	RESO=$(wm size | grep -oE "[0-9]+x[0-9]+" | head -n 1)
-
-	if [ -z "$(getprop $RESO_PROP)" ]; then
-		if [ -n "$RESO" ]; then
-			setprop "$RESO_PROP" "$RESO"
-			dlog "Detected resolution: $RESO"
-			dlog "Property $RESO_PROP set successfully"
-		else
-			dlog "Failed to detect physical resolution"
-		fi
-	fi
-
 	if [ "$(getprop persist.sys.azenithconf.schemeconfig)" != "1000 1000 1000 1000" ]; then
 		# Restore saved display boost
 		val=$(getprop persist.sys.azenithconf.schemeconfig)
@@ -1600,6 +1503,16 @@ initialize() {
 		service call SurfaceFlinger 1015 i32 1 f $rf f 0 f 0 f 0 f 0 f $gf f 0 f 0 f 0 f 0 f $bf f 0 f 0 f 0 f 0 f 1
 		service call SurfaceFlinger 1022 f $sf
 	fi
+	
+	if [ -n "$(getprop persist.sys.azenithconf.renderer)" ]; then
+        render="$(getprop persist.sys.azenithconf.renderer)"
+        if [ "$render" != "Default" ]; then
+            sys.azenith-utilityconf setrender "$render"
+        else
+            # Skip
+            :
+        fi
+    fi
 
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
     # APPLY PREFERENCED SETTINGS IN INITIALIZING
@@ -2152,8 +2065,6 @@ initialize() {
     fi
     
     # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #  
-    # APPLY DISABLE VSYNC IF AVAILABLE
-	sys.azenith-utilityconf disablevsync $VSYNCVALUE
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 	
 	# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 

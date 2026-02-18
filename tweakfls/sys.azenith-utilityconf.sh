@@ -78,15 +78,6 @@ setsgov() {
 	chmod 444 /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
 	dlog "Set current CPU Governor to $1"
 }
-   
-setsGPUMali() {
-    MALI=/sys/devices/platform/soc/*.mali
-    MALI_GOV=$MALI/devfreq/*.mali/governor
-	chmod 644 $MALI_GOV
-	echo "$1" | tee $MALI_GOV
-	chmod 444 $MALI_GOV
-	dlog "Set current GPU Mali Governor to $1"
-}
 
 setsIO() {
 	for block in sda sdb sdc mmcblk0 mmcblk1; do
@@ -154,13 +145,14 @@ setrender() {
     case "$1" in
         vulkan)
             setprop debug.hwui.renderer skiavk
+            resetprop -p persist.sys.azenithconf.renderer skiavk
             ;;
         skiagl)
             setprop debug.hwui.renderer skiagl
+            resetprop -p persist.sys.azenithconf.renderer skiagl
             ;;
         *)
-            # system default → jangan sentuh renderer
-            return
+            resetprop -p persist.sys.azenithconf.renderer Default
             ;;
     esac
     dlog "Set current renderer to: $1"
@@ -173,19 +165,16 @@ saveLog() {
     android_sdk=$(getprop ro.build.version.sdk)
     kernel_info=$(uname -r -m)
     fingerprint=$(getprop ro.build.fingerprint)
-    device=$(getprop sys.azenith.device)
-    chipset=$(getprop sys.azenith.soc)
 
     {
         echo "##########################################"
+        echo
         echo "             AZenith Process Log"
         echo
         echo "    Module: $module_ver"
         echo "    Android: $android_sdk"
         echo "    Kernel: $kernel_info"
         echo "    Fingerprint: $fingerprint"
-        echo "    Device: $device"
-        echo "    Chipset: $chipset"
         echo "##########################################"
         echo
         cat /data/adb/.config/AZenith/debug/AZenith.log 2>/dev/null
