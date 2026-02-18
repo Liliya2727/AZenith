@@ -148,7 +148,7 @@ fun ColorPaletteScreen(navController: NavController) {
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
-                bottom = 20.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -318,7 +318,6 @@ fun ColorPaletteScreen(navController: NavController) {
                     }
                 }
             }
-            item { Spacer(modifier = Modifier.height(24.dp)) }
         }
     }
 }

@@ -124,7 +124,7 @@ fun AppSettingsScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
-                bottom = 20.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
             ),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -244,7 +244,6 @@ fun AppSettingsScreen(
                     }
                 }
             }
-            item { Spacer(modifier = Modifier.height(70.dp)) }
         }
     }
 }
