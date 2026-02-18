@@ -59,6 +59,7 @@
     <string name="Renderer_Select">Select Renderer</string>
     
     <string name="Renderer_Vulkan">Vulkan</string>
+    <string name="Renderer_Default">Default</string>
     <string name="Renderer_SkiaGL">SkiaGL</string>
     
     <string name="CompatibilityCheck">Compatibility Check</string>
