@@ -169,7 +169,7 @@ fun ColorSchemeSettings(navController: NavController) {
                             content = listOf(
                                 {
                                     ExpressiveListItemHighlight(
-                                        headlineContent = { Text("Color Scheme") },
+                                        headlineContent = { Text(stringResource(R.string.color_scheme)) },
                                         leadingContent = { Icon(Icons.Rounded.Palette, null) },
                                         trailingContent = {
                                             // TOMBOL RESET ke 1000
@@ -181,9 +181,9 @@ fun ColorSchemeSettings(navController: NavController) {
                                                 applyRGB(1000f, 1000f, 1000f)
                                                 applySat(1000f)
                                                 saveToProp()
-                                                Toast.makeText(context, "Settings Reset", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, context.getString(R.string.toast_settings_reset), Toast.LENGTH_SHORT).show()
                                             }) {
-                                                Icon(Icons.Rounded.Refresh, contentDescription = "Reset")
+                                                Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.reset))
                                             }
                                         },
                                         containerColor = colorScheme.secondaryContainer,
@@ -193,8 +193,8 @@ fun ColorSchemeSettings(navController: NavController) {
                                 // SLIDER RED
                                 { 
                                     ColorSliderItem(
-                                        label = "Red",
-                                        summary = "Adjust red channel intensity",
+                                        label = stringResource(R.string.color_red),
+                                        summary = stringResource(R.string.color_red_desc),
                                         value = redVal,
                                         accentColor = Color(0xFFEF5350),
                                         onValueChange = { 
@@ -207,8 +207,8 @@ fun ColorSchemeSettings(navController: NavController) {
                                 // SLIDER GREEN
                                 { 
                                     ColorSliderItem(
-                                        label = "Green",
-                                        summary = "Adjust green channel intensity",
+                                        label = stringResource(R.string.color_green),
+                                        summary = stringResource(R.string.color_green_desc),
                                         value = greenVal,
                                         accentColor = Color(0xFF66BB6A),
                                         onValueChange = { 
@@ -221,8 +221,8 @@ fun ColorSchemeSettings(navController: NavController) {
                                 // SLIDER BLUE
                                 { 
                                     ColorSliderItem(
-                                        label = "Blue",
-                                        summary = "Adjust blue channel intensity",
+                                        label = stringResource(R.string.color_blue),
+                                        summary = stringResource(R.string.color_blue_desc),
                                         value = blueVal,
                                         accentColor = Color(0xFF42A5F5),
                                         onValueChange = { 
@@ -235,8 +235,8 @@ fun ColorSchemeSettings(navController: NavController) {
                                 // SLIDER SATURATION
                                 { 
                                     ColorSliderItem(
-                                        label = "Saturation",
-                                        summary = "Adjust overall color saturation",
+                                        label = stringResource(R.string.color_saturation),
+                                        summary = stringResource(R.string.color_saturation_desc),
                                         value = satVal,
                                         accentColor = colorScheme.primary,
                                         onValueChange = { 
@@ -361,9 +361,9 @@ fun ColorSliderItem(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Min (0)", style = MaterialTheme.typography.labelSmall, color = colorScheme.outline)
-            Text("Default (1000)", style = MaterialTheme.typography.labelSmall, color = colorScheme.outline)
-            Text("Max (2000)", style = MaterialTheme.typography.labelSmall, color = colorScheme.outline)
+                                        Text(stringResource(R.string.min_val, 0), style = MaterialTheme.typography.labelSmall, color = colorScheme.outline)
+                                        Text(stringResource(R.string.default_val, 1000), style = MaterialTheme.typography.labelSmall, color = colorScheme.outline)
+                                        Text(stringResource(R.string.max_val, 2000), style = MaterialTheme.typography.labelSmall, color = colorScheme.outline)
         }
     }
 }
@@ -400,7 +400,7 @@ fun ColorSchemeTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> 
             },
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
             },        
             colors = TopAppBarDefaults.topAppBarColors(

@@ -53,7 +53,7 @@ private fun getRefreshRatePickerOptions(context: Context): List<RefreshRatePicke
     
     return supported.mapIndexed { index, rate ->
         RefreshRatePickerOption(
-            titleString = "$rate Hz",
+            titleString = context.getString(R.string.refresh_rate_format, rate),
             // index 0 akan jadi "0", index 1 jadi "1", dst.
             reason = index.toString(), 
             icon = Icons.Outlined.WebStories

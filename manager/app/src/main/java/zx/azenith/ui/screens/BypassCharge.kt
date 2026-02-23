@@ -153,9 +153,9 @@ fun BypassChargeScreen(navController: NavController) {
                         ExpressiveList(
                             content = listOf {
                                 ExpressiveSwitchItem(
-                                    title = "Enable Bypass Charge",
-                                    summary = if (isUnsupported) "Feature not supported on this device" 
-                                              else "Use Bypass charge in Performance Profile",
+                                    title = stringResource(R.string.enable_bypass_charge),
+                                    summary = if (isUnsupported) stringResource(R.string.bypass_not_supported)
+                                              else stringResource(R.string.enable_bypass_charge_desc),
                                     checked = bypassChgState!!,
                                     // Disable interaction if unsupported
                                     enabled = !isUnsupported,
@@ -206,7 +206,7 @@ fun BypassChargeScreen(navController: NavController) {
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "Charging Threshold",
+                                        text = stringResource(R.string.charging_threshold),
                                         style = MaterialTheme.typography.titleMedium,
                                         color = colorScheme.onSurface
                                     )
@@ -221,7 +221,7 @@ fun BypassChargeScreen(navController: NavController) {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 
                                 Text(
-                                    text = "Start charging if battery level is below charging threshold",
+                                    text = stringResource(R.string.charging_threshold_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = colorScheme.outline
                                 )
@@ -338,14 +338,14 @@ fun BypassChgTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Un
         TopAppBar(
             title = { 
                 Text(
-                    text = "Bypass Charge",
+                    text = stringResource(R.string.bcharging),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 ) 
             },
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
             },        
             colors = TopAppBarDefaults.topAppBarColors(

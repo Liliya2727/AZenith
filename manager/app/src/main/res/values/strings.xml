@@ -35,6 +35,8 @@
     <string name="settings">Settings</string>
 
     <string name="section_personalization">Personalization</string>
+    <string name="language">Language</string>
+    <string name="language_desc">Choose your preferred language</string>
     <string name="section_additionalsettings">Additional Settings</string>
     <string name="section_features">Features</string>
     <string name="section_others">Others</string>
@@ -110,6 +112,140 @@
     <string name="cd_back">Back</string>
     <string name="cd_search">Search</string>
     <string name="cd_menu">Menu</string>
-    
+    <string name="reset">Reset</string>
+
+    <!-- Navigation labels -->
+    <string name="nav_home">Home</string>
+    <string name="nav_applist">Applist</string>
+    <string name="nav_tweaks">Tweaks</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Tweak Screen strings -->
+    <string name="perf_lite_mode">Perf Lite Mode</string>
+    <string name="perf_lite_mode_desc">Reduce heating in performance profile by limiting CPU Frequencies</string>
+    <string name="default_cpu_gov">Default CPU Governor</string>
+    <string name="default_cpu_gov_desc">Governor used in Balanced Profiles</string>
+    <string name="toast_default_gov_set">Default Governor set to %1$s</string>
+    <string name="powersave_cpu_gov">Powersave CPU Governor</string>
+    <string name="powersave_cpu_gov_desc">Governor used in Powersave Profiles</string>
+    <string name="toast_powersave_gov_set">Powersave Governor set to %1$s</string>
+    <string name="freq_offset">Frequency Offset</string>
+    <string name="freq_offset_desc">Limit max freq by percentage</string>
+    <string name="disabled">Disabled</string>
+    <string name="io_settings">I/O Settings</string>
+    <string name="balanced_io_scheduler">Balanced I/O Scheduler</string>
+    <string name="balanced_io_scheduler_desc">Scheduler used in Balanced Profiles</string>
+    <string name="toast_balanced_io_set">Balanced I/O set to %1$s</string>
+    <string name="performance_io_scheduler">Performance I/O Scheduler</string>
+    <string name="performance_io_scheduler_desc">Scheduler used in Performance Profiles</string>
+    <string name="toast_performance_io_set">Performance I/O set to %1$s</string>
+    <string name="powersave_io_scheduler">Powersave I/O Scheduler</string>
+    <string name="powersave_io_scheduler_desc">Scheduler used in Powersave Profiles</string>
+    <string name="toast_powersave_io_set">Powersave I/O set to %1$s</string>
+    <string name="game_preload">Game Preload</string>
+    <string name="game_preload_desc">Preload libraries at game start</string>
+    <string name="memory_killer">Memory Killer</string>
+    <string name="memory_killer_desc">Clear ram usage at gamestart</string>
+    <string name="app_priority_control">App Priority Control</string>
+    <string name="app_priority_control_desc">Increase running game I/O scheduling priority in Performance profiles</string>
+    <string name="dnd_mode_gaming">DND Mode on Gaming</string>
+    <string name="dnd_mode_gaming_desc">Enable DND in Performance Profile</string>
+    <string name="trim_filesystem">Trim Filesystem Partition</string>
+    <string name="trim_filesystem_desc">Trim unused blocks in system partitions to Increase I/O Performance</string>
+    <string name="thermalcore_service">ThermalCore Service</string>
+    <string name="thermalcore_service_desc">Automatically manage system thermal based on device behavior, prevent phone getting too hot in daily use while maintaining device stability</string>
+    <string name="toast_applied_renderer">Applied: %1$s</string>
+    <string name="toast_applied_refresh_rate">Applied Selected Refresh Rate</string>
+
+    <!-- Home Screen strings -->
+    <string name="toast_applying_profile">Applying Selected Profile</string>
+    <string name="profile_perflite">PerfLite</string>
+    <string name="status_unknown">Unknown</string>
+
+    <!-- Settings Screen strings -->
+    <string name="uninstall_confirm_content">Module will be uninstalled. This action will remove AZenith files and requires a reboot to take effect. Do you want to proceed?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+
+    <!-- Bypass Charge strings -->
+    <string name="enable_bypass_charge">Enable Bypass Charge</string>
+    <string name="bypass_not_supported">Feature not supported on this device</string>
+    <string name="enable_bypass_charge_desc">Use Bypass charge in Performance Profile</string>
+    <string name="charging_threshold">Charging Threshold</string>
+    <string name="charging_threshold_desc">Start charging if battery level is below charging threshold</string>
+
+    <!-- Bypass Charge Check strings -->
+    <string name="done">Done</string>
+    <string name="diagnostic_in_progress">Diagnostic in progress</string>
+    <string name="diagnostic_complete">Diagnostic complete</string>
+    <string name="please_wait">Please wait...</string>
+    <string name="all_checks_finished">All checks finished</string>
+
+    <!-- Color Scheme strings -->
+    <string name="toast_settings_reset">Settings Reset</string>
+    <string name="color_scheme">Color Scheme</string>
+    <string name="color_red">Red</string>
+    <string name="color_red_desc">Adjust red channel intensity</string>
+    <string name="color_green">Green</string>
+    <string name="color_green_desc">Adjust green channel intensity</string>
+    <string name="color_blue">Blue</string>
+    <string name="color_blue_desc">Adjust blue channel intensity</string>
+    <string name="color_saturation">Saturation</string>
+    <string name="color_saturation_desc">Adjust overall color saturation</string>
+    <string name="min_val">Min (%1$d)</string>
+    <string name="default_val">Default (%1$d)</string>
+    <string name="max_val">Max (%1$d)</string>
+
+    <!-- Preference Tweak strings -->
+    <string name="sched_tunes">Sched Tunes</string>
+    <string name="sched_tunes_desc">Optimize CPU frequency scaling for all CPU clusters (Schedutil/Schedhorizon)</string>
+    <string name="walt_tunes">Walt Governor Tunes</string>
+    <string name="walt_tunes_desc">Optimize WALT governor parameters for faster CPU scheduling</string>
+    <string name="sfl_latency">SurfaceFlinger Latency</string>
+    <string name="sfl_latency_desc">Tweak SurfaceFlinger to reduce screen latency and improve responsiveness.</string>
+    <string name="jit_compilation">JIT Compilation (Just in Time)</string>
+    <string name="jit_compilation_desc">Improve application performance by enabling JIT compilation</string>
+    <string name="disable_trace">Disable Trace</string>
+    <string name="disable_trace_desc">Disable kernel tracing and android framework tracing</string>
+    <string name="disable_logging">Disable System Logging</string>
+    <string name="disable_logging_desc">Disable system logging services to reduce background activity</string>
+    <string name="fpsgo_ged">FPSGO and GED Parameters</string>
+    <string name="fpsgo_ged_desc">Apply optimized value of FPSGO and GED Parameter</string>
+    <string name="gpu_mali">GPU Mali Scheduling</string>
+    <string name="gpu_mali_desc">Force the GPU to serialize job processing to improve predictability</string>
+    <string name="disable_thermals">Disable Thermals</string>
+    <string name="disable_thermals_desc">Kill thermal service</string>
+
+    <!-- App Settings strings -->
+    <string name="master_switch">Master Switch</string>
+    <string name="master_switch_desc">Enable app to trigger Performance profiles</string>
+    <string name="preferred_settings">Preferred Settings</string>
+    <string name="perf_lite_mode_desc_short">Reduce heating by reducing CPU frequency</string>
+    <string name="app_priority">App Priority</string>
+    <string name="app_priority_desc">Increase I/O scheduling priority</string>
+    <string name="dnd_mode">DND Mode</string>
+    <string name="dnd_mode_desc">Block notifications while gaming</string>
+    <string name="refreshrates_desc">Set preferred Display refresh rates</string>
+    <string name="renderengine_desc">Set preferred rendering engine</string>
+    <string name="app_settings_title">App Settings</string>
+    <string name="unknown_package">Unknown Package</string>
+    <string name="unknown_app">Unknown App</string>
+    <string name="default_label">Default</string>
+    <string name="on_label">On</string>
+    <string name="off_label">Off</string>
+    <string name="status_active">Active</string>
+    <string name="status_inactive">Inactive</string>
+    <string name="status_not_supported">Not Supported</string>
+    <string name="accent_color">Accent Color</string>
+    <string name="appearance">Appearance</string>
+    <string name="banner">Banner</string>
+    <string name="custom">Custom</string>
+    <string name="selinux_enforcing">Enforcing</string>
+    <string name="selinux_permissive">Permissive</string>
+    <string name="selinux_disabled">Disabled</string>
+    <string name="refresh_rate_format">%1$s Hz</string>
+    <string name="lang_en">English</string>
+    <string name="lang_in">Indonesian</string>
+    <string name="lang_zh">Chinese</string>
     
 </resources>

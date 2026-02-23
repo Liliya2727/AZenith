@@ -45,8 +45,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
+import zx.azenith.R
 import zx.azenith.ui.screens.*
 import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.util.RootUtils
@@ -64,7 +66,6 @@ class MainActivity : ComponentActivity() {
     }
 }
     
-    
 val ExpressiveShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
     small = RoundedCornerShape(12.dp),
@@ -75,9 +76,8 @@ val ExpressiveShapes = Shapes(
 
 data class NavItem(
     val route: String,
-    val label: String,
+    val labelRes: Int,
     val icon: ImageVector,
-    // Tambahkan default value agar tidak error saat dipanggil tanpa gradient
     val gradientColors: List<Color> = listOf(Color.Transparent, Color.Transparent)
 )
 
@@ -105,25 +105,22 @@ fun MainScreen(isFromTile: Boolean = false) {
 
     val navItems = remember {
         listOf(
-            NavItem("home", "Home", Icons.Rounded.Home),
-            NavItem("applist", "Applist", Icons.Rounded.Widgets),
-            NavItem("tweaks", "Tweaks", Icons.Rounded.SettingsInputComponent),
-            NavItem("settings", "Settings", Icons.Rounded.Settings)
+            NavItem("home", R.string.nav_home, Icons.Rounded.Home),
+            NavItem("applist", R.string.nav_applist, Icons.Rounded.Widgets),
+            NavItem("tweaks", R.string.nav_tweaks, Icons.Rounded.SettingsInputComponent),
+            NavItem("settings", R.string.nav_settings, Icons.Rounded.Settings)
         )
     }
     
     val bottomBarRoutes = remember { setOf("home", "applist", "tweaks", "settings") }
 
-    // PAKAI BOX SAJA agar benar-benar melayang & transparan
     Box(modifier = Modifier.fillMaxSize()) {
         
         Row(modifier = Modifier.fillMaxSize()) {
-            // Sidebar muncul jika Landscape
             if (rootStatus && moduleInstalled && isLandscape && currentRoute in bottomBarRoutes) {
                 SideBar(navController, navItems, currentRoute)
             }
 
-            // NavHost sekarang memenuhi layar (Fullscreen)
             NavHost(
                 navController = navController,
                 startDestination = "home",
@@ -272,7 +269,6 @@ private fun NavPill(
         modifier = modifier
             .scale(scale)
             .height(48.dp)
-            // WAJIB: Agar transisi lebar Pill menjadi halus
             .animateContentSize(
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioLowBouncy,
@@ -295,7 +291,7 @@ private fun NavPill(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(horizontal = 8.dp) // Tambahkan padding dalam
+            modifier = Modifier.padding(horizontal = 8.dp)
         ) {
             Icon(
                 imageVector = item.icon,
@@ -307,7 +303,7 @@ private fun NavPill(
             if (isSelected && labelAlpha > 0.01f) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = item.label,
+                    text = stringResource(item.labelRes),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onPrimary,
@@ -344,8 +340,8 @@ private fun SideBar(
                             }
                         }
                     },
-                    icon = { Icon(item.icon, contentDescription = item.label) },
-                    label = { Text(item.label) },
+                    icon = { Icon(item.icon, contentDescription = stringResource(item.labelRes)) },
+                    label = { Text(stringResource(item.labelRes)) },
                     alwaysShowLabel = false
                 )
             }

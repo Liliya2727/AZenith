@@ -35,8 +35,6 @@ class ZenithReceiver : BroadcastReceiver() {
         private const val CH_PROFILE = "az_profile"
         private const val CH_SYSTEM = "az_system"
         private const val PROFILE_ID = 1001
-
-        // Actions
         const val ACTION_MANAGE = "zx.azenith.ACTION_MANAGE"
         private const val ACTION_RESHOW = "zx.azenith.ACTION_RESHOW"
     }
@@ -47,26 +45,20 @@ class ZenithReceiver : BroadcastReceiver() {
 
         when (action) {
             ACTION_MANAGE -> {
-                // 1. Clear All
                 val clearAll = intent.getBooleanExtra("clearall", false) || 
                               intent.getStringExtra("clearall") == "true"
                 if (clearAll) {
                     manager.cancelAll()
                 }
-
-                // 2. Toast
                 intent.getStringExtra("toasttext")?.let {
                     Toast.makeText(context, it, Toast.LENGTH_LONG).show()
                 }
-
-                // 3. Notification
                 intent.getStringExtra("notifytext")?.let {
                     handleNotification(context, intent, manager)
                 }
             }
 
             ACTION_RESHOW -> {
-                // Logika Auto-Reshow (Tiru MyReceiver lama)
                 Handler(Looper.getMainLooper()).postDelayed({
                     val reshow = Intent(context, ZenithReceiver::class.java).apply {
                         this.action = ACTION_MANAGE
@@ -93,7 +85,6 @@ class ZenithReceiver : BroadcastReceiver() {
 
         val channelId = if (isProfile) CH_PROFILE else CH_SYSTEM
 
-        // Create Channel (Android O+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val name = if (isProfile) "AZenith Profiles" else "AZenith System"
             val channel = NotificationChannel(channelId, name, NotificationManager.IMPORTANCE_LOW)
@@ -112,10 +103,9 @@ class ZenithReceiver : BroadcastReceiver() {
             setContentTitle(title)
             setContentText(message)
             setUsesChronometer(chrono)
-            setOngoing(isProfile) // Profile notif biasanya persisten
+            setOngoing(isProfile)
             setAutoCancel(!isProfile)
 
-            // Jika Profile, pasang DeleteIntent untuk trigger ACTION_RESHOW
             if (isProfile) {
                 val reshowIntent = Intent(context, ZenithReceiver::class.java).apply {
                     this.action = ACTION_RESHOW

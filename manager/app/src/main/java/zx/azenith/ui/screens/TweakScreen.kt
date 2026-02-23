@@ -214,7 +214,7 @@ fun TweakScreen(navController: NavController) {
                 // 2. Langsung update UI setelah perintah dikirim
                 delay(1000)
                 updateUiData() 
-                Toast.makeText(context, "Applied: $rendererReason", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.toast_applied_renderer, rendererReason), Toast.LENGTH_SHORT).show()
             }
         }
     )
@@ -228,7 +228,7 @@ fun TweakScreen(navController: NavController) {
                 // 3. Langsung update UI setelah perintah dikirim
                 delay(1000)
                 updateUiData()
-                Toast.makeText(context, "Applied Selected Refresh Rate", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.toast_applied_refresh_rate), Toast.LENGTH_SHORT).show()
             }
         }
     )
@@ -280,8 +280,8 @@ fun TweakScreen(navController: NavController) {
                                 },
                                 {
                                     ExpressiveSwitchItem(
-                                        title = "Perf Lite Mode",
-                                        summary = "Reduce heating in performance profile by limiting CPU Frequencies",
+                                        title = stringResource(R.string.perf_lite_mode),
+                                        summary = stringResource(R.string.perf_lite_mode_desc),
                                         checked = liteState!!,
                                         onCheckedChange = { isChecked ->
                                             liteState = isChecked
@@ -292,8 +292,8 @@ fun TweakScreen(navController: NavController) {
                                 {
                                     // Default CPU Governor
                                     ExpressiveDropdownItem(
-                                        title = "Default CPU Governor",
-                                        summary = "Governor used in Balanced Profiles",
+                                        title = stringResource(R.string.default_cpu_gov),
+                                        summary = stringResource(R.string.default_cpu_gov_desc),
                                         items = availableGovernors,
                                         selectedIndex = defaultGovIndex,
                                         onItemSelected = { index ->
@@ -308,7 +308,7 @@ fun TweakScreen(navController: NavController) {
                                                 if (currentProfile == "2") {
                                                     Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsgov $selectedGov").submit()
                                                 }
-                                                Toast.makeText(context, "Default Governor set to $selectedGov", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, context.getString(R.string.toast_default_gov_set, selectedGov), Toast.LENGTH_SHORT).show()
                                             }
                                         }
                                     )
@@ -317,8 +317,8 @@ fun TweakScreen(navController: NavController) {
                                     // Powersave CPU Governor
                                     ExpressiveDropdownItem(
                                         
-                                        title = "Powersave CPU Governor",
-                                        summary = "Governor used in Powersave Profiles",
+                                        title = stringResource(R.string.powersave_cpu_gov),
+                                        summary = stringResource(R.string.powersave_cpu_gov_desc),
                                         items = availableGovernors,
                                         selectedIndex = powersaveGovIndex,
                                         onItemSelected = { index ->
@@ -333,7 +333,7 @@ fun TweakScreen(navController: NavController) {
                                                 if (currentProfile == "3") {
                                                     Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsgov $selectedGov").submit()
                                                 }
-                                                Toast.makeText(context, "Powersave Governor set to $selectedGov", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, context.getString(R.string.toast_powersave_gov_set, selectedGov), Toast.LENGTH_SHORT).show()
                                             }
                                         }
                                     )
@@ -351,12 +351,12 @@ fun TweakScreen(navController: NavController) {
                                         ) {
                                             Column {
                                                 Text(
-                                                    text = "Frequency Offset",
+                                                    text = stringResource(R.string.freq_offset),
                                                     style = MaterialTheme.typography.titleMedium,
                                                     color = colorScheme.onSurface
                                                 )
                                                 Text(
-                                                    text = "Limit max freq by percentage",
+                                                    text = stringResource(R.string.freq_offset_desc),
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = colorScheme.outline
                                                 )
@@ -367,7 +367,7 @@ fun TweakScreen(navController: NavController) {
                                                 shape = RoundedCornerShape(12.dp)
                                             ) {
                                                 Text(
-                                                    text = offsetLabels[freqOffsetIndex.roundToInt()],
+                                                    text = if (freqOffsetIndex.roundToInt() == 0) stringResource(R.string.disabled) else offsetLabels[freqOffsetIndex.roundToInt()],
                                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                                     style = MaterialTheme.typography.labelMedium,
                                                     fontWeight = FontWeight.Bold,
@@ -433,7 +433,7 @@ fun TweakScreen(navController: NavController) {
                                             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                                             horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
-                                            Text("Disabled", style = MaterialTheme.typography.labelSmall, color = colorScheme.outline)
+                                            Text(stringResource(R.string.disabled), style = MaterialTheme.typography.labelSmall, color = colorScheme.outline)
                                             Text("40%", style = MaterialTheme.typography.labelSmall, color = colorScheme.outline)
                                         }
                                     }
@@ -462,7 +462,7 @@ fun TweakScreen(navController: NavController) {
                             content = listOf(
                                 {
                                     ExpressiveListItemHighlight(
-                                        headlineContent = { Text("I/O Settings") },
+                                        headlineContent = { Text(stringResource(R.string.io_settings)) },
                                         leadingContent = { Icon(Icons.Rounded.Storage, null) }, // Icon header tetap ada biar rapi
                                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                                         onClick = {}
@@ -472,8 +472,8 @@ fun TweakScreen(navController: NavController) {
                                     // Balanced I/O
                                     ExpressiveDropdownItem(
                                          // Sesuai request: Gausah pake icon
-                                        title = "Balanced I/O Scheduler",
-                                        summary = "Scheduler used in Balanced Profiles",
+                                        title = stringResource(R.string.balanced_io_scheduler),
+                                        summary = stringResource(R.string.balanced_io_scheduler_desc),
                                         items = availableIOSchedulers,
                                         selectedIndex = balancedIOIndex,
                                         onItemSelected = { index ->
@@ -488,7 +488,7 @@ fun TweakScreen(navController: NavController) {
                                                 if (currentProfile == "2") {
                                                     Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO $selectedIO").submit()
                                                 }
-                                                Toast.makeText(context, "Balanced I/O set to $selectedIO", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, context.getString(R.string.toast_balanced_io_set, selectedIO), Toast.LENGTH_SHORT).show()
                                             }
                                         }
                                     )
@@ -497,8 +497,8 @@ fun TweakScreen(navController: NavController) {
                                     // Performance I/O
                                     ExpressiveDropdownItem(
                                          // Tanpa icon
-                                        title = "Performance I/O Scheduler",
-                                        summary = "Scheduler used in Performance Profiles",
+                                        title = stringResource(R.string.performance_io_scheduler),
+                                        summary = stringResource(R.string.performance_io_scheduler_desc),
                                         items = availableIOSchedulers,
                                         selectedIndex = performanceIOIndex,
                                         onItemSelected = { index ->
@@ -512,7 +512,7 @@ fun TweakScreen(navController: NavController) {
                                                 if (currentProfile == "1") {
                                                     Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO $selectedIO").submit()
                                                 }
-                                                Toast.makeText(context, "Performance I/O set to $selectedIO", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, context.getString(R.string.toast_performance_io_set, selectedIO), Toast.LENGTH_SHORT).show()
                                             }
                                         }
                                     )
@@ -521,8 +521,8 @@ fun TweakScreen(navController: NavController) {
                                     // Powersave I/O
                                     ExpressiveDropdownItem(
                                          // Tanpa icon
-                                        title = "Powersave I/O Scheduler",
-                                        summary = "Scheduler used in Powersave Profiles",
+                                        title = stringResource(R.string.powersave_io_scheduler),
+                                        summary = stringResource(R.string.powersave_io_scheduler_desc),
                                         items = availableIOSchedulers,
                                         selectedIndex = powersaveIOIndex,
                                         onItemSelected = { index ->
@@ -536,7 +536,7 @@ fun TweakScreen(navController: NavController) {
                                                 if (currentProfile == "3") {
                                                     Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO $selectedIO").submit()
                                                 }
-                                                Toast.makeText(context, "Powersave I/O set to $selectedIO", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context, context.getString(R.string.toast_powersave_io_set, selectedIO), Toast.LENGTH_SHORT).show()
                                             }
                                         }
                                     )
@@ -581,8 +581,8 @@ fun TweakScreen(navController: NavController) {
                                 },
                                 {
                                     ExpressiveSwitchItem(
-                                        title = "Game Preload",
-                                        summary = "Preload libraries at game start",
+                                        title = stringResource(R.string.game_preload),
+                                        summary = stringResource(R.string.game_preload_desc),
                                         checked = preloadState!!,
                                         onCheckedChange = { isChecked ->
                                             preloadState = isChecked
@@ -592,8 +592,8 @@ fun TweakScreen(navController: NavController) {
                                 },
                                 {
                                     ExpressiveSwitchItem(
-                                        title = "Memory Killer",
-                                        summary = "Clear ram usage at gamestart",
+                                        title = stringResource(R.string.memory_killer),
+                                        summary = stringResource(R.string.memory_killer_desc),
                                         checked = memKillerState!!,
                                         onCheckedChange = { isChecked ->
                                             memKillerState = isChecked
@@ -603,8 +603,8 @@ fun TweakScreen(navController: NavController) {
                                 },
                                 {
                                     ExpressiveSwitchItem(
-                                        title = "App Priority Control",
-                                        summary = "Increase running game I/O scheduling priority in Performance profiles",
+                                        title = stringResource(R.string.app_priority_control),
+                                        summary = stringResource(R.string.app_priority_control_desc),
                                         checked = appPriorState!!,
                                         onCheckedChange = { isChecked ->
                                             appPriorState = isChecked
@@ -614,8 +614,8 @@ fun TweakScreen(navController: NavController) {
                                 },
                                 {
                                     ExpressiveSwitchItem(
-                                        title = "DND Mode on Gaming",
-                                        summary = "Enable DND in Performance Profile",
+                                        title = stringResource(R.string.dnd_mode_gaming),
+                                        summary = stringResource(R.string.dnd_mode_gaming_desc),
                                         checked = dndState!!,
                                         onCheckedChange = { isChecked ->
                                             dndState = isChecked
@@ -625,8 +625,8 @@ fun TweakScreen(navController: NavController) {
                                 },
                                 {
                                     ExpressiveSwitchItem(
-                                        title = "Trim Filesystem Partition",
-                                        summary = "Trim unused blocks in system partitions to Increase I/O Performance",
+                                        title = stringResource(R.string.trim_filesystem),
+                                        summary = stringResource(R.string.trim_filesystem_desc),
                                         checked = fstrimState!!,
                                         onCheckedChange = { isChecked ->
                                             fstrimState = isChecked
@@ -737,8 +737,8 @@ fun TweakScreen(navController: NavController) {
                                 },
                                 {
                                     ExpressiveSwitchItem(
-                                        title = "ThermalCore Service",
-                                        summary = "Automatically manage system thermal based on device behavior, prevent phone getting too hot in daily use while maintaining device stability",
+                                        title = stringResource(R.string.thermalcore_service),
+                                        summary = stringResource(R.string.thermalcore_service_desc),
                                         checked = thermalstate!!,
                                         onCheckedChange = { isChecked ->
                                             thermalstate = isChecked
@@ -847,7 +847,7 @@ fun TweakScreenTopAppBar(scrollBehavior: TopAppBarScrollBehavior) {
                     }
                     Spacer(Modifier.width(12.dp))
                     Text(
-                        text = "Tweaks",
+                        text = stringResource(R.string.nav_tweaks),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )

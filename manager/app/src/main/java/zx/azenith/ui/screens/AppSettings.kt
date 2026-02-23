@@ -63,6 +63,7 @@ import zx.azenith.ui.component.AppIconImage
 import zx.azenith.ui.viewmodel.ApplistViewmodel
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import zx.azenith.ui.viewmodel.AppSettingsViewModel
 import zx.azenith.ui.component.ExpressiveList
@@ -95,8 +96,16 @@ fun AppSettingsScreen(
 
     var localMasterOn by remember(config != null) { mutableStateOf(config != null) }
 
-    val booleanModes = listOf("Default", "On", "Off")
-    val rendererModes = listOf("Default", "Vulkan", "SkiaGL")
+    val booleanModes = listOf(
+        stringResource(R.string.default_label),
+        stringResource(R.string.on_label),
+        stringResource(R.string.off_label)
+    )
+    val rendererModes = listOf(
+        stringResource(R.string.Renderer_Default),
+        stringResource(R.string.Renderer_Vulkan),
+        stringResource(R.string.Renderer_SkiaGL)
+    )
     val dynamicRefreshModes = remember { getSupportedRefreshRates(context) }
 
     fun getBoolIndex(v: String?): Int = when(v) {
@@ -136,8 +145,8 @@ fun AppSettingsScreen(
                     content = listOf {
                         ExpressiveSwitchItem(
                             icon = Icons.Rounded.PowerSettingsNew,
-                            title = "Master Switch",
-                            summary = "Enable app to trigger Performance profiles",
+                            title = stringResource(R.string.master_switch),
+                            summary = stringResource(R.string.master_switch_desc),
                             checked = localMasterOn,
                             onCheckedChange = { isChecked ->
                                 localMasterOn = isChecked 
@@ -157,15 +166,15 @@ fun AppSettingsScreen(
                     val displayConfig = config ?: zx.azenith.ui.util.AppConfig() 
                     
                     Column {
-                        SectionHeader("Preferred Settings")
+                        SectionHeader(stringResource(R.string.preferred_settings))
                         ExpressiveList(
                             modifier = Modifier.padding(horizontal = 16.dp),
                             content = listOf(
                                 {
                                     ExpressiveDropdownItem(
                                         icon = Icons.Rounded.Speed,
-                                        title = "Perf Lite Mode",
-                                        summary = "Reduce heating by reducing CPU frequency",
+                                        title = stringResource(R.string.perf_lite_mode),
+                                        summary = stringResource(R.string.perf_lite_mode_desc_short),
                                         items = booleanModes,
                                         selectedIndex = getBoolIndex(displayConfig.perf_lite_mode),
                                         onItemSelected = { index ->
@@ -177,8 +186,8 @@ fun AppSettingsScreen(
                                 {
                                     ExpressiveDropdownItem(
                                         icon = Icons.Rounded.RocketLaunch,
-                                        title = "Game Preload",
-                                        summary = "Preload libraries at game start",
+                                        title = stringResource(R.string.game_preload),
+                                        summary = stringResource(R.string.game_preload_desc),
                                         items = booleanModes,
                                         selectedIndex = getBoolIndex(displayConfig.game_preload),
                                         onItemSelected = { index ->
@@ -190,8 +199,8 @@ fun AppSettingsScreen(
                                 {
                                     ExpressiveDropdownItem(
                                         icon = Icons.Rounded.SwapVerticalCircle,
-                                        title = "App Priority",
-                                        summary = "Increase I/O scheduling priority",
+                                        title = stringResource(R.string.app_priority),
+                                        summary = stringResource(R.string.app_priority_desc),
                                         items = booleanModes,
                                         selectedIndex = getBoolIndex(displayConfig.app_priority),
                                         onItemSelected = { index ->
@@ -203,8 +212,8 @@ fun AppSettingsScreen(
                                 {
                                     ExpressiveDropdownItem(
                                         icon = Icons.Rounded.DoNotDisturbOn,
-                                        title = "DND Mode",
-                                        summary = "Block notifications while gaming",
+                                        title = stringResource(R.string.dnd_mode),
+                                        summary = stringResource(R.string.dnd_mode_desc),
                                         items = booleanModes,
                                         selectedIndex = getBoolIndex(displayConfig.dnd_on_gaming),
                                         onItemSelected = { index ->
@@ -216,8 +225,8 @@ fun AppSettingsScreen(
                                 {
                                     ExpressiveDropdownItem(
                                         icon = Icons.Rounded.WebStories,
-                                        title = "Refresh Rate",
-                                        summary = "Set preferred Display refresh rates",
+                                        title = stringResource(R.string.refreshrates),
+                                        summary = stringResource(R.string.refreshrates_desc),
                                         items = dynamicRefreshModes,
                                         selectedIndex = dynamicRefreshModes.indexOf(displayConfig.refresh_rate).coerceAtLeast(0),
                                         onItemSelected = { index ->
@@ -229,8 +238,8 @@ fun AppSettingsScreen(
                                 {
                                     ExpressiveDropdownItem(
                                         icon = Icons.Rounded.Layers,
-                                        title = "Renderer",
-                                        summary = "Set preferred rendering engine",
+                                        title = stringResource(R.string.renderengine),
+                                        summary = stringResource(R.string.renderengine_desc),
                                         items = rendererModes,
                                         selectedIndex = rendererModes.indexOfFirst { it.equals(displayConfig.renderer, ignoreCase = true) }.coerceAtLeast(0),
                                         onItemSelected = { index ->
@@ -294,7 +303,7 @@ fun AppHeader(appDetails: Triple<String, android.graphics.drawable.Drawable?, St
         )
 
         Text(
-            text = packageName ?: "Unknown Package",
+            text = packageName ?: stringResource(R.string.unknown_package),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(top = 4.dp)
@@ -322,10 +331,10 @@ fun getAppDetails(context: android.content.Context, packageName: String?): Tripl
         val packageInfo = pm.getPackageInfo(packageName ?: "", 0)
         val label = pm.getApplicationLabel(info).toString()
         val icon = pm.getApplicationIcon(info)
-        val version = packageInfo.versionName ?: "Unknown"
+        val version = packageInfo.versionName ?: context.getString(R.string.status_unknown)
         Triple(label, icon, version)
     } catch (e: Exception) {
-        Triple("Unknown App", null, "0.0.0")
+        Triple(context.getString(R.string.unknown_app), null, "0.0.0")
     }
 }
 
@@ -354,14 +363,14 @@ fun AppSettingsTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> 
         TopAppBar(
             title = { 
                 Text(
-                    text = "App Settings",
+                    text = stringResource(R.string.app_settings_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 ) 
             },
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
             },
             scrollBehavior = scrollBehavior,
