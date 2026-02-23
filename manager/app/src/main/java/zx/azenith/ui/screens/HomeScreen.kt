@@ -85,12 +85,12 @@ fun HomeScreen() {
     val uriHandler = LocalUriHandler.current
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
 
-    val serviceInfo by produceState(initialValue = "Suspended" to "") {
-        value = RootUtils.getServiceStatus()
+    val serviceInfo by produceState(initialValue = R.string.status_suspended to "") {
+        value = RootUtils.getServiceStatusRes()
     }
     // Mengamati perubahan Flow secara otomatis
-    val currentProfile by RootUtils.observeProfile()
-        .collectAsState(initial = "Initializing...")
+    val currentProfileRes by RootUtils.observeProfileRes()
+        .collectAsState(initial = R.string.status_initializing)
     
     val rootStatus by produceState(initialValue = false) {
         value = RootUtils.isRootGranted()
@@ -119,7 +119,7 @@ fun HomeScreen() {
         onDismiss = { showProfileDialog = false },
         onProfile = { profileReason ->
             Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service -p $profileReason").submit()
-            Toast.makeText(context, "Applying Selected Profile", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.toast_applying_profile), Toast.LENGTH_SHORT).show()
         }
     )
     
@@ -144,7 +144,7 @@ fun HomeScreen() {
                         status = if (!moduleInstalled)
                             stringResource(R.string.module_not_installed)
                         else
-                            serviceInfo.first,
+                            stringResource(serviceInfo.first),
                         pid = serviceInfo.second
                     ) { }
                 }
@@ -156,8 +156,8 @@ fun HomeScreen() {
                             modifier = Modifier.weight(1f),
                             icon = Icons.Rounded.Token,
                             label = stringResource(R.string.current_profile),
-                            value = currentProfile,
-                            highlight = (currentProfile != stringResource(R.string.status_initializing)),
+                            value = stringResource(currentProfileRes),
+                            highlight = (currentProfileRes != R.string.status_initializing),
                             showArrow = autoMode == "0" // Panah muncul jika AI mati
                         ) {
                             if (autoMode == "0") {
@@ -348,7 +348,7 @@ fun DeviceInfoCard() {
     val uname = Os.uname()
 
     val kernelVer = remember { uname.release }
-    val selinux = remember { getSELinuxStatus() }
+    val selinux = remember { getSELinuxStatus(context) }
     val appVer = remember { getAppVersion(context) }
 
     Surface(

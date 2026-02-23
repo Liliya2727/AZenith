@@ -158,7 +158,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                         containerColor = colorScheme.primary,
                         contentColor = colorScheme.onPrimary,
                         icon = { Icon(Icons.Rounded.Check, null) },
-                        text = { Text("Done") }
+                        text = { Text(stringResource(R.string.done)) }
                     )
                 }
             }
@@ -178,13 +178,13 @@ fun BypassChargeCheckScreen(navController: NavController) {
                 ) {
                     Column {
                         Text(
-                            text = if (isRunning) "Diagnostic in progress" else "Diagnostic complete",
+                            text = if (isRunning) stringResource(R.string.diagnostic_in_progress) else stringResource(R.string.diagnostic_complete),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = if (isRunning) "Please wait..." else "All checks finished",
+                            text = if (isRunning) stringResource(R.string.please_wait) else stringResource(R.string.all_checks_finished),
                             style = MaterialTheme.typography.bodySmall,
                             color = colorScheme.onSurfaceVariant
                         )
@@ -270,7 +270,7 @@ fun BypassChgCheckTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () 
             },
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
             },        
             colors = TopAppBarDefaults.topAppBarColors(

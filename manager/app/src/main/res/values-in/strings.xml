@@ -1,0 +1,251 @@
+<resources>
+    <string name="app_name">AZenith</string>
+    <string name="app_name_styled">AZenith火</string>
+
+    <string name="status_alive">Aktif</string>
+    <string name="status_suspended">Ditangguhkan</string>
+    <string name="status_initializing">Inisialisasi</string>
+
+    <string name="pid_format">PID: %1$s</string>
+
+    <string name="current_profile">Profil Saat Ini</string>
+    <string name="root_access">Akses Root</string>
+    <string name="root_granted">Diberikan</string>
+    <string name="root_not_granted">Tidak Diberikan</string>
+
+    <string name="show_icon">Tampilkan ikon aplikasi di Beranda</string>
+
+    <string name="device_info">Info Perangkat</string>
+
+    <string name="kernel_version">Versi Kernel</string>
+    <string name="device_name">Nama Perangkat</string>
+    <string name="azenith_version">Versi AZenith</string>
+    <string name="module_not_installed">Modul Tidak Terpasang</string>
+
+    <string name="fingerprint">Sidik Jari</string>
+    <string name="selinux_status">Status SELinux</string>
+    <string name="instruction_sets">ABI Android</string>
+    <string name="android_version">Versi Android</string>
+
+    <string name="learn_more">Pelajari Lebih Lanjut</string>
+    <string name="learn_more_desc">
+        Dokumentasi, kode sumber, log perubahan, dan penjelasan rinci tentang cara kerja AZenith. Pelajari bagaimana fitur diimplementasikan dan cara menyesuaikannya dengan aman.
+    </string>
+
+    <string name="settings">Pengaturan</string>
+
+    <string name="section_personalization">Personalisasi</string>
+    <string name="language">Bahasa</string>
+    <string name="language_desc">Pilih bahasa pilihan Anda</string>
+    <string name="section_additionalsettings">Pengaturan Tambahan</string>
+    <string name="section_features">Fitur</string>
+    <string name="section_others">Lainnya</string>
+    <string name="section_about">Tentang</string>
+    <string name="section_addons">Addon</string>
+    <string name="section_rateandrender">Refresh Rate dan Renderer</string>
+    <string name="section_CPUSettings">Pengaturan CPU</string>
+
+    <string name="refreshrates">Refresh Rate</string>
+    <string name="schemecolor">Skema Warna Layar</string>
+    <string name="schemecolordesc">Sesuaikan Saturasi warna layar dan Kekuatan RGB</string>
+    <string name="renderengine">Renderer Saat Ini</string>
+    <string name="bcharging">Bypass Charging</string>
+    <string name="prefs">Pengaturan Preferensi</string>
+    <string name="section_prefstweaks">Tweak Preferensi</string>
+    <string name="uninstall">Hapus Instalan</string>
+    <string name="prefsdesc">Tweak addon yang diterapkan saat booting</string>
+
+    <string name="bcharging_desc">Konfigurasi AZenith Bypass Charging</string>
+    <string name="Profile_Select">Pilih Profil</string>
+    <string name="RefreshRatePicker_Select">Pilih Refresh Rate</string>
+    <string name="Renderer_Select">Pilih Renderer</string>
+
+    <string name="Renderer_Vulkan">Vulkan</string>
+    <string name="Renderer_Default">Default</string>
+    <string name="Renderer_SkiaGL">SkiaGL</string>
+
+    <string name="CompatibilityCheck">Cek Kompatibilitas</string>
+    <string name="CompatibilityCheck_desc">Jalankan diagnostik untuk memverifikasi apakah perangkat Anda mendukung Bypass Charging. Pastikan ponsel Anda terhubung ke pengisi daya sebelum memulai pengujian.</string>
+
+
+    <string name="Profile_Balanced">Seimbang</string>
+    <string name="Profile_Performance">Performa</string>
+    <string name="Profile_ECO_mode">Mode Eco</string>
+
+    <string name="theme">Tema</string>
+    <string name="theme_desc">Sesuaikan warna dan aksen</string>
+
+    <string name="show_toast">Tampilkan notifikasi toast</string>
+    <string name="disable_auto_mode">Matikan mode otomatis</string>
+    <string name="allow_verbose_log">Izinkan Daemon ke log Verbose</string>
+
+    <string name="restart_service">Mulai Ulang Layanan</string>
+    <string name="restart_service_desc">Inisialisasi ulang proses Daemon</string>
+
+    <string name="save_log">Simpan Log</string>
+    <string name="save_log_desc">Ekspor log debug ke /sdcard</string>
+
+    <string name="toast_restarting_service">Memulai Ulang Layanan</string>
+    <string name="toast_log_saved">Log disimpan ke /sdcard/AZenith.log</string>
+
+    <string name="about_azenith">Tentang AZenith</string>
+    <string name="version_format">Versi %1$s</string>
+
+    <string name="support_us">Dukung Kami</string>
+    <string name="support_us_desc">
+        Bantu dukung pengembangan dan jaga agar AZenith terus berkembang.
+    </string>
+
+    <string name="about_source_code"><![CDATA[Lihat kode sumber di %1$s<br/>Bergabunglah dengan saluran %2$s kami]]></string>
+    <string name="applist_title">Daftar Aplikasi</string>
+
+    <string name="search_apps">Cari aplikasi...</string>
+
+    <string name="label_enabled">AKTIF</string>
+    <string name="label_disabled">NONAKTIF</string>
+    <string name="label_recommended">REKOMENDASI</string>
+    <string name="label_system">SISTEM</string>
+
+    <string name="menu_refresh">Segarkan</string>
+    <string name="menu_show_system_apps">Tampilkan Aplikasi Sistem</string>
+
+    <string name="cd_back">Kembali</string>
+    <string name="cd_search">Cari</string>
+    <string name="cd_menu">Menu</string>
+    <string name="reset">Atur Ulang</string>
+
+    <!-- Navigation labels -->
+    <string name="nav_home">Beranda</string>
+    <string name="nav_applist">Aplikasi</string>
+    <string name="nav_tweaks">Tweak</string>
+    <string name="nav_settings">Pengaturan</string>
+
+    <!-- Tweak Screen strings -->
+    <string name="perf_lite_mode">Mode Perf Lite</string>
+    <string name="perf_lite_mode_desc">Kurangi panas dalam profil performa dengan membatasi Frekuensi CPU</string>
+    <string name="default_cpu_gov">Governor CPU Default</string>
+    <string name="default_cpu_gov_desc">Governor yang digunakan dalam Profil Seimbang</string>
+    <string name="toast_default_gov_set">Governor Default disetel ke %1$s</string>
+    <string name="powersave_cpu_gov">Governor CPU Hemat Daya</string>
+    <string name="powersave_cpu_gov_desc">Governor yang digunakan dalam Profil Hemat Daya</string>
+    <string name="toast_powersave_gov_set">Governor Hemat Daya disetel ke %1$s</string>
+    <string name="freq_offset">Offset Frekuensi</string>
+    <string name="freq_offset_desc">Batasi frekuensi maksimum berdasarkan persentase</string>
+    <string name="disabled">Dinonaktifkan</string>
+    <string name="io_settings">Pengaturan I/O</string>
+    <string name="balanced_io_scheduler">Scheduler I/O Seimbang</string>
+    <string name="balanced_io_scheduler_desc">Scheduler yang digunakan dalam Profil Seimbang</string>
+    <string name="toast_balanced_io_set">I/O Seimbang disetel ke %1$s</string>
+    <string name="performance_io_scheduler">Scheduler I/O Performa</string>
+    <string name="performance_io_scheduler_desc">Scheduler yang digunakan dalam Profil Performa</string>
+    <string name="toast_performance_io_set">I/O Performa disetel ke %1$s</string>
+    <string name="powersave_io_scheduler">Scheduler I/O Hemat Daya</string>
+    <string name="powersave_io_scheduler_desc">Scheduler yang digunakan dalam Profil Hemat Daya</string>
+    <string name="toast_powersave_io_set">I/O Hemat Daya disetel ke %1$s</string>
+    <string name="game_preload">Preload Game</string>
+    <string name="game_preload_desc">Preload library saat game dimulai</string>
+    <string name="memory_killer">Memory Killer</string>
+    <string name="memory_killer_desc">Bersihkan penggunaan ram saat game dimulai</string>
+    <string name="app_priority_control">Kontrol Prioritas Aplikasi</string>
+    <string name="app_priority_control_desc">Tingkatkan prioritas penjadwalan I/O game yang berjalan di profil Performa</string>
+    <string name="dnd_mode_gaming">Mode DND saat Bermain Game</string>
+    <string name="dnd_mode_gaming_desc">Aktifkan DND di Profil Performa</string>
+    <string name="trim_filesystem">Trim Partisi Filesystem</string>
+    <string name="trim_filesystem_desc">Trim blok yang tidak digunakan di partisi sistem untuk Meningkatkan Performa I/O</string>
+    <string name="thermalcore_service">Layanan ThermalCore</string>
+    <string name="thermalcore_service_desc">Secara otomatis mengelola thermal sistem berdasarkan perilaku perangkat, mencegah ponsel menjadi terlalu panas dalam penggunaan sehari-hari sambil menjaga stabilitas perangkat</string>
+    <string name="toast_applied_renderer">Diterapkan: %1$s</string>
+    <string name="toast_applied_refresh_rate">Refresh Rate Terpilih Diterapkan</string>
+
+    <!-- Home Screen strings -->
+    <string name="toast_applying_profile">Menerapkan Profil Terpilih</string>
+    <string name="profile_perflite">PerfLite</string>
+    <string name="status_unknown">Tidak Diketahui</string>
+
+    <!-- Settings Screen strings -->
+    <string name="uninstall_confirm_content">Modul akan dihapus. Tindakan ini akan menghapus file AZenith dan memerlukan boot ulang untuk efeknya. Apakah Anda ingin melanjutkan?</string>
+    <string name="yes">Ya</string>
+    <string name="no">Tidak</string>
+
+    <!-- Bypass Charge strings -->
+    <string name="enable_bypass_charge">Aktifkan Bypass Charge</string>
+    <string name="bypass_not_supported">Fitur tidak didukung pada perangkat ini</string>
+    <string name="enable_bypass_charge_desc">Gunakan Bypass charge di Profil Performa</string>
+    <string name="charging_threshold">Ambang Batas Pengisian Daya</string>
+    <string name="charging_threshold_desc">Mulai mengisi daya jika level baterai di bawah ambang batas pengisian daya</string>
+
+    <!-- Bypass Charge Check strings -->
+    <string name="done">Selesai</string>
+    <string name="diagnostic_in_progress">Diagnostik sedang berlangsung</string>
+    <string name="diagnostic_complete">Diagnostik selesai</string>
+    <string name="please_wait">Mohon tunggu...</string>
+    <string name="all_checks_finished">Semua pemeriksaan selesai</string>
+
+    <!-- Color Scheme strings -->
+    <string name="toast_settings_reset">Pengaturan Direset</string>
+    <string name="color_scheme">Skema Warna</string>
+    <string name="color_red">Merah</string>
+    <string name="color_red_desc">Sesuaikan intensitas saluran merah</string>
+    <string name="color_green">Hijau</string>
+    <string name="color_green_desc">Sesuaikan intensitas saluran hijau</string>
+    <string name="color_blue">Biru</string>
+    <string name="color_blue_desc">Sesuaikan intensitas saluran biru</string>
+    <string name="color_saturation">Saturasi</string>
+    <string name="color_saturation_desc">Sesuaikan saturasi warna secara keseluruhan</string>
+    <string name="min_val">Min (%1$d)</string>
+    <string name="default_val">Default (%1$d)</string>
+    <string name="max_val">Maks (%1$d)</string>
+
+    <!-- Preference Tweak strings -->
+    <string name="sched_tunes">Sched Tunes</string>
+    <string name="sched_tunes_desc">Optimalkan penskalaan frekuensi CPU untuk semua cluster CPU (Schedutil/Schedhorizon)</string>
+    <string name="walt_tunes">Walt Governor Tunes</string>
+    <string name="walt_tunes_desc">Optimalkan parameter governor WALT untuk penjadwalan CPU yang lebih cepat</string>
+    <string name="sfl_latency">Latensi SurfaceFlinger</string>
+    <string name="sfl_latency_desc">Tweak SurfaceFlinger untuk mengurangi latensi layar dan meningkatkan responsivitas.</string>
+    <string name="jit_compilation">Kompilasi JIT (Just in Time)</string>
+    <string name="jit_compilation_desc">Tingkatkan performa aplikasi dengan mengaktifkan kompilasi JIT</string>
+    <string name="disable_trace">Matikan Trace</string>
+    <string name="disable_trace_desc">Matikan pelacakan kernel dan pelacakan framework android</string>
+    <string name="disable_logging">Matikan Log Sistem</string>
+    <string name="disable_logging_desc">Matikan layanan log sistem untuk mengurangi aktivitas latar belakang</string>
+    <string name="fpsgo_ged">Parameter FPSGO dan GED</string>
+    <string name="fpsgo_ged_desc">Terapkan nilai optimal Parameter FPSGO dan GED</string>
+    <string name="gpu_mali">Penjadwalan GPU Mali</string>
+    <string name="gpu_mali_desc">Paksa GPU untuk menserialisasikan pemrosesan tugas untuk meningkatkan prediktabilitas</string>
+    <string name="disable_thermals">Matikan Thermal</string>
+    <string name="disable_thermals_desc">Hentikan layanan thermal</string>
+
+    <!-- App Settings strings -->
+    <string name="master_switch">Saklar Utama</string>
+    <string name="master_switch_desc">Izinkan aplikasi untuk memicu profil Performa</string>
+    <string name="preferred_settings">Pengaturan Terpilih</string>
+    <string name="perf_lite_mode_desc_short">Kurangi panas dengan mengurangi frekuensi CPU</string>
+    <string name="app_priority">Prioritas Aplikasi</string>
+    <string name="app_priority_desc">Tingkatkan prioritas penjadwalan I/O</string>
+    <string name="dnd_mode">Mode DND</string>
+    <string name="dnd_mode_desc">Blokir notifikasi saat bermain game</string>
+    <string name="refreshrates_desc">Setel refresh rate tampilan terpilih</string>
+    <string name="renderengine_desc">Setel mesin renderer terpilih</string>
+    <string name="app_settings_title">Pengaturan Aplikasi</string>
+    <string name="unknown_package">Paket Tidak Diketahui</string>
+    <string name="unknown_app">Aplikasi Tidak Diketahui</string>
+    <string name="default_label">Default</string>
+    <string name="on_label">Nyala</string>
+    <string name="off_label">Mati</string>
+    <string name="status_active">Aktif</string>
+    <string name="status_inactive">Tidak Aktif</string>
+    <string name="status_not_supported">Tidak Didukung</string>
+    <string name="accent_color">Warna Aksen</string>
+    <string name="appearance">Tampilan</string>
+    <string name="banner">Banner</string>
+    <string name="custom">Kustom</string>
+    <string name="selinux_enforcing">Enforcing</string>
+    <string name="selinux_permissive">Permissive</string>
+    <string name="selinux_disabled">Dinonaktifkan</string>
+    <string name="refresh_rate_format">%1$s Hz</string>
+    <string name="lang_en">Inggris</string>
+    <string name="lang_in">Indonesia</string>
+    <string name="lang_zh">Mandarin</string>
+
+</resources>

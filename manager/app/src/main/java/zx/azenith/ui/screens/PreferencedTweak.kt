@@ -140,8 +140,8 @@ fun PreferenceTweakScreen(navController: NavController) {
                                 },
                                 {
                                     ExpressiveSwitchItem(
-                                        title = "Sched Tunes",
-                                        summary = "Optimize CPU frequency scaling for all CPU clusters (Schedutil/Schedhorizon)",
+                                        title = stringResource(R.string.sched_tunes),
+                                        summary = stringResource(R.string.sched_tunes_desc),
                                         checked = schedTunes!!,
                                         onCheckedChange = { isChecked ->
                                             schedTunes = isChecked
@@ -159,8 +159,8 @@ fun PreferenceTweakScreen(navController: NavController) {
                                 if (socType == "2") {
                                     {
                                         ExpressiveSwitchItem(
-                                            title = "Walt Governor Tunes",
-                                            summary = "Optimize WALT governor parameters for faster CPU scheduling",
+                                            title = stringResource(R.string.walt_tunes),
+                                            summary = stringResource(R.string.walt_tunes_desc),
                                             checked = waltTunes!!,
                                             onCheckedChange = { isChecked ->
                                                 waltTunes = isChecked
@@ -177,8 +177,8 @@ fun PreferenceTweakScreen(navController: NavController) {
                                 } else null,
                                 {
                                     ExpressiveSwitchItem(
-                                        title = "SurfaceFlinger Latency",
-                                        summary = "Tweak SurfaceFlinger to reduce screen latency and improve responsiveness.",
+                                        title = stringResource(R.string.sfl_latency),
+                                        summary = stringResource(R.string.sfl_latency_desc),
                                         checked = sflstate!!,
                                         onCheckedChange = { isChecked ->
                                             sflstate = isChecked
@@ -188,8 +188,8 @@ fun PreferenceTweakScreen(navController: NavController) {
                                 },
                                 {
                                     ExpressiveSwitchItem(
-                                        title = "JIT Compilation (Just in Time)",
-                                        summary = "Improve application performance by enabling JIT compilation",
+                                        title = stringResource(R.string.jit_compilation),
+                                        summary = stringResource(R.string.jit_compilation_desc),
                                         checked = jitstate!!,
                                         onCheckedChange = { isChecked ->
                                             jitstate = isChecked
@@ -199,8 +199,8 @@ fun PreferenceTweakScreen(navController: NavController) {
                                 },
                                 {
                                     ExpressiveSwitchItem(
-                                        title = "Disable Trace",
-                                        summary = "Disable kernel tracing and android framework tracing",
+                                        title = stringResource(R.string.disable_trace),
+                                        summary = stringResource(R.string.disable_trace_desc),
                                         checked = DTraces!!,
                                         onCheckedChange = { isChecked ->
                                             DTraces = isChecked
@@ -210,8 +210,8 @@ fun PreferenceTweakScreen(navController: NavController) {
                                 },
                                 {
                                     ExpressiveSwitchItem(
-                                        title = "Disable System Logging",
-                                        summary = "Disable system logging services to reduce background activity",
+                                        title = stringResource(R.string.disable_logging),
+                                        summary = stringResource(R.string.disable_logging_desc),
                                         checked = dlogcat!!,
                                         onCheckedChange = { isChecked ->
                                             dlogcat = isChecked
@@ -223,8 +223,8 @@ fun PreferenceTweakScreen(navController: NavController) {
                                 if (socType == "1") {
                                     {
                                         ExpressiveSwitchItem(
-                                            title = "FPSGO and GED Parameters",
-                                            summary = "Apply optimized value of FPSGO and GED Parameter",
+                                            title = stringResource(R.string.fpsgo_ged),
+                                            summary = stringResource(R.string.fpsgo_ged_desc),
                                             checked = fpsgogedstate!!,
                                             onCheckedChange = { isChecked ->
                                                 fpsgogedstate = isChecked
@@ -236,8 +236,8 @@ fun PreferenceTweakScreen(navController: NavController) {
                                 if (socType == "1") {
                                     {
                                         ExpressiveSwitchItem(
-                                            title = "GPU Mali Scheduling",
-                                            summary = "Force the GPU to serialize job processing to improve predictability",
+                                            title = stringResource(R.string.gpu_mali),
+                                            summary = stringResource(R.string.gpu_mali_desc),
                                             checked = malischedstate!!,
                                             onCheckedChange = { isChecked ->
                                                 malischedstate = isChecked
@@ -249,8 +249,8 @@ fun PreferenceTweakScreen(navController: NavController) {
                                 if (socType == "1") {
                                     {
                                         ExpressiveSwitchItem(
-                                            title = "Disable Thermals",
-                                            summary = "Kill thermal service",
+                                            title = stringResource(R.string.disable_thermals),
+                                            summary = stringResource(R.string.disable_thermals_desc),
                                             checked = distherm!!,
                                             onCheckedChange = { isChecked ->
                                                 distherm = isChecked
@@ -307,7 +307,7 @@ fun PreferenceTweakTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: ()
             },
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
             },        
             colors = TopAppBarDefaults.topAppBarColors(

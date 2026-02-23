@@ -100,15 +100,17 @@ fun SettingsScreen(navController: NavController) {
             item { SettingsSectionTitle(stringResource(R.string.section_personalization)) }
             item {
                 ExpressiveList(
-                    content = listOf {
-                        ExpressiveListItem(
-                            onClick = { navController.navigate("color_palette") },
-                            headlineContent = { Text(stringResource(R.string.theme)) },
-                            supportingContent = { Text(stringResource(R.string.theme_desc)) },
-                            leadingContent = { Icon(Icons.Filled.Palette, null) },
-                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                        )
-                    }
+                    content = listOf(
+                        {
+                            ExpressiveListItem(
+                                onClick = { navController.navigate("color_palette") },
+                                headlineContent = { Text(stringResource(R.string.theme)) },
+                                supportingContent = { Text(stringResource(R.string.theme_desc)) },
+                                leadingContent = { Icon(Icons.Filled.Palette, null) },
+                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                            )
+                        }
+                    )
                 )
             }
 
@@ -245,10 +247,10 @@ fun SettingsScreen(navController: NavController) {
                             ExpressiveListItem(
                                 onClick = {
                                     uninstallDialog.showConfirm(
-                                        title = "Uninstall",
-                                        content = "Module will be uninstalled. This action will remove AZenith files and requires a reboot to take effect. Do you want to proceed?",
-                                        confirm = "Yes",
-                                        dismiss = "No"
+                                        title = context.getString(R.string.uninstall),
+                                        content = context.getString(R.string.uninstall_confirm_content),
+                                        confirm = context.getString(R.string.yes),
+                                        dismiss = context.getString(R.string.no)
                                     )
                                 },
                                 headlineContent = { Text(stringResource(R.string.uninstall)) },

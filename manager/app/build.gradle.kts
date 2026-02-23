@@ -19,11 +19,11 @@ android {
         applicationId = "zx.azenith"
         minSdk = 26
         targetSdk = 36
-        versionCode = (Placeholder)
-        versionName = "Placeholder"
+        versionCode = 1
+        versionName = "1.0.0"
 
         androidResources {
-            localeFilters += listOf("en", "in")
+            localeFilters += listOf("en", "in", "zh")
         }
         
         vectorDrawables.useSupportLibrary = true
@@ -36,6 +36,10 @@ android {
             keyAlias = "azenith_key"
             keyPassword = System.getenv("KS_PWD") ?: "your_password"
         }
+    }
+    
+    androidResources {
+        generateLocaleConfig = true
     }
 
     buildTypes {

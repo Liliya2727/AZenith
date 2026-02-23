@@ -162,7 +162,7 @@ fun ColorPaletteScreen(navController: NavController) {
                 val isDark = currentColorMode.getDarkThemeValue(isSystemInDarkTheme())
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "Accent Color",
+                        stringResource(R.string.accent_color),
                         modifier = Modifier.padding(horizontal = 20.dp),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary
@@ -208,7 +208,7 @@ fun ColorPaletteScreen(navController: NavController) {
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        "Appearance",
+                        stringResource(R.string.appearance),
                         modifier = Modifier.padding(horizontal = 4.dp),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary
@@ -259,7 +259,7 @@ fun ColorPaletteScreen(navController: NavController) {
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        "Banner",
+                        stringResource(R.string.banner),
                         modifier = Modifier.padding(horizontal = 4.dp),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary
@@ -308,9 +308,9 @@ fun ColorPaletteScreen(navController: NavController) {
                                     )
                                     Text(
                                         text = if (isCustom)
-                                            "Custom"
+                                            stringResource(R.string.custom)
                                         else
-                                            "Default"
+                                            stringResource(R.string.default_label)
                                     )
                                 }
                             }
@@ -346,14 +346,14 @@ fun PaletteTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit
         TopAppBar(
             title = { 
                 Text(
-                    text = "Theme",
+                    text = stringResource(R.string.theme),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 ) 
             },
             navigationIcon = {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
             },        
             colors = TopAppBarDefaults.topAppBarColors(
