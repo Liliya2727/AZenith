@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package com.rem01gaming.systemmonitor
+package zx.azenith
 
 import org.lsposed.hiddenapibypass.HiddenApiBypass
-
 import android.annotation.SuppressLint
 import android.app.ActivityManager
 import android.content.ComponentName
@@ -25,7 +24,6 @@ import android.content.Context
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
-
 import java.io.File
 import java.io.FileOutputStream
 import java.lang.reflect.Field
@@ -34,11 +32,8 @@ import java.nio.channels.FileChannel
 import java.nio.channels.FileLock
 import java.nio.file.StandardOpenOption
 
-// @SuppressLint("StaticFieldLeak") is intentional, this runs as a CLI tool via app_process,
-// not inside an Android Activity lifecycle, so there is no real Context leak risk here.
-
 @SuppressLint("StaticFieldLeak", "DiscouragedPrivateApi", "PrivateApi")
-object MainKt {
+object AppMonitor {
     private const val POLL_INTERVAL_MS = 500L
     private const val PID_RETRY_INTERVAL_MS = 50L
     private const val UNKNOWN_APP = "unknown 0 0"
@@ -76,22 +71,27 @@ object MainKt {
 
     @Volatile
     private var lastStatus = ""
+    
+    @Volatile
+    private var lastBackgroundApps = ""
 
     private var outputPath = ""
+    private var backgroundOutputPath = ""
     private var lockFilePath: String? = null
 
     @JvmStatic
     fun main(args: Array<String>) {
-        // Usage: app_process / com.rem01gaming.systemmonitor.MainKt <output_path> [lock_file_path]
-        if (args.isEmpty()) {
-            System.err.println("Usage: <output_path> [lock_file_path]")
-            System.err.println("ERROR: output path is required.")
+        if (args.size < 2) {
+            System.err.println("Usage: <status_output_path> <background_output_path> [lock_file_path]")
+            System.err.println("ERROR: Missing required output paths.")
             return
         }
+        
         outputPath = args[0]
+        backgroundOutputPath = args[1]
 
-        if (args.size >= 2) {
-            lockFilePath = args[1]
+        if (args.size >= 3) {
+            lockFilePath = args[2]
         }
 
         bypassHiddenApiRestrictions()
@@ -150,6 +150,7 @@ object MainKt {
         while (!Thread.currentThread().isInterrupted) {
             try {
                 writeStatus()
+                writeBackgroundApps()
                 Thread.sleep(POLL_INTERVAL_MS)
             } catch (_: InterruptedException) {
                 Thread.currentThread().interrupt()
@@ -160,118 +161,24 @@ object MainKt {
         }
     }
 
-    private fun setupSystemContext() {
-        try {
-            val looperClass = Class.forName("android.os.Looper")
-            if (looperClass.getMethod("getMainLooper").invoke(null) == null) {
-                looperClass.getMethod("prepareMainLooper").invoke(null)
-            }
-
-            val activityThreadClass = Class.forName("android.app.ActivityThread")
-
-            val thread = activityThreadClass.getMethod("systemMain").invoke(null)
-                ?: activityThreadClass.getMethod("currentActivityThread").invoke(null)
-                ?: error("Both systemMain() and currentActivityThread() returned null")
-
-            systemContext =
-                activityThreadClass.getMethod("getSystemContext").invoke(thread) as? Context
-                    ?: error("getSystemContext() returned null")
-
-        } catch (e: Exception) {
-            System.err.println("ERROR: Failed to set up system context:")
-            e.printStackTrace()
-        }
-    }
-
-    private fun bypassHiddenApiRestrictions() {
-        HiddenApiBypass.addHiddenApiExemptions("")
-    }
-
-    private fun initializeServices(): Boolean {
-        return try {
-            val ctx = systemContext ?: return false
-            powerManager = ctx.getSystemService(Context.POWER_SERVICE) as PowerManager
-            activityManager = ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-            initActivityTaskManager()
-            initNotificationManager()
-            true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
-        }
-    }
-
-    private fun initActivityTaskManager() {
-        val binder = getSystemService(resolveAtmServiceName())
-            ?: error("ServiceManager returned null binder for '${resolveAtmServiceName()}'")
-        val atm = bindInterface("${resolveAtmInterfaceName()}\$Stub", binder)
-        activityTaskManager = atm
-        foregroundMethod = findForegroundMethod(atm)
-    }
-
-    private fun initNotificationManager() {
-        val binder = getSystemService(Context.NOTIFICATION_SERVICE)
-            ?: error("ServiceManager returned null binder for notification service")
-        notificationManager = bindInterface("android.app.INotificationManager\$Stub", binder)
-        notificationManager?.let { manager ->
-            getDeclaredMethods(manager.javaClass).forEach { member ->
-                if (member.name == "getZenMode" && member.parameterTypes.isEmpty()) {
-                    getZenModeMethod = member
-                }
-            }
-        }
-    }
-
-    private fun resolveAtmServiceName() =
-        if (Build.VERSION.SDK_INT >= 29) "activity_task" else Context.ACTIVITY_SERVICE
-
-    private fun resolveAtmInterfaceName() =
-        if (Build.VERSION.SDK_INT >= 29) "android.app.IActivityTaskManager" else "android.app.IActivityManager"
-
-    private fun getSystemService(name: String): IBinder? {
-        val serviceManager = Class.forName("android.os.ServiceManager")
-        return serviceManager.getMethod("getService", String::class.java)
-            .invoke(null, name) as? IBinder
-    }
-
-    private fun bindInterface(stubClassName: String, binder: IBinder): Any {
-        return Class.forName(stubClassName)
-            .getMethod("asInterface", IBinder::class.java)
-            .invoke(null, binder)
-            ?: error("asInterface returned null for $stubClassName")
-    }
-
-    private fun findForegroundMethod(atm: Any): Method? {
-        val methods = getDeclaredMethods(atm.javaClass).associateBy { it.name }
-
-        return FOREGROUND_METHOD_CANDIDATES
-            .mapNotNull { candidate -> methods[candidate] }
-            .find { method ->
-                method.parameterTypes.isEmpty() ||
-                        (method.parameterTypes.size == 1 && method.parameterTypes[0] == Int::class.java) ||
-                        method.name == "getTasks" || method.name == "getRunningTasks"
-            }
-            ?.apply { isAccessible = true }
-    }
-
     private fun writeStatus() {
-        // Resolve the focused app, retrying if the PID is not yet available.
-        // Returns null if the timeout elapsed without a valid PID, in that case we
-        // skip this update so that stale "0 0" data is never written to the output file.
         val focusedApp = waitForValidFocusedApp() ?: return
-
         val currentStatus = buildStatus(focusedApp)
         if (currentStatus == lastStatus) return
 
         try {
             val file = File(outputPath)
             file.parentFile?.mkdirs()
+            
+            val tmpFile = File("$outputPath.tmp")
 
-            FileOutputStream(file).use { fos ->
+            FileOutputStream(tmpFile).use { fos ->
                 fos.write(currentStatus.toByteArray(Charsets.UTF_8))
                 fos.fd.sync()
             }
 
+            tmpFile.renameTo(file)
+            
             lastStatus = currentStatus
         } catch (e: Exception) {
             e.printStackTrace()
@@ -279,16 +186,68 @@ object MainKt {
     }
 
     /**
-     * Returns the focused-app string once its PID is known.
-     *
-     * When the foreground app was just launched it may not yet be visible to
-     * [ActivityManager.getRunningAppProcesses], causing [getPidUid] to return "0 0".
-     * Rather than writing that bogus value immediately, we poll every [PID_RETRY_INTERVAL_MS] ms
-     * until the process shows up or [POLL_INTERVAL_MS] elapses.
-     * If the timeout expires and the PID is still unknown, the app string with "0 0" is returned
-     * so the output file is still updated rather than silently skipped.
-     * Returns null only if interrupted.
+     * MENGAMBIL DAFTAR PACKAGE YANG ADA DI RECENT APPS (TASK MANAGER)
      */
+    @Suppress("DEPRECATION")
+    private fun getRecentAppPackages(): Set<String> {
+        val packages = mutableSetOf<String>()
+        try {
+            val recentTasks = activityManager?.getRecentTasks(30, ActivityManager.RECENT_IGNORE_UNAVAILABLE)
+            recentTasks?.forEach { task ->
+                val pkg = task.baseIntent.component?.packageName ?: task.topActivity?.packageName
+                if (pkg != null) {
+                    packages.add(pkg)
+                }
+            }
+            
+            val currentFocused = lastStatus.substringAfter("focused_app ").substringBefore(" ")
+            if (currentFocused.isNotBlank() && currentFocused != "unknown" && currentFocused != "none") {
+                packages.add(currentFocused)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return packages
+    }
+
+
+    private fun writeBackgroundApps() {
+        val processes = activityManager?.runningAppProcesses ?: return
+        
+        val recentPackages = getRecentAppPackages()
+
+        val currentApps = buildString {
+            for (process in processes) {
+                val pkgName = process.pkgList?.firstOrNull() ?: process.processName
+                
+                if (recentPackages.contains(pkgName)) {
+                    appendLine("$pkgName ${process.pid} ${process.uid}")
+                }
+            }
+        }
+
+        if (currentApps == lastBackgroundApps) return
+
+        try {
+            val file = File(backgroundOutputPath)
+            file.parentFile?.mkdirs()
+            
+            val tmpFile = File("$backgroundOutputPath.tmp")
+
+            FileOutputStream(tmpFile).use { fos ->
+                fos.write(currentApps.toByteArray(Charsets.UTF_8))
+                fos.fd.sync()
+            }
+
+            tmpFile.renameTo(file)
+
+            lastBackgroundApps = currentApps
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+
     private fun waitForValidFocusedApp(): String? {
         var focusedApp = getFocusedAppInfo()
         if (!hasMissingPid(focusedApp)) return focusedApp
@@ -305,15 +264,9 @@ object MainKt {
             if (!hasMissingPid(focusedApp)) return focusedApp
         }
 
-        // Timed out, write the app with 0 0 as PID/UID anyway.
-        System.err.println("DEBUG: PID still unresolved after ${POLL_INTERVAL_MS}ms for '$focusedApp'.")
         return focusedApp
     }
 
-    /**
-     * Returns true when [appInfo] represents a real foreground app whose PID could not
-     * yet be resolved (i.e. ends with " 0 0" but is not the sentinel [NONE_APP] value).
-     */
     private fun hasMissingPid(appInfo: String): Boolean =
         appInfo != NONE_APP && appInfo.endsWith(" 0 0")
 
@@ -515,13 +468,104 @@ object MainKt {
                 ?.find { it.processName == pkg || it.pkgList?.contains(pkg) == true }
                 ?.let { "${it.pid} ${it.uid}" }
                 ?: run {
-                    System.err.println("DEBUG: No running process found for package '$pkg'")
                     "0 0"
                 }
         } catch (e: Exception) {
-            System.err.println("DEBUG: getPidUid failed for '$pkg': ${e.message}")
             "0 0"
         }
+    }
+
+    private fun setupSystemContext() {
+        try {
+            val looperClass = Class.forName("android.os.Looper")
+            if (looperClass.getMethod("getMainLooper").invoke(null) == null) {
+                looperClass.getMethod("prepareMainLooper").invoke(null)
+            }
+
+            val activityThreadClass = Class.forName("android.app.ActivityThread")
+
+            val thread = activityThreadClass.getMethod("systemMain").invoke(null)
+                ?: activityThreadClass.getMethod("currentActivityThread").invoke(null)
+                ?: error("Both systemMain() and currentActivityThread() returned null")
+
+            systemContext =
+                activityThreadClass.getMethod("getSystemContext").invoke(thread) as? Context
+                    ?: error("getSystemContext() returned null")
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun bypassHiddenApiRestrictions() {
+        HiddenApiBypass.addHiddenApiExemptions("")
+    }
+
+    private fun initializeServices(): Boolean {
+        return try {
+            val ctx = systemContext ?: return false
+            powerManager = ctx.getSystemService(Context.POWER_SERVICE) as PowerManager
+            activityManager = ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            initActivityTaskManager()
+            initNotificationManager()
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    private fun initActivityTaskManager() {
+        val binder = getSystemService(resolveAtmServiceName())
+            ?: error("ServiceManager returned null binder for '${resolveAtmServiceName()}'")
+        val atm = bindInterface("${resolveAtmInterfaceName()}\$Stub", binder)
+        activityTaskManager = atm
+        foregroundMethod = findForegroundMethod(atm)
+    }
+
+    private fun findForegroundMethod(atm: Any): Method? {
+        val methods = getDeclaredMethods(atm.javaClass).associateBy { it.name }
+
+        return FOREGROUND_METHOD_CANDIDATES
+            .mapNotNull { candidate -> methods[candidate] }
+            .find { method ->
+                method.parameterTypes.isEmpty() ||
+                        (method.parameterTypes.size == 1 && method.parameterTypes[0] == Int::class.java) ||
+                        method.name == "getTasks" || method.name == "getRunningTasks"
+            }
+            ?.apply { isAccessible = true }
+    }
+
+    private fun initNotificationManager() {
+        val binder = getSystemService(Context.NOTIFICATION_SERVICE)
+            ?: error("ServiceManager returned null binder for notification service")
+        notificationManager = bindInterface("android.app.INotificationManager\$Stub", binder)
+        notificationManager?.let { manager ->
+            getDeclaredMethods(manager.javaClass).forEach { member ->
+                if (member.name == "getZenMode" && member.parameterTypes.isEmpty()) {
+                    getZenModeMethod = member
+                }
+            }
+        }
+    }
+
+    private fun resolveAtmServiceName() =
+        if (Build.VERSION.SDK_INT >= 29) "activity_task" else Context.ACTIVITY_SERVICE
+
+    private fun resolveAtmInterfaceName() =
+        if (Build.VERSION.SDK_INT >= 29) "android.app.IActivityTaskManager" else "android.app.IActivityManager"
+
+    private fun getSystemService(name: String): IBinder? {
+        val serviceManager = Class.forName("android.os.ServiceManager")
+        return serviceManager.getMethod("getService", String::class.java)
+            .invoke(null, name) as? IBinder
+    }
+
+    private fun bindInterface(stubClassName: String, binder: IBinder): Any {
+        return Class.forName(stubClassName)
+            .getMethod("asInterface", IBinder::class.java)
+            .invoke(null, binder)
+            ?: error("asInterface returned null for $stubClassName")
     }
 
     private fun getDeclaredMethods(cls: Class<*>): List<Method> {
