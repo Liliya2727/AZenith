@@ -19,3 +19,9 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+-keep class zx.azenith.AppMonitor {
+    public static void main(java.lang.String[]);
+}
+
+-keep class org.lsposed.hiddenapibypass.** { *; }

@@ -51,7 +51,6 @@ android {
         }
         debug {
             isMinifyEnabled = false
-            applicationIdSuffix = ".debug"
         }
     }
 
@@ -122,4 +121,5 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.ansi.library)
     implementation(libs.ansi.library.ktx)
+    implementation(libs.hiddenapibypass)
 }
