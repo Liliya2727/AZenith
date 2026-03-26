@@ -80,14 +80,3 @@ jobs:
             echo "Telegram bot token or chatid is undefined!"
             exit 1
           fi
-
-      - name: Prepare Artifact
-        run: |
-          mkdir -p extracted
-          unzip "${{ steps.compileZip.outputs.zipName }}" -d extracted
-
-      - name: Upload Build Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.compileZip.outputs.artifactName }}
-          path: extracted/
