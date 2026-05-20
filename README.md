@@ -13,22 +13,27 @@
 ---
 
 ## ⚡ Overview
-**AZenith** is a universal **AIO (All-In-One)** advanced performance module. It leverages AI-driven optimization and a dedicated WebUI interface to maintain a smooth gaming experience while preserving battery life and day-to-day usability.
+**AZenith** is an All-In-One (AIO) system optimization module designed to enhance Android performance. By utilizing dynamic resource management and a dedicated APP dashboard, it balances high-end gaming performance with daily battery efficiency and system stability.
+
 
 ## 📖 Short Documentation (Quick Guide)
-### Core Features
+
+### 🤖 Optimization
+* **Process Priority:** Prioritizes foreground games while intelligently freezing unnecessary background bloatware to free up resources.
 * **Auto Profiles:** Seamlessly switches performance profiles when a game is detected.
-* **Manual Profiles:** You can turn off Auto Profile and toggle profile manually: **Performance**, **Balanced**, or **ECO Mode**. To use manual profiles, go to `AZenith Settings > Disable Auto Mode`.
+
+### 🌐 Core Features
+* **Custom Profiles:** Manually toggle between **Performance**, **Balanced**, or **ECO Mode*. To use manual profiles, go to `AZenith Settings > Disable Auto Mode`.
 * **Game Preload:** Preload game libs right after the games open.
 * **Custom CPU Governors:** Custom Default CPU Governor based on your preference.
 * **Custom I/O Scheduler:** Custom Default I/O Scheduler based on your preference.
 * **CPU Freq Limiter:** Prevents Device heating by limiting CPU Frequency based on percentage.
-* **Thermalcore Service:** automatically manage system thermal based on device behavior, prevent phone getting too hot in daily use while maintaining device stability.
+* **Thermalcore Service:** Intelligent throttling management—preventing overheating while maintaining a stable FPS floor.
 
 ---
 
 ## 📦 Installation
-This is a **Magisk Module**, so you must install it via your preferred Root Manager. All Root Managers is Supported
+This is a **Magisk Module**, so you must install it via your preferred Root Manager.
 
 ---
 
@@ -63,7 +68,6 @@ We welcome contributions to make **AZenith** even better!
 ### Sources & References
 - **Tweak Sources:** @Rem01Gaming, @MiAzami, @KanagawaYamadaVTeacher, @ShiraXblood, @Laynsb, @Koneko_dev
 - **Game Preload:** @HoyoSlave, @KutuMoba, @Feravolt, @iamlooper
-- **App Reference and Helper:** @ErOneSoul, @kowx712 (KowSU), @Gustyx, @rianistr
 
 ---
 
