@@ -10,7 +10,7 @@ $COMMIT_MESSAGE
 "
 
 file="$1"
-thumbnail="$GITHUB_WORKSPACE/logo.png"
+thumbnail="$GITHUB_WORKSPACE/logo.jpg"
 
 if [ ! -f "$file" ]; then
     echo "error: File not found" >&2
