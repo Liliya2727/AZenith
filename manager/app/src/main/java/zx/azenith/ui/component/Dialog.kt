@@ -156,7 +156,7 @@ interface ConfirmCallback {
 private class ConfirmDialogHandleImpl(
     visible: MutableState<Boolean>,
     coroutineScope: CoroutineScope,
-    private val callback: ConfirmCallback, // FIX: Ditambah 'private val' agar bisa diakses di awaitResult
+    private val callback: ConfirmCallback,
     override var visuals: ConfirmDialogVisuals = ConfirmDialogVisualsImpl.Empty,
     private val resultFlow: ReceiveChannel<ConfirmResult>
 ) : ConfirmDialogHandle, DialogHandleBase(visible, coroutineScope) {
