@@ -94,6 +94,9 @@ fun ColorSchemeSettings(navController: NavController) {
     var blueVal by remember { mutableFloatStateOf(1000f) }
     var satVal by remember { mutableFloatStateOf(1000f) }
     var isLoading by remember { mutableStateOf(true) }
+    val coroutineScope = rememberCoroutineScope()
+    val resetToastMsg = stringResource(R.string.toast_settings_reset)
+    
 
     val applyRGB = { r: Float, g: Float, b: Float ->
         Shell.cmd("service call SurfaceFlinger 1015 i32 1 f ${r / 1000f} f 0 f 0 f 0 f 0 f ${g / 1000f} f 0 f 0 f 0 f 0 f ${b / 1000f} f 0 f 0 f 0 f 0 f 1").submit()
@@ -200,7 +203,7 @@ fun ColorSchemeSettings(navController: NavController) {
                                                 applySat(1000f)
                                                 saveToProp()
                                                 coroutineScope.launch {
-                                                    snackbarHostState.showSnackbar(stringResource(R.string.toast_settings_reset))
+                                                    snackbarHostState.showSnackbar(resetToastMsg)
                                                 }
                                             }) {
                                                 Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.reset))
