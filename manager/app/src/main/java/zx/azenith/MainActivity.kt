@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -107,12 +107,29 @@ fun MainScreen(isFromTile: Boolean = false) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    val rootStatus by produceState(initialValue = false) { value = RootUtils.isRootGranted() }
-    val moduleInstalled by produceState(initialValue = false) { value = RootUtils.isModuleInstalled() }
+    val hasCompletedGetStarted = remember {
+        val prefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+        prefs.getBoolean("has_completed_get_started", false)
+    }
 
+    var rootStatus by remember { mutableStateOf(false) }
+    var moduleInstalled by remember { mutableStateOf(false) }
+
+    val refreshStatus = {
+        rootStatus = RootUtils.requestRootAccess()
+        moduleInstalled = RootUtils.isModuleInstalled()
+    }
+
+    LaunchedEffect(currentRoute) {
+        refreshStatus()
+    }
+    
     val navItems = remember {
         listOf(
             NavItem("home", R.string.nav_home, Icons.Rounded.Home),
@@ -123,70 +140,174 @@ fun MainScreen(isFromTile: Boolean = false) {
     }
     
     val bottomBarRoutes = remember { setOf("home", "applist", "tweaks", "settings") }
+    
+    val updateDialog = rememberConfirmDialog(
+        onConfirm = {
+            coroutineScope.launch {
+                
+                val cacheApk = File(context.cacheDir, "AZenith_update.apk")
+                
+                val copyCmd = """
+                    cp /data/adb/modules/AZenith/AZenith.apk ${cacheApk.absolutePath}
+                    chmod 644 ${cacheApk.absolutePath}
+                """.trimIndent()
+                
+                val result = Shell.cmd(copyCmd).exec()
+                
+                if (result.isSuccess && cacheApk.exists()) {
+                    try {
+                        val apkUri = FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.provider",
+                            cacheApk
+                        )
+                        
+                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(apkUri, "application/vnd.android.package-archive")
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        }
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Failed to open installer: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+                } else {
+                    Toast.makeText(context, "Failed to copy update file from Root.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    )
+
+    val rebootDialog = rememberConfirmDialog(
+        onConfirm = {
+            Shell.cmd("svc power reboot || reboot").submit()
+        }
+    )
+    
+    LaunchedEffect(rootStatus) {
+        if (rootStatus) {
+            val moduleVC = RootUtils.getModuleVersionCode()
+
+            val appVC = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode.toInt()
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(context.packageName, 0).versionCode
+            }
+
+            if (appVC < moduleVC && RootUtils.isUpdateApkAvailable()) {
+                updateDialog.showConfirm(
+                    title = "App Update Available",
+                    content = "Your app manager version ($appVC) is older than the module version ($moduleVC).\n\nUpdate now to get the latest features?",
+                    confirm = "Update Now",
+                    dismiss = "Later"
+                )
+            }
+
+            if (RootUtils.isModuleUpdatePendingReboot()) {
+                rebootDialog.showConfirm(
+                    title = "Module Update Available",
+                    content = "Module update is pending to be applied. Reboot the device now?",
+                    confirm = "Reboot Now",
+                    dismiss = "Not Now"
+                )
+            }
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         
-        Row(modifier = Modifier.fillMaxSize()) {
-            if (rootStatus && moduleInstalled && isLandscape && currentRoute in bottomBarRoutes) {
-                SideBar(navController, navItems, currentRoute)
+        NavHost(
+            navController = navController,
+            startDestination = if (hasCompletedGetStarted) "home" else "get_started",
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surface),                
+            
+            enterTransition = {
+                if (initialState.destination.route == "get_started" && targetState.destination.route == "home") {
+                    fadeIn(animationSpec = tween(700)) 
+                } else if (targetState.destination.route !in bottomBarRoutes) {
+                    // Animasi masuk ke Sub-screen (Slide dari kanan)
+                    slideInHorizontally(
+                        initialOffsetX = { fullWidth -> fullWidth },
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(300))
+                } else {
+                    // Animasi pindah antar tab (Fade + sedikit Scale-in membesar)
+                    fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
+                    scaleIn(
+                        initialScale = 0.96f,
+                        animationSpec = tween(220, easing = FastOutSlowInEasing)
+                    )
+                }
+            },
+            exitTransition = {
+                if (initialState.destination.route == "get_started" && targetState.destination.route == "home") {
+                    fadeOut(animationSpec = tween(700))
+                } else if (initialState.destination.route in bottomBarRoutes && targetState.destination.route !in bottomBarRoutes) {
+                    // Layar utama bergeser sedikit ke kiri (Parallax effect) saat sub-screen masuk
+                    slideOutHorizontally(
+                        targetOffsetX = { fullWidth -> -(fullWidth / 4) },
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(300))
+                } else {
+                    // Animasi keluar saat pindah tab
+                    fadeOut(animationSpec = tween(150))
+                }
+            },
+            popEnterTransition = {
+                // 👇 FIX DI SINI: Cek apakah asalnya DARI sub-screen, bukan dari sesama tab
+                if (initialState.destination.route !in bottomBarRoutes && targetState.destination.route in bottomBarRoutes) {
+                    // Layar utama kembali bergeser dari kiri (Parallax effect) saat sub-screen ditutup
+                    slideInHorizontally(
+                        initialOffsetX = { fullWidth -> -(fullWidth / 4) },
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    ) + fadeIn(animationSpec = tween(300))
+                } else {
+                    // Animasi pindah antar tab (saat ditekan dari tombol Navbar)
+                    fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
+                    scaleIn(
+                        initialScale = 0.96f,
+                        animationSpec = tween(220, easing = FastOutSlowInEasing)
+                    )
+                }
+            },
+            popExitTransition = {
+                if (initialState.destination.route !in bottomBarRoutes) {
+                    // Animasi sub-screen ditutup (Slide ke kanan)
+                    slideOutHorizontally(
+                        targetOffsetX = { fullWidth -> fullWidth },
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    ) + fadeOut(animationSpec = tween(300))
+                } else {
+                    fadeOut(animationSpec = tween(150))
+                }
             }
 
-            NavHost(
-                navController = navController,
-                startDestination = "home",
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface),                
-                enterTransition = {
-                    if (targetState.destination.route !in bottomBarRoutes) {
-                        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(400))
-                    } else {
-                        fadeIn(animationSpec = tween(340))
-                    }
-                },
-                exitTransition = {
-                    if (initialState.destination.route in bottomBarRoutes && targetState.destination.route !in bottomBarRoutes) {
-                        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, targetOffset = { it / 4 }, animationSpec = tween(400)) + fadeOut()
-                    } else {
-                        fadeOut(animationSpec = tween(340))
-                    }
-                },
-                popEnterTransition = {
-                    if (initialState.destination.route !in bottomBarRoutes && targetState.destination.route in bottomBarRoutes) {
-                        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, initialOffset = { it / 4 }, animationSpec = tween(400)) + fadeIn()
-                    } else {
-                        fadeIn(animationSpec = tween(340))
-                    }
-                },
-                popExitTransition = {
-                    if (initialState.destination.route !in bottomBarRoutes) {
-                        scaleOut(targetScale = 0.9f, animationSpec = tween(300)) + fadeOut()
-                    } else {
-                        fadeOut(animationSpec = tween(340))
-                    }
-                }
-            ) {
-                composable("home") { HomeScreen() }
-                composable("applist") { ApplistScreen(navController) }
-                composable("tweaks") { TweakScreen(navController) }
-                composable("settings") { SettingsScreen(navController) }
-                composable("color_palette") { ColorPaletteScreen(navController) }
-                composable("colorscheme") { ColorSchemeSettings(navController) }
-                composable("bypasschg") { BypassChargeScreen(navController) }
-                composable("bypasschg_check") { BypassChargeCheckScreen(navController) }
-                composable("preferenced") { PreferenceTweakScreen(navController) }
-                composable(
-                    route = "app_settings/{pkg}",
-                    arguments = listOf(navArgument("pkg") { type = NavType.StringType })
-                ) { backStackEntry ->
-                    val pkg = backStackEntry.arguments?.getString("pkg")
-                    AppSettingsScreen(navController, pkg)
-                }
+        ) {
+
+            composable("get_started") { GetStartedScreen(navController) }
+            composable("home") { HomeScreen() }
+            composable("applist") { ApplistScreen(navController) }
+            composable("tweaks") { TweakScreen(navController) }
+            composable("settings") { SettingsScreen(navController) }
+            composable("color_palette") { ColorPaletteScreen(navController) }
+            composable("colorscheme") { ColorSchemeSettings(navController) }
+            composable("FasScreen") { FasScreen(navController) }
+            composable("bypasschg") { BypassChargeScreen(navController) }
+            composable("bypasschg_check") { BypassChargeCheckScreen(navController) }
+            composable("preferenced") { PreferenceTweakScreen(navController) }
+            composable(
+                route = "app_settings/{pkg}",
+                arguments = listOf(navArgument("pkg") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val pkg = backStackEntry.arguments?.getString("pkg")
+                AppSettingsScreen(navController, pkg)
             }
         }
 
         AnimatedVisibility(
-            visible = rootStatus && moduleInstalled && !isLandscape && currentRoute in bottomBarRoutes,
+            visible = rootStatus && moduleInstalled && currentRoute in bottomBarRoutes,
             enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
             exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter)
@@ -199,9 +320,9 @@ fun MainScreen(isFromTile: Boolean = false) {
                 onItemSelected = { route ->
                     if (currentRoute != route) {
                         navController.navigate(route) {
-                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            popUpTo(navController.graph.startDestinationId) { saveState = false }
                             launchSingleTop = true
-                            restoreState = true
+                            restoreState = false
                         }
                     }
                 }
@@ -252,7 +373,6 @@ fun BottomNavBar(
         }
     }
 }
-
 
 @Composable
 private fun NavPill(
