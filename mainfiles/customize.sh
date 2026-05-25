@@ -18,8 +18,8 @@ SKIPUNZIP=1
 
 # Paths
 MODULE_CONFIG="/data/adb/.config/AZenith"
-device_codename=$(resetprop ro.product.board)
-chip=$(resetprop ro.hardware)
+device_codename=$(getprop ro.product.board)
+chip=$(getprop ro.hardware)
 
 # Create File
 make_node() {
@@ -41,8 +41,6 @@ abort_arch() {
   ui_print "! Supported architectures:"
   ui_print "  • arm64-v8a"
   ui_print "  • armeabi-v7a"
-  ui_print "  • x86 / x86_64"
-  ui_print "  • riscv64"
   abort "# # # # # # # # # # # # # # # # # # # # #"
 }
 
@@ -67,6 +65,7 @@ mkdir -p "$MODULE_CONFIG/debug"
 mkdir -p "$MODULE_CONFIG/API"
 mkdir -p "$MODULE_CONFIG/preload"
 mkdir -p "$MODULE_CONFIG/gamelist"
+mkdir -p "$MODPATH/system/bin"
 ui_print "- Create module config"
 
 # Flashable integrity checkup
@@ -75,14 +74,28 @@ unzip -o "$ZIPFILE" 'verify.sh' -d "$TMPDIR" >&2
 [ ! -f "$TMPDIR/verify.sh" ] && abort_corrupted
 source "$TMPDIR/verify.sh"
 
-# Extract Module files
-ui_print "- Extracting system directory..."
-extract "$ZIPFILE" 'system/bin/sys.azenith-profilesettings' "$MODPATH"
-extract "$ZIPFILE" 'system/bin/sys.azenith-utilityconf' "$MODPATH"
-extract "$ZIPFILE" 'system/bin/sys.azenith-preloadbin' "$MODPATH"
-extract "$ZIPFILE" 'system/bin/sys.azenith-rianixiathermalcore' "$MODPATH"
+# Target architecture detection
+case $ARCH in
+"arm64") ARCH_TMP="arm64-v8a" ;;
+"arm") ARCH_TMP="armeabi-v7a" ;;
+*) abort_arch ;;
+esac
+
+ui_print "- Extracting binaries for $ARCH_TMP..."
+extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-service" "$TMPDIR"
+extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-profilesettings" "$TMPDIR"
+extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-rianixiathermalcore" "$TMPDIR"
+extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-utilityconf" "$TMPDIR"
+extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-preloadbin" "$TMPDIR"
+cp "$TMPDIR/libs/$ARCH_TMP/"* "$MODPATH/system/bin/"
+rm -rf "$TMPDIR/libs"
+ui_print "- All binaries installed successfully"
+
+# Extract Module standard files
 ui_print "- Extracting service.sh..."
 extract "$ZIPFILE" service.sh "$MODPATH"
+ui_print "- Extracting post-fs-data.sh..."
+extract "$ZIPFILE" post-fs-data.sh "$MODPATH"
 ui_print "- Extracting action.sh..."
 extract "$ZIPFILE" action.sh "$MODPATH"
 ui_print "- Extracting module.prop..."
@@ -96,24 +109,7 @@ fi
 ui_print "- Extracting module banner..."
 extract "$ZIPFILE" module.banner.avif "$MODPATH"
 
-# Target architecture
-case $ARCH in
-"arm64") ARCH_TMP="arm64-v8a" ;;
-"arm") ARCH_TMP="armeabi-v7a" ;;
-"x64") ARCH_TMP="x86_64" ;;
-"x86") ARCH_TMP="x86" ;;
-"riscv64") ARCH_TMP="riscv64" ;;
-*) abort_arch ;;
-esac
-
-# Extract daemon
-ui_print "- Extracting sys.azenith-service for $ARCH_TMP"
-extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-service" "$TMPDIR"
-cp "$TMPDIR"/libs/"$ARCH_TMP"/* "$MODPATH/system/bin"
-rm -rf "$TMPDIR/libs"
-ui_print "- Installing for Arch : $ARCH_TMP"
-
-# Use Symlink
+# Use Symlink for APatch / KernelSU
 if [ "$KSU" = "true" ] || [ "$APATCH" = "true" ]; then
 	# skip mount on APatch / KernelSU
 	touch "$MODPATH/skip_mount"
@@ -136,38 +132,38 @@ fi
 # Apply Tweaks Based on Chipset
 ui_print "- Checking device soc"
 chipset=$(grep -i 'hardware' /proc/cpuinfo | uniq | cut -d ':' -f2 | sed 's/^[ \t]*//')
-[ -z "$chipset" ] && chipset="$(resetprop ro.board.platform) $(resetprop ro.hardware)"
+[ -z "$chipset" ] && chipset="$(getprop ro.board.platform) $(getprop ro.hardware)"
 
 case "$(echo "$chipset" | tr '[:upper:]' '[:lower:]')" in
 *mt* | *MT*)
 	soc="MediaTek"
 	ui_print "- Applying Tweaks for $soc"
-	resetprop -p persist.sys.azenithdebug.soctype 1
+	setprop persist.sys.azenithdebug.soctype 1
 	;;
 *sm* | *qcom* | *SM* | *QCOM* | *Qualcomm* | *sdm* | *snapdragon*)
 	soc="Snapdragon"
 	ui_print "- Applying Tweaks for $soc"
-	resetprop -p persist.sys.azenithdebug.soctype 2
+	setprop persist.sys.azenithdebug.soctype 2
 	;;
 *exynos* | *Exynos* | *EXYNOS* | *universal* | *samsung* | *erd* | *s5e*)
 	soc="Exynos"
 	ui_print "- Applying Tweaks for $soc"
-	resetprop -p persist.sys.azenithdebug.soctype 3
+	setprop persist.sys.azenithdebug.soctype 3
 	;;
 *Unisoc* | *unisoc* | *ums*)
 	soc="Unisoc"
 	ui_print "- Applying Tweaks for $soc"
-	resetprop -p persist.sys.azenithdebug.soctype 4
+	setprop persist.sys.azenithdebug.soctype 4
 	;;
 *gs* | *Tensor* | *tensor*)
 	soc="Tensor"
 	ui_print "- Applying Tweaks for $soc"
-	resetprop -p persist.sys.azenithdebug.soctype 5
+	setprop persist.sys.azenithdebug.soctype 5
 	;;
 *)
 	soc="Unknown"
 	ui_print "- Applying Tweaks for $chipset"
-	resetprop -p persist.sys.azenithdebug.soctype 0
+	setprop persist.sys.azenithdebug.soctype 0
 	;;
 esac
 
@@ -181,40 +177,41 @@ esac
 
 # Set default freqoffset
 if [ -z "$(getprop persist.sys.azenithconf.freqoffset)" ]; then
-	resetprop -p persist.sys.azenithconf.freqoffset "Disabled"
+	setprop persist.sys.azenithconf.freqoffset "Disabled"
 fi
 
 # Set default renderer
 if [ -z "$(getprop persist.sys.azenithconf.renderer)" ]; then
-	resetprop -p persist.sys.azenithconf.renderer "Default"
+	setprop persist.sys.azenithconf.renderer "Default"
 fi
 
 # Set default color scheme if not set
 if [ -z "$(getprop persist.sys.azenithconf.schemeconfig)" ]; then
-	resetprop -p persist.sys.azenithconf.schemeconfig "1000 1000 1000 1000"
+	setprop persist.sys.azenithconf.schemeconfig "1000 1000 1000 1000"
 fi
 
 # Initiate bypasspath default value
 if [ -z "$(getprop persist.sys.azenithconf.bypasspath)" ]; then
-	resetprop -p persist.sys.azenithconf.bypasspath "UNSUPPORTED"
+	setprop persist.sys.azenithconf.bypasspath "UNSUPPORTED"
 fi
 
 # Daemon Configurations
 if [ -z "$(getprop persist.sys.azenithconf.showtoast)" ]; then
-	resetprop -p persist.sys.azenithconf.showtoast 1
+	setprop persist.sys.azenithconf.showtoast 1
 fi
 
 if [ -z "$(getprop persist.sys.azenithconf.preloadbudget)" ]; then
-    resetprop -p persist.sys.azenithconf.preloadbudget 500M
+    setprop persist.sys.azenithconf.preloadbudget 500M
 fi
 
 if [ -z "$(getprop persist.sys.azenithconf.AIenabled)" ]; then
     ui_print "- Enabling Auto Mode"
-    resetprop -p persist.sys.azenithconf.AIenabled 1
+    setprop persist.sys.azenithconf.AIenabled 1
+    echo 1 > "$MODULE_CONFIG/API/current_modes"
 fi
 
 ui_print "- Disable Debugmode"
-resetprop -p persist.sys.azenith.debugmode "false"
+setprop persist.sys.azenith.debugmode "false"
 
 # Set config properties to use
 ui_print "- Setting config properties..."
@@ -237,17 +234,16 @@ persist.sys.azenithconf.thermalcore
 persist.sys.azenithconf.walttunes
 "
 for prop in $props; do
-	curval=$(resetprop "$prop")
+	curval=$(getprop "$prop")
 	if [ -z "$curval" ]; then
-		resetprop -p "$prop" 0
+		setprop "$prop" 0
 	fi
 done
 
 # Install Manager Apk
 extract "$ZIPFILE" AZenith.apk "$MODPATH"
 ui_print "- Installing AZenith apk..."
-pm install "$MODPATH/AZenith.apk" > /dev/null 2>&1
-rm "$MODPATH/AZenith.apk"
+pm install -r -d --user 0 "$MODPATH/AZenith.apk" > /dev/null 2>&1
 
 # Remove old module files if available
 ui_print "- Cleaning old files..."
