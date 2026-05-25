@@ -46,6 +46,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Surface
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+
 
 private val largeCorner = 26.dp
 private val smallCorner = 4.dp
@@ -65,7 +73,6 @@ private val bottomShape = RoundedCornerShape(
 )
 private val singleShape = RoundedCornerShape(largeCorner)
 
-// List Composable
 @Composable
 fun ExpressiveList(
     modifier: Modifier = Modifier,
@@ -97,7 +104,9 @@ fun ExpressiveList(
                     else -> middleShape
                 }
                 Column(
-                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp), shape)
+                    modifier = Modifier
+                        .clip(shape) // 👇 TAMBAHAN WAJIB DI SINI
+                        .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp), shape)
                 ) {
                     itemContent()
                 }
@@ -143,6 +152,15 @@ fun <T> ExpressiveLazyList(
                 }
                 Column(
                     modifier = Modifier
+                        // 👇 TAMBAHKAN MODIFIER INI SEBELUM CLIP
+                        .animateItem( // Catatan: Gunakan .animateItemPlacement() jika Compose versi < 1.7.0
+                            fadeInSpec = null,
+                            fadeOutSpec = null,
+                            placementSpec = spring(
+                                dampingRatio = Spring.DampingRatioLowBouncy, // Efek mantul dikit pas naik/turun
+                                stiffness = Spring.StiffnessLow
+                            )
+                        )
                         .clip(shape)
                         .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))
                 ) {
@@ -150,10 +168,10 @@ fun <T> ExpressiveLazyList(
                 }
             }
         }
+
     }
 }
 
-// Item Composable
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ExpressiveListItem(
@@ -222,7 +240,6 @@ fun ExpressiveListItemHighlight(
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
     headlineContent: @Composable () -> Unit,
-    // 1. Tambahkan parameter containerColor dengan default value (misal Transparan atau Surface)
     containerColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Transparent, 
     @SuppressLint("ModifierParameter") modifier: Modifier = Modifier,
     supportingContent: @Composable (() -> Unit)? = null,
@@ -232,7 +249,6 @@ fun ExpressiveListItemHighlight(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            // 2. Pasang background SEBELUM clickable dan padding agar warnanya mengisi seluruh baris
             .background(containerColor) 
             .let {
                 if (onClick != null || onLongClick != null) {
@@ -282,6 +298,75 @@ fun ExpressiveListItemHighlight(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ExpressiveInfoCard(
+    onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
+    containerColor: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Transparent, 
+    @SuppressLint("ModifierParameter") modifier: Modifier = Modifier,
+    supportingContent: @Composable (() -> Unit)? = null,
+    leadingContent: @Composable (() -> Unit)? = null,
+    trailingContent: @Composable (() -> Unit)? = null,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(containerColor) 
+            .let {
+                if (onClick != null || onLongClick != null) {
+                    it.combinedClickable(onClick = onClick ?: {}, onLongClick = onLongClick)
+                } else {
+                    it
+                }
+            }
+            .then(modifier)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (leadingContent != null) {
+            Box(
+                modifier = Modifier.padding(end = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                leadingContent()
+            }
+        }
+        
+        // Bagian tengah (menggantikan posisi headlineContent)
+        if (supportingContent != null) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                CompositionLocalProvider(
+                    LocalContentColor provides MaterialTheme.colorScheme.outline
+                ) {
+                    ProvideTextStyle(value = MaterialTheme.typography.bodyMedium) {
+                        supportingContent()
+                    }
+                }
+            }
+        } else {
+            // Spacer agar trailingContent tetap terdorong ke ujung kanan jika tengah kosong
+            Spacer(modifier = Modifier.weight(1f))
+        }
+        
+        if (trailingContent != null) {
+            Box(
+                modifier = Modifier.padding(start = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                ProvideTextStyle(value = MaterialTheme.typography.bodySmall) {
+                    trailingContent()
+                }
+            }
+        }
+    }
+}
+
 
 @Composable
 fun ExpressiveSwitchItem(
@@ -305,11 +390,28 @@ fun ExpressiveSwitchItem(
             onValueChange = onCheckedChange
         ),
         headlineContent = { Text(title) },
-        leadingContent = icon?.let { { Icon(it, title) } },
+        leadingContent = icon?.let { { LeadingIcon(icon = it, contentDescription = title) } },
         trailingContent = {
             Switch(
                 checked = checked,
                 enabled = enabled,
+                thumbContent = {
+                    if (checked) {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(SwitchDefaults.IconSize),
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            modifier = Modifier.size(SwitchDefaults.IconSize),
+                        )
+                    }
+                }, 
                 onCheckedChange = onCheckedChange,
                 interactionSource = interactionSource
             )
@@ -343,7 +445,7 @@ fun ExpressiveDropdownItem(
         } else {
             Modifier
         },
-        leadingContent = icon?.let { { Icon(it, title) } },
+        leadingContent = icon?.let { { LeadingIcon(icon = it, contentDescription = title) } },
         headlineContent = { Text(text = title) },
         supportingContent = summary?.let { { Text(it) } },
         trailingContent = {
@@ -466,11 +568,55 @@ fun ExpressiveColumn(
                     else -> middleShape
                 }
                 Column(
-                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp), shape)
+                    modifier = Modifier
+                        .clip(shape)
+                        .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp), shape)
                 ) {
                     itemContent()
                 }
             }
         }
+    }
+}
+
+@Composable
+fun LeadingIcon(
+    icon: ImageVector,
+    contentDescription: String? = null,
+    containerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+    contentColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary
+) {
+    Box(
+        modifier = Modifier
+            .size(34.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(containerColor),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(20.dp),
+            tint = contentColor
+        )
+    }
+}
+
+@Composable
+fun SmallLeadingIcon(icon: ImageVector) {
+    val cs = MaterialTheme.colorScheme
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = cs.primary.copy(alpha = 0.12f),
+        modifier = Modifier.size(32.dp)
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = cs.primary,
+            modifier = Modifier
+                .padding(7.dp)
+                .size(18.dp)
+        )
     }
 }
