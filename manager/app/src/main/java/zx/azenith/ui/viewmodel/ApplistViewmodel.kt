@@ -36,7 +36,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
 import org.json.JSONObject
 import zx.azenith.R
-import zx.azenith.ui.util.AppConfig
 import java.text.Collator
 import java.util.Locale
 import androidx.compose.ui.text.input.TextFieldValue
@@ -111,19 +110,23 @@ class ApplistViewmodel : ViewModel() {
             isRefreshing = true
             val pm = context.packageManager
 
-            val gameList = try {
-                context.assets.open("gamelist.txt").bufferedReader().useLines { it.toSet() }
-            } catch (e: Exception) { emptySet() }
-
             val enabledList = getEnabledPackages()
-
             val installed = pm.getInstalledPackages(PackageManager.GET_META_DATA)
 
             val loadedApps = installed.map { pkg ->
+                val appInfo = pkg.applicationInfo
+                
+                // Cek apakah aplikasi tersebut adalah game menggunakan API Android
+                @Suppress("DEPRECATION")
+                val isGame = appInfo != null && (
+                    appInfo.category == ApplicationInfo.CATEGORY_GAME ||
+                    (appInfo.flags and ApplicationInfo.FLAG_IS_GAME) != 0
+                )
+
                 AppInfo(
-                    label = pkg.applicationInfo?.loadLabel(pm)?.toString() ?: context.getString(R.string.status_unknown),
+                    label = appInfo?.loadLabel(pm)?.toString() ?: context.getString(R.string.status_unknown),
                     packageInfo = pkg,
-                    isRecommended = gameList.contains(pkg.packageName),
+                    isRecommended = isGame,
                     isEnabledInConfig = enabledList.contains(pkg.packageName)
                 )
             }
