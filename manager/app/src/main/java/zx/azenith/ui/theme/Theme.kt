@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowInsetsControllerCompat
 import com.materialkolor.rememberDynamicColorScheme
+import com.materialkolor.dynamiccolor.ColorSpec
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.ColorScheme
@@ -71,7 +72,6 @@ fun animateColorSchemeAsState(
     )
 }
 
-
 enum class ColorMode(val value: Int) {
     SYSTEM(3), LIGHT(4), DARK(5), DARKAMOLED(6);
 
@@ -87,7 +87,7 @@ enum class ColorMode(val value: Int) {
     }
 }
 
-data class AppSettings(val colorMode: ColorMode, val keyColor: Int)
+data class AppSettings(val colorMode: ColorMode, val keyColor: Int, val colorSpec: ColorSpec.SpecVersion)
 
 object ThemeController {
     fun getAppSettings(context: Context): AppSettings {
@@ -96,7 +96,15 @@ object ThemeController {
             prefs.getInt("color_mode", ColorMode.SYSTEM.value)
         )
         val keyColor = prefs.getInt("key_color", 0) 
-        return AppSettings(colorMode, keyColor)
+        
+        val colorSpecStr = prefs.getString("color_spec", "DEFAULT")
+        val colorSpec = try {
+            ColorSpec.SpecVersion.valueOf(colorSpecStr ?: "DEFAULT")
+        } catch (_: Exception) {
+            ColorSpec.SpecVersion.entries.firstOrNull() ?: error("Fallback SpecVersion failed")
+        }
+        
+        return AppSettings(colorMode, keyColor, colorSpec)
     }
 }
 
@@ -124,28 +132,34 @@ fun AZenithTheme(
     val darkTheme = themeState.colorMode.getDarkThemeValue(systemDarkTheme)
     val amoledMode = themeState.colorMode == ColorMode.DARKAMOLED
     val isDynamic = themeState.keyColor == 0
+    val colorSpec = themeState.colorSpec
 
-    val colorScheme = when {
-        isDynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val base = if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            rememberDynamicColorScheme(
-                seedColor = Color.Unspecified,
-                isDark = darkTheme,
-                isAmoled = amoledMode,
-                primary = base.primary,
-                secondary = base.secondary,
-                tertiary = base.tertiary,
-                neutral = base.surface,
-                neutralVariant = base.surfaceVariant,
-                error = base.error
-            )
+    val colorScheme = if (isDynamic) {
+        val baseScheme = when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            else ->
+                if (darkTheme) darkColorScheme() else expressiveLightColorScheme()
         }
-        !isDynamic -> rememberDynamicColorScheme(
-            seedColor = Color(themeState.keyColor), 
-            isDark = darkTheme, 
-            isAmoled = amoledMode
+        rememberDynamicColorScheme(
+            seedColor = baseScheme.primary,
+            isDark = darkTheme,
+            isAmoled = amoledMode,
+            specVersion = colorSpec,
+            primary = baseScheme.primary,
+            secondary = baseScheme.secondary,
+            tertiary = baseScheme.tertiary,
+            neutral = baseScheme.surface,
+            neutralVariant = baseScheme.surfaceVariant,
+            error = baseScheme.error
         )
-        else -> if (darkTheme) darkColorScheme() else expressiveLightColorScheme()
+    } else {
+        rememberDynamicColorScheme(
+            seedColor = Color(themeState.keyColor),
+            isDark = darkTheme,
+            isAmoled = amoledMode,
+            specVersion = colorSpec,
+        )
     }
 
     val view = androidx.compose.ui.platform.LocalView.current
