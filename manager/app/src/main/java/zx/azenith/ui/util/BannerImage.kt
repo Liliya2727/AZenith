@@ -17,11 +17,28 @@
 package zx.azenith.ui.util
 
 import android.content.Context
+import android.net.Uri
+import java.io.File
 
 private const val PREFS_NAME = "settings"
 private const val KEY_HEADER_IMAGE = "header_image_uri"
 private const val KEY_ENABLE_BANNER = "enable_banner_image"
 private const val KEY_BANNER_GRADIENT_ALPHA = "banner_gradient_alpha"
+
+private fun Context.deleteOldBannerFile(uriString: String?) {
+    if (uriString.isNullOrEmpty()) return
+    try {
+        val uri = Uri.parse(uriString)
+        val path = uri.path ?: uriString 
+        val file = File(path)
+        
+        if (file.exists() && file.absolutePath.startsWith(cacheDir.absolutePath)) {
+            file.delete()
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+}
 
 fun Context.getHeaderImage(): String? {
     return getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -29,6 +46,12 @@ fun Context.getHeaderImage(): String? {
 }
 
 fun Context.saveHeaderImage(uri: String) {
+    val oldUri = getHeaderImage()
+    
+    if (oldUri != null && oldUri != uri) {
+        deleteOldBannerFile(oldUri)
+    }
+
     getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         .edit()
         .putString(KEY_HEADER_IMAGE, uri)
@@ -36,6 +59,10 @@ fun Context.saveHeaderImage(uri: String) {
 }
 
 fun Context.clearHeaderImage() {
+    val oldUri = getHeaderImage()
+    
+    deleteOldBannerFile(oldUri)
+
     getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         .edit()
         .remove(KEY_HEADER_IMAGE)
