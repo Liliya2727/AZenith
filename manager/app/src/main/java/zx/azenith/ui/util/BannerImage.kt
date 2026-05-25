@@ -20,19 +20,14 @@ import android.content.Context
 
 private const val PREFS_NAME = "settings"
 private const val KEY_HEADER_IMAGE = "header_image_uri"
+private const val KEY_ENABLE_BANNER = "enable_banner_image"
+private const val KEY_BANNER_GRADIENT_ALPHA = "banner_gradient_alpha"
 
-/**
- * @return uri string of custom header image, or null if using default
- */
 fun Context.getHeaderImage(): String? {
     return getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         .getString(KEY_HEADER_IMAGE, null)
 }
 
-/**
- * Save custom header image uri.
- * Default header should NOT be saved.
- */
 fun Context.saveHeaderImage(uri: String) {
     getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         .edit()
@@ -40,12 +35,33 @@ fun Context.saveHeaderImage(uri: String) {
         .apply()
 }
 
-/**
- * Clear custom header image and fallback to default.
- */
 fun Context.clearHeaderImage() {
     getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         .edit()
         .remove(KEY_HEADER_IMAGE)
+        .apply()
+}
+
+fun Context.isBannerImageEnabled(): Boolean {
+    return getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .getBoolean(KEY_ENABLE_BANNER, true)
+}
+
+fun Context.setBannerImageEnabled(enabled: Boolean) {
+    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .edit()
+        .putBoolean(KEY_ENABLE_BANNER, enabled)
+        .apply()
+}
+
+fun Context.getBannerGradientAlpha(): Float {
+    return getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .getFloat(KEY_BANNER_GRADIENT_ALPHA, 0.5f)
+}
+
+fun Context.setBannerGradientAlpha(alpha: Float) {
+    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .edit()
+        .putFloat(KEY_BANNER_GRADIENT_ALPHA, alpha)
         .apply()
 }
