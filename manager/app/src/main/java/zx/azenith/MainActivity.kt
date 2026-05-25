@@ -47,11 +47,21 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.compose.*
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.navArgument
 import zx.azenith.R
-import zx.azenith.ui.screens.*
+import zx.azenith.ui.mainscreens.*
+import zx.azenith.ui.subscreens.*
 import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.util.RootUtils
+import kotlinx.coroutines.launch
+import com.topjohnwu.superuser.Shell
+import zx.azenith.ui.component.rememberConfirmDialog
+import android.content.Intent
+import androidx.core.content.FileProvider
+import java.io.File
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
