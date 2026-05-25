@@ -326,36 +326,3 @@ private fun NavPill(
         }
     }
 }
-
-@Composable
-private fun SideBar(
-    navController: NavHostController,
-    items: List<NavItem>,
-    currentRoute: String?
-) {
-    NavigationRail(modifier = Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.fillMaxHeight(),
-            verticalArrangement = Arrangement.Center
-        ) {
-            items.forEach { item ->
-                val isSelected = currentRoute == item.route
-                NavigationRailItem(
-                    selected = isSelected,
-                    onClick = {
-                        if (!isSelected) {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.startDestinationId)
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
-                    },
-                    icon = { Icon(item.icon, contentDescription = stringResource(item.labelRes)) },
-                    label = { Text(stringResource(item.labelRes)) },
-                    alwaysShowLabel = false
-                )
-            }
-        }
-    }
-}
