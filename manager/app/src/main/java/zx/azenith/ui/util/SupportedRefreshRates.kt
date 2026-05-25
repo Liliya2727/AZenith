@@ -37,7 +37,7 @@ fun getSupportedRefreshRates(context: Context): List<String> {
     val standardModes = listOf(60, 90, 120, 144)
     
     standardModes.forEach { mode ->
-        if (supportedRR.any { it >= mode - 1 && it <= mode + 1 }) { // Toleransi +/- 1Hz
+        if (supportedRR.any { it >= mode - 1 && it <= mode + 1 }) {
             finalModes.add(mode.toString())
         }
     }
