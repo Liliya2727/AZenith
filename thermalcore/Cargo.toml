@@ -1,0 +1,29 @@
+[package]
+name = "rianixia-thermalcore"
+version = "2.0.0"
+edition = "2024"
+authors = ["rianixia"]
+
+[dependencies]
+nix = { version = "0.30", features = ["poll", "time"] }
+inotify = "0.11.0"
+serde = { version = "1.0", features = ["derive"] }
+bincode = { version = "2.0.1", features = ["serde"] }
+signal-hook = "0.3"
+chrono = { version = "0.4", features = ["serde"] }
+sysinfo = "0.37.2"
+serde_json = "1.0"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+[features]
+simulator = []
+
+[[bin]]
+name = "rianixia-thermalcore"
+path = "src/main.rs"
+
