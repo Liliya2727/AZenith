@@ -243,6 +243,7 @@ fun BottomNavBar(
     }
 }
 
+
 @Composable
 private fun NavPill(
     item: NavItem,
@@ -253,65 +254,75 @@ private fun NavPill(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     
+    // Efek scale saat ditekan
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.95f else 1f,
-        animationSpec = tween(100), label = "scale"
+        animationSpec = tween(150), label = "scale"
+    )
+
+    // Animasi transisi warna
+    val animationSpec = tween<Color>(durationMillis = 300, easing = FastOutSlowInEasing)
+    
+    val bgColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp),
+        animationSpec = animationSpec,
+        label = "bgColor"
     )
     
-    val labelAlpha by animateFloatAsState(
-        targetValue = if (isSelected) 1f else 0f,
-        animationSpec = tween(200), label = "labelAlpha"
+    val contentColor by animateColorAsState(
+        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = animationSpec,
+        label = "contentColor"
     )
 
     val shape = if (isSelected) RoundedCornerShape(24.dp) else CircleShape
     
-    Box(
+    // HAPUS Box dan animateContentSize, kita pakai Row langsung seperti KSU
+    Row(
         modifier = modifier
             .scale(scale)
             .height(48.dp)
-            .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                )
-            )
-            .then(if (!isSelected) Modifier.aspectRatio(1f) else Modifier)
+            .defaultMinSize(minWidth = 48.dp) // Pastikan bentuknya minimal bulat sempurna (48x48) saat menutup
             .clip(shape)
-            .background(
-                if (isSelected) MaterialTheme.colorScheme.primary 
-                else MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
-            )
+            .background(bgColor)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(horizontal = 8.dp)
-        ) {
-            Icon(
-                imageVector = item.icon,
-                contentDescription = null,
-                tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(22.dp)
             )
-            
-            if (isSelected && labelAlpha > 0.01f) {
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(item.labelRes),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.alpha(labelAlpha),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            .padding(horizontal = 12.dp), // Padding seragam
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = item.icon,
+            contentDescription = null,
+            tint = contentColor,
+            modifier = Modifier.size(24.dp)
+        )
+        
+        // Murni mengandalkan expandHorizontally untuk melebar tanpa bentrok
+        AnimatedVisibility(
+            visible = isSelected,
+            enter = expandHorizontally(
+                animationSpec = tween(300, easing = FastOutSlowInEasing),
+                expandFrom = Alignment.Start
+            ) + fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)),
+            exit = shrinkHorizontally(
+                animationSpec = tween(300, easing = FastOutSlowInEasing),
+                shrinkTowards = Alignment.Start
+            ) + fadeOut(animationSpec = tween(300, easing = FastOutSlowInEasing))
+        ) {
+            Text(
+                text = stringResource(item.labelRes),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = contentColor,
+                maxLines = 1,
+                softWrap = false, // Kunci biar teks gak loncat ke baris baru saat menyusut
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 5.dp) // Jarak antara icon dan teks
+            )
         }
     }
 }
