@@ -18,4 +18,4 @@
 
 sys.azenith-service --appactivity > /dev/null 2>&1
 sync
-exit 0
+exit 
