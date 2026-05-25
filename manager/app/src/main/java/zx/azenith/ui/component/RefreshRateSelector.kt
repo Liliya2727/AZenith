@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import zx.azenith.ui.component.*
 import zx.azenith.R
 import zx.azenith.ui.util.getSupportedRefreshRatesPicker
 
@@ -46,15 +47,14 @@ private data class RefreshRatePickerOption(
     val icon: ImageVector
 )
 
+
 @Composable
 private fun getRefreshRatePickerOptions(context: Context): List<RefreshRatePickerOption> {
-    // List sekarang berisi: ["144", "120", "90", "60"]
     val supported = getSupportedRefreshRatesPicker(context)
     
     return supported.mapIndexed { index, rate ->
         RefreshRatePickerOption(
             titleString = context.getString(R.string.refresh_rate_format, rate),
-            // index 0 akan jadi "0", index 1 jadi "1", dst.
             reason = index.toString(), 
             icon = Icons.Outlined.WebStories
         )
@@ -71,7 +71,6 @@ fun RefreshRatePickerDialog(
 ) {
     if (!show) return
     val context = LocalContext.current
-    // Panggil options berdasarkan context saat ini
     val options = getRefreshRatePickerOptions(context)
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
@@ -82,27 +81,20 @@ fun RefreshRatePickerDialog(
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
                     text = stringResource(R.string.RefreshRatePicker_Select),
-                    style = MaterialTheme.typography.titleLarge
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
 
                 val content = options.map { option ->
                     @Composable {
                         ExpressiveListItem(
-                            modifier = Modifier.padding(vertical = 8.dp),
+                            modifier = Modifier.padding(vertical = 4.dp),
                             headlineContent = { Text(option.titleString) },
-                            leadingContent = {
-                                Box(
-                                    modifier = Modifier.size(40.dp).background(
-                                        MaterialTheme.colorScheme.secondaryContainer, CircleShape
-                                    ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(option.icon, null, modifier = Modifier.size(20.dp))
-                                }
+                            leadingContent = { 
+                                SmallLeadingIcon(icon = option.icon) 
                             },
                             onClick = {
                                 onDismiss()
-                                // Mengirim "0", "1", "2" sesuai urutan max -> min
                                 onRefreshRatePicker(option.reason)
                             }
                         )
@@ -110,13 +102,14 @@ fun RefreshRatePickerDialog(
                 }
 
                 ExpressiveColumn(
-                    modifier = Modifier.padding(top = 20.dp),
+                    modifier = Modifier.padding(top = 12.dp),
                     content = content
                 )
             }
         }
     }
 }
+
 
 @Preview(showBackground = true)
 @Composable

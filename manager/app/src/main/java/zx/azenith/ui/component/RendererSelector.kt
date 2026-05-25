@@ -38,6 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import zx.azenith.ui.component.*
 import zx.azenith.R
 
 private data class RendererOption(
@@ -54,7 +55,6 @@ private fun getRendererOptions(): List<RendererOption> {
         RendererOption(R.string.Renderer_SkiaGL, "skiagl", Icons.Rounded.Layers),
     )
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,23 +91,8 @@ fun RendererDialog(
                             headlineContent = {
                                 Text(stringResource(option.titleRes))
                             },
-                            leadingContent = {
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .background(
-                                            color = MaterialTheme.colorScheme.secondaryContainer,
-                                            shape = CircleShape
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = option.icon,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp),
-                                        tint = MaterialTheme.colorScheme.onSecondaryContainer
-                                    )
-                                }
+                            leadingContent = { 
+                                SmallLeadingIcon(icon = option.icon) 
                             },
                             onClick = {
                                 onDismiss()
