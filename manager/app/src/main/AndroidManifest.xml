@@ -2,7 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    
+    
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -17,8 +19,19 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AZenith"> 
         
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        
         <service
-            android:name=".BypassChgTileService"
+            android:name=".TileService.BypassChgTileService"
             android:icon="@drawable/bypasschgicon"
             android:label="Bypass Charge"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
