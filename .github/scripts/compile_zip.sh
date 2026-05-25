@@ -18,6 +18,7 @@ need_integrity=(
 	"mainfiles/libs"
 	"mainfiles/META-INF"
 	"mainfiles/service.sh"
+	"mainfiles/post-fs-data.sh"
 	"mainfiles/action.sh"
 	"mainfiles/uninstall.sh"
 	"mainfiles/module.prop"
@@ -34,13 +35,28 @@ release_code="$(git rev-list HEAD --count)-$(git rev-parse --short HEAD)-$versio
 sed -i "s/version=.*/version=$version ($release_code)/" mainfiles/module.prop
 sed -i "s/versionCode=.*/versionCode=$version_code/" mainfiles/module.prop
 
-# Copy module files
-cp -r ./libs mainfiles
-cp -r ./tweakfls/* mainfiles/system/bin
-cp -r ./thermalcore/* mainfiles/system/bin
-cp -r ./preloadbin/* mainfiles/system/bin
-cp -r azenithApplist.json ./mainfiles
-cp LICENSE ./mainfiles
+mkdir -p mainfiles/libs/arm64-v8a
+mkdir -p mainfiles/libs/armeabi-v7a
+mkdir -p mainfiles/system/bin
+
+[ -d "libs" ] && cp -r libs/* mainfiles/libs/ 2>/dev/null
+[ -d "daemon/libs" ] && cp -r daemon/libs/* mainfiles/libs/ 2>/dev/null
+[ -d "preloadbin/libs" ] && cp -r preloadbin/libs/* mainfiles/libs/ 2>/dev/null
+
+cp thermalcore/target/aarch64-linux-android/release/rianixia-thermalcore mainfiles/libs/arm64-v8a/sys.azenith-rianixiathermalcore 2>/dev/null || true
+cp binprofiles/target/aarch64-linux-android/release/azenith-profilesettings mainfiles/libs/arm64-v8a/sys.azenith-profilesettings 2>/dev/null || true
+cp binutils/target/aarch64-linux-android/release/azenith-utilityconf mainfiles/libs/arm64-v8a/sys.azenith-utilityconf 2>/dev/null || true
+
+cp thermalcore/target/armv7-linux-androideabi/release/rianixia-thermalcore mainfiles/libs/armeabi-v7a/sys.azenith-rianixiathermalcore 2>/dev/null || true
+cp binprofiles/target/armv7-linux-androideabi/release/azenith-profilesettings mainfiles/libs/armeabi-v7a/sys.azenith-profilesettings 2>/dev/null || true
+cp binutils/target/armv7-linux-androideabi/release/azenith-utilityconf mainfiles/libs/armeabi-v7a/sys.azenith-utilityconf 2>/dev/null || true
+
+# Other Files
+cp azenithApplist.json mainfiles/
+cp LICENSE mainfiles/ 2>/dev/null
+cp NOTICE.md mainfiles/ 2>/dev/null
+
+# Copy Manager APK
 APK_PATH=$(find manager/app/build/outputs/apk/release -name "*.apk" | head -n 1)
 APK_PATH_DEBUG=$(find manager/app/build/outputs/apk/debug -name "*.apk" | head -n 1)
 if [ -n "$APK_PATH" ]; then
@@ -51,11 +67,8 @@ else
     echo "APK found at $APK_PATH_DEBUG and copied to mainfiles successfully."
 fi
 
-# Remove .sh extension from scripts
-find mainfiles/system/bin -maxdepth 1 -type f -name "*.sh" -exec sh -c 'mv -- "$0" "${0%.sh}"' {} \;
-
 # Parse version info to module prop
-zipName="AZenith-$version-$release_code.zip"
+zipName="AZenithNext-$version-$release_code.zip"
 echo "zipName=$zipName" >>"$GITHUB_OUTPUT"
 artifactName="${zipName%.zip}"
 echo "artifactName=$artifactName" >>"$GITHUB_OUTPUT"
