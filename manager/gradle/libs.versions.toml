@@ -1,6 +1,6 @@
 [versions]
 # Engine dari KernelSU (Bleeding Edge)
-agp = "9.0.0"
+agp = "9.1.0"
 kotlin = "2.3.10"
 ksp = "2.3.0-1.0.27"
 hiddenapibypass = "6.1"

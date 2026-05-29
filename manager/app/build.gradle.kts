@@ -13,12 +13,12 @@ plugins {
 
 android {
     namespace = "zx.azenith"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "zx.azenith"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = (Placeholder)
         versionName = "Placeholder"
         vectorDrawables.useSupportLibrary = true
