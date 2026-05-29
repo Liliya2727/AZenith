@@ -29,11 +29,18 @@ need_integrity=(
 
 # Version info
 version="$(cat version)"
-version_type="$(cat version_type)"
+version_type="$(cat version_type | tr -d '\n\r ')" # Hapus spasi/newline agar presisi
 version_code="$(git rev-list HEAD --count)"
 release_code="$(git rev-list HEAD --count)-$(git rev-parse --short HEAD)-$version_type"
 sed -i "s/version=.*/version=$version ($release_code)/" mainfiles/module.prop
 sed -i "s/versionCode=.*/versionCode=$version_code/" mainfiles/module.prop
+
+# Set Profile Folder untuk Rust berdasarkan version_type
+RUST_PROFILE="release"
+if [ "$version_type" == "experimental" ]; then
+    RUST_PROFILE="debug"
+fi
+echo "Using Rust build profile: $RUST_PROFILE"
 
 mkdir -p mainfiles/libs/arm64-v8a
 mkdir -p mainfiles/libs/armeabi-v7a
@@ -43,13 +50,14 @@ mkdir -p mainfiles/system/bin
 [ -d "daemon/libs" ] && cp -r daemon/libs/* mainfiles/libs/ 2>/dev/null
 [ -d "preloadbin/libs" ] && cp -r preloadbin/libs/* mainfiles/libs/ 2>/dev/null
 
-cp thermalcore/target/aarch64-linux-android/release/rianixia-thermalcore mainfiles/libs/arm64-v8a/sys.azenith-rianixiathermalcore 2>/dev/null || true
-cp binprofiles/target/aarch64-linux-android/release/azenith-profilesettings mainfiles/libs/arm64-v8a/sys.azenith-profilesettings 2>/dev/null || true
-cp binutils/target/aarch64-linux-android/release/azenith-utilityconf mainfiles/libs/arm64-v8a/sys.azenith-utilityconf 2>/dev/null || true
+# Ambil binari Rust berdasarkan RUST_PROFILE (debug / release)
+cp thermalcore/target/aarch64-linux-android/$RUST_PROFILE/rianixia-thermalcore mainfiles/libs/arm64-v8a/sys.azenith-rianixiathermalcore 2>/dev/null || true
+cp binprofiles/target/aarch64-linux-android/$RUST_PROFILE/azenith-profilesettings mainfiles/libs/arm64-v8a/sys.azenith-profilesettings 2>/dev/null || true
+cp binutils/target/aarch64-linux-android/$RUST_PROFILE/azenith-utilityconf mainfiles/libs/arm64-v8a/sys.azenith-utilityconf 2>/dev/null || true
 
-cp thermalcore/target/armv7-linux-androideabi/release/rianixia-thermalcore mainfiles/libs/armeabi-v7a/sys.azenith-rianixiathermalcore 2>/dev/null || true
-cp binprofiles/target/armv7-linux-androideabi/release/azenith-profilesettings mainfiles/libs/armeabi-v7a/sys.azenith-profilesettings 2>/dev/null || true
-cp binutils/target/armv7-linux-androideabi/release/azenith-utilityconf mainfiles/libs/armeabi-v7a/sys.azenith-utilityconf 2>/dev/null || true
+cp thermalcore/target/armv7-linux-androideabi/$RUST_PROFILE/rianixia-thermalcore mainfiles/libs/armeabi-v7a/sys.azenith-rianixiathermalcore 2>/dev/null || true
+cp binprofiles/target/armv7-linux-androideabi/$RUST_PROFILE/azenith-profilesettings mainfiles/libs/armeabi-v7a/sys.azenith-profilesettings 2>/dev/null || true
+cp binutils/target/armv7-linux-androideabi/$RUST_PROFILE/azenith-utilityconf mainfiles/libs/armeabi-v7a/sys.azenith-utilityconf 2>/dev/null || true
 
 # Other Files
 cp azenithApplist.json mainfiles/
@@ -62,9 +70,11 @@ APK_PATH_DEBUG=$(find manager/app/build/outputs/apk/debug -name "*.apk" | head -
 if [ -n "$APK_PATH" ]; then
     cp "$APK_PATH" "mainfiles/AZenith.apk"
     echo "APK found at $APK_PATH and copied to mainfiles successfully."
-else
+elif [ -n "$APK_PATH_DEBUG" ]; then
     cp "$APK_PATH_DEBUG" "mainfiles/AZenith.apk"
     echo "APK found at $APK_PATH_DEBUG and copied to mainfiles successfully."
+else
+    echo "ERROR: No APK found!"
 fi
 
 # Parse version info to module prop
