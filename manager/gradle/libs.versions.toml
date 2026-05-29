@@ -70,7 +70,7 @@ com-github-topjohnwu-libsu-core = { group = "com.github.topjohnwu.libsu", name =
 com-github-topjohnwu-libsu-service = { group = "com.github.topjohnwu.libsu", name = "service", version.ref = "libsu" }
 com-github-topjohnwu-libsu-io = { group = "com.github.topjohnwu.libsu", name = "io", version.ref = "libsu" }
 
-material-kolor = { group = "com.materialkolor", name = "material-kolor", version = "5.0.0-alpha7" }
+material-kolor = { group = "com.materialkolor", name = "material-kolor", version = "5.0.0-alpha07" }
 
 yalantis-ucrop = { group = "com.github.yalantis", name = "ucrop", version.ref = "ucrop" }
 
