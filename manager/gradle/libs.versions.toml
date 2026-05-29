@@ -14,7 +14,7 @@ junitVersion = "1.3.0"
 material3 = "1.5.0-alpha20"
 activity-compose = "1.13.0-alpha01"
 lifecycle = "2.11.0-beta02"
-navigation = "2.10.0-alpha05"
+navigation = "2.9.8"
 
 # Security & Glassmorphism
 stringfog = "5.1.0"
