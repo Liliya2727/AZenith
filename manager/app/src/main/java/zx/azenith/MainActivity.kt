@@ -223,67 +223,44 @@ fun MainScreen(isFromTile: Boolean = false) {
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.surface),                
             
+            // 👇 Tetap pertahankan ini untuk animasi maju (forward navigation)
             enterTransition = {
                 if (initialState.destination.route == "get_started" && targetState.destination.route == "home") {
                     fadeIn(animationSpec = tween(700)) 
                 } else if (targetState.destination.route !in bottomBarRoutes) {
-                    // Animasi masuk ke Sub-screen (Slide dari kanan)
                     slideInHorizontally(
                         initialOffsetX = { fullWidth -> fullWidth },
                         animationSpec = tween(300, easing = FastOutSlowInEasing)
                     ) + fadeIn(animationSpec = tween(300))
                 } else {
-                    // Animasi pindah antar tab (Fade + sedikit Scale-in membesar)
                     fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
-                    scaleIn(
-                        initialScale = 0.96f,
-                        animationSpec = tween(220, easing = FastOutSlowInEasing)
-                    )
+                    scaleIn(initialScale = 0.96f, animationSpec = tween(220, easing = FastOutSlowInEasing))
                 }
             },
             exitTransition = {
                 if (initialState.destination.route == "get_started" && targetState.destination.route == "home") {
                     fadeOut(animationSpec = tween(700))
                 } else if (initialState.destination.route in bottomBarRoutes && targetState.destination.route !in bottomBarRoutes) {
-                    // Layar utama bergeser sedikit ke kiri (Parallax effect) saat sub-screen masuk
                     slideOutHorizontally(
                         targetOffsetX = { fullWidth -> -(fullWidth / 4) },
                         animationSpec = tween(300, easing = FastOutSlowInEasing)
                     ) + fadeOut(animationSpec = tween(300))
                 } else {
-                    // Animasi keluar saat pindah tab
                     fadeOut(animationSpec = tween(150))
                 }
             },
+            
+            // 👇 UBAH DI SINI: Serahkan ke sistem biar gak tabrakan sama Predictive Back
             popEnterTransition = {
-                // 👇 FIX DI SINI: Cek apakah asalnya DARI sub-screen, bukan dari sesama tab
-                if (initialState.destination.route !in bottomBarRoutes && targetState.destination.route in bottomBarRoutes) {
-                    // Layar utama kembali bergeser dari kiri (Parallax effect) saat sub-screen ditutup
-                    slideInHorizontally(
-                        initialOffsetX = { fullWidth -> -(fullWidth / 4) },
-                        animationSpec = tween(300, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(300))
-                } else {
-                    // Animasi pindah antar tab (saat ditekan dari tombol Navbar)
-                    fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
-                    scaleIn(
-                        initialScale = 0.96f,
-                        animationSpec = tween(220, easing = FastOutSlowInEasing)
-                    )
-                }
+                // Saat sub-screen ditutup, layar utama di bawahnya otomatis membesar secara native
+                // Kita cukup kasih fade-in tipis biar transisi warna/komponen mulus
+                fadeIn(animationSpec = tween(300))
             },
             popExitTransition = {
-                if (initialState.destination.route !in bottomBarRoutes) {
-                    // Animasi sub-screen ditutup (Slide ke kanan)
-                    slideOutHorizontally(
-                        targetOffsetX = { fullWidth -> fullWidth },
-                        animationSpec = tween(300, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(300))
-                } else {
-                    fadeOut(animationSpec = tween(150))
-                }
+                // Saat sub-screen di-swipe balik, biarkan sistem mengecilkan layarnya (Predictive scale).
+                // Kita cukup ikuti dengan efek memudar (fadeOut) agar tidak glitch/patah.
+                fadeOut(animationSpec = tween(300))
             }
-
         ) {
 
             composable("get_started") { GetStartedScreen(navController) }
