@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package zx.azenith
+package zx.azenith.TileService
 
 import android.service.quicksettings.Tile
 import zx.azenith.R
