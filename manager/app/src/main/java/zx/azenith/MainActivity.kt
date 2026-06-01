@@ -16,8 +16,10 @@
 
 package zx.azenith
 
+import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -34,37 +36,34 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.Dp
+import androidx.core.content.FileProvider
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-import androidx.compose.ui.res.stringResource
 import androidx.navigation.compose.*
-import android.content.pm.PackageManager
-import android.widget.Toast
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.navArgument
+import com.topjohnwu.superuser.Shell
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
+import kotlinx.coroutines.launch
+import java.io.File
 import zx.azenith.R
+import zx.azenith.ui.component.rememberConfirmDialog
 import zx.azenith.ui.mainscreens.*
 import zx.azenith.ui.subscreens.*
 import zx.azenith.ui.theme.AZenithTheme
-import zx.azenith.ui.util.RootUtils
-import kotlinx.coroutines.launch
-import com.topjohnwu.superuser.Shell
-import zx.azenith.ui.component.rememberConfirmDialog
-import android.content.Intent
-import androidx.core.content.FileProvider
-import java.io.File
-import zx.azenith.ui.util.LocalHazeState
 import zx.azenith.ui.util.LocalBlurEnabled
+import zx.azenith.ui.util.LocalHazeState
+import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.util.expressiveBlur
 
 class MainActivity : ComponentActivity() {
