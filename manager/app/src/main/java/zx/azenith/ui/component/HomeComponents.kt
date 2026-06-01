@@ -2,7 +2,9 @@
 
 package zx.azenith.ui.component
 
+import android.content.Context
 import android.os.Build
+import android.os.PowerManager
 import android.system.Os
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
@@ -17,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -32,9 +35,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import zx.azenith.R
+import zx.azenith.ui.util.LocalHazeState
+import zx.azenith.ui.util.LocalBlurEnabled
+import zx.azenith.ui.util.expressiveBlur
 import zx.azenith.ui.component.*
 import zx.azenith.ui.util.getAppVersion
 import zx.azenith.ui.util.getHeaderImage
@@ -282,6 +289,10 @@ fun LinkCard(icon: ImageVector, titleRes: Int, descRes: Int, onClick: () -> Unit
     }
 }
 
+// ==========================================
+// REBOOT BOTTOM SHEET (MODIFIED DENGAN BLUR)
+// ==========================================
+
 @Composable
 fun RebootBottomSheet(
     show: Boolean,
@@ -311,7 +322,15 @@ fun RebootBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer
+        // PENERAPAN BLUR
+        containerColor = Color.Transparent, 
+        tonalElevation = 0.dp,
+        modifier = Modifier.expressiveBlur(
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            fallbackColor = MaterialTheme.colorScheme.surfaceContainer,
+            alpha = 0.75f,
+            blurRadius = 30.dp
+        )
     ) {
         Column(
             modifier = Modifier

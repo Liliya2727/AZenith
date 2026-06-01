@@ -37,6 +37,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import zx.azenith.ui.util.LocalHazeState
+import zx.azenith.ui.util.LocalBlurEnabled
+import zx.azenith.ui.util.expressiveBlur
+import zx.azenith.ui.component.*
 import zx.azenith.R
 
 private data class ProfileOption(
@@ -47,13 +51,11 @@ private data class ProfileOption(
 
 @Composable
 private fun getProfileOptions(): List<ProfileOption> {
-    
     val options = mutableListOf(
         ProfileOption(R.string.Profile_Balanced, "2", Icons.Outlined.Water),
         ProfileOption(R.string.Profile_Performance, "1", Icons.Outlined.OfflineBolt),
         ProfileOption(R.string.Profile_ECO_mode, "3", Icons.Outlined.EnergySavingsLeaf),
     )
-
     return options
 }
 
@@ -71,9 +73,19 @@ fun ProfileDialog(
     BasicAlertDialog(
         onDismissRequest = onDismiss
     ) {
+        // PENERAPAN BLUR
         Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .expressiveBlur(
+                    shape = RoundedCornerShape(28.dp),
+                    fallbackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    alpha = 0.75f,
+                    blurRadius = 30.dp
+                ),
             shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh
+            color = Color.Transparent, 
+            tonalElevation = 0.dp
         ) {
             Column(
                 modifier = Modifier.padding(24.dp)
