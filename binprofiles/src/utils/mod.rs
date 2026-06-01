@@ -235,14 +235,14 @@ pub fn setfreqppm() {
                 let target_min_target = cpu_maxfreq * 40 / 100;
                 let new_minfreq = setfreqs(&avail_file, target_min_target);
 
-                zeshia(&format!("{} {}", cluster, new_maxfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
-                zeshia(&format!("{} {}", cluster, new_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
+                zeshia_def(&format!("{} {}", cluster, new_maxfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
+                zeshia_def(&format!("{} {}", cluster, new_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
 
                 dlog(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_maxfreq, new_minfreq));
             } else {
                 // Default Mode
-                zeshia(&format!("{} {}", cluster, new_maxfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
-                zeshia(&format!("{} {}", cluster, cpu_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
+                zeshia_def(&format!("{} {}", cluster, new_maxfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
+                zeshia_def(&format!("{} {}", cluster, cpu_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
 
                 dlog(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_maxfreq, cpu_minfreq));
             }
@@ -280,15 +280,15 @@ pub fn setfreq() {
                 let target_min_target = cpu_maxfreq * 40 / 100;
                 let new_minfreq = setfreqs(&avail_file, target_min_target);
 
-                zeshia(&new_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
-                zeshia(&new_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
+                zeshia_def(&new_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
+                zeshia_def(&new_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
 
                 dlog(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_maxfreq, new_minfreq));
                 // Setara dengan `continue` di bash
             } else {
                 // Default Mode
-                zeshia(&new_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
-                zeshia(&cpu_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
+                zeshia_def(&new_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
+                zeshia_def(&cpu_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
 
                 dlog(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_maxfreq, cpu_minfreq));
 
@@ -332,8 +332,8 @@ pub fn setgamefreqppm() {
 
                 dlog(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
             } else {
-                zeshia_def(&format!("{} {}", cluster, cpu_maxfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");             
-                zeshia_def(&format!("{} {}", cluster, cpu_maxfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
+                zeshia(&format!("{} {}", cluster, cpu_maxfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");             
+                zeshia(&format!("{} {}", cluster, cpu_maxfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
 
                 dlog(&format!("Set {} maxfreq={} minfreq={}", policy_name, cpu_maxfreq, new_midfreq));
             }
@@ -371,8 +371,8 @@ pub fn setgamefreq() {
 
                 dlog(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
             } else {
-                zeshia_def(&cpu_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
-                zeshia_def(&cpu_maxfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
+                zeshia(&cpu_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
+                zeshia(&cpu_maxfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
 
                 dlog(&format!("Set {} maxfreq={} minfreq={}", policy_name, cpu_maxfreq, new_midfreq));
 
@@ -550,7 +550,7 @@ pub fn devfreq_mid_perf(path: &str) {
     if !Path::new(&avail).exists() { return; }
 
     if let (Some(max_freq), Some(mid_freq)) = (which_maxfreq(&avail), which_midfreq(&avail)) {
-        zeshia(&max_freq.to_string(), &format!("{}/max_freq", path));
+        zeshia_def(&max_freq.to_string(), &format!("{}/max_freq", path));
         zeshia(&mid_freq.to_string(), &format!("{}/min_freq", path));
     }
 }
@@ -560,8 +560,8 @@ pub fn devfreq_unlock(path: &str) {
     if !Path::new(&avail).exists() { return; }
 
     if let (Some(max_freq), Some(min_freq)) = (which_maxfreq(&avail), which_minfreq(&avail)) {
-        zeshia(&max_freq.to_string(), &format!("{}/max_freq", path));
-        zeshia(&min_freq.to_string(), &format!("{}/min_freq", path));
+        zeshia_def(&max_freq.to_string(), &format!("{}/max_freq", path));
+        zeshia_def(&min_freq.to_string(), &format!("{}/min_freq", path));
     }
 }
 
@@ -570,8 +570,8 @@ pub fn devfreq_min_perf(path: &str) {
     if !Path::new(&avail).exists() { return; }
 
     if let Some(freq) = which_minfreq(&avail) {
-        zeshia(&freq.to_string(), &format!("{}/min_freq", path));
-        zeshia(&freq.to_string(), &format!("{}/max_freq", path));
+        zeshia_def(&freq.to_string(), &format!("{}/min_freq", path));
+        zeshia_def(&freq.to_string(), &format!("{}/max_freq", path));
     }
 }
 
