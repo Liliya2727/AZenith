@@ -109,11 +109,6 @@ fun ColorPaletteScreen(navController: NavController) {
         mutableStateOf(context.getHeaderImage()) 
     }
     
-    // Perbaikan State: Membaca langsung dari SharedPreferences
-    var isExpressiveBlurEnabled by rememberSaveable { 
-        mutableStateOf(prefs.getBoolean("expressive_blur", false)) 
-    }
-    
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     
     val cropLauncher = rememberLauncherForActivityResult(
@@ -223,7 +218,6 @@ fun ColorPaletteScreen(navController: NavController) {
                         currentColorSpec = currentColorSpec,
                         isDark = isDark,
                         isBannerEnabled = isBannerEnabled,
-                        isExpressiveBlurEnabled = isExpressiveBlurEnabled,
                         bannerGradientAlpha = bannerGradientAlpha,
                         customBannerUri = customBannerUri,
                         prefs = prefs,
@@ -233,10 +227,6 @@ fun ColorPaletteScreen(navController: NavController) {
                         onBannerEnabledChange = { 
                             isBannerEnabled = it 
                             context.setBannerImageEnabled(it)
-                        },
-                        onExpressiveBlurEnabledChange = {
-                            isExpressiveBlurEnabled = it
-                            prefs.edit { putBoolean("expressive_blur", it) }
                         },
                         onBannerGradientAlphaChange = {
                             bannerGradientAlpha = it
@@ -275,7 +265,6 @@ fun ColorPaletteScreen(navController: NavController) {
                     currentColorSpec = currentColorSpec,
                     isDark = isDark,
                     isBannerEnabled = isBannerEnabled,
-                    isExpressiveBlurEnabled = isExpressiveBlurEnabled,
                     bannerGradientAlpha = bannerGradientAlpha,
                     customBannerUri = customBannerUri,
                     prefs = prefs,
@@ -285,10 +274,6 @@ fun ColorPaletteScreen(navController: NavController) {
                     onBannerEnabledChange = { 
                         isBannerEnabled = it 
                         context.setBannerImageEnabled(it)
-                    },
-                    onExpressiveBlurEnabledChange = {
-                        isExpressiveBlurEnabled = it
-                        prefs.edit { putBoolean("expressive_blur", it) }
                     },
                     onBannerGradientAlphaChange = {
                         bannerGradientAlpha = it
@@ -312,7 +297,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     currentColorSpec: ColorSpec.SpecVersion,
     isDark: Boolean,
     isBannerEnabled: Boolean,
-    isExpressiveBlurEnabled: Boolean,
     bannerGradientAlpha: Float,
     customBannerUri: String?,
     prefs: android.content.SharedPreferences,
@@ -320,7 +304,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     onKeyColorChange: (Int) -> Unit,
     onColorSpecChange: (ColorSpec.SpecVersion) -> Unit,
     onBannerEnabledChange: (Boolean) -> Unit,
-    onExpressiveBlurEnabledChange: (Boolean) -> Unit,
     onBannerGradientAlphaChange: (Float) -> Unit,
     onBannerUpdated: (String?) -> Unit,
     imagePicker: androidx.activity.result.ActivityResultLauncher<Array<String>>,
@@ -438,35 +421,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
             }
         }
     }
-
-    // ==== TOGGLE EXPRESSIVE BLUR DITAMBAHKAN DI SINI ====
-    item {
-        ExpressiveColumn(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            title = "Experimental UI",
-            content = buildList {
-                add {
-                    ExpressiveListItem(
-                        modifier = Modifier.padding(vertical = 4.dp),
-                        headlineContent = { Text("Expressive Blur UI") },
-                        supportingContent = { Text("Gunakan efek Frosted Glass pada elemen UI") },
-                        leadingContent = {
-                            SmallLeadingIcon(icon = Icons.Outlined.BlurOn)
-                        },
-                        trailingContent = {
-                            Switch(
-                                checked = isExpressiveBlurEnabled,
-                                onCheckedChange = onExpressiveBlurEnabledChange
-                            )
-                        },
-                        onClick = { onExpressiveBlurEnabledChange(!isExpressiveBlurEnabled) }
-                    )
-                }
-            }
-        )
-    }
-    // ====================================================
-
+    
     item {
         ExpressiveColumn(
             modifier = Modifier.padding(horizontal = 16.dp),

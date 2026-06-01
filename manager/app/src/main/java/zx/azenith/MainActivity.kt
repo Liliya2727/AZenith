@@ -16,10 +16,8 @@
 
 package zx.azenith
 
-import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -36,58 +34,43 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.compose.*
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.navArgument
-import com.topjohnwu.superuser.Shell
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.haze
-import kotlinx.coroutines.launch
-import java.io.File
 import zx.azenith.R
-import zx.azenith.ui.component.rememberConfirmDialog
 import zx.azenith.ui.mainscreens.*
 import zx.azenith.ui.subscreens.*
 import zx.azenith.ui.theme.AZenithTheme
-import zx.azenith.ui.util.LocalBlurEnabled
-import zx.azenith.ui.util.LocalHazeState
 import zx.azenith.ui.util.RootUtils
-import zx.azenith.ui.util.expressiveBlur
+import kotlinx.coroutines.launch
+import com.topjohnwu.superuser.Shell
+import zx.azenith.ui.component.rememberConfirmDialog
+import android.content.Intent
+import androidx.core.content.FileProvider
+import java.io.File
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val isFromTile = intent.action == "android.service.quicksettings.action.QS_TILE_PREFERENCES"
-        
         setContent {
-            val context = LocalContext.current
-            val prefs = remember { context.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE) }
-            
-            // Baca status toggle blur dari pengaturan
-            val isBlurEnabled by remember { mutableStateOf(prefs.getBoolean("expressive_blur", false)) }
-            val hazeState = remember { HazeState() }
-
             AZenithTheme {
-                // Sediakan state blur ke seluruh aplikasi
-                CompositionLocalProvider(
-                    LocalHazeState provides hazeState,
-                    LocalBlurEnabled provides isBlurEnabled
-                ) {
-                    MainScreen(isFromTile)
-                }
+                MainScreen(isFromTile)
             }
         }
     }
@@ -161,6 +144,7 @@ fun MainScreen(isFromTile: Boolean = false) {
     val updateDialog = rememberConfirmDialog(
         onConfirm = {
             coroutineScope.launch {
+                
                 val cacheApk = File(context.cacheDir, "AZenith_update.apk")
                 
                 val copyCmd = """
@@ -235,22 +219,21 @@ fun MainScreen(isFromTile: Boolean = false) {
         NavHost(
             navController = navController,
             startDestination = if (hasCompletedGetStarted) "home" else "get_started",
-            // 3. PASANG HAZE DI NAVHOST
-            // Ini akan merekam semua konten aplikasi yang sedang di-scroll di belakangnya
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
-                .let { if (LocalBlurEnabled.current) it.haze(state = LocalHazeState.current) else it },                
+                .background(MaterialTheme.colorScheme.surface),                
             
             enterTransition = {
                 if (initialState.destination.route == "get_started" && targetState.destination.route == "home") {
                     fadeIn(animationSpec = tween(700)) 
                 } else if (targetState.destination.route !in bottomBarRoutes) {
+                    // Animasi masuk ke Sub-screen (Slide dari kanan)
                     slideInHorizontally(
                         initialOffsetX = { fullWidth -> fullWidth },
                         animationSpec = tween(300, easing = FastOutSlowInEasing)
                     ) + fadeIn(animationSpec = tween(300))
                 } else {
+                    // Animasi pindah antar tab (Fade + sedikit Scale-in membesar)
                     fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
                     scaleIn(
                         initialScale = 0.96f,
@@ -262,21 +245,26 @@ fun MainScreen(isFromTile: Boolean = false) {
                 if (initialState.destination.route == "get_started" && targetState.destination.route == "home") {
                     fadeOut(animationSpec = tween(700))
                 } else if (initialState.destination.route in bottomBarRoutes && targetState.destination.route !in bottomBarRoutes) {
+                    // Layar utama bergeser sedikit ke kiri (Parallax effect) saat sub-screen masuk
                     slideOutHorizontally(
                         targetOffsetX = { fullWidth -> -(fullWidth / 4) },
                         animationSpec = tween(300, easing = FastOutSlowInEasing)
                     ) + fadeOut(animationSpec = tween(300))
                 } else {
+                    // Animasi keluar saat pindah tab
                     fadeOut(animationSpec = tween(150))
                 }
             },
             popEnterTransition = {
+                // 👇 FIX DI SINI: Cek apakah asalnya DARI sub-screen, bukan dari sesama tab
                 if (initialState.destination.route !in bottomBarRoutes && targetState.destination.route in bottomBarRoutes) {
+                    // Layar utama kembali bergeser dari kiri (Parallax effect) saat sub-screen ditutup
                     slideInHorizontally(
                         initialOffsetX = { fullWidth -> -(fullWidth / 4) },
                         animationSpec = tween(300, easing = FastOutSlowInEasing)
                     ) + fadeIn(animationSpec = tween(300))
                 } else {
+                    // Animasi pindah antar tab (saat ditekan dari tombol Navbar)
                     fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
                     scaleIn(
                         initialScale = 0.96f,
@@ -286,6 +274,7 @@ fun MainScreen(isFromTile: Boolean = false) {
             },
             popExitTransition = {
                 if (initialState.destination.route !in bottomBarRoutes) {
+                    // Animasi sub-screen ditutup (Slide ke kanan)
                     slideOutHorizontally(
                         targetOffsetX = { fullWidth -> fullWidth },
                         animationSpec = tween(300, easing = FastOutSlowInEasing)
@@ -296,6 +285,7 @@ fun MainScreen(isFromTile: Boolean = false) {
             }
 
         ) {
+
             composable("get_started") { GetStartedScreen(navController) }
             composable("home") { HomeScreen() }
             composable("applist") { ApplistScreen(navController) }
@@ -355,21 +345,13 @@ fun BottomNavBar(
             .padding(horizontal = 26.dp, vertical = 20.dp),
         contentAlignment = Alignment.Center
     ) {
-        // 4. MODIFIKASI SURFACE BOTTOM BAR
-        // Jadikan transparan dan pasang modifier expressiveBlur()
         Surface(
             modifier = Modifier
                 .widthIn(max = 350.dp)
-                .fillMaxWidth()
-                .expressiveBlur(
-                    shape = RoundedCornerShape(28.dp),
-                    fallbackColor = MaterialTheme.colorScheme.surfaceContainer,
-                    alpha = 0.75f,
-                    blurRadius = 30.dp
-                ),
+                .fillMaxWidth(),
             shape = RoundedCornerShape(28.dp),
-            color = Color.Transparent, // PENTING: Wajib transparan agar blur bekerja
-            shadowElevation = if (LocalBlurEnabled.current) 0.dp else 8.dp // Hilangkan shadow saat blur aktif
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            shadowElevation = 8.dp
         ) {
             Row(
                 modifier = Modifier
@@ -402,11 +384,13 @@ private fun NavPill(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     
+    // Efek scale saat ditekan
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.95f else 1f,
         animationSpec = tween(150), label = "scale"
     )
 
+    // Animasi transisi warna
     val animationSpec = tween<Color>(durationMillis = 300, easing = FastOutSlowInEasing)
     
     val bgColor by animateColorAsState(
@@ -423,11 +407,12 @@ private fun NavPill(
 
     val shape = if (isSelected) RoundedCornerShape(24.dp) else CircleShape
     
+    // HAPUS Box dan animateContentSize, kita pakai Row langsung seperti KSU
     Row(
         modifier = modifier
             .scale(scale)
             .height(48.dp)
-            .defaultMinSize(minWidth = 48.dp) 
+            .defaultMinSize(minWidth = 48.dp) // Pastikan bentuknya minimal bulat sempurna (48x48) saat menutup
             .clip(shape)
             .background(bgColor)
             .clickable(
@@ -435,7 +420,7 @@ private fun NavPill(
                 indication = null,
                 onClick = onClick
             )
-            .padding(horizontal = 12.dp), 
+            .padding(horizontal = 12.dp), // Padding seragam
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
@@ -446,6 +431,7 @@ private fun NavPill(
             modifier = Modifier.size(24.dp)
         )
         
+        // Murni mengandalkan expandHorizontally untuk melebar tanpa bentrok
         AnimatedVisibility(
             visible = isSelected,
             enter = expandHorizontally(
@@ -463,9 +449,9 @@ private fun NavPill(
                 fontWeight = FontWeight.SemiBold,
                 color = contentColor,
                 maxLines = 1,
-                softWrap = false, 
+                softWrap = false, // Kunci biar teks gak loncat ke baris baru saat menyusut
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 5.dp)
+                modifier = Modifier.padding(start = 5.dp) // Jarak antara icon dan teks
             )
         }
     }
