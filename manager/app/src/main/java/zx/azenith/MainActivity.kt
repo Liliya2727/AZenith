@@ -63,50 +63,9 @@ import zx.azenith.ui.component.rememberConfirmDialog
 import android.content.Intent
 import androidx.core.content.FileProvider
 import java.io.File
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.haze
-import dev.chrisbanes.haze.hazeChild
-
-// ==========================================
-// 1. UTILITAS EXPRESSIVE BLUR (HAZE)
-// ==========================================
-
-val LocalHazeState = compositionLocalOf { HazeState() }
-val LocalBlurEnabled = compositionLocalOf { false }
-
-@Composable
-fun Modifier.expressiveBlur(
-    shape: androidx.compose.ui.graphics.Shape,
-    alpha: Float = 0.65f,
-    blurRadius: Dp = 24.dp,
-    fallbackColor: Color = Color.Unspecified
-): Modifier {
-    val isBlurEnabled = LocalBlurEnabled.current
-    val hazeState = LocalHazeState.current
-    
-    // Jika warna fallback tidak ditentukan, gunakan surfaceContainer sebagai default
-    val actualFallback = if (fallbackColor == Color.Unspecified) MaterialTheme.colorScheme.surfaceContainer else fallbackColor
-    val monetTintColor = actualFallback.copy(alpha = alpha)
-
-    return if (isBlurEnabled) {
-        this.hazeChild(
-            state = hazeState,
-            shape = shape,
-            style = HazeStyle(
-                tint = monetTintColor,
-                blurRadius = blurRadius,
-                noiseFactor = 0.05f
-            )
-        )
-    } else {
-        this.background(color = actualFallback, shape = shape)
-    }
-}
-
-// ==========================================
-// 2. MAIN ACTIVITY
-// ==========================================
+import zx.azenith.ui.util.LocalHazeState
+import zx.azenith.ui.util.LocalBlurEnabled
+import zx.azenith.ui.util.expressiveBlur
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
