@@ -56,6 +56,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.parcelize.Parcelize
 import kotlin.coroutines.resume
+import androidx.compose.ui.graphics.Color
+import zx.azenith.ui.util.expressiveBlur
 
 private const val TAG = "DialogComponent"
 
@@ -271,7 +273,20 @@ private fun LoadingDialog() {
         properties = DialogProperties(dismissOnClickOutside = false, dismissOnBackPress = false)
     ) {
         MaterialExpressiveTheme {
-            Surface(modifier = Modifier.size(100.dp), shape = RoundedCornerShape(8.dp)) {
+            // PENERAPAN BLUR DI LOADING DIALOG
+            Surface(
+                modifier = Modifier
+                    .size(100.dp)
+                    .expressiveBlur(
+                        shape = RoundedCornerShape(24.dp), // Sedikit diperbesar radiusnya agar blur terlihat bagus
+                        fallbackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        alpha = 0.75f,
+                        blurRadius = 30.dp
+                    ),
+                shape = RoundedCornerShape(24.dp),
+                color = Color.Transparent, // PENTING: Transparan
+                tonalElevation = 0.dp
+            ) {
                 Box(contentAlignment = Alignment.Center) {
                     LoadingIndicator()
                 }
@@ -280,9 +295,19 @@ private fun LoadingDialog() {
     }
 }
 
+
 @Composable
 private fun ConfirmDialog(visuals: ConfirmDialogVisuals, confirm: () -> Unit, dismiss: () -> Unit) {
+    // PENERAPAN BLUR DI CONFIRM DIALOG
     AlertDialog(
+        modifier = Modifier.expressiveBlur(
+            shape = RoundedCornerShape(28.dp),
+            fallbackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            alpha = 0.75f,
+            blurRadius = 30.dp
+        ),
+        containerColor = Color.Transparent, // PENTING: Transparan
+        tonalElevation = 0.dp,
         onDismissRequest = dismiss,
         title = { Text(text = visuals.title) },
         text = { visuals.content?.let { Text(text = it) } },

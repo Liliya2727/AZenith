@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -32,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -40,13 +42,13 @@ import androidx.compose.ui.unit.dp
 import zx.azenith.ui.component.*
 import zx.azenith.R
 import zx.azenith.ui.util.getSupportedRefreshRatesPicker
+import zx.azenith.ui.util.expressiveBlur
 
 private data class RefreshRatePickerOption(
     val titleString: String,
     val reason: String,
     val icon: ImageVector
 )
-
 
 @Composable
 private fun getRefreshRatePickerOptions(context: Context): List<RefreshRatePickerOption> {
@@ -61,7 +63,6 @@ private fun getRefreshRatePickerOptions(context: Context): List<RefreshRatePicke
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RefreshRatePickerDialog(
@@ -74,14 +75,25 @@ fun RefreshRatePickerDialog(
     val options = getRefreshRatePickerOptions(context)
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
+        // PENERAPAN BLUR
         Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .expressiveBlur(
+                    shape = RoundedCornerShape(28.dp),
+                    fallbackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    alpha = 0.75f,
+                    blurRadius = 30.dp
+                ),
             shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh
+            color = Color.Transparent, 
+            tonalElevation = 0.dp
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(
                     text = stringResource(R.string.RefreshRatePicker_Select),
                     style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
@@ -109,7 +121,6 @@ fun RefreshRatePickerDialog(
         }
     }
 }
-
 
 @Preview(showBackground = true)
 @Composable
