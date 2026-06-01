@@ -53,7 +53,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-
+import zx.azenith.ui.util.expressiveBlur
 
 private val largeCorner = 26.dp
 private val smallCorner = 4.dp
@@ -454,9 +454,19 @@ fun ExpressiveDropdownItem(
                     text = if (hasItems && safeIndex >= 0) items[safeIndex] else "",
                     color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
                 DropdownMenu(
                     expanded = expanded,
-                    onDismissRequest = { expanded = false }
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.expressiveBlur(
+                        shape = RoundedCornerShape(12.dp),
+                        fallbackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        alpha = 0.75f,
+                        blurRadius = 30.dp
+                    ),
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent, 
+                    shape = RoundedCornerShape(12.dp),
+                    tonalElevation = 0.dp
                 ) {
                     items.forEachIndexed { index, text ->
                         DropdownMenuItem(
@@ -474,6 +484,7 @@ fun ExpressiveDropdownItem(
         }
     )
 }
+
 
 @Composable
 fun ExpressiveRadioItem(
