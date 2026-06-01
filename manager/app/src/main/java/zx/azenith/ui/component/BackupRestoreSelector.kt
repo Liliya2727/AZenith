@@ -13,14 +13,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.background
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import zx.azenith.ui.component.*
-import zx.azenith.ui.util.expressiveBlur // <-- Import Modifier Blur
 
 @Composable
 fun BackupRestoreBottomSheet(
@@ -36,15 +34,7 @@ fun BackupRestoreBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        // PENERAPAN BLUR
-        containerColor = Color.Transparent,
-        tonalElevation = 0.dp,
-        modifier = Modifier.expressiveBlur(
-            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            fallbackColor = MaterialTheme.colorScheme.surfaceContainer,
-            alpha = 0.75f,
-            blurRadius = 30.dp
-        )
+        containerColor = MaterialTheme.colorScheme.surfaceContainer
     ) {
         Column(
             modifier = Modifier

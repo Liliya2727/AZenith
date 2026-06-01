@@ -65,7 +65,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import zx.azenith.R
 import zx.azenith.ui.component.AppIconImage
 import zx.azenith.ui.component.*
-import zx.azenith.ui.util.expressiveBlur
 import zx.azenith.ui.viewmodel.ApplistViewmodel
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalFocusManager
@@ -355,20 +354,7 @@ fun ApplistTopAppBar(
                         IconButton(onClick = { menuExpanded = true }) {
                             Icon(Icons.Default.MoreVert, stringResource(R.string.cd_menu))
                         }
-                        
-                        DropdownMenu(
-                            expanded = menuExpanded, 
-                            onDismissRequest = { menuExpanded = false },
-                            modifier = Modifier.expressiveBlur(
-                                shape = RoundedCornerShape(12.dp),
-                                fallbackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                alpha = 0.75f,
-                                blurRadius = 30.dp
-                            ),
-                            containerColor = androidx.compose.ui.graphics.Color.Transparent, 
-                            shape = RoundedCornerShape(12.dp),
-                            tonalElevation = 0.dp
-                        ) {
+                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.menu_refresh)) },
                                 onClick = { 

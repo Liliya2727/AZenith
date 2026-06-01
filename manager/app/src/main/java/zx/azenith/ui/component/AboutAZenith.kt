@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -22,7 +23,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -40,25 +40,13 @@ import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import zx.azenith.BuildConfig
 import zx.azenith.R
-import zx.azenith.ui.util.expressiveBlur // <-- Import Modifier Blur
 
 @Preview
 @Composable
 fun AboutCard() {
-    // Ganti ElevatedCard dengan Surface Transparan + Blur
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .expressiveBlur(
-                shape = RoundedCornerShape(20.dp),
-                fallbackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                alpha = 0.75f,
-                blurRadius = 30.dp
-            ),
-        shape = RoundedCornerShape(20.dp),
-        color = Color.Transparent, // PENTING: Harus transparan
-        shadowElevation = 0.dp,
-        tonalElevation = 0.dp
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp)
     ) {
         Row(
             modifier = Modifier
