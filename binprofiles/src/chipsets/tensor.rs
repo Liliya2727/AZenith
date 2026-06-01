@@ -6,8 +6,8 @@ pub fn tensor_balance() {
             if let Some(gpu_path) = path.to_str() {
                 let avail = format!("{}/available_frequencies", gpu_path);
                 if let (Some(max_freq), Some(min_freq)) = (which_maxfreq(&avail), which_minfreq(&avail)) {
-                    zeshia(&max_freq.to_string(), &format!("{}/scaling_max_freq", gpu_path));
-                    zeshia(&min_freq.to_string(), &format!("{}/scaling_min_freq", gpu_path));
+                    zeshia_def(&max_freq.to_string(), &format!("{}/scaling_max_freq", gpu_path));
+                    zeshia_def(&min_freq.to_string(), &format!("{}/scaling_min_freq", gpu_path));
                 }
             }
         }
@@ -30,14 +30,14 @@ pub fn tensor_performance() {
             if let Some(gpu_path) = path.to_str() {
                 let avail = format!("{}/available_frequencies", gpu_path);
                 if let Some(max_freq) = which_maxfreq(&avail) {
-                    zeshia(&max_freq.to_string(), &format!("{}/scaling_max_freq", gpu_path));
+                    zeshia_def(&max_freq.to_string(), &format!("{}/scaling_max_freq", gpu_path));
 
                     if lite_mode {
                         if let Some(mid_freq) = which_midfreq(&avail) {
-                            zeshia(&mid_freq.to_string(), &format!("{}/scaling_min_freq", gpu_path));
+                            zeshia_def(&mid_freq.to_string(), &format!("{}/scaling_min_freq", gpu_path));
                         }
                     } else {
-                        zeshia(&max_freq.to_string(), &format!("{}/scaling_min_freq", gpu_path));
+                        zeshia_def(&max_freq.to_string(), &format!("{}/scaling_min_freq", gpu_path));
                     }
                 }
             }
@@ -59,8 +59,8 @@ pub fn tensor_powersave() {
             if let Some(gpu_path) = path.to_str() {
                 let avail = format!("{}/available_frequencies", gpu_path);
                 if let Some(freq) = which_minfreq(&avail) {
-                    zeshia(&freq.to_string(), &format!("{}/scaling_min_freq", gpu_path));
-                    zeshia(&freq.to_string(), &format!("{}/scaling_max_freq", gpu_path));
+                    zeshia_def(&freq.to_string(), &format!("{}/scaling_min_freq", gpu_path));
+                    zeshia_def(&freq.to_string(), &format!("{}/scaling_max_freq", gpu_path));
                 }
             }
         }
