@@ -67,6 +67,7 @@ import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import zx.azenith.ui.component.*
+import androidx.compose.material.icons.outlined.BlurOn
 
 private val keyColorOptions = listOf(
     Color(0xFFF44336).toArgb(),
@@ -86,6 +87,7 @@ private val keyColorOptions = listOf(
     Color(0xFFFF9CA8).toArgb(),
 )
 
+
 @Composable
 fun ColorPaletteScreen(navController: NavController) {
     val context = LocalContext.current
@@ -99,6 +101,10 @@ fun ColorPaletteScreen(navController: NavController) {
     
     var isBannerEnabled by rememberSaveable { 
         mutableStateOf(context.isBannerImageEnabled()) 
+    }
+    
+    var isBlurEnabled by rememberSaveable {
+        mutableStateOf(prefs.getBoolean("is_blur_enabled", false))
     }
 
     var bannerGradientAlpha by rememberSaveable { 
@@ -218,6 +224,7 @@ fun ColorPaletteScreen(navController: NavController) {
                         currentColorSpec = currentColorSpec,
                         isDark = isDark,
                         isBannerEnabled = isBannerEnabled,
+                        isBlurEnabled = isBlurEnabled, // Tambahan
                         bannerGradientAlpha = bannerGradientAlpha,
                         customBannerUri = customBannerUri,
                         prefs = prefs,
@@ -228,10 +235,11 @@ fun ColorPaletteScreen(navController: NavController) {
                             isBannerEnabled = it 
                             context.setBannerImageEnabled(it)
                         },
-                        onBannerGradientAlphaChange = {
-                            bannerGradientAlpha = it
-                            context.setBannerGradientAlpha(it)
-                        },
+                        onBlurEnabledChange = {
+                            isBlurEnabled = it
+                            prefs.edit { putBoolean("is_blur_enabled", it) }
+                        }, // Tambahan
+                        onBannerGradientAlphaChange = { /* ... */ },
                         onBannerUpdated = { customBannerUri = it },
                         imagePicker = imagePicker,
                         context = context,
@@ -297,6 +305,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     currentColorSpec: ColorSpec.SpecVersion,
     isDark: Boolean,
     isBannerEnabled: Boolean,
+    isBlurEnabled: Boolean, // Parameter baru
     bannerGradientAlpha: Float,
     customBannerUri: String?,
     prefs: android.content.SharedPreferences,
@@ -304,6 +313,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     onKeyColorChange: (Int) -> Unit,
     onColorSpecChange: (ColorSpec.SpecVersion) -> Unit,
     onBannerEnabledChange: (Boolean) -> Unit,
+    onBlurEnabledChange: (Boolean) -> Unit, // Parameter baru
     onBannerGradientAlphaChange: (Float) -> Unit,
     onBannerUpdated: (String?) -> Unit,
     imagePicker: androidx.activity.result.ActivityResultLauncher<Array<String>>,
@@ -584,7 +594,24 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
             }
         )
     }
-
+    
+    item {
+        ExpressiveColumn(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            title = "Effects",
+            content = buildList {
+                add {
+                    ExpressiveSwitchItem(
+                        icon = Icons.Outlined.BlurOn,
+                        title = "Enable Background Blur",
+                        summary = "Apply gaussian blur on overlays and dialogs",
+                        checked = isBlurEnabled,
+                        onCheckedChange = onBlurEnabledChange
+                    )
+                }
+            }
+        )
+    }
     
     item {
         Column(
