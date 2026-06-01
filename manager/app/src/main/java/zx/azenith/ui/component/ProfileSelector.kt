@@ -41,6 +41,8 @@ import zx.azenith.ui.util.LocalHazeState
 import zx.azenith.ui.util.LocalBlurEnabled
 import zx.azenith.ui.util.expressiveBlur
 import zx.azenith.ui.component.*
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.graphics.Color
 import zx.azenith.R
 
 private data class ProfileOption(
