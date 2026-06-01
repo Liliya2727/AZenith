@@ -12,7 +12,7 @@ pub fn snapdragon_balance() {
     for (pattern, gov) in govs {
         if let Ok(paths) = glob::glob(&format!("/sys/class/devfreq{}", pattern)) {
             for path in paths.flatten() {
-                zeshia(gov, &format!("{}/governor", path.display()));
+                zeshia_def(gov, &format!("{}/governor", path.display()));
             }
         }
     }
@@ -24,12 +24,12 @@ pub fn snapdragon_balance() {
             if let (Some(max), Some(min)) = (which_maxfreq(&avail), which_minfreq(&avail)) {
                 if let Ok(paths) = glob::glob(&format!("{}/*/max_freq", base)) {
                     for p in paths.flatten() {
-                        zeshia(&max.to_string(), p.to_str().unwrap());
+                        zeshia_def(&max.to_string(), p.to_str().unwrap());
                     }
                 }
                 if let Ok(paths) = glob::glob(&format!("{}/*/min_freq", base)) {
                     for p in paths.flatten() {
-                        zeshia(&min.to_string(), p.to_str().unwrap());
+                        zeshia_def(&min.to_string(), p.to_str().unwrap());
                     }
                 }
             }
@@ -40,15 +40,15 @@ pub fn snapdragon_balance() {
     if Path::new(gpu_path).exists() {
         let freqs = read_freqs(&format!("{}/available_frequencies", gpu_path));
         if freqs.len() >= 2 {
-            zeshia(&freqs[1].to_string(), &format!("{}/min_freq", gpu_path));
-            zeshia(&freqs[freqs.len() - 1].to_string(), &format!("{}/max_freq", gpu_path));
+            zeshia_def(&freqs[1].to_string(), &format!("{}/min_freq", gpu_path));
+            zeshia_def(&freqs[freqs.len() - 1].to_string(), &format!("{}/max_freq", gpu_path));
         } else if freqs.len() == 1 {
-            zeshia(&freqs[0].to_string(), &format!("{}/min_freq", gpu_path));
-            zeshia(&freqs[0].to_string(), &format!("{}/max_freq", gpu_path));
+            zeshia_def(&freqs[0].to_string(), &format!("{}/min_freq", gpu_path));
+            zeshia_def(&freqs[0].to_string(), &format!("{}/max_freq", gpu_path));
         }
     }
 
-    zeshia("1", "/sys/class/kgsl/kgsl-3d0/devfreq/adrenoboost");
+    zeshia_def("1", "/sys/class/kgsl/kgsl-3d0/devfreq/adrenoboost");
 }
 
 pub fn snapdragon_performance() {
@@ -65,7 +65,7 @@ pub fn snapdragon_performance() {
         for (pattern, gov) in govs {
             if let Ok(paths) = glob::glob(&format!("/sys/class/devfreq{}", pattern)) {
                 for path in paths.flatten() {
-                    zeshia(gov, path.to_str().unwrap());
+                    zeshia_def(gov, path.to_str().unwrap());
                 }
             }
         }
@@ -79,10 +79,10 @@ pub fn snapdragon_performance() {
                 let avail = format!("{}/available_frequencies", base);
                 if let Some(max) = which_maxfreq(&avail) {
                     if let Ok(paths) = glob::glob(&format!("{}/*/max_freq", base)) {
-                        for p in paths.flatten() { zeshia(&max.to_string(), p.to_str().unwrap()); }
+                        for p in paths.flatten() { zeshia_def(&max.to_string(), p.to_str().unwrap()); }
                     }
                     if let Ok(paths) = glob::glob(&format!("{}/*/min_freq", base)) {
-                        for p in paths.flatten() { zeshia(&max.to_string(), p.to_str().unwrap()); }
+                        for p in paths.flatten() { zeshia_def(&max.to_string(), p.to_str().unwrap()); }
                     }
                 }
             }
@@ -93,12 +93,12 @@ pub fn snapdragon_performance() {
     let gpu_path = "/sys/class/kgsl/kgsl-3d0/devfreq";
     if Path::new(gpu_path).exists() {
         if let Some(freq) = which_maxfreq(&format!("{}/available_frequencies", gpu_path)) {
-            zeshia(&freq.to_string(), &format!("{}/min_freq", gpu_path));
-            zeshia(&freq.to_string(), &format!("{}/max_freq", gpu_path));
+            zeshia_def(&freq.to_string(), &format!("{}/min_freq", gpu_path));
+            zeshia_def(&freq.to_string(), &format!("{}/max_freq", gpu_path));
         }
     }
 
-    zeshia("3", "/sys/class/kgsl/kgsl-3d0/devfreq/adrenoboost");
+    zeshia_def("3", "/sys/class/kgsl/kgsl-3d0/devfreq/adrenoboost");
 }
 
 pub fn snapdragon_powersave() {
@@ -113,7 +113,7 @@ pub fn snapdragon_powersave() {
     for (pattern, gov) in govs {
         if let Ok(paths) = glob::glob(&format!("/sys/class/devfreq{}", pattern)) {
             for path in paths.flatten() {
-                zeshia(gov, &format!("{}/governor", path.display()));
+                zeshia_def(gov, &format!("{}/governor", path.display()));
             }
         }
     }
@@ -124,10 +124,10 @@ pub fn snapdragon_powersave() {
             let avail = format!("{}/available_frequencies", base);
             if let Some(min) = which_minfreq(&avail) {
                 if let Ok(paths) = glob::glob(&format!("{}/*/max_freq", base)) {
-                    for p in paths.flatten() { zeshia(&min.to_string(), p.to_str().unwrap()); }
+                    for p in paths.flatten() { zeshia_def(&min.to_string(), p.to_str().unwrap()); }
                 }
                 if let Ok(paths) = glob::glob(&format!("{}/*/min_freq", base)) {
-                    for p in paths.flatten() { zeshia(&min.to_string(), p.to_str().unwrap()); }
+                    for p in paths.flatten() { zeshia_def(&min.to_string(), p.to_str().unwrap()); }
                 }
             }
         }
@@ -136,10 +136,10 @@ pub fn snapdragon_powersave() {
     let gpu_path = "/sys/class/kgsl/kgsl-3d0/devfreq";
     if Path::new(gpu_path).exists() {
         if let Some(freq) = which_minfreq(&format!("{}/available_frequencies", gpu_path)) {
-            zeshia(&freq.to_string(), &format!("{}/min_freq", gpu_path));
-            zeshia(&freq.to_string(), &format!("{}/max_freq", gpu_path));
+            zeshia_def(&freq.to_string(), &format!("{}/min_freq", gpu_path));
+            zeshia_def(&freq.to_string(), &format!("{}/max_freq", gpu_path));
         }
     }
 
-    zeshia("0", "/sys/class/kgsl/kgsl-3d0/devfreq/adrenoboost");
+    zeshia_def("0", "/sys/class/kgsl/kgsl-3d0/devfreq/adrenoboost");
 }

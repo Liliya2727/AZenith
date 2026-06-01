@@ -5,14 +5,14 @@ pub fn exynos_balance() {
     if Path::new(gpu_path).exists() {
         let avail = format!("{}/gpu_available_frequencies", gpu_path);
         if let (Some(max_freq), Some(min_freq)) = (which_maxfreq(&avail), which_minfreq(&avail)) {
-            zeshia(&max_freq.to_string(), &format!("{}/gpu_max_clock", gpu_path));
-            zeshia(&min_freq.to_string(), &format!("{}/gpu_min_clock", gpu_path));
+            zeshia_def(&max_freq.to_string(), &format!("{}/gpu_max_clock", gpu_path));
+            zeshia_def(&min_freq.to_string(), &format!("{}/gpu_min_clock", gpu_path));
         }
     }
 
     if let Ok(mut paths) = glob::glob("/sys/devices/platform/**/*.mali") {
         if let Some(Ok(path)) = paths.next() {
-            zeshia("coarse_demand", &format!("{}/power_policy", path.display()));
+            zeshia_def("coarse_demand", &format!("{}/power_policy", path.display()));
         }
     }
 
@@ -32,21 +32,21 @@ pub fn exynos_performance() {
     if Path::new(gpu_path).exists() {
         let avail = format!("{}/gpu_available_frequencies", gpu_path);
         if let Some(max_freq) = which_maxfreq(&avail) {
-            zeshia(&max_freq.to_string(), &format!("{}/gpu_max_clock", gpu_path));
+            zeshia_def(&max_freq.to_string(), &format!("{}/gpu_max_clock", gpu_path));
 
             if lite_mode {
                 if let Some(mid_freq) = which_midfreq(&avail) {
-                    zeshia(&mid_freq.to_string(), &format!("{}/gpu_min_clock", gpu_path));
+                    zeshia_def(&mid_freq.to_string(), &format!("{}/gpu_min_clock", gpu_path));
                 }
             } else {
-                zeshia(&max_freq.to_string(), &format!("{}/gpu_min_clock", gpu_path));
+                zeshia_def(&max_freq.to_string(), &format!("{}/gpu_min_clock", gpu_path));
             }
         }
     }
 
     if let Ok(mut paths) = glob::glob("/sys/devices/platform/**/*.mali") {
         if let Some(Ok(path)) = paths.next() {
-            zeshia("always_on", &format!("{}/power_policy", path.display()));
+            zeshia_def("always_on", &format!("{}/power_policy", path.display()));
         }
     }
 
@@ -64,8 +64,8 @@ pub fn exynos_powersave() {
     if Path::new(gpu_path).exists() {
         let avail = format!("{}/gpu_available_frequencies", gpu_path);
         if let Some(freq) = which_minfreq(&avail) {
-            zeshia(&freq.to_string(), &format!("{}/gpu_min_clock", gpu_path));
-            zeshia(&freq.to_string(), &format!("{}/gpu_max_clock", gpu_path));
+            zeshia_def(&freq.to_string(), &format!("{}/gpu_min_clock", gpu_path));
+            zeshia_def(&freq.to_string(), &format!("{}/gpu_max_clock", gpu_path));
         }
     }
 }
