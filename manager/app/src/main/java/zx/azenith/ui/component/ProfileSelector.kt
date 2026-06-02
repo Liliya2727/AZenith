@@ -57,23 +57,101 @@ private fun getProfileOptions(): List<ProfileOption> {
     return options
 }
 
+package zx.azenith.ui.component
+
+import android.content.Context
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.hazeChild
+import zx.azenith.R
+
+private data class ProfileOption(
+    val titleRes: Int,
+    val reason: String,
+    val icon: ImageVector
+)
+
+@Composable
+private fun getProfileOptions(): List<ProfileOption> {
+    return listOf(
+        ProfileOption(R.string.Profile_Balanced, "2", Icons.Outlined.Water),
+        ProfileOption(R.string.Profile_Performance, "1", Icons.Outlined.OfflineBolt),
+        ProfileOption(R.string.Profile_ECO_mode, "3", Icons.Outlined.EnergySavingsLeaf),
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileDialog(
     show: Boolean,
     onDismiss: () -> Unit,
-    onProfile: (String) -> Unit
+    onProfile: (String) -> Unit,
+    // Tambahkan parameter HazeState yang dikirim dari parent screen
+    hazeState: HazeState? = null 
 ) {
     if (!show) return
 
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    val isBlurEnabled = remember { prefs.getBoolean("is_blur_enabled", false) }
+
     val options = getProfileOptions()
+    val dialogShape = RoundedCornerShape(28.dp)
+    
+    // Tentukan warna dasar container. 
+    // Buat jauh lebih transparan agar efek blur Haze dari background bisa tembus
+    val containerColor = if (isBlurEnabled) {
+        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHigh
+    }
 
     BasicAlertDialog(
         onDismissRequest = onDismiss
     ) {
         Surface(
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh
+            shape = dialogShape,
+            // Jika haze aktif, jadikan color Surface Transparent karena HazeStyle yang akan mewarnainya
+            color = if (isBlurEnabled && hazeState != null) Color.Transparent else containerColor,
+            modifier = Modifier.then(
+                if (isBlurEnabled && hazeState != null) {
+                    Modifier.hazeChild(
+                        state = hazeState,
+                        shape = dialogShape,
+                        style = HazeStyle(
+                            backgroundColor = containerColor,
+                            blurRadius = 24.dp, // Intensitas blur menyerupai gambar referensi
+                            tint = Color.Black.copy(alpha = 0.1f) // Sedikit penggelapan tambahan
+                        )
+                    )
+                } else {
+                    Modifier
+                }
+            )
         ) {
             Column(
                 modifier = Modifier.padding(24.dp)
@@ -87,8 +165,9 @@ fun ProfileDialog(
                 val content = options.map { option ->
                     @Composable
                     {
-                        ExpressiveListItem(
+                        ExpressiveListItemHighlight(
                             modifier = Modifier.padding(vertical = 8.dp),
+                            containerColor = Color.Transparent, 
                             headlineContent = {
                                 Text(stringResource(option.titleRes))
                             },
@@ -97,7 +176,9 @@ fun ProfileDialog(
                                     modifier = Modifier
                                         .size(40.dp)
                                         .background(
-                                            color = MaterialTheme.colorScheme.secondaryContainer,
+                                            color = MaterialTheme.colorScheme.secondaryContainer.let {
+                                                if (isBlurEnabled) it.copy(alpha = 0.6f) else it
+                                            },
                                             shape = CircleShape
                                         ),
                                     contentAlignment = Alignment.Center
