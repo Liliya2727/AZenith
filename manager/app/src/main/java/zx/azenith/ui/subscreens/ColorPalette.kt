@@ -450,7 +450,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
             )
-        )
+        }
         ExpressiveColumn(
             modifier = Modifier.padding(horizontal = 16.dp),
             content = buildList {
@@ -622,7 +622,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
             )
-        )
+        }
         ExpressiveColumn(
             modifier = Modifier.padding(horizontal = 16.dp),
             content = buildList {
