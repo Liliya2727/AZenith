@@ -454,6 +454,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
         }
         ExpressiveColumn(
             modifier = Modifier.padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             content = buildList {
                 
                 // --- KARTU 1: Switch & Tombol (Dibuat berdekatan) ---
@@ -627,6 +628,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
         }
         ExpressiveColumn(
             modifier = Modifier.padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             content = buildList {
                 add {
                     ExpressiveSwitchItem(
