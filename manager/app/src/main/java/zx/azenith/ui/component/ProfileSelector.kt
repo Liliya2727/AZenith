@@ -1,5 +1,7 @@
 package zx.azenith.ui.component
 
+import android.content.Context
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -7,24 +9,25 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.activity.compose.BackHandler
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeChild
 import zx.azenith.R
-
 
 private data class ProfileOption(
     val titleRes: Int,
@@ -66,7 +69,6 @@ fun SharedTransitionScope.ProfileDialog(
         BackHandler { onDismiss() }
     }
 
-    // Gunakan AnimatedVisibility untuk memicu masuknya dialog
     AnimatedVisibility(
         visible = show,
         enter = fadeIn(tween(300)),
@@ -76,7 +78,7 @@ fun SharedTransitionScope.ProfileDialog(
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(100f)
-                .background(Color.Black.copy(alpha = 0.2f)) // Scrim belakang meredup
+                .background(Color.Black.copy(alpha = 0.2f))
                 .pointerInput(Unit) {
                     detectTapGestures(onTap = { onDismiss() })
                 },
@@ -86,11 +88,9 @@ fun SharedTransitionScope.ProfileDialog(
                 shape = dialogShape,
                 color = if (isBlurEnabled && hazeState != null) Color.Transparent else containerColor,
                 modifier = Modifier
-                    // LOGIKA SIZE: Sama dengan BasicAlertDialog
                     .widthIn(min = 280.dp, max = 400.dp)
                     .padding(horizontal = 24.dp)
                     .pointerInput(Unit) { detectTapGestures { /* Do nothing */ } }
-                    // SHARED ELEMENT TRANSITION: Ini yang bikin animasi keluar dari card
                     .sharedBounds(
                         sharedContentState = rememberSharedContentState(key = "profile_card_transition"),
                         animatedVisibilityScope = this@AnimatedVisibility,
@@ -101,12 +101,11 @@ fun SharedTransitionScope.ProfileDialog(
                             )
                         }
                     )
-                    // FIX BLUR NGOTAK: Shape dimasukkan ke parameter Haze
                     .then(
                         if (isBlurEnabled && hazeState != null) {
                             Modifier.hazeChild(
                                 state = hazeState,
-                                shape = dialogShape, // <--- Ini kuncinya
+                                shape = dialogShape,
                                 style = HazeStyle(
                                     backgroundColor = containerColor,
                                     blurRadius = 24.dp,
@@ -172,14 +171,20 @@ fun SharedTransitionScope.ProfileDialog(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Preview(showBackground = true)
 @Composable
 private fun ProfileDialogPreview() {
     MaterialTheme {
-        ProfileDialog(
-            show = true,
-            onDismiss = {},
-            onProfile = {}
-        )
+        // Solusi Preview: Bungkus dengan SharedTransitionLayout agar scope-nya terpenuhi saat compile
+        SharedTransitionLayout {
+            AnimatedVisibility(visible = true) {
+                ProfileDialog(
+                    show = true,
+                    onDismiss = {},
+                    onProfile = {}
+                )
+            }
+        }
     }
 }
