@@ -39,59 +39,14 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import zx.azenith.BuildConfig
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.hazeChild
-import androidx.compose.ui.graphics.Color
-import dev.chrisbanes.haze.HazeTint
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import zx.azenith.R
 
 @Preview
 @Composable
-fun AboutDialog(dismiss: () -> Unit, hazeState: HazeState? = null) {
-    Dialog(
-        onDismissRequest = { dismiss() }
-    ) {
-        AboutCard(hazeState = hazeState)
-    }
-}
-
-@Composable
-fun AboutCard(hazeState: HazeState? = null) {
-    val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
-    val isBlurEnabled = remember { prefs.getBoolean("is_blur_enabled", false) }
-    
-    val cardShape = RoundedCornerShape(20.dp)
-    val containerColor = if (isBlurEnabled) {
-        MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.35f)
-    } else {
-        MaterialTheme.colorScheme.surfaceContainerLow
-    }
-
-    // Pakai Card biasa alih-alih ElevatedCard karena bayangan Elevation 
-    // suka kelihatan aneh di belakang background transparan
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(
-                if (isBlurEnabled && hazeState != null) {
-                    Modifier.hazeChild(
-                        state = hazeState,
-                        style = HazeStyle(
-                            backgroundColor = containerColor,
-                            blurRadius = 24.dp,
-                            tint = HazeTint(Color.Black.copy(alpha = 0.1f))
-                        )
-                    )
-                } else Modifier
-            ),
-        shape = cardShape,
-        colors = CardDefaults.cardColors(
-            containerColor = if (isBlurEnabled && hazeState != null) Color.Transparent else containerColor
-        )
+fun AboutCard() {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp)
     ) {
         Row(
             modifier = Modifier
@@ -103,6 +58,14 @@ fun AboutCard(hazeState: HazeState? = null) {
     }
 }
 
+@Composable
+fun AboutDialog(dismiss: () -> Unit) {
+    Dialog(
+        onDismissRequest = { dismiss() }
+    ) {
+        AboutCard()
+    }
+}
 
 @Composable
 private fun AboutCardContent() {

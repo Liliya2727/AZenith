@@ -53,13 +53,6 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.hazeChild
-import androidx.compose.ui.graphics.Color
-import dev.chrisbanes.haze.HazeTint
-import android.content.Context
-import androidx.compose.ui.platform.LocalContext
 
 
 private val largeCorner = 26.dp
@@ -436,12 +429,7 @@ fun ExpressiveDropdownItem(
     enabled: Boolean = true,
     selectedIndex: Int,
     onItemSelected: (Int) -> Unit,
-    hazeState: HazeState? = null // Tambahan
 ) {
-    val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
-    val isBlurEnabled = remember { prefs.getBoolean("is_blur_enabled", false) }
-
     var expanded by remember { mutableStateOf(false) }
 
     val hasItems = items.isNotEmpty()
@@ -449,14 +437,6 @@ fun ExpressiveDropdownItem(
         selectedIndex.coerceIn(0, items.lastIndex)
     } else {
         -1
-    }
-
-    // Persiapan warna dan bentuk untuk menu
-    val menuShape = RoundedCornerShape(12.dp)
-    val menuColor = if (isBlurEnabled) {
-        MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.35f)
-    } else {
-        MaterialTheme.colorScheme.surfaceContainer
     }
 
     ExpressiveListItem(
@@ -474,25 +454,9 @@ fun ExpressiveDropdownItem(
                     text = if (hasItems && safeIndex >= 0) items[safeIndex] else "",
                     color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                
                 DropdownMenu(
                     expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                    // Inject Haze dan Warna Transparan di sini
-                    shape = menuShape,
-                    containerColor = if (isBlurEnabled && hazeState != null) Color.Transparent else menuColor,
-                    modifier = Modifier.then(
-                        if (isBlurEnabled && hazeState != null) {
-                            Modifier.hazeChild(
-                                state = hazeState,
-                                style = HazeStyle(
-                                    backgroundColor = menuColor,
-                                    blurRadius = 24.dp,
-                                    tint = HazeTint(Color.Black.copy(alpha = 0.1f))
-                                )
-                            )
-                        } else Modifier
-                    )
+                    onDismissRequest = { expanded = false }
                 ) {
                     items.forEachIndexed { index, text ->
                         DropdownMenuItem(
@@ -510,7 +474,6 @@ fun ExpressiveDropdownItem(
         }
     )
 }
-
 
 @Composable
 fun ExpressiveRadioItem(
