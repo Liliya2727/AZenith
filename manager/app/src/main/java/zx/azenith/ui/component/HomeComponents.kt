@@ -40,6 +40,9 @@ import zx.azenith.ui.util.getAppVersion
 import zx.azenith.ui.util.getHeaderImage
 import zx.azenith.ui.util.getSELinuxStatus
 import zx.azenith.ui.util.getBannerGradientAlpha
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.hazeChild
 
 @Composable
 fun HomeTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onRebootClick: () -> Unit) {
@@ -282,18 +285,23 @@ fun LinkCard(icon: ImageVector, titleRes: Int, descRes: Int, onClick: () -> Unit
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RebootBottomSheet(
     show: Boolean,
     onDismiss: () -> Unit,
-    onReboot: (String) -> Unit
+    onReboot: (String) -> Unit,
+    hazeState: HazeState? = null
 ) {
     if (!show) return
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val context = LocalContext.current
-    val pm = context.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager?
+    val pm = context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager?
+    
+    val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    val isBlurEnabled = remember { prefs.getBoolean("is_blur_enabled", false) }
     
     @Suppress("DEPRECATION")
     val isUserspaceSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && pm?.isRebootingUserspaceSupported == true
@@ -308,10 +316,31 @@ fun RebootBottomSheet(
         add(Triple("EDL", "edl", Icons.Outlined.DeveloperMode))
     }
 
+    val sheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    val containerColor = if (isBlurEnabled) {
+        MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.35f)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainer
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer
+        shape = sheetShape,
+        containerColor = if (isBlurEnabled && hazeState != null) Color.Transparent else containerColor,
+        modifier = Modifier.then(
+            if (isBlurEnabled && hazeState != null) {
+                Modifier.hazeChild(
+                    state = hazeState,
+                    shape = sheetShape,
+                    style = HazeStyle(
+                        backgroundColor = containerColor,
+                        blurRadius = 24.dp,
+                        tint = Color.Black.copy(alpha = 0.1f)
+                    )
+                )
+            } else Modifier
+        )
     ) {
         Column(
             modifier = Modifier
@@ -331,7 +360,8 @@ fun RebootBottomSheet(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 content = options.map { (label, reason, icon) ->
                     {
-                        ExpressiveListItem(
+                        ExpressiveListItemHighlight(
+                            containerColor = Color.Transparent, // Supaya tembus blur
                             headlineContent = { Text(label) },
                             leadingContent = { SmallLeadingIcon(icon) },
                             onClick = {
