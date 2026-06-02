@@ -19,22 +19,53 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import zx.azenith.ui.component.*
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.hazeChild
+import zx.azenith.R
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BackupRestoreBottomSheet(
     show: Boolean,
     onDismiss: () -> Unit,
     onBackup: () -> Unit,
-    onRestore: () -> Unit
+    onRestore: () -> Unit,
+    hazeState: HazeState? = null
 ) {
     if (!show) return
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    val isBlurEnabled = remember { prefs.getBoolean("is_blur_enabled", false) }
+    
+    val sheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    val containerColor = if (isBlurEnabled) {
+        MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.35f)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainer
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer
+        shape = sheetShape,
+        containerColor = if (isBlurEnabled && hazeState != null) Color.Transparent else containerColor,
+        modifier = Modifier.then(
+            if (isBlurEnabled && hazeState != null) {
+                Modifier.hazeChild(
+                    state = hazeState,
+                    shape = sheetShape,
+                    style = HazeStyle(
+                        backgroundColor = containerColor,
+                        blurRadius = 24.dp,
+                        tint = Color.Black.copy(alpha = 0.1f)
+                    )
+                )
+            } else Modifier
+        )
     ) {
         Column(
             modifier = Modifier
@@ -54,7 +85,8 @@ fun BackupRestoreBottomSheet(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 content = listOf(
                     {
-                        ExpressiveListItem(
+                        ExpressiveListItemHighlight(
+                            containerColor = Color.Transparent,
                             headlineContent = { Text("Backup Configuration") },
                             supportingContent = { Text("Save your current tweak settings") },
                             leadingContent = { SmallLeadingIcon(Icons.Outlined.Save) },
@@ -65,7 +97,8 @@ fun BackupRestoreBottomSheet(
                         )
                     },
                     {
-                        ExpressiveListItem(
+                        ExpressiveListItemHighlight(
+                            containerColor = Color.Transparent,
                             headlineContent = { Text("Restore Configuration") },
                             supportingContent = { Text("Load a previously saved backup") },
                             leadingContent = { SmallLeadingIcon(Icons.Outlined.SettingsBackupRestore) },
