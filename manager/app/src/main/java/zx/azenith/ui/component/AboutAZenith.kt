@@ -42,6 +42,8 @@ import zx.azenith.BuildConfig
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.HazeTint
+
 import zx.azenith.R
 
 @Preview

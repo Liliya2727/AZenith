@@ -273,6 +273,7 @@ fun ColorPaletteScreen(navController: NavController) {
                     currentColorSpec = currentColorSpec,
                     isDark = isDark,
                     isBannerEnabled = isBannerEnabled,
+                    isBlurEnabled = isBlurEnabled, // Tambahan
                     bannerGradientAlpha = bannerGradientAlpha,
                     customBannerUri = customBannerUri,
                     prefs = prefs,
@@ -287,6 +288,10 @@ fun ColorPaletteScreen(navController: NavController) {
                         bannerGradientAlpha = it
                         context.setBannerGradientAlpha(it)
                     },
+                    onBlurEnabledChange = {
+                        isBlurEnabled = it
+                        prefs.edit { putBoolean("is_blur_enabled", it) }
+                    }, // Tambahan
                     onBannerUpdated = { customBannerUri = it },
                     imagePicker = imagePicker,
                     context = context,

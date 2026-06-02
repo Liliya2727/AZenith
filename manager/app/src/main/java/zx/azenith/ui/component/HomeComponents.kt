@@ -43,6 +43,7 @@ import zx.azenith.ui.util.getBannerGradientAlpha
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.hazeTint
 
 @Composable
 fun HomeTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onRebootClick: () -> Unit) {
@@ -332,11 +333,10 @@ fun RebootBottomSheet(
             if (isBlurEnabled && hazeState != null) {
                 Modifier.hazeChild(
                     state = hazeState,
-                    shape = sheetShape,
                     style = HazeStyle(
                         backgroundColor = containerColor,
                         blurRadius = 24.dp,
-                        tint = Color.Black.copy(alpha = 0.1f)
+                        tint = HazeTint(Color.Black.copy(alpha = 0.1f)) // <--- BUNGKUS DENGAN HazeTint
                     )
                 )
             } else Modifier

@@ -23,6 +23,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeChild
 import zx.azenith.R
 
@@ -73,11 +74,10 @@ fun RendererDialog(
                 if (isBlurEnabled && hazeState != null) {
                     Modifier.hazeChild(
                         state = hazeState,
-                        shape = dialogShape,
                         style = HazeStyle(
                             backgroundColor = containerColor,
                             blurRadius = 24.dp,
-                            tint = Color.Black.copy(alpha = 0.1f)
+                            tint = HazeTint(Color.Black.copy(alpha = 0.1f)) // <--- BUNGKUS DENGAN HazeTint
                         )
                     )
                 } else {

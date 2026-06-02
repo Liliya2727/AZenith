@@ -37,56 +37,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import zx.azenith.R
-
-private data class ProfileOption(
-    val titleRes: Int,
-    val reason: String,
-    val icon: ImageVector
-)
-
-@Composable
-private fun getProfileOptions(): List<ProfileOption> {
-    
-    val options = mutableListOf(
-        ProfileOption(R.string.Profile_Balanced, "2", Icons.Outlined.Water),
-        ProfileOption(R.string.Profile_Performance, "1", Icons.Outlined.OfflineBolt),
-        ProfileOption(R.string.Profile_ECO_mode, "3", Icons.Outlined.EnergySavingsLeaf),
-    )
-
-    return options
-}
-
-package zx.azenith.ui.component
-
-import android.content.Context
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.material3.BasicAlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.HazeTint
 import zx.azenith.R
 
 private data class ProfileOption(
@@ -141,11 +95,10 @@ fun ProfileDialog(
                 if (isBlurEnabled && hazeState != null) {
                     Modifier.hazeChild(
                         state = hazeState,
-                        shape = dialogShape,
                         style = HazeStyle(
                             backgroundColor = containerColor,
-                            blurRadius = 24.dp, // Intensitas blur menyerupai gambar referensi
-                            tint = Color.Black.copy(alpha = 0.1f) // Sedikit penggelapan tambahan
+                            blurRadius = 24.dp,
+                            tint = HazeTint(Color.Black.copy(alpha = 0.1f)) // <--- BUNGKUS DENGAN HazeTint
                         )
                     )
                 } else {

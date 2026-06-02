@@ -78,6 +78,7 @@ import androidx.compose.material3.LargeFlexibleTopAppBar
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.hazeTint
 
 @Composable
 fun ApplistScreen(navController: NavController) {
@@ -88,9 +89,6 @@ fun ApplistScreen(navController: NavController) {
     val listState = rememberLazyListState()
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    val isBlurEnabled = remember { prefs.getBoolean("is_blur_enabled", false) }
-    val menuShape = RoundedCornerShape(12.dp)
-    val menuColor = if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surfaceContainer
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     
     val pullToRefreshState = rememberPullToRefreshState()
@@ -254,6 +252,18 @@ fun ApplistTopAppBar(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val colorScheme = MaterialTheme.colorScheme
+    
+    // Taruh ini di dalam body Composable sebelum UI di-render
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    val isBlurEnabled = remember { prefs.getBoolean("is_blur_enabled", false) }
+    val hazeState: HazeState? = null // Atau ambil dari LocalHazeState kalau kamu pakai CompositionLocal
+    val menuShape = RoundedCornerShape(12.dp)
+    val menuColor = if (isBlurEnabled) {
+        MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.35f)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainer
+    }
 
     val smoothGradient = Brush.verticalGradient(
         0.0f to colorScheme.surface,
@@ -369,11 +379,10 @@ fun ApplistTopAppBar(
                                 if (isBlurEnabled && hazeState != null) {
                                     Modifier.hazeChild(
                                         state = hazeState,
-                                        shape = menuShape,
                                         style = HazeStyle(
-                                            backgroundColor = menuColor,
+                                            backgroundColor = containerColor,
                                             blurRadius = 24.dp,
-                                            tint = Color.Black.copy(alpha = 0.1f)
+                                            tint = HazeTint(Color.Black.copy(alpha = 0.1f)) // <--- BUNGKUS DENGAN HazeTint
                                         )
                                     )
                                 } else Modifier

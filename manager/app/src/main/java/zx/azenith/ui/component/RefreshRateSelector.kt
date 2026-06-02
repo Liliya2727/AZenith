@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.HazeTint
 import zx.azenith.R
 import zx.azenith.ui.util.getSupportedRefreshRatesPicker
 
@@ -79,7 +80,7 @@ fun RefreshRatePickerDialog(
                         style = HazeStyle(
                             backgroundColor = containerColor,
                             blurRadius = 24.dp,
-                            tint = Color.Black.copy(alpha = 0.1f)
+                            tint = HazeTint(Color.Black.copy(alpha = 0.1f)) // <--- BUNGKUS DENGAN HazeTint
                         )
                     )
                 } else {
