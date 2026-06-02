@@ -488,7 +488,7 @@ fun ExpressiveDropdownItem(
                                 style = HazeStyle(
                                     backgroundColor = menuColor,
                                     blurRadius = 24.dp,
-                                    tint = Color.Black.copy(alpha = 0.1f)
+                                    tint = HazeTint(Color.Black.copy(alpha = 0.1f))
                                 )
                             )
                         } else Modifier

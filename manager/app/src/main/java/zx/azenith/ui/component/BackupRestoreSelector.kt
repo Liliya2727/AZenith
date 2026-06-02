@@ -45,6 +45,17 @@ import dev.chrisbanes.haze.hazeChild
 import androidx.compose.ui.graphics.Color
 import dev.chrisbanes.haze.HazeTint
 import android.content.Context
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Save
+import androidx.compose.material.icons.outlined.SettingsBackupRestore
 import androidx.compose.ui.platform.LocalContext
 
 @Composable

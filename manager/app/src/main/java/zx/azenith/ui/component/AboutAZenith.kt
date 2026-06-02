@@ -83,7 +83,7 @@ fun AboutCard(hazeState: HazeState? = null) {
                         style = HazeStyle(
                             backgroundColor = containerColor,
                             blurRadius = 24.dp,
-                            tint = Color.Black.copy(alpha = 0.1f)
+                            tint = HazeTint(Color.Black.copy(alpha = 0.1f))
                         )
                     )
                 } else Modifier
