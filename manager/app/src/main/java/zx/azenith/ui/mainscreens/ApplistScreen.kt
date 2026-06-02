@@ -78,7 +78,9 @@ import androidx.compose.material3.LargeFlexibleTopAppBar
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeChild
-import dev.chrisbanes.haze.hazeTint
+import dev.chrisbanes.haze.HazeTint
+import androidx.compose.ui.graphics.Color
+
 
 @Composable
 fun ApplistScreen(navController: NavController) {
@@ -380,7 +382,7 @@ fun ApplistTopAppBar(
                                     Modifier.hazeChild(
                                         state = hazeState,
                                         style = HazeStyle(
-                                            backgroundColor = containerColor,
+                                            backgroundColor = menuColor,
                                             blurRadius = 24.dp,
                                             tint = HazeTint(Color.Black.copy(alpha = 0.1f)) // <--- BUNGKUS DENGAN HazeTint
                                         )

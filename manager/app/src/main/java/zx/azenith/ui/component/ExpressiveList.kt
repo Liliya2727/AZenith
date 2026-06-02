@@ -56,7 +56,11 @@ import androidx.compose.animation.core.spring
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeChild
-import dev.chrisbanes.haze.hazeTint
+import androidx.compose.ui.graphics.Color
+import dev.chrisbanes.haze.HazeTint
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
+
 
 private val largeCorner = 26.dp
 private val smallCorner = 4.dp
@@ -481,7 +485,6 @@ fun ExpressiveDropdownItem(
                         if (isBlurEnabled && hazeState != null) {
                             Modifier.hazeChild(
                                 state = hazeState,
-                                shape = menuShape,
                                 style = HazeStyle(
                                     backgroundColor = menuColor,
                                     blurRadius = 24.dp,
