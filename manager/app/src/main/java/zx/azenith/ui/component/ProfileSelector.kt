@@ -75,40 +75,20 @@ fun ProfileDialog(
             shape = RoundedCornerShape(28.dp),
             color = MaterialTheme.colorScheme.surfaceContainerHigh
         ) {
-            Column(
-                modifier = Modifier.padding(24.dp)
-            ) {
+            Column(modifier = Modifier.padding(24.dp)) {
                 Text(
-                    text = stringResource(R.string.Profile_Select),
+                    text = stringResource(R.string.RefreshRatePicker_Select),
                     style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
 
                 val content = options.map { option ->
-                    @Composable
-                    {
+                    @Composable {
                         ExpressiveListItem(
-                            modifier = Modifier.padding(vertical = 8.dp),
-                            headlineContent = {
-                                Text(stringResource(option.titleRes))
-                            },
-                            leadingContent = {
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .background(
-                                            color = MaterialTheme.colorScheme.secondaryContainer,
-                                            shape = CircleShape
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = option.icon,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp),
-                                        tint = MaterialTheme.colorScheme.onSecondaryContainer
-                                    )
-                                }
+                            modifier = Modifier.padding(vertical = 4.dp),
+                            headlineContent = { Text(option.titleRes) },
+                            leadingContent = { 
+                                SmallLeadingIcon(icon = option.icon) 
                             },
                             onClick = {
                                 onDismiss()
@@ -119,14 +99,13 @@ fun ProfileDialog(
                 }
 
                 ExpressiveColumn(
-                    modifier = Modifier.padding(top = 20.dp),
+                    modifier = Modifier.padding(top = 12.dp),
                     content = content
                 )
             }
         }
     }
 }
-
 
 @Preview(showBackground = true)
 @Composable
