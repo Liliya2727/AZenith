@@ -104,8 +104,11 @@ fun BackupRestoreBottomSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp)
+                .padding(bottom = 16.dp)      // Your extra padding
+                .navigationBarsPadding()     // Automatically adds the bottom inset for the nav bar
         ) {
+
+
             Text(
                 text = "Backup & Restore",
                 style = MaterialTheme.typography.titleLarge,
