@@ -367,6 +367,8 @@ fun BottomNavBar(
             modifier = Modifier
                 .widthIn(max = 350.dp)
                 .fillMaxWidth()
+                // FIX: Tambahkan clip di sini SEBELUM hazeEffect agar blur mengikuti bentuk rounded
+                .clip(RoundedCornerShape(28.dp)) 
                 .then(
                     if (isBlurEnabled && hazeState != null) {
                         Modifier.hazeEffect(state = hazeState) {
@@ -392,6 +394,7 @@ fun BottomNavBar(
                     NavPill(
                         item = item,
                         isSelected = isSelected,
+                        isBlurEnabled = isBlurEnabled, // FIX: Teruskan state blur ke NavPill
                         onClick = { onItemSelected(item.route) },
                         modifier = if (isSelected) Modifier.weight(1f) else Modifier
                     )
@@ -405,6 +408,7 @@ fun BottomNavBar(
 private fun NavPill(
     item: NavItem,
     isSelected: Boolean,
+    isBlurEnabled: Boolean = false, // Tambahan parameter baru
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -420,45 +424,59 @@ private fun NavPill(
     // Animasi transisi warna
     val animationSpec = tween<Color>(durationMillis = 300, easing = FastOutSlowInEasing)
     
+    // FIX: Logika Background Color
     val bgColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp),
+        targetValue = when {
+            // Jika Blur Nyala + Dipilih = Semi-transparan (Glassy effect)
+            isSelected && isBlurEnabled -> MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+            // Jika Blur Mati + Dipilih = Solid Primary
+            isSelected && !isBlurEnabled -> MaterialTheme.colorScheme.primary
+            // Jika Blur Nyala + Gak Dipilih = Tembus Pandang (Biar blur di belakangnya bersih)
+            !isSelected && isBlurEnabled -> Color.Transparent
+            // Default M3 (Blur Mati + Gak dipilih)
+            else -> MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+        },
         animationSpec = animationSpec,
         label = "bgColor"
     )
     
+    // FIX: Logika Text/Icon Color
     val contentColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+        targetValue = when {
+            // Jika background semi-transparan, teks pakai warna Primary agar kontras dan terbaca
+            isSelected && isBlurEnabled -> MaterialTheme.colorScheme.primary
+            isSelected && !isBlurEnabled -> MaterialTheme.colorScheme.onPrimary
+            else -> MaterialTheme.colorScheme.onSurfaceVariant
+        },
         animationSpec = animationSpec,
         label = "contentColor"
     )
 
     val shape = if (isSelected) RoundedCornerShape(24.dp) else CircleShape
     
-    // HAPUS Box dan animateContentSize, kita pakai Row langsung seperti KSU
     Row(
         modifier = modifier
             .scale(scale)
             .height(48.dp)
-            .defaultMinSize(minWidth = 48.dp) // Pastikan bentuknya minimal bulat sempurna (48x48) saat menutup
+            .defaultMinSize(minWidth = 48.dp) 
             .clip(shape)
-            .background(bgColor)
+            .background(bgColor) // Pakai background dinamis yang baru
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick
             )
-            .padding(horizontal = 12.dp), // Padding seragam
+            .padding(horizontal = 12.dp), 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
         Icon(
             imageVector = item.icon,
             contentDescription = null,
-            tint = contentColor,
+            tint = contentColor, // Pakai warna konten dinamis yang baru
             modifier = Modifier.size(24.dp)
         )
         
-        // Murni mengandalkan expandHorizontally untuk melebar tanpa bentrok
         AnimatedVisibility(
             visible = isSelected,
             enter = expandHorizontally(
@@ -476,9 +494,9 @@ private fun NavPill(
                 fontWeight = FontWeight.SemiBold,
                 color = contentColor,
                 maxLines = 1,
-                softWrap = false, // Kunci biar teks gak loncat ke baris baru saat menyusut
+                softWrap = false, 
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 5.dp) // Jarak antara icon dan teks
+                modifier = Modifier.padding(start = 5.dp) 
             )
         }
     }
