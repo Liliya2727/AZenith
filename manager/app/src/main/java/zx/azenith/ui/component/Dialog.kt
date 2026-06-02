@@ -75,6 +75,8 @@ import kotlin.coroutines.resume
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.activity.compose.BackHandler
+
 
 private const val TAG = "DialogComponent"
 
@@ -318,9 +320,7 @@ private fun ConfirmDialog(visuals: ConfirmDialogVisuals, confirm: () -> Unit, di
     )
 }
 
-// =========================================================================
-// KOMPONEN BARU: Custom Dialog Container dengan Shared Element Support
-// =========================================================================
+// 2. UBAH FUNGSI INI
 @Composable
 fun SharedTransitionScope.CustomSharedDialog(
     visible: Boolean,
@@ -329,10 +329,15 @@ fun SharedTransitionScope.CustomSharedDialog(
     modifier: Modifier = Modifier,
     content: @Composable (AnimatedVisibilityScope) -> Unit
 ) {
+    // Menangkap event "Swipe Back" atau tombol kembali dari sistem
+    BackHandler(enabled = visible) {
+        onDismissRequest() // Tutup dialog secara visual alih-alih keluar aplikasi
+    }
+
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(300)), // Tambahkan durasi fade in
-        exit = fadeOut(animationSpec = tween(250))  // Tambahkan durasi fade out
+        enter = fadeIn(animationSpec = tween(250)),
+        exit = fadeOut(animationSpec = tween(200))
     ) {
         // Layar belakang gelap (Overlay)
         Box(
@@ -352,12 +357,8 @@ fun SharedTransitionScope.CustomSharedDialog(
                     .sharedBounds(
                         sharedContentState = rememberSharedContentState(key = sharedKey),
                         animatedVisibilityScope = this@AnimatedVisibility,
-                        // 1. INI KUNCINYA: Gunakan bounds transform khusus
                         boundsTransform = { _, _ ->
-                            spring(
-                                dampingRatio = Spring.DampingRatioLowBouncy, 
-                                stiffness = Spring.StiffnessLow
-                            )
+                            spring(dampingRatio = 0.8f, stiffness = 400f)
                         }
                     )
                     .clickable(
@@ -370,8 +371,13 @@ fun SharedTransitionScope.CustomSharedDialog(
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth(0.9f) // Atur lebar dialog agar konsisten
-                        .wrapContentHeight() 
+                        // SOLUSI UKURAN:
+                        // Alih-alih pakai padding layar statis atau fillMaxWidth(0.9f),
+                        // kita atur lebar mutlaknya. 340.dp adalah ukuran wajar dialog Material 3.
+                        // - Di HP kecil: Dia akan menyesuaikan sebisanya tanpa jadi sangat gepeng
+                        // - Di HP biasa/besar: Dia akan mentok di 340dp, menyisakan celah di kiri-kanan
+                        .widthIn(min = 280.dp, max = 340.dp)
+                        .wrapContentHeight()
                 ) {
                     content(this@AnimatedVisibility)
                 }
@@ -379,4 +385,3 @@ fun SharedTransitionScope.CustomSharedDialog(
         }
     }
 }
-

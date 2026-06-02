@@ -151,7 +151,11 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                                     .fillMaxWidth()
                                                     .sharedBounds(
                                                         sharedContentState = rememberSharedContentState(key = "profile_dialog_transition"),
-                                                        animatedVisibilityScope = this@AnimatedVisibility
+                                                        animatedVisibilityScope = this@AnimatedVisibility,
+                                                        // Cukup gunakan boundsTransform, hapus baris resizeMode
+                                                        boundsTransform = { _, _ -> 
+                                                            spring(dampingRatio = 0.8f, stiffness = 400f) 
+                                                        }
                                                     ),
                                                 icon = Icons.Rounded.Token,
                                                 label = stringResource(R.string.current_profile), value = stringResource(uiState.currentProfileRes),
