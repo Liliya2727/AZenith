@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,13 +14,27 @@
  * limitations under the License.
  */
 
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@file:OptIn(
+    ExperimentalMaterial3ExpressiveApi::class, 
+    ExperimentalMaterial3Api::class,
+    ExperimentalSharedTransitionApi::class
+)
 
 package zx.azenith.ui.component
 
 import android.os.Parcelable
 import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
@@ -40,6 +54,7 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -297,4 +312,54 @@ private fun ConfirmDialog(visuals: ConfirmDialogVisuals, confirm: () -> Unit, di
             }
         },
     )
+}
+
+// =========================================================================
+// KOMPONEN BARU: Custom Dialog Container dengan Shared Element Support
+// =========================================================================
+@Composable
+fun SharedTransitionScope.CustomSharedDialog(
+    visible: Boolean,
+    onDismissRequest: () -> Unit,
+    sharedKey: String,
+    modifier: Modifier = Modifier,
+    content: @Composable (AnimatedVisibilityScope) -> Unit
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        // Layar belakang gelap (Overlay)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.5f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismissRequest
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            // Container Dialog yang akan di-animasikan
+            Surface(
+                modifier = modifier
+                    .sharedBounds(
+                        sharedContentState = rememberSharedContentState(key = sharedKey),
+                        animatedVisibilityScope = this@AnimatedVisibility,
+                        resizeMode = SharedTransitionScope.ResizeMode.ScaleToBounds()
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {} // Cegah klik tembus ke belakang
+                    ),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh
+            ) {
+                content(this@AnimatedVisibility)
+            }
+        }
+    }
 }
