@@ -442,6 +442,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     
     item {
         Column(
+            modifier = Modifier.padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
@@ -614,6 +615,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     
     item {
         Column(
+            modifier = Modifier.padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
