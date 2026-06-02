@@ -606,7 +606,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     item {
         ExpressiveColumn(
             modifier = Modifier.padding(horizontal = 12.dp),
-            title = Interface,
+            title = "Interface",
             content = buildList {
                 add {
                     ExpressiveSwitchItem(

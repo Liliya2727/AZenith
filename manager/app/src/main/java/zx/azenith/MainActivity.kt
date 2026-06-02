@@ -119,12 +119,14 @@ fun MainScreen(isFromTile: Boolean = false) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
+    val appPrefs = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
+    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+
     val hasCompletedGetStarted = remember {
-        val prefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
-        prefs.getBoolean("has_completed_get_started", false)
+        appPrefs.getBoolean("has_completed_get_started", false)
     }
     
-    var isBlurEnabled by remember { mutableStateOf(prefs.getBoolean("expressive_blur_ui", false)) }
+    var isBlurEnabled by remember { mutableStateOf(settingsPrefs.getBoolean("expressive_blur_ui", false)) }
     val hazeState = remember { HazeState() }
 
     var rootStatus by remember { mutableStateOf(false) }
@@ -133,11 +135,13 @@ fun MainScreen(isFromTile: Boolean = false) {
     val refreshStatus = {
         rootStatus = RootUtils.requestRootAccess()
         moduleInstalled = RootUtils.isModuleInstalled()
+        isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
     }
 
     LaunchedEffect(currentRoute) {
         refreshStatus()
     }
+
     
     val navItems = remember {
         listOf(
