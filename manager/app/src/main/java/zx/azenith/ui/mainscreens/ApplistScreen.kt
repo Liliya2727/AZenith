@@ -75,10 +75,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.LargeFlexibleTopAppBar
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.hazeChild
-import dev.chrisbanes.haze.HazeTint
 
 
 @Composable
@@ -89,7 +85,7 @@ fun ApplistScreen(navController: NavController) {
     val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
     val lifecycleOwner = LocalLifecycleOwner.current
-
+    
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     
     val pullToRefreshState = rememberPullToRefreshState()
@@ -253,18 +249,6 @@ fun ApplistTopAppBar(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val colorScheme = MaterialTheme.colorScheme
-    
-    // Taruh ini di dalam body Composable sebelum UI di-render
-    val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
-    val isBlurEnabled = remember { prefs.getBoolean("is_blur_enabled", false) }
-    val hazeState: HazeState? = null // Atau ambil dari LocalHazeState kalau kamu pakai CompositionLocal
-    val menuShape = RoundedCornerShape(12.dp)
-    val menuColor = if (isBlurEnabled) {
-        MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.35f)
-    } else {
-        MaterialTheme.colorScheme.surfaceContainer
-    }
 
     val smoothGradient = Brush.verticalGradient(
         0.0f to colorScheme.surface,
@@ -370,25 +354,7 @@ fun ApplistTopAppBar(
                         IconButton(onClick = { menuExpanded = true }) {
                             Icon(Icons.Default.MoreVert, stringResource(R.string.cd_menu))
                         }
-                        
-                        DropdownMenu(
-                            expanded = menuExpanded, 
-                            onDismissRequest = { menuExpanded = false },
-                            shape = menuShape,
-                            containerColor = if (isBlurEnabled && hazeState != null) Color.Transparent else menuColor,
-                            modifier = Modifier.then(
-                                if (isBlurEnabled && hazeState != null) {
-                                    Modifier.hazeChild(
-                                        state = hazeState,
-                                        style = HazeStyle(
-                                            backgroundColor = menuColor,
-                                            blurRadius = 24.dp,
-                                            tint = HazeTint(Color.Black.copy(alpha = 0.1f)) // <--- BUNGKUS DENGAN HazeTint
-                                        )
-                                    )
-                                } else Modifier
-                            )
-                        ) {
+                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.menu_refresh)) },
                                 onClick = { 

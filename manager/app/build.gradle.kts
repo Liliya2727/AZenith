@@ -105,6 +105,7 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.material.kolor)
     implementation(libs.haze)
+    implementation(libs.haze.blur)
     implementation(libs.me.zhanghai.android.appiconloader.coil)
     implementation(libs.io.coil.kt.coil.compose)
 
@@ -122,4 +123,5 @@ dependencies {
     implementation(libs.ansi.library)
     implementation(libs.ansi.library.ktx)
     implementation(libs.hiddenapibypass)
+    
 }
