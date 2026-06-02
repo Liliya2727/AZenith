@@ -42,7 +42,12 @@ import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeChild
 import androidx.compose.ui.graphics.Color
 import dev.chrisbanes.haze.HazeTint
-
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.zIndex
 import zx.azenith.R
 
 private data class ProfileOption(
@@ -66,7 +71,6 @@ fun ProfileDialog(
     show: Boolean,
     onDismiss: () -> Unit,
     onProfile: (String) -> Unit,
-    // Tambahkan parameter HazeState yang dikirim dari parent screen
     hazeState: HazeState? = null 
 ) {
     if (!show) return
@@ -78,35 +82,48 @@ fun ProfileDialog(
     val options = getProfileOptions()
     val dialogShape = RoundedCornerShape(28.dp)
     
-    // Tentukan warna dasar container. 
-    // Buat jauh lebih transparan agar efek blur Haze dari background bisa tembus
     val containerColor = if (isBlurEnabled) {
         MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)
     } else {
         MaterialTheme.colorScheme.surfaceContainerHigh
     }
 
-    BasicAlertDialog(
-        onDismissRequest = onDismiss
+    // 1. Tangani tombol back dari sistem agar bisa menutup dialog
+    BackHandler { onDismiss() }
+
+    // 2. Gunakan Box full-screen sebagai pengganti BasicAlertDialog
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .zIndex(100f) // Pastikan dialog berada di lapisan paling atas
+            .background(Color.Black.copy(alpha = 0.2f)) // Efek redup (scrim) di belakang dialog
+            // Tutup dialog jika user tap area kosong (di luar dialog)
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { onDismiss() })
+            },
+        contentAlignment = Alignment.Center
     ) {
         Surface(
             shape = dialogShape,
-            // Jika haze aktif, jadikan color Surface Transparent karena HazeStyle yang akan mewarnainya
             color = if (isBlurEnabled && hazeState != null) Color.Transparent else containerColor,
-            modifier = Modifier.then(
-                if (isBlurEnabled && hazeState != null) {
-                    Modifier.hazeChild(
-                        state = hazeState,
-                        style = HazeStyle(
-                            backgroundColor = containerColor,
-                            blurRadius = 24.dp,
-                            tint = HazeTint(Color.Black.copy(alpha = 0.1f)) // <--- BUNGKUS DENGAN HazeTint
+            modifier = Modifier
+                .padding(horizontal = 24.dp) // Beri margin samping agar dialog tidak mentok layar
+                // 3. Mencegah tap di dalam dialog tembus ke belakang dan menutup dialog
+                .pointerInput(Unit) { detectTapGestures { /* Do nothing */ } }
+                .then(
+                    if (isBlurEnabled && hazeState != null) {
+                        Modifier.hazeChild(
+                            state = hazeState,
+                            style = HazeStyle(
+                                backgroundColor = containerColor,
+                                blurRadius = 24.dp,
+                                tint = HazeTint(Color.Black.copy(alpha = 0.1f))
+                            )
                         )
-                    )
-                } else {
-                    Modifier
-                }
-            )
+                    } else {
+                        Modifier
+                    }
+                )
         ) {
             Column(
                 modifier = Modifier.padding(24.dp)
@@ -162,6 +179,7 @@ fun ProfileDialog(
         }
     }
 }
+
 
 
 @Preview(showBackground = true)
