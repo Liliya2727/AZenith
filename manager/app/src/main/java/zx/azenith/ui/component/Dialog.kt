@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,29 +14,14 @@
  * limitations under the License.
  */
 
-@file:OptIn(
-    ExperimentalMaterial3ExpressiveApi::class, 
-    ExperimentalMaterial3Api::class,
-    ExperimentalSharedTransitionApi::class
-)
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 
 package zx.azenith.ui.component
 
 import android.os.Parcelable
 import android.util.Log
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.*
@@ -55,7 +40,6 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -72,11 +56,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.parcelize.Parcelize
 import kotlin.coroutines.resume
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.activity.compose.BackHandler
-
 
 private const val TAG = "DialogComponent"
 
@@ -318,70 +297,4 @@ private fun ConfirmDialog(visuals: ConfirmDialogVisuals, confirm: () -> Unit, di
             }
         },
     )
-}
-
-// 2. UBAH FUNGSI INI
-@Composable
-fun SharedTransitionScope.CustomSharedDialog(
-    visible: Boolean,
-    onDismissRequest: () -> Unit,
-    sharedKey: String,
-    modifier: Modifier = Modifier,
-    content: @Composable (AnimatedVisibilityScope) -> Unit
-) {
-    // Menangkap event "Swipe Back" atau tombol kembali dari sistem
-    BackHandler(enabled = visible) {
-        onDismissRequest() // Tutup dialog secara visual alih-alih keluar aplikasi
-    }
-
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(animationSpec = tween(250)),
-        exit = fadeOut(animationSpec = tween(200))
-    ) {
-        // Layar belakang gelap (Overlay)
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.5f))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onDismissRequest
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            // Container Dialog yang akan di-animasikan
-            Surface(
-                modifier = modifier
-                    .sharedBounds(
-                        sharedContentState = rememberSharedContentState(key = sharedKey),
-                        animatedVisibilityScope = this@AnimatedVisibility,
-                        boundsTransform = { _, _ ->
-                            spring(dampingRatio = 0.8f, stiffness = 400f)
-                        }
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {} // Cegah klik tembus ke belakang
-                    ),
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh
-            ) {
-                Column(
-                    modifier = Modifier
-                        // SOLUSI UKURAN:
-                        // Alih-alih pakai padding layar statis atau fillMaxWidth(0.9f),
-                        // kita atur lebar mutlaknya. 340.dp adalah ukuran wajar dialog Material 3.
-                        // - Di HP kecil: Dia akan menyesuaikan sebisanya tanpa jadi sangat gepeng
-                        // - Di HP biasa/besar: Dia akan mentok di 340dp, menyisakan celah di kiri-kanan
-                        .widthIn(min = 280.dp, max = 340.dp)
-                        .wrapContentHeight()
-                ) {
-                    content(this@AnimatedVisibility)
-                }
-            }
-        }
-    }
 }
