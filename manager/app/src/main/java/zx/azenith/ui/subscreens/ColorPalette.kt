@@ -68,6 +68,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import zx.azenith.ui.component.*
 
+
 private val keyColorOptions = listOf(
     Color(0xFFF44336).toArgb(),
     Color(0xFFE91E63).toArgb(),
@@ -107,6 +108,11 @@ fun ColorPaletteScreen(navController: NavController) {
 
     var customBannerUri by remember { 
         mutableStateOf(context.getHeaderImage()) 
+    }
+
+    // STATE UNTUK BLUR UI
+    var isBlurEnabled by rememberSaveable {
+        mutableStateOf(prefs.getBoolean("expressive_blur_ui", false))
     }
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
@@ -220,6 +226,7 @@ fun ColorPaletteScreen(navController: NavController) {
                         isBannerEnabled = isBannerEnabled,
                         bannerGradientAlpha = bannerGradientAlpha,
                         customBannerUri = customBannerUri,
+                        isBlurEnabled = isBlurEnabled, // Teruskan parameter Blur
                         prefs = prefs,
                         onColorModeChange = { currentColorMode = it },
                         onKeyColorChange = { currentKeyColor = it },
@@ -233,6 +240,10 @@ fun ColorPaletteScreen(navController: NavController) {
                             context.setBannerGradientAlpha(it)
                         },
                         onBannerUpdated = { customBannerUri = it },
+                        onBlurEnabledChange = {
+                            isBlurEnabled = it
+                            prefs.edit { putBoolean("expressive_blur_ui", it) }
+                        },
                         imagePicker = imagePicker,
                         context = context,
                         snackbarHostState = snackbarHostState,
@@ -265,6 +276,7 @@ fun ColorPaletteScreen(navController: NavController) {
                     currentColorSpec = currentColorSpec,
                     isDark = isDark,
                     isBannerEnabled = isBannerEnabled,
+                    isBlurEnabled = isBlurEnabled,
                     bannerGradientAlpha = bannerGradientAlpha,
                     customBannerUri = customBannerUri,
                     prefs = prefs,
@@ -278,6 +290,10 @@ fun ColorPaletteScreen(navController: NavController) {
                     onBannerGradientAlphaChange = {
                         bannerGradientAlpha = it
                         context.setBannerGradientAlpha(it)
+                    },
+                    onBlurEnabledChange = {
+                        isBlurEnabled = it
+                        prefs.edit { putBoolean("expressive_blur_ui", it) }
                     },
                     onBannerUpdated = { customBannerUri = it },
                     imagePicker = imagePicker,
@@ -299,6 +315,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     isBannerEnabled: Boolean,
     bannerGradientAlpha: Float,
     customBannerUri: String?,
+    isBlurEnabled: Boolean,
     prefs: android.content.SharedPreferences,
     onColorModeChange: (ColorMode) -> Unit,
     onKeyColorChange: (Int) -> Unit,
@@ -306,6 +323,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     onBannerEnabledChange: (Boolean) -> Unit,
     onBannerGradientAlphaChange: (Float) -> Unit,
     onBannerUpdated: (String?) -> Unit,
+    onBlurEnabledChange: (Boolean) -> Unit,
     imagePicker: androidx.activity.result.ActivityResultLauncher<Array<String>>,
     context: Context,
     snackbarHostState: SnackbarHostState,
@@ -584,7 +602,24 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
             }
         )
     }
-
+    
+    item {
+        ExpressiveColumn(
+            modifier = Modifier.padding(horizontal = 12.dp),
+            title = Interface,
+            content = buildList {
+                add {
+                    ExpressiveSwitchItem(
+                        icon = Icons.Filled.BlurOn,
+                        title = "Expressive Blur",
+                        summary = "Enable Frosted glass effect UI",
+                        checked = isBlurEnabled,
+                        onCheckedChange = onBlurEnabledChange
+                    )
+                }
+            }
+        )
+    }
     
     item {
         Column(
