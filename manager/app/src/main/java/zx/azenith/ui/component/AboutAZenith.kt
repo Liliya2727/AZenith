@@ -42,8 +42,10 @@ import zx.azenith.BuildConfig
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeChild
+import androidx.compose.ui.graphics.Color
 import dev.chrisbanes.haze.HazeTint
-
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import zx.azenith.R
 
 @Preview
@@ -78,7 +80,6 @@ fun AboutCard(hazeState: HazeState? = null) {
                 if (isBlurEnabled && hazeState != null) {
                     Modifier.hazeChild(
                         state = hazeState,
-                        shape = cardShape,
                         style = HazeStyle(
                             backgroundColor = containerColor,
                             blurRadius = 24.dp,

@@ -58,7 +58,11 @@ import kotlinx.parcelize.Parcelize
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeChild
-import dev.chrisbanes.haze.hazeTint
+import androidx.compose.ui.graphics.Color
+import dev.chrisbanes.haze.HazeTint
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
+
 import kotlin.coroutines.resume
 
 private const val TAG = "DialogComponent"
