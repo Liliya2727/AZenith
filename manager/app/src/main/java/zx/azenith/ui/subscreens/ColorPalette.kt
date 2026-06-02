@@ -424,7 +424,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     
     item {
         ExpressiveColumn(
-            modifier = Modifier.padding(horizontal = 16.dp),
+            modifier = Modifier.padding(horizontal = 12.dp),
             title = stringResource(R.string.banner),
             content = buildList {
                 
