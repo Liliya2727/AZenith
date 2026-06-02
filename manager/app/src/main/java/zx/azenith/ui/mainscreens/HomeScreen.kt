@@ -56,6 +56,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     }
 
     MaterialExpressiveTheme {
+        // Bungkus keseluruhan layar dengan SharedTransitionLayout
         SharedTransitionLayout {
             Box(modifier = Modifier.fillMaxSize()) {
                 Scaffold(
@@ -105,12 +106,14 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                         modifier = Modifier.weight(1f).fillMaxHeight(),
                                         verticalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
-                                        // BUNGKUS DENGAN ANIMATED VISIBILITY & SHARED BOUNDS
-                                        AnimatedVisibility(visible = true) {
+                                        // Tile Profil Landscape - Modifier weight harus ditaruh di bungkus AnimatedVisibility
+                                        AnimatedVisibility(
+                                            visible = true,
+                                            modifier = Modifier.fillMaxWidth().weight(1f)
+                                        ) {
                                             InfoTile(
                                                 modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .weight(1f)
+                                                    .fillMaxSize()
                                                     .sharedBounds(
                                                         sharedContentState = rememberSharedContentState(key = "profile_dialog_transition"),
                                                         animatedVisibilityScope = this@AnimatedVisibility
@@ -138,11 +141,14 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                     ) { }
 
                                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                        // BUNGKUS DENGAN ANIMATED VISIBILITY & SHARED BOUNDS
-                                        AnimatedVisibility(visible = true) {
+                                        // Tile Profil Portrait - Modifier weight ditaruh di AnimatedVisibility
+                                        AnimatedVisibility(
+                                            visible = true,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
                                             InfoTile(
                                                 modifier = Modifier
-                                                    .weight(1f)
+                                                    .fillMaxWidth()
                                                     .sharedBounds(
                                                         sharedContentState = rememberSharedContentState(key = "profile_dialog_transition"),
                                                         animatedVisibilityScope = this@AnimatedVisibility
@@ -167,20 +173,18 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                         item { LinkCard(Icons.Rounded.Favorite, R.string.support_us, R.string.support_us_desc) { uriHandler.openUri("https://t.me/ZeshArch") } }
                         item { LinkCard(Icons.Rounded.Info, R.string.learn_more, R.string.learn_more_desc) { uriHandler.openUri("https://github.com/Liliya2727/AZenith") } }
                     }
-                } // End Scaffold
+                }
 
-                // DIALOG OVERLAY ANIMASI SHARED ELEMENT
+                // DIALOG OVERLAY (Di luar Scaffold agar menutupi seluruh layar)
                 CustomSharedDialog(
                     visible = showProfileDialog,
                     onDismissRequest = { showProfileDialog = false },
                     sharedKey = "profile_dialog_transition"
                 ) {
-                    // Masukkan UI konten profil kamu di sini (hanya Column/Card biasa).
-                    // PERINGATAN: Pastikan isi dari fungsi ini BUKAN komponen `Dialog()` atau `AlertDialog()`!
                     ProfileDialogContent(
                         onDismiss = { showProfileDialog = false },
                         onProfile = { profileReason ->
-                            showProfileDialog = false
+                            showProfileDialog = false // Tutup dialog secara visual dulu
                             viewModel.applyProfile(profileReason) {
                                 coroutineScope.launch {
                                     snackbarHostState.showSnackbar(context.getString(R.string.toast_applying_profile))
@@ -195,35 +199,6 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                     onDismiss = { showRebootSheet = false },
                     onReboot = { reason -> viewModel.rebootDevice(reason) }
                 )
-            }
-        }
-    }
-}
-
-// -----------------------------------------------------------------------------------------
-// Contoh struktur konten Dialog yang direkomendasikan.
-// Pastikan kode asli dari `ProfileDialog` di-refactor menjadi seperti ini (Hanya Column layout, tanpa fungsi Dialog).
-// -----------------------------------------------------------------------------------------
-@Composable
-fun ProfileDialogContent(
-    onDismiss: () -> Unit,
-    onProfile: (String) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .padding(24.dp)
-            .widthIn(min = 280.dp, max = 400.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text(text = "Profile Settings", style = MaterialTheme.typography.titleLarge)
-        Text(text = "Select your desired performance profile.", style = MaterialTheme.typography.bodyMedium)
-        
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-            TextButton(onClick = { onProfile("Performance") }) {
-                Text("Apply")
             }
         }
     }
