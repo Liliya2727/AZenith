@@ -19,7 +19,7 @@ navigation = "2.9.8"
 # Security & Glassmorphism
 stringfog = "5.1.0"
 stringfogXor = "5.0.0"
-haze = "1.7.1"
+haze = "2.0.0-alpha02"
 
 coil-compose = "2.7.0"
 appiconloader-coil = "1.5.0"
