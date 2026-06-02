@@ -136,8 +136,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                                     .weight(1f)
                                                     .sharedBounds(
                                                         sharedContentState = rememberSharedContentState(key = "profile_card_transition"),
-                                                        animatedVisibilityScope = this@AnimatedVisibility,
-                                                        resizeMode = SharedTransitionScope.ResizeMode.ScaleToBounds()
+                                                        animatedVisibilityScope = this@AnimatedVisibility
                                                     )
                                             ) {
                                                 InfoTile(
@@ -174,8 +173,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                                     .weight(1f)
                                                     .sharedBounds(
                                                         sharedContentState = rememberSharedContentState(key = "profile_card_transition"),
-                                                        animatedVisibilityScope = this@AnimatedVisibility,
-                                                        resizeMode = SharedTransitionScope.ResizeMode.ScaleToBounds()
+                                                        animatedVisibilityScope = this@AnimatedVisibility
                                                     )
                                             ) {
                                                 InfoTile(
@@ -235,8 +233,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 )
                                 .sharedBounds(
                                     sharedContentState = rememberSharedContentState(key = "profile_card_transition"),
-                                    animatedVisibilityScope = this@AnimatedVisibility,
-                                    resizeMode = SharedTransitionScope.ResizeMode.ScaleToBounds()
+                                    animatedVisibilityScope = this@AnimatedVisibility
                                 ),
                             onDismiss = { showProfileDialog = false },
                             onProfile = { profileReason ->
