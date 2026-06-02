@@ -29,6 +29,8 @@ import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.viewmodel.HomeViewModel
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 
 @Composable
 fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
