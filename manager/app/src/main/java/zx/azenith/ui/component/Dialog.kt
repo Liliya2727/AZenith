@@ -327,8 +327,8 @@ fun SharedTransitionScope.CustomSharedDialog(
 ) {
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(),
-        exit = fadeOut()
+        enter = fadeIn(animationSpec = tween(300)), // Tambahkan durasi fade in
+        exit = fadeOut(animationSpec = tween(250))  // Tambahkan durasi fade out
     ) {
         // Layar belakang gelap (Overlay)
         Box(
@@ -347,7 +347,14 @@ fun SharedTransitionScope.CustomSharedDialog(
                 modifier = modifier
                     .sharedBounds(
                         sharedContentState = rememberSharedContentState(key = sharedKey),
-                        animatedVisibilityScope = this@AnimatedVisibility
+                        animatedVisibilityScope = this@AnimatedVisibility,
+                        // 1. INI KUNCINYA: Gunakan bounds transform khusus
+                        boundsTransform = { _, _ ->
+                            spring(
+                                dampingRatio = Spring.DampingRatioLowBouncy, 
+                                stiffness = Spring.StiffnessLow
+                            )
+                        }
                     )
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -357,8 +364,15 @@ fun SharedTransitionScope.CustomSharedDialog(
                 shape = RoundedCornerShape(24.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh
             ) {
-                content(this@AnimatedVisibility)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f) // Atur lebar dialog agar konsisten
+                        .wrapContentHeight() 
+                ) {
+                    content(this@AnimatedVisibility)
+                }
             }
         }
     }
 }
+
