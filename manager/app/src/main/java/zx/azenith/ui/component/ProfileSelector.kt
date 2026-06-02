@@ -86,7 +86,9 @@ fun ProfileDialog(
                     @Composable {
                         ExpressiveListItem(
                             modifier = Modifier.padding(vertical = 4.dp),
-                            headlineContent = { Text(option.titleRes) },
+                            headlineContent = {
+                                Text(stringResource(option.titleRes))
+                            },
                             leadingContent = { 
                                 SmallLeadingIcon(icon = option.icon) 
                             },
