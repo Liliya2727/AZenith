@@ -347,8 +347,7 @@ fun SharedTransitionScope.CustomSharedDialog(
                 modifier = modifier
                     .sharedBounds(
                         sharedContentState = rememberSharedContentState(key = sharedKey),
-                        animatedVisibilityScope = this@AnimatedVisibility,
-                        resizeMode = SharedTransitionScope.ResizeMode.ScaleToBounds()
+                        animatedVisibilityScope = this@AnimatedVisibility
                     )
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
