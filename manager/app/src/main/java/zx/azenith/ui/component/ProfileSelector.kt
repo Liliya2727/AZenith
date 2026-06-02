@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
 import zx.azenith.R
 
 private data class ProfileOption(
@@ -109,8 +110,7 @@ fun ProfileDialogContent(
 @Composable
 private fun ProfileDialogPreview() {
     MaterialTheme {
-        ProfileDialog(
-            show = true,
+        ProfileDialogContent(
             onDismiss = {},
             onProfile = {}
         )
