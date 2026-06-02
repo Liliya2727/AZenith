@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeChild
-import androidx.compose.ui.graphics.Color
 import dev.chrisbanes.haze.HazeTint
 
 import zx.azenith.R
