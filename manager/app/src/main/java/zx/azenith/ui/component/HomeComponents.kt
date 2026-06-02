@@ -118,20 +118,24 @@ fun BannerCard(
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    // TERAPKAN HAZE SOURCE DI SINI (Background)
-                    .then(if (isBlurEnabled) Modifier.hazeSource(state = bannerHazeState) else Modifier)
+                modifier = Modifier.fillMaxSize()
             ) {
+                // TERAPKAN HAZE SOURCE PADA GAMBAR
                 if (customBannerUri != null) {
                     AsyncImage(
                         model = customBannerUri, contentDescription = null,
-                        modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .then(if (isBlurEnabled) Modifier.hazeSource(state = bannerHazeState) else Modifier),
+                        contentScale = ContentScale.Crop
                     )
                 } else {
                     Image(
                         painter = painterResource(id = R.drawable.banner_bg), contentDescription = null,
-                        modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .then(if (isBlurEnabled) Modifier.hazeSource(state = bannerHazeState) else Modifier), 
+                        contentScale = ContentScale.Crop
                     )
                 }
 
@@ -155,8 +159,8 @@ fun BannerCard(
                             if (isAlive) colorScheme.secondaryContainer else colorScheme.errorContainer
                         },
                         shape = CircleShape,
-                        // Pastikan diclip DULU sebelum diberi Haze Effect agar blurnya melingkar
                         modifier = Modifier
+                            // Clip DULU agar blurnya melingkar mengikuti bentuk Surface
                             .clip(CircleShape)
                             .then(if (isBlurEnabled) Modifier.hazeEffect(state = bannerHazeState) { blurEffect { blurRadius = 14.dp } } else Modifier)
                     ) {
@@ -164,7 +168,6 @@ fun BannerCard(
                             text = status, 
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), 
                             fontWeight = FontWeight.Bold,
-                            // Warna teks dipertajam sedikit kalau blur aktif biar tetap kontras terbaca
                             color = if (isAlive) colorScheme.onSecondaryContainer else colorScheme.onErrorContainer
                         )
                     }
@@ -221,6 +224,7 @@ fun BannerCard(
         }
     }
 }
+
 
 @Composable
 fun InfoTile(
