@@ -19,6 +19,7 @@ package zx.azenith
 
 import android.content.res.Configuration
 import android.os.Bundle
+import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
