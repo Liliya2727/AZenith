@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+
 package zx.azenith
 
 import android.content.res.Configuration
@@ -62,6 +63,11 @@ import zx.azenith.ui.component.rememberConfirmDialog
 import android.content.Intent
 import androidx.core.content.FileProvider
 import java.io.File
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.blur.blurEffect
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -117,6 +123,9 @@ fun MainScreen(isFromTile: Boolean = false) {
         val prefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
         prefs.getBoolean("has_completed_get_started", false)
     }
+    
+    var isBlurEnabled by remember { mutableStateOf(prefs.getBoolean("expressive_blur_ui", false)) }
+    val hazeState = remember { HazeState() }
 
     var rootStatus by remember { mutableStateOf(false) }
     var moduleInstalled by remember { mutableStateOf(false) }
@@ -215,14 +224,15 @@ fun MainScreen(isFromTile: Boolean = false) {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        
         NavHost(
             navController = navController,
             startDestination = if (hasCompletedGetStarted) "home" else "get_started",
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface),                
-            
+                .background(MaterialTheme.colorScheme.surface)
+                .then(
+                    if (isBlurEnabled) Modifier.hazeSource(state = hazeState) else Modifier
+                ),
             enterTransition = {
                 if (initialState.destination.route == "get_started" && targetState.destination.route == "home") {
                     fadeIn(animationSpec = tween(700)) 
@@ -315,8 +325,9 @@ fun MainScreen(isFromTile: Boolean = false) {
             BottomNavBar(
                 items = navItems,
                 selectedRoute = currentRoute ?: "home",
-                modifier = Modifier
-                    .align(Alignment.BottomCenter),
+                isBlurEnabled = isBlurEnabled,
+                hazeState = hazeState,
+                modifier = Modifier.align(Alignment.BottomCenter),
                 onItemSelected = { route ->
                     if (currentRoute != route) {
                         navController.navigate(route) {
@@ -336,7 +347,9 @@ fun BottomNavBar(
     items: List<NavItem>,
     selectedRoute: String,
     onItemSelected: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isBlurEnabled: Boolean = false,
+    hazeState: HazeState? = null
 ) {
     Box(
         modifier = modifier
@@ -348,10 +361,19 @@ fun BottomNavBar(
         Surface(
             modifier = Modifier
                 .widthIn(max = 350.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .then(
+                    if (isBlurEnabled && hazeState != null) {
+                        Modifier.hazeEffect(state = hazeState) {
+                            blurEffect {
+                                blurRadius = 24.dp
+                            }
+                        }
+                    } else Modifier
+                ),
             shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            shadowElevation = 8.dp
+            color = if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceContainer,
+            shadowElevation = if (isBlurEnabled) 0.dp else 8.dp
         ) {
             Row(
                 modifier = Modifier
