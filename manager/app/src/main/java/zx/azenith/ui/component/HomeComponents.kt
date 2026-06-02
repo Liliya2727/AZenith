@@ -34,6 +34,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.blur.blurEffect
 import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.util.getAppVersion
@@ -94,6 +98,7 @@ fun BannerCard(
     status: String,
     pid: String,
     isBannerEnabled: Boolean,
+    isBlurEnabled: Boolean = false, // Parameter baru
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
@@ -102,6 +107,9 @@ fun BannerCard(
     val customBannerUri = remember { context.getHeaderImage() }
     val gradientAlpha = remember { context.getBannerGradientAlpha() }
     val isAlive = status == stringResource(R.string.status_alive)
+    
+    // Inisialisasi state untuk Haze Banner
+    val bannerHazeState = remember { HazeState() }
 
     if (isBannerEnabled) {
         Card(
@@ -109,7 +117,12 @@ fun BannerCard(
             shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    // TERAPKAN HAZE SOURCE DI SINI (Background)
+                    .then(if (isBlurEnabled) Modifier.hazeSource(state = bannerHazeState) else Modifier)
+            ) {
                 if (customBannerUri != null) {
                     AsyncImage(
                         model = customBannerUri, contentDescription = null,
@@ -134,21 +147,44 @@ fun BannerCard(
                     modifier = Modifier.align(Alignment.BottomStart).padding(start = 24.dp, bottom = 20.dp),
                     horizontalAlignment = Alignment.Start
                 ) {
+                    // CHIP STATUS
                     Surface(
-                        color = if (isAlive) colorScheme.secondaryContainer else colorScheme.errorContainer,
-                        shape = CircleShape
+                        color = if (isBlurEnabled) {
+                            if (isAlive) colorScheme.secondaryContainer.copy(alpha = 0.45f) else colorScheme.errorContainer.copy(alpha = 0.45f)
+                        } else {
+                            if (isAlive) colorScheme.secondaryContainer else colorScheme.errorContainer
+                        },
+                        shape = CircleShape,
+                        // Pastikan diclip DULU sebelum diberi Haze Effect agar blurnya melingkar
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .then(if (isBlurEnabled) Modifier.hazeEffect(state = bannerHazeState) { blurEffect { blurRadius = 14.dp } } else Modifier)
                     ) {
-                        Text(text = status, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), fontWeight = FontWeight.Bold)
+                        Text(
+                            text = status, 
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), 
+                            fontWeight = FontWeight.Bold,
+                            // Warna teks dipertajam sedikit kalau blur aktif biar tetap kontras terbaca
+                            color = if (isAlive) colorScheme.onSecondaryContainer else colorScheme.onErrorContainer
+                        )
                     }
 
                     if (isAlive) {
                         Spacer(modifier = Modifier.height(4.dp))
-                        Surface(color = colorScheme.secondaryContainer, shape = CircleShape) {
+                        // CHIP PID
+                        Surface(
+                            color = if (isBlurEnabled) colorScheme.secondaryContainer.copy(alpha = 0.45f) else colorScheme.secondaryContainer, 
+                            shape = CircleShape,
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .then(if (isBlurEnabled) Modifier.hazeEffect(state = bannerHazeState) { blurEffect { blurRadius = 14.dp } } else Modifier)
+                        ) {
                             Text(
                                 text = stringResource(R.string.pid_format, pid),
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                                 style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold, color = colorScheme.onSecondaryContainer
+                                fontWeight = FontWeight.Bold, 
+                                color = colorScheme.onSecondaryContainer
                             )
                         }
                     }
@@ -156,6 +192,7 @@ fun BannerCard(
             }
         }
     } else {
+        // [Bagian kondisi isBannerEnabled == false tetap sama persis seperti kode lama]
         Surface(
             modifier = modifier.clip(RoundedCornerShape(26.dp)).clickable { onClick() },
             color = colorScheme.secondaryContainer, shape = RoundedCornerShape(26.dp)
