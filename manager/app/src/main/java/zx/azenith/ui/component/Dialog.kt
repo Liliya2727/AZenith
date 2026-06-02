@@ -265,13 +265,42 @@ fun rememberCustomDialog(composable: @Composable (dismiss: () -> Unit) -> Unit):
 }
 
 @Composable
-private fun LoadingDialog() {
+fun LoadingDialog(hazeState: HazeState? = null) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    val isBlurEnabled = remember { prefs.getBoolean("is_blur_enabled", false) }
+    
+    val dialogShape = RoundedCornerShape(24.dp) // Lebih bulat sedikit dari default 8dp biar pas sama blur
+    val containerColor = if (isBlurEnabled) {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.35f)
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+
     Dialog(
         onDismissRequest = {},
         properties = DialogProperties(dismissOnClickOutside = false, dismissOnBackPress = false)
     ) {
         MaterialExpressiveTheme {
-            Surface(modifier = Modifier.size(100.dp), shape = RoundedCornerShape(8.dp)) {
+            Surface(
+                modifier = Modifier
+                    .size(100.dp)
+                    .then(
+                        if (isBlurEnabled && hazeState != null) {
+                            Modifier.hazeChild(
+                                state = hazeState,
+                                shape = dialogShape,
+                                style = HazeStyle(
+                                    backgroundColor = containerColor,
+                                    blurRadius = 24.dp,
+                                    tint = Color.Black.copy(alpha = 0.1f)
+                                )
+                            )
+                        } else Modifier
+                    ),
+                color = if (isBlurEnabled && hazeState != null) Color.Transparent else containerColor,
+                shape = dialogShape
+            ) {
                 Box(contentAlignment = Alignment.Center) {
                     LoadingIndicator()
                 }
@@ -281,9 +310,39 @@ private fun LoadingDialog() {
 }
 
 @Composable
-private fun ConfirmDialog(visuals: ConfirmDialogVisuals, confirm: () -> Unit, dismiss: () -> Unit) {
+fun ConfirmDialog(
+    visuals: ConfirmDialogVisuals, 
+    confirm: () -> Unit, 
+    dismiss: () -> Unit,
+    hazeState: HazeState? = null
+) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    val isBlurEnabled = remember { prefs.getBoolean("is_blur_enabled", false) }
+    
+    val dialogShape = RoundedCornerShape(28.dp)
+    val containerColor = if (isBlurEnabled) {
+        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHigh
+    }
+
     AlertDialog(
         onDismissRequest = dismiss,
+        modifier = Modifier.then(
+            if (isBlurEnabled && hazeState != null) {
+                Modifier.hazeChild(
+                    state = hazeState,
+                    shape = dialogShape,
+                    style = HazeStyle(
+                        backgroundColor = containerColor,
+                        blurRadius = 24.dp,
+                        tint = Color.Black.copy(alpha = 0.1f)
+                    )
+                )
+            } else Modifier
+        ),
+        containerColor = if (isBlurEnabled && hazeState != null) Color.Transparent else containerColor,
         title = { Text(text = visuals.title) },
         text = { visuals.content?.let { Text(text = it) } },
         confirmButton = {
