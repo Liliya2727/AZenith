@@ -75,7 +75,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.LargeFlexibleTopAppBar
-
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.hazeChild
 
 @Composable
 fun ApplistScreen(navController: NavController) {
@@ -85,7 +87,10 @@ fun ApplistScreen(navController: NavController) {
     val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
     val lifecycleOwner = LocalLifecycleOwner.current
-    
+
+    val isBlurEnabled = remember { prefs.getBoolean("is_blur_enabled", false) }
+    val menuShape = RoundedCornerShape(12.dp)
+    val menuColor = if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surfaceContainer
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     
     val pullToRefreshState = rememberPullToRefreshState()
@@ -354,7 +359,26 @@ fun ApplistTopAppBar(
                         IconButton(onClick = { menuExpanded = true }) {
                             Icon(Icons.Default.MoreVert, stringResource(R.string.cd_menu))
                         }
-                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                        
+                        DropdownMenu(
+                            expanded = menuExpanded, 
+                            onDismissRequest = { menuExpanded = false },
+                            shape = menuShape,
+                            containerColor = if (isBlurEnabled && hazeState != null) Color.Transparent else menuColor,
+                            modifier = Modifier.then(
+                                if (isBlurEnabled && hazeState != null) {
+                                    Modifier.hazeChild(
+                                        state = hazeState,
+                                        shape = menuShape,
+                                        style = HazeStyle(
+                                            backgroundColor = menuColor,
+                                            blurRadius = 24.dp,
+                                            tint = Color.Black.copy(alpha = 0.1f)
+                                        )
+                                    )
+                                } else Modifier
+                            )
+                        ) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.menu_refresh)) },
                                 onClick = { 
