@@ -56,7 +56,7 @@ import androidx.compose.animation.core.spring
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeChild
-
+import dev.chrisbanes.haze.hazeTint
 
 private val largeCorner = 26.dp
 private val smallCorner = 4.dp

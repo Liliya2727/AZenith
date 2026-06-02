@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import zx.azenith.ui.component.*
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.hazeTint
 import dev.chrisbanes.haze.hazeChild
 import zx.azenith.R
 
@@ -57,11 +58,10 @@ fun BackupRestoreBottomSheet(
             if (isBlurEnabled && hazeState != null) {
                 Modifier.hazeChild(
                     state = hazeState,
-                    shape = sheetShape,
                     style = HazeStyle(
                         backgroundColor = containerColor,
                         blurRadius = 24.dp,
-                        tint = Color.Black.copy(alpha = 0.1f)
+                        tint = HazeTint(Color.Black.copy(alpha = 0.1f)) // <--- BUNGKUS DENGAN HazeTint
                     )
                 )
             } else Modifier

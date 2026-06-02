@@ -55,6 +55,10 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.parcelize.Parcelize
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.hazeTint
 import kotlin.coroutines.resume
 
 private const val TAG = "DialogComponent"
@@ -289,11 +293,10 @@ fun LoadingDialog(hazeState: HazeState? = null) {
                         if (isBlurEnabled && hazeState != null) {
                             Modifier.hazeChild(
                                 state = hazeState,
-                                shape = dialogShape,
                                 style = HazeStyle(
                                     backgroundColor = containerColor,
                                     blurRadius = 24.dp,
-                                    tint = Color.Black.copy(alpha = 0.1f)
+                                    tint = HazeTint(Color.Black.copy(alpha = 0.1f)) // <--- BUNGKUS DENGAN HazeTint
                                 )
                             )
                         } else Modifier
@@ -333,11 +336,10 @@ fun ConfirmDialog(
             if (isBlurEnabled && hazeState != null) {
                 Modifier.hazeChild(
                     state = hazeState,
-                    shape = dialogShape,
                     style = HazeStyle(
                         backgroundColor = containerColor,
                         blurRadius = 24.dp,
-                        tint = Color.Black.copy(alpha = 0.1f)
+                        tint = HazeTint(Color.Black.copy(alpha = 0.1f)) // <--- BUNGKUS DENGAN HazeTint
                     )
                 )
             } else Modifier
