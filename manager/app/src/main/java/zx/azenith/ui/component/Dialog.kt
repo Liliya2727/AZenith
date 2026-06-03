@@ -18,54 +18,49 @@
 
 package zx.azenith.ui.component
 
+import android.content.Context
 import android.os.Parcelable
-import android.util.Log
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.*
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.zIndex
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.blur.blurEffect
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.parcelize.Parcelize
 import kotlin.coroutines.resume
-import android.content.Context
-import android.os.Build
-import android.view.WindowManager
-import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.window.DialogWindowProvider
-
 
 private const val TAG = "DialogComponent"
+
+// 👇 State Haze global agar bisa dibaca oleh Custom Dialog tanpa mengubah parameter fungsi
+val LocalAppHazeState = compositionLocalOf<HazeState?> { null }
 
 interface ConfirmDialogVisuals : Parcelable {
     val title: String
@@ -231,7 +226,10 @@ private class ConfirmDialogHandleImpl(
 fun rememberLoadingDialog(): LoadingDialogHandle {
     val visible = remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-    if (visible.value) LoadingDialog()
+    
+    // 👇 Lempar state visibilitas langsung agar animasi M3 masuk/keluar tereksekusi mulus
+    LoadingDialog(visible = visible.value)
+    
     return remember { LoadingDialogHandleImpl(visible, coroutineScope) }
 }
 
@@ -250,13 +248,14 @@ fun rememberConfirmDialog(onConfirm: NullableCallback = null, onDismiss: Nullabl
         init = { ConfirmDialogHandleImpl(visible, coroutineScope, callback, ConfirmDialogVisualsImpl.Empty, resultChannel) }
     )
 
-    if (visible.value) {
-        ConfirmDialog(
-            handle.visuals,
-            confirm = { coroutineScope.launch { resultChannel.send(ConfirmResult.Confirmed) } },
-            dismiss = { coroutineScope.launch { resultChannel.send(ConfirmResult.Canceled) } }
-        )
-    }
+    // 👇 Lempar state visibilitas langsung
+    ConfirmDialog(
+        visible = visible.value,
+        visuals = handle.visuals,
+        confirm = { coroutineScope.launch { resultChannel.send(ConfirmResult.Confirmed) } },
+        dismiss = { coroutineScope.launch { resultChannel.send(ConfirmResult.Canceled) } }
+    )
+    
     return handle
 }
 
@@ -273,101 +272,158 @@ fun rememberCustomDialog(composable: @Composable (dismiss: () -> Unit) -> Unit):
 }
 
 @Composable
-private fun LoadingDialog() {
+private fun LoadingDialog(visible: Boolean) {
     val context = LocalContext.current
     val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
     val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
+    val hazeState = LocalAppHazeState.current
 
-    Dialog(
-        onDismissRequest = {},
-        properties = DialogProperties(dismissOnClickOutside = false, dismissOnBackPress = false)
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)),
+        exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
     ) {
-        MaterialExpressiveTheme {
-            Surface(
-                modifier = Modifier.size(100.dp),
-                shape = RoundedCornerShape(24.dp), // Dibikin agak membulat (opsional)
-                // 👇 Set warna transparan & tanpa bayangan jika blur aktif
-                color = if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f) else MaterialTheme.colorScheme.surface,
-                shadowElevation = if (isBlurEnabled) 0.dp else 8.dp
+        // Blokir tombol kembali saat loading aktif
+        BackHandler(onBack = { /* Do nothing */ })
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(100f) // Pastikan dialog selalu ada di layer paling atas
+                .background(Color.Black.copy(alpha = 0.32f)) // Scrim M3 standar
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {} // Blokir klik di luar agar tidak tertutup
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            AnimatedVisibility(
+                visible = visible,
+                enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) + 
+                        scaleIn(animationSpec = tween(250, easing = LinearOutSlowInEasing), initialScale = 0.9f),
+                exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)) + 
+                       scaleOut(animationSpec = tween(200, easing = FastOutSlowInEasing), targetScale = 0.9f)
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    LoadingIndicator() // (Pastikan komponen ini ada di project kamu)
+                Surface(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .then(
+                            if (isBlurEnabled && hazeState != null) {
+                                Modifier.hazeEffect(state = hazeState) {
+                                    blurEffect { blurRadius = 24.dp }
+                                }
+                            } else Modifier
+                        ),
+                    shape = RoundedCornerShape(24.dp),
+                    color = if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f) else MaterialTheme.colorScheme.surface,
+                    shadowElevation = if (isBlurEnabled) 0.dp else 8.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        // Pastikan LoadingIndicator ada di project kamu
+                        LoadingIndicator()
+                    }
                 }
             }
         }
     }
-
-    // 👇 Tambahkan efek blur window
-    if (isBlurEnabled) {
-        val view = LocalView.current
-        val dialogWindowProvider = view.parent as? DialogWindowProvider
-        val window = dialogWindowProvider?.window
-
-        SideEffect {
-            if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-                window.attributes.blurBehindRadius = 40
-                window.setDimAmount(0.3f)
-            }
-        }
-    }
 }
 
-
 @Composable
-private fun ConfirmDialog(visuals: ConfirmDialogVisuals, confirm: () -> Unit, dismiss: () -> Unit) {
-    // 👇 1. Baca pengaturan dari SharedPreferences
+private fun ConfirmDialog(
+    visible: Boolean, 
+    visuals: ConfirmDialogVisuals, 
+    confirm: () -> Unit, 
+    dismiss: () -> Unit
+) {
     val context = LocalContext.current
     val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
     val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
+    val hazeState = LocalAppHazeState.current
 
-    // 👇 2. Ganti Container Color dan Elevation sesuai pengaturan
-    val containerColor = if (isBlurEnabled) {
-        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f) // Efek kaca
-    } else {
-        AlertDialogDefaults.containerColor // Solid bawaan Material 3
-    }
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)),
+        exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
+    ) {
+        // Tutup dialog saat tombol back Android ditekan
+        BackHandler(onBack = dismiss)
 
-    val dialogElevation = if (isBlurEnabled) {
-        0.dp // Hapus bayangan agar efek kaca lebih realistis
-    } else {
-        AlertDialogDefaults.TonalElevation // Bayangan standar
-    }
-
-    AlertDialog(
-        onDismissRequest = dismiss,
-        containerColor = containerColor,
-        tonalElevation = dialogElevation,
-        title = { Text(text = visuals.title) },
-        text = { visuals.content?.let { Text(text = it) } },
-        confirmButton = {
-            TextButton(onClick = confirm) {
-                Text(text = visuals.confirm ?: stringResource(id = android.R.string.ok))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = dismiss) {
-                Text(text = visuals.dismiss ?: stringResource(id = android.R.string.cancel))
-            }
-        },
-    )
-
-    // 👇 3. Aktifkan Window Blur bawaan Android (API 31+) jika fitur dinyalakan
-    if (isBlurEnabled) {
-        val view = LocalView.current
-        val dialogWindowProvider = view.parent as? DialogWindowProvider
-        val window = dialogWindowProvider?.window
-
-        SideEffect {
-            if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                // Tambahkan flag blur
-                window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-                // Atur seberapa buram (radius)
-                window.attributes.blurBehindRadius = 40
-                // Atur tingkat kegelapan di belakang dialog (dim)
-                window.setDimAmount(0.3f)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(100f) // Lapisan paling atas
+                .background(Color.Black.copy(alpha = 0.32f)) // Scrim standar M3
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = dismiss // Tutup saat area luar diklik
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            AnimatedVisibility(
+                visible = visible,
+                enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) + 
+                        scaleIn(animationSpec = tween(250, easing = LinearOutSlowInEasing), initialScale = 0.9f),
+                exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)) + 
+                       scaleOut(animationSpec = tween(200, easing = FastOutSlowInEasing), targetScale = 0.9f)
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .widthIn(min = 280.dp, max = 340.dp) // Ukuran width M3
+                        .padding(24.dp) // Jarak aman dengan edge screen
+                        .clip(RoundedCornerShape(28.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {} // Blokir klik di area dialog itu sendiri agar tidak tertutup
+                        )
+                        .then(
+                            if (isBlurEnabled && hazeState != null) {
+                                Modifier.hazeEffect(state = hazeState) {
+                                    blurEffect { blurRadius = 24.dp }
+                                }
+                            } else Modifier
+                        ),
+                    shape = RoundedCornerShape(28.dp),
+                    color = if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f) else AlertDialogDefaults.containerColor,
+                    shadowElevation = if (isBlurEnabled) 0.dp else AlertDialogDefaults.TonalElevation
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp)
+                    ) {
+                        Text(
+                            text = visuals.title,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        visuals.content?.let { contentText ->
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = contentText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(onClick = dismiss) {
+                                Text(text = visuals.dismiss ?: stringResource(id = android.R.string.cancel))
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            TextButton(onClick = confirm) {
+                                Text(text = visuals.confirm ?: stringResource(id = android.R.string.ok))
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
-
