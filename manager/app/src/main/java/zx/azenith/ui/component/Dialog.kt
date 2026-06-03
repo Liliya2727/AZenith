@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+
 @file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 
 package zx.azenith.ui.component
@@ -49,7 +50,6 @@ import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -59,7 +59,6 @@ import kotlin.coroutines.resume
 
 private const val TAG = "DialogComponent"
 
-// 👇 State Haze global agar bisa dibaca oleh Custom Dialog tanpa mengubah parameter fungsi
 val LocalAppHazeState = compositionLocalOf<HazeState?> { null }
 
 interface ConfirmDialogVisuals : Parcelable {
@@ -98,20 +97,13 @@ sealed interface ConfirmResult {
     object Canceled : ConfirmResult
 }
 
+// Tambahan fungsi accept() dan cancel() untuk dipanggil oleh Host
 interface ConfirmDialogHandle : DialogHandle {
     val visuals: ConfirmDialogVisuals
-    fun showConfirm(
-        title: String,
-        content: String? = null,
-        confirm: String? = null,
-        dismiss: String? = null
-    )
-    suspend fun awaitConfirm(
-        title: String,
-        content: String? = null,
-        confirm: String? = null,
-        dismiss: String? = null
-    ): ConfirmResult
+    fun showConfirm(title: String, content: String? = null, confirm: String? = null, dismiss: String? = null)
+    suspend fun awaitConfirm(title: String, content: String? = null, confirm: String? = null, dismiss: String? = null): ConfirmResult
+    fun accept() 
+    fun cancel() 
 }
 
 private abstract class DialogHandleBase(
@@ -160,13 +152,19 @@ private class ConfirmDialogHandleImpl(
     visible: MutableState<Boolean>,
     coroutineScope: CoroutineScope,
     private val callback: ConfirmCallback,
-    override var visuals: ConfirmDialogVisuals = ConfirmDialogVisualsImpl.Empty,
-    private val resultFlow: ReceiveChannel<ConfirmResult>
+    initialVisuals: ConfirmDialogVisuals,
+    private val resultChannel: Channel<ConfirmResult>
 ) : ConfirmDialogHandle, DialogHandleBase(visible, coroutineScope) {
+
+    // Visuals sekarang berupa state agar Host tahu saat ada update teks
+    private val _visuals = mutableStateOf(initialVisuals)
+    override var visuals: ConfirmDialogVisuals
+        get() = _visuals.value
+        set(value) { _visuals.value = value }
 
     init {
         coroutineScope.launch {
-            resultFlow.consumeAsFlow()
+            resultChannel.consumeAsFlow()
                 .onEach { result ->
                     awaitContinuation?.let {
                         awaitContinuation = null
@@ -187,9 +185,7 @@ private class ConfirmDialogHandleImpl(
     private suspend fun awaitResult(): ConfirmResult {
         return suspendCancellableCoroutine {
             awaitContinuation = it.apply {
-                if (callback.isEmpty) {
-                    invokeOnCancellation { visible.value = false }
-                }
+                if (callback.isEmpty) invokeOnCancellation { visible.value = false }
             }
         }
     }
@@ -211,10 +207,12 @@ private class ConfirmDialogHandleImpl(
         return awaitResult()
     }
 
+    override fun accept() { coroutineScope.launch { resultChannel.send(ConfirmResult.Confirmed) } }
+    override fun cancel() { coroutineScope.launch { resultChannel.send(ConfirmResult.Canceled) } }
     override val dialogType: String get() = "ConfirmDialog"
 
     companion object {
-        fun Saver(visible: MutableState<Boolean>, coroutineScope: CoroutineScope, callback: ConfirmCallback, resultChannel: ReceiveChannel<ConfirmResult>) =
+        fun Saver(visible: MutableState<Boolean>, coroutineScope: CoroutineScope, callback: ConfirmCallback, resultChannel: Channel<ConfirmResult>) =
             Saver<ConfirmDialogHandle, ConfirmDialogVisuals>(
                 save = { it.visuals },
                 restore = { ConfirmDialogHandleImpl(visible, coroutineScope, callback, it, resultChannel) }
@@ -222,54 +220,48 @@ private class ConfirmDialogHandleImpl(
     }
 }
 
+// Hanya menyimpan handle, TIDAK me-render UI di sini
 @Composable
 fun rememberLoadingDialog(): LoadingDialogHandle {
     val visible = remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
-    
-    // 👇 Lempar state visibilitas langsung agar animasi M3 masuk/keluar tereksekusi mulus
-    LoadingDialog(visible = visible.value)
-    
     return remember { LoadingDialogHandleImpl(visible, coroutineScope) }
 }
 
+// Hanya menyimpan handle, TIDAK me-render UI di sini
 @Composable
 fun rememberConfirmDialog(onConfirm: NullableCallback = null, onDismiss: NullableCallback = null): ConfirmDialogHandle {
     val currentOnConfirm by rememberUpdatedState(onConfirm)
     val currentOnDismiss by rememberUpdatedState(onDismiss)
     val callback = remember { ConfirmCallback({ currentOnConfirm }, { currentOnDismiss }) }
-    
     val visible = rememberSaveable { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val resultChannel = remember { Channel<ConfirmResult>() }
 
-    val handle = rememberSaveable(
+    return rememberSaveable(
         saver = ConfirmDialogHandleImpl.Saver(visible, coroutineScope, callback, resultChannel),
         init = { ConfirmDialogHandleImpl(visible, coroutineScope, callback, ConfirmDialogVisualsImpl.Empty, resultChannel) }
     )
+}
 
-    // 👇 Lempar state visibilitas langsung
-    ConfirmDialog(
-        visible = visible.value,
-        visuals = handle.visuals,
-        confirm = { coroutineScope.launch { resultChannel.send(ConfirmResult.Confirmed) } },
-        dismiss = { coroutineScope.launch { resultChannel.send(ConfirmResult.Canceled) } }
-    )
-    
-    return handle
+// --- 👇 HOST COMPONENTS: Panggil ini di akhir hirarki layout layar kamu 👇 --- //
+
+@Composable
+fun LoadingDialogHost(handle: LoadingDialogHandle) {
+    LoadingDialog(visible = handle.isShown)
 }
 
 @Composable
-fun rememberCustomDialog(composable: @Composable (dismiss: () -> Unit) -> Unit): DialogHandle {
-    val visible = rememberSaveable { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
-    if (visible.value) composable { visible.value = false }
-    return remember { 
-        object : DialogHandleBase(visible, coroutineScope) { 
-            override val dialogType: String get() = "CustomDialog" 
-        } 
-    }
+fun ConfirmDialogHost(handle: ConfirmDialogHandle) {
+    ConfirmDialog(
+        visible = handle.isShown,
+        visuals = handle.visuals,
+        confirm = { handle.accept() },
+        dismiss = { handle.cancel() }
+    )
 }
+
+// --- INTERNAL UI COMPONENTS --- //
 
 @Composable
 private fun LoadingDialog(visible: Boolean) {
@@ -283,46 +275,38 @@ private fun LoadingDialog(visible: Boolean) {
         enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)),
         exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
     ) {
-        // Blokir tombol kembali saat loading aktif
-        BackHandler(onBack = { /* Do nothing */ })
-
+        BackHandler(onBack = { })
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .zIndex(100f) // Pastikan dialog selalu ada di layer paling atas
-                .background(Color.Black.copy(alpha = 0.32f)) // Scrim M3 standar
+                .zIndex(100f) 
+                .background(Color.Black.copy(alpha = 0.32f)) 
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = {} // Blokir klik di luar agar tidak tertutup
+                    onClick = {} 
                 ),
             contentAlignment = Alignment.Center
         ) {
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) + 
-                        scaleIn(animationSpec = tween(250, easing = LinearOutSlowInEasing), initialScale = 0.9f),
-                exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)) + 
-                       scaleOut(animationSpec = tween(200, easing = FastOutSlowInEasing), targetScale = 0.9f)
+                enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) + scaleIn(animationSpec = tween(250, easing = LinearOutSlowInEasing), initialScale = 0.9f),
+                exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)) + scaleOut(animationSpec = tween(200, easing = FastOutSlowInEasing), targetScale = 0.9f)
             ) {
                 Surface(
                     modifier = Modifier
                         .size(100.dp)
                         .clip(RoundedCornerShape(24.dp))
                         .then(
-                            if (isBlurEnabled && hazeState != null) {
-                                Modifier.hazeEffect(state = hazeState) {
-                                    blurEffect { blurRadius = 24.dp }
-                                }
-                            } else Modifier
+                            if (isBlurEnabled && hazeState != null) Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
+                            else Modifier
                         ),
                     shape = RoundedCornerShape(24.dp),
                     color = if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f) else MaterialTheme.colorScheme.surface,
                     shadowElevation = if (isBlurEnabled) 0.dp else 8.dp
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        // Pastikan LoadingIndicator ada di project kamu
-                        LoadingIndicator()
+                        CircularProgressIndicator() // Gunakan loading indicator bawaan/custom mu
                     }
                 }
             }
@@ -347,44 +331,37 @@ private fun ConfirmDialog(
         enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)),
         exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
     ) {
-        // Tutup dialog saat tombol back Android ditekan
         BackHandler(onBack = dismiss)
-
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .zIndex(100f) // Lapisan paling atas
-                .background(Color.Black.copy(alpha = 0.32f)) // Scrim standar M3
+                .zIndex(100f) 
+                .background(Color.Black.copy(alpha = 0.32f)) 
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = dismiss // Tutup saat area luar diklik
+                    onClick = dismiss 
                 ),
             contentAlignment = Alignment.Center
         ) {
             AnimatedVisibility(
                 visible = visible,
-                enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) + 
-                        scaleIn(animationSpec = tween(250, easing = LinearOutSlowInEasing), initialScale = 0.9f),
-                exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)) + 
-                       scaleOut(animationSpec = tween(200, easing = FastOutSlowInEasing), targetScale = 0.9f)
+                enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) + scaleIn(animationSpec = tween(250, easing = LinearOutSlowInEasing), initialScale = 0.9f),
+                exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)) + scaleOut(animationSpec = tween(200, easing = FastOutSlowInEasing), targetScale = 0.9f)
             ) {
                 Surface(
                     modifier = Modifier
-                        .widthIn(min = 280.dp, max = 340.dp) // Ukuran width M3
-                        .padding(24.dp) // Jarak aman dengan edge screen
+                        .widthIn(min = 280.dp, max = 340.dp) 
+                        .padding(24.dp) 
                         .clip(RoundedCornerShape(28.dp))
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
-                            onClick = {} // Blokir klik di area dialog itu sendiri agar tidak tertutup
+                            onClick = {} 
                         )
                         .then(
-                            if (isBlurEnabled && hazeState != null) {
-                                Modifier.hazeEffect(state = hazeState) {
-                                    blurEffect { blurRadius = 24.dp }
-                                }
-                            } else Modifier
+                            if (isBlurEnabled && hazeState != null) Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
+                            else Modifier
                         ),
                     shape = RoundedCornerShape(28.dp),
                     color = if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f) else AlertDialogDefaults.containerColor,

@@ -229,6 +229,7 @@ fun MainScreen(isFromTile: Boolean = false) {
             }
         }
     }
+    
 
     // 👇 PENTING: Melempar HazeState secara internal menggunakan CompositionLocal
     CompositionLocalProvider(LocalAppHazeState provides hazeState) {
@@ -338,6 +339,8 @@ fun MainScreen(isFromTile: Boolean = false) {
                     }
                 )
             }
+            ConfirmDialogHost(handle = updateDialog)
+            ConfirmDialogHost(handle = rebootDialog)
         }
     }
 }
