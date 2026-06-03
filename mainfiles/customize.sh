@@ -255,6 +255,8 @@ fi
 
 # Set Permissions
 ui_print "- Setting Permissions..."
+pm grant zx.azenith android.permission.REQUEST_INSTALL_PACKAGES
+pm grant zx.azenith android.permission.READ_EXTERNAL_STORAGE
 pm grant zx.azenith android.permission.POST_NOTIFICATIONS
 set_perm_recursive "$MODPATH/system/bin" 0 2000 0777 0777
 chmod +x "$MODPATH/system/bin/sys.azenith-service"
