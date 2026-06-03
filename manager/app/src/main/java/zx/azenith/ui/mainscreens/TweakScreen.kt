@@ -435,25 +435,21 @@ fun TweakScreen(
             onRestore = { scope.launch { snackbarHostState.showSnackbar("Dummy: Restore Started") } }
         )
 
-        
-            RootAppDialog {
-                RendererDialog(
-                    show = true,
-                    onDismiss = { showRendererDialog = false },
-                    onRenderer = { reason -> viewModel.executeSetRenderer(reason, context) }
-                )
-            }
-        
+        RootAppDialog {
+            RendererDialog(
+                show = showRendererDialog,
+                onDismiss = { showRendererDialog = false },
+                onRenderer = { reason -> viewModel.executeSetRenderer(reason, context) }
+            )
+        }
 
-        
-            RootAppDialog {
-                RefreshRatePickerDialog(
-                    show = true,
-                    onDismiss = { showRefreshRateDialog = false },
-                    onRefreshRatePicker = { reason -> viewModel.executeSetRefreshRates(reason, context) }
-                )
-            }
-        
+        RootAppDialog {
+            RefreshRatePickerDialog(
+                show = showRefreshRateDialog,
+                onDismiss = { showRefreshRateDialog = false },
+                onRefreshRatePicker = { reason -> viewModel.executeSetRefreshRates(reason, context) }
+            )
+        }
     }
 }
 

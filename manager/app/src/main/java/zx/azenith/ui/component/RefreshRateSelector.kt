@@ -108,7 +108,7 @@ fun RefreshRatePickerDialog(
                         onClick = {}
                     )
             ) {
-                Column(
+                                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(24.dp)
@@ -116,6 +116,7 @@ fun RefreshRatePickerDialog(
                     Text(
                         text = stringResource(R.string.RefreshRatePicker_Select),
                         style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface, // 👈 TAMBAHKAN INI
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
 
@@ -123,7 +124,12 @@ fun RefreshRatePickerDialog(
                         @Composable {
                             ExpressiveListItem(
                                 modifier = Modifier.padding(vertical = 4.dp),
-                                headlineContent = { Text(option.titleString) },
+                                headlineContent = { 
+                                    Text(
+                                        text = option.titleString,
+                                        color = MaterialTheme.colorScheme.onSurface // 👈 TAMBAHKAN INI
+                                    ) 
+                                },
                                 leadingContent = { 
                                     SmallLeadingIcon(icon = option.icon) 
                                 },
@@ -140,6 +146,7 @@ fun RefreshRatePickerDialog(
                         content = content
                     )
                 }
+
             }
         }
     }
