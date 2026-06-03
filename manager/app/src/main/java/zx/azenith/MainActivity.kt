@@ -57,7 +57,7 @@ import zx.azenith.R
 import zx.azenith.ui.mainscreens.*
 import zx.azenith.ui.subscreens.*
 import zx.azenith.ui.theme.AZenithTheme
-import zx.azenith.ui.util.RootUtils
+import zx.azenith.ui.util.*
 import kotlinx.coroutines.launch
 import com.topjohnwu.superuser.Shell
 import zx.azenith.ui.component.rememberConfirmDialog
@@ -111,6 +111,7 @@ fun MainScreen(isFromTile: Boolean = false) {
             }
         }
     }
+        
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -125,6 +126,10 @@ fun MainScreen(isFromTile: Boolean = false) {
 
     val hasCompletedGetStarted = remember {
         appPrefs.getBoolean("has_completed_get_started", false)
+    }
+    
+    LaunchedEffect(Unit) {
+        WallpaperCache.init(context)
     }
     
     var isBlurEnabled by remember { mutableStateOf(settingsPrefs.getBoolean("expressive_blur_ui", false)) }
