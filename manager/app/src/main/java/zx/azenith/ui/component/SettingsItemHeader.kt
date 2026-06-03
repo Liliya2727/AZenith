@@ -1,6 +1,5 @@
 package zx.azenith.ui.component
 
-import android.app.WallpaperManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -12,22 +11,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.graphics.drawable.toBitmap
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import zx.azenith.BuildConfig
+import zx.azenith.ui.util.*
 import zx.azenith.R
 
 @Composable
@@ -50,29 +45,8 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
         formatter.format(Date(BuildConfig.BUILD_TIME))
     }
 
-    // 👇 STATE UNTUK MENYIMPAN BITMAP
-    var wallpaperBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
-
-    // 👇 PROSES AMBIL GAMBAR PINDAH KE BACKGROUND THREAD (IO)
-    LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            try {
-                val wallpaperManager = WallpaperManager.getInstance(context)
-                val drawable = wallpaperManager.drawable
-                
-                // PENTING: Downscale gambar agar tidak makan RAM dan bikin scroll berat
-                // Ukuran 400x800 sudah sangat cukup tajam untuk kotak sekecil itu
-                val bitmap = drawable?.toBitmap(width = 400, height = 800)?.asImageBitmap()
-                
-                // Update state (akan otomatis ter-render ulang setelah gambar siap)
-                wallpaperBitmap = bitmap
-            } catch (e: SecurityException) {
-                // Izin belum ada
-            } catch (e: Exception) {
-                // Jaga-jaga kalau OutOfMemory
-            }
-        }
-    }
+    // 👇 CUKUP BACA DARI CACHE GLOBAL, NGGAK PERLU LOAD LAGI!
+    val wallpaperBitmap by WallpaperCache.bitmapState
     
     Row(
         modifier = modifier
@@ -81,7 +55,7 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // --- BAGIAN KIRI: Wallpaper & Jam (Style Layar HP) ---
+        // --- BAGIAN KIRI: Wallpaper & Jam ---
         Box(
             modifier = Modifier
                 .weight(0.45f)
@@ -91,10 +65,10 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
                 .clip(RoundedCornerShape(15.dp)) 
                 .background(MaterialTheme.colorScheme.surfaceVariant) 
         ) {
-            // Gambar hanya akan muncul setelah proses di background thread selesai
-            wallpaperBitmap?.let { bitmap ->
+            // Render Wallpaper dari Cache
+            if (wallpaperBitmap != null) {
                 Image(
-                    bitmap = bitmap, 
+                    bitmap = wallpaperBitmap!!, 
                     contentDescription = "Device Wallpaper",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -133,15 +107,13 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             AppInfoTextItem(title = "App Name", value = context.getString(R.string.app_name))
-            AppInfoTextItem(title = "Author", value = "ArchHaven Devs")
+            AppInfoTextItem(title = "Author", value = "Zexshia")
             AppInfoTextItem(title = "Build Date", value = buildDateString)
             AppInfoTextItem(title = "Version Code", value = BuildConfig.VERSION_CODE.toString())
             AppInfoTextItem(title = "Package Name", value = context.packageName)
         }
     }
 }
-
-// ... AppInfoTextItem ...
 
 
 @Composable
