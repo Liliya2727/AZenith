@@ -56,6 +56,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.parcelize.Parcelize
 import kotlin.coroutines.resume
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.draw.scale
+
+
 
 private const val TAG = "DialogComponent"
 
