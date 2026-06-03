@@ -30,7 +30,6 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     val uriHandler = LocalUriHandler.current
     val uiState by viewModel.uiState.collectAsState()
 
-    // 1. TAMBAHKAN PEMBACAAN PREFS UNTUK BLUR DI SINI
     val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
     var isBlurEnabled by remember { mutableStateOf(settingsPrefs.getBoolean("expressive_blur_ui", false)) }
 
@@ -51,22 +50,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     
     LaunchedEffect(Unit) {
         viewModel.refreshAiMode()
-        // 2. REFRESH STATUS BLUR JIKA KEMBALI KE HOME
         isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
     }
-
-    // ... [Bagian ProfileDialog tetap sama] ...
-    ProfileDialog(
-        show = showProfileDialog,
-        onDismiss = { showProfileDialog = false },
-        onProfile = { profileReason ->
-            viewModel.applyProfile(profileReason) {
-                coroutineScope.launch {
-                    snackbarHostState.showSnackbar(context.getString(R.string.toast_applying_profile))
-                }
-            }
-        }
-    )
 
     MaterialExpressiveTheme {
         Scaffold(
@@ -88,7 +73,6 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
             containerColor = MaterialTheme.colorScheme.surface
         ) { innerPadding ->
             LazyColumn(
-                // ... [Padding dan konfigurasi LazyColumn tetap sama] ...
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
@@ -103,7 +87,6 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                     
                     if (isLandscape) {
                         Row(
-                            // ... [Layout Landscape] ...
                             modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -112,11 +95,10 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 BannerCard(
                                     status = bannerStatus, pid = uiState.servicePid,
                                     isBannerEnabled = uiState.isBannerEnabled, 
-                                    isBlurEnabled = isBlurEnabled, // 3. TERUSKAN BLUR KE BANNER
+                                    isBlurEnabled = isBlurEnabled,
                                     modifier = Modifier.fillMaxSize()
                                 ) { }
                             }
-                            // ... [InfoTile tetap sama] ...
                             Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 InfoTile(modifier = Modifier.fillMaxWidth().weight(1f), icon = Icons.Rounded.Token, label = stringResource(R.string.current_profile), value = stringResource(uiState.currentProfileRes), highlight = (uiState.currentProfileRes != R.string.status_initializing), showArrow = uiState.autoMode == "0") { if (uiState.autoMode == "0") showProfileDialog = true }
                                 InfoTile(modifier = Modifier.fillMaxWidth().weight(1f), icon = Icons.Rounded.Security, label = stringResource(R.string.root_access), value = if (uiState.rootStatus) stringResource(R.string.root_granted) else stringResource(R.string.root_not_granted), highlight = false) {}
@@ -127,11 +109,10 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                             BannerCard(
                                 status = bannerStatus, pid = uiState.servicePid,
                                 isBannerEnabled = uiState.isBannerEnabled,
-                                isBlurEnabled = isBlurEnabled, // 3. TERUSKAN BLUR KE BANNER
+                                isBlurEnabled = isBlurEnabled,
                                 modifier = if (uiState.isBannerEnabled) Modifier.fillMaxWidth().aspectRatio(20 / 9f) else Modifier.fillMaxWidth().height(100.dp)
                             ) { }
 
-                            // ... [Row InfoTile tetap sama] ...
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                 InfoTile(modifier = Modifier.weight(1f), icon = Icons.Rounded.Token, label = stringResource(R.string.current_profile), value = stringResource(uiState.currentProfileRes), highlight = (uiState.currentProfileRes != R.string.status_initializing), showArrow = uiState.autoMode == "0") { if (uiState.autoMode == "0") showProfileDialog = true }
                                 InfoTile(modifier = Modifier.weight(1f), icon = Icons.Rounded.Security, label = stringResource(R.string.root_access), value = if (uiState.rootStatus) stringResource(R.string.root_granted) else stringResource(R.string.root_not_granted), highlight = false) {}
@@ -150,5 +131,21 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
             onDismiss = { showRebootSheet = false },
             onReboot = { reason -> viewModel.rebootDevice(reason) }
         )
+
+        if (showProfileDialog) {
+            RootAppDialog {
+                ProfileDialog(
+                    show = true,
+                    onDismiss = { showProfileDialog = false },
+                    onProfile = { profileReason ->
+                        viewModel.applyProfile(profileReason) {
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar(context.getString(R.string.toast_applying_profile))
+                            }
+                        }
+                    }
+                )
+            }
+        }
     }
 }

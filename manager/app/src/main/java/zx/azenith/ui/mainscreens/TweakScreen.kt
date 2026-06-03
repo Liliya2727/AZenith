@@ -82,7 +82,6 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import zx.azenith.ui.viewmodel.TweakViewModel
 
-
 @Composable
 fun TweakScreen(
     navController: NavController,
@@ -101,18 +100,6 @@ fun TweakScreen(
     LaunchedEffect(Unit) {
         viewModel.loadAllConfiguration(context)
     }
-
-    RendererDialog(
-        show = showRendererDialog,
-        onDismiss = { showRendererDialog = false },
-        onRenderer = { reason -> viewModel.executeSetRenderer(reason, context) }
-    )
-
-    RefreshRatePickerDialog(
-        show = showRefreshRateDialog,
-        onDismiss = { showRefreshRateDialog = false },
-        onRefreshRatePicker = { reason -> viewModel.executeSetRefreshRates(reason, context) }
-    )
 
     MaterialExpressiveTheme {
         Scaffold(
@@ -146,9 +133,7 @@ fun TweakScreen(
             ) {
             
                 item {
-                    
                     Spacer(modifier = Modifier.height(16.dp))
-                    
                     ExpressiveList(
                         content = listOf( 
                             {
@@ -163,9 +148,6 @@ fun TweakScreen(
                     )
                 }
 
-                // ==========================================
-                // SEC 1: Performance Mode
-                // ==========================================
                 item { TweaksSectionTitle(text = "Performance") }
                 item {
                     if (viewModel.liteState != null) {
@@ -196,9 +178,6 @@ fun TweakScreen(
                     }
                 }
                 
-                // ==========================================
-                // SEC 4: Additional Settings
-                // ==========================================
                 item { TweaksSectionTitle(stringResource(R.string.section_additionalsettings)) }
                 item {
                     if (viewModel.preloadState != null && 
@@ -260,9 +239,6 @@ fun TweakScreen(
                     }
                 }
 
-                // ==========================================
-                // SEC 2: CPU Governor & Freq Limit
-                // ==========================================
                 item { TweaksSectionTitle(stringResource(R.string.section_CPUSettings)) }
                 item {
                     if (viewModel.defaultGovIndex != null && 
@@ -305,16 +281,11 @@ fun TweakScreen(
                     }
                 }
 
-                // ==========================================
-                // SEC 3: I/O Scheduler
-                // ==========================================
                 item { TweaksSectionTitle(stringResource(R.string.io_settings)) }
                 item {
                     if (viewModel.availableIOSchedulers == null) {
-                        // Masih proses memuat dari ViewModel
                         SectionLoadingIndicator()
                     } else if (viewModel.availableIOSchedulers!!.isNotEmpty()) {
-                        // Ada data IO Scheduler, tampilkan list
                         if (viewModel.balancedIOIndex != null && 
                             viewModel.performanceIOIndex != null && 
                             viewModel.powersaveIOIndex != null) {
@@ -356,9 +327,6 @@ fun TweakScreen(
                             SectionLoadingIndicator()
                         }
                     } else {
-                        // Jika IO block tidak ditemukan (fallback empty list), 
-                        // kamu bisa menampilkan teks "Tidak Didukung" atau menyembunyikan blok ini sama sekali.
-                        // Di sini kita sembunyikan isinya jika emptyList
                         Text(
                             text = "I/O Scheduler tidak didukung pada perangkat ini.",
                             modifier = Modifier.padding(horizontal = 16.dp),
@@ -368,9 +336,6 @@ fun TweakScreen(
                     }
                 }
                 
-                
-                
-                // Grid Layout Tile Renderer & Refresh rate
                 item {
                     if (viewModel.currentRefreshRate != null && viewModel.currentRenderer != null) {
                         Row(
@@ -405,9 +370,6 @@ fun TweakScreen(
                     }
                 }
                 
-                // ==========================================
-                // SEC 5: Power, ThermalCore, Display (Tiles & Switch)
-                // ==========================================
                 item { TweaksSectionTitle(text = "Power & Thermal") }
                 item {
                     if (viewModel.thermalState != null) {
@@ -438,12 +400,8 @@ fun TweakScreen(
                     }
                 }
                 
-                // ==========================================
-                // SEC 6: Addons
-                // ==========================================
                 item { TweaksSectionTitle(stringResource(R.string.section_addons)) }
                 item {
-                    // Karena ini statis (hanya navigasi), tidak butuh loading
                     ExpressiveList(
                         content = listOf(
                             {
@@ -476,6 +434,26 @@ fun TweakScreen(
             onBackup = { scope.launch { snackbarHostState.showSnackbar("Dummy: Backup Started") } },
             onRestore = { scope.launch { snackbarHostState.showSnackbar("Dummy: Restore Started") } }
         )
+
+        if (showRendererDialog) {
+            RootAppDialog {
+                RendererDialog(
+                    show = true,
+                    onDismiss = { showRendererDialog = false },
+                    onRenderer = { reason -> viewModel.executeSetRenderer(reason, context) }
+                )
+            }
+        }
+
+        if (showRefreshRateDialog) {
+            RootAppDialog {
+                RefreshRatePickerDialog(
+                    show = true,
+                    onDismiss = { showRefreshRateDialog = false },
+                    onRefreshRatePicker = { reason -> viewModel.executeSetRefreshRates(reason, context) }
+                )
+            }
+        }
     }
 }
 
@@ -618,8 +596,8 @@ fun ExpressiveTile(
     val colorScheme = MaterialTheme.colorScheme
 
     Surface(
-        onClick = onClick, // Gunakan onClick bawaan Surface agar ripple pas dengan shape
-        modifier = modifier.padding(top = 16.dp), // Taruh padding di awal sebagai margin luar
+        onClick = onClick,
+        modifier = modifier.padding(top = 16.dp),
         color = if (highlight) colorScheme.secondaryContainer else colorScheme.surfaceColorAtElevation(1.dp),
         shape = RoundedCornerShape(26.dp)
     ) {

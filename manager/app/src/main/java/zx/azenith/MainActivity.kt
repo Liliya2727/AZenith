@@ -231,17 +231,17 @@ fun MainScreen(isFromTile: Boolean = false) {
     CompositionLocalProvider(LocalAppHazeState provides hazeState) {
         RootDialogsProvider {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface)
-                    .then(
-                        if (isBlurEnabled) Modifier.hazeSource(state = hazeState) else Modifier
-                    )
+                modifier = Modifier.fillMaxSize()
             ) {
                 NavHost(
                     navController = navController,
                     startDestination = if (hasCompletedGetStarted) "home" else "get_started",
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .then(
+                            if (isBlurEnabled) Modifier.hazeSource(state = hazeState) else Modifier
+                        ),
                     enterTransition = {
                         if (initialState.destination.route == "get_started" && targetState.destination.route == "home") {
                             fadeIn(animationSpec = tween(700)) 
@@ -343,6 +343,7 @@ fun MainScreen(isFromTile: Boolean = false) {
             ConfirmDialogHost(handle = rebootDialog)
         }
     }
+
 }
 
 @Composable
