@@ -49,8 +49,7 @@ import androidx.navigation.NavController
 import com.topjohnwu.superuser.Shell
 import zx.azenith.BuildConfig
 import zx.azenith.R
-import zx.azenith.ui.component.* // 👈 Wildcard import biar manggil Host dan komponen custom-nya aman
-import androidx.compose.ui.res.stringResource
+import zx.azenith.ui.component.* import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import kotlinx.coroutines.launch
 
@@ -67,7 +66,9 @@ fun SettingsScreen(navController: NavController) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val listState = rememberLazyListState()
-    val aboutDialog = rememberCustomDialog { AboutDialog(it) }
+    
+    // 👇 Menggunakan state Boolean native Compose untuk AboutDialog
+    var showAboutDialog by remember { mutableStateOf(false) }
     
     val restartToastText = stringResource(R.string.toast_restarting_service)
     val logSavedToastText = stringResource(R.string.toast_log_saved)
@@ -87,7 +88,6 @@ fun SettingsScreen(navController: NavController) {
     )
 
     MaterialExpressiveTheme {
-        // 👇 Dibungkus Box agar layer ConfirmDialogHost bisa ditaruh paling atas (Z-Index tertinggi)
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -113,7 +113,6 @@ fun SettingsScreen(navController: NavController) {
                     )
                 ) {
                     
-                    // Gabung Header dan Theme dalam satu ExpressiveList
                     item {
                         Spacer(modifier = Modifier.height(16.dp)) 
                         
@@ -288,7 +287,7 @@ fun SettingsScreen(navController: NavController) {
                         ExpressiveList(
                             content = listOf {
                                 ExpressiveListItem(
-                                    onClick = { aboutDialog.show() },
+                                    onClick = { showAboutDialog = true }, // 👈 Membuka dialog
                                     headlineContent = { Text(stringResource(R.string.about_azenith)) },
                                     supportingContent = {
                                         Text(stringResource(R.string.version_format, BuildConfig.VERSION_NAME))
@@ -301,8 +300,12 @@ fun SettingsScreen(navController: NavController) {
                 }
             }
 
-            // 👇 PENTING: Ditaruh di sini agar dirender tepat di atas sistem layout Scaffold
             ConfirmDialogHost(handle = uninstallDialog)
+
+            // 👇 Render AboutDialog secara kondisional di sini
+            if (showAboutDialog) {
+                AboutDialog(dismiss = { showAboutDialog = false })
+            }
         }
     }
 }
