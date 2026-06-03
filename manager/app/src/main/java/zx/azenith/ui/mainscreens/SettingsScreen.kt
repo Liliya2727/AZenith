@@ -49,7 +49,7 @@ import androidx.navigation.NavController
 import com.topjohnwu.superuser.Shell
 import zx.azenith.BuildConfig
 import zx.azenith.R
-import zx.azenith.ui.component.*
+import zx.azenith.ui.component.* // 👈 Wildcard import biar manggil Host dan komponen custom-nya aman
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import kotlinx.coroutines.launch
@@ -85,219 +85,224 @@ fun SettingsScreen(navController: NavController) {
         },
         onDismiss = {}
     )
+
     MaterialExpressiveTheme {
-        Scaffold(
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            topBar = { SettingsScreenTopAppBar(scrollBehavior) },
-            snackbarHost = { 
-                SnackbarHost(
-                    hostState = snackbarHostState,
-                    modifier = Modifier.padding(
+        // 👇 Dibungkus Box agar layer ConfirmDialogHost bisa ditaruh paling atas (Z-Index tertinggi)
+        Box(modifier = Modifier.fillMaxSize()) {
+            Scaffold(
+                modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+                topBar = { SettingsScreenTopAppBar(scrollBehavior) },
+                snackbarHost = { 
+                    SnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = Modifier.padding(
+                            bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                        )
+                    ) 
+                },
+                containerColor = MaterialTheme.colorScheme.surface
+            ) { innerPadding ->
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        top = innerPadding.calculateTopPadding(),
+                        start = 16.dp,
+                        end = 16.dp,
                         bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                     )
-                ) 
-            },
-            containerColor = MaterialTheme.colorScheme.surface
-        ) { innerPadding ->
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                )
-            ) {
-                
-                // 👇 Gabung Header dan Theme dalam satu ExpressiveList
-                item {
-                    Spacer(modifier = Modifier.height(16.dp)) // Jarak dari TopAppBar
+                ) {
                     
-                    ExpressiveList(
-                        content = listOf(
-                            {
-                                // Item 1 (Paling Atas, akan dapat topShape otomatis)
-                                AppInfoHeaderContent()
-                            },
-                            {
-                                // Item 2 (Paling Bawah, akan dapat bottomShape otomatis)
-                                ExpressiveListItem(
-                                    onClick = { navController.navigate("color_palette") },
-                                    headlineContent = { Text(stringResource(R.string.theme)) },
-                                    supportingContent = { Text(stringResource(R.string.theme_desc)) },
-                                    leadingContent = { LeadingIcon(icon = Icons.Filled.Palette) },
-                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                )
-                            }
-                        )
-                    )
-                }
-    
-                item { SettingsSectionTitle(stringResource(R.string.section_features)) }
-                
-                item {
-                    var stateToast by remember { mutableStateOf<Boolean?>(null) }
-                    var autoMode by remember { mutableStateOf<Boolean?>(null) }
-                    var debugMode by remember { mutableStateOf<Boolean?>(null) }
-    
-                    LaunchedEffect(Unit) {
-                        stateToast = Shell.cmd("getprop persist.sys.azenithconf.showtoast").exec().out.firstOrNull()?.trim() == "1"
-                        autoMode = Shell.cmd("getprop persist.sys.azenithconf.AIenabled").exec().out.firstOrNull()?.trim() == "0"
-                        debugMode = Shell.cmd("getprop persist.sys.azenith.debugmode").exec().out.firstOrNull()?.trim() == "true"
-                    }
-    
-                    if (stateToast != null && autoMode != null && debugMode != null) {
+                    // Gabung Header dan Theme dalam satu ExpressiveList
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp)) 
+                        
                         ExpressiveList(
                             content = listOf(
                                 {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Filled.Notifications,
-                                        title = stringResource(R.string.show_toast),
-                                        checked = stateToast!!,
-                                        onCheckedChange = { isChecked ->
-                                            stateToast = isChecked
-                                            Shell.cmd("setprop persist.sys.azenithconf.showtoast ${if (isChecked) "1" else "0"}").submit()
-                                        }
-                                    )
+                                    AppInfoHeaderContent()
                                 },
                                 {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Filled.Assistant,
-                                        title = stringResource(R.string.disable_auto_mode),
-                                        checked = autoMode!!,
-                                        onCheckedChange = { isChecked ->
-                                            autoMode = isChecked
-                                            val state = if (isChecked) "0" else "1"
-                                            
-                                            Shell.cmd(
-                                                "setprop persist.sys.azenithconf.AIenabled $state",
-                                                "echo $state > /data/adb/.config/AZenith/API/current_modes"
-                                            ).submit()
-                                        }
-                                    )
-                                },
-                                {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Filled.BugReport,
-                                        title = stringResource(R.string.allow_verbose_log),
-                                        checked = debugMode!!,
-                                        onCheckedChange = { isChecked ->
-                                            debugMode = isChecked
-                                            Shell.cmd("setprop persist.sys.azenith.debugmode ${if (isChecked) "true" else "false"}").submit()
-                                        }
+                                    ExpressiveListItem(
+                                        onClick = { navController.navigate("color_palette") },
+                                        headlineContent = { Text(stringResource(R.string.theme)) },
+                                        supportingContent = { Text(stringResource(R.string.theme_desc)) },
+                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Palette) },
+                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
                                     )
                                 }
                             )
                         )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(180.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(32.dp),
-                                strokeWidth = 3.dp
-                            )
-                        }
                     }
-                }
-    
-                item { SettingsSectionTitle(stringResource(R.string.section_others)) }
-                item {
-                    ExpressiveList(
-                        content = listOf(
-                            {
-                                ExpressiveSwitchItem(
-                                    icon = Icons.Rounded.AddHome,
-                                    title = stringResource(R.string.show_icon),
-                                    checked = isLauncherVisible,
-                                    onCheckedChange = { isChecked ->
-                                        isLauncherVisible = isChecked
-                                        val pkg = context.packageManager
-                                        val componentName = ComponentName(context.packageName, "${context.packageName}.Launcher")
-                                        
-                                        val newState = if (isChecked) {
-                                            PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                                        } else {
-                                            PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-                                        }
-                                        
-                                        pkg.setComponentEnabledSetting(componentName, newState, PackageManager.DONT_KILL_APP)
-                                    }
-                                )
-                            },
-                            {
-                                ExpressiveListItem(
-                                    onClick = {
-                                        Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf restartservice").submit { result ->
-                                            if (result.isSuccess) {
-                                                coroutineScope.launch {
-                                                    snackbarHostState.showSnackbar(restartToastText)
-                                                }
+        
+                    item { SettingsSectionTitle(stringResource(R.string.section_features)) }
+                    
+                    item {
+                        var stateToast by remember { mutableStateOf<Boolean?>(null) }
+                        var autoMode by remember { mutableStateOf<Boolean?>(null) }
+                        var debugMode by remember { mutableStateOf<Boolean?>(null) }
+        
+                        LaunchedEffect(Unit) {
+                            stateToast = Shell.cmd("getprop persist.sys.azenithconf.showtoast").exec().out.firstOrNull()?.trim() == "1"
+                            autoMode = Shell.cmd("getprop persist.sys.azenithconf.AIenabled").exec().out.firstOrNull()?.trim() == "0"
+                            debugMode = Shell.cmd("getprop persist.sys.azenith.debugmode").exec().out.firstOrNull()?.trim() == "true"
+                        }
+        
+                        if (stateToast != null && autoMode != null && debugMode != null) {
+                            ExpressiveList(
+                                content = listOf(
+                                    {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Filled.Notifications,
+                                            title = stringResource(R.string.show_toast),
+                                            checked = stateToast!!,
+                                            onCheckedChange = { isChecked ->
+                                                stateToast = isChecked
+                                                Shell.cmd("setprop persist.sys.azenithconf.showtoast ${if (isChecked) "1" else "0"}").submit()
                                             }
-                                        }
-                                    },
-                                    headlineContent = { Text(stringResource(R.string.restart_service)) },
-                                    supportingContent = { Text(stringResource(R.string.restart_service_desc)) },
-                                    leadingContent = { LeadingIcon(icon = Icons.Filled.RestartAlt) },
-                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                )
-                            },
-                            {
-                                ExpressiveListItem(
-                                    onClick = {
-                                        Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf saveLog").submit { result ->
-                                            if (result.isSuccess) {
-                                                coroutineScope.launch {
-                                                    snackbarHostState.showSnackbar(logSavedToastText)
-                                                }
-                                            }
-                                        }
-                                    },
-                                    headlineContent = { Text(stringResource(R.string.save_log)) },
-                                    supportingContent = { Text(stringResource(R.string.save_log_desc)) },
-                                    leadingContent = { LeadingIcon(icon = Icons.Filled.Save) },
-                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                )
-                            },
-                            {
-                                ExpressiveListItem(
-                                    onClick = {
-                                        uninstallDialog.showConfirm(
-                                            title = context.getString(R.string.uninstall),
-                                            content = context.getString(R.string.uninstall_confirm_content),
-                                            confirm = context.getString(R.string.yes),
-                                            dismiss = context.getString(R.string.no)
                                         )
                                     },
-                                    headlineContent = { Text(stringResource(R.string.uninstall)) },
-                                    leadingContent = { LeadingIcon(icon = Icons.Filled.Delete) },
-                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                    {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Filled.Assistant,
+                                            title = stringResource(R.string.disable_auto_mode),
+                                            checked = autoMode!!,
+                                            onCheckedChange = { isChecked ->
+                                                autoMode = isChecked
+                                                val state = if (isChecked) "0" else "1"
+                                                
+                                                Shell.cmd(
+                                                    "setprop persist.sys.azenithconf.AIenabled $state",
+                                                    "echo $state > /data/adb/.config/AZenith/API/current_modes"
+                                                ).submit()
+                                            }
+                                        )
+                                    },
+                                    {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Filled.BugReport,
+                                            title = stringResource(R.string.allow_verbose_log),
+                                            checked = debugMode!!,
+                                            onCheckedChange = { isChecked ->
+                                                debugMode = isChecked
+                                                Shell.cmd("setprop persist.sys.azenith.debugmode ${if (isChecked) "true" else "false"}").submit()
+                                            }
+                                        )
+                                    }
+                                )
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(180.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(32.dp),
+                                    strokeWidth = 3.dp
+                                )
+                            }
+                        }
+                    }
+        
+                    item { SettingsSectionTitle(stringResource(R.string.section_others)) }
+                    item {
+                        ExpressiveList(
+                            content = listOf(
+                                {
+                                    ExpressiveSwitchItem(
+                                        icon = Icons.Rounded.AddHome,
+                                        title = stringResource(R.string.show_icon),
+                                        checked = isLauncherVisible,
+                                        onCheckedChange = { isChecked ->
+                                            isLauncherVisible = isChecked
+                                            val pkg = context.packageManager
+                                            val componentName = ComponentName(context.packageName, "${context.packageName}.Launcher")
+                                            
+                                            val newState = if (isChecked) {
+                                                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                                            } else {
+                                                PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                                            }
+                                            
+                                            pkg.setComponentEnabledSetting(componentName, newState, PackageManager.DONT_KILL_APP)
+                                        }
+                                    )
+                                },
+                                {
+                                    ExpressiveListItem(
+                                        onClick = {
+                                            Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf restartservice").submit { result ->
+                                                if (result.isSuccess) {
+                                                    coroutineScope.launch {
+                                                        snackbarHostState.showSnackbar(restartToastText)
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        headlineContent = { Text(stringResource(R.string.restart_service)) },
+                                        supportingContent = { Text(stringResource(R.string.restart_service_desc)) },
+                                        leadingContent = { LeadingIcon(icon = Icons.Filled.RestartAlt) },
+                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                    )
+                                },
+                                {
+                                    ExpressiveListItem(
+                                        onClick = {
+                                            Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf saveLog").submit { result ->
+                                                if (result.isSuccess) {
+                                                    coroutineScope.launch {
+                                                        snackbarHostState.showSnackbar(logSavedToastText)
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        headlineContent = { Text(stringResource(R.string.save_log)) },
+                                        supportingContent = { Text(stringResource(R.string.save_log_desc)) },
+                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Save) },
+                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                    )
+                                },
+                                {
+                                    ExpressiveListItem(
+                                        onClick = {
+                                            uninstallDialog.showConfirm(
+                                                title = context.getString(R.string.uninstall),
+                                                content = context.getString(R.string.uninstall_confirm_content),
+                                                confirm = context.getString(R.string.yes),
+                                                dismiss = context.getString(R.string.no)
+                                            )
+                                        },
+                                        headlineContent = { Text(stringResource(R.string.uninstall)) },
+                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Delete) },
+                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                    )
+                                }
+                            )
+                        )
+                    }
+        
+                    item { SettingsSectionTitle(stringResource(R.string.section_about)) }
+                    item {
+                        ExpressiveList(
+                            content = listOf {
+                                ExpressiveListItem(
+                                    onClick = { aboutDialog.show() },
+                                    headlineContent = { Text(stringResource(R.string.about_azenith)) },
+                                    supportingContent = {
+                                        Text(stringResource(R.string.version_format, BuildConfig.VERSION_NAME))
+                                    },
+                                    leadingContent = { LeadingIcon(icon = Icons.Filled.ContactPage) }
                                 )
                             }
                         )
-                    )
-                }
-    
-                item { SettingsSectionTitle(stringResource(R.string.section_about)) }
-                item {
-                    ExpressiveList(
-                        content = listOf {
-                            ExpressiveListItem(
-                                onClick = { aboutDialog.show() },
-                                headlineContent = { Text(stringResource(R.string.about_azenith)) },
-                                supportingContent = {
-                                    Text(stringResource(R.string.version_format, BuildConfig.VERSION_NAME))
-                                },
-                                leadingContent = { LeadingIcon(icon = Icons.Filled.ContactPage) }
-                            )
-                        }
-                    )
+                    }
                 }
             }
+
+            // 👇 PENTING: Ditaruh di sini agar dirender tepat di atas sistem layout Scaffold
+            ConfirmDialogHost(handle = uninstallDialog)
         }
     }
 }

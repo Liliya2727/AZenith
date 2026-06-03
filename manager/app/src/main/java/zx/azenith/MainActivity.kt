@@ -59,8 +59,7 @@ import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.util.*
 import kotlinx.coroutines.launch
 import com.topjohnwu.superuser.Shell
-import zx.azenith.ui.component.rememberConfirmDialog
-import zx.azenith.ui.component.LocalAppHazeState // 👇 Import HazeState Helper Custom
+import zx.azenith.ui.component.* // 👈 DIUBAH JADI WILDCARD BIAR SEMUA HOST & COMPONENT KE-IMPORT
 import android.content.Intent
 import androidx.core.content.FileProvider
 import java.io.File
@@ -231,7 +230,6 @@ fun MainScreen(isFromTile: Boolean = false) {
     }
     
 
-    // 👇 PENTING: Melempar HazeState secara internal menggunakan CompositionLocal
     CompositionLocalProvider(LocalAppHazeState provides hazeState) {
         Box(modifier = Modifier.fillMaxSize()) {
             NavHost(
