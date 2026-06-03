@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -19,7 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -47,12 +50,27 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
         formatter.format(Date(BuildConfig.BUILD_TIME))
     }
 
-    val wallpaperBitmap = remember {
-        try {
-            val wallpaperManager = WallpaperManager.getInstance(context)
-            wallpaperManager.drawable?.toBitmap()?.asImageBitmap()
-        } catch (e: SecurityException) {
-            null 
+    // 👇 STATE UNTUK MENYIMPAN BITMAP
+    var wallpaperBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+
+    // 👇 PROSES AMBIL GAMBAR PINDAH KE BACKGROUND THREAD (IO)
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            try {
+                val wallpaperManager = WallpaperManager.getInstance(context)
+                val drawable = wallpaperManager.drawable
+                
+                // PENTING: Downscale gambar agar tidak makan RAM dan bikin scroll berat
+                // Ukuran 400x800 sudah sangat cukup tajam untuk kotak sekecil itu
+                val bitmap = drawable?.toBitmap(width = 400, height = 800)?.asImageBitmap()
+                
+                // Update state (akan otomatis ter-render ulang setelah gambar siap)
+                wallpaperBitmap = bitmap
+            } catch (e: SecurityException) {
+                // Izin belum ada
+            } catch (e: Exception) {
+                // Jaga-jaga kalau OutOfMemory
+            }
         }
     }
     
@@ -61,7 +79,6 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .padding(16.dp), 
         horizontalArrangement = Arrangement.spacedBy(16.dp),
-        // 👇 Bikin seluruh konten di Row ini align ke tengah secara vertikal
         verticalAlignment = Alignment.CenterVertically
     ) {
         // --- BAGIAN KIRI: Wallpaper & Jam (Style Layar HP) ---
@@ -69,17 +86,15 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .weight(0.45f)
                 .aspectRatio(0.48f) 
-                // 👇 Border/Bezel luar warna Monet (Primary)
                 .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(18.dp)) 
-                .padding(3.dp) 
+                .padding(1.dp) 
                 .clip(RoundedCornerShape(15.dp)) 
-                // 👇 Background fallback warna Monet (Surface Variant)
                 .background(MaterialTheme.colorScheme.surfaceVariant) 
         ) {
-            // Render Wallpaper (Fallback avatar sudah dihapus)
-            if (wallpaperBitmap != null) {
+            // Gambar hanya akan muncul setelah proses di background thread selesai
+            wallpaperBitmap?.let { bitmap ->
                 Image(
-                    bitmap = wallpaperBitmap, 
+                    bitmap = bitmap, 
                     contentDescription = "Device Wallpaper",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -94,7 +109,6 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
             ) {
                 Text(
                     text = hourFormat.format(time.time),
-                    // 👇 Teks Jam warna Monet (Primary)
                     color = MaterialTheme.colorScheme.primary,
                     fontSize = 38.sp, 
                     fontWeight = FontWeight.Light,
@@ -102,7 +116,6 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
                 )
                 Text(
                     text = minuteFormat.format(time.time),
-                    // 👇 Teks Menit warna Monet (Primary)
                     color = MaterialTheme.colorScheme.primary,
                     fontSize = 38.sp,
                     fontWeight = FontWeight.Light,
@@ -117,17 +130,19 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .weight(0.55f)
                 .padding(vertical = 4.dp),
-            // Jarak antar item tetap rapi, tapi keseluruhan blok ini ada di tengah Row
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             AppInfoTextItem(title = "App Name", value = context.getString(R.string.app_name))
-            AppInfoTextItem(title = "Author", value = "Zexshia")
+            AppInfoTextItem(title = "Author", value = "ArchHaven Devs")
             AppInfoTextItem(title = "Build Date", value = buildDateString)
             AppInfoTextItem(title = "Version Code", value = BuildConfig.VERSION_CODE.toString())
             AppInfoTextItem(title = "Package Name", value = context.packageName)
         }
     }
 }
+
+// ... AppInfoTextItem ...
+
 
 @Composable
 private fun AppInfoTextItem(title: String, value: String) {
