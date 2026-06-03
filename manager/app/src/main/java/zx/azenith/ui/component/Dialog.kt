@@ -56,6 +56,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.parcelize.Parcelize
 import kotlin.coroutines.resume
+import android.content.Context
+import android.os.Build
+import android.view.WindowManager
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.DialogWindowProvider
+
 
 private const val TAG = "DialogComponent"
 
@@ -266,24 +274,70 @@ fun rememberCustomDialog(composable: @Composable (dismiss: () -> Unit) -> Unit):
 
 @Composable
 private fun LoadingDialog() {
+    val context = LocalContext.current
+    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
+
     Dialog(
         onDismissRequest = {},
         properties = DialogProperties(dismissOnClickOutside = false, dismissOnBackPress = false)
     ) {
         MaterialExpressiveTheme {
-            Surface(modifier = Modifier.size(100.dp), shape = RoundedCornerShape(8.dp)) {
+            Surface(
+                modifier = Modifier.size(100.dp),
+                shape = RoundedCornerShape(24.dp), // Dibikin agak membulat (opsional)
+                // 👇 Set warna transparan & tanpa bayangan jika blur aktif
+                color = if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f) else MaterialTheme.colorScheme.surface,
+                shadowElevation = if (isBlurEnabled) 0.dp else 8.dp
+            ) {
                 Box(contentAlignment = Alignment.Center) {
-                    LoadingIndicator()
+                    LoadingIndicator() // (Pastikan komponen ini ada di project kamu)
                 }
+            }
+        }
+    }
+
+    // 👇 Tambahkan efek blur window
+    if (isBlurEnabled) {
+        val view = LocalView.current
+        val dialogWindowProvider = view.parent as? DialogWindowProvider
+        val window = dialogWindowProvider?.window
+
+        SideEffect {
+            if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                window.attributes.blurBehindRadius = 40
+                window.setDimAmount(0.3f)
             }
         }
     }
 }
 
+
 @Composable
 private fun ConfirmDialog(visuals: ConfirmDialogVisuals, confirm: () -> Unit, dismiss: () -> Unit) {
+    // 👇 1. Baca pengaturan dari SharedPreferences
+    val context = LocalContext.current
+    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
+
+    // 👇 2. Ganti Container Color dan Elevation sesuai pengaturan
+    val containerColor = if (isBlurEnabled) {
+        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f) // Efek kaca
+    } else {
+        AlertDialogDefaults.containerColor // Solid bawaan Material 3
+    }
+
+    val dialogElevation = if (isBlurEnabled) {
+        0.dp // Hapus bayangan agar efek kaca lebih realistis
+    } else {
+        AlertDialogDefaults.TonalElevation // Bayangan standar
+    }
+
     AlertDialog(
         onDismissRequest = dismiss,
+        containerColor = containerColor,
+        tonalElevation = dialogElevation,
         title = { Text(text = visuals.title) },
         text = { visuals.content?.let { Text(text = it) } },
         confirmButton = {
@@ -297,4 +351,23 @@ private fun ConfirmDialog(visuals: ConfirmDialogVisuals, confirm: () -> Unit, di
             }
         },
     )
+
+    // 👇 3. Aktifkan Window Blur bawaan Android (API 31+) jika fitur dinyalakan
+    if (isBlurEnabled) {
+        val view = LocalView.current
+        val dialogWindowProvider = view.parent as? DialogWindowProvider
+        val window = dialogWindowProvider?.window
+
+        SideEffect {
+            if (window != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // Tambahkan flag blur
+                window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                // Atur seberapa buram (radius)
+                window.attributes.blurBehindRadius = 40
+                // Atur tingkat kegelapan di belakang dialog (dim)
+                window.setDimAmount(0.3f)
+            }
+        }
+    }
 }
+

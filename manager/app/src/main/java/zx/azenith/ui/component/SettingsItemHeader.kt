@@ -62,7 +62,7 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
                 .heightIn(max = 220.dp) 
                 .aspectRatio(0.48f) 
                 .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(18.dp)) 
-                .padding(1.dp) 
+                .padding(2.dp) 
                 .clip(RoundedCornerShape(15.dp)) 
                 .background(MaterialTheme.colorScheme.surfaceVariant) 
         ) {
