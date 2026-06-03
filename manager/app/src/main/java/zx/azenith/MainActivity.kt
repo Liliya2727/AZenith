@@ -59,8 +59,7 @@ import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.util.*
 import kotlinx.coroutines.launch
 import com.topjohnwu.superuser.Shell
-import zx.azenith.ui.component.* // 👈 DIUBAH JADI WILDCARD BIAR SEMUA HOST & COMPONENT KE-IMPORT
-import android.content.Intent
+import zx.azenith.ui.component.* import android.content.Intent
 import androidx.core.content.FileProvider
 import java.io.File
 import dev.chrisbanes.haze.HazeState
@@ -229,113 +228,116 @@ fun MainScreen(isFromTile: Boolean = false) {
         }
     }
     
-
     CompositionLocalProvider(LocalAppHazeState provides hazeState) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            NavHost(
-                navController = navController,
-                startDestination = if (hasCompletedGetStarted) "home" else "get_started",
+        RootDialogsProvider {
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.surface)
                     .then(
                         if (isBlurEnabled) Modifier.hazeSource(state = hazeState) else Modifier
-                    ),
-                enterTransition = {
-                    if (initialState.destination.route == "get_started" && targetState.destination.route == "home") {
-                        fadeIn(animationSpec = tween(700)) 
-                    } else if (targetState.destination.route !in bottomBarRoutes) {
-                        slideInHorizontally(
-                            initialOffsetX = { fullWidth -> fullWidth },
-                            animationSpec = tween(300, easing = FastOutSlowInEasing)
-                        ) + fadeIn(animationSpec = tween(300))
-                    } else {
-                        fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
-                        scaleIn(
-                            initialScale = 0.96f,
-                            animationSpec = tween(220, easing = FastOutSlowInEasing)
-                        )
-                    }
-                },
-                exitTransition = {
-                    if (initialState.destination.route == "get_started" && targetState.destination.route == "home") {
-                        fadeOut(animationSpec = tween(700))
-                    } else if (initialState.destination.route in bottomBarRoutes && targetState.destination.route !in bottomBarRoutes) {
-                        slideOutHorizontally(
-                            targetOffsetX = { fullWidth -> -(fullWidth / 4) },
-                            animationSpec = tween(300, easing = FastOutSlowInEasing)
-                        ) + fadeOut(animationSpec = tween(300))
-                    } else {
-                        fadeOut(animationSpec = tween(150))
-                    }
-                },
-                popEnterTransition = {
-                    if (initialState.destination.route !in bottomBarRoutes && targetState.destination.route in bottomBarRoutes) {
-                        slideInHorizontally(
-                            initialOffsetX = { fullWidth -> -(fullWidth / 4) },
-                            animationSpec = tween(300, easing = FastOutSlowInEasing)
-                        ) + fadeIn(animationSpec = tween(300))
-                    } else {
-                        fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
-                        scaleIn(
-                            initialScale = 0.96f,
-                            animationSpec = tween(220, easing = FastOutSlowInEasing)
-                        )
-                    }
-                },
-                popExitTransition = {
-                    if (initialState.destination.route !in bottomBarRoutes) {
-                        slideOutHorizontally(
-                            targetOffsetX = { fullWidth -> fullWidth },
-                            animationSpec = tween(300, easing = FastOutSlowInEasing)
-                        ) + fadeOut(animationSpec = tween(300))
-                    } else {
-                        fadeOut(animationSpec = tween(150))
-                    }
-                }
+                    )
             ) {
-                composable("get_started") { GetStartedScreen(navController) }
-                composable("home") { HomeScreen() }
-                composable("applist") { ApplistScreen(navController) }
-                composable("tweaks") { TweakScreen(navController) }
-                composable("settings") { SettingsScreen(navController) }
-                composable("color_palette") { ColorPaletteScreen(navController) }
-                composable("colorscheme") { ColorSchemeSettings(navController) }
-                composable("FasScreen") { FasScreen(navController) }
-                composable("bypasschg") { BypassChargeScreen(navController) }
-                composable("bypasschg_check") { BypassChargeCheckScreen(navController) }
-                composable("preferenced") { PreferenceTweakScreen(navController) }
-                composable(
-                    route = "app_settings/{pkg}",
-                    arguments = listOf(navArgument("pkg") { type = NavType.StringType })
-                ) { backStackEntry ->
-                    val pkg = backStackEntry.arguments?.getString("pkg")
-                    AppSettingsScreen(navController, pkg)
-                }
-            }
-
-            AnimatedVisibility(
-                visible = rootStatus && moduleInstalled && currentRoute in bottomBarRoutes,
-                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-                modifier = Modifier.align(Alignment.BottomCenter)
-            ) {
-                BottomNavBar(
-                    items = navItems,
-                    selectedRoute = currentRoute ?: "home",
-                    isBlurEnabled = isBlurEnabled,
-                    hazeState = hazeState,
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                    onItemSelected = { route ->
-                        if (currentRoute != route) {
-                            navController.navigate(route) {
-                                popUpTo(navController.graph.startDestinationId) { saveState = false }
-                                launchSingleTop = true
-                                restoreState = false
-                            }
+                NavHost(
+                    navController = navController,
+                    startDestination = if (hasCompletedGetStarted) "home" else "get_started",
+                    modifier = Modifier.fillMaxSize(),
+                    enterTransition = {
+                        if (initialState.destination.route == "get_started" && targetState.destination.route == "home") {
+                            fadeIn(animationSpec = tween(700)) 
+                        } else if (targetState.destination.route !in bottomBarRoutes) {
+                            slideInHorizontally(
+                                initialOffsetX = { fullWidth -> fullWidth },
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + fadeIn(animationSpec = tween(300))
+                        } else {
+                            fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
+                            scaleIn(
+                                initialScale = 0.96f,
+                                animationSpec = tween(220, easing = FastOutSlowInEasing)
+                            )
+                        }
+                    },
+                    exitTransition = {
+                        if (initialState.destination.route == "get_started" && targetState.destination.route == "home") {
+                            fadeOut(animationSpec = tween(700))
+                        } else if (initialState.destination.route in bottomBarRoutes && targetState.destination.route !in bottomBarRoutes) {
+                            slideOutHorizontally(
+                                targetOffsetX = { fullWidth -> -(fullWidth / 4) },
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + fadeOut(animationSpec = tween(300))
+                        } else {
+                            fadeOut(animationSpec = tween(150))
+                        }
+                    },
+                    popEnterTransition = {
+                        if (initialState.destination.route !in bottomBarRoutes && targetState.destination.route in bottomBarRoutes) {
+                            slideInHorizontally(
+                                initialOffsetX = { fullWidth -> -(fullWidth / 4) },
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + fadeIn(animationSpec = tween(300))
+                        } else {
+                            fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
+                            scaleIn(
+                                initialScale = 0.96f,
+                                animationSpec = tween(220, easing = FastOutSlowInEasing)
+                            )
+                        }
+                    },
+                    popExitTransition = {
+                        if (initialState.destination.route !in bottomBarRoutes) {
+                            slideOutHorizontally(
+                                targetOffsetX = { fullWidth -> fullWidth },
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + fadeOut(animationSpec = tween(300))
+                        } else {
+                            fadeOut(animationSpec = tween(150))
                         }
                     }
-                )
+                ) {
+                    composable("get_started") { GetStartedScreen(navController) }
+                    composable("home") { HomeScreen() }
+                    composable("applist") { ApplistScreen(navController) }
+                    composable("tweaks") { TweakScreen(navController) }
+                    composable("settings") { SettingsScreen(navController) }
+                    composable("color_palette") { ColorPaletteScreen(navController) }
+                    composable("colorscheme") { ColorSchemeSettings(navController) }
+                    composable("FasScreen") { FasScreen(navController) }
+                    composable("bypasschg") { BypassChargeScreen(navController) }
+                    composable("bypasschg_check") { BypassChargeCheckScreen(navController) }
+                    composable("preferenced") { PreferenceTweakScreen(navController) }
+                    composable(
+                        route = "app_settings/{pkg}",
+                        arguments = listOf(navArgument("pkg") { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        val pkg = backStackEntry.arguments?.getString("pkg")
+                        AppSettingsScreen(navController, pkg)
+                    }
+                }
+
+                AnimatedVisibility(
+                    visible = rootStatus && moduleInstalled && currentRoute in bottomBarRoutes,
+                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                ) {
+                    BottomNavBar(
+                        items = navItems,
+                        selectedRoute = currentRoute ?: "home",
+                        isBlurEnabled = isBlurEnabled,
+                        hazeState = hazeState,
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                        onItemSelected = { route ->
+                            if (currentRoute != route) {
+                                navController.navigate(route) {
+                                    popUpTo(navController.graph.startDestinationId) { saveState = false }
+                                    launchSingleTop = true
+                                    restoreState = false
+                                }
+                            }
+                        }
+                    )
+                }
             }
             ConfirmDialogHost(handle = updateDialog)
             ConfirmDialogHost(handle = rebootDialog)

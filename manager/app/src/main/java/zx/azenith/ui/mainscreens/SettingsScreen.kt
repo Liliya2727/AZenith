@@ -67,7 +67,6 @@ fun SettingsScreen(navController: NavController) {
     val context = LocalContext.current
     val listState = rememberLazyListState()
     
-    // 👇 Menggunakan state Boolean native Compose untuk AboutDialog
     var showAboutDialog by remember { mutableStateOf(false) }
     
     val restartToastText = stringResource(R.string.toast_restarting_service)
@@ -287,7 +286,7 @@ fun SettingsScreen(navController: NavController) {
                         ExpressiveList(
                             content = listOf {
                                 ExpressiveListItem(
-                                    onClick = { showAboutDialog = true }, // 👈 Membuka dialog
+                                    onClick = { showAboutDialog = true }, 
                                     headlineContent = { Text(stringResource(R.string.about_azenith)) },
                                     supportingContent = {
                                         Text(stringResource(R.string.version_format, BuildConfig.VERSION_NAME))
@@ -299,12 +298,13 @@ fun SettingsScreen(navController: NavController) {
                     }
                 }
             }
-
+            
             ConfirmDialogHost(handle = uninstallDialog)
 
-            // 👇 Render AboutDialog secara kondisional di sini
             if (showAboutDialog) {
-                AboutDialog(dismiss = { showAboutDialog = false })
+                RootAppDialog {
+                    AboutDialog(dismiss = { showAboutDialog = false })
+                }
             }
         }
     }
