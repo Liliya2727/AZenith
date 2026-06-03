@@ -135,7 +135,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         
             RootAppDialog {
                 ProfileDialog(
-                    show = true,
+                    show = showProfileDialog,
                     onDismiss = { showProfileDialog = false },
                     onProfile = { profileReason ->
                         viewModel.applyProfile(profileReason) {
