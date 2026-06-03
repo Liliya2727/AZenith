@@ -11,24 +11,34 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 object WallpaperCache {
-    // Menyimpan bitmap dalam wujud State agar UI otomatis update kalau gambar sudah siap
     val bitmapState: MutableState<ImageBitmap?> = mutableStateOf(null)
-    private var isLoaded = false // Penanda agar tidak di-load berulang kali
+    private var isLoaded = false
 
     suspend fun init(context: Context) {
-        if (isLoaded) return // Kalau sudah pernah di-load, langsung skip!
+        if (isLoaded) return
 
         withContext(Dispatchers.IO) {
             try {
                 val wallpaperManager = WallpaperManager.getInstance(context)
                 val drawable = wallpaperManager.drawable
                 
-                // Downscale tetap dilakukan agar hemat RAM
-                val bitmap = drawable?.toBitmap(width = 400, height = 800)?.asImageBitmap()
-                
-                bitmapState.value = bitmap
+                if (drawable != null) {
+                    // 👇 Ambil ukuran asli gambar
+                    val intrinsicWidth = drawable.intrinsicWidth
+                    val intrinsicHeight = drawable.intrinsicHeight
+                    
+                    // 👇 Hitung rasio agar tidak gepeng
+                    val ratio = intrinsicWidth.toFloat() / intrinsicHeight.toFloat()
+                    
+                    // Tetapkan target tinggi (hemat RAM), lebarnya menyesuaikan rasio asli
+                    val targetHeight = 800
+                    val targetWidth = (targetHeight * ratio).toInt()
+                    
+                    val bitmap = drawable.toBitmap(width = targetWidth, height = targetHeight).asImageBitmap()
+                    bitmapState.value = bitmap
+                }
             } catch (e: Exception) {
-                // Abaikan jika error (misal permission belum ada)
+                // Abaikan
             } finally {
                 isLoaded = true
             }

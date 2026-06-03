@@ -58,7 +58,8 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
         // --- BAGIAN KIRI: Wallpaper & Jam ---
         Box(
             modifier = Modifier
-                .weight(0.45f)
+                // 👇 HAPUS weight() dan ganti pakai heightIn untuk membatasi ukuran maksimal
+                .heightIn(max = 220.dp) 
                 .aspectRatio(0.48f) 
                 .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(18.dp)) 
                 .padding(1.dp) 
@@ -70,7 +71,7 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
                 Image(
                     bitmap = wallpaperBitmap!!, 
                     contentDescription = "Device Wallpaper",
-                    contentScale = ContentScale.Crop,
+                    contentScale = ContentScale.Crop, // Sekarang nggak gepeng karena bitmap-nya udah proporsional
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -102,7 +103,8 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
         // --- BAGIAN KANAN: Detail Informasi ---
         Column(
             modifier = Modifier
-                .weight(0.55f)
+                // 👇 UBAH INI JADI weight(1f) agar teks mengambil SEMUA sisa layar di sebelah kanan
+                .weight(1f)
                 .padding(vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
