@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 
 @file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 
@@ -25,6 +24,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -38,6 +38,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -56,14 +57,35 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.parcelize.Parcelize
 import kotlin.coroutines.resume
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.ui.draw.scale
-
-
 
 private const val TAG = "DialogComponent"
 
 val LocalAppHazeState = compositionLocalOf<HazeState?> { null }
+val LocalRootDialogs = compositionLocalOf<MutableMap<String, @Composable () -> Unit>> { error("RootDialogsProvider not found") }
+
+@Composable
+fun RootDialogsProvider(content: @Composable () -> Unit) {
+    val dialogs = remember { mutableStateMapOf<String, @Composable () -> Unit>() }
+    CompositionLocalProvider(LocalRootDialogs provides dialogs) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            content()
+            dialogs.values.forEach { it() }
+        }
+    }
+}
+
+@Composable
+fun RootAppDialog(content: @Composable () -> Unit) {
+    val dialogs = LocalRootDialogs.current
+    val key = remember { java.util.UUID.randomUUID().toString() }
+    
+    DisposableEffect(key) {
+        dialogs[key] = content
+        onDispose {
+            dialogs.remove(key)
+        }
+    }
+}
 
 interface ConfirmDialogVisuals : Parcelable {
     val title: String
@@ -101,7 +123,6 @@ sealed interface ConfirmResult {
     object Canceled : ConfirmResult
 }
 
-// Tambahan fungsi accept() dan cancel() untuk dipanggil oleh Host
 interface ConfirmDialogHandle : DialogHandle {
     val visuals: ConfirmDialogVisuals
     fun showConfirm(title: String, content: String? = null, confirm: String? = null, dismiss: String? = null)
@@ -160,7 +181,6 @@ private class ConfirmDialogHandleImpl(
     private val resultChannel: Channel<ConfirmResult>
 ) : ConfirmDialogHandle, DialogHandleBase(visible, coroutineScope) {
 
-    // Visuals sekarang berupa state agar Host tahu saat ada update teks
     private val _visuals = mutableStateOf(initialVisuals)
     override var visuals: ConfirmDialogVisuals
         get() = _visuals.value
@@ -224,7 +244,6 @@ private class ConfirmDialogHandleImpl(
     }
 }
 
-// Hanya menyimpan handle, TIDAK me-render UI di sini
 @Composable
 fun rememberLoadingDialog(): LoadingDialogHandle {
     val visible = remember { mutableStateOf(false) }
@@ -232,7 +251,6 @@ fun rememberLoadingDialog(): LoadingDialogHandle {
     return remember { LoadingDialogHandleImpl(visible, coroutineScope) }
 }
 
-// Hanya menyimpan handle, TIDAK me-render UI di sini
 @Composable
 fun rememberConfirmDialog(onConfirm: NullableCallback = null, onDismiss: NullableCallback = null): ConfirmDialogHandle {
     val currentOnConfirm by rememberUpdatedState(onConfirm)
@@ -248,24 +266,40 @@ fun rememberConfirmDialog(onConfirm: NullableCallback = null, onDismiss: Nullabl
     )
 }
 
-// --- 👇 HOST COMPONENTS: Panggil ini di akhir hirarki layout layar kamu 👇 --- //
-
 @Composable
 fun LoadingDialogHost(handle: LoadingDialogHandle) {
-    LoadingDialog(visible = handle.isShown)
+    val dialogs = LocalRootDialogs.current
+    val key = remember { java.util.UUID.randomUUID().toString() }
+    
+    DisposableEffect(key, handle) {
+        dialogs[key] = @Composable {
+            LoadingDialog(visible = handle.isShown)
+        }
+        onDispose {
+            dialogs.remove(key)
+        }
+    }
 }
 
 @Composable
 fun ConfirmDialogHost(handle: ConfirmDialogHandle) {
-    ConfirmDialog(
-        visible = handle.isShown,
-        visuals = handle.visuals,
-        confirm = { handle.accept() },
-        dismiss = { handle.cancel() }
-    )
+    val dialogs = LocalRootDialogs.current
+    val key = remember { java.util.UUID.randomUUID().toString() }
+    
+    DisposableEffect(key, handle) {
+        dialogs[key] = @Composable {
+            ConfirmDialog(
+                visible = handle.isShown,
+                visuals = handle.visuals,
+                confirm = { handle.accept() },
+                dismiss = { handle.cancel() }
+            )
+        }
+        onDispose {
+            dialogs.remove(key)
+        }
+    }
 }
-
-// --- INTERNAL UI COMPONENTS --- //
 
 @Composable
 private fun LoadingDialog(visible: Boolean) {
@@ -284,7 +318,7 @@ private fun LoadingDialog(visible: Boolean) {
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(100f) 
-                .background(Color.Black.copy(alpha = 0.42f)) // Scrim gelap di belakang
+                .background(Color.Black.copy(alpha = 0.42f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -292,29 +326,24 @@ private fun LoadingDialog(visible: Boolean) {
                 ),
             contentAlignment = Alignment.Center
         ) {
-            // Gunakan animateFloatAsState agar tidak perlu nested AnimatedVisibility
             val scale by animateFloatAsState(
                 targetValue = if (visible) 1f else 0.9f,
                 animationSpec = tween(250, easing = LinearOutSlowInEasing),
                 label = "dialog_scale"
             )
 
-            // Ganti Surface dengan Box untuk rendering Haze yang lebih stabil
             Box(
                 modifier = Modifier
                     .size(100.dp)
                     .scale(scale)
-                    // 1. Wajib di-clip ke bentuk dialognya dulu
                     .clip(RoundedCornerShape(24.dp))
-                    // 2. Terapkan Haze Effect untuk me-render blur
                     .then(
                         if (isBlurEnabled && hazeState != null) {
                             Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
                         } else Modifier
                     )
-                    // 3. Terapkan warna transparan (Tint) DI ATAS blur
                     .background(
-                        if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f) // Alpha diturunkan agar blur tembus
+                        if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)
                         else MaterialTheme.colorScheme.surface
                     ),
                 contentAlignment = Alignment.Center
@@ -324,7 +353,6 @@ private fun LoadingDialog(visible: Boolean) {
         }
     }
 }
-
 
 @Composable
 private fun ConfirmDialog(
@@ -362,21 +390,17 @@ private fun ConfirmDialog(
                 label = "dialog_scale"
             )
 
-            // Ganti Surface dengan Box
             Box(
                 modifier = Modifier
                     .widthIn(min = 350.dp, max = 500.dp) 
                     .padding(24.dp) 
                     .scale(scale)
-                    // 1. Clip bounds
                     .clip(RoundedCornerShape(28.dp))
-                    // 2. Render blur dari background
                     .then(
                         if (isBlurEnabled && hazeState != null) {
                             Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
                         } else Modifier
                     )
-                    // 3. Tambahkan semi-transparent tint
                     .background(
                         if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f) 
                         else AlertDialogDefaults.containerColor
@@ -384,7 +408,7 @@ private fun ConfirmDialog(
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onClick = {} // Blokir sentuhan agar tidak merembes ke dismiss
+                        onClick = {}
                     )
             ) {
                 Column(
