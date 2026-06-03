@@ -11,6 +11,7 @@ plugins {
     id("kotlin-parcelize")
 }
 
+
 android {
     namespace = "zx.azenith"
     compileSdk = 37
@@ -22,6 +23,7 @@ android {
         versionCode = (Placeholder)
         versionName = "Placeholder"
         vectorDrawables.useSupportLibrary = true
+        buildConfigField("long", "BUILD_TIME", "${System.currentTimeMillis()}L")
     }
 
     signingConfigs {
