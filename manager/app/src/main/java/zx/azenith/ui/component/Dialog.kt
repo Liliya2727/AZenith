@@ -280,7 +280,7 @@ private fun LoadingDialog(visible: Boolean) {
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(100f) 
-                .background(Color.Black.copy(alpha = 0.32f)) 
+                .background(Color.Black.copy(alpha = 0.42f)) // Scrim gelap di belakang
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -288,31 +288,39 @@ private fun LoadingDialog(visible: Boolean) {
                 ),
             contentAlignment = Alignment.Center
         ) {
-            AnimatedVisibility(
-                visible = visible,
-                enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) + scaleIn(animationSpec = tween(250, easing = LinearOutSlowInEasing), initialScale = 0.9f),
-                exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)) + scaleOut(animationSpec = tween(200, easing = FastOutSlowInEasing), targetScale = 0.9f)
+            // Gunakan animateFloatAsState agar tidak perlu nested AnimatedVisibility
+            val scale by animateFloatAsState(
+                targetValue = if (visible) 1f else 0.9f,
+                animationSpec = tween(250, easing = LinearOutSlowInEasing),
+                label = "dialog_scale"
+            )
+
+            // Ganti Surface dengan Box untuk rendering Haze yang lebih stabil
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .scale(scale)
+                    // 1. Wajib di-clip ke bentuk dialognya dulu
+                    .clip(RoundedCornerShape(24.dp))
+                    // 2. Terapkan Haze Effect untuk me-render blur
+                    .then(
+                        if (isBlurEnabled && hazeState != null) {
+                            Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
+                        } else Modifier
+                    )
+                    // 3. Terapkan warna transparan (Tint) DI ATAS blur
+                    .background(
+                        if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f) // Alpha diturunkan agar blur tembus
+                        else MaterialTheme.colorScheme.surface
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                Surface(
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .then(
-                            if (isBlurEnabled && hazeState != null) Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
-                            else Modifier
-                        ),
-                    shape = RoundedCornerShape(24.dp),
-                    color = if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f) else MaterialTheme.colorScheme.surface,
-                    shadowElevation = if (isBlurEnabled) 0.dp else 8.dp
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator() // Gunakan loading indicator bawaan/custom mu
-                    }
-                }
+                CircularProgressIndicator()
             }
         }
     }
 }
+
 
 @Composable
 private fun ConfirmDialog(
@@ -336,7 +344,7 @@ private fun ConfirmDialog(
             modifier = Modifier
                 .fillMaxSize()
                 .zIndex(100f) 
-                .background(Color.Black.copy(alpha = 0.32f)) 
+                .background(Color.Black.copy(alpha = 0.42f)) 
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -344,59 +352,66 @@ private fun ConfirmDialog(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            AnimatedVisibility(
-                visible = visible,
-                enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) + scaleIn(animationSpec = tween(250, easing = LinearOutSlowInEasing), initialScale = 0.9f),
-                exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)) + scaleOut(animationSpec = tween(200, easing = FastOutSlowInEasing), targetScale = 0.9f)
+            val scale by animateFloatAsState(
+                targetValue = if (visible) 1f else 0.9f,
+                animationSpec = tween(250, easing = LinearOutSlowInEasing),
+                label = "dialog_scale"
+            )
+
+            // Ganti Surface dengan Box
+            Box(
+                modifier = Modifier
+                    .widthIn(min = 350.dp, max = 500.dp) 
+                    .padding(24.dp) 
+                    .scale(scale)
+                    // 1. Clip bounds
+                    .clip(RoundedCornerShape(28.dp))
+                    // 2. Render blur dari background
+                    .then(
+                        if (isBlurEnabled && hazeState != null) {
+                            Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
+                        } else Modifier
+                    )
+                    // 3. Tambahkan semi-transparent tint
+                    .background(
+                        if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f) 
+                        else AlertDialogDefaults.containerColor
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {} // Blokir sentuhan agar tidak merembes ke dismiss
+                    )
             ) {
-                Surface(
+                Column(
                     modifier = Modifier
-                        .widthIn(min = 280.dp, max = 340.dp) 
-                        .padding(24.dp) 
-                        .clip(RoundedCornerShape(28.dp))
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {} 
-                        )
-                        .then(
-                            if (isBlurEnabled && hazeState != null) Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
-                            else Modifier
-                        ),
-                    shape = RoundedCornerShape(28.dp),
-                    color = if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f) else AlertDialogDefaults.containerColor,
-                    shadowElevation = if (isBlurEnabled) 0.dp else AlertDialogDefaults.TonalElevation
+                        .fillMaxWidth()
+                        .padding(24.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp)
-                    ) {
+                    Text(
+                        text = visuals.title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    visuals.content?.let { contentText ->
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = visuals.title,
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = contentText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        visuals.content?.let { contentText ->
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = contentText,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = dismiss) {
+                            Text(text = visuals.dismiss ?: stringResource(id = android.R.string.cancel))
                         }
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
-                            TextButton(onClick = dismiss) {
-                                Text(text = visuals.dismiss ?: stringResource(id = android.R.string.cancel))
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            TextButton(onClick = confirm) {
-                                Text(text = visuals.confirm ?: stringResource(id = android.R.string.ok))
-                            }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        TextButton(onClick = confirm) {
+                            Text(text = visuals.confirm ?: stringResource(id = android.R.string.ok))
                         }
                     }
                 }
