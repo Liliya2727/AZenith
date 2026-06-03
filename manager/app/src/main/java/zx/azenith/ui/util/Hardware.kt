@@ -17,12 +17,20 @@ fun getSystemProperty(key: String, defaultValue: String = ""): String {
 
 // Fungsi utama mengambil nama Chipset
 fun getChipsetName(context: Context): String {
-    // Ambil kode SoC dari beberapa sumber yang umum digunakan Android
-    val boardPlatform = getSystemProperty("ro.board.platform")
-    val hardware = Build.HARDWARE
-    val board = Build.BOARD
+    // 1. Ambil semua kemungkinan kode SoC dan bersihkan spasi berlebih (trim)
+    val boardPlatform = getSystemProperty("ro.board.platform").trim()
+    val hardware = Build.HARDWARE.trim()
+    val board = Build.BOARD.trim()
+    
+    // Ambil SOC_MODEL untuk API 31+ 
+    val socModel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        Build.SOC_MODEL.trim()
+    } else ""
 
-    val rawCodes = listOf(boardPlatform, hardware, board).filter { it.isNotEmpty() }
+    // 2. MASUKKAN socModel KE DALAM LIST agar ikut dicek ke dalam socs.json!
+    val rawCodes = listOf(socModel, boardPlatform, hardware, board).filter { 
+        it.isNotEmpty() && it != Build.UNKNOWN 
+    }
 
     return try {
         // Baca file socs.json dari folder assets
@@ -38,14 +46,6 @@ fun getChipsetName(context: Context): String {
             if (matchedName != null) break
         }
 
-        // Fallback tambahan (API 31+) jika OEM menanamkan nama asli di sistem
-        if (matchedName == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val socModel = Build.SOC_MODEL
-            if (socModel != Build.UNKNOWN) {
-                matchedName = socModel
-            }
-        }
-
         // Jika ketemu, tampilkan. Jika tidak, kembalikan kode raw terbaik yang ada
         matchedName ?: "Unknown (${rawCodes.firstOrNull() ?: "SoC"})"
     } catch (e: Exception) {
@@ -54,24 +54,46 @@ fun getChipsetName(context: Context): String {
     }
 }
 
-// Helper untuk mencari secara case-insensitive agar "gs301" dan "GS301" terbaca sama
+// Helper untuk mencari secara pintar di dalam JSON
 private fun findSocInJson(json: JSONObject, searchKey: String): String? {
     val lowerSearchKey = searchKey.lowercase()
-    val keys = json.keys()
     
-    while (keys.hasNext()) {
-        val key = keys.next()
+    // Ambil semua key dari JSON
+    val keys = mutableListOf<String>()
+    val keysIterator = json.keys()
+    while (keysIterator.hasNext()) {
+        keys.add(keysIterator.next())
+    }
+
+    // TAHAP 1: Coba pencarian persis (Exact Match)
+    for (key in keys) {
         if (key.lowercase() == lowerSearchKey) {
-            val socObj = json.getJSONObject(key)
-            val vendor = socObj.optString("VENDOR", "").trim()
-            val name = socObj.optString("NAME", "").trim()
-            
-            return when {
-                vendor.isNotEmpty() && name.isNotEmpty() -> "$vendor $name" // Contoh: "Google Tensor G3"
-                name.isNotEmpty() -> name
-                else -> null
-            }
+            return extractSocName(json, key)
         }
     }
+
+    // TAHAP 2: Coba pencarian sebagian (Partial Match)
+    // Berfungsi jika sistem mendeteksi "mt6893" tapi di JSON hanya ada "MT6893Z_T/CZA", atau sebaliknya.
+    for (key in keys) {
+        val lowerKey = key.lowercase()
+        // Cek apakah key mengandung searchKey, atau searchKey mengandung key
+        if (lowerKey.contains(lowerSearchKey) || lowerSearchKey.contains(lowerKey)) {
+            return extractSocName(json, key)
+        }
+    }
+
     return null
+}
+
+// Ekstraktor untuk menyusun nama VENDOR + NAME
+private fun extractSocName(json: JSONObject, key: String): String? {
+    val socObj = json.getJSONObject(key)
+    val vendor = socObj.optString("VENDOR", "").trim()
+    val name = socObj.optString("NAME", "").trim()
+    
+    return when {
+        vendor.isNotEmpty() && name.isNotEmpty() -> "$vendor $name" // Contoh: "MediaTek Dimensity 8050"
+        name.isNotEmpty() -> name
+        else -> null
+    }
 }
