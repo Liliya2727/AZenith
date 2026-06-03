@@ -109,11 +109,19 @@ fun SettingsScreen(navController: NavController) {
                     bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                 )
             ) {
-                item { SettingsSectionTitle(stringResource(R.string.section_personalization)) }
+                
+                // 👇 Gabung Header dan Theme dalam satu ExpressiveList
                 item {
+                    Spacer(modifier = Modifier.height(16.dp)) // Jarak dari TopAppBar
+                    
                     ExpressiveList(
                         content = listOf(
                             {
+                                // Item 1 (Paling Atas, akan dapat topShape otomatis)
+                                AppInfoHeaderContent()
+                            },
+                            {
+                                // Item 2 (Paling Bawah, akan dapat bottomShape otomatis)
                                 ExpressiveListItem(
                                     onClick = { navController.navigate("color_palette") },
                                     headlineContent = { Text(stringResource(R.string.theme)) },
@@ -127,6 +135,7 @@ fun SettingsScreen(navController: NavController) {
                 }
     
                 item { SettingsSectionTitle(stringResource(R.string.section_features)) }
+                
                 item {
                     var stateToast by remember { mutableStateOf<Boolean?>(null) }
                     var autoMode by remember { mutableStateOf<Boolean?>(null) }
