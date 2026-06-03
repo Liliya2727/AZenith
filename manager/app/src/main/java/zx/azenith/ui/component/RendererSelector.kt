@@ -105,7 +105,7 @@ fun RendererDialog(
                         onClick = {}
                     )
             ) {
-                Column(
+                                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(24.dp)
@@ -113,6 +113,7 @@ fun RendererDialog(
                     Text(
                         text = stringResource(R.string.Renderer_Select),
                         style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface, // 👈 INI SUDAH ADA SEBELUMNYA
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
 
@@ -120,7 +121,12 @@ fun RendererDialog(
                         @Composable {
                             ExpressiveListItem(
                                 modifier = Modifier.padding(vertical = 4.dp),
-                                headlineContent = { Text(stringResource(option.titleRes)) },
+                                headlineContent = { 
+                                    Text(
+                                        text = stringResource(option.titleRes),
+                                        color = MaterialTheme.colorScheme.onSurface // 👈 TAMBAHKAN INI
+                                    ) 
+                                },
                                 leadingContent = { 
                                     SmallLeadingIcon(icon = option.icon) 
                                 },
@@ -137,6 +143,7 @@ fun RendererDialog(
                         content = content
                     )
                 }
+
             }
         }
     }

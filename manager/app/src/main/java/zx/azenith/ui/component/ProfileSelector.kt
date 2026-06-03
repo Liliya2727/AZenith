@@ -110,7 +110,7 @@ fun ProfileDialog(
                         onClick = {}
                     )
             ) {
-                Column(
+                                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(24.dp)
@@ -118,7 +118,8 @@ fun ProfileDialog(
                     Text(
                         text = stringResource(R.string.RefreshRatePicker_Select),
                         style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.padding(bottom = 16.dp) // Jarak ditambah sedikit agar lega
+                        color = MaterialTheme.colorScheme.onSurface, // 👈 TAMBAHKAN INI
+                        modifier = Modifier.padding(bottom = 16.dp)
                     )
 
                     val content = options.map { option ->
@@ -126,7 +127,10 @@ fun ProfileDialog(
                             ExpressiveListItem(
                                 modifier = Modifier.padding(vertical = 4.dp),
                                 headlineContent = {
-                                    Text(stringResource(option.titleRes))
+                                    Text(
+                                        text = stringResource(option.titleRes),
+                                        color = MaterialTheme.colorScheme.onSurface // 👈 TAMBAHKAN INI
+                                    )
                                 },
                                 leadingContent = { 
                                     SmallLeadingIcon(icon = option.icon) 
@@ -139,12 +143,12 @@ fun ProfileDialog(
                         }
                     }
 
-                    // Tampilkan List
                     ExpressiveColumn(
                         modifier = Modifier.fillMaxWidth(),
                         content = content
                     )
                 }
+
             }
         }
     }
