@@ -261,6 +261,9 @@ fun DeviceInfoCard() {
     val kernelVer = remember { uname.release }
     val selinux = remember { getSELinuxStatus(context) }
     val appVer = remember { getAppVersion(context) }
+    
+    // 👇 1. PANGGIL FUNGSI CHIPSET DI SINI
+    val chipsetName = remember { getChipsetName(context) }
 
     Surface(
         shape = RoundedCornerShape(26.dp), color = colorScheme.surfaceColorAtElevation(1.dp),
@@ -280,6 +283,10 @@ fun DeviceInfoCard() {
             Spacer(Modifier.height(8.dp))
             DeviceInfoRow(stringResource(R.string.kernel_version), kernelVer)
             DeviceInfoRow(stringResource(R.string.device_name), "${Build.MANUFACTURER} ${Build.MODEL}")
+            
+            // 👇 2. TAMBAHKAN ROW CHIPSET DI BAWAH DEVICE NAME
+            DeviceInfoRow("Chipset", chipsetName)
+            
             DeviceInfoRow(stringResource(R.string.azenith_version), appVer)
 
             if (isExpanded) {
@@ -291,6 +298,7 @@ fun DeviceInfoCard() {
         }
     }
 }
+
 
 @Composable
 fun DeviceInfoRow(title: String, value: String) {
