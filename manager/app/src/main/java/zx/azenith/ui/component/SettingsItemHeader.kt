@@ -15,7 +15,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,14 +47,11 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
         formatter.format(Date(BuildConfig.BUILD_TIME))
     }
 
-    // 👇 LOGIKA MENGAMBIL WALLPAPER DEVICE DENGAN AMAN
     val wallpaperBitmap = remember {
         try {
             val wallpaperManager = WallpaperManager.getInstance(context)
-            // Mengambil wallpaper, diconvert ke Bitmap, lalu ke ImageBitmap (format Compose)
             wallpaperManager.drawable?.toBitmap()?.asImageBitmap()
         } catch (e: SecurityException) {
-            // Akan lari ke sini jika aplikasi belum diberi izin akses storage
             null 
         }
     }
@@ -64,19 +60,23 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .padding(16.dp), 
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        // 👇 Bikin seluruh konten di Row ini align ke tengah secara vertikal
+        verticalAlignment = Alignment.CenterVertically
     ) {
         // --- BAGIAN KIRI: Wallpaper & Jam (Style Layar HP) ---
         Box(
             modifier = Modifier
                 .weight(0.45f)
-                .aspectRatio(0.48f) // Rasio layar HP memanjang (mirip 19:9)
-                .background(Color.Black, RoundedCornerShape(18.dp)) // Bingkai luar (Bezel) hitam
-                .padding(3.dp) // Ketebalan bezel
-                .clip(RoundedCornerShape(15.dp)) // Sudut membulat layar bagian dalam
-                .background(Color.DarkGray) // Warna dasar jika gambar gagal load
+                .aspectRatio(0.48f) 
+                // 👇 Border/Bezel luar warna Monet (Primary)
+                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(18.dp)) 
+                .padding(3.dp) 
+                .clip(RoundedCornerShape(15.dp)) 
+                // 👇 Background fallback warna Monet (Surface Variant)
+                .background(MaterialTheme.colorScheme.surfaceVariant) 
         ) {
-            // Render Wallpaper atau Fallback
+            // Render Wallpaper (Fallback avatar sudah dihapus)
             if (wallpaperBitmap != null) {
                 Image(
                     bitmap = wallpaperBitmap, 
@@ -84,16 +84,9 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
-            } else {
-                Image(
-                    painter = painterResource(R.drawable.avatar), 
-                    contentDescription = "Fallback App Header Background",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
             }
             
-            // Jam Overlay (Tetap di tengah layar)
+            // Jam Overlay
             Column(
                 modifier = Modifier.align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -101,14 +94,16 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
             ) {
                 Text(
                     text = hourFormat.format(time.time),
-                    color = Color.White,
-                    fontSize = 38.sp, // Sedikit dikecilkan agar pas di layar
+                    // 👇 Teks Jam warna Monet (Primary)
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 38.sp, 
                     fontWeight = FontWeight.Light,
                     style = MaterialTheme.typography.displayMedium
                 )
                 Text(
                     text = minuteFormat.format(time.time),
-                    color = Color.White,
+                    // 👇 Teks Menit warna Monet (Primary)
+                    color = MaterialTheme.colorScheme.primary,
                     fontSize = 38.sp,
                     fontWeight = FontWeight.Light,
                     style = MaterialTheme.typography.displayMedium,
@@ -122,6 +117,7 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .weight(0.55f)
                 .padding(vertical = 4.dp),
+            // Jarak antar item tetap rapi, tapi keseluruhan blok ini ada di tengah Row
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             AppInfoTextItem(title = "App Name", value = context.getString(R.string.app_name))
