@@ -132,7 +132,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
             onReboot = { reason -> viewModel.rebootDevice(reason) }
         )
 
-        if (showProfileDialog) {
+        
             RootAppDialog {
                 ProfileDialog(
                     show = true,
@@ -146,6 +146,6 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                     }
                 )
             }
-        }
+        
     }
 }
