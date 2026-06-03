@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package zx.azenith
 
 import android.content.res.Configuration
@@ -61,6 +60,7 @@ import zx.azenith.ui.util.*
 import kotlinx.coroutines.launch
 import com.topjohnwu.superuser.Shell
 import zx.azenith.ui.component.rememberConfirmDialog
+import zx.azenith.ui.component.LocalAppHazeState // 👇 Import HazeState Helper Custom
 import android.content.Intent
 import androidx.core.content.FileProvider
 import java.io.File
@@ -68,7 +68,6 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.blur.blurEffect
-
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -148,7 +147,6 @@ fun MainScreen(isFromTile: Boolean = false) {
         refreshStatus()
     }
 
-    
     val navItems = remember {
         listOf(
             NavItem("home", R.string.nav_home, Icons.Rounded.Home),
@@ -163,7 +161,6 @@ fun MainScreen(isFromTile: Boolean = false) {
     val updateDialog = rememberConfirmDialog(
         onConfirm = {
             coroutineScope.launch {
-                
                 val cacheApk = File(context.cacheDir, "AZenith_update.apk")
                 
                 val copyCmd = """
@@ -233,121 +230,114 @@ fun MainScreen(isFromTile: Boolean = false) {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        NavHost(
-            navController = navController,
-            startDestination = if (hasCompletedGetStarted) "home" else "get_started",
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
-                .then(
-                    if (isBlurEnabled) Modifier.hazeSource(state = hazeState) else Modifier
-                ),
-            enterTransition = {
-                if (initialState.destination.route == "get_started" && targetState.destination.route == "home") {
-                    fadeIn(animationSpec = tween(700)) 
-                } else if (targetState.destination.route !in bottomBarRoutes) {
-                    // Animasi masuk ke Sub-screen (Slide dari kanan)
-                    slideInHorizontally(
-                        initialOffsetX = { fullWidth -> fullWidth },
-                        animationSpec = tween(300, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(300))
-                } else {
-                    // Animasi pindah antar tab (Fade + sedikit Scale-in membesar)
-                    fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
-                    scaleIn(
-                        initialScale = 0.96f,
-                        animationSpec = tween(220, easing = FastOutSlowInEasing)
-                    )
-                }
-            },
-            exitTransition = {
-                if (initialState.destination.route == "get_started" && targetState.destination.route == "home") {
-                    fadeOut(animationSpec = tween(700))
-                } else if (initialState.destination.route in bottomBarRoutes && targetState.destination.route !in bottomBarRoutes) {
-                    // Layar utama bergeser sedikit ke kiri (Parallax effect) saat sub-screen masuk
-                    slideOutHorizontally(
-                        targetOffsetX = { fullWidth -> -(fullWidth / 4) },
-                        animationSpec = tween(300, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(300))
-                } else {
-                    // Animasi keluar saat pindah tab
-                    fadeOut(animationSpec = tween(150))
-                }
-            },
-            popEnterTransition = {
-                // 👇 FIX DI SINI: Cek apakah asalnya DARI sub-screen, bukan dari sesama tab
-                if (initialState.destination.route !in bottomBarRoutes && targetState.destination.route in bottomBarRoutes) {
-                    // Layar utama kembali bergeser dari kiri (Parallax effect) saat sub-screen ditutup
-                    slideInHorizontally(
-                        initialOffsetX = { fullWidth -> -(fullWidth / 4) },
-                        animationSpec = tween(300, easing = FastOutSlowInEasing)
-                    ) + fadeIn(animationSpec = tween(300))
-                } else {
-                    // Animasi pindah antar tab (saat ditekan dari tombol Navbar)
-                    fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
-                    scaleIn(
-                        initialScale = 0.96f,
-                        animationSpec = tween(220, easing = FastOutSlowInEasing)
-                    )
-                }
-            },
-            popExitTransition = {
-                if (initialState.destination.route !in bottomBarRoutes) {
-                    // Animasi sub-screen ditutup (Slide ke kanan)
-                    slideOutHorizontally(
-                        targetOffsetX = { fullWidth -> fullWidth },
-                        animationSpec = tween(300, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(300))
-                } else {
-                    fadeOut(animationSpec = tween(150))
-                }
-            }
-
-        ) {
-
-            composable("get_started") { GetStartedScreen(navController) }
-            composable("home") { HomeScreen() }
-            composable("applist") { ApplistScreen(navController) }
-            composable("tweaks") { TweakScreen(navController) }
-            composable("settings") { SettingsScreen(navController) }
-            composable("color_palette") { ColorPaletteScreen(navController) }
-            composable("colorscheme") { ColorSchemeSettings(navController) }
-            composable("FasScreen") { FasScreen(navController) }
-            composable("bypasschg") { BypassChargeScreen(navController) }
-            composable("bypasschg_check") { BypassChargeCheckScreen(navController) }
-            composable("preferenced") { PreferenceTweakScreen(navController) }
-            composable(
-                route = "app_settings/{pkg}",
-                arguments = listOf(navArgument("pkg") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val pkg = backStackEntry.arguments?.getString("pkg")
-                AppSettingsScreen(navController, pkg)
-            }
-        }
-
-        AnimatedVisibility(
-            visible = rootStatus && moduleInstalled && currentRoute in bottomBarRoutes,
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            BottomNavBar(
-                items = navItems,
-                selectedRoute = currentRoute ?: "home",
-                isBlurEnabled = isBlurEnabled,
-                hazeState = hazeState,
-                modifier = Modifier.align(Alignment.BottomCenter),
-                onItemSelected = { route ->
-                    if (currentRoute != route) {
-                        navController.navigate(route) {
-                            popUpTo(navController.graph.startDestinationId) { saveState = false }
-                            launchSingleTop = true
-                            restoreState = false
-                        }
+    // 👇 PENTING: Melempar HazeState secara internal menggunakan CompositionLocal
+    CompositionLocalProvider(LocalAppHazeState provides hazeState) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            NavHost(
+                navController = navController,
+                startDestination = if (hasCompletedGetStarted) "home" else "get_started",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .then(
+                        if (isBlurEnabled) Modifier.hazeSource(state = hazeState) else Modifier
+                    ),
+                enterTransition = {
+                    if (initialState.destination.route == "get_started" && targetState.destination.route == "home") {
+                        fadeIn(animationSpec = tween(700)) 
+                    } else if (targetState.destination.route !in bottomBarRoutes) {
+                        slideInHorizontally(
+                            initialOffsetX = { fullWidth -> fullWidth },
+                            animationSpec = tween(300, easing = FastOutSlowInEasing)
+                        ) + fadeIn(animationSpec = tween(300))
+                    } else {
+                        fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
+                        scaleIn(
+                            initialScale = 0.96f,
+                            animationSpec = tween(220, easing = FastOutSlowInEasing)
+                        )
+                    }
+                },
+                exitTransition = {
+                    if (initialState.destination.route == "get_started" && targetState.destination.route == "home") {
+                        fadeOut(animationSpec = tween(700))
+                    } else if (initialState.destination.route in bottomBarRoutes && targetState.destination.route !in bottomBarRoutes) {
+                        slideOutHorizontally(
+                            targetOffsetX = { fullWidth -> -(fullWidth / 4) },
+                            animationSpec = tween(300, easing = FastOutSlowInEasing)
+                        ) + fadeOut(animationSpec = tween(300))
+                    } else {
+                        fadeOut(animationSpec = tween(150))
+                    }
+                },
+                popEnterTransition = {
+                    if (initialState.destination.route !in bottomBarRoutes && targetState.destination.route in bottomBarRoutes) {
+                        slideInHorizontally(
+                            initialOffsetX = { fullWidth -> -(fullWidth / 4) },
+                            animationSpec = tween(300, easing = FastOutSlowInEasing)
+                        ) + fadeIn(animationSpec = tween(300))
+                    } else {
+                        fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
+                        scaleIn(
+                            initialScale = 0.96f,
+                            animationSpec = tween(220, easing = FastOutSlowInEasing)
+                        )
+                    }
+                },
+                popExitTransition = {
+                    if (initialState.destination.route !in bottomBarRoutes) {
+                        slideOutHorizontally(
+                            targetOffsetX = { fullWidth -> fullWidth },
+                            animationSpec = tween(300, easing = FastOutSlowInEasing)
+                        ) + fadeOut(animationSpec = tween(300))
+                    } else {
+                        fadeOut(animationSpec = tween(150))
                     }
                 }
-            )
+            ) {
+                composable("get_started") { GetStartedScreen(navController) }
+                composable("home") { HomeScreen() }
+                composable("applist") { ApplistScreen(navController) }
+                composable("tweaks") { TweakScreen(navController) }
+                composable("settings") { SettingsScreen(navController) }
+                composable("color_palette") { ColorPaletteScreen(navController) }
+                composable("colorscheme") { ColorSchemeSettings(navController) }
+                composable("FasScreen") { FasScreen(navController) }
+                composable("bypasschg") { BypassChargeScreen(navController) }
+                composable("bypasschg_check") { BypassChargeCheckScreen(navController) }
+                composable("preferenced") { PreferenceTweakScreen(navController) }
+                composable(
+                    route = "app_settings/{pkg}",
+                    arguments = listOf(navArgument("pkg") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val pkg = backStackEntry.arguments?.getString("pkg")
+                    AppSettingsScreen(navController, pkg)
+                }
+            }
+
+            AnimatedVisibility(
+                visible = rootStatus && moduleInstalled && currentRoute in bottomBarRoutes,
+                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                modifier = Modifier.align(Alignment.BottomCenter)
+            ) {
+                BottomNavBar(
+                    items = navItems,
+                    selectedRoute = currentRoute ?: "home",
+                    isBlurEnabled = isBlurEnabled,
+                    hazeState = hazeState,
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    onItemSelected = { route ->
+                        if (currentRoute != route) {
+                            navController.navigate(route) {
+                                popUpTo(navController.graph.startDestinationId) { saveState = false }
+                                launchSingleTop = true
+                                restoreState = false
+                            }
+                        }
+                    }
+                )
+            }
         }
     }
 }
@@ -372,7 +362,6 @@ fun BottomNavBar(
             modifier = Modifier
                 .widthIn(max = 350.dp)
                 .fillMaxWidth()
-                // FIX: Tambahkan clip di sini SEBELUM hazeEffect agar blur mengikuti bentuk rounded
                 .clip(RoundedCornerShape(28.dp)) 
                 .then(
                     if (isBlurEnabled && hazeState != null) {
@@ -399,7 +388,7 @@ fun BottomNavBar(
                     NavPill(
                         item = item,
                         isSelected = isSelected,
-                        isBlurEnabled = isBlurEnabled, // FIX: Teruskan state blur ke NavPill
+                        isBlurEnabled = isBlurEnabled, 
                         onClick = { onItemSelected(item.route) },
                         modifier = if (isSelected) Modifier.weight(1f) else Modifier
                     )
@@ -413,42 +402,33 @@ fun BottomNavBar(
 private fun NavPill(
     item: NavItem,
     isSelected: Boolean,
-    isBlurEnabled: Boolean = false, // Tambahan parameter baru
+    isBlurEnabled: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     
-    // Efek scale saat ditekan
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.95f else 1f,
         animationSpec = tween(150), label = "scale"
     )
 
-    // Animasi transisi warna
     val animationSpec = tween<Color>(durationMillis = 300, easing = FastOutSlowInEasing)
     
-    // FIX: Logika Background Color
     val bgColor by animateColorAsState(
         targetValue = when {
-            // Jika Blur Nyala + Dipilih = Semi-transparan (Glassy effect)
             isSelected && isBlurEnabled -> MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
-            // Jika Blur Mati + Dipilih = Solid Primary
             isSelected && !isBlurEnabled -> MaterialTheme.colorScheme.primary
-            // Jika Blur Nyala + Gak Dipilih = Tembus Pandang (Biar blur di belakangnya bersih)
             !isSelected && isBlurEnabled -> Color.Transparent
-            // Default M3 (Blur Mati + Gak dipilih)
             else -> MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
         },
         animationSpec = animationSpec,
         label = "bgColor"
     )
     
-    // FIX: Logika Text/Icon Color
     val contentColor by animateColorAsState(
         targetValue = when {
-            // Jika background semi-transparan, teks pakai warna Primary agar kontras dan terbaca
             isSelected && isBlurEnabled -> MaterialTheme.colorScheme.primary
             isSelected && !isBlurEnabled -> MaterialTheme.colorScheme.onPrimary
             else -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -465,7 +445,7 @@ private fun NavPill(
             .height(48.dp)
             .defaultMinSize(minWidth = 48.dp) 
             .clip(shape)
-            .background(bgColor) // Pakai background dinamis yang baru
+            .background(bgColor)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -478,7 +458,7 @@ private fun NavPill(
         Icon(
             imageVector = item.icon,
             contentDescription = null,
-            tint = contentColor, // Pakai warna konten dinamis yang baru
+            tint = contentColor,
             modifier = Modifier.size(24.dp)
         )
         
