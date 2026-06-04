@@ -334,7 +334,7 @@ fun InfoTile(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1.4f) 
+                    .aspectRatio(1.6f) 
                     .clip(RoundedCornerShape(18.dp)) 
                     // Gunakan warna yang sudah di-animate di sini
                     .background(iconBoxBgColor),
@@ -428,12 +428,12 @@ fun DeviceInfoCard() {
         }
     }
 
-    // Animasi putaran (rotate) untuk ikon arrow
+    // Animasi putaran (rotate) untuk ikon arrow dibikin lebih cepat (Medium stiffness)
     val rotationAngle by animateFloatAsState(
         targetValue = if (isExpanded) 180f else 0f,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow
         ),
         label = "expandArrowRotation"
     )
@@ -446,7 +446,13 @@ fun DeviceInfoCard() {
         Column(
             modifier = Modifier
                 .padding(vertical = 16.dp)
-                .animateContentSize(animationSpec = spring(Spring.DampingRatioLowBouncy, Spring.StiffnessLow))
+                // Animasi expand keseluruhan card dibikin lebih cepat
+                .animateContentSize(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioLowBouncy, 
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
         ) {
             // Header Info Card
             Row(
@@ -456,49 +462,47 @@ fun DeviceInfoCard() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 SmallLeadingIcon(Icons.Outlined.Info)
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(16.dp))
                 Text(
                     text = stringResource(R.string.device_info), 
                     modifier = Modifier.weight(1f), 
                     style = MaterialTheme.typography.titleMedium, 
                     fontWeight = FontWeight.SemiBold
                 )
-                // Icon Arrow dengan Modifier.graphicsLayer untuk rotasi
                 Icon(
                     imageVector = Icons.Rounded.ExpandMore, 
                     contentDescription = null,
-                    modifier = Modifier.graphicsLayer { // 👈 UBAH JADI GINI AJA
+                    modifier = Modifier.graphicsLayer { 
                         rotationZ = rotationAngle
                     }
                 )
-
             }
 
             Spacer(Modifier.height(12.dp))
 
-            // Grid Container (Menggunakan Column yang berisi Row)
+            // Grid Container: Jarak antar elemen konsisten 8.dp
             Column(
                 modifier = Modifier.padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp) // Jarak vertikal antar baris
+                verticalArrangement = Arrangement.spacedBy(8.dp) 
             ) {
-                // Baris 1 (Selalu terlihat)
+                // Baris 1: Kernel & Device Name
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp) // Jarak horizontal antar item
+                    horizontalArrangement = Arrangement.spacedBy(8.dp) 
                 ) {
                     DeviceInfoGridItem(
                         modifier = Modifier.weight(1f),
-                        title = "Manufacturer", 
-                        value = Build.MANUFACTURER.uppercase()
+                        title = stringResource(R.string.kernel_version), 
+                        value = kernelVer
                     )
                     DeviceInfoGridItem(
                         modifier = Modifier.weight(1f),
-                        title = "Model", 
-                        value = Build.MODEL
+                        title = stringResource(R.string.device_name), 
+                        value = realDeviceName
                     )
                 }
 
-                // Baris 2 (Selalu terlihat)
+                // Baris 2: Chipset & App Version
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -510,53 +514,54 @@ fun DeviceInfoCard() {
                     )
                     DeviceInfoGridItem(
                         modifier = Modifier.weight(1f),
-                        title = "Device", 
-                        value = realDeviceName
+                        title = stringResource(R.string.azenith_version), 
+                        value = appVer
                     )
                 }
 
-                // Animasi buka/tutup sisa info
+                // Animasi buka/tutup dibikin lebih gesit
                 AnimatedVisibility(
                     visible = isExpanded,
-                    enter = expandVertically(expandFrom = Alignment.Top, animationSpec = spring()) + fadeIn(animationSpec = tween(300)),
-                    exit = shrinkVertically(shrinkTowards = Alignment.Top, animationSpec = spring()) + fadeOut(animationSpec = tween(200))
+                    enter = expandVertically(expandFrom = Alignment.Top, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeIn(animationSpec = tween(200)),
+                    exit = shrinkVertically(shrinkTowards = Alignment.Top, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeOut(animationSpec = tween(150))
                 ) {
                     Column(
+                        // Tetap pakai spacedBy 8.dp biar jarak konsisten sama baris atasnya
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Spacer(modifier = Modifier.height(0.dp)) // Penyeimbang jarak
+                        Spacer(modifier = Modifier.height(0.dp)) // Penyeimbang jarak teratas
                         
-                        // Baris 3 (Expanded)
+                        // Baris 3: Fingerprint & SELinux
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             DeviceInfoGridItem(
                                 modifier = Modifier.weight(1f),
-                                title = stringResource(R.string.android_version), 
-                                value = Build.VERSION.RELEASE
-                            )
-                            DeviceInfoGridItem(
-                                modifier = Modifier.weight(1f),
-                                title = "API Level", 
-                                value = Build.VERSION.SDK_INT.toString()
-                            )
-                        }
-
-                        // Baris 4 (Expanded)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            DeviceInfoGridItem(
-                                modifier = Modifier.weight(1f),
-                                title = stringResource(R.string.kernel_version), 
-                                value = kernelVer
+                                title = stringResource(R.string.fingerprint), 
+                                value = Build.FINGERPRINT
                             )
                             DeviceInfoGridItem(
                                 modifier = Modifier.weight(1f),
                                 title = stringResource(R.string.selinux_status), 
                                 value = selinux
+                            )
+                        }
+
+                        // Baris 4: Instruction Sets & Android Version
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            DeviceInfoGridItem(
+                                modifier = Modifier.weight(1f),
+                                title = stringResource(R.string.instruction_sets), 
+                                value = Build.SUPPORTED_ABIS.joinToString(", ")
+                            )
+                            DeviceInfoGridItem(
+                                modifier = Modifier.weight(1f),
+                                title = stringResource(R.string.android_version), 
+                                value = "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})"
                             )
                         }
                     }
@@ -566,17 +571,17 @@ fun DeviceInfoCard() {
     }
 }
 
-// Komponen baru pengganti DeviceInfoRow
 @Composable
 fun DeviceInfoGridItem(modifier: Modifier = Modifier, title: String, value: String) {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
-        modifier = modifier.fillMaxWidth(), // Agar item memenuhi space weight
-        color = colorScheme.surfaceVariant.copy(alpha = 0.5f), // Warna background card kecil (transparan dikit)
-        shape = RoundedCornerShape(16.dp) // Radius card kecil
+        // fillMaxHeight biar tingginya selalu sama dalam satu Row kalau ada teks yang lebih panjang
+        modifier = modifier.fillMaxWidth().fillMaxHeight(), 
+        color = colorScheme.surfaceVariant.copy(alpha = 0.5f), 
+        shape = RoundedCornerShape(16.dp) 
     ) {
         Column(
-            modifier = Modifier.padding(12.dp), // Padding dalam card kecil
+            modifier = Modifier.padding(12.dp), 
             verticalArrangement = Arrangement.Center
         ) {
             Text(
@@ -599,7 +604,6 @@ fun DeviceInfoGridItem(modifier: Modifier = Modifier, title: String, value: Stri
     }
 }
 
-
 @Composable
 fun LinkCard(icon: ImageVector, titleRes: Int, descRes: Int, onClick: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
@@ -616,7 +620,7 @@ fun LinkCard(icon: ImageVector, titleRes: Int, descRes: Int, onClick: () -> Unit
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 18.dp), // Padding disesuaikan biar proporsional
+                .padding(horizontal = 16.dp, vertical = 18.dp), // Padding disesuaikan biar proporsional
             verticalAlignment = Alignment.CenterVertically // Bikin icon dan teks sejajar di tengah
         ) {
             // 1. Icon Sebelah Kiri
