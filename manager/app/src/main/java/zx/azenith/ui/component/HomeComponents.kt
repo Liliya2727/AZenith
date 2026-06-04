@@ -301,12 +301,22 @@ fun InfoTile(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     
-    // Warna untuk background luar card (mengikuti gambar yang gelap/surface)
+    // Warna luar card tetap statis (tidak berubah)
     val cardBgColor = colorScheme.surfaceColorAtElevation(1.dp)
     
-    // Warna untuk Box Icon gede di atas
-    val iconBoxBgColor = if (highlight) colorScheme.primaryContainer else colorScheme.surfaceVariant
-    val iconColor = if (highlight) colorScheme.onPrimaryContainer else colorScheme.onSurfaceVariant
+    // Animasi transisi warna untuk Box Icon saat state highlight berubah
+    val iconBoxBgColor by animateColorAsState(
+        targetValue = if (highlight) colorScheme.primaryContainer else colorScheme.surfaceVariant,
+        animationSpec = tween(400), // Durasi transisi warna 400ms biar smooth
+        label = "iconBoxBgColorAnim"
+    )
+    
+    // Animasi transisi warna untuk Icon
+    val iconColor by animateColorAsState(
+        targetValue = if (highlight) colorScheme.onPrimaryContainer else colorScheme.onSurfaceVariant,
+        animationSpec = tween(400),
+        label = "iconColorAnim"
+    )
 
     Surface(
         modifier = modifier
@@ -317,25 +327,26 @@ fun InfoTile(
         shape = RoundedCornerShape(26.dp)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp) // Padding dalam card keseluruhan
+            modifier = Modifier.padding(12.dp) 
         ) {
             // 1. Box Icon (Top Section)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1.4f) // Bikin proporsinya jadi persegi panjang (landscape)
-                    .clip(RoundedCornerShape(18.dp)) // Sudut inner box sedikit lebih kecil dari outer card
+                    .aspectRatio(1.4f) 
+                    .clip(RoundedCornerShape(18.dp)) 
+                    // Gunakan warna yang sudah di-animate di sini
                     .background(iconBoxBgColor),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon, 
                     contentDescription = null, 
+                    // Gunakan warna icon yang sudah di-animate
                     tint = iconColor,
-                    modifier = Modifier.size(36.dp) // Ukuran icon lebih besar biar seimbang
+                    modifier = Modifier.size(36.dp) 
                 )
 
-                // Kalau ada arrow, taruh di pojok kanan atas box icon-nya
                 if (showArrow) {
                     Icon(
                         imageVector = Icons.Rounded.ChevronRight, 
@@ -355,7 +366,6 @@ fun InfoTile(
             Column(
                 modifier = Modifier.padding(horizontal = 4.dp)
             ) {
-                // Judul (Label) -> Bold
                 Text(
                     text = label, 
                     style = MaterialTheme.typography.titleMedium,
@@ -367,30 +377,35 @@ fun InfoTile(
                 
                 Spacer(modifier = Modifier.height(4.dp))
                 
-                // Deskripsi (Value) -> Dimmed & Smaller
                 AnimatedContent(
                     targetState = value,
                     transitionSpec = {
-                        fadeIn(animationSpec = tween(200)) togetherWith fadeOut(animationSpec = tween(200))
+                        // Kombinasi fade in + sedikit scale up untuk masuk
+                        // dan fade out + sedikit scale down untuk keluar (bikin efek "luntur/ngeblur")
+                        (fadeIn(animationSpec = tween(300, delayMillis = 100)) +
+                         scaleIn(initialScale = 0.95f, animationSpec = tween(300, delayMillis = 100)))
+                            .togetherWith(
+                                fadeOut(animationSpec = tween(200)) +
+                                scaleOut(targetScale = 1.05f, animationSpec = tween(200))
+                            )
                     },
                     label = "ValueTextAnimation"
                 ) { targetValue ->
                     Text(
                         text = targetValue, 
                         style = MaterialTheme.typography.bodyMedium, 
-                        color = colorScheme.onSurfaceVariant, // Bikin teksnya agak redup
+                        color = colorScheme.onSurfaceVariant, 
                         maxLines = 2, 
                         overflow = TextOverflow.Ellipsis,
                         lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified
                     )
                 }
+
             }
             Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }
-
-
 
 @Composable
 fun DeviceInfoCard() {
@@ -412,66 +427,234 @@ fun DeviceInfoCard() {
         }
     }
 
+    // Animasi putaran (rotate) untuk ikon arrow
+    val rotationAngle by animateFloatAsState(
+        targetValue = if (isExpanded) 180f else 0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "expandArrowRotation"
+    )
+
     Surface(
-        shape = RoundedCornerShape(26.dp), color = colorScheme.surfaceColorAtElevation(1.dp),
+        shape = RoundedCornerShape(26.dp), 
+        color = colorScheme.surfaceColorAtElevation(1.dp),
         onClick = { isExpanded = !isExpanded }
     ) {
         Column(
-            modifier = Modifier.padding(vertical = 16.dp)
+            modifier = Modifier
+                .padding(vertical = 16.dp)
                 .animateContentSize(animationSpec = spring(Spring.DampingRatioLowBouncy, Spring.StiffnessLow))
         ) {
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Header Info Card
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp), 
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 SmallLeadingIcon(Icons.Outlined.Info)
                 Spacer(Modifier.width(12.dp))
-                Text(stringResource(R.string.device_info), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Icon(if (isExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, null)
+                Text(
+                    text = stringResource(R.string.device_info), 
+                    modifier = Modifier.weight(1f), 
+                    style = MaterialTheme.typography.titleMedium, 
+                    fontWeight = FontWeight.SemiBold
+                )
+                // Icon Arrow dengan Modifier.graphicsLayer untuk rotasi
+                Icon(
+                    imageVector = Icons.Rounded.ExpandMore, 
+                    contentDescription = null,
+                    modifier = Modifier.androidx.compose.ui.graphics.graphicsLayer {
+                        rotationZ = rotationAngle
+                    }
+                )
             }
 
-            DeviceInfoRow(stringResource(R.string.kernel_version), kernelVer)
-            
-            DeviceInfoRow(stringResource(R.string.device_name), realDeviceName)
-            
-            DeviceInfoRow("Chipset", chipsetName)
-            DeviceInfoRow(stringResource(R.string.azenith_version), appVer)
+            Spacer(Modifier.height(12.dp))
 
-            if (isExpanded) {
-                DeviceInfoRow(stringResource(R.string.fingerprint), Build.FINGERPRINT)
-                DeviceInfoRow(stringResource(R.string.selinux_status), selinux)
-                DeviceInfoRow(stringResource(R.string.instruction_sets), Build.SUPPORTED_ABIS.joinToString(", "))
-                DeviceInfoRow(stringResource(R.string.android_version), "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
+            // Grid Container (Menggunakan Column yang berisi Row)
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp) // Jarak vertikal antar baris
+            ) {
+                // Baris 1 (Selalu terlihat)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp) // Jarak horizontal antar item
+                ) {
+                    DeviceInfoGridItem(
+                        modifier = Modifier.weight(1f),
+                        title = "Manufacturer", 
+                        value = Build.MANUFACTURER.uppercase()
+                    )
+                    DeviceInfoGridItem(
+                        modifier = Modifier.weight(1f),
+                        title = "Model", 
+                        value = Build.MODEL
+                    )
+                }
+
+                // Baris 2 (Selalu terlihat)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    DeviceInfoGridItem(
+                        modifier = Modifier.weight(1f),
+                        title = "Chipset", 
+                        value = chipsetName
+                    )
+                    DeviceInfoGridItem(
+                        modifier = Modifier.weight(1f),
+                        title = "Device", 
+                        value = realDeviceName
+                    )
+                }
+
+                // Animasi buka/tutup sisa info
+                AnimatedVisibility(
+                    visible = isExpanded,
+                    enter = expandVertically(expandFrom = Alignment.Top, animationSpec = spring()) + fadeIn(animationSpec = tween(300)),
+                    exit = shrinkVertically(shrinkTowards = Alignment.Top, animationSpec = spring()) + fadeOut(animationSpec = tween(200))
+                ) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Spacer(modifier = Modifier.height(0.dp)) // Penyeimbang jarak
+                        
+                        // Baris 3 (Expanded)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            DeviceInfoGridItem(
+                                modifier = Modifier.weight(1f),
+                                title = stringResource(R.string.android_version), 
+                                value = Build.VERSION.RELEASE
+                            )
+                            DeviceInfoGridItem(
+                                modifier = Modifier.weight(1f),
+                                title = "API Level", 
+                                value = Build.VERSION.SDK_INT.toString()
+                            )
+                        }
+
+                        // Baris 4 (Expanded)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            DeviceInfoGridItem(
+                                modifier = Modifier.weight(1f),
+                                title = stringResource(R.string.kernel_version), 
+                                value = kernelVer
+                            )
+                            DeviceInfoGridItem(
+                                modifier = Modifier.weight(1f),
+                                title = stringResource(R.string.selinux_status), 
+                                value = selinux
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-
+// Komponen baru pengganti DeviceInfoRow
 @Composable
-fun DeviceInfoRow(title: String, value: String) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
-        Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
-        Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+fun DeviceInfoGridItem(modifier: Modifier = Modifier, title: String, value: String) {
+    val colorScheme = MaterialTheme.colorScheme
+    Surface(
+        modifier = modifier.fillMaxWidth(), // Agar item memenuhi space weight
+        color = colorScheme.surfaceVariant.copy(alpha = 0.5f), // Warna background card kecil (transparan dikit)
+        shape = RoundedCornerShape(16.dp) // Radius card kecil
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp), // Padding dalam card kecil
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = title, 
+                style = MaterialTheme.typography.labelMedium, 
+                color = colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = value, 
+                style = MaterialTheme.typography.titleSmall, 
+                fontWeight = FontWeight.Bold, 
+                color = colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
+
 
 @Composable
 fun LinkCard(icon: ImageVector, titleRes: Int, descRes: Int, onClick: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(26.dp)
+    
     Surface(
-        shape = shape, color = colorScheme.surfaceColorAtElevation(1.dp),
-        modifier = Modifier.fillMaxWidth().clip(shape).clickable { onClick() }
+        shape = shape, 
+        color = colorScheme.surfaceColorAtElevation(1.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .clickable { onClick() }
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                SmallLeadingIcon(icon)
-                Spacer(Modifier.width(12.dp))
-                Text(stringResource(titleRes), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = colorScheme.onSurface)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 18.dp), // Padding disesuaikan biar proporsional
+            verticalAlignment = Alignment.CenterVertically // Bikin icon dan teks sejajar di tengah
+        ) {
+            // 1. Icon Sebelah Kiri
+            SmallLeadingIcon(icon)
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            // 2. Teks Judul & Deskripsi di Tengah (weight = 1f biar dorong icon kanan ke ujung)
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = stringResource(titleRes), 
+                    style = MaterialTheme.typography.titleMedium, 
+                    fontWeight = FontWeight.SemiBold, 
+                    color = colorScheme.onSurface
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                Text(
+                    text = stringResource(descRes), 
+                    style = MaterialTheme.typography.bodyMedium, 
+                    color = colorScheme.onSurfaceVariant
+                )
             }
-            Spacer(Modifier.height(14.dp))
-            Text(stringResource(descRes), style = MaterialTheme.typography.bodyMedium, color = colorScheme.onSurfaceVariant)
+            
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            // 3. Icon panah/open link kecil di Kanan
+            Icon(
+                imageVector = Icons.Rounded.OpenInNew, // Bisa diganti Icons.Rounded.ChevronRight kalau lebih suka panah
+                contentDescription = "Open Link",
+                modifier = Modifier.size(22.dp),
+                tint = colorScheme.onSurfaceVariant
+            )
         }
     }
 }
+
 
 @Composable
 fun RebootBottomSheet(
