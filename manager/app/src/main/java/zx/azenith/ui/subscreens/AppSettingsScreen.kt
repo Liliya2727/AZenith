@@ -66,7 +66,6 @@ import android.widget.Toast
 import androidx.lifecycle.viewmodel.compose.viewModel
 import zx.azenith.R
 import zx.azenith.ui.component.*
-import zx.azenith.ui.util.*
 import zx.azenith.ui.viewmodel.ApplistViewmodel
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalFocusManager
@@ -80,12 +79,10 @@ import zx.azenith.ui.component.ExpressiveDropdownItem
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.animation.core.tween
-import zx.azenith.ui.util.getSupportedRefreshRatesPicker
+import zx.azenith.ui.util.getSupportedRefreshRates
 import java.io.File
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.ui.platform.LocalDensity
-
-data class RefreshRateOption(val label: String, val modeValue: String)
 
 @Composable
 fun AppSettingsScreen(
@@ -119,30 +116,7 @@ fun AppSettingsScreen(
         stringResource(R.string.Renderer_Vulkan),
         stringResource(R.string.Renderer_SkiaGL)
     )
-    val dynamicRefreshModes = remember { 
-        val options = mutableListOf(
-            RefreshRateOption(context.getString(R.string.default_label), "default")
-        )
-        
-        val display = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            context.display
-        } else {
-            @Suppress("DEPRECATION")
-            (context.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager).defaultDisplay
-        }
-    
-        // Ambil Mode ID asli seperti yang kita lakukan sebelumnya
-        val supportedModes = display?.supportedModes ?: emptyArray()
-        val standardModes = listOf(144, 120, 90, 60)
-        
-        standardModes.forEach { targetRate ->
-            val mode = supportedModes.firstOrNull { it.refreshRate.toInt() in (targetRate - 1)..(targetRate + 1) }
-            if (mode != null) {
-                options.add(RefreshRateOption("${targetRate}Hz", mode.modeId.toString()))
-            }
-        }
-        options
-    }
+    val dynamicRefreshModes = remember { getSupportedRefreshRates(context) }
 
     fun getBoolIndex(v: String?): Int = when(v) {
         "true" -> 1
@@ -315,17 +289,10 @@ fun AppSettingsScreen(
                                         icon = Icons.Rounded.WebStories,
                                         title = stringResource(R.string.refreshrates),
                                         summary = stringResource(R.string.refreshrates_desc),
-                                        // Ambil labelnya aja buat ditampilin di UI ("Default", "120Hz", "90Hz")
-                                        items = dynamicRefreshModes.map { it.label },
-                                        
-                                        // Cari index berdasarkan modeValue yang tersimpan di JSON
-                                        selectedIndex = dynamicRefreshModes.indexOfFirst { 
-                                            it.modeValue == (displayConfig.refresh_rate ?: "default") 
-                                        }.coerceAtLeast(0),
-                                        
+                                        items = dynamicRefreshModes,
+                                        selectedIndex = dynamicRefreshModes.indexOf(displayConfig.refresh_rate).coerceAtLeast(0),
                                         onItemSelected = { index ->
-                                            // Simpan modeValue (Mode ID) ke JSON, BUKAN labelnya!
-                                            val value = dynamicRefreshModes[index].modeValue
+                                            val value = dynamicRefreshModes[index]
                                             packageName?.let { viewModel.updateSetting(it, "refresh_rate", value) }
                                         }
                                     )

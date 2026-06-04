@@ -462,24 +462,15 @@ int main_daemon(void) {
             }
                             
             if (!IS_DEFAULT(opts.refresh_rate)) {
-                int target_mode_id = atoi(opts.refresh_rate);
-                
-                // Mode ID dari SurfaceFlinger biasanya angka kecil (0, 1, 2, dst). 
-                // Kita batasi sampai 30 untuk mencegah input ngaco.
-                if (target_mode_id >= 0 && target_mode_id <= 30) {
+                int rr = atoi(opts.refresh_rate);
+                if (rr >= 60 && rr <= 144) {
                     if (saved_refresh_rate < 0) {
-                        // Simpan nilai layar saat ini (dalam Hz) sebelum game dibuka
                         saved_refresh_rate = get_current_refresh_rate();
+                        
                     }
-                    
-                    log_zenith(LOG_INFO, "Applying Game Refresh Rate Mode ID: %d", target_mode_id);
-                    
-                    // Langsung eksekusi Mode ID ke backend Rust
-                    systemv("sys.azenith-utilityconf setrefreshrates %d", target_mode_id);
+                    apply_dynamic_refresh_rate(rr);
                 }
             }
-
-
                   
             if (IS_TRUE(opts.game_preload)) {
                 notify("AZenith Preload", "Preloading Complete at : %s", true, 10000, gamestart);
