@@ -59,7 +59,7 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
         Box(
             modifier = Modifier
                 // 👇 HAPUS weight() dan ganti pakai heightIn untuk membatasi ukuran maksimal
-                .heightIn(max = 220.dp) 
+                .heightIn(max = 340.dp) 
                 .aspectRatio(0.48f) 
                 .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(18.dp)) 
                 .padding(2.dp) 
@@ -86,15 +86,15 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
                     text = hourFormat.format(time.time),
                     color = MaterialTheme.colorScheme.primary,
                     fontSize = 38.sp, 
-                    fontWeight = FontWeight.Light,
-                    style = MaterialTheme.typography.displayMedium
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.displayLarge
                 )
                 Text(
                     text = minuteFormat.format(time.time),
                     color = MaterialTheme.colorScheme.primary,
                     fontSize = 38.sp,
-                    fontWeight = FontWeight.Light,
-                    style = MaterialTheme.typography.displayMedium,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.displayLarge,
                     modifier = Modifier.offset(y = (-12).dp)
                 )
             }
