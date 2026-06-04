@@ -1,5 +1,6 @@
 package zx.azenith.ui.component
 
+import android.os.SystemClock // 👇 Tambahkan import ini
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -45,8 +46,20 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
         formatter.format(Date(BuildConfig.BUILD_TIME))
     }
 
-    // 👇 CUKUP BACA DARI CACHE GLOBAL, NGGAK PERLU LOAD LAGI!
     val wallpaperBitmap by WallpaperCache.bitmapState
+    
+    // 👇 PERHITUNGAN UPTIME (Otomatis ter-update tiap detik karena state `time`)
+    val uptimeMillis = SystemClock.elapsedRealtime()
+    val uptimeSeconds = uptimeMillis / 1000
+    val days = uptimeSeconds / (24 * 3600)
+    val hours = (uptimeSeconds % (24 * 3600)) / 3600
+    val minutes = (uptimeSeconds % 3600) / 60
+    
+    val uptimeString = if (days > 0) {
+        "${days}d ${hours}h ${minutes}m"
+    } else {
+        "${hours}h ${minutes}m"
+    }
     
     Row(
         modifier = modifier
@@ -58,8 +71,7 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
         // --- BAGIAN KIRI: Wallpaper & Jam ---
         Box(
             modifier = Modifier
-                // 👇 HAPUS weight() dan ganti pakai heightIn untuk membatasi ukuran maksimal
-                .heightIn(max = 340.dp) 
+                .heightIn(max = 260.dp) 
                 .aspectRatio(0.48f) 
                 .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(18.dp)) 
                 .padding(2.dp) 
@@ -71,7 +83,7 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
                 Image(
                     bitmap = wallpaperBitmap!!, 
                     contentDescription = "Device Wallpaper",
-                    contentScale = ContentScale.Crop, // Sekarang nggak gepeng karena bitmap-nya udah proporsional
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -85,16 +97,16 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
                 Text(
                     text = hourFormat.format(time.time),
                     color = MaterialTheme.colorScheme.primary,
-                    fontSize = 38.sp, 
+                    fontSize = 44.sp, 
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.displayLarge
+                    style = MaterialTheme.typography.displayMedium
                 )
                 Text(
                     text = minuteFormat.format(time.time),
                     color = MaterialTheme.colorScheme.primary,
-                    fontSize = 38.sp,
+                    fontSize = 44.sp,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.displayLarge,
+                    style = MaterialTheme.typography.displayMedium, // 👈 Fix koma yang kurang di sini
                     modifier = Modifier.offset(y = (-12).dp)
                 )
             }
@@ -103,7 +115,6 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
         // --- BAGIAN KANAN: Detail Informasi ---
         Column(
             modifier = Modifier
-                // 👇 UBAH INI JADI weight(1f) agar teks mengambil SEMUA sisa layar di sebelah kanan
                 .weight(1f)
                 .padding(vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -113,10 +124,11 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
             AppInfoTextItem(title = "Build Date", value = buildDateString)
             AppInfoTextItem(title = "Version Code", value = BuildConfig.VERSION_CODE.toString())
             AppInfoTextItem(title = "Package Name", value = context.packageName)
+            // 👇 MASUKKAN INFO UPTIME DI SINI
+            AppInfoTextItem(title = "Device Uptime", value = uptimeString)
         }
     }
 }
-
 
 @Composable
 private fun AppInfoTextItem(title: String, value: String) {
