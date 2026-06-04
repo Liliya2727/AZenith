@@ -568,11 +568,11 @@ fun DeviceInfoGridItem(modifier: Modifier = Modifier, title: String, value: Stri
     ) {
         Column(
             modifier = Modifier.padding(12.dp), 
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Top
         ) {
             Text(
                 text = title, 
-                style = MaterialTheme.typography.labelMedium, 
+                style = MaterialTheme.typography.labelLarge, 
                 color = colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -583,7 +583,7 @@ fun DeviceInfoGridItem(modifier: Modifier = Modifier, title: String, value: Stri
                 style = MaterialTheme.typography.titleSmall, 
                 fontWeight = FontWeight.Bold, 
                 color = colorScheme.onSurface,
-                maxLines = 2, // Kunci teks value maksimal 2 baris
+                maxLines = 3, // Kunci teks value maksimal 2 baris
                 overflow = TextOverflow.Ellipsis
             )
         }
