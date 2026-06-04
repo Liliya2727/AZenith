@@ -86,11 +86,14 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                     val bannerStatus = if (!uiState.moduleInstalled) stringResource(R.string.module_not_installed) else stringResource(uiState.serviceStatusRes)
                     
                     if (isLandscape) {
+                        // MODE LANDSCAPE
                         Row(
-                            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(IntrinsicSize.Max), // Patokan tinggi maksimal
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
+                            // Sisi Kiri: Banner
                             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                                 BannerCard(
                                     status = bannerStatus, pid = uiState.servicePid,
@@ -99,12 +102,34 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                     modifier = Modifier.fillMaxSize()
                                 ) { }
                             }
-                            Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                InfoTile(modifier = Modifier.fillMaxWidth().weight(1f), icon = Icons.Rounded.Token, label = stringResource(R.string.current_profile), value = stringResource(uiState.currentProfileRes), highlight = (uiState.currentProfileRes != R.string.status_initializing), showArrow = uiState.autoMode == "0") { if (uiState.autoMode == "0") showProfileDialog = true }
-                                InfoTile(modifier = Modifier.fillMaxWidth().weight(1f), icon = Icons.Rounded.Security, label = stringResource(R.string.root_access), value = if (uiState.rootStatus) stringResource(R.string.root_granted) else stringResource(R.string.root_not_granted), highlight = false) {}
+                            
+                            // Sisi Kanan: Dua InfoTile sejajar ke samping (Row)
+                            Row(
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                InfoTile(
+                                    modifier = Modifier.weight(1f).fillMaxHeight(), // Tarik tinggi mentok
+                                    icon = Icons.Rounded.Token, 
+                                    label = stringResource(R.string.current_profile), 
+                                    value = stringResource(uiState.currentProfileRes), 
+                                    highlight = (uiState.currentProfileRes != R.string.status_initializing), 
+                                    showArrow = uiState.autoMode == "0"
+                                ) { 
+                                    if (uiState.autoMode == "0") showProfileDialog = true 
+                                }
+                                
+                                InfoTile(
+                                    modifier = Modifier.weight(1f).fillMaxHeight(), // Tarik tinggi mentok
+                                    icon = Icons.Rounded.Security, 
+                                    label = stringResource(R.string.root_access), 
+                                    value = if (uiState.rootStatus) stringResource(R.string.root_granted) else stringResource(R.string.root_not_granted), 
+                                    highlight = false
+                                ) {}
                             }
                         }
                     } else {
+                        // MODE PORTRAIT
                         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                             BannerCard(
                                 status = bannerStatus, pid = uiState.servicePid,
@@ -113,9 +138,30 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 modifier = if (uiState.isBannerEnabled) Modifier.fillMaxWidth().aspectRatio(20 / 9f) else Modifier.fillMaxWidth().height(100.dp)
                             ) { }
 
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                InfoTile(modifier = Modifier.weight(1f), icon = Icons.Rounded.Token, label = stringResource(R.string.current_profile), value = stringResource(uiState.currentProfileRes), highlight = (uiState.currentProfileRes != R.string.status_initializing), showArrow = uiState.autoMode == "0") { if (uiState.autoMode == "0") showProfileDialog = true }
-                                InfoTile(modifier = Modifier.weight(1f), icon = Icons.Rounded.Security, label = stringResource(R.string.root_access), value = if (uiState.rootStatus) stringResource(R.string.root_granted) else stringResource(R.string.root_not_granted), highlight = false) {}
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(IntrinsicSize.Max), // Patokan tinggi maksimal
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                InfoTile(
+                                    modifier = Modifier.weight(1f).fillMaxHeight(), // Tarik tinggi mentok
+                                    icon = Icons.Rounded.Token, 
+                                    label = stringResource(R.string.current_profile), 
+                                    value = stringResource(uiState.currentProfileRes), 
+                                    highlight = (uiState.currentProfileRes != R.string.status_initializing), 
+                                    showArrow = uiState.autoMode == "0"
+                                ) { 
+                                    if (uiState.autoMode == "0") showProfileDialog = true 
+                                }
+                                
+                                InfoTile(
+                                    modifier = Modifier.weight(1f).fillMaxHeight(), // Tarik tinggi mentok
+                                    icon = Icons.Rounded.Security, 
+                                    label = stringResource(R.string.root_access), 
+                                    value = if (uiState.rootStatus) stringResource(R.string.root_granted) else stringResource(R.string.root_not_granted), 
+                                    highlight = false
+                                ) {}
                             }
                         }
                     }
@@ -132,20 +178,18 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
             onReboot = { reason -> viewModel.rebootDevice(reason) }
         )
 
-        
-            RootAppDialog {
-                ProfileDialog(
-                    show = showProfileDialog,
-                    onDismiss = { showProfileDialog = false },
-                    onProfile = { profileReason ->
-                        viewModel.applyProfile(profileReason) {
-                            coroutineScope.launch {
-                                snackbarHostState.showSnackbar(context.getString(R.string.toast_applying_profile))
-                            }
+        RootAppDialog {
+            ProfileDialog(
+                show = showProfileDialog,
+                onDismiss = { showProfileDialog = false },
+                onProfile = { profileReason ->
+                    viewModel.applyProfile(profileReason) {
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(context.getString(R.string.toast_applying_profile))
                         }
                     }
-                )
-            }
-        
+                }
+            )
+        }
     }
 }

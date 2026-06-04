@@ -123,22 +123,13 @@ fun BannerCard(
     
     val bannerHazeState = remember { HazeState() }
 
-    // Animasi warna untuk badge status
-    val statusBgColor by animateColorAsState(
-        targetValue = if (isAlive) {
-            if (isBlurEnabled) colorScheme.secondaryContainer.copy(alpha = 0.45f) else colorScheme.secondaryContainer
-        } else {
-            if (isBlurEnabled) colorScheme.errorContainer.copy(alpha = 0.45f) else colorScheme.errorContainer
-        },
-        animationSpec = tween(400),
-        label = "StatusBgAnim"
-    )
+    val statusBgColor = if (isAlive) {
+        if (isBlurEnabled) colorScheme.secondaryContainer.copy(alpha = 0.45f) else colorScheme.secondaryContainer
+    } else {
+        if (isBlurEnabled) colorScheme.errorContainer.copy(alpha = 0.45f) else colorScheme.errorContainer
+    }
 
-    val statusTextColor by animateColorAsState(
-        targetValue = if (isAlive) colorScheme.onSecondaryContainer else colorScheme.onErrorContainer,
-        animationSpec = tween(400),
-        label = "StatusTextAnim"
-    )
+    val statusTextColor = if (isAlive) colorScheme.onSecondaryContainer else colorScheme.onErrorContainer
 
     if (isBannerEnabled) {
         Card(
@@ -149,7 +140,6 @@ fun BannerCard(
             Box(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Background & Blur... (Kode asli kamu tidak berubah)
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -178,12 +168,11 @@ fun BannerCard(
                     )
                 }
 
-                // Bagian Teks & Badge
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .padding(start = 24.dp, bottom = 20.dp)
-                        .animateContentSize(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)), // Animasi ukuran badge
+                        .animateContentSize(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)), 
                     horizontalAlignment = Alignment.Start
                 ) {
                     Surface(
@@ -193,11 +182,10 @@ fun BannerCard(
                             .clip(CircleShape)
                             .then(if (isBlurEnabled) Modifier.hazeEffect(state = bannerHazeState) { blurEffect { blurRadius = 14.dp } } else Modifier)
                     ) {
-                        // Animasi teks status berubah
                         AnimatedContent(
                             targetState = status,
                             transitionSpec = {
-                                fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+                                fadeIn(animationSpec = tween(200)) togetherWith fadeOut(animationSpec = tween(200))
                             },
                             label = "BannerStatusTextAnim"
                         ) { targetStatus ->
@@ -210,36 +198,30 @@ fun BannerCard(
                         }
                     }
 
-                    // Animasi kemunculan PID (Muncul dari atas, menghilang ke atas/fade)
-                    AnimatedVisibility(
-                        visible = isAlive,
-                        enter = expandVertically(expandFrom = Alignment.Top, animationSpec = spring()) + fadeIn(),
-                        exit = shrinkVertically(shrinkTowards = Alignment.Top, animationSpec = spring()) + fadeOut()
-                    ) {
-                        Column {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Surface(
-                                color = if (isBlurEnabled) colorScheme.secondaryContainer.copy(alpha = 0.45f) else colorScheme.secondaryContainer, 
-                                shape = CircleShape,
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .then(if (isBlurEnabled) Modifier.hazeEffect(state = bannerHazeState) { blurEffect { blurRadius = 14.dp } } else Modifier)
-                            ) {
-                                AnimatedContent(
-                                    targetState = pid,
-                                    transitionSpec = {
-                                        fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
-                                    },
-                                    label = "BannerPidAnim"
-                                ) { targetPid ->
-                                    Text(
-                                        text = stringResource(R.string.pid_format, targetPid),
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.Bold, 
-                                        color = colorScheme.onSecondaryContainer
-                                    )
-                                }
+                    // Hilangkan expand/shrink, biarkan Column (pembungkusnya) yang meng-animate content size-nya
+                    if (isAlive) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Surface(
+                            color = if (isBlurEnabled) colorScheme.secondaryContainer.copy(alpha = 0.45f) else colorScheme.secondaryContainer, 
+                            shape = CircleShape,
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .then(if (isBlurEnabled) Modifier.hazeEffect(state = bannerHazeState) { blurEffect { blurRadius = 14.dp } } else Modifier)
+                        ) {
+                            AnimatedContent(
+                                targetState = pid,
+                                transitionSpec = {
+                                    fadeIn(animationSpec = tween(200)) togetherWith fadeOut(animationSpec = tween(200))
+                                },
+                                label = "BannerPidAnim"
+                            ) { targetPid ->
+                                Text(
+                                    text = stringResource(R.string.pid_format, targetPid),
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold, 
+                                    color = colorScheme.onSecondaryContainer
+                                )
                             }
                         }
                     }
@@ -247,12 +229,12 @@ fun BannerCard(
             }
         }
     } else {
-        // Mode Banner Disabled (Animasi juga diaplikasikan)
+        // Mode Banner Disabled
         Surface(
             modifier = modifier
                 .clip(RoundedCornerShape(26.dp))
                 .clickable { onClick() }
-                .animateContentSize(animationSpec = spring()), // Animasi card membesar/mengecil
+                .animateContentSize(animationSpec = spring()), 
             color = colorScheme.secondaryContainer, 
             shape = RoundedCornerShape(26.dp)
         ) {
@@ -261,12 +243,9 @@ fun BannerCard(
                 verticalAlignment = Alignment.CenterVertically, 
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Animasi pergantian Icon
                 AnimatedContent(
                     targetState = isAlive,
-                    transitionSpec = {
-                        scaleIn() togetherWith scaleOut()
-                    },
+                    transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
                     label = "BannerIconAnim"
                 ) { alive ->
                     Icon(
@@ -282,30 +261,24 @@ fun BannerCard(
                 Column(verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.Start) {
                     AnimatedContent(
                         targetState = status,
-                        transitionSpec = { fadeIn() togetherWith fadeOut() },
+                        transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
                         label = "BannerStatusAnimNoImage"
                     ) { targetStatus ->
                         Text(text = targetStatus, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = colorScheme.onSecondaryContainer)
                     }
 
-                    AnimatedVisibility(
-                        visible = isAlive,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut()
-                    ) {
-                        Column {
-                            Spacer(modifier = Modifier.height(2.dp))
-                            AnimatedContent(
-                                targetState = pid,
-                                transitionSpec = { fadeIn() togetherWith fadeOut() },
-                                label = "BannerPidAnimNoImage"
-                            ) { targetPid ->
-                                Text(
-                                    text = stringResource(R.string.pid_format, targetPid),
-                                    style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium,
-                                    color = colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                                )
-                            }
+                    if (isAlive) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        AnimatedContent(
+                            targetState = pid,
+                            transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
+                            label = "BannerPidAnimNoImage"
+                        ) { targetPid ->
+                            Text(
+                                text = stringResource(R.string.pid_format, targetPid),
+                                style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium,
+                                color = colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                            )
                         }
                     }
                 }
@@ -313,6 +286,7 @@ fun BannerCard(
         }
     }
 }
+
 
 @Composable
 fun InfoTile(
@@ -326,76 +300,95 @@ fun InfoTile(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     
-    // Animasi warna background biar smooth pas ganti state highlight
-    val animatedColor by animateColorAsState(
-        targetValue = if (highlight) colorScheme.secondaryContainer else colorScheme.surfaceColorAtElevation(1.dp),
-        animationSpec = tween(500),
-        label = "InfoTileColorAnimation"
-    )
+    // Warna untuk background luar card (mengikuti gambar yang gelap/surface)
+    val cardBgColor = colorScheme.surfaceColorAtElevation(1.dp)
+    
+    // Warna untuk Box Icon gede di atas
+    val iconBoxBgColor = if (highlight) colorScheme.primaryContainer else colorScheme.surfaceVariant
+    val iconColor = if (highlight) colorScheme.onPrimaryContainer else colorScheme.onSurfaceVariant
 
     Surface(
         modifier = modifier
             .clip(RoundedCornerShape(26.dp))
             .clickable { onClick() }
-            .animateContentSize(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)), // Animasi ukuran
-        color = animatedColor,
+            .animateContentSize(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)),
+        color = cardBgColor,
         shape = RoundedCornerShape(26.dp)
     ) {
-        Box(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
-            contentAlignment = Alignment.CenterStart
+        Column(
+            modifier = Modifier.padding(12.dp) // Padding dalam card keseluruhan
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+            // 1. Box Icon (Top Section)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1.4f) // Bikin proporsinya jadi persegi panjang (landscape)
+                    .clip(RoundedCornerShape(18.dp)) // Sudut inner box sedikit lebih kecil dari outer card
+                    .background(iconBoxBgColor),
+                contentAlignment = Alignment.Center
             ) {
-                SmallLeadingIcon(icon)
-                
-                Spacer(modifier = Modifier.width(16.dp))
-                
-                Column(
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = label, 
-                        style = MaterialTheme.typography.labelMedium, 
-                        color = colorScheme.onSurfaceVariant
+                Icon(
+                    imageVector = icon, 
+                    contentDescription = null, 
+                    tint = iconColor,
+                    modifier = Modifier.size(36.dp) // Ukuran icon lebih besar biar seimbang
+                )
+
+                // Kalau ada arrow, taruh di pojok kanan atas box icon-nya
+                if (showArrow) {
+                    Icon(
+                        imageVector = Icons.Rounded.ChevronRight, 
+                        contentDescription = null,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .size(20.dp), 
+                        tint = iconColor.copy(alpha = 0.6f)
                     )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    
-                    // Animasi blur transisi teks
-                    AnimatedContent(
-                        targetState = value,
-                        transitionSpec = {
-                            (fadeIn(animationSpec = tween(300, delayMillis = 90)) + 
-                             scaleIn(initialScale = 0.92f, animationSpec = tween(300, delayMillis = 90)))
-                                .togetherWith(fadeOut(animationSpec = tween(150)))
-                        },
-                        label = "ValueTextAnimation"
-                    ) { targetValue ->
-                        Text(
-                            text = targetValue, 
-                            style = MaterialTheme.typography.titleMedium, 
-                            fontWeight = FontWeight.Bold, 
-                            color = colorScheme.onSurface
-                        )
-                    }
                 }
             }
 
-            if (showArrow) {
-                Icon(
-                    imageVector = Icons.Rounded.ChevronRight, 
-                    contentDescription = null,
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .size(24.dp), 
-                    tint = colorScheme.onSurfaceVariant
+            Spacer(modifier = Modifier.height(14.dp))
+            
+            // 2. Teks Area (Bottom Section)
+            Column(
+                modifier = Modifier.padding(horizontal = 4.dp)
+            ) {
+                // Judul (Label) -> Bold
+                Text(
+                    text = label, 
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                // Deskripsi (Value) -> Dimmed & Smaller
+                AnimatedContent(
+                    targetState = value,
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(200)) togetherWith fadeOut(animationSpec = tween(200))
+                    },
+                    label = "ValueTextAnimation"
+                ) { targetValue ->
+                    Text(
+                        text = targetValue, 
+                        style = MaterialTheme.typography.bodyMedium, 
+                        color = colorScheme.onSurfaceVariant, // Bikin teksnya agak redup
+                        maxLines = 2, 
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified
+                    )
+                }
             }
+            Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }
+
 
 
 @Composable
@@ -433,7 +426,6 @@ fun DeviceInfoCard() {
                 Icon(if (isExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, null)
             }
 
-            Spacer(Modifier.height(8.dp))
             DeviceInfoRow(stringResource(R.string.kernel_version), kernelVer)
             
             DeviceInfoRow(stringResource(R.string.device_name), realDeviceName)
@@ -468,7 +460,7 @@ fun LinkCard(icon: ImageVector, titleRes: Int, descRes: Int, onClick: () -> Unit
         shape = shape, color = colorScheme.surfaceColorAtElevation(1.dp),
         modifier = Modifier.fillMaxWidth().clip(shape).clickable { onClick() }
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SmallLeadingIcon(icon)
                 Spacer(Modifier.width(12.dp))
