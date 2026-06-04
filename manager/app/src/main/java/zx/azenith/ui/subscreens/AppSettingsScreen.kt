@@ -84,6 +84,35 @@ import java.io.File
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.ui.platform.LocalDensity
 
+// Bikin struktur data kecil untuk nampung Label (Hz) dan Value (Mode ID)
+data class RefreshRateOption(val label: String, val modeValue: String)
+
+// Ubah deklarasi dynamicRefreshModes kamu menjadi seperti ini:
+val dynamicRefreshModes = remember { 
+    val options = mutableListOf(
+        RefreshRateOption(context.getString(R.string.default_label), "default")
+    )
+    
+    val display = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+        context.display
+    } else {
+        @Suppress("DEPRECATION")
+        (context.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager).defaultDisplay
+    }
+
+    // Ambil Mode ID asli seperti yang kita lakukan sebelumnya
+    val supportedModes = display?.supportedModes ?: emptyArray()
+    val standardModes = listOf(144, 120, 90, 60)
+    
+    standardModes.forEach { targetRate ->
+        val mode = supportedModes.firstOrNull { it.refreshRate.toInt() in (targetRate - 1)..(targetRate + 1) }
+        if (mode != null) {
+            options.add(RefreshRateOption("${targetRate}Hz", mode.modeId.toString()))
+        }
+    }
+    options
+}
+
 @Composable
 fun AppSettingsScreen(
     navController: NavController, 
@@ -289,10 +318,17 @@ fun AppSettingsScreen(
                                         icon = Icons.Rounded.WebStories,
                                         title = stringResource(R.string.refreshrates),
                                         summary = stringResource(R.string.refreshrates_desc),
-                                        items = dynamicRefreshModes,
-                                        selectedIndex = dynamicRefreshModes.indexOf(displayConfig.refresh_rate).coerceAtLeast(0),
+                                        // Ambil labelnya aja buat ditampilin di UI ("Default", "120Hz", "90Hz")
+                                        items = dynamicRefreshModes.map { it.label },
+                                        
+                                        // Cari index berdasarkan modeValue yang tersimpan di JSON
+                                        selectedIndex = dynamicRefreshModes.indexOfFirst { 
+                                            it.modeValue == (displayConfig.refresh_rate ?: "default") 
+                                        }.coerceAtLeast(0),
+                                        
                                         onItemSelected = { index ->
-                                            val value = dynamicRefreshModes[index]
+                                            // Simpan modeValue (Mode ID) ke JSON, BUKAN labelnya!
+                                            val value = dynamicRefreshModes[index].modeValue
                                             packageName?.let { viewModel.updateSetting(it, "refresh_rate", value) }
                                         }
                                     )
