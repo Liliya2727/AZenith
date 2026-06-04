@@ -7,11 +7,26 @@ import java.io.File
 import java.io.FileOutputStream
 
 fun getRealDeviceName(context: Context): String {
-    val defaultName = "${Build.MANUFACTURER} ${Build.MODEL}"
+    val mfg = Build.MANUFACTURER
+    val model = Build.MODEL
+    val device = Build.DEVICE
+
+    // 1. Perbaiki fallback agar tidak dobel (Misal: "INFINIX Infinix X6739" -> "Infinix X6739")
+    val defaultName = if (model.contains(mfg, ignoreCase = true)) {
+        model
+    } else {
+        "$mfg $model"
+    }
+
+    // 2. Bikin versi "Bersih" dengan menghapus nama pabrikan dan karakter aneh
+    // "Infinix X6739" -> "X6739"
+    // "Infinix-X6739" -> "X6739"
+    val cleanModel = model.replace(mfg, "", ignoreCase = true).trim(' ', '-', '_')
+    val cleanDevice = device.replace(mfg, "", ignoreCase = true).trim(' ', '-', '_')
+
     val dbName = "devices.db"
     val dbFile = context.getDatabasePath(dbName)
 
-    // 1. Ekstrak database dari assets ke internal storage (hanya jika belum ada)
     if (!dbFile.exists()) {
         try {
             dbFile.parentFile?.mkdirs()
@@ -26,22 +41,27 @@ fun getRealDeviceName(context: Context): String {
         }
     }
 
-    // 2. Baca database untuk mencari Marketing Name
     var marketingName = ""
     var db: SQLiteDatabase? = null
     
     try {
         db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
         
-        // Ambil brand dan name, cari berdasarkan model atau device (case-insensitive)
-        val query = "SELECT brand, name FROM devices WHERE model COLLATE NOCASE = ? OR device COLLATE NOCASE = ? LIMIT 1"
+        // 3. Cek kecocokan menggunakan RAW dan CLEAN
+        val query = """
+            SELECT brand, name 
+            FROM devices 
+            WHERE model COLLATE NOCASE IN (?, ?) 
+               OR device COLLATE NOCASE IN (?, ?) 
+            LIMIT 1
+        """.trimIndent()
         
-        db.rawQuery(query, arrayOf(Build.MODEL, Build.DEVICE)).use { cursor ->
+        // Masukkan 4 parameter sesuai jumlah tanda tanya (?)
+        db.rawQuery(query, arrayOf(model, cleanModel, device, cleanDevice)).use { cursor ->
             if (cursor.moveToFirst()) {
                 val brand = cursor.getString(0) ?: ""
                 val name = cursor.getString(1) ?: ""
                 
-                // Mencegah duplikasi brand (misal: "vivo vivo V50")
                 marketingName = if (name.contains(brand, ignoreCase = true)) {
                     name
                 } else {
@@ -55,7 +75,6 @@ fun getRealDeviceName(context: Context): String {
         db?.close()
     }
 
-    // 3. Gabungkan hasil
     return if (marketingName.isNotEmpty()) {
         marketingName
     } else {
