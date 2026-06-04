@@ -37,6 +37,18 @@ import coil.compose.AsyncImage
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import dev.chrisbanes.haze.blur.blurEffect
 import zx.azenith.R
 import zx.azenith.ui.util.getAppVersion
@@ -111,6 +123,23 @@ fun BannerCard(
     
     val bannerHazeState = remember { HazeState() }
 
+    // Animasi warna untuk badge status
+    val statusBgColor by animateColorAsState(
+        targetValue = if (isAlive) {
+            if (isBlurEnabled) colorScheme.secondaryContainer.copy(alpha = 0.45f) else colorScheme.secondaryContainer
+        } else {
+            if (isBlurEnabled) colorScheme.errorContainer.copy(alpha = 0.45f) else colorScheme.errorContainer
+        },
+        animationSpec = tween(400),
+        label = "StatusBgAnim"
+    )
+
+    val statusTextColor by animateColorAsState(
+        targetValue = if (isAlive) colorScheme.onSecondaryContainer else colorScheme.onErrorContainer,
+        animationSpec = tween(400),
+        label = "StatusTextAnim"
+    )
+
     if (isBannerEnabled) {
         Card(
             modifier = modifier.clip(RoundedCornerShape(26.dp)).clickable { onClick() },
@@ -120,6 +149,7 @@ fun BannerCard(
             Box(
                 modifier = Modifier.fillMaxSize()
             ) {
+                // Background & Blur... (Kode asli kamu tidak berubah)
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -148,73 +178,135 @@ fun BannerCard(
                     )
                 }
 
+                // Bagian Teks & Badge
                 Column(
-                    modifier = Modifier.align(Alignment.BottomStart).padding(start = 24.dp, bottom = 20.dp),
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = 24.dp, bottom = 20.dp)
+                        .animateContentSize(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)), // Animasi ukuran badge
                     horizontalAlignment = Alignment.Start
                 ) {
                     Surface(
-                        color = if (isBlurEnabled) {
-                            if (isAlive) colorScheme.secondaryContainer.copy(alpha = 0.45f) else colorScheme.errorContainer.copy(alpha = 0.45f)
-                        } else {
-                            if (isAlive) colorScheme.secondaryContainer else colorScheme.errorContainer
-                        },
+                        color = statusBgColor,
                         shape = CircleShape,
                         modifier = Modifier
                             .clip(CircleShape)
                             .then(if (isBlurEnabled) Modifier.hazeEffect(state = bannerHazeState) { blurEffect { blurRadius = 14.dp } } else Modifier)
                     ) {
-                        Text(
-                            text = status, 
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), 
-                            fontWeight = FontWeight.Bold,
-                            color = if (isAlive) colorScheme.onSecondaryContainer else colorScheme.onErrorContainer
-                        )
+                        // Animasi teks status berubah
+                        AnimatedContent(
+                            targetState = status,
+                            transitionSpec = {
+                                fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+                            },
+                            label = "BannerStatusTextAnim"
+                        ) { targetStatus ->
+                            Text(
+                                text = targetStatus, 
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), 
+                                fontWeight = FontWeight.Bold,
+                                color = statusTextColor
+                            )
+                        }
                     }
 
-                    if (isAlive) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Surface(
-                            color = if (isBlurEnabled) colorScheme.secondaryContainer.copy(alpha = 0.45f) else colorScheme.secondaryContainer, 
-                            shape = CircleShape,
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .then(if (isBlurEnabled) Modifier.hazeEffect(state = bannerHazeState) { blurEffect { blurRadius = 14.dp } } else Modifier)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.pid_format, pid),
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold, 
-                                color = colorScheme.onSecondaryContainer
-                            )
+                    // Animasi kemunculan PID (Muncul dari atas, menghilang ke atas/fade)
+                    AnimatedVisibility(
+                        visible = isAlive,
+                        enter = expandVertically(expandFrom = Alignment.Top, animationSpec = spring()) + fadeIn(),
+                        exit = shrinkVertically(shrinkTowards = Alignment.Top, animationSpec = spring()) + fadeOut()
+                    ) {
+                        Column {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Surface(
+                                color = if (isBlurEnabled) colorScheme.secondaryContainer.copy(alpha = 0.45f) else colorScheme.secondaryContainer, 
+                                shape = CircleShape,
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .then(if (isBlurEnabled) Modifier.hazeEffect(state = bannerHazeState) { blurEffect { blurRadius = 14.dp } } else Modifier)
+                            ) {
+                                AnimatedContent(
+                                    targetState = pid,
+                                    transitionSpec = {
+                                        fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+                                    },
+                                    label = "BannerPidAnim"
+                                ) { targetPid ->
+                                    Text(
+                                        text = stringResource(R.string.pid_format, targetPid),
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold, 
+                                        color = colorScheme.onSecondaryContainer
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
         }
     } else {
+        // Mode Banner Disabled (Animasi juga diaplikasikan)
         Surface(
-            modifier = modifier.clip(RoundedCornerShape(26.dp)).clickable { onClick() },
-            color = colorScheme.secondaryContainer, shape = RoundedCornerShape(26.dp)
+            modifier = modifier
+                .clip(RoundedCornerShape(26.dp))
+                .clickable { onClick() }
+                .animateContentSize(animationSpec = spring()), // Animasi card membesar/mengecil
+            color = colorScheme.secondaryContainer, 
+            shape = RoundedCornerShape(26.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)
+                verticalAlignment = Alignment.CenterVertically, 
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Icon(
-                    imageVector = if (isAlive) Icons.Outlined.CheckCircle else Icons.Rounded.ErrorOutline,
-                    contentDescription = null, tint = colorScheme.onSecondaryContainer, modifier = Modifier.size(42.dp)
-                )
+                // Animasi pergantian Icon
+                AnimatedContent(
+                    targetState = isAlive,
+                    transitionSpec = {
+                        scaleIn() togetherWith scaleOut()
+                    },
+                    label = "BannerIconAnim"
+                ) { alive ->
+                    Icon(
+                        imageVector = if (alive) Icons.Outlined.CheckCircle else Icons.Rounded.ErrorOutline,
+                        contentDescription = null, 
+                        tint = colorScheme.onSecondaryContainer, 
+                        modifier = Modifier.size(42.dp)
+                    )
+                }
+                
                 Box(modifier = Modifier.height(42.dp).width(1.5.dp).background(colorScheme.onSecondaryContainer.copy(alpha = 0.3f)))
+                
                 Column(verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.Start) {
-                    Text(text = status, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = colorScheme.onSecondaryContainer)
-                    if (isAlive) {
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = stringResource(R.string.pid_format, pid),
-                            style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium,
-                            color = colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                        )
+                    AnimatedContent(
+                        targetState = status,
+                        transitionSpec = { fadeIn() togetherWith fadeOut() },
+                        label = "BannerStatusAnimNoImage"
+                    ) { targetStatus ->
+                        Text(text = targetStatus, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = colorScheme.onSecondaryContainer)
+                    }
+
+                    AnimatedVisibility(
+                        visible = isAlive,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Column {
+                            Spacer(modifier = Modifier.height(2.dp))
+                            AnimatedContent(
+                                targetState = pid,
+                                transitionSpec = { fadeIn() togetherWith fadeOut() },
+                                label = "BannerPidAnimNoImage"
+                            ) { targetPid ->
+                                Text(
+                                    text = stringResource(R.string.pid_format, targetPid),
+                                    style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium,
+                                    color = colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -222,34 +314,89 @@ fun BannerCard(
     }
 }
 
-
 @Composable
 fun InfoTile(
-    modifier: Modifier, icon: ImageVector, label: String, value: String, highlight: Boolean,
-    showArrow: Boolean = false, onClick: () -> Unit
+    modifier: Modifier, 
+    icon: ImageVector, 
+    label: String, 
+    value: String, 
+    highlight: Boolean,
+    showArrow: Boolean = false, 
+    onClick: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    
+    // Animasi warna background biar smooth pas ganti state highlight
+    val animatedColor by animateColorAsState(
+        targetValue = if (highlight) colorScheme.secondaryContainer else colorScheme.surfaceColorAtElevation(1.dp),
+        animationSpec = tween(500),
+        label = "InfoTileColorAnimation"
+    )
+
     Surface(
-        modifier = modifier.clip(RoundedCornerShape(26.dp)).clickable { onClick() },
-        color = if (highlight) colorScheme.secondaryContainer else colorScheme.surfaceColorAtElevation(1.dp),
+        modifier = modifier
+            .clip(RoundedCornerShape(26.dp))
+            .clickable { onClick() }
+            .animateContentSize(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)), // Animasi ukuran
+        color = animatedColor,
         shape = RoundedCornerShape(26.dp)
     ) {
-        Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
-            Column {
-                Icon(icon, null, tint = colorScheme.primary, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.height(4.dp))
-                Text(label, style = MaterialTheme.typography.labelSmall, color = colorScheme.onSurfaceVariant)
-                Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = colorScheme.onSurface)
+        Box(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                SmallLeadingIcon(icon)
+                
+                Spacer(modifier = Modifier.width(16.dp))
+                
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = label, 
+                        style = MaterialTheme.typography.labelMedium, 
+                        color = colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    
+                    // Animasi blur transisi teks
+                    AnimatedContent(
+                        targetState = value,
+                        transitionSpec = {
+                            (fadeIn(animationSpec = tween(300, delayMillis = 90)) + 
+                             scaleIn(initialScale = 0.92f, animationSpec = tween(300, delayMillis = 90)))
+                                .togetherWith(fadeOut(animationSpec = tween(150)))
+                        },
+                        label = "ValueTextAnimation"
+                    ) { targetValue ->
+                        Text(
+                            text = targetValue, 
+                            style = MaterialTheme.typography.titleMedium, 
+                            fontWeight = FontWeight.Bold, 
+                            color = colorScheme.onSurface
+                        )
+                    }
+                }
             }
+
             if (showArrow) {
                 Icon(
-                    Icons.Rounded.ChevronRight, contentDescription = null,
-                    modifier = Modifier.align(Alignment.CenterEnd).size(20.dp), tint = colorScheme.onSurfaceVariant
+                    imageVector = Icons.Rounded.ChevronRight, 
+                    contentDescription = null,
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .size(24.dp), 
+                    tint = colorScheme.onSurfaceVariant
                 )
             }
         }
     }
 }
+
 
 @Composable
 fun DeviceInfoCard() {
@@ -279,7 +426,7 @@ fun DeviceInfoCard() {
             modifier = Modifier.padding(vertical = 16.dp)
                 .animateContentSize(animationSpec = spring(Spring.DampingRatioLowBouncy, Spring.StiffnessLow))
         ) {
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 SmallLeadingIcon(Icons.Outlined.Info)
                 Spacer(Modifier.width(12.dp))
                 Text(stringResource(R.string.device_info), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -307,7 +454,7 @@ fun DeviceInfoCard() {
 
 @Composable
 fun DeviceInfoRow(title: String, value: String) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 6.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
         Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Medium)
         Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }

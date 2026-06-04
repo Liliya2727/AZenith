@@ -588,7 +588,7 @@ fun LeadingIcon(
 ) {
     Box(
         modifier = Modifier
-            .size(34.dp)
+            .size(36.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(containerColor),
         contentAlignment = Alignment.Center
@@ -596,7 +596,7 @@ fun LeadingIcon(
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(22.dp),
             tint = contentColor
         )
     }
@@ -608,7 +608,7 @@ fun SmallLeadingIcon(icon: ImageVector) {
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = cs.primary.copy(alpha = 0.12f),
-        modifier = Modifier.size(32.dp)
+        modifier = Modifier.size(36.dp)
     ) {
         Icon(
             icon,
@@ -616,7 +616,7 @@ fun SmallLeadingIcon(icon: ImageVector) {
             tint = cs.primary,
             modifier = Modifier
                 .padding(7.dp)
-                .size(18.dp)
+                .size(22.dp)
         )
     }
 }
