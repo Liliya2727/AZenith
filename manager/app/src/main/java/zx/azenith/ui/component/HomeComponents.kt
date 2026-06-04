@@ -563,7 +563,7 @@ fun DeviceInfoGridItem(modifier: Modifier = Modifier, title: String, value: Stri
     Surface(
         // Cukup pakai modifier yang di-passing (karena sudah ada weight(1f) dari luar),
         // ditambah aspectRatio untuk bentuk konsisten.
-        modifier = modifier.aspectRatio(1.8f), 
+        modifier = modifier.height(86.dp),
         color = colorScheme.surfaceVariant.copy(alpha = 0.5f), 
         shape = RoundedCornerShape(18.dp) 
     ) {
