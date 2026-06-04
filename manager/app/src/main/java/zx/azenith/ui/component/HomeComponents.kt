@@ -50,6 +50,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import dev.chrisbanes.haze.blur.blurEffect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import zx.azenith.R
 import zx.azenith.ui.util.getAppVersion
@@ -466,10 +467,11 @@ fun DeviceInfoCard() {
                 Icon(
                     imageVector = Icons.Rounded.ExpandMore, 
                     contentDescription = null,
-                    modifier = Modifier.androidx.compose.ui.graphics.graphicsLayer {
+                    modifier = Modifier.graphicsLayer { // 👈 UBAH JADI GINI AJA
                         rotationZ = rotationAngle
                     }
                 )
+
             }
 
             Spacer(Modifier.height(12.dp))
