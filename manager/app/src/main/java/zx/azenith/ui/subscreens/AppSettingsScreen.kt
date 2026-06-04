@@ -80,7 +80,7 @@ import zx.azenith.ui.component.ExpressiveDropdownItem
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.animation.core.tween
-import zx.azenith.ui.util.getSupportedRefreshRates
+import zx.azenith.ui.util.getSupportedRefreshRatesPicker
 import java.io.File
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.ui.platform.LocalDensity
