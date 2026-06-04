@@ -19,8 +19,6 @@ fun getRealDeviceName(context: Context): String {
     }
 
     // 2. Bikin versi "Bersih" dengan menghapus nama pabrikan dan karakter aneh
-    // "Infinix X6739" -> "X6739"
-    // "Infinix-X6739" -> "X6739"
     val cleanModel = model.replace(mfg, "", ignoreCase = true).trim(' ', '-', '_')
     val cleanDevice = device.replace(mfg, "", ignoreCase = true).trim(' ', '-', '_')
 
@@ -37,7 +35,8 @@ fun getRealDeviceName(context: Context): String {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            return defaultName
+            // Jika gagal ekstrak, tambahkan codename di dalam kurung jika beda dengan model
+            return if (defaultName.contains(device, ignoreCase = true)) defaultName else "$defaultName ($device)"
         }
     }
 
@@ -75,9 +74,15 @@ fun getRealDeviceName(context: Context): String {
         db?.close()
     }
 
+    // 4. Gabungkan hasil akhir dengan menambahkan (codename)
     return if (marketingName.isNotEmpty()) {
-        marketingName
+        "$marketingName ($device)"
     } else {
-        defaultName
+        // Fallback jika tidak ada di DB, tambahkan codename juga asalkan tidak sama persis dengan fallback-nya
+        if (defaultName.contains(device, ignoreCase = true)) {
+            defaultName
+        } else {
+            "$defaultName ($device)"
+        }
     }
 }
