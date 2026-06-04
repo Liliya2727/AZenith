@@ -238,6 +238,40 @@ fun TweakScreen(
                         SectionLoadingIndicator()
                     }
                 }
+                
+                item {
+                    if (viewModel.currentRefreshRate != null && viewModel.currentRenderer != null) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            ExpressiveTile(
+                                modifier = Modifier.weight(1f),
+                                icon = Icons.Rounded.WebStories,
+                                label = stringResource(R.string.refreshrates),
+                                value = "${viewModel.currentRefreshRate}Hz",
+                                showArrow = true,
+                                highlight = false
+                            ) {
+                                showRefreshRateDialog = true
+                            }
+
+                            ExpressiveTile(
+                                modifier = Modifier.weight(1f),
+                                icon = Icons.Rounded.SettingsSuggest,
+                                label = stringResource(R.string.renderengine),
+                                value = viewModel.currentRenderer!!.uppercase(),
+                                showArrow = true,
+                                highlight = false
+                            ) {
+                                showRendererDialog = true
+                            }
+                        }
+                    } else {
+                        SectionLoadingIndicator()
+                    }
+                }
 
                 item { TweaksSectionTitle(stringResource(R.string.section_CPUSettings)) }
                 item {
@@ -336,39 +370,6 @@ fun TweakScreen(
                     }
                 }
                 
-                item {
-                    if (viewModel.currentRefreshRate != null && viewModel.currentRenderer != null) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            ExpressiveTile(
-                                modifier = Modifier.weight(1f),
-                                icon = Icons.Rounded.WebStories,
-                                label = stringResource(R.string.refreshrates),
-                                value = "${viewModel.currentRefreshRate}Hz",
-                                showArrow = true,
-                                highlight = false
-                            ) {
-                                showRefreshRateDialog = true
-                            }
-
-                            ExpressiveTile(
-                                modifier = Modifier.weight(1f),
-                                icon = Icons.Rounded.SettingsSuggest,
-                                label = stringResource(R.string.renderengine),
-                                value = viewModel.currentRenderer!!.uppercase(),
-                                showArrow = true,
-                                highlight = false
-                            ) {
-                                showRendererDialog = true
-                            }
-                        }
-                    } else {
-                        SectionLoadingIndicator()
-                    }
-                }
                 
                 item { TweaksSectionTitle(text = "Power & Thermal") }
                 item {
