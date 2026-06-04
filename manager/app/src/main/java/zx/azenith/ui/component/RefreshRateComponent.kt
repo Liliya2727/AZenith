@@ -40,17 +40,14 @@ private data class RefreshRatePickerOption(
 @Composable
 private fun getRefreshRatePickerOptions(context: Context): List<RefreshRatePickerOption> {
     val supported = getSupportedRefreshRatesPicker(context)
-    
-    // Ganti mapIndexed jadi map biasa, dan panggil properti dari DisplayModeInfo
-    return supported.map { modeInfo ->
+    return supported.mapIndexed { index, rate ->
         RefreshRatePickerOption(
-            titleString = context.getString(R.string.refresh_rate_format, modeInfo.refreshRate),
-            reason = modeInfo.modeId.toString(), // 👈 INI KUNCINYA: Pakai Mode ID, bukan index
+            titleString = context.getString(R.string.refresh_rate_format, rate),
+            reason = index.toString(), 
             icon = Icons.Outlined.WebStories
         )
     }
 }
-
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
