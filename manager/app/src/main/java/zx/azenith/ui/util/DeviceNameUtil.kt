@@ -11,7 +11,7 @@ fun getRealDeviceName(context: Context): String {
     val model = Build.MODEL
     val device = Build.DEVICE
 
-    // 1. Perbaiki fallback agar tidak dobel (Misal: "INFINIX Infinix X6739" -> "Infinix X6739")
+    // 1. Perbaiki fallback agar tidak dobel
     val defaultName = if (model.contains(mfg, ignoreCase = true)) {
         model
     } else {
@@ -35,54 +35,57 @@ fun getRealDeviceName(context: Context): String {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            // Jika gagal ekstrak, tambahkan codename di dalam kurung jika beda dengan model
-            return if (defaultName.contains(device, ignoreCase = true)) defaultName else "$defaultName ($device)"
         }
     }
 
     var marketingName = ""
     var db: SQLiteDatabase? = null
     
-    try {
-        db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
-        
-        // 3. Cek kecocokan menggunakan RAW dan CLEAN
-        val query = """
-            SELECT brand, name 
-            FROM devices 
-            WHERE model COLLATE NOCASE IN (?, ?) 
-               OR device COLLATE NOCASE IN (?, ?) 
-            LIMIT 1
-        """.trimIndent()
-        
-        // Masukkan 4 parameter sesuai jumlah tanda tanya (?)
-        db.rawQuery(query, arrayOf(model, cleanModel, device, cleanDevice)).use { cursor ->
-            if (cursor.moveToFirst()) {
-                val brand = cursor.getString(0) ?: ""
-                val name = cursor.getString(1) ?: ""
-                
-                marketingName = if (name.contains(brand, ignoreCase = true)) {
-                    name
-                } else {
-                    "$brand $name".trim()
+    if (dbFile.exists()) {
+        try {
+            db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
+            
+            // 3. Cek kecocokan menggunakan RAW dan CLEAN
+            val query = """
+                SELECT brand, name 
+                FROM devices 
+                WHERE model COLLATE NOCASE IN (?, ?) 
+                   OR device COLLATE NOCASE IN (?, ?) 
+                LIMIT 1
+            """.trimIndent()
+            
+            db.rawQuery(query, arrayOf(model, cleanModel, device, cleanDevice)).use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val brand = cursor.getString(0) ?: ""
+                    val name = cursor.getString(1) ?: ""
+                    
+                    marketingName = if (name.contains(brand, ignoreCase = true)) {
+                        name
+                    } else {
+                        "$brand $name".trim()
+                    }
                 }
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            db?.close()
         }
-    } catch (e: Exception) {
-        e.printStackTrace()
-    } finally {
-        db?.close()
     }
 
-    // 4. Gabungkan hasil akhir dengan menambahkan (codename)
-    return if (marketingName.isNotEmpty()) {
-        "$marketingName ($device)"
+    // 4. Tahap Akhir: Pembersihan Duplikat Codename
+    val finalName = marketingName.ifEmpty { defaultName }
+    
+    // Hapus format "(codename)" jika kebetulan dari DB sudah membawanya
+    var cleanFinal = finalName.replace("($device)", "", ignoreCase = true).trim()
+    
+    // Pastikan tidak ada duplikat berjejer karena kelalaian data
+    cleanFinal = cleanFinal.replace("$device $device", device, ignoreCase = true)
+    
+    // Kembalikan nama ditambah codename, tapi JANGAN tambah lagi kalau teksnya sudah punya codename
+    return if (cleanFinal.contains(device, ignoreCase = true)) {
+        cleanFinal
     } else {
-        // Fallback jika tidak ada di DB, tambahkan codename juga asalkan tidak sama persis dengan fallback-nya
-        if (defaultName.contains(device, ignoreCase = true)) {
-            defaultName
-        } else {
-            "$defaultName ($device)"
-        }
+        "$cleanFinal ($device)"
     }
 }
