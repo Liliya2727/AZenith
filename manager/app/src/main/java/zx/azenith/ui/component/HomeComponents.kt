@@ -42,6 +42,7 @@ import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.util.getAppVersion
 import zx.azenith.ui.util.getChipsetName
+import zx.azenith.ui.util.getRealDeviceName
 import zx.azenith.ui.util.getHeaderImage
 import zx.azenith.ui.util.getSELinuxStatus
 import zx.azenith.ui.util.getBannerGradientAlpha
