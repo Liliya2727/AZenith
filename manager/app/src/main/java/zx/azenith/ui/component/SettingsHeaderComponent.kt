@@ -1,6 +1,6 @@
 package zx.azenith.ui.component
 
-import android.os.SystemClock // 👇 Tambahkan import ini
+import android.os.SystemClock
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -48,17 +48,18 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
 
     val wallpaperBitmap by WallpaperCache.bitmapState
     
-    // 👇 PERHITUNGAN UPTIME (Otomatis ter-update tiap detik karena state `time`)
+    // 👇 PERHITUNGAN UPTIME DENGAN DETIK
     val uptimeMillis = SystemClock.elapsedRealtime()
-    val uptimeSeconds = uptimeMillis / 1000
-    val days = uptimeSeconds / (24 * 3600)
-    val hours = (uptimeSeconds % (24 * 3600)) / 3600
-    val minutes = (uptimeSeconds % 3600) / 60
+    val totalSeconds = uptimeMillis / 1000
+    val days = totalSeconds / (24 * 3600)
+    val hours = (totalSeconds % (24 * 3600)) / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60 // 👈 Ini untuk mendapatkan sisa detiknya
     
     val uptimeString = if (days > 0) {
-        "${days}d ${hours}h ${minutes}m"
+        "${days}d ${hours}h ${minutes}m ${seconds}s"
     } else {
-        "${hours}h ${minutes}m"
+        "${hours}h ${minutes}m ${seconds}s"
     }
     
     Row(
@@ -71,7 +72,7 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
         // --- BAGIAN KIRI: Wallpaper & Jam ---
         Box(
             modifier = Modifier
-                .heightIn(max = 260.dp) 
+                .heightIn(max = 280.dp) 
                 .aspectRatio(0.48f) 
                 .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(18.dp)) 
                 .padding(2.dp) 
@@ -106,7 +107,7 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
                     color = MaterialTheme.colorScheme.primary,
                     fontSize = 44.sp,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.displayMedium, // 👈 Fix koma yang kurang di sini
+                    style = MaterialTheme.typography.displayMedium,
                     modifier = Modifier.offset(y = (-12).dp)
                 )
             }
@@ -117,14 +118,14 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .weight(1f)
                 .padding(vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             AppInfoTextItem(title = "App Name", value = context.getString(R.string.app_name))
-            AppInfoTextItem(title = "Author", value = "Zexshia")
+            AppInfoTextItem(title = "Author", value = "ArchHaven Developers")
             AppInfoTextItem(title = "Build Date", value = buildDateString)
             AppInfoTextItem(title = "Version Code", value = BuildConfig.VERSION_CODE.toString())
             AppInfoTextItem(title = "Package Name", value = context.packageName)
-            // 👇 MASUKKAN INFO UPTIME DI SINI
+            // Uptime yang sudah dilengkapi detik
             AppInfoTextItem(title = "Device Uptime", value = uptimeString)
         }
     }
