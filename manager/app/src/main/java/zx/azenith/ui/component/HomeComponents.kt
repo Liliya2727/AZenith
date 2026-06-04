@@ -307,7 +307,7 @@ fun InfoTile(
     
     // Animasi transisi warna untuk Box Icon saat state highlight berubah
     val iconBoxBgColor by animateColorAsState(
-        targetValue = if (highlight) colorScheme.primaryContainer else colorScheme.surfaceVariant,
+        targetValue = if (highlight) colorScheme.primaryContainer else colorScheme.surfaceVariant.copy(alpha = 0.5f),
         animationSpec = tween(400), // Durasi transisi warna 400ms biar smooth
         label = "iconBoxBgColorAnim"
     )
@@ -580,10 +580,10 @@ fun DeviceInfoGridItem(modifier: Modifier = Modifier, title: String, value: Stri
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = value, 
-                style = MaterialTheme.typography.titleSmall, 
+                style = MaterialTheme.typography.titleMedium, 
                 fontWeight = FontWeight.Bold, 
                 color = colorScheme.onSurface,
-                maxLines = 3, // Kunci teks value maksimal 2 baris
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
         }
