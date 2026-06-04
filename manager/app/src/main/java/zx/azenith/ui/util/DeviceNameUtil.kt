@@ -18,13 +18,14 @@ fun getRealDeviceName(context: Context): String {
         "$mfg $model"
     }
 
-    // 2. Bikin versi "Bersih" dengan menghapus nama pabrikan dan karakter aneh
+    // 2. Bikin versi "Bersih" dengan menghapus nama pabrikan
     val cleanModel = model.replace(mfg, "", ignoreCase = true).trim(' ', '-', '_')
     val cleanDevice = device.replace(mfg, "", ignoreCase = true).trim(' ', '-', '_')
 
     val dbName = "devices.db"
     val dbFile = context.getDatabasePath(dbName)
 
+    // Ekstrak database jika belum ada
     if (!dbFile.exists()) {
         try {
             dbFile.parentFile?.mkdirs()
@@ -35,6 +36,8 @@ fun getRealDeviceName(context: Context): String {
             }
         } catch (e: Exception) {
             e.printStackTrace()
+            // Jika ekstrak gagal, kembalikan fallback
+            return if (defaultName.contains(device, ignoreCase = true)) defaultName else "$defaultName ($device)"
         }
     }
 
@@ -45,24 +48,28 @@ fun getRealDeviceName(context: Context): String {
         try {
             db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             
-            // 3. Cek kecocokan menggunakan RAW dan CLEAN
+            // 3. Query diperbaiki: HANYA SELECT name (karena kolom brand tidak ada)
             val query = """
-                SELECT brand, name 
+                SELECT name 
                 FROM devices 
-                WHERE model COLLATE NOCASE IN (?, ?) 
-                   OR device COLLATE NOCASE IN (?, ?) 
+                WHERE model LIKE ? OR model LIKE ? 
+                   OR device LIKE ? OR device LIKE ? 
                 LIMIT 1
             """.trimIndent()
             
             db.rawQuery(query, arrayOf(model, cleanModel, device, cleanDevice)).use { cursor ->
                 if (cursor.moveToFirst()) {
-                    val brand = cursor.getString(0) ?: ""
-                    val name = cursor.getString(1) ?: ""
+                    // Ambil string dari kolom index 0 (yaitu kolom 'name')
+                    val nameFromDb = cursor.getString(0)
                     
-                    marketingName = if (name.contains(brand, ignoreCase = true)) {
-                        name
-                    } else {
-                        "$brand $name".trim()
+                    // Terkadang database berisi nilai null atau kosong
+                    if (!nameFromDb.isNullOrBlank()) {
+                        // Tambahkan nama pabrikan (mfg) jika belum ada di dalam nama marketing
+                        marketingName = if (nameFromDb.contains(mfg, ignoreCase = true)) {
+                            nameFromDb.trim()
+                        } else {
+                            "$mfg $nameFromDb".trim()
+                        }
                     }
                 }
             }
@@ -73,16 +80,12 @@ fun getRealDeviceName(context: Context): String {
         }
     }
 
-    // 4. Tahap Akhir: Pembersihan Duplikat Codename
+    // 4. Tahap Akhir: Pembersihan Duplikat Codename dan Penggabungan
     val finalName = marketingName.ifEmpty { defaultName }
     
-    // Hapus format "(codename)" jika kebetulan dari DB sudah membawanya
     var cleanFinal = finalName.replace("($device)", "", ignoreCase = true).trim()
+    cleanFinal = cleanFinal.replace("$device $device", device, ignoreCase = true).trim()
     
-    // Pastikan tidak ada duplikat berjejer karena kelalaian data
-    cleanFinal = cleanFinal.replace("$device $device", device, ignoreCase = true)
-    
-    // Kembalikan nama ditambah codename, tapi JANGAN tambah lagi kalau teksnya sudah punya codename
     return if (cleanFinal.contains(device, ignoreCase = true)) {
         cleanFinal
     } else {
