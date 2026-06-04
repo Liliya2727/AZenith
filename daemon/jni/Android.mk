@@ -15,6 +15,8 @@ LOCAL_SRC_FILES := \
     src/azenith_commandline.c \
     src/bypass_charge.c \
     src/app_status_monitor.c \
+    src/refreshrates.c \
+    src/renderer.c \
     src/app_monitor.c
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/include
