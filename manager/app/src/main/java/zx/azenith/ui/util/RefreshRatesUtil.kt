@@ -48,19 +48,3 @@ fun getSupportedRefreshRatesPicker(context: Context): List<DisplayModeInfo> {
     
     return finalModes 
 }
-
-
-@Composable
-private fun getRefreshRatePickerOptions(context: Context): List<RefreshRatePickerOption> {
-    val supported = getSupportedRefreshRatesPicker(context)
-    
-    // Ganti mapIndexed menjadi map biasa
-    return supported.map { modeInfo ->
-        RefreshRatePickerOption(
-            titleString = context.getString(R.string.refresh_rate_format, modeInfo.refreshRate),
-            reason = modeInfo.modeId.toString(), 
-            icon = Icons.Outlined.WebStories
-        )
-    }
-}
-

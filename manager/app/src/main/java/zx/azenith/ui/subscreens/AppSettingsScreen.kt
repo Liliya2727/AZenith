@@ -84,34 +84,7 @@ import java.io.File
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.ui.platform.LocalDensity
 
-// Bikin struktur data kecil untuk nampung Label (Hz) dan Value (Mode ID)
 data class RefreshRateOption(val label: String, val modeValue: String)
-
-// Ubah deklarasi dynamicRefreshModes kamu menjadi seperti ini:
-val dynamicRefreshModes = remember { 
-    val options = mutableListOf(
-        RefreshRateOption(context.getString(R.string.default_label), "default")
-    )
-    
-    val display = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-        context.display
-    } else {
-        @Suppress("DEPRECATION")
-        (context.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager).defaultDisplay
-    }
-
-    // Ambil Mode ID asli seperti yang kita lakukan sebelumnya
-    val supportedModes = display?.supportedModes ?: emptyArray()
-    val standardModes = listOf(144, 120, 90, 60)
-    
-    standardModes.forEach { targetRate ->
-        val mode = supportedModes.firstOrNull { it.refreshRate.toInt() in (targetRate - 1)..(targetRate + 1) }
-        if (mode != null) {
-            options.add(RefreshRateOption("${targetRate}Hz", mode.modeId.toString()))
-        }
-    }
-    options
-}
 
 @Composable
 fun AppSettingsScreen(
@@ -145,7 +118,30 @@ fun AppSettingsScreen(
         stringResource(R.string.Renderer_Vulkan),
         stringResource(R.string.Renderer_SkiaGL)
     )
-    val dynamicRefreshModes = remember { getSupportedRefreshRates(context) }
+    val dynamicRefreshModes = remember { 
+        val options = mutableListOf(
+            RefreshRateOption(context.getString(R.string.default_label), "default")
+        )
+        
+        val display = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            context.display
+        } else {
+            @Suppress("DEPRECATION")
+            (context.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager).defaultDisplay
+        }
+    
+        // Ambil Mode ID asli seperti yang kita lakukan sebelumnya
+        val supportedModes = display?.supportedModes ?: emptyArray()
+        val standardModes = listOf(144, 120, 90, 60)
+        
+        standardModes.forEach { targetRate ->
+            val mode = supportedModes.firstOrNull { it.refreshRate.toInt() in (targetRate - 1)..(targetRate + 1) }
+            if (mode != null) {
+                options.add(RefreshRateOption("${targetRate}Hz", mode.modeId.toString()))
+            }
+        }
+        options
+    }
 
     fun getBoolIndex(v: String?): Int = when(v) {
         "true" -> 1
