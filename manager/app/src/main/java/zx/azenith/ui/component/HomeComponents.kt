@@ -328,13 +328,13 @@ fun InfoTile(
         shape = RoundedCornerShape(26.dp)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp) 
+            modifier = Modifier.padding(16.dp) 
         ) {
             // 1. Box Icon (Top Section)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1.6f) 
+                    .aspectRatio(1.8f) 
                     .clip(RoundedCornerShape(18.dp)) 
                     // Gunakan warna yang sudah di-animate di sini
                     .background(iconBoxBgColor),
@@ -376,7 +376,7 @@ fun InfoTile(
                     overflow = TextOverflow.Ellipsis
                 )
                 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 
                 AnimatedContent(
                     targetState = value,
@@ -428,12 +428,11 @@ fun DeviceInfoCard() {
         }
     }
 
-    // Animasi putaran (rotate) untuk ikon arrow dibikin lebih cepat (Medium stiffness)
     val rotationAngle by animateFloatAsState(
         targetValue = if (isExpanded) 180f else 0f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessMediumLow
+            stiffness = Spring.StiffnessLow
         ),
         label = "expandArrowRotation"
     )
@@ -446,13 +445,7 @@ fun DeviceInfoCard() {
         Column(
             modifier = Modifier
                 .padding(vertical = 16.dp)
-                // Animasi expand keseluruhan card dibikin lebih cepat
-                .animateContentSize(
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioLowBouncy, 
-                        stiffness = Spring.StiffnessMediumLow
-                    )
-                )
+                .animateContentSize(animationSpec = spring(Spring.DampingRatioLowBouncy, Spring.StiffnessLow))
         ) {
             // Header Info Card
             Row(
@@ -462,7 +455,7 @@ fun DeviceInfoCard() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 SmallLeadingIcon(Icons.Outlined.Info)
-                Spacer(Modifier.width(16.dp))
+                Spacer(Modifier.width(12.dp))
                 Text(
                     text = stringResource(R.string.device_info), 
                     modifier = Modifier.weight(1f), 
@@ -480,12 +473,12 @@ fun DeviceInfoCard() {
 
             Spacer(Modifier.height(12.dp))
 
-            // Grid Container: Jarak antar elemen konsisten 8.dp
+            // Grid Container
             Column(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp) 
             ) {
-                // Baris 1: Kernel & Device Name
+                // Baris 1
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp) 
@@ -502,7 +495,7 @@ fun DeviceInfoCard() {
                     )
                 }
 
-                // Baris 2: Chipset & App Version
+                // Baris 2
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -519,19 +512,13 @@ fun DeviceInfoCard() {
                     )
                 }
 
-                // Animasi buka/tutup dibikin lebih gesit
-                AnimatedVisibility(
-                    visible = isExpanded,
-                    enter = expandVertically(expandFrom = Alignment.Top, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeIn(animationSpec = tween(200)),
-                    exit = shrinkVertically(shrinkTowards = Alignment.Top, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeOut(animationSpec = tween(150))
-                ) {
+                if (isExpanded) {
                     Column(
-                        // Tetap pakai spacedBy 8.dp biar jarak konsisten sama baris atasnya
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp) // Jaraknya langsung diatur di sini
                     ) {
-                        Spacer(modifier = Modifier.height(0.dp)) // Penyeimbang jarak teratas
+                        // ❌ HAPUS Spacer yang ada di sini!
                         
-                        // Baris 3: Fingerprint & SELinux
+                        // Baris 3
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -548,7 +535,7 @@ fun DeviceInfoCard() {
                             )
                         }
 
-                        // Baris 4: Instruction Sets & Android Version
+                        // Baris 4
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -571,12 +558,13 @@ fun DeviceInfoCard() {
     }
 }
 
+
 @Composable
 fun DeviceInfoGridItem(modifier: Modifier = Modifier, title: String, value: String) {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
-        // fillMaxHeight biar tingginya selalu sama dalam satu Row kalau ada teks yang lebih panjang
-        modifier = modifier.fillMaxWidth().fillMaxHeight(), 
+        // Tambahkan height statis (misal 72.dp) biar tinggi semua kotak sama rata
+        modifier = modifier.fillMaxWidth().height(72.dp), 
         color = colorScheme.surfaceVariant.copy(alpha = 0.5f), 
         shape = RoundedCornerShape(16.dp) 
     ) {
@@ -591,18 +579,19 @@ fun DeviceInfoGridItem(modifier: Modifier = Modifier, title: String, value: Stri
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = value, 
                 style = MaterialTheme.typography.titleSmall, 
                 fontWeight = FontWeight.Bold, 
                 color = colorScheme.onSurface,
-                maxLines = 2,
+                maxLines = 2, // Kunci teks value maksimal 2 baris
                 overflow = TextOverflow.Ellipsis
             )
         }
     }
 }
+
 
 @Composable
 fun LinkCard(icon: ImageVector, titleRes: Int, descRes: Int, onClick: () -> Unit) {
