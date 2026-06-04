@@ -39,7 +39,6 @@ import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.blur.blurEffect
 import zx.azenith.R
-import zx.azenith.ui.component.*
 import zx.azenith.ui.util.getAppVersion
 import zx.azenith.ui.util.getChipsetName
 import zx.azenith.ui.util.getRealDeviceName
@@ -121,7 +120,6 @@ fun BannerCard(
             Box(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Bungkus Image dan Gradient ke dalam satu Box, lalu jadikan Box ini sebagai Haze Source
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -265,10 +263,8 @@ fun DeviceInfoCard() {
     val appVer = remember { getAppVersion(context) }
     val chipsetName = remember { getChipsetName(context) }
 
-    // 👇 State untuk Device Name, default-nya pakai raw dulu
     var realDeviceName by remember { mutableStateOf("${Build.MANUFACTURER} ${Build.MODEL}") }
 
-    // 👇 Proses pencarian nama asli di background agar UI tidak lag
     LaunchedEffect(Unit) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             realDeviceName = getRealDeviceName(context)
@@ -293,7 +289,6 @@ fun DeviceInfoCard() {
             Spacer(Modifier.height(8.dp))
             DeviceInfoRow(stringResource(R.string.kernel_version), kernelVer)
             
-            // 👇 Gunakan state realDeviceName yang sudah diproses
             DeviceInfoRow(stringResource(R.string.device_name), realDeviceName)
             
             DeviceInfoRow("Chipset", chipsetName)
