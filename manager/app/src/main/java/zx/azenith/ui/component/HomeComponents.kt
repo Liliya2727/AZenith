@@ -328,7 +328,7 @@ fun InfoTile(
         shape = RoundedCornerShape(26.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp) 
+            modifier = Modifier.padding(14.dp) 
         ) {
             // 1. Box Icon (Top Section)
             Box(
@@ -375,8 +375,6 @@ fun InfoTile(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                
-                Spacer(modifier = Modifier.height(2.dp))
                 
                 AnimatedContent(
                     targetState = value,
@@ -564,7 +562,7 @@ fun DeviceInfoGridItem(modifier: Modifier = Modifier, title: String, value: Stri
     val colorScheme = MaterialTheme.colorScheme
     Surface(
         // Tambahkan height statis (misal 72.dp) biar tinggi semua kotak sama rata
-        modifier = modifier.fillMaxWidth().height(72.dp), 
+        modifier = modifier.fillMaxWidth().height(86.dp), 
         color = colorScheme.surfaceVariant.copy(alpha = 0.5f), 
         shape = RoundedCornerShape(16.dp) 
     ) {
