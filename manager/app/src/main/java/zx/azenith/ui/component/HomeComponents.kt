@@ -561,34 +561,50 @@ fun DeviceInfoCard() {
 fun DeviceInfoGridItem(modifier: Modifier = Modifier, title: String, value: String) {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
-        // Tambahkan height statis (misal 72.dp) biar tinggi semua kotak sama rata
-        modifier = modifier.fillMaxWidth().height(86.dp), 
+        // Cukup pakai modifier yang di-passing (karena sudah ada weight(1f) dari luar),
+        // ditambah aspectRatio untuk bentuk konsisten.
+        modifier = modifier.aspectRatio(1.8f), 
         color = colorScheme.surfaceVariant.copy(alpha = 0.5f), 
-        shape = RoundedCornerShape(16.dp) 
+        shape = RoundedCornerShape(18.dp) 
     ) {
         Column(
-            modifier = Modifier.padding(12.dp), 
-            verticalArrangement = Arrangement.Top
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxSize(), // Pastikan Column memenuhi seluruh ruang dalam Surface
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.Start // Pastikan teks rata kiri
         ) {
             Text(
                 text = title, 
-                style = MaterialTheme.typography.labelLarge, 
+                style = MaterialTheme.typography.labelMedium, // Balikin ke labelMedium agar proporsional
                 color = colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = value, 
-                style = MaterialTheme.typography.titleMedium, 
-                fontWeight = FontWeight.Bold, 
-                color = colorScheme.onSurface,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+            
+            Spacer(modifier = Modifier.height(4.dp)) // Jarak title dan value dibesarkan dikit
+            
+            // Box untuk membungkus Value, agar dia ngambil semua sisa space ke bawah
+            Box(
+                modifier = Modifier.weight(1f), 
+                contentAlignment = Alignment.TopStart
+            ) {
+                Text(
+                    text = value, 
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold, 
+                    color = colorScheme.onSurface,
+                    maxLines = 2, 
+                    // Kalau ruangannya lega tapi sering kepotong "...",
+                    // hapus saja overflow = TextOverflow.Ellipsis
+                    // Biarkan Compose yang motong secara alami
+                    lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified // Bebaskan line height
+                )
+            }
         }
     }
 }
+
 
 
 @Composable
