@@ -21,31 +21,12 @@ import android.os.Build
 import android.view.Display
 import android.view.WindowManager
 
-fun getSupportedRefreshRates(context: Context): List<String> {
-    val display = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-        context.display
-    } else {
-        @Suppress("DEPRECATION")
-        (context.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager).defaultDisplay
-    }
+data class DisplayModeInfo(
+    val modeId: Int,
+    val refreshRate: String
+)
 
-
-    val supportedRR = display?.supportedModes?.map { it.refreshRate.toInt() }?.distinct()?.sorted() ?: listOf(60)
-    
-    val finalModes = mutableListOf("Default")
-
-    val standardModes = listOf(60, 90, 120, 144)
-    
-    standardModes.forEach { mode ->
-        if (supportedRR.any { it >= mode - 1 && it <= mode + 1 }) {
-            finalModes.add(mode.toString())
-        }
-    }
-    
-    return finalModes
-}
-
-fun getSupportedRefreshRatesPicker(context: Context): List<String> {
+fun getSupportedRefreshRatesPicker(context: Context): List<DisplayModeInfo> {
     val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
         context.display
     } else {
@@ -53,20 +34,33 @@ fun getSupportedRefreshRatesPicker(context: Context): List<String> {
         (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
     }
 
-    val supportedRR = display?.supportedModes
-        ?.map { it.refreshRate.toInt() }
-        ?.distinct()
-        ?.sortedDescending() ?: listOf(60)
-    
-    val finalModes = mutableListOf<String>()
-
+    val supportedModes = display?.supportedModes ?: return emptyList()
+    val finalModes = mutableListOf<DisplayModeInfo>()
     val standardModes = listOf(144, 120, 90, 60)
     
-    standardModes.forEach { mode ->
-        if (supportedRR.any { it in (mode - 1)..(mode + 1) }) {
-            finalModes.add(mode.toString())
+    standardModes.forEach { targetRate ->
+        // Cari Mode ID asli dari hardware yang cocok dengan target rate
+        val mode = supportedModes.firstOrNull { it.refreshRate.toInt() in (targetRate - 1)..(targetRate + 1) }
+        if (mode != null) {
+            finalModes.add(DisplayModeInfo(mode.modeId, targetRate.toString()))
         }
     }
     
     return finalModes 
 }
+
+
+@Composable
+private fun getRefreshRatePickerOptions(context: Context): List<RefreshRatePickerOption> {
+    val supported = getSupportedRefreshRatesPicker(context)
+    
+    // Ganti mapIndexed menjadi map biasa
+    return supported.map { modeInfo ->
+        RefreshRatePickerOption(
+            titleString = context.getString(R.string.refresh_rate_format, modeInfo.refreshRate),
+            reason = modeInfo.modeId.toString(), 
+            icon = Icons.Outlined.WebStories
+        )
+    }
+}
+
