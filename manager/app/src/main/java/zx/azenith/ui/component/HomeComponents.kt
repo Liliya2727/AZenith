@@ -576,7 +576,7 @@ fun DeviceInfoGridItem(modifier: Modifier = Modifier, title: String, value: Stri
         ) {
             Text(
                 text = title, 
-                style = MaterialTheme.typography.labelMedium, // Balikin ke labelMedium agar proporsional
+                style = MaterialTheme.typography.labelSmall, // Balikin ke labelMedium agar proporsional
                 color = colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -591,7 +591,7 @@ fun DeviceInfoGridItem(modifier: Modifier = Modifier, title: String, value: Stri
             ) {
                 Text(
                     text = value, 
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall, // Balikin ke titleSmall
                     fontWeight = FontWeight.Bold, 
                     color = colorScheme.onSurface,
                     maxLines = 2, 
