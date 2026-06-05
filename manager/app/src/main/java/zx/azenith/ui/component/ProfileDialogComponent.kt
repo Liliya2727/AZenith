@@ -2,11 +2,6 @@ package zx.azenith.ui.component
 
 import android.content.Context
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.*
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -16,17 +11,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.blur.blurEffect
 import zx.azenith.R
@@ -34,7 +23,7 @@ import zx.azenith.R
 private data class ProfileOption(
     val titleRes: Int,
     val reason: String,
-    val icon: ImageVector
+    val icon: androidx.compose.ui.graphics.vector.ImageVector
 )
 
 @Composable
@@ -59,96 +48,70 @@ fun ProfileDialog(
     val hazeState = LocalAppHazeState.current
     val options = getProfileOptions()
 
-    // 1. Animasi keluar-masuk
-    AnimatedVisibility(
-        visible = show,
-        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)),
-        exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
-    ) {
+    // Cek show di sini, sisanya biarkan HomeScreen yang mengatur animasi dan posisinya
+    if (show) {
         // Tangkap tombol back agar tidak menutup layar lain di bawahnya
         BackHandler(onBack = onDismiss)
-        
-        // 2. Scrim (Latar gelap) yang bisa diklik untuk menutup dialog
+
+        // Kotak Dialog Kustom (Langsung ke komponen inti)
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .zIndex(100f) 
-                .background(Color.Black.copy(alpha = 0.42f)) 
+                .widthIn(min = 320.dp, max = 400.dp) 
+                // Catatan: padding luar dihapus agar animasi SharedBounds pas dengan tepi card
+                .clip(RoundedCornerShape(28.dp))
+                .then(
+                    if (isBlurEnabled && hazeState != null) {
+                        Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
+                    } else Modifier
+                )
+                .background(
+                    if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f) 
+                    else MaterialTheme.colorScheme.surfaceContainerHigh
+                )
+                // Cegah klik tembus ke bawah
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = onDismiss 
-                ),
-            contentAlignment = Alignment.Center
+                    onClick = {}
+                )
         ) {
-            val scale by animateFloatAsState(
-                targetValue = if (show) 1f else 0.9f,
-                animationSpec = tween(250, easing = LinearOutSlowInEasing),
-                label = "dialog_scale"
-            )
-
-            // 3. Kotak Dialog Kustom dengan Blur (Menggantikan BasicAlertDialog)
-            Box(
+            Column(
                 modifier = Modifier
-                    .widthIn(min = 320.dp, max = 400.dp) 
-                    .padding(24.dp) 
-                    .scale(scale)
-                    .clip(RoundedCornerShape(28.dp))
-                    .then(
-                        if (isBlurEnabled && hazeState != null) {
-                            Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
-                        } else Modifier
-                    )
-                    .background(
-                        if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f) 
-                        else MaterialTheme.colorScheme.surfaceContainerHigh
-                    )
-                    // Cegah klik tembus ke scrim saat mengklik area kosong di dalam dialog
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}
-                    )
+                    .fillMaxWidth()
+                    .padding(24.dp) // Padding dalam untuk konten tetap dipertahankan
             ) {
-                                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.RefreshRatePicker_Select),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface, // 👈 TAMBAHKAN INI
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
+                Text(
+                    text = stringResource(R.string.RefreshRatePicker_Select), // Atau pakai R.string.Profile_Select jika ada
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
 
-                    val content = options.map { option ->
-                        @Composable {
-                            ExpressiveListItem(
-                                modifier = Modifier.padding(vertical = 4.dp),
-                                headlineContent = {
-                                    Text(
-                                        text = stringResource(option.titleRes),
-                                        color = MaterialTheme.colorScheme.onSurface // 👈 TAMBAHKAN INI
-                                    )
-                                },
-                                leadingContent = { 
-                                    SmallLeadingIcon(icon = option.icon) 
-                                },
-                                onClick = {
-                                    onDismiss()
-                                    onProfile(option.reason)
-                                }
-                            )
-                        }
+                val content = options.map { option ->
+                    @Composable {
+                        ExpressiveListItem(
+                            modifier = Modifier.padding(vertical = 4.dp),
+                            headlineContent = {
+                                Text(
+                                    text = stringResource(option.titleRes),
+                                    color = MaterialTheme.colorScheme.onSurface 
+                                )
+                            },
+                            leadingContent = { 
+                                SmallLeadingIcon(icon = option.icon) 
+                            },
+                            onClick = {
+                                onDismiss() // Tutup via state di HomeScreen
+                                onProfile(option.reason)
+                            }
+                        )
                     }
-
-                    ExpressiveColumn(
-                        modifier = Modifier.fillMaxWidth(),
-                        content = content
-                    )
                 }
 
+                ExpressiveColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    content = content
+                )
             }
         }
     }
