@@ -53,6 +53,14 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import android.content.Context
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.blur.blurEffect
+import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.unit.DpOffset
 
 
 
@@ -425,6 +433,7 @@ fun ExpressiveSwitchItem(
 fun ExpressiveDropdownMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
+    offset: DpOffset = DpOffset(0.dp, 0.dp),
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -433,7 +442,7 @@ fun ExpressiveDropdownMenu(
     val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
     val hazeState = LocalAppHazeState.current
 
-    // Memaksa surfaceContainer bawaan menjadi Transparan agar tidak menutupi/merusak efek Haze Blur
+    // Trik Utama: Mematikan token warna container bawaan Material 3 dropdown
     val customColorScheme = MaterialTheme.colorScheme.copy(
         surfaceContainer = Color.Transparent
     )
@@ -442,10 +451,19 @@ fun ExpressiveDropdownMenu(
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = onDismissRequest,
+            offset = offset,
+            // PENTING: Kita manipulasi properties agar ia tidak membuat platform sub-window baru yang mengisolasi pixel
+            properties = PopupProperties(
+                focusable = true,
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true,
+                usePlatformDefaultWidth = false // Membantu Haze membaca posisi koordinat lokal layout
+            ),
             modifier = modifier
-                .clip(RoundedCornerShape(22.dp)) // Style melengkung halus khas Expressive UI
+                .clip(RoundedCornerShape(22.dp))
                 .then(
                     if (isBlurEnabled && hazeState != null) {
+                        // Sekarang Haze bisa bekerja karena berada di hierarki visual yang terjangkau oleh HazeState
                         Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
                     } else Modifier
                 )
@@ -457,6 +475,7 @@ fun ExpressiveDropdownMenu(
         )
     }
 }
+
 
 @Composable
 fun ExpressiveDropdownItem(
