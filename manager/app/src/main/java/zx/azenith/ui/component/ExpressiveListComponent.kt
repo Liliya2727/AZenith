@@ -1,29 +1,23 @@
 package zx.azenith.ui.component
 
 import android.annotation.SuppressLint
+import android.content.Context
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -36,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,18 +38,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.compose.material3.Surface
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.SwitchDefaults
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-
-
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.blur.blurEffect
 
 private val largeCorner = 26.dp
 private val smallCorner = 4.dp
@@ -106,7 +106,7 @@ fun ExpressiveList(
                 }
                 Column(
                     modifier = Modifier
-                        .clip(shape) // 👇 TAMBAHAN WAJIB DI SINI
+                        .clip(shape) 
                         .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp), shape)
                 ) {
                     itemContent()
@@ -153,12 +153,11 @@ fun <T> ExpressiveLazyList(
                 }
                 Column(
                     modifier = Modifier
-                        // 👇 TAMBAHKAN MODIFIER INI SEBELUM CLIP
-                        .animateItem( // Catatan: Gunakan .animateItemPlacement() jika Compose versi < 1.7.0
+                        .animateItem(
                             fadeInSpec = null,
                             fadeOutSpec = null,
                             placementSpec = spring(
-                                dampingRatio = Spring.DampingRatioLowBouncy, // Efek mantul dikit pas naik/turun
+                                dampingRatio = Spring.DampingRatioLowBouncy,
                                 stiffness = Spring.StiffnessLow
                             )
                         )
@@ -334,7 +333,6 @@ fun ExpressiveInfoCard(
             }
         }
         
-        // Bagian tengah (menggantikan posisi headlineContent)
         if (supportingContent != null) {
             Column(
                 modifier = Modifier
@@ -351,7 +349,6 @@ fun ExpressiveInfoCard(
                 }
             }
         } else {
-            // Spacer agar trailingContent tetap terdorong ke ujung kanan jika tengah kosong
             Spacer(modifier = Modifier.weight(1f))
         }
         
@@ -421,6 +418,7 @@ fun ExpressiveSwitchItem(
     )
 }
 
+// 👇 DIMODIFIKASI SECARA PENUH UNTUK MENDUKUNG HAZE BLUR & ANIMASI
 @Composable
 fun ExpressiveDropdownItem(
     icon: ImageVector? = null,
@@ -432,37 +430,59 @@ fun ExpressiveDropdownItem(
     onItemSelected: (Int) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var anchorPosition by remember { mutableStateOf(Offset.Zero) }
+    var anchorSize by remember { mutableStateOf(IntSize.Zero) }
+
+    val hasItems = items.isNotEmpty()
+    val safeIndex = if (hasItems) {
+        selectedIndex.coerceIn(0, items.lastIndex)
+    } else {
+        -1
+    }
 
     ExpressiveListItem(
-        modifier = if (enabled) Modifier.clickable { expanded = true } else Modifier,
+        modifier = if (enabled) {
+            Modifier
+                .onGloballyPositioned { coords ->
+                    anchorPosition = coords.positionInRoot()
+                    anchorSize = coords.size
+                }
+                .clickable { expanded = true }
+        } else {
+            Modifier
+        },
         leadingContent = icon?.let { { LeadingIcon(icon = it, contentDescription = title) } },
         headlineContent = { Text(text = title) },
         supportingContent = summary?.let { { Text(it) } },
         trailingContent = {
-            Box {
+            Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
                 Text(
-                    text = if (items.isNotEmpty()) items.getOrElse(selectedIndex) { "" } else "",
+                    text = if (hasItems && safeIndex >= 0) items[safeIndex] else "",
                     color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                
-                // 👇 Panggil komponen baru di sini
-                ExpressiveDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    items.forEachIndexed { index, text ->
-                        ExpressiveDropdownMenuItem(
-                            text = text,
-                            onClick = {
-                                onItemSelected(index)
-                                expanded = false
-                            }
-                        )
-                    }
-                }
             }
         }
     )
+
+    // 👇 Custom Dropdown yang akan otomatis 'terbang' ke Root layar
+    HazeDropdownMenu(
+        expanded = expanded,
+        onDismissRequest = { expanded = false },
+        anchorPosition = anchorPosition,
+        anchorSize = anchorSize
+    ) {
+        items.forEachIndexed { index, text ->
+            DropdownMenuItem(
+                text = { Text(text) },
+                onClick = {
+                    if (index in items.indices) {
+                        onItemSelected(index)
+                    }
+                    expanded = false
+                }
+            )
+        }
+    }
 }
 
 
@@ -609,5 +629,126 @@ fun SmallLeadingIcon(icon: ImageVector) {
                 .padding(7.dp)
                 .size(22.dp)
         )
+    }
+}
+
+
+// =======================================================================
+// 👇 CUSTOM COMPONENT HAZE DROPDOWN MENU
+// =======================================================================
+
+@Composable
+fun HazeDropdownMenu(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    anchorPosition: Offset,
+    anchorSize: IntSize,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val dialogs = LocalRootDialogs.current
+    val key = remember { java.util.UUID.randomUUID().toString() }
+
+    DisposableEffect(key, expanded) {
+        dialogs[key] = @Composable {
+            HazeDropdownOverlay(
+                expanded = expanded,
+                onDismissRequest = onDismissRequest,
+                anchorPosition = anchorPosition,
+                anchorSize = anchorSize,
+                content = content
+            )
+        }
+        onDispose { dialogs.remove(key) }
+    }
+}
+
+@Composable
+private fun HazeDropdownOverlay(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    anchorPosition: Offset,
+    anchorSize: IntSize,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val settingsPrefs = remember { LocalContext.current.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
+    val hazeState = LocalAppHazeState.current
+    val density = LocalDensity.current
+
+    var rootSize by remember { mutableStateOf(IntSize.Zero) }
+
+    AnimatedVisibility(
+        visible = expanded,
+        enter = fadeIn(tween(250)),
+        exit = fadeOut(tween(200))
+    ) {
+        if (expanded) BackHandler(onBack = onDismissRequest)
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(100f)
+                .onGloballyPositioned { rootSize = it.size }
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismissRequest
+                )
+        ) {
+            if (rootSize != IntSize.Zero) {
+                // Kalkulasi agar menu sejajar dengan ujung kanan baris (rata kanan / align end)
+                val topOffset = with(density) { (anchorPosition.y + anchorSize.height).toDp() }
+                val endPadding = with(density) { 
+                    (rootSize.width - (anchorPosition.x + anchorSize.width)).coerceAtLeast(0f).toDp() 
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = topOffset, end = endPadding),
+                    contentAlignment = Alignment.TopEnd
+                ) {
+                    AnimatedVisibility(
+                        visible = expanded,
+                        enter = scaleIn(
+                            animationSpec = tween(300, easing = FastOutSlowInEasing),
+                            initialScale = 0.85f,
+                            transformOrigin = TransformOrigin(1f, 0f) // Animasi muncul dr kanan-atas
+                        ) + fadeIn(tween(250)),
+                        exit = scaleOut(
+                            animationSpec = tween(200, easing = FastOutSlowInEasing),
+                            targetScale = 0.9f,
+                            transformOrigin = TransformOrigin(1f, 0f)
+                        ) + fadeOut(tween(200))
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .widthIn(min = 150.dp, max = 280.dp)
+                                .clip(RoundedCornerShape(26.dp))
+                                .then(
+                                    if (isBlurEnabled && hazeState != null) {
+                                        Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
+                                    } else Modifier
+                                ),
+                            shape = RoundedCornerShape(26.dp),
+                            color = if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f) 
+                                    else MaterialTheme.colorScheme.surfaceContainerHigh,
+                            shadowElevation = if (isBlurEnabled) 0.dp else 8.dp
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .padding(vertical = 8.dp)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClick = {} // Blokir agar klik di menu tidak dismiss
+                                    ),
+                                content = content
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
