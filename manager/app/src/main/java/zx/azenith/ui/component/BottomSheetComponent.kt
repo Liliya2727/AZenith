@@ -19,7 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity // 👇 Tambahkan import ini
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -42,7 +42,6 @@ fun CustomBottomSheet(
     val coroutineScope = rememberCoroutineScope()
     val dragOffset = remember { Animatable(0f) }
     
-    // 👇 Deklarasikan variabel untuk trik Anti-Terpotong
     val density = LocalDensity.current
     val extraBottomPadding = 100.dp
 
@@ -80,7 +79,6 @@ fun CustomBottomSheet(
         visible = visible,
         enter = slideInVertically(
             initialOffsetY = { it }, 
-            // 👇 Animasi dikembalikan ke Bouncy seperti permintaanmu
             animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
         ),
         exit = slideOutVertically(
@@ -89,14 +87,16 @@ fun CustomBottomSheet(
         ),
         modifier = Modifier.zIndex(101f)
     ) {
+        // Box utama dengan Alignment.BottomCenter memastikan Card selalu di tengah bawah
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.BottomCenter
         ) {
             Column(
                 modifier = Modifier
+                    // 👇 FIX: Batasi lebar maksimal seperti Material 3 (640.dp)
+                    .widthIn(max = 640.dp)
                     .fillMaxWidth()
-                    // 👇 Terapkan efek Drag DITAMBAH geseran (offset) ke bawah sejauh ekstra padding
                     .offset { 
                         IntOffset(
                             x = 0, 
@@ -160,11 +160,10 @@ fun CustomBottomSheet(
                     )
                 }
                 
-                // Isi konten aslinya
+                // Isi konten
                 content()
 
-                // 👇 INI RAHASIANYA: Bantalan tembus pandang yang ditambahkan ke ujung bawah Card
-                // Card kamu akan jadi 100dp lebih panjang di bawah batas layar
+                // Spacer anti-potong
                 Spacer(modifier = Modifier.height(extraBottomPadding))
             }
         }
