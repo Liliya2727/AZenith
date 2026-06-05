@@ -36,19 +36,19 @@ fun CustomDropdownMenu(
             onDismissRequest = onDismissRequest,
             properties = PopupProperties(focusable = true)
         ) {
-            // Animasi khas Material 3 (muncul membesar dari pojok atas)
             AnimatedVisibility(
                 visible = expanded,
                 enter = fadeIn(tween(150)) + scaleIn(initialScale = 0.9f, animationSpec = tween(150), transformOrigin = TransformOrigin(1f, 0f)),
                 exit = fadeOut(tween(150)) + scaleOut(targetScale = 0.9f, animationSpec = tween(150), transformOrigin = TransformOrigin(1f, 0f))
             ) {
-                // Surface dengan properti persis seperti M3 (bayangan & lengkungan 8.dp)
                 Surface(
                     modifier = modifier
-                        .widthIn(min = 112.dp, max = 280.dp)
-                        .padding(top = 4.dp) // Sedikit jarak dari anchor agar tidak numpuk
-                        .clip(RoundedCornerShape(20.dp))
+                        // 👇 KUNCI ANTI-CRASH: Batasi lebar statis, biarkan teks yang menyesuaikan
+                        .widthIn(min = 150.dp, max = 260.dp) 
+                        .padding(top = 4.dp, end = 8.dp) 
+                        .clip(RoundedCornerShape(12.dp))
                         .then(
+                            // 👇 Haze kita kembalikan!
                             if (isBlurEnabled && hazeState != null) {
                                 Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
                             } else Modifier
@@ -57,12 +57,11 @@ fun CustomDropdownMenu(
                             else MaterialTheme.colorScheme.surfaceContainer,
                     tonalElevation = if (isBlurEnabled) 0.dp else 3.dp,
                     shadowElevation = if (isBlurEnabled) 0.dp else 3.dp,
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(
-                        modifier = Modifier
-                            .padding(vertical = 8.dp)
-                            .width(IntrinsicSize.Max)
+                        // ❌ IntrinsicSize.Max DIHAPUS agar tidak terjadi Infinite Render Loop
+                        modifier = Modifier.padding(vertical = 8.dp)
                     ) {
                         content()
                     }
@@ -82,13 +81,14 @@ fun CustomDropdownMenuItem(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelLarge, // Font bawaan M3 Menu
-            color = MaterialTheme.colorScheme.onSurface
+            style = MaterialTheme.typography.labelLarge, 
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 2 // 👇 Tambahan agar teks panjang di TweakScreen tidak merusak layout
         )
     }
 }
