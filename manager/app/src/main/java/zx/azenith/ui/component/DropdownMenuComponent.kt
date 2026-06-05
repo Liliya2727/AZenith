@@ -5,6 +5,8 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState // 👇 Import scroll state
+import androidx.compose.foundation.verticalScroll // 👇 Import vertical scroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,12 +45,12 @@ fun CustomDropdownMenu(
             ) {
                 Surface(
                     modifier = modifier
-                        // 👇 KUNCI ANTI-CRASH: Batasi lebar statis, biarkan teks yang menyesuaikan
                         .widthIn(min = 150.dp, max = 260.dp) 
+                        // 👇 KUNCI ANTI-CRASH: Batasi tinggi maksimal agar tidak menembus layar!
+                        .heightIn(max = 350.dp) 
                         .padding(top = 4.dp, end = 8.dp) 
                         .clip(RoundedCornerShape(12.dp))
                         .then(
-                            // 👇 Haze kita kembalikan!
                             if (isBlurEnabled && hazeState != null) {
                                 Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
                             } else Modifier
@@ -60,8 +62,10 @@ fun CustomDropdownMenu(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(
-                        // ❌ IntrinsicSize.Max DIHAPUS agar tidak terjadi Infinite Render Loop
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        modifier = Modifier
+                            .padding(vertical = 8.dp)
+                            // 👇 KUNCI ANTI-CRASH 2: Jadikan bisa di-scroll jika itemnya banyak!
+                            .verticalScroll(rememberScrollState())
                     ) {
                         content()
                     }
@@ -88,7 +92,7 @@ fun CustomDropdownMenuItem(
             text = text,
             style = MaterialTheme.typography.labelLarge, 
             color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 2 // 👇 Tambahan agar teks panjang di TweakScreen tidak merusak layout
+            maxLines = 2 
         )
     }
 }
