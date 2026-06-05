@@ -664,16 +664,13 @@ fun LinkCard(icon: ImageVector, titleRes: Int, descRes: Int, onClick: () -> Unit
     }
 }
 
-
 @Composable
 fun RebootBottomSheet(
     show: Boolean,
     onDismiss: () -> Unit,
     onReboot: (String) -> Unit
 ) {
-    if (!show) return
-
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // ❌ HAPUS BARIS INI: if (!show) return
 
     val context = LocalContext.current
     val pm = context.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager?
@@ -691,10 +688,10 @@ fun RebootBottomSheet(
         add(Triple("EDL", "edl", Icons.Outlined.DeveloperMode))
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer
+    // Gunakan CustomBottomSheet yang baru kita buat
+    CustomBottomSheet(
+        visible = show,
+        onDismiss = onDismiss
     ) {
         Column(
             modifier = Modifier
@@ -707,7 +704,7 @@ fun RebootBottomSheet(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                modifier = Modifier.padding(horizontal = 24.dp, bottom = 16.dp)
             )
 
             ExpressiveList(
@@ -715,7 +712,10 @@ fun RebootBottomSheet(
                 content = options.map { (label, reason, icon) ->
                     {
                         ExpressiveListItem(
-                            headlineContent = { Text(label) },
+                            // 👇 Jangan lupa suntik warna biar gak hitam di Dark Mode
+                            headlineContent = { 
+                                Text(text = label, color = MaterialTheme.colorScheme.onSurface) 
+                            },
                             leadingContent = { SmallLeadingIcon(icon) },
                             onClick = {
                                 onDismiss()
@@ -728,3 +728,4 @@ fun RebootBottomSheet(
         }
     }
 }
+

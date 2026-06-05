@@ -174,7 +174,7 @@ fun GetStartedScreen(navController: NavController) {
                                         val prefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
                                         prefs.edit().putBoolean("has_completed_get_started", true).commit()
 
-                                        Shell.cmd("su -c am start -S -n zx.azenith/.MainActivity").exec()
+                                        Shell.cmd("su -c pm grant zx.azenith android.permission.READ_EXTERNAL_STORAGE && su -c pm grant zx.azenith android.permission.POST_NOTIFICATIONS && su -c pm grant zx.azenith android.permission.READ_MEDIA_IMAGES && su -c am start -S -n zx.azenith/.MainActivity").exec()
                                     }
                                 }
                             },
