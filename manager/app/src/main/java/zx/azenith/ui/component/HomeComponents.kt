@@ -704,8 +704,10 @@ fun RebootBottomSheet(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(horizontal = 24.dp, bottom = 16.dp)
+                // 👇 UBAH BAGIAN INI (Gunakan start, end, bottom)
+                modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 16.dp)
             )
+
 
             ExpressiveList(
                 modifier = Modifier.padding(horizontal = 16.dp),

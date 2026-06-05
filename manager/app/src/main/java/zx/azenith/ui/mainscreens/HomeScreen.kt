@@ -181,9 +181,18 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
             )
         }
 
+        // 👇 KEMBALIKAN KODE INI SEPERTI SEMULA
         RootAppDialog {
             ProfileDialog(
-                // ... (Kode profil yang sudah ada tidak perlu diubah)
+                show = showProfileDialog,
+                onDismiss = { showProfileDialog = false },
+                onProfile = { profileReason ->
+                    viewModel.applyProfile(profileReason) {
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar(context.getString(R.string.toast_applying_profile))
+                        }
+                    }
+                }
             )
         }
     }
