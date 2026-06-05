@@ -75,8 +75,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.LargeFlexibleTopAppBar
-import androidx.compose.foundation.clickable // Tambahkan ini
-import androidx.compose.foundation.layout.Box // Jika belum ada
 
 
 @Composable
@@ -349,52 +347,28 @@ fun ApplistTopAppBar(
                             )
                         }
                     },
-                                        actions = {
+                    actions = {
                         IconButton(onClick = { onSearchModeChange(true) }) {
                             Icon(Icons.Default.Search, stringResource(R.string.cd_search))
                         }
-                        
-                        // Gunakan Box untuk membungkus ikon menu agar posisi ExpressiveDropdownMenu pas
-                        Box {
-                            IconButton(onClick = { menuExpanded = true }) {
-                                Icon(Icons.Default.MoreVert, stringResource(R.string.cd_menu))
-                            }
-                            
-                            // 👇 Ganti DropdownMenu bawaan dengan ExpressiveDropdownMenu
-                            ExpressiveDropdownMenu(
-                                expanded = menuExpanded, 
-                                onDismissRequest = { menuExpanded = false }
-                            ) {
-                                ExpressiveDropdownMenuItem(
-                                    text = stringResource(R.string.menu_refresh),
-                                    onClick = { 
-                                        AppIconCache.clear()
-                                        onRefresh()
-                                        menuExpanded = false 
-                                    }
-                                )
-                                // Menu checkbox untuk system apps
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { onToggleSystem(!showSystemApps); menuExpanded = false }
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    contentAlignment = Alignment.CenterStart
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Text(
-                                            text = stringResource(R.string.menu_show_system_apps),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Checkbox(checked = showSystemApps, onCheckedChange = null)
-                                    }
-                                }
-                            }
+                        IconButton(onClick = { menuExpanded = true }) {
+                            Icon(Icons.Default.MoreVert, stringResource(R.string.cd_menu))
+                        }
+                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.menu_refresh)) },
+                                onClick = { 
+                                    AppIconCache.clear()
+                                    onRefresh()
+                                    menuExpanded = false 
+                                },
+                                leadingIcon = { Icon(Icons.Default.Refresh, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.menu_show_system_apps)) },
+                                trailingIcon = { Checkbox(showSystemApps, null) },
+                                onClick = { onToggleSystem(!showSystemApps); menuExpanded = false }
+                            )
                         }
                     }
                 )
