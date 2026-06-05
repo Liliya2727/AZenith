@@ -19,12 +19,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity // 👇 Tambahkan import ini
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.ui.input.pointer.pointerInput
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.blur.blurEffect
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @Composable
 fun CustomBottomSheet(
@@ -37,11 +39,24 @@ fun CustomBottomSheet(
     val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
     val hazeState = LocalAppHazeState.current
 
+    val coroutineScope = rememberCoroutineScope()
+    val dragOffset = remember { Animatable(0f) }
+    
+    // 👇 Deklarasikan variabel untuk trik Anti-Terpotong
+    val density = LocalDensity.current
+    val extraBottomPadding = 100.dp
+
+    LaunchedEffect(visible) {
+        if (visible) {
+            dragOffset.snapTo(0f)
+        }
+    }
+
     if (visible) {
         BackHandler(onBack = onDismiss)
     }
 
-    // 1. Lapisan Gelap (Scrim) di belakang Bottom Sheet
+    // 1. Lapisan Gelap (Scrim)
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn(animationSpec = tween(250)),
@@ -60,11 +75,12 @@ fun CustomBottomSheet(
         )
     }
 
-    // 2. Kontainer Bottom Sheet yang meluncur dari bawah
+    // 2. Kontainer Bottom Sheet
     AnimatedVisibility(
         visible = visible,
         enter = slideInVertically(
             initialOffsetY = { it }, 
+            // 👇 Animasi dikembalikan ke Bouncy seperti permintaanmu
             animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
         ),
         exit = slideOutVertically(
@@ -80,6 +96,13 @@ fun CustomBottomSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    // 👇 Terapkan efek Drag DITAMBAH geseran (offset) ke bawah sejauh ekstra padding
+                    .offset { 
+                        IntOffset(
+                            x = 0, 
+                            y = dragOffset.value.roundToInt() + with(density) { extraBottomPadding.roundToPx() }
+                        ) 
+                    }
                     .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                     .then(
                         if (isBlurEnabled && hazeState != null) {
@@ -90,23 +113,40 @@ fun CustomBottomSheet(
                         if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)
                         else MaterialTheme.colorScheme.surfaceContainer
                     )
-                    // Mencegah klik tembus ke belakang
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = {}
                     )
             ) {
-                // Area Drag Handle (Garis kecil di atas untuk ditarik)
+                // Area Drag Handle
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(36.dp)
                         .pointerInput(Unit) {
-                            detectVerticalDragGestures { _, dragAmount ->
-                                // Jika ditarik ke bawah lebih dari 10 pixel, tutup!
-                                if (dragAmount > 10f) {
-                                    onDismiss()
+                            detectVerticalDragGestures(
+                                onDragEnd = {
+                                    if (dragOffset.value > 250f) {
+                                        onDismiss()
+                                    } else {
+                                        coroutineScope.launch {
+                                            dragOffset.animateTo(
+                                                targetValue = 0f,
+                                                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
+                                            )
+                                        }
+                                    }
+                                },
+                                onDragCancel = {
+                                    coroutineScope.launch {
+                                        dragOffset.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 400f))
+                                    }
+                                }
+                            ) { change, dragAmount ->
+                                change.consume()
+                                coroutineScope.launch {
+                                    dragOffset.snapTo(maxOf(0f, dragOffset.value + dragAmount))
                                 }
                             }
                         },
@@ -120,8 +160,12 @@ fun CustomBottomSheet(
                     )
                 }
                 
-                // Isi dari Bottom Sheet
+                // Isi konten aslinya
                 content()
+
+                // 👇 INI RAHASIANYA: Bantalan tembus pandang yang ditambahkan ke ujung bawah Card
+                // Card kamu akan jadi 100dp lebih panjang di bawah batas layar
+                Spacer(modifier = Modifier.height(extraBottomPadding))
             }
         }
     }
