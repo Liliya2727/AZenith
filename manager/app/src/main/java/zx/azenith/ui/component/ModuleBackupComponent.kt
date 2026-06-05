@@ -27,14 +27,9 @@ fun BackupRestoreBottomSheet(
     onBackup: () -> Unit,
     onRestore: () -> Unit
 ) {
-    if (!show) return
-
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer
+    CustomBottomSheet(
+        visible = show,
+        onDismiss = onDismiss
     ) {
         Column(
             modifier = Modifier
@@ -55,8 +50,8 @@ fun BackupRestoreBottomSheet(
                 content = listOf(
                     {
                         ExpressiveListItem(
-                            headlineContent = { Text("Backup Configuration") },
-                            supportingContent = { Text("Save your current tweak settings") },
+                            headlineContent = { Text("Backup Configuration", color = MaterialTheme.colorScheme.onSurface) },
+                            supportingContent = { Text("Save your current tweak settings", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                             leadingContent = { SmallLeadingIcon(Icons.Outlined.Save) },
                             onClick = {
                                 onDismiss()
@@ -66,8 +61,8 @@ fun BackupRestoreBottomSheet(
                     },
                     {
                         ExpressiveListItem(
-                            headlineContent = { Text("Restore Configuration") },
-                            supportingContent = { Text("Load a previously saved backup") },
+                            headlineContent = { Text("Restore Configuration", color = MaterialTheme.colorScheme.onSurface) },
+                            supportingContent = { Text("Load a previously saved backup", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                             leadingContent = { SmallLeadingIcon(Icons.Outlined.SettingsBackupRestore) },
                             onClick = {
                                 onDismiss()
