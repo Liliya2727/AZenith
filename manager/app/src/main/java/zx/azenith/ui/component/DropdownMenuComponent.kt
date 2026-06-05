@@ -1,16 +1,17 @@
 package zx.azenith.ui.component
 
-import android.content.Context // Tambahkan ini
+import android.content.Context
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
@@ -19,7 +20,7 @@ import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.blur.blurEffect
 
 @Composable
-fun ExpressiveDropdownMenu(
+fun CustomDropdownMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
@@ -35,28 +36,36 @@ fun ExpressiveDropdownMenu(
             onDismissRequest = onDismissRequest,
             properties = PopupProperties(focusable = true)
         ) {
+            // Animasi khas Material 3 (muncul membesar dari pojok atas)
             AnimatedVisibility(
                 visible = expanded,
-                enter = fadeIn(tween(200)) + scaleIn(initialScale = 0.95f, animationSpec = tween(200)),
-                exit = fadeOut(tween(200)) + scaleOut(targetScale = 0.95f, animationSpec = tween(200))
+                enter = fadeIn(tween(150)) + scaleIn(initialScale = 0.9f, animationSpec = tween(150), transformOrigin = TransformOrigin(1f, 0f)),
+                exit = fadeOut(tween(150)) + scaleOut(targetScale = 0.9f, animationSpec = tween(150), transformOrigin = TransformOrigin(1f, 0f))
             ) {
-                Column(
+                // Surface dengan properti persis seperti M3 (bayangan & lengkungan 8.dp)
+                Surface(
                     modifier = modifier
-                        .padding(8.dp)
-                        .widthIn(min = 180.dp)
+                        .widthIn(min = 112.dp, max = 280.dp)
+                        .padding(top = 4.dp) // Sedikit jarak dari anchor agar tidak numpuk
                         .clip(RoundedCornerShape(20.dp))
                         .then(
                             if (isBlurEnabled && hazeState != null) {
                                 Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
                             } else Modifier
-                        )
-                        .background(
-                            if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.4f)
-                            else MaterialTheme.colorScheme.surfaceContainer
-                        )
-                        .padding(vertical = 8.dp)
+                        ),
+                    color = if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)
+                            else MaterialTheme.colorScheme.surfaceContainer,
+                    tonalElevation = if (isBlurEnabled) 0.dp else 3.dp,
+                    shadowElevation = if (isBlurEnabled) 0.dp else 3.dp,
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    content()
+                    Column(
+                        modifier = Modifier
+                            .padding(vertical = 8.dp)
+                            .width(IntrinsicSize.Max)
+                    ) {
+                        content()
+                    }
                 }
             }
         }
@@ -64,19 +73,21 @@ fun ExpressiveDropdownMenu(
 }
 
 @Composable
-fun ExpressiveDropdownMenuItem(
+fun CustomDropdownMenuItem(
     text: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+        contentAlignment = Alignment.CenterStart
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.labelLarge, // Font bawaan M3 Menu
             color = MaterialTheme.colorScheme.onSurface
         )
     }

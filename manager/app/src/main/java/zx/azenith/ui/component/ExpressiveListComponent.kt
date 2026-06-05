@@ -53,14 +53,6 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import android.content.Context
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.blur.blurEffect
-import androidx.compose.ui.window.PopupProperties
-import androidx.compose.ui.unit.DpOffset
 
 
 
@@ -430,54 +422,6 @@ fun ExpressiveSwitchItem(
 }
 
 @Composable
-fun ExpressiveDropdownMenu(
-    expanded: Boolean,
-    onDismissRequest: () -> Unit,
-    offset: DpOffset = DpOffset(0.dp, 0.dp),
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    val context = LocalContext.current
-    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
-    val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
-    val hazeState = LocalAppHazeState.current
-
-    // Trik Utama: Mematikan token warna container bawaan Material 3 dropdown
-    val customColorScheme = MaterialTheme.colorScheme.copy(
-        surfaceContainer = Color.Transparent
-    )
-
-    MaterialTheme(colorScheme = customColorScheme) {
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = onDismissRequest,
-            offset = offset,
-            // PENTING: Kita manipulasi properties agar ia tidak membuat platform sub-window baru yang mengisolasi pixel
-            properties = PopupProperties(
-                focusable = true,
-                dismissOnBackPress = true,
-                dismissOnClickOutside = true,
-                usePlatformDefaultWidth = false // Membantu Haze membaca posisi koordinat lokal layout
-            ),
-            modifier = modifier
-                .clip(RoundedCornerShape(22.dp))
-                .then(
-                    if (isBlurEnabled && hazeState != null) {
-                        // Sekarang Haze bisa bekerja karena berada di hierarki visual yang terjangkau oleh HazeState
-                        Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
-                    } else Modifier
-                )
-                .background(
-                    if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)
-                    else MaterialTheme.colorScheme.surfaceContainer
-                ),
-            content = content
-        )
-    }
-}
-
-
-@Composable
 fun ExpressiveDropdownItem(
     icon: ImageVector? = null,
     title: String,
@@ -506,20 +450,21 @@ fun ExpressiveDropdownItem(
         headlineContent = { Text(text = title) },
         supportingContent = summary?.let { { Text(it) } },
         trailingContent = {
-            Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
+            // Kita ubah Alignment menjadi TopEnd agar saat menu muncul, posisinya selaras ke kanan bawah
+            Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
                 Text(
                     text = if (hasItems && safeIndex >= 0) items[safeIndex] else "",
                     color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
-                // Menggunakan ExpressiveDropdownMenu kustom yang sudah mendukung Haze Blur
-                ExpressiveDropdownMenu(
+                // 👇 Panggil Dropdown Kustom kita di sini
+                CustomDropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
                 ) {
                     items.forEachIndexed { index, text ->
-                        DropdownMenuItem(
-                            text = { Text(text) },
+                        CustomDropdownMenuItem(
+                            text = text,
                             onClick = {
                                 if (index in items.indices) {
                                     onItemSelected(index)
