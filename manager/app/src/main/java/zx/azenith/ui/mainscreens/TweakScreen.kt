@@ -429,12 +429,15 @@ fun TweakScreen(
             }
         }
 
-        BackupRestoreBottomSheet(
-            show = showBackupRestoreSheet,
-            onDismiss = { showBackupRestoreSheet = false },
-            onBackup = { scope.launch { snackbarHostState.showSnackbar("Dummy: Backup Started") } },
-            onRestore = { scope.launch { snackbarHostState.showSnackbar("Dummy: Restore Started") } }
-        )
+        RootAppDialog {
+            BackupRestoreBottomSheet(
+                show = showBackupRestoreSheet,
+                onDismiss = { showBackupRestoreSheet = false },
+                onBackup = { scope.launch { snackbarHostState.showSnackbar("Dummy: Backup Started") } },
+                onRestore = { scope.launch { snackbarHostState.showSnackbar("Dummy: Restore Started") } }
+            )
+        }
+
 
         RootAppDialog {
             RendererDialog(
