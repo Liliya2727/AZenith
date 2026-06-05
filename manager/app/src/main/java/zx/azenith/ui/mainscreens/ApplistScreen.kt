@@ -75,6 +75,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.foundation.clickable // Tambahkan ini
+import androidx.compose.foundation.layout.Box // Jika belum ada
 
 
 @Composable
