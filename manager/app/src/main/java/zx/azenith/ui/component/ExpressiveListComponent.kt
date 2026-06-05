@@ -433,39 +433,28 @@ fun ExpressiveDropdownItem(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    val hasItems = items.isNotEmpty()
-    val safeIndex = if (hasItems) {
-        selectedIndex.coerceIn(0, items.lastIndex)
-    } else {
-        -1
-    }
-
     ExpressiveListItem(
-        modifier = if (enabled) {
-            Modifier.clickable { expanded = true }
-        } else {
-            Modifier
-        },
+        modifier = if (enabled) Modifier.clickable { expanded = true } else Modifier,
         leadingContent = icon?.let { { LeadingIcon(icon = it, contentDescription = title) } },
         headlineContent = { Text(text = title) },
         supportingContent = summary?.let { { Text(it) } },
         trailingContent = {
-            Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
+            Box {
                 Text(
-                    text = if (hasItems && safeIndex >= 0) items[safeIndex] else "",
+                    text = if (items.isNotEmpty()) items.getOrElse(selectedIndex) { "" } else "",
                     color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                DropdownMenu(
+                
+                // 👇 Panggil komponen baru di sini
+                ExpressiveDropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
                 ) {
                     items.forEachIndexed { index, text ->
-                        DropdownMenuItem(
-                            text = { Text(text) },
+                        ExpressiveDropdownMenuItem(
+                            text = text,
                             onClick = {
-                                if (index in items.indices) {
-                                    onItemSelected(index)
-                                }
+                                onItemSelected(index)
                                 expanded = false
                             }
                         )
@@ -475,6 +464,7 @@ fun ExpressiveDropdownItem(
         }
     )
 }
+
 
 @Composable
 fun ExpressiveRadioItem(
