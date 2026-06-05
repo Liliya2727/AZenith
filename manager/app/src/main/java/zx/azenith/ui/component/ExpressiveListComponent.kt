@@ -450,21 +450,18 @@ fun ExpressiveDropdownItem(
         headlineContent = { Text(text = title) },
         supportingContent = summary?.let { { Text(it) } },
         trailingContent = {
-            // Kita ubah Alignment menjadi TopEnd agar saat menu muncul, posisinya selaras ke kanan bawah
-            Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
+            Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
                 Text(
                     text = if (hasItems && safeIndex >= 0) items[safeIndex] else "",
                     color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                
-                // 👇 Panggil Dropdown Kustom kita di sini
-                CustomDropdownMenu(
+                DropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
                 ) {
                     items.forEachIndexed { index, text ->
-                        CustomDropdownMenuItem(
-                            text = text,
+                        DropdownMenuItem(
+                            text = { Text(text) },
                             onClick = {
                                 if (index in items.indices) {
                                     onItemSelected(index)
@@ -478,7 +475,6 @@ fun ExpressiveDropdownItem(
         }
     )
 }
-
 
 
 @Composable
