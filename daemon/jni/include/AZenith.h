@@ -136,6 +136,8 @@ void read_app_status(void);
 
 // Variabel Cache
 extern char cached_focused_app[128];
+extern char cached_app_name[256];
+extern int cached_zen_mode;
 extern int cached_focused_pid; // Ditambahkan agar dikenali global
 extern int cached_screen_awake;
 extern int cached_battery_saver;

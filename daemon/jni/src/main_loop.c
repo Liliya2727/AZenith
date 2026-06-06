@@ -25,10 +25,6 @@ pid_t game_pids[MAX_GAME_PIDS] = {0};
 int game_pid_count = 0;
 bool is_restarting_renderer = false;
 GameOptions opts;
-extern int cached_focused_pid;
-extern char cached_app_name[256];
-extern int cached_zen_mode;
-
 
 int main_daemon(void) {
     if (check_running_state() != 0) {
