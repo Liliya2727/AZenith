@@ -135,7 +135,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                                 .sharedBounds(
                                                     sharedContentState = rememberSharedContentState(key = "profile_morph"),
                                                     animatedVisibilityScope = this@AnimatedVisibility,
-                                                    resizeMode = SharedTransitionScope.ResizeMode.ScaleToBounds(),
+                                                    
                                                     clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(26.dp))
                                                 ),
                                             icon = Icons.Rounded.Token, 
@@ -180,7 +180,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                                 .sharedBounds(
                                                     sharedContentState = rememberSharedContentState(key = "profile_morph"),
                                                     animatedVisibilityScope = this@AnimatedVisibility,
-                                                    resizeMode = SharedTransitionScope.ResizeMode.ScaleToBounds(),
+                                                    
                                                     clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(26.dp))
                                                 ),
                                             icon = Icons.Rounded.Token, 
@@ -242,7 +242,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                             .sharedBounds(
                                 sharedContentState = rememberSharedContentState(key = "profile_morph"),
                                 animatedVisibilityScope = this@AnimatedVisibility,
-                                resizeMode = SharedTransitionScope.ResizeMode.ScaleToBounds(),
+                                
                                 clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(28.dp))
                             )
                     ) {
