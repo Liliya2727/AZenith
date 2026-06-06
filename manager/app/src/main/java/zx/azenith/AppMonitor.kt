@@ -270,18 +270,22 @@ object AppMonitor {
     private fun hasMissingPid(appInfo: String): Boolean =
         appInfo != NONE_APP && appInfo.endsWith(" 0 0")
 
-    private fun buildStatus(focusedApp: String): String {
+        private fun buildStatus(focusedApp: String): String {
         val screenAwake = if (powerManager?.isInteractive == true) 1 else 0
         val batterySaver = if (powerManager?.isPowerSaveMode == true) 1 else 0
         val zenMode = getZenMode()
+        val pkgName = focusedApp.substringBefore(" ")
+        val appName = getAppName(pkgName)
 
         return buildString {
             appendLine("focused_app $focusedApp")
             appendLine("screen_awake $screenAwake")
             appendLine("battery_saver $batterySaver")
             appendLine("zen_mode $zenMode")
+            appendLine("app_name $appName")
         }
     }
+
 
     private fun getZenMode(): Int {
         return try {
@@ -575,4 +579,20 @@ object AppMonitor {
     private fun getInstanceFields(cls: Class<*>): List<Field> {
         return HiddenApiBypass.getInstanceFields(cls).filterIsInstance<Field>()
     }
+    
+    private fun getAppName(pkgName: String): String {
+        if (pkgName == "unknown" || pkgName == "none" || pkgName.isBlank()) {
+            return "Unknown"
+        }
+        return try {
+            val pm = systemContext?.packageManager ?: return "Unknown"
+            val appInfo = pm.getApplicationInfo(pkgName, 0)
+            appInfo.loadLabel(pm).toString()
+        } catch (e: Exception) {
+            // Jika gagal (misal aplikasi sudah di-uninstall saat dicek), 
+            // kembalikan package name sebagai fallback
+            pkgName 
+        }
+    }
+    
 }
