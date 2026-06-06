@@ -16,24 +16,24 @@
 # limitations under the License.
 #
 
-MODDIR=$(dirname "$0")
-MODULE_CONFIG="/data/adb/.config/AZenith"
+readonly MODDIR="${0%/*}"
+readonly MODULE_CONFIG="/data/adb/.config/AZenith"
 
-# Wait for boot to Complete
-while [ "$(resetprop sys.boot_completed)" != "1" ]; do
-	sleep 40
+until [ "$(resetprop sys.boot_completed)" = "1" ]; do 
+    sleep 5 
 done
 
-# Refresh daemon state
-if [ -z "$(resetprop persist.sys.azenith.state)" ] || { [ "$(resetprop persist.sys.azenith.state)" = "running" ] && [ -z "$(/system/bin/toybox pidof sys.azenith-service)" ]; }; then
+STATE=$(resetprop persist.sys.azenith.state)
+{ [ -z "$STATE" ] || { [ "$STATE" = "running" ] && [ -z "$(/system/bin/toybox pidof sys.azenith-service)" ]; }; } && {
     setprop persist.sys.azenith.state stopped
     setprop persist.sys.azenith.service ""
-fi
+}
 
-# Set Up App Monitoring
-nohup app_process -Djava.class.path="$MODDIR/AZenith.apk" / --nice-name=AZenithAppMon zx.azenith.AppMonitor "$MODULE_CONFIG/app_status" "$MODULE_CONFIG/background_apps" "$MODULE_CONFIG/java.lock" >"$MODULE_CONFIG/sysmon.log" 2>&1 &
+nohup app_process -Djava.class.path="$MODDIR/AZenith.apk" / \
+    --nice-name=AZenithAppMon zx.azenith.AppMonitor \
+    "$MODULE_CONFIG/app_status" \
+    "$MODULE_CONFIG/background_apps" \
+    "$MODULE_CONFIG/java.lock" >"$MODULE_CONFIG/sysmon.log" 2>&1 &
+    
 
-sleep 1
-
-# Run Daemon
-sys.azenith-service --run
+sleep 1 && exec sys.azenith-service --run
