@@ -37,7 +37,7 @@ void read_app_status() {
     if (!fp) return;
     
     char line[256];
-    char temp_app_name[256] = {0}; // Local buffer 
+
     
     while (fgets(line, sizeof(line), fp)) {
         if (strncmp(line, "focused_app ", 12) == 0) {
