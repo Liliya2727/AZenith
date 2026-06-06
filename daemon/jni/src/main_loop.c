@@ -20,11 +20,14 @@
 #include <poll.h>
 
 char* gamestart = NULL;
+char* active_app_name = NULL;
 pid_t game_pids[MAX_GAME_PIDS] = {0};
 int game_pid_count = 0;
 bool is_restarting_renderer = false;
 GameOptions opts;
 extern int cached_focused_pid;
+extern char cached_app_name[256];
+
 
 int main_daemon(void) {
     if (check_running_state() != 0) {
@@ -96,6 +99,7 @@ int main_daemon(void) {
     static bool is_initialize_complete = false;
     static bool dnd_enabled = false;
     static int saved_refresh_rate = -1;
+    static int saved_zen_mode = -1; 
     static time_t screen_off_timer = 0;
     static int pid_retries = 0;
     static bool has_applied_renderer = false; 
@@ -192,9 +196,13 @@ int main_daemon(void) {
 
                                     if (pids_changed) {
                                         if (new_count > 0) {
-                                            log_zenith(LOG_INFO, "Tracking %d PID(s) for %s", new_count, gamestart);
+                                        
+// ...
+
+
+                                            log_zenith(LOG_INFO, "Tracking %d PID(s) for %s", new_count, active_app_name ? active_app_name : gamestart);
                                         } else {
-                                            log_zenith(LOG_INFO, "Game %s PIDs updated. Found %d active processes.", gamestart, new_count);
+                                            log_zenith(LOG_INFO, "Game %s PIDs updated. Found %d active processes.", active_app_name ? active_app_name : gamestart, new_count);
                                         }
                                         game_pid_count = new_count;
                                         
@@ -213,11 +221,12 @@ int main_daemon(void) {
 
                                         if (new_count == 0) {
                                             if (strcmp(cached_focused_app, gamestart) == 0 || is_restarting_renderer) {
-                                                log_zenith(LOG_INFO, "Game %s PIDs dropped (Renderer Restart). Waiting to respawn...", gamestart);
+                                                log_zenith(LOG_INFO, "Game %s PIDs dropped (Renderer Restart). Waiting to respawn...", active_app_name ? active_app_name : gamestart);
                                             } else {
-                                                log_zenith(LOG_INFO, "Game %s completely closed. Exiting performance mode...", gamestart);
+                                                log_zenith(LOG_INFO, "Game %s completely closed. Exiting performance mode...", active_app_name ? active_app_name : gamestart);
                                                 free(gamestart);
                                                 gamestart = NULL;
+                                                if (active_app_name) { free(active_app_name); active_app_name = NULL; } // Bersihkan memory nama
                                                 need_profile_checkup = true;
                                             }
                                         }
@@ -329,9 +338,13 @@ int main_daemon(void) {
         char* current_focused_game = get_gamestart(&opts);
         if (current_focused_game) {
             if (!gamestart || strcmp(gamestart, current_focused_game) != 0) {
-                log_zenith(LOG_INFO, "New game detected: %s", current_focused_game);
                 if (gamestart) free(gamestart);
+                if (active_app_name) free(active_app_name);
+                
                 gamestart = current_focused_game;
+                active_app_name = strdup(cached_app_name); // Kunci nama aplikasi
+                
+                log_zenith(LOG_INFO, "New game detected: %s", active_app_name ? active_app_name : gamestart);
                 game_pid_count = 0;
                 pid_retries = 0;
                 has_applied_renderer = false;
@@ -340,6 +353,7 @@ int main_daemon(void) {
                 free(current_focused_game);
             }
         }
+
 
   
         int effective_screen_state = real_screen_state;
@@ -404,17 +418,19 @@ int main_daemon(void) {
                 if (game_pid_count == 0) {
                     if (pid_retries < 5) {
                         pid_retries++;
-                        log_zenith(LOG_WARN, "Waiting for %s to spawn (Retry %d/5)...", gamestart, pid_retries);
+                        log_zenith(LOG_WARN, "Waiting for %s to spawn (Retry %d/5)...", active_app_name ? active_app_name : gamestart, pid_retries);
                         continue; 
                     } else {
-                        log_zenith(LOG_ERROR, "Unable to fetch any PIDs for %s after 5 retries. Dropping.", gamestart);
+                        log_zenith(LOG_ERROR, "Unable to fetch any PIDs for %s after 5 retries. Dropping.", active_app_name ? active_app_name : gamestart);
                         free(gamestart);
                         gamestart = NULL;
+                        if (active_app_name) { free(active_app_name); active_app_name = NULL; }
                         pid_retries = 0;
                         need_profile_checkup = true;
                         continue;
                     }
                 }
+                                            
 
                 pid_retries = 0;
 
@@ -434,9 +450,9 @@ int main_daemon(void) {
             need_profile_checkup = false;
             
             run_profiler(PERFORMANCE_PROFILE);
-            notify("Performance Profile", "Running at : %s", false, 0, gamestart);
+            notify("Performance Profile", "Running at : %s", false, 0, active_app_name ? active_app_name : gamestart);
+            log_zenith(LOG_INFO, "Applying performance profile for %s", active_app_name ? active_app_name : gamestart);
             
-            log_zenith(LOG_INFO, "Applying performance profile for %s", gamestart);
             toast("Applying Performance Profile");
 
             if (IS_TRUE(opts.perf_lite_mode)) {
@@ -449,17 +465,26 @@ int main_daemon(void) {
                 systemv("setprop persist.sys.azenithconf.litemode %s", (strcmp(lite_prop, "1") == 0) ? "1" : "0");
             }
                      
-            if (IS_TRUE(opts.dnd_on_gaming)) {                   
-                systemv("sys.azenith-utilityconf enableDND");
+            if (saved_zen_mode < 0) {
+                saved_zen_mode = cached_zen_mode;
+            }
+
+            if (IS_TRUE(opts.dnd_on_gaming)) {
+                if (saved_zen_mode == 0) {
+                    systemv("sys.azenith-utilityconf enableDND");
+                }
                 dnd_enabled = true;
             } else if (!IS_FALSE(opts.dnd_on_gaming)) {
                 char dnd_state[PROP_VALUE_MAX] = {0};
                 __system_property_get("persist.sys.azenithconf.dnd", dnd_state);
                 if (strcmp(dnd_state, "1") == 0) {
-                    systemv("sys.azenith-utilityconf enableDND");
+                    if (saved_zen_mode == 0) {
+                        systemv("sys.azenith-utilityconf enableDND");
+                    }
                     dnd_enabled = true;
                 }
             }
+
                             
             if (!IS_DEFAULT(opts.refresh_rate)) {
                 int rr = atoi(opts.refresh_rate);
@@ -473,13 +498,15 @@ int main_daemon(void) {
             }
                   
             if (IS_TRUE(opts.game_preload)) {
-                notify("AZenith Preload", "Preloading Complete at : %s", true, 10000, gamestart);
+                notify("AZenith Preload", "Preloading Complete at : %s", true, 10000, active_app_name ? active_app_name : gamestart);
+
                 GamePreload(gamestart);
             } else if (!IS_FALSE(opts.game_preload)) {
                 char preload_active[PROP_VALUE_MAX] = {0};
                 __system_property_get("persist.sys.azenithconf.APreload", preload_active);
                 if (strcmp(preload_active, "1") == 0) {
-                    notify("AZenith Preload", "Preloading Complete at : %s", true, 10000, gamestart);
+                    notify("AZenith Preload", "Preloading Complete at : %s", true, 10000, active_app_name ? active_app_name : gamestart);
+
                     GamePreload(gamestart);
                 }
             }
@@ -502,9 +529,15 @@ int main_daemon(void) {
             }   
 
             if (dnd_enabled) {
-                systemv("sys.azenith-utilityconf disableDND");
+                // Hanya matikan DND jika state asalnya memang mati (0)
+                if (saved_zen_mode == 0) {
+                    systemv("sys.azenith-utilityconf disableDND");
+                }
                 dnd_enabled = false;
             }
+            // Reset saved_zen_mode untuk game berikutnya
+            saved_zen_mode = -1; 
+
 
             if (strlen(saved_renderer) > 0) {
                 char current_now[PROP_VALUE_MAX] = {0};
@@ -534,9 +567,15 @@ int main_daemon(void) {
             }
 
             if (dnd_enabled) {
-                systemv("sys.azenith-utilityconf disableDND");
+                // Hanya matikan DND jika state asalnya memang mati (0)
+                if (saved_zen_mode == 0) {
+                    systemv("sys.azenith-utilityconf disableDND");
+                }
                 dnd_enabled = false;
             }
+            // Reset saved_zen_mode untuk game berikutnya
+            saved_zen_mode = -1; 
+
 
             if (!is_initialize_complete) {
                 notify("Daemon Info", "AZenith is running successfully", false, 60000);
