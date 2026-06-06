@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,8 +19,9 @@
 #include <poll.h>
 #include <string.h>
 
-extern int cached_focused_pid;
-extern char cached_app_name[256];
+char cached_focused_app[128] = {0};
+char cached_app_name[256] = "Unknown";
+int cached_focused_pid = 0;
 int cached_zen_mode = 0; 
 int cached_screen_awake = 1;
 int cached_battery_saver = 0;
@@ -31,7 +32,6 @@ void read_app_status() {
     
     char line[256];
 
-    
     while (fgets(line, sizeof(line), fp)) {
         if (strncmp(line, "focused_app ", 12) == 0) {
             int uid;
