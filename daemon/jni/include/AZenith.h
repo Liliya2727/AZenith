@@ -41,6 +41,7 @@
 #define PROFILE_MODE "/data/adb/.config/AZenith/API/current_profile"
 #define PROFILE_MODE_APP "/data/data/zx.azenith/API/current_profile"
 #define GAME_INFO "/data/adb/.config/AZenith/API/gameinfo"
+#define GAME_INFO_APP "/data/data/zx.azenith/API/gameinfo"
 #define GAMELIST "/data/adb/.config/AZenith/gamelist/azenithApplist.json"
 #define DAEMON_MODES "/data/adb/.config/AZenith/API/current_modes"
 #define MODULE_PROP "/data/adb/modules/AZenith/module.prop"

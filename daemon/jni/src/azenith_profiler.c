@@ -34,8 +34,10 @@ void run_profiler(const int profile) {
     if (profile == 1) {
         pid_t main_pid = (game_pid_count > 0) ? game_pids[0] : 0;
         write2file(GAME_INFO, false, false, "%s %d %d\n", gamestart, main_pid, uidof(main_pid));
+        write2file(GAME_INFO, false, false, "%s %d %d\n", gamestart, main_pid, uidof(main_pid));
     } else {
         write2file(GAME_INFO, false, false, "NULL 0 0\n");
+        write2file(GAME_INFO_APP, false, false, "NULL 0 0\n");
     }
 
     write2file(PROFILE_MODE, false, false, "%d\n", profile);
