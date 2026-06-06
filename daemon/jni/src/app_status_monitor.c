@@ -19,13 +19,6 @@
 #include <poll.h>
 #include <string.h>
 
-char* gamestart = NULL;
-char* active_app_name = NULL;
-pid_t game_pids[MAX_GAME_PIDS] = {0};
-int game_pid_count = 0;
-bool is_restarting_renderer = false;
-GameOptions opts;
-
 extern int cached_focused_pid;
 extern char cached_app_name[256];
 int cached_zen_mode = 0; 
