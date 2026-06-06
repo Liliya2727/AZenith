@@ -17,9 +17,18 @@
 #include <AZenith.h>
 #include <sys/inotify.h>
 #include <poll.h>
+#include <string.h>
 
-char cached_focused_app[128] = {0};
-int cached_focused_pid = 0;
+char* gamestart = NULL;
+char* active_app_name = NULL;
+pid_t game_pids[MAX_GAME_PIDS] = {0};
+int game_pid_count = 0;
+bool is_restarting_renderer = false;
+GameOptions opts;
+
+extern int cached_focused_pid;
+extern char cached_app_name[256];
+int cached_zen_mode = 0; 
 int cached_screen_awake = 1;
 int cached_battery_saver = 0;
 
@@ -28,15 +37,21 @@ void read_app_status() {
     if (!fp) return;
     
     char line[256];
+    char temp_app_name[256] = {0}; // Local buffer 
+    
     while (fgets(line, sizeof(line), fp)) {
         if (strncmp(line, "focused_app ", 12) == 0) {
             int uid;
-            // Masukkan PID langsung ke cached_focused_pid
             sscanf(line + 12, "%127s %d %d", cached_focused_app, &cached_focused_pid, &uid);
         } else if (strncmp(line, "screen_awake ", 13) == 0) {
             sscanf(line + 13, "%d", &cached_screen_awake);
         } else if (strncmp(line, "battery_saver ", 14) == 0) {
             sscanf(line + 14, "%d", &cached_battery_saver);
+        } else if (strncmp(line, "zen_mode ", 9) == 0) {
+            sscanf(line + 9, "%d", &cached_zen_mode);
+        } else if (strncmp(line, "app_name ", 9) == 0) {
+            strncpy(cached_app_name, line + 9, sizeof(cached_app_name) - 1);
+            cached_app_name[strcspn(cached_app_name, "\n")] = 0;
         }
     }
     fclose(fp);
