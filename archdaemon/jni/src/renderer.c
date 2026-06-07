@@ -34,12 +34,14 @@ bool apply_smart_renderer(const char* target_type, const char* pkg, char* saved_
         strncpy(saved_ref, current_renderer, PROP_VALUE_MAX - 1);
     }
 
-    const char* real_target = strcmp(target_type, "vulkan") == 0 ? "skiavk" : "skiagl";
+    const char* real_target = strcmp(target_type, "vulkan") == 0 ? "vulkan" : "skiagl";
 
     if (strcmp(current_renderer, real_target) != 0) {
         log_zenith(LOG_INFO, "Switching to %s...", real_target);
 
-        systemv("sys.azenith-utilityconf setrender %s", real_target);
+        systemv("sys.azenith-utilityconf setrenderer %s", real_target);
+        
+        sleep(2);
 
         systemv("am force-stop %s && am start -n $(cmd package resolve-activity --brief %s | tail -n 1)", pkg, pkg);
 

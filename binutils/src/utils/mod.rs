@@ -149,14 +149,12 @@ pub fn setrender(renderer: &str) {
     match renderer {
         "vulkan" => {
             setprop("debug.hwui.renderer", "skiavk");
-            setprop("persist.sys.azenithconf.renderer", "skiavk");
         }
         "skiagl" => {
             setprop("debug.hwui.renderer", "skiagl");
-            setprop("persist.sys.azenithconf.renderer", "skiagl");
         }
         _ => {
-            setprop("persist.sys.azenithconf.renderer", "Default");
+            // Ignore
         }
     }
     dlog(&format!("Set current renderer to: {}", renderer));
