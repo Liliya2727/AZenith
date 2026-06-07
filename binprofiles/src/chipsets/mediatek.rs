@@ -16,6 +16,11 @@ pub fn mediatek_balance() {
             }
         }
     }
+    
+    ppm_fix_freq("-1"); 
+    
+    zeshia_def("1", "/sys/kernel/fpsgo/common/force_onoff");
+    zeshia_def("1", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
 
     zeshia_def("0", "/proc/cpufreq/cpufreq_cci_mode");
     zeshia_def("1", "/proc/cpufreq/cpufreq_power_mode");
@@ -43,10 +48,29 @@ pub fn mediatek_balance() {
     zeshia_def("stop 0", "/proc/pbm/pbm_stop");
     zeshia_def("1", "/sys/kernel/eara_thermal/enable");
 
-    zeshia_def("-1", "/sys/devices/platform/10012000.dvfsrc/helio-dvfsrc/dvfsrc_req_ddr_opp");
     zeshia_def("-1", "/sys/kernel/helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp");
     zeshia_def("userspace", "/sys/class/devfreq/mtk-dvfsrc-devfreq/governor");
-    zeshia_def("userspace", "/sys/devices/platform/soc/1c00f000.dvfsrc/mtk-dvfsrc-devfreq/devfreq/mtk-dvfsrc-devfreq/governor");
+    
+        // 1. Eksekusi statis untuk path /sys/kernel dan /sys/class (karena ini symlink global, tidak berubah)
+    zeshia_def("-1", "/sys/kernel/helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp");
+    zeshia_def("userspace", "/sys/class/devfreq/mtk-dvfsrc-devfreq/governor");
+
+    if let Ok(paths) = glob::glob("/sys/devices/platform/*.dvfsrc") {
+        for path in paths.flatten() {
+            if let Some(p_str) = path.to_str() {
+                zeshia_def("-1", &format!("{}/helio-dvfsrc/dvfsrc_req_ddr_opp", p_str));
+            }
+        }
+    }
+
+    if let Ok(paths) = glob::glob("/sys/devices/platform/soc/*.dvfsrc") {
+        for path in paths.flatten() {
+            if let Some(p_str) = path.to_str() {
+                zeshia_def("userspace", &format!("{}/mtk-dvfsrc-devfreq/devfreq/mtk-dvfsrc-devfreq/governor", p_str));
+            }
+        }
+    }
+    
 
     if let Ok(mut paths) = glob::glob("/sys/devices/platform/*.mali") {
         if let Some(Ok(path)) = paths.next() {
@@ -71,6 +95,12 @@ pub fn mediatek_performance() {
             }
         }
     }
+    
+    ppm_fix_freq("0"); 
+
+    zeshia_def("0", "/sys/kernel/fpsgo/common/force_onoff");
+    zeshia_def("0", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
+
 
     zeshia_def("1", "/proc/cpufreq/cpufreq_cci_mode");
     zeshia_def("3", "/proc/cpufreq/cpufreq_power_mode");
@@ -99,10 +129,24 @@ pub fn mediatek_performance() {
     zeshia_def("stop 1", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
     zeshia_def("0", "/sys/kernel/eara_thermal/enable");
 
-    zeshia_def("0", "/sys/devices/platform/10012000.dvfsrc/helio-dvfsrc/dvfsrc_req_ddr_opp");
     zeshia_def("0", "/sys/kernel/helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp");
     zeshia_def("performance", "/sys/class/devfreq/mtk-dvfsrc-devfreq/governor");
-    zeshia_def("performance", "/sys/devices/platform/soc/1c00f000.dvfsrc/mtk-dvfsrc-devfreq/devfreq/mtk-dvfsrc-devfreq/governor");
+    
+    if let Ok(paths) = glob::glob("/sys/devices/platform/*.dvfsrc") {
+        for path in paths.flatten() {
+            if let Some(p_str) = path.to_str() {
+                zeshia_def("0", &format!("{}/helio-dvfsrc/dvfsrc_req_ddr_opp", p_str));
+            }
+        }
+    }
+
+    if let Ok(paths) = glob::glob("/sys/devices/platform/soc/*.dvfsrc") {
+        for path in paths.flatten() {
+            if let Some(p_str) = path.to_str() {
+                zeshia_def("performance", &format!("{}/mtk-dvfsrc-devfreq/devfreq/mtk-dvfsrc-devfreq/governor", p_str));
+            }
+        }
+    }
 
     if let Ok(mut paths) = glob::glob("/sys/devices/platform/*.mali") {
         if let Some(Ok(path)) = paths.next() {
@@ -127,11 +171,30 @@ pub fn mediatek_powersave() {
             }
         }
     }
+    
+    ppm_fix_freq("-1"); 
+    
+    zeshia_def("1", "/sys/kernel/fpsgo/common/force_onoff");
+    zeshia_def("1", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
 
-    zeshia_def("0", "/sys/devices/platform/10012000.dvfsrc/helio-dvfsrc/dvfsrc_req_ddr_opp");
-    zeshia_def("0", "/sys/kernel/helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp");
+    zeshia_def("-1", "/sys/kernel/helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp");
     zeshia_def("powersave", "/sys/class/devfreq/mtk-dvfsrc-devfreq/governor");
-    zeshia_def("powersave", "/sys/devices/platform/soc/1c00f000.dvfsrc/mtk-dvfsrc-devfreq/devfreq/mtk-dvfsrc-devfreq/governor");
+    
+    if let Ok(paths) = glob::glob("/sys/devices/platform/*.dvfsrc") {
+        for path in paths.flatten() {
+            if let Some(p_str) = path.to_str() {
+                zeshia_def("-1", &format!("{}/helio-dvfsrc/dvfsrc_req_ddr_opp", p_str));
+            }
+        }
+    }
+
+    if let Ok(paths) = glob::glob("/sys/devices/platform/soc/*.dvfsrc") {
+        for path in paths.flatten() {
+            if let Some(p_str) = path.to_str() {
+                zeshia_def("powersave", &format!("{}/mtk-dvfsrc-devfreq/devfreq/mtk-dvfsrc-devfreq/governor", p_str));
+            }
+        }
+    }
 
     if Path::new("/proc/gpufreq/gpufreq_power_limited").exists() {
         let settings = [
