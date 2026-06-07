@@ -103,7 +103,7 @@ fun AppSettingsScreen(
 
     var localMasterOn by remember(config != null) { mutableStateOf(config != null) }
     
-    // BARU: Penanda untuk mendeteksi apakah user yang menekan switch secara manual
+
     var userToggled by remember { mutableStateOf(false) }
 
     val booleanModes = listOf(
@@ -111,11 +111,19 @@ fun AppSettingsScreen(
         stringResource(R.string.on_label),
         stringResource(R.string.off_label)
     )
+
     val rendererModes = listOf(
         stringResource(R.string.Renderer_Default),
-        stringResource(R.string.Renderer_Vulkan),
-        stringResource(R.string.Renderer_SkiaGL)
+        "SkiaVK",
+        "SkiaGL"
     )
+
+    val rendererValues = listOf(
+        "default", 
+        "skiavk",
+        "skiagl"
+    )
+
     val dynamicRefreshModes = remember { getSupportedRefreshRates(context) }
 
     fun getBoolIndex(v: String?): Int = when(v) {
@@ -286,14 +294,14 @@ fun AppSettingsScreen(
                                 },
                                 {
                                     ExpressiveDropdownItem(
-                                        icon = Icons.Rounded.WebStories,
-                                        title = stringResource(R.string.refreshrates),
-                                        summary = stringResource(R.string.refreshrates_desc),
-                                        items = dynamicRefreshModes,
-                                        selectedIndex = dynamicRefreshModes.indexOf(displayConfig.refresh_rate).coerceAtLeast(0),
+                                        icon = Icons.Rounded.Layers,
+                                        title = stringResource(R.string.renderengine),
+                                        summary = stringResource(R.string.renderengine_desc),
+                                        items = rendererModes,
+                                        selectedIndex = rendererValues.indexOfFirst { it.equals(displayConfig.renderer, ignoreCase = true) }.coerceAtLeast(0),
                                         onItemSelected = { index ->
-                                            val value = dynamicRefreshModes[index]
-                                            packageName?.let { viewModel.updateSetting(it, "refresh_rate", value) }
+                                            val value = rendererValues[index]
+                                            packageName?.let { viewModel.updateSetting(it, "renderer", value) }
                                         }
                                     )
                                 },

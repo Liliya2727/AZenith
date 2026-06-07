@@ -389,14 +389,14 @@ int main_daemon(void) {
                     is_renderer_changing = apply_smart_renderer(opts.renderer, gamestart, saved_renderer);
                 } else {
                     char global_renderer[PROP_VALUE_MAX] = {0};
-                    __system_property_get("persist.sys.azenithconf.renderer", global_renderer);
+                    __system_property_get("debug.hwui.renderer", global_renderer);
                     if (strcmp(global_renderer, "default") != 0) {
                         is_renderer_changing = apply_smart_renderer(global_renderer, gamestart, saved_renderer);
                     }
                 }
 
                 if (is_renderer_changing) {
-                    log_zenith(LOG_INFO, "Renderer changing applied. Waiting for app to respawn...");
+                    log_zenith(LOG_INFO, "Changing renderer. Waiting for app to respawn...");
                     sleep(5);
                     game_pid_count = 0;
                     pid_retries = 0;

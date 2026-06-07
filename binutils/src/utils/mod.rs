@@ -147,7 +147,7 @@ pub fn restartservice() {
 
 pub fn setrender(renderer: &str) {
     match renderer {
-        "vulkan" => {
+        "skiavk" => {
             setprop("debug.hwui.renderer", "skiavk");
         }
         "skiagl" => {
