@@ -218,7 +218,7 @@ int main_daemon(void) {
 
                                         if (new_count == 0) {
                                             if (strcmp(cached_focused_app, gamestart) == 0 || is_restarting_renderer) {
-                                                log_zenith(LOG_INFO, "Game %s PIDs dropped (Renderer Restart). Waiting to respawn...", active_app_name ? active_app_name : gamestart);
+                                                log_zenith(LOG_INFO, "Game %s PIDs dropped (Restarting). Waiting to respawn...", active_app_name ? active_app_name : gamestart);
                                             } else {
                                                 log_zenith(LOG_INFO, "Game %s completely closed. Exiting performance mode...", active_app_name ? active_app_name : gamestart);
                                                 free(gamestart);
