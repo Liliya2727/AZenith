@@ -294,14 +294,14 @@ fun AppSettingsScreen(
                                 },
                                 {
                                     ExpressiveDropdownItem(
-                                        icon = Icons.Rounded.Layers,
-                                        title = stringResource(R.string.renderengine),
-                                        summary = stringResource(R.string.renderengine_desc),
-                                        items = rendererModes,
-                                        selectedIndex = rendererValues.indexOfFirst { it.equals(displayConfig.renderer, ignoreCase = true) }.coerceAtLeast(0),
+                                        icon = Icons.Rounded.WebStories,
+                                        title = stringResource(R.string.refreshrates),
+                                        summary = stringResource(R.string.refreshrates_desc),
+                                        items = dynamicRefreshModes,
+                                        selectedIndex = dynamicRefreshModes.indexOf(displayConfig.refresh_rate).coerceAtLeast(0),
                                         onItemSelected = { index ->
-                                            val value = rendererValues[index]
-                                            packageName?.let { viewModel.updateSetting(it, "renderer", value) }
+                                            val value = dynamicRefreshModes[index]
+                                            packageName?.let { viewModel.updateSetting(it, "refresh_rate", value) }
                                         }
                                     )
                                 },
@@ -311,9 +311,9 @@ fun AppSettingsScreen(
                                         title = stringResource(R.string.renderengine),
                                         summary = stringResource(R.string.renderengine_desc),
                                         items = rendererModes,
-                                        selectedIndex = rendererModes.indexOfFirst { it.equals(displayConfig.renderer, ignoreCase = true) }.coerceAtLeast(0),
+                                        selectedIndex = rendererValues.indexOfFirst { it.equals(displayConfig.renderer, ignoreCase = true) }.coerceAtLeast(0),
                                         onItemSelected = { index ->
-                                            val value = rendererModes[index].lowercase()
+                                            val value = rendererValues[index]
                                             packageName?.let { viewModel.updateSetting(it, "renderer", value) }
                                         }
                                     )
