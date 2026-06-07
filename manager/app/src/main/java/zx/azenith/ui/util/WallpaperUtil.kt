@@ -23,14 +23,11 @@ object WallpaperCache {
                 val drawable = wallpaperManager.drawable
                 
                 if (drawable != null) {
-                    // 👇 Ambil ukuran asli gambar
+
                     val intrinsicWidth = drawable.intrinsicWidth
                     val intrinsicHeight = drawable.intrinsicHeight
                     
-                    // 👇 Hitung rasio agar tidak gepeng
                     val ratio = intrinsicWidth.toFloat() / intrinsicHeight.toFloat()
-                    
-                    // Tetapkan target tinggi (hemat RAM), lebarnya menyesuaikan rasio asli
                     val targetHeight = 800
                     val targetWidth = (targetHeight * ratio).toInt()
                     
@@ -38,7 +35,7 @@ object WallpaperCache {
                     bitmapState.value = bitmap
                 }
             } catch (e: Exception) {
-                // Abaikan
+                // 
             } finally {
                 isLoaded = true
             }
