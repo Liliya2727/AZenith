@@ -47,7 +47,7 @@ mkdir -p mainfiles/libs/armeabi-v7a
 mkdir -p mainfiles/system/bin
 
 [ -d "libs" ] && cp -r libs/* mainfiles/libs/ 2>/dev/null
-[ -d "daemon/libs" ] && cp -r daemon/libs/* mainfiles/libs/ 2>/dev/null
+[ -d "archdaemon/libs" ] && cp -r archdaemon/libs/* mainfiles/libs/ 2>/dev/null
 [ -d "preloadbin/libs" ] && cp -r preloadbin/libs/* mainfiles/libs/ 2>/dev/null
 
 # Ambil binari Rust berdasarkan RUST_PROFILE (debug / release)
