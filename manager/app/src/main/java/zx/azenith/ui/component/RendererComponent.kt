@@ -32,7 +32,7 @@ import dev.chrisbanes.haze.blur.blurEffect
 import zx.azenith.R
 
 private data class RendererOption(
-    val titleRes: Int,
+    val titleRes: String,
     val reason: String,
     val icon: ImageVector
 )
@@ -40,8 +40,8 @@ private data class RendererOption(
 @Composable
 private fun getRendererOptions(): List<RendererOption> {
     return listOf(
-        RendererOption(R.string.Renderer_Vulkan, "vulkan", Icons.Rounded.Layers),
-        RendererOption(R.string.Renderer_SkiaGL, "skiagl", Icons.Rounded.Layers),
+        RendererOption("SkiaVK", "skiavk", Icons.Rounded.Layers),
+        RendererOption("SkiaGL", "skiagl", Icons.Rounded.Layers),
     )
 }
 
