@@ -122,7 +122,7 @@ fun RendererDialog(
                                 modifier = Modifier.padding(vertical = 4.dp),
                                 headlineContent = { 
                                     Text(
-                                        text = stringResource(option.titleRes),
+                                        text = option.titleRes,
                                         color = MaterialTheme.colorScheme.onSurface // 👈 TAMBAHKAN INI
                                     ) 
                                 },
