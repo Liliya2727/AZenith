@@ -607,12 +607,10 @@ pub fn clear_background_apps() {
     let exclude = ["com.android.systemui", "com.android.settings", "android", "system"];
 
     for pkg in invisible_pkgs {
-        // Jika package juga terdeteksi sebagai visible, lewati (setara: grep -qFx)
         if visible_pkgs.contains(&pkg) {
             continue;
         }
 
-        // Cek pengecualian (setara: grep -Eq)
         let is_excluded = exclude.iter().any(|&ex| pkg.contains(ex));
 
         if !is_excluded {
@@ -635,38 +633,32 @@ pub fn get_mtk_gpu_max_freq() -> Option<u64> {
         .max()
 }
 
-
 pub fn read_freqs(path: &str) -> Vec<u64> {
     let mut freqs: Vec<u64> = fs::read_to_string(path)
         .unwrap_or_default()
         .split_whitespace()
         .filter_map(|s: &str| s.parse().ok())
         .collect();
-    freqs.sort_unstable(); // Diurutkan dari terkecil ke terbesar
+    freqs.sort_unstable();
     freqs
 }
 
 pub fn ppm_fix_freq(target_index: &str) {
     let ppm_path = "/proc/ppm/policy/ut_fix_freq_idx";
-    
-    // Pastikan file PPM-nya ada
+
     if !Path::new(ppm_path).exists() {
         return;
     }
 
-    // 1. Hitung jumlah cluster CPU secara dinamis
     let mut cluster_count = 0;
     if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpufreq/policy*") {
-        cluster_count = paths.filter_map(Result::ok).count(); // Hitung jumlah folder policy
+        cluster_count = paths.filter_map(Result::ok).count();
     }
 
     if cluster_count > 0 {
-        // 2. Gandakan target index (misal "-1") sebanyak jumlah cluster, gabungkan dengan spasi
         let payload = vec![target_index; cluster_count].join(" ");
-        
-        // 3. Eksekusi ke sistem (Contoh output: "-1 -1" atau "-1 -1 -1")
+)
         zeshia_def(&payload, ppm_path);
         
-        dlog(&format!("Applied {} to ut_fix_freq_idx ({} Clusters)", payload, cluster_count));
     }
 }
