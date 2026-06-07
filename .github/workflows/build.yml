@@ -12,7 +12,7 @@ on:
       - ".github/workflows/build.yml"
       - ".github/scripts/**"
       - "manager/**"
-      - "daemon/**"
+      - "archdaemon/**"
       - "tweakfls/**"
       - "mainfiles/**"
       - "preloadbin/**"
@@ -51,8 +51,8 @@ jobs:
         with:
           ndk-version: r29
 
-      - name: Build AZenith Daemon
-        working-directory: ./daemon
+      - name: Compile Daemon
+        working-directory: ./archdaemon
         run: |
           if [ "$V_TYPE" == "experimental" ]; then
             ndk-build NDK_DEBUG=1
@@ -60,7 +60,7 @@ jobs:
             ndk-build
           fi
 
-      - name: Build AZenith VMT
+      - name: Compile Preload Binary
         working-directory: ./preloadbin
         run: |
           if [ "$V_TYPE" == "experimental" ]; then
@@ -86,7 +86,7 @@ jobs:
             cargo ndk -t arm64-v8a -t armeabi-v7a build --release
           fi
 
-      - name: Build AZenith Profilesettings
+      - name: Compile AZenith Profilesettings
         working-directory: ./binprofiles
         run: |
           if [ "$V_TYPE" == "experimental" ]; then
@@ -95,7 +95,7 @@ jobs:
             cargo ndk -t arm64-v8a -t armeabi-v7a build --release
           fi
 
-      - name: Build AZenith Utility
+      - name: Compile AZenith Utility
         working-directory: ./binutils
         run: |
           if [ "$V_TYPE" == "experimental" ]; then
