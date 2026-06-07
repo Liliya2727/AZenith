@@ -1,29 +1,43 @@
-#!/bin/env bash
-# shellcheck disable=SC2035
+#!/usr/bin/env bash
 
-if [ -z "$GITHUB_WORKSPACE" ]; then
-	echo "This script should only run on GitHub action!" >&2
+set -euo pipefail
+l
+if [ -z "${GITHUB_WORKSPACE:-}" ]; then
+	echo "❌ Error: This script should only run on GitHub Actions!" >&2
 	exit 1
 fi
 
-# Make sure we're on right directory
 cd "$GITHUB_WORKSPACE" || {
-	echo "Unable to cd to GITHUB_WORKSPACE" >&2
+	echo "❌ Error: Unable to cd to GITHUB_WORKSPACE" >&2
 	exit 1
 }
 
+readonly HEADER_FILE="archdaemon/jni/include/AZenith.h"
+readonly GRADLE_FILE="manager/app/build.gradle.kts"
 
-# Write module version to daemon and webui
-version="$(cat version)"
-version_type="$(cat version_type)"
-version_code="$(git rev-list HEAD --count)"
-release_code="$(git rev-list HEAD --count)-$(git rev-parse --short HEAD)-$version_type"
-echo "start sending AZenith version: $version ($release_code) to WebUI, App and Daemon"
-sed -i "s|#define MODULE_VERSION \".*\"|#define MODULE_VERSION \"$version ($release_code)\"|" daemon/jni/include/AZenith.h
-sed -i "s/versionCode =.*/versionCode = $version_code/" manager/app/build.gradle.kts
-sed -i "s/versionName =.*/versionName = \"$version ($release_code)\"/" manager/app/build.gradle.kts
+[ -f "version" ] || { echo "❌ Error: 'version' file not found!"; exit 1; }
+[ -f "version_type" ] || { echo "❌ Error: 'version_type' file not found!"; exit 1; }
 
-echo "Successfully write Version code to gradle.build: $(cat manager/app/build.gradle.kts | grep versionCode)"
-echo "Successfully write Version name to gradle.build: $(cat manager/app/build.gradle.kts | grep versionName)"
-echo "Successfully write to AZenith.h: $(cat daemon/jni/include/AZenith.h | grep MODULE_VERSION)"
+readonly VERSION=$(cat version)
+readonly VERSION_TYPE=$(cat version_type)
+readonly VERSION_CODE=$(git rev-list HEAD --count)
+readonly SHORT_HASH=$(git rev-parse --short HEAD)
+readonly RELEASE_CODE="${VERSION_CODE}-${SHORT_HASH}-${VERSION_TYPE}"
+readonly FULL_VERSION="${VERSION} (${RELEASE_CODE})"
 
+echo "Starting version injection..."
+echo "Target Version: $FULL_VERSION"
+echo "Version Code  : $VERSION_CODE"
+
+sed -i "s|#define MODULE_VERSION \".*\"|#define MODULE_VERSION \"$FULL_VERSION\"|" "$HEADER_FILE"
+
+sed -i "s/versionCode =.*/versionCode = $VERSION_CODE/" "$GRADLE_FILE"
+sed -i "s/versionName =.*/versionName = \"$FULL_VERSION\"/" "$GRADLE_FILE"
+
+echo "✅ Injection complete! Verifying changes:"
+echo "---------------------------------------------------"
+
+grep -H "versionCode" "$GRADLE_FILE"
+grep -H "versionName" "$GRADLE_FILE"
+grep -H "MODULE_VERSION" "$HEADER_FILE"
+echo "---------------------------------------------------"
