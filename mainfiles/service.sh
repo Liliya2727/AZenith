@@ -19,18 +19,18 @@
 readonly MODDIR="${0%/*}"
 readonly MODULE_CONFIG="/data/adb/.config/AZenith"
 
-until [ "$(resetprop sys.boot_completed)" = "1" ]; do 
+until [ "$(getprop sys.boot_completed)" = "1" ]; do 
     sleep 5 
 done
 
-STATE=$(resetprop persist.sys.azenith.state)
+STATE=$(getprop persist.sys.azenith.state)
 { [ -z "$STATE" ] || { [ "$STATE" = "running" ] && [ -z "$(/system/bin/toybox pidof sys.azenith-service)" ]; }; } && {
     setprop persist.sys.azenith.state stopped
     setprop persist.sys.azenith.service ""
 }
 
 nohup app_process -Djava.class.path="$MODDIR/AZenith.apk" / \
-    --nice-name=AZenithAppMon zx.azenith.AppMonitor \
+    --nice-name=sys.azenith-appmonitoring zx.azenith.AppMonitor \
     "$MODULE_CONFIG/app_status" \
     "$MODULE_CONFIG/background_apps" \
     "$MODULE_CONFIG/java.lock" >"$MODULE_CONFIG/sysmon.log" 2>&1 &

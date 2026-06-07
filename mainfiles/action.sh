@@ -16,5 +16,4 @@
 # limitations under the License.
 #
 
-sys.azenith-service --appactivity > /dev/null 2>&1
-exec sync
+exec sys.azenith-service --appactivity > /dev/null 2>&1
