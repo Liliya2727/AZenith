@@ -137,7 +137,7 @@ pub fn setrefreshrates(rate: &str) {
 pub fn restartservice() {
     let _ = Command::new("pkill").args(["-9", "-f", "sys.azenith-rianixiathermalcore"]).status();
     let _ = Command::new("pkill").args(["-9", "-f", "sys.azenith-service"]).status();
-    let _ = Command::new("pkill").args(["-9", "-f", "AZenithAppMon"]).status();
+    let _ = Command::new("pkill").args(["-9", "-f", "sys.azenith-appmonitoring"]).status();
 
     setprop("persist.sys.azenith.state", "stopped");
 
