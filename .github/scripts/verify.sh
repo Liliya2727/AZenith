@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-l
+
 if [ -z "${GITHUB_WORKSPACE:-}" ]; then
 	echo "❌ Error: This script should only run on GitHub Actions!" >&2
 	exit 1
