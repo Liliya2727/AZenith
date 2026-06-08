@@ -595,28 +595,99 @@ fun ExpressiveTile(
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
+    val cardBgColor = colorScheme.surfaceColorAtElevation(1.dp)
+
+    val iconBoxBgColor by animateColorAsState(
+        targetValue = if (highlight) colorScheme.primaryContainer else colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        animationSpec = tween(400), 
+        label = "iconBoxBgColorAnim"
+    )
+
+    val iconColor by animateColorAsState(
+        targetValue = if (highlight) colorScheme.onPrimaryContainer else colorScheme.onSurfaceVariant,
+        animationSpec = tween(400),
+        label = "iconColorAnim"
+    )
+
     Surface(
-        onClick = onClick,
-        modifier = modifier.padding(top = 16.dp),
-        color = if (highlight) colorScheme.secondaryContainer else colorScheme.surfaceColorAtElevation(1.dp),
+        modifier = modifier
+            .clip(RoundedCornerShape(26.dp))
+            .clickable { onClick() }
+            .animateContentSize(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)),
+        color = cardBgColor,
         shape = RoundedCornerShape(26.dp)
     ) {
-        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
-            Column {
-                Icon(icon, null, tint = colorScheme.primary, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.height(4.dp))
-                Text(label, style = MaterialTheme.typography.labelSmall, color = colorScheme.onSurfaceVariant)
-                Text(value, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = colorScheme.onSurface)
-            }
-            
-            if (showArrow) {
+        Column(
+            modifier = Modifier.padding(14.dp) 
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1.8f) 
+                    .clip(RoundedCornerShape(18.dp)) 
+                    .background(iconBoxBgColor),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
-                    Icons.Rounded.ChevronRight,
-                    contentDescription = null,
-                    modifier = Modifier.align(Alignment.CenterEnd).size(20.dp),
-                    tint = colorScheme.onSurfaceVariant
+                    imageVector = icon, 
+                    contentDescription = null, 
+                    tint = iconColor,
+                    modifier = Modifier.size(36.dp) 
                 )
+
+                if (showArrow) {
+                    Icon(
+                        imageVector = Icons.Rounded.ChevronRight, 
+                        contentDescription = null,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .size(20.dp), 
+                        tint = iconColor.copy(alpha = 0.6f)
+                    )
+                }
             }
+
+            Spacer(modifier = Modifier.height(14.dp))
+            
+            Column(
+                modifier = Modifier.padding(horizontal = 4.dp)
+            ) {
+                Text(
+                    text = label, 
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                
+                AnimatedContent(
+                    targetState = value,
+                    transitionSpec = {
+                        // Kombinasi fade in + sedikit scale up untuk masuk
+                        // dan fade out + sedikit scale down untuk keluar (bikin efek "luntur/ngeblur")
+                        (fadeIn(animationSpec = tween(300, delayMillis = 100)) +
+                         scaleIn(initialScale = 0.95f, animationSpec = tween(300, delayMillis = 100)))
+                            .togetherWith(
+                                fadeOut(animationSpec = tween(200)) +
+                                scaleOut(targetScale = 1.05f, animationSpec = tween(200))
+                            )
+                    },
+                    label = "ValueTextAnimation"
+                ) { targetValue ->
+                    Text(
+                        text = targetValue, 
+                        style = MaterialTheme.typography.bodyMedium, 
+                        color = colorScheme.onSurfaceVariant, 
+                        maxLines = 2, 
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified
+                    )
+                }
+
+            }
+            Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }

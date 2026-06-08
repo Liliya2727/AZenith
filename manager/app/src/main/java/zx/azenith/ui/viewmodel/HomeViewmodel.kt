@@ -22,8 +22,11 @@ data class HomeUiState(
     val rootStatus: Boolean = false,
     val serviceStatusRes: Int = R.string.status_suspended,
     val servicePid: String = "",
-    val currentProfileRes: Int = R.string.status_initializing
+    val currentProfileRes: Int = R.string.status_initializing,
+    val runningGamePkg: String? = null,
+    val runningGameStartTime: String? = null
 )
+
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -58,7 +61,17 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.value = _uiState.value.copy(currentProfileRes = profileRes)
             }
         }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            RootUtils.observeGameInfo().collect { info ->
+                _uiState.value = _uiState.value.copy(
+                    runningGamePkg = info.pkg,
+                    runningGameStartTime = info.startTime
+                )
+            }
+        }
     }
+
 
     private fun fetchInitialSystemData() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -86,7 +99,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             val cmd = when (reason) {
                 "" -> "svc power reboot"
                 "soft_reboot" -> "killall system_server"
-                "recovery" -> "/system/bin/input keyevent 26" // Perbaikan sesuai kodemu
+                "recovery" -> "/system/bin/input keyevent 26 && svc power reboot $reason || reboot $reason"
                 else -> "svc power reboot $reason || reboot $reason"
             }
             Shell.cmd(cmd).submit()
