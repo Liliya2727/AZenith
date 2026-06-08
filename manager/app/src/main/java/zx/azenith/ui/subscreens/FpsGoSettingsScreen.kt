@@ -113,7 +113,7 @@ fun FpsGoSettings(navController: NavController) {
                             {
                                 ExpressiveInfoCard(
                                     supportingContent = { 
-                                        Text(text = "FPSGO (Frame Per Second GO) is a MediaTek kernel module that dynamically scales CPU/GPU frequencies based on real-time frame rates. Enabling it helps preserve battery life and reduces heat by scaling down performance during stable frames. Disabling it (Force OFF) gives the system raw, unrestricted performance by preventing aggressive thermal throttling, which is ideal for hardcore gaming but may result in higher temperatures and battery drain.") 
+                                        Text(text = "FPSGO (Frame Per Second GO) is a MediaTek kernel module that dynamically scales CPU/GPU frequencies based on real-time frame rates. Enabling it helps preserve battery life and reduces heat by scaling down performance during stable frames.") 
                                     },
                                     leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
                                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -128,7 +128,7 @@ fun FpsGoSettings(navController: NavController) {
                     var fpsgostate by remember { mutableStateOf<Boolean?>(null) }
                     
                     LaunchedEffect(Unit) {
-                        fpsgostate = PropertyUtils.get("persist.sys.azenithconf.usefpsgo") == "0"
+                        fpsgostate = PropertyUtils.get("persist.sys.azenithconf.usefpsgo") == "1"
                     }
                     
                     if (fpsgostate != null) {
