@@ -77,7 +77,7 @@ import android.widget.Toast
 import androidx.compose.material3.LargeFlexibleTopAppBar
 
 @Composable
-fun FasScreen(navController: NavController) {
+fun FpsGoSettings(navController: NavController) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val listState = rememberLazyListState()
@@ -87,7 +87,7 @@ fun FasScreen(navController: NavController) {
     MaterialExpressiveTheme {        
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            topBar = { FasTopAppBar(
+            topBar = { FpsGoTopAppBar(
                 scrollBehavior,
                 onBack = { navController.popBackStack() }
                 ) 
@@ -103,23 +103,59 @@ fun FasScreen(navController: NavController) {
                     end = 16.dp,
                     bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                 )
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 item {
                     
-                    Spacer(modifier = Modifier.height(16.dp))
                     
                     ExpressiveList(
-                        content = listOf( 
+                        content = listOf(
                             {
                                 ExpressiveInfoCard(
-                                    supportingContent = { Text(text = "fas is a user-space implementation of FAS (Frame Aware Scheduling), which has the advantage of near-universal compatibility and flexibility on any device compared to the kernel-space MI FEAS. FAS (Frame Aware Scheduling) is this scheduling concept, which tries to control performance by monitoring frame rendering to minimize overhead while ensuring rendering time.") },
+                                    supportingContent = { 
+                                        Text(text = "FPSGO (Frame Per Second GO) is a MediaTek kernel module that dynamically scales CPU/GPU frequencies based on real-time frame rates. Enabling it helps preserve battery life and reduces heat by scaling down performance during stable frames. Disabling it (Force OFF) gives the system raw, unrestricted performance by preventing aggressive thermal throttling, which is ideal for hardcore gaming but may result in higher temperatures and battery drain.") 
+                                    },
                                     leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
-                                    containerColor = colorScheme.surfaceContainerLow,
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                                     onClick = {}
                                 )
                             }
                         )
                     )
+                }
+                
+                item {
+                    var fpsgostate by remember { mutableStateOf<Boolean?>(null) }
+                    
+                    LaunchedEffect(Unit) {
+                        fpsgostate = PropertyUtils.get("persist.sys.azenithconf.usefpsgo") == "0"
+                    }
+                    
+                    if (fpsgostate != null) {
+                        ExpressiveList(
+                            content = listOf(
+                                {
+                                     ExpressiveSwitchItem(
+                                        icon = Icons.Rounded.Speed,
+                                        title = "Use FPSGO in Performance Profile",
+                                        summary = "Keep it disabled if you want raw power for hardcore gaming. Enable it to balance frame stability with device temperature.",
+                                        checked = fpsgostate!!,
+                                        onCheckedChange = { isChecked ->
+                                            fpsgostate = isChecked
+                                            PropertyUtils.set("persist.sys.azenithconf.usefpsgo", if (isChecked) "1" else "0")
+                                        }
+                                    )
+                                }
+                            )
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(180.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            LoadingIndicator(modifier = Modifier.size(32.dp))
+                        }
+                    }
                 }
             }
         }
@@ -127,22 +163,7 @@ fun FasScreen(navController: NavController) {
 }
 
 @Composable
-fun FasSectionTitle(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(
-            start = 12.dp,
-            end = 12.dp,
-            top = 16.dp,
-            bottom = 8.dp
-        )
-    )
-}
-
-@Composable
-fun FasTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit) {
+fun FpsGoTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
 
     val smoothGradient = Brush.verticalGradient(
@@ -165,7 +186,7 @@ fun FasTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit) {
         LargeFlexibleTopAppBar(
             title = { 
                 Text(
-                    text = "Frame Aware Scheduling",
+                    text = "FPSGO Settings",
                     fontWeight = FontWeight.Bold
                 ) 
             },

@@ -335,7 +335,7 @@ fun InfoTile(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1.8f) 
+                    .height(82.dp) 
                     .clip(RoundedCornerShape(18.dp)) 
                     .background(iconBoxBgColor),
                 contentAlignment = Alignment.Center
