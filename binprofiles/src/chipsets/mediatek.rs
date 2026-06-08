@@ -19,7 +19,7 @@ pub fn mediatek_balance() {
     
     ppm_fix_freq("-1"); 
     
-    zeshia_def("1", "/sys/kernel/fpsgo/common/force_onoff");
+    zeshia_def("2", "/sys/kernel/fpsgo/common/force_onoff");
     zeshia_def("1", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
 
     zeshia_def("0", "/proc/cpufreq/cpufreq_cci_mode");
