@@ -249,6 +249,7 @@ fun TweakScreen(
                 }
                 
                 item {
+                    Spacer(modifier = Modifier.height(10.dp))
                     if (viewModel.currentRefreshRate != null && viewModel.currentRenderer != null) {
                         Row(
                             modifier = Modifier
