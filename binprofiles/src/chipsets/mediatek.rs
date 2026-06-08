@@ -98,7 +98,11 @@ pub fn mediatek_performance() {
     
     ppm_fix_freq("0"); 
 
-    zeshia_def("0", "/sys/kernel/fpsgo/common/force_onoff");
+    let use_fpsgo = getprop("persist.sys.azenithconf.usefpsgo");
+    if use_fpsgo == "0" {
+        zeshia_def("0", "/sys/kernel/fpsgo/common/force_onoff");
+    }
+    
     zeshia_def("0", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
 
 
