@@ -301,18 +301,15 @@ fun InfoTile(
     onClick: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    
-    // Warna luar card tetap statis (tidak berubah)
+
     val cardBgColor = colorScheme.surfaceColorAtElevation(1.dp)
-    
-    // Animasi transisi warna untuk Box Icon saat state highlight berubah
+
     val iconBoxBgColor by animateColorAsState(
         targetValue = if (highlight) colorScheme.primaryContainer else colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        animationSpec = tween(400), // Durasi transisi warna 400ms biar smooth
+        animationSpec = tween(400), 
         label = "iconBoxBgColorAnim"
     )
-    
-    // Animasi transisi warna untuk Icon
+
     val iconColor by animateColorAsState(
         targetValue = if (highlight) colorScheme.onPrimaryContainer else colorScheme.onSurfaceVariant,
         animationSpec = tween(400),
@@ -330,20 +327,17 @@ fun InfoTile(
         Column(
             modifier = Modifier.padding(14.dp) 
         ) {
-            // 1. Box Icon (Top Section)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1.8f) 
                     .clip(RoundedCornerShape(18.dp)) 
-                    // Gunakan warna yang sudah di-animate di sini
                     .background(iconBoxBgColor),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon, 
                     contentDescription = null, 
-                    // Gunakan warna icon yang sudah di-animate
                     tint = iconColor,
                     modifier = Modifier.size(36.dp) 
                 )
@@ -363,7 +357,6 @@ fun InfoTile(
 
             Spacer(modifier = Modifier.height(14.dp))
             
-            // 2. Teks Area (Bottom Section)
             Column(
                 modifier = Modifier.padding(horizontal = 4.dp)
             ) {
@@ -670,7 +663,6 @@ fun RebootBottomSheet(
     onDismiss: () -> Unit,
     onReboot: (String) -> Unit
 ) {
-    // ❌ HAPUS BARIS INI: if (!show) return
 
     val context = LocalContext.current
     val pm = context.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager?
@@ -731,3 +723,167 @@ fun RebootBottomSheet(
     }
 }
 
+@Composable
+fun RunningGameCard(
+    pkgName: String,
+    startTimeStr: String,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val pm = context.packageManager
+    val density = LocalDensity.current
+    
+    // 1. Ambil AppInfo & Nama Aplikasi
+    val appInfo = remember(pkgName) {
+        try { pm.getApplicationInfo(pkgName, 0) } catch (e: Exception) { null }
+    }
+    val appName = remember(appInfo) {
+        appInfo?.loadLabel(pm)?.toString() ?: pkgName
+    }
+
+    // 2. Siapkan State untuk Icon Bitmap dari AppIconCache
+    var appIconBitmap by remember(pkgName) { 
+        mutableStateOf(AppIconCache.get(pkgName)) 
+    }
+    
+    // Konversi 54.dp ke pixel untuk batas ukuran ikon
+    val targetSizePx = remember(density) { 
+        with(density) { 54.dp.roundToPx() } 
+    }
+
+    // 3. Load Icon secara Asinkron menggunakan fungsimu
+    LaunchedEffect(pkgName) {
+        if (appIconBitmap == null && appInfo != null) {
+            try {
+                appIconBitmap = AppIconCache.loadIcon(pm, appInfo, targetSizePx)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    // 4. Logika Timer (Sama seperti sebelumnya)
+    var elapsedTime by remember { mutableStateOf("00:00:00") }
+    
+    LaunchedEffect(startTimeStr) {
+        val sdf = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
+        val startParsed = try { sdf.parse(startTimeStr) } catch(e: Exception) { null }
+        
+        if (startParsed != null) {
+            while (true) {
+                val now = java.util.Calendar.getInstance()
+                val start = java.util.Calendar.getInstance().apply {
+                    time = startParsed
+                    set(java.util.Calendar.YEAR, now.get(java.util.Calendar.YEAR))
+                    set(java.util.Calendar.MONTH, now.get(java.util.Calendar.MONTH))
+                    set(java.util.Calendar.DAY_OF_MONTH, now.get(java.util.Calendar.DAY_OF_MONTH))
+                }
+                
+                var diff = now.timeInMillis - start.timeInMillis
+                if (diff < 0) diff += 24 * 60 * 60 * 1000
+                
+                val h = diff / 3600000
+                val m = (diff / 60000) % 60
+                val s = (diff / 1000) % 60
+                
+                elapsedTime = String.format("%02d:%02d:%02d", h, m, s)
+                kotlinx.coroutines.delay(1000)
+            }
+        } else {
+            elapsedTime = "--:--:--"
+        }
+    }
+
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(26.dp))
+            .clickable {
+                val intent = pm.getLaunchIntentForPackage(pkgName)
+                if (intent != null) {
+                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(intent)
+                }
+            },
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        shape = RoundedCornerShape(26.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 👇 5. Render Icon menggunakan Crossfade ala fungsi buatanmu
+            Box(modifier = Modifier.size(54.dp)) {
+                Crossfade(
+                    targetState = appIconBitmap,
+                    animationSpec = tween(durationMillis = 200),
+                    label = "GameIconFade"
+                ) { icon ->
+                    if (icon == null) {
+                        // Placeholder
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.1f))
+                        )
+                    } else {
+                        // Gambar Asli
+                        Image(
+                            bitmap = icon,
+                            contentDescription = appName,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(14.dp))
+                        )
+                    }
+                }
+            }
+            
+            Spacer(Modifier.width(16.dp))
+            
+            // Text Detail Info
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = appName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Rounded.Timer,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "Running for $elapsedTime",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                    )
+                }
+            }
+            
+            // Tombol Play / Return
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.1f),
+                modifier = Modifier.size(42.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.PlayArrow,
+                        contentDescription = "Return",
+                        tint = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
+            }
+        }
+    }
+}
