@@ -738,27 +738,28 @@ fun RunningGameCard(
     val pm = context.packageManager
     val density = LocalDensity.current
     
-    // 1. Ambil AppInfo & Nama Aplikasi
-    val appInfo = remember(pkgName) {
-        try { pm.getApplicationInfo(pkgName, 0) } catch (e: Exception) { null }
+    // 👇 1. Cek apakah ini mode CLI (Tidak ada Foreground App)
+    val isNoApp = pkgName == "(null)" || pkgName.equals("null", ignoreCase = true) || pkgName.isEmpty()
+    
+    // 2. Ambil AppInfo & Nama (Hanya diload jika isNoApp bernilai false)
+    val appInfo = remember(pkgName, isNoApp) {
+        if (isNoApp) null else try { pm.getApplicationInfo(pkgName, 0) } catch (e: Exception) { null }
     }
-    val appName = remember(appInfo) {
-        appInfo?.loadLabel(pm)?.toString() ?: pkgName
+    val appName = remember(appInfo, isNoApp) {
+        if (isNoApp) "Performance profile active" else appInfo?.loadLabel(pm)?.toString() ?: pkgName
     }
 
-    // 2. Siapkan State untuk Icon Bitmap dari AppIconCache
+    // 3. Siapkan State untuk Icon Bitmap
     var appIconBitmap by remember(pkgName) { 
-        mutableStateOf(AppIconCache.get(pkgName)) 
+        mutableStateOf(if (isNoApp) null else AppIconCache.get(pkgName)) 
     }
     
-    // Konversi 54.dp ke pixel untuk batas ukuran ikon
     val targetSizePx = remember(density) { 
         with(density) { 54.dp.roundToPx() } 
     }
 
-    // 3. Load Icon secara Asinkron menggunakan fungsimu
-    LaunchedEffect(pkgName) {
-        if (appIconBitmap == null && appInfo != null) {
+    LaunchedEffect(pkgName, isNoApp) {
+        if (!isNoApp && appIconBitmap == null && appInfo != null) {
             try {
                 appIconBitmap = AppIconCache.loadIcon(pm, appInfo, targetSizePx)
             } catch (e: Exception) {
@@ -767,7 +768,7 @@ fun RunningGameCard(
         }
     }
 
-    // 4. Logika Timer (Sama seperti sebelumnya)
+    // 4. Logika Timer (Berlaku untuk game maupun mode CLI)
     var elapsedTime by remember { mutableStateOf("00:00:00") }
     
     LaunchedEffect(startTimeStr) {
@@ -803,13 +804,18 @@ fun RunningGameCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(26.dp))
-            .clickable {
-                val intent = pm.getLaunchIntentForPackage(pkgName)
-                if (intent != null) {
-                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                    context.startActivity(intent)
-                }
-            },
+            .then(
+                // 👇 Hilangkan interaksi "Clickable" jika tidak ada game
+                if (!isNoApp) {
+                    Modifier.clickable {
+                        val intent = pm.getLaunchIntentForPackage(pkgName)
+                        if (intent != null) {
+                            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            context.startActivity(intent)
+                        }
+                    }
+                } else Modifier
+            ),
         color = MaterialTheme.colorScheme.tertiaryContainer,
         shape = RoundedCornerShape(26.dp)
     ) {
@@ -817,37 +823,36 @@ fun RunningGameCard(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 👇 5. Render Icon menggunakan Crossfade ala fungsi buatanmu
-            Box(modifier = Modifier.size(54.dp)) {
-                Crossfade(
-                    targetState = appIconBitmap,
-                    animationSpec = tween(durationMillis = 200),
-                    label = "GameIconFade"
-                ) { icon ->
-                    if (icon == null) {
-                        // Placeholder
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.1f))
-                        )
-                    } else {
-                        // Gambar Asli
-                        Image(
-                            bitmap = icon,
-                            contentDescription = appName,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(RoundedCornerShape(14.dp))
-                        )
+            // 👇 Render Container Icon HANYA jika ada game
+            if (!isNoApp) {
+                Box(modifier = Modifier.size(54.dp)) {
+                    Crossfade(
+                        targetState = appIconBitmap,
+                        animationSpec = tween(durationMillis = 200),
+                        label = "GameIconFade"
+                    ) { icon ->
+                        if (icon == null) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.1f))
+                            )
+                        } else {
+                            Image(
+                                bitmap = icon,
+                                contentDescription = appName,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(14.dp))
+                            )
+                        }
                     }
                 }
+                Spacer(Modifier.width(16.dp))
             }
             
-            Spacer(Modifier.width(16.dp))
-            
-            // Text Detail Info
+            // Text Detail Info (Judul & Timer akan merapat ke kiri kalau gambar tidak dirender)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = appName,
@@ -875,18 +880,20 @@ fun RunningGameCard(
                 }
             }
             
-            // Tombol Play / Return
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.1f),
-                modifier = Modifier.size(42.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Rounded.PlayArrow,
-                        contentDescription = "Return",
-                        tint = MaterialTheme.colorScheme.onTertiaryContainer
-                    )
+            // 👇 Tombol Return to Game HANYA jika ada game
+            if (!isNoApp) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.1f),
+                    modifier = Modifier.size(42.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Rounded.PlayArrow,
+                            contentDescription = "Return",
+                            tint = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
                 }
             }
         }
