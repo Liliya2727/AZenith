@@ -306,7 +306,7 @@ fun MainScreen(isFromTile: Boolean = false) {
                     composable("bypasschg") { BypassChargeScreen(navController) }
                     composable("bypasschg_check") { BypassChargeCheckScreen(navController) }
                     composable("preferenced") { PreferenceTweakScreen(navController) }
-                    composable("fpsgosreen") { FpsGoSettings(navController) }
+                    composable("fpsgoscreen") { FpsGoSettings(navController) }
                     composable(
                         route = "app_settings/{pkg}",
                         arguments = listOf(navArgument("pkg") { type = NavType.StringType })

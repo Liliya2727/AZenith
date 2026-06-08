@@ -199,7 +199,7 @@ fun TweakScreen(
                                             supportingContent = { 
                                                 Text(
                                                     text = if (isMediaTek) 
-                                                        "Frame Per Second GO settings for MediaTek" 
+                                                        "Frame Per Second GO Settings for MediaTek" 
                                                     else 
                                                         "This option is only available for MediaTek Devices"
                                                 ) 
