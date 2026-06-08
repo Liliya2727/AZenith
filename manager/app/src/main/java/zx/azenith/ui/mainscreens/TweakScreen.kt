@@ -159,7 +159,12 @@ fun TweakScreen(
 
                 item { TweaksSectionTitle(text = "Performance") }
                 item {
-                    if (viewModel.liteState != null) {
+                    var socType by remember { mutableStateOf<String?>(null) }
+                    LaunchedEffect(Unit) {
+                        socType = PropertyUtils.get("persist.sys.azenithdebug.soctype")
+                    }
+                    if (socType != null && viewModel.liteState != null) {
+                        val isMediaTek = socType == "1"
                         ExpressiveList(
                             content = listOf(
                                 {
@@ -179,6 +184,28 @@ fun TweakScreen(
                                         supportingContent = { Text(text = "Frame aware scheduling for Android" ) },
                                         trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
                                     )                                
+                                },
+                                {
+                                    Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
+                                        ExpressiveListItem(
+                                            leadingContent = { LeadingIcon(icon = Icons.Filled.Speed) },
+                                            onClick = { 
+                                                if (isMediaTek) {
+                                                    navController.navigate("fpsgoscreen") 
+                                                }
+                                            },
+                                            headlineContent = { Text(text = "FPSGO Settings") },
+                                            supportingContent = { 
+                                                Text(
+                                                    text = if (isMediaTek) 
+                                                        "Frame Per Second GO settings for MediaTek" 
+                                                    else 
+                                                        "This option is only available for MediaTek Devices"
+                                                ) 
+                                            },
+                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                        )
+                                    }
                                 }
                             )
                         )
@@ -633,7 +660,7 @@ fun ExpressiveTile(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1.8f) 
+                    .height(82.dp)  
                     .clip(RoundedCornerShape(18.dp)) 
                     .background(iconBoxBgColor),
                 contentAlignment = Alignment.Center
