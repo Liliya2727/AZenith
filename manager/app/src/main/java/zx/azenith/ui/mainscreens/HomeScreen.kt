@@ -109,13 +109,14 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                 
                     if (isLandscape) {
                         // MODE LANDSCAPE
-                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        // 👇 1. HAPUS verticalArrangement = Arrangement.spacedBy(16.dp) di sini
+                        Column() {
                             // Barisan Atas (Banner + InfoTile berdampingan)
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(IntrinsicSize.Max),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                horizontalArrangement = Arrangement.spacedBy(16.dp) // Ini biarkan, karena horizontal
                             ) {
                                 Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                                     BannerCard(
@@ -149,23 +150,27 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 }
                             }
                 
-                            // 👇 Taruh dibawah (Sesuai request) menggunakan AnimatedVisibility
                             AnimatedVisibility(
                                 visible = showGameCard,
                                 enter = expandVertically(animationSpec = spring()) + fadeIn(),
                                 exit = shrinkVertically(animationSpec = spring()) + fadeOut()
                             ) {
-                                if (retainedPkg.isNotEmpty()) { // Cegah render jika masih benar-benar kosong
-                                    RunningGameCard(
-                                        pkgName = retainedPkg,
-                                        startTimeStr = retainedStartTime
-                                    )
+                                // 👇 2. BUNGKUS DENGAN COLUMN DAN MASUKKAN SPACER KE DALAM ANIMASI
+                                Column {
+                                    Spacer(modifier = Modifier.height(16.dp)) // Jarak ini akan ikut ter-animasi!
+                                    if (retainedPkg.isNotEmpty()) {
+                                        RunningGameCard(
+                                            pkgName = retainedPkg,
+                                            startTimeStr = retainedStartTime
+                                        )
+                                    }
                                 }
                             }
                         }
                     } else {
                         // MODE PORTRAIT
-                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        // 👇 3. HAPUS verticalArrangement = Arrangement.spacedBy(16.dp) di sini juga
+                        Column() {
                             BannerCard(
                                 status = bannerStatus, pid = uiState.servicePid,
                                 isBannerEnabled = uiState.isBannerEnabled,
@@ -173,20 +178,26 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 modifier = if (uiState.isBannerEnabled) Modifier.fillMaxWidth().aspectRatio(20 / 9f) else Modifier.fillMaxWidth().height(100.dp)
                             ) { }
                 
-                            // 👇 Taruh ditengah (Antara Banner dan dua Tile)
                             AnimatedVisibility(
                                 visible = showGameCard,
                                 enter = expandVertically(animationSpec = spring()) + fadeIn(),
                                 exit = shrinkVertically(animationSpec = spring()) + fadeOut()
                             ) {
-                                if (retainedPkg.isNotEmpty()) { 
-                                    RunningGameCard(
-                                        pkgName = retainedPkg,
-                                        startTimeStr = retainedStartTime
-                                    )
+                                // 👇 4. BUNGKUS DENGAN COLUMN DAN MASUKKAN SPACER
+                                Column {
+                                    Spacer(modifier = Modifier.height(16.dp)) // Jarak bagian atas card ikut ter-animasi
+                                    if (retainedPkg.isNotEmpty()) { 
+                                        RunningGameCard(
+                                            pkgName = retainedPkg,
+                                            startTimeStr = retainedStartTime
+                                        )
+                                    }
                                 }
                             }
                 
+                            // 👇 5. TAMBAHKAN SPACER MANUAL DI SINI (Jarak antara Banner/GameCard dengan InfoTile)
+                            Spacer(modifier = Modifier.height(16.dp))
+
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -212,6 +223,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                             }
                         }
                     }
+
                 }
                 
                 item { DeviceInfoCard() }
