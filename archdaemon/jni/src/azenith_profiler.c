@@ -15,6 +15,7 @@
  */
 
 #include <AZenith.h>
+#include <time.h>
 
 bool (*get_screenstate)(void) = get_screenstate_normal;
 bool (*get_low_power_state)(void) = get_low_power_state_normal;
@@ -31,19 +32,26 @@ bool (*get_low_power_state)(void) = get_low_power_state_normal;
 void run_profiler(const int profile) {
     is_kanged();
 
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    char time_str[64];
+
+    snprintf(time_str, sizeof(time_str), "%02d:%02d:%02d", tm.tm_hour, tm.tm_min, tm.tm_sec);
+
     if (profile == 1) {
         pid_t main_pid = (game_pid_count > 0) ? game_pids[0] : 0;
-        write2file(GAME_INFO, false, false, "%s %d %d\n", gamestart, main_pid, uidof(main_pid));
-        write2file(GAME_INFO, false, false, "%s %d %d\n", gamestart, main_pid, uidof(main_pid));
+        write2file(GAME_INFO, false, false, "%s %d %d\nTime: %s\n", gamestart, main_pid, uidof(main_pid), time_str);
+        write2file(GAME_INFO_APP, false, false, "%s %d %d\nTime: %s\n", gamestart, main_pid, uidof(main_pid), time_str);
     } else {
-        write2file(GAME_INFO, false, false, "NULL 0 0\n");
-        write2file(GAME_INFO_APP, false, false, "NULL 0 0\n");
+        write2file(GAME_INFO, false, false, "NULL 0 0\nTime: %s\n", time_str);
+        write2file(GAME_INFO_APP, false, false, "NULL 0 0\nTime: %s\n", time_str);
     }
 
     write2file(PROFILE_MODE, false, false, "%d\n", profile);
     write2file(PROFILE_MODE_APP, false, false, "%d\n", profile);
     (void)systemv("sys.azenith-profilesettings %d", profile);
 }
+
 
 /***********************************************************************************
  * Function Name      : get_gamestart
