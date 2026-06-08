@@ -76,6 +76,15 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.text.style.TextOverflow
 import kotlin.math.roundToInt
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.graphics.SolidColor

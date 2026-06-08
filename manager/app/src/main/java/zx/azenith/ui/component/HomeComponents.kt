@@ -59,6 +59,11 @@ import zx.azenith.ui.util.getRealDeviceName
 import zx.azenith.ui.util.getHeaderImage
 import zx.azenith.ui.util.getSELinuxStatus
 import zx.azenith.ui.util.getBannerGradientAlpha
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.ImageBitmap
+
 
 @Composable
 fun HomeTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onRebootClick: () -> Unit) {
