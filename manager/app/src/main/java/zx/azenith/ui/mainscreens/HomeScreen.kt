@@ -25,6 +25,7 @@ import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.viewmodel.HomeViewModel
 
+
 @Composable
 fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     val context = LocalContext.current
@@ -86,47 +87,62 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                 item {
                     val bannerStatus = if (!uiState.moduleInstalled) stringResource(R.string.module_not_installed) else stringResource(uiState.serviceStatusRes)
                     
+                    // 👇 LOGIKA VISIBILITAS GAME CARD:
+                    val isPerformanceMode = uiState.currentProfileRes == R.string.Profile_Performance || uiState.currentProfileRes == R.string.profile_perflite
+                    val showGameCard = isPerformanceMode && !uiState.runningGamePkg.isNullOrEmpty()
+                
                     if (isLandscape) {
                         // MODE LANDSCAPE
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(IntrinsicSize.Max), // Patokan tinggi maksimal
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            // Sisi Kiri: Banner
-                            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                                BannerCard(
-                                    status = bannerStatus, pid = uiState.servicePid,
-                                    isBannerEnabled = uiState.isBannerEnabled, 
-                                    isBlurEnabled = isBlurEnabled,
-                                    modifier = Modifier.fillMaxSize()
-                                ) { }
-                            }
-                            
-                            // Sisi Kanan: Dua InfoTile sejajar ke samping (Row)
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            // Barisan Atas (Banner + InfoTile berdampingan)
                             Row(
-                                modifier = Modifier.weight(1f).fillMaxHeight(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(IntrinsicSize.Max),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                InfoTile(
-                                    modifier = Modifier.weight(1f).fillMaxHeight(), // Tarik tinggi mentok
-                                    icon = Icons.Rounded.Token, 
-                                    label = stringResource(R.string.current_profile), 
-                                    value = stringResource(uiState.currentProfileRes), 
-                                    highlight = (uiState.currentProfileRes != R.string.status_initializing), 
-                                    showArrow = uiState.autoMode == "0"
-                                ) { 
-                                    if (uiState.autoMode == "0") showProfileDialog = true 
+                                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                                    BannerCard(
+                                        status = bannerStatus, pid = uiState.servicePid,
+                                        isBannerEnabled = uiState.isBannerEnabled, 
+                                        isBlurEnabled = isBlurEnabled,
+                                        modifier = Modifier.fillMaxSize()
+                                    ) { }
                                 }
                                 
-                                InfoTile(
-                                    modifier = Modifier.weight(1f).fillMaxHeight(), // Tarik tinggi mentok
-                                    icon = Icons.Rounded.Security, 
-                                    label = stringResource(R.string.root_access), 
-                                    value = if (uiState.rootStatus) stringResource(R.string.root_granted) else stringResource(R.string.root_not_granted), 
-                                    highlight = false
-                                ) {}
+                                Row(
+                                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    InfoTile(
+                                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                                        icon = Icons.Rounded.Token, 
+                                        label = stringResource(R.string.current_profile), 
+                                        value = stringResource(uiState.currentProfileRes), 
+                                        highlight = (uiState.currentProfileRes != R.string.status_initializing), 
+                                        showArrow = uiState.autoMode == "0"
+                                    ) { if (uiState.autoMode == "0") showProfileDialog = true }
+                                    
+                                    InfoTile(
+                                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                                        icon = Icons.Rounded.Security, 
+                                        label = stringResource(R.string.root_access), 
+                                        value = if (uiState.rootStatus) stringResource(R.string.root_granted) else stringResource(R.string.root_not_granted), 
+                                        highlight = false
+                                    ) {}
+                                }
+                            }
+                
+                            // 👇 Taruh dibawah (Sesuai request) menggunakan AnimatedVisibility
+                            AnimatedVisibility(
+                                visible = showGameCard,
+                                enter = expandVertically(animationSpec = spring()) + fadeIn(),
+                                exit = shrinkVertically(animationSpec = spring()) + fadeOut()
+                            ) {
+                                RunningGameCard(
+                                    pkgName = uiState.runningGamePkg!!,
+                                    startTimeStr = uiState.runningGameStartTime ?: "00:00:00"
+                                )
                             }
                         }
                     } else {
@@ -138,26 +154,36 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 isBlurEnabled = isBlurEnabled,
                                 modifier = if (uiState.isBannerEnabled) Modifier.fillMaxWidth().aspectRatio(20 / 9f) else Modifier.fillMaxWidth().height(100.dp)
                             ) { }
-
+                
+                            // 👇 Taruh ditengah (Antara Banner dan dua Tile)
+                            AnimatedVisibility(
+                                visible = showGameCard,
+                                enter = expandVertically(animationSpec = spring()) + fadeIn(),
+                                exit = shrinkVertically(animationSpec = spring()) + fadeOut()
+                            ) {
+                                RunningGameCard(
+                                    pkgName = uiState.runningGamePkg!!,
+                                    startTimeStr = uiState.runningGameStartTime ?: "00:00:00"
+                                )
+                            }
+                
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(IntrinsicSize.Max), // Patokan tinggi maksimal
+                                    .height(IntrinsicSize.Max),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 InfoTile(
-                                    modifier = Modifier.weight(1f).fillMaxHeight(), // Tarik tinggi mentok
+                                    modifier = Modifier.weight(1f).fillMaxHeight(),
                                     icon = Icons.Rounded.Token, 
                                     label = stringResource(R.string.current_profile), 
                                     value = stringResource(uiState.currentProfileRes), 
                                     highlight = (uiState.currentProfileRes != R.string.status_initializing), 
                                     showArrow = uiState.autoMode == "0"
-                                ) { 
-                                    if (uiState.autoMode == "0") showProfileDialog = true 
-                                }
+                                ) { if (uiState.autoMode == "0") showProfileDialog = true }
                                 
                                 InfoTile(
-                                    modifier = Modifier.weight(1f).fillMaxHeight(), // Tarik tinggi mentok
+                                    modifier = Modifier.weight(1f).fillMaxHeight(),
                                     icon = Icons.Rounded.Security, 
                                     label = stringResource(R.string.root_access), 
                                     value = if (uiState.rootStatus) stringResource(R.string.root_granted) else stringResource(R.string.root_not_granted), 
@@ -167,6 +193,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                         }
                     }
                 }
+                
                 item { DeviceInfoCard() }
                 item { LinkCard(Icons.Rounded.Favorite, R.string.support_us, R.string.support_us_desc) { uriHandler.openUri("https://t.me/ZeshArch") } }
                 item { LinkCard(Icons.Rounded.Info, R.string.learn_more, R.string.learn_more_desc) { uriHandler.openUri("https://github.com/Liliya2727/AZenith") } }

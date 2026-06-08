@@ -27,6 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
 import android.os.FileObserver
 import zx.azenith.R
+    
 
 object RootUtils {
     private const val MODULE_DIR = "/data/adb/modules/AZenith"
@@ -50,7 +51,36 @@ object RootUtils {
         val result = Shell.cmd("grep '^versionCode=' /data/adb/modules/AZenith/module.prop | cut -d= -f2").exec().out
         return result.firstOrNull()?.trim()?.toIntOrNull() ?: -1
     }
+    
+    data class GameInfo(val pkg: String?, val startTime: String?)
 
+    fun observeGameInfo(): Flow<GameInfo> = flow {
+        var lastInfo: GameInfo? = null
+        while (true) {
+            val result = Shell.cmd("cat /data/data/zx.azenith/API/gameinfo").exec()
+            var currentInfo = GameInfo(null, null)
+            
+            if (result.isSuccess && result.out.isNotEmpty()) {
+                val lines = result.out
+                val firstLine = lines[0].split(" ")
+                
+                // Ambil Package Name (Cegah jika string kosong atau bernilai "NULL")
+                val pkg = firstLine.getOrNull(0)?.takeIf { it != "NULL" && it.isNotBlank() }
+                
+                // Cari baris yang depannya "Time: " lalu potong stringnya
+                val time = lines.find { it.startsWith("Time:") }?.substringAfter("Time:")?.trim()
+                
+                currentInfo = GameInfo(pkg, time)
+            }
+            
+            // Hanya emit jika ada perubahan untuk mencegah UI terus-terusan merender
+            if (currentInfo != lastInfo) {
+                emit(currentInfo)
+                lastInfo = currentInfo
+            }
+            delay(2000) // Polling tiap 2 detik, aman untuk efisiensi
+        }
+    }.flowOn(Dispatchers.IO)
 
     fun observeProfileRes(): Flow<Int> = callbackFlow {
         syncProfileState()
