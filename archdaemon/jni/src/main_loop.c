@@ -339,7 +339,7 @@ int main_daemon(void) {
                 if (active_app_name) free(active_app_name);
                 
                 gamestart = current_focused_game;
-                active_app_name = strdup(cached_app_name); // Kunci nama aplikasi
+                active_app_name = strdup(cached_app_name); 
                 
                 log_zenith(LOG_INFO, "New game detected: %s", active_app_name ? active_app_name : gamestart);
                 game_pid_count = 0;
@@ -447,7 +447,7 @@ int main_daemon(void) {
             need_profile_checkup = false;
             
             run_profiler(PERFORMANCE_PROFILE);
-            notify("Performance Profile", "Running at : %s", false, 0, active_app_name ? active_app_name : gamestart);
+            notify("Performance Profile", "Running at %s", false, 0, active_app_name ? active_app_name : gamestart);
             log_zenith(LOG_INFO, "Applying performance profile for %s", active_app_name ? active_app_name : gamestart);
             
             toast("Applying Performance Profile");
