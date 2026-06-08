@@ -30,48 +30,6 @@ import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.viewmodel.HomeViewModel
-
-
-                    val isPerformanceMode = uiState.currentProfileRes == R.string.Profile_Performance || uiState.currentProfileRes == R.string.profile_perflite
-                    val showGameCard = isPerformanceMode && !uiState.runningGamePkg.isNullOrEmpty()
-                    
-                    // 👇 1. TAMBAHKAN INI: Simpan data terakhir agar animasi exit tidak patah
-                    
-                    
-                    // Update nilai memori HANYA jika datanya valid (tidak kosong)
-                    
-                    
-                    if (isLandscape) {
-                        // MODE LANDSCAPE
-                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            // ... (Kode Row Banner dan InfoTile tetap sama) ...
-                    
-                            AnimatedVisibility(
-                                visible = showGameCard,
-                                enter = expandVertically(animationSpec = spring()) + fadeIn(),
-                                exit = shrinkVertically(animationSpec = spring()) + fadeOut()
-                            ) {
-                                // 👇 2. GUNAKAN VARIABEL RETAINED DI SINI
-                                
-                            }
-                        }
-                    } else {
-                        // MODE PORTRAIT
-                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            // ... (Kode BannerCard tetap sama) ...
-                    
-                            AnimatedVisibility(
-                                visible = showGameCard,
-                                enter = expandVertically(animationSpec = spring()) + fadeIn(),
-                                exit = shrinkVertically(animationSpec = spring()) + fadeOut()
-                            ) {
-                                // 👇 3. GUNAKAN VARIABEL RETAINED DI SINI JUGA
-                                
-                            }
-                    
-                            // ... (Kode Row InfoTile tetap sama) ...
-                        }
-                    }
                 
 
 @Composable
