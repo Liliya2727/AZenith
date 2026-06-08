@@ -32,6 +32,48 @@ import zx.azenith.ui.component.*
 import zx.azenith.ui.viewmodel.HomeViewModel
 
 
+                    val isPerformanceMode = uiState.currentProfileRes == R.string.Profile_Performance || uiState.currentProfileRes == R.string.profile_perflite
+                    val showGameCard = isPerformanceMode && !uiState.runningGamePkg.isNullOrEmpty()
+                    
+                    // 👇 1. TAMBAHKAN INI: Simpan data terakhir agar animasi exit tidak patah
+                    
+                    
+                    // Update nilai memori HANYA jika datanya valid (tidak kosong)
+                    
+                    
+                    if (isLandscape) {
+                        // MODE LANDSCAPE
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            // ... (Kode Row Banner dan InfoTile tetap sama) ...
+                    
+                            AnimatedVisibility(
+                                visible = showGameCard,
+                                enter = expandVertically(animationSpec = spring()) + fadeIn(),
+                                exit = shrinkVertically(animationSpec = spring()) + fadeOut()
+                            ) {
+                                // 👇 2. GUNAKAN VARIABEL RETAINED DI SINI
+                                
+                            }
+                        }
+                    } else {
+                        // MODE PORTRAIT
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            // ... (Kode BannerCard tetap sama) ...
+                    
+                            AnimatedVisibility(
+                                visible = showGameCard,
+                                enter = expandVertically(animationSpec = spring()) + fadeIn(),
+                                exit = shrinkVertically(animationSpec = spring()) + fadeOut()
+                            ) {
+                                // 👇 3. GUNAKAN VARIABEL RETAINED DI SINI JUGA
+                                
+                            }
+                    
+                            // ... (Kode Row InfoTile tetap sama) ...
+                        }
+                    }
+                
+
 @Composable
 fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     val context = LocalContext.current
@@ -93,9 +135,19 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                 item {
                     val bannerStatus = if (!uiState.moduleInstalled) stringResource(R.string.module_not_installed) else stringResource(uiState.serviceStatusRes)
                     
-                    // 👇 LOGIKA VISIBILITAS GAME CARD:
+               
                     val isPerformanceMode = uiState.currentProfileRes == R.string.Profile_Performance || uiState.currentProfileRes == R.string.profile_perflite
                     val showGameCard = isPerformanceMode && !uiState.runningGamePkg.isNullOrEmpty()
+                    
+                    var retainedPkg by remember { mutableStateOf("") }
+                    var retainedStartTime by remember { mutableStateOf("00:00:00") }
+                    
+                    LaunchedEffect(uiState.runningGamePkg, uiState.runningGameStartTime) {
+                        if (!uiState.runningGamePkg.isNullOrEmpty()) {
+                            retainedPkg = uiState.runningGamePkg!!
+                            retainedStartTime = uiState.runningGameStartTime ?: "00:00:00"
+                        }
+                    }
                 
                     if (isLandscape) {
                         // MODE LANDSCAPE
@@ -145,10 +197,12 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 enter = expandVertically(animationSpec = spring()) + fadeIn(),
                                 exit = shrinkVertically(animationSpec = spring()) + fadeOut()
                             ) {
-                                RunningGameCard(
-                                    pkgName = uiState.runningGamePkg!!,
-                                    startTimeStr = uiState.runningGameStartTime ?: "00:00:00"
-                                )
+                                if (retainedPkg.isNotEmpty()) { // Cegah render jika masih benar-benar kosong
+                                    RunningGameCard(
+                                        pkgName = retainedPkg,
+                                        startTimeStr = retainedStartTime
+                                    )
+                                }
                             }
                         }
                     } else {
@@ -167,10 +221,12 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 enter = expandVertically(animationSpec = spring()) + fadeIn(),
                                 exit = shrinkVertically(animationSpec = spring()) + fadeOut()
                             ) {
-                                RunningGameCard(
-                                    pkgName = uiState.runningGamePkg!!,
-                                    startTimeStr = uiState.runningGameStartTime ?: "00:00:00"
-                                )
+                                if (retainedPkg.isNotEmpty()) { 
+                                    RunningGameCard(
+                                        pkgName = retainedPkg,
+                                        startTimeStr = retainedStartTime
+                                    )
+                                }
                             }
                 
                             Row(
