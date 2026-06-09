@@ -166,6 +166,7 @@ fun TweakScreen(
                     }
                     if (socType != null && viewModel.liteState != null) {
                         val isMediaTek = socType == "1"
+                        val available = false
                         ExpressiveList(
                             content = listOf(
                                 {
@@ -178,13 +179,26 @@ fun TweakScreen(
                                     )
                                 },
                                 {
-                                    ExpressiveListItem(
-                                        leadingContent = { LeadingIcon(icon = Icons.Filled.ArtTrack) },
-                                        onClick = { navController.navigate("FasScreen") },
-                                        headlineContent = { Text(text = "Frame Aware Scheduling (FAS)" ) },
-                                        supportingContent = { Text(text = "Frame aware scheduling for Android" ) },
-                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                    )                                
+                                    Box(modifier = Modifier.alpha(if (available) 1f else 0.4f)) {
+                                        ExpressiveListItem(
+                                            leadingContent = { LeadingIcon(icon = Icons.Filled.ArtTrack) },
+                                            onClick = { 
+                                                if (available) {
+                                                    navController.navigate("FasScreen") 
+                                                }
+                                            },
+                                            headlineContent = { Text(text = "Frame Aware Scheduling (FAS)" ) },
+                                            supportingContent = { 
+                                                Text(
+                                                    text = if (available)
+                                                        "Frame aware scheduling for Android" 
+                                                    else
+                                                        "Unavailable"
+                                                ) 
+                                            },
+                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                        )
+                                    }
                                 },
                                 {
                                     Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
