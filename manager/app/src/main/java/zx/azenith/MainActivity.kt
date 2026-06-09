@@ -100,34 +100,6 @@ data class NavItem(
     val gradientColors: List<Color> = listOf(Color.Transparent, Color.Transparent)
 )
 
-// Tambahkan import ini di atas file MainActivity.kt
-
-
-// Di dalam fun MainScreen(...)
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MainScreen(isFromTile: Boolean = false) {
-    // ... [Kode yang sudah ada] ...
-
-    
-    
-    // State untuk melacak visibilitas FAB saat di-scroll
-    
-
-    // ... [Kode yang sudah ada sampai deklarasi NavHost] ...
-
-    
-                    // ... [Transitions code tetap sama] ...
-                ) {
-                    // ... [Definisi composable routes] ...
-                }
-
-                // Bottom Nav Bar ...
-                AnimatedVisibility(...) { BottomNavBar(...) }
-
-                // --- TAMBAHKAN FAB REBOOT DI SINI ---
-                
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
