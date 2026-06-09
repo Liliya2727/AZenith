@@ -118,9 +118,19 @@ touch "$MODPATH/skip_mountify"
 if [ -f "$HM_CONFIG" ]; then
     ui_print "- Hybrid Mount detected, configuring rules..."
 
-    if command -v hybrid-mount >/dev/null 2>&1; then
-        hybrid-mount api config-patch --patch '{"rules":{"AZenith":{"default_mode":"ignore"}}}' >/dev/null 2>&1
-        ui_print "- Runtime policy updated to 'ignore'."
+    HM_BIN=""
+    if [ -x "/data/adb/modules/hybrid_mount/hybrid-mount" ]; then
+        HM_BIN="/data/adb/modules/hybrid_mount/hybrid-mount"
+    elif command -v hybrid-mount >/dev/null 2>&1; then
+        HM_BIN="hybrid-mount"
+    fi
+
+    if [ -n "$HM_BIN" ]; then
+        ui_print "- Found Hybrid Mount CLI at: $HM_BIN"
+        $HM_BIN api config-patch --patch '{"rules":{"AZenith":{"default_mode":"ignore"}}}' --apply-runtime >/dev/null 2>&1
+        ui_print "- Runtime policy for AZenith updated to 'ignore'."
+    else
+        ui_print "- Warning: CLI binary not found in standard paths. Skipping live patch."
     fi
 
     if ! grep -q "\[rules\.AZenith\]" "$HM_CONFIG"; then
@@ -132,8 +142,6 @@ if [ -f "$HM_CONFIG" ]; then
 else
     ui_print "- Hybrid Mount is not installed. Skipping configuration."
 fi
-
-
 
 # Use Symlink for APatch / KernelSU
 if [ "$KSU" = "true" ] || [ "$APATCH" = "true" ]; then
@@ -270,7 +278,13 @@ done
 # Install Manager Apk
 extract "$ZIPFILE" AZenith.apk "$MODPATH"
 ui_print "- Installing AZenith apk..."
-pm install -r -d --user 0 "$MODPATH/AZenith.apk" > /dev/null 2>&1
+local install_res=$(cmd package install -r -d --user 0 "$MODPATH/AZenith.apk" 2>&1)
+if echo "$install_res" | grep -iq "Success"; then
+    ui_print "- AZenith.apk installed successfully."
+else
+    ui_print "! Failed to install AZenith.apk"
+    ui_print "  Log: $install_res"
+fi
 
 # Remove old module files if available
 ui_print "- Cleaning old files..."
@@ -286,11 +300,6 @@ pm grant zx.azenith android.permission.REQUEST_INSTALL_PACKAGES
 pm grant zx.azenith android.permission.READ_EXTERNAL_STORAGE
 pm grant zx.azenith android.permission.POST_NOTIFICATIONS
 pm grant zx.azenith android.permission.READ_MEDIA_IMAGES
-set_perm_recursive "$MODPATH/system/bin" 0 2000 0777 0777
-chmod +x "$MODPATH/system/bin/sys.azenith-service"
-chmod +x "$MODPATH/system/bin/sys.azenith-profilesettings"
-chmod +x "$MODPATH/system/bin/sys.azenith-utilityconf"
-chmod +x "$MODPATH/system/bin/sys.azenith-preloadbin"
-chmod +x "$MODPATH/system/bin/sys.azenith-rianixiathermalcore"
+set_perm_recursive "$MODPATH/system/bin" 0 0 0755 0755
 
 installation_complete
