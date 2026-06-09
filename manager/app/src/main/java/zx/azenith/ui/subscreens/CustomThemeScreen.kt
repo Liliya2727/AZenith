@@ -67,6 +67,7 @@ import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import zx.azenith.ui.component.*
+import androidx.activity.result.PickVisualMediaRequest
 
 
 private val keyColorOptions = listOf(
@@ -136,10 +137,16 @@ fun ColorPaletteScreen(navController: NavController) {
     val colorScheme = MaterialTheme.colorScheme 
     
     val imagePicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
+        ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         uri?.let { sourceUri ->
-            val destinationUri = Uri.fromFile(File(context.cacheDir, "temp_banner_${System.currentTimeMillis()}.jpg"))
+            val bannerDir = File(context.filesDir, "banners")
+            if (!bannerDir.exists()) {
+                bannerDir.mkdirs()
+            }
+            
+            val destinationFile = File(bannerDir, "banner_${System.currentTimeMillis()}.jpg")
+            val destinationUri = Uri.fromFile(destinationFile)
             
             val options = UCrop.Options().apply {
                 setHideBottomControls(false)
@@ -160,6 +167,7 @@ fun ColorPaletteScreen(navController: NavController) {
             cropLauncher.launch(uCrop.getIntent(context))
         }
     }
+
 
     var currentColorMode by remember { 
         mutableStateOf(ThemeController.getAppSettings(context).colorMode) 
