@@ -369,12 +369,44 @@ fun MainScreen(isFromTile: Boolean = false) {
                         elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)
                     )
                 }
+
+                AnimatedVisibility(
+                    visible = currentRoute in bottomBarRoutes,
+                    enter = slideInVertically(
+                        initialOffsetY = { it }, 
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    ) + fadeIn(),
+                    exit = slideOutVertically(
+                        targetOffsetY = { it }, 
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    ) + fadeOut(),
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                ) {
+                    BottomNavBar(
+                        items = navItems,
+                        selectedRoute = currentRoute ?: "home",
+                        onItemSelected = { route ->
+                            if (currentRoute != route) {
+                                navController.navigate(route) {
+                                    popUpTo(navController.graph.startDestinationId) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        },
+                        isBlurEnabled = isBlurEnabled,
+                        hazeState = hazeState
+                    )
+                }
             }
             ConfirmDialogHost(handle = updateDialog)
             ConfirmDialogHost(handle = rebootDialog)
         }
     }
 }
+
 
 @Composable
 fun BottomNavBar(
