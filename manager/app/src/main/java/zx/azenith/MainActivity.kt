@@ -61,6 +61,11 @@ import kotlinx.coroutines.launch
 import com.topjohnwu.superuser.Shell
 import zx.azenith.ui.component.* import android.content.Intent
 import androidx.core.content.FileProvider
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.material.icons.rounded.RestartAlt
 import java.io.File
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
@@ -95,6 +100,35 @@ data class NavItem(
     val gradientColors: List<Color> = listOf(Color.Transparent, Color.Transparent)
 )
 
+// Tambahkan import ini di atas file MainActivity.kt
+
+
+// Di dalam fun MainScreen(...)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainScreen(isFromTile: Boolean = false) {
+    // ... [Kode yang sudah ada] ...
+
+    
+    
+    // State untuk melacak visibilitas FAB saat di-scroll
+    
+
+    // ... [Kode yang sudah ada sampai deklarasi NavHost] ...
+
+    
+                    // ... [Transitions code tetap sama] ...
+                ) {
+                    // ... [Definisi composable routes] ...
+                }
+
+                // Bottom Nav Bar ...
+                AnimatedVisibility(...) { BottomNavBar(...) }
+
+                // --- TAMBAHKAN FAB REBOOT DI SINI ---
+                
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(isFromTile: Boolean = false) {
@@ -108,6 +142,8 @@ fun MainScreen(isFromTile: Boolean = false) {
             }
         }
     }
+    
+    var pendingReboot by remember { mutableStateOf(false) }
         
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -228,6 +264,31 @@ fun MainScreen(isFromTile: Boolean = false) {
         }
     }
     
+    val isFabVisible = remember { mutableStateOf(true) }
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                // Jika scroll ke bawah (y negatif), sembunyikan FAB
+                if (available.y < -10f) {
+                    isFabVisible.value = false
+                } 
+                // Jika scroll ke atas (y positif), munculkan FAB
+                else if (available.y > 10f) {
+                    isFabVisible.value = true
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
+    val refreshStatus = {
+        rootStatus = RootUtils.requestRootAccess()
+        moduleInstalled = RootUtils.isModuleInstalled()
+        isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
+        // Cek apakah file flag reboot ada
+        pendingReboot = Shell.cmd("test -f /data/adb/modules/AZenith/reboot").exec().isSuccess
+    }
+    
     CompositionLocalProvider(LocalAppHazeState provides hazeState) {
         RootDialogsProvider {
             Box(
@@ -236,9 +297,11 @@ fun MainScreen(isFromTile: Boolean = false) {
                 NavHost(
                     navController = navController,
                     startDestination = if (hasCompletedGetStarted) "home" else "get_started",
+                    // Pasang nested scroll di sini untuk melacak scroll secara global
                     modifier = Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.surface)
+                        .nestedScroll(nestedScrollConnection)
                         .then(
                             if (isBlurEnabled) Modifier.hazeSource(state = hazeState) else Modifier
                         ),
@@ -317,26 +380,27 @@ fun MainScreen(isFromTile: Boolean = false) {
                 }
 
                 AnimatedVisibility(
-                    visible = rootStatus && moduleInstalled && currentRoute in bottomBarRoutes,
-                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-                    modifier = Modifier.align(Alignment.BottomCenter)
+                    visible = rootStatus && moduleInstalled && pendingReboot && currentRoute in bottomBarRoutes && isFabVisible.value,
+                    enter = scaleIn(animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeIn(),
+                    exit = scaleOut(animationSpec = tween(200, easing = FastOutLinearInEasing)) + fadeOut(),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 24.dp, bottom = 116.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())
                 ) {
-                    BottomNavBar(
-                        items = navItems,
-                        selectedRoute = currentRoute ?: "home",
-                        isBlurEnabled = isBlurEnabled,
-                        hazeState = hazeState,
-                        modifier = Modifier.align(Alignment.BottomCenter),
-                        onItemSelected = { route ->
-                            if (currentRoute != route) {
-                                navController.navigate(route) {
-                                    popUpTo(navController.graph.startDestinationId) { saveState = false }
-                                    launchSingleTop = true
-                                    restoreState = false
-                                }
-                            }
-                        }
+                    ExtendedFloatingActionButton(
+                        onClick = {
+                            rebootDialog.showConfirm(
+                                title = "Reboot Required",
+                                content = "A configuration has been restored. Reboot the device now to apply changes?",
+                                confirm = "Reboot",
+                                dismiss = "Later"
+                            )
+                        },
+                        icon = { Icon(Icons.Rounded.RestartAlt, contentDescription = "Reboot") },
+                        text = { Text("Reboot", fontWeight = FontWeight.Bold) },
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)
                     )
                 }
             }
@@ -344,7 +408,6 @@ fun MainScreen(isFromTile: Boolean = false) {
             ConfirmDialogHost(handle = rebootDialog)
         }
     }
-
 }
 
 @Composable

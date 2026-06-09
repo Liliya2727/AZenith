@@ -93,7 +93,7 @@ class TweakViewModel : ViewModel() {
     }
 
     // Hasil pengecekan: isSuccess, errorMessage, validDataToRestore
-        fun validateAndRestoreFile(context: Context, uri: Uri, onResult: (Boolean, String, Map<String, String>?) -> Unit) {
+    fun validateAndRestoreFile(context: Context, uri: Uri, onResult: (Boolean, String, Map<String, String>?) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             val backupData = BackupManager.readBackup(context, uri)
             
@@ -121,21 +121,24 @@ class TweakViewModel : ViewModel() {
         }
     }
 
-
+    // Di dalam TweakViewModel.kt
     fun applyRestoreData(context: Context, backupData: Map<String, String>, onFinished: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             backupData.forEach { (key, value) ->
-                // Jangan timpa soctype saat restore, itu paten milik device
                 if (key != "persist.sys.azenithdebug.soctype" && value.isNotEmpty()) {
                     PropertyUtils.set(key, value)
                 }
             }
-            // Muat ulang UI agar sinkron dengan data baru
+            
+            Shell.cmd("touch /data/adb/modules/AZenith/reboot").exec()
             loadAllConfiguration(context)
+            delay(1200) 
+            
             withContext(Dispatchers.Main) { onFinished() }
         }
     }
 
+    
     fun loadAllConfiguration(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             

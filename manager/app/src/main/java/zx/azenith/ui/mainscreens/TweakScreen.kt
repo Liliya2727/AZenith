@@ -118,7 +118,10 @@ fun TweakScreen(
                 scope.launch {
                     loadingDialog.withLoading {
                         viewModel.applyRestoreData(context, data) {
-                            scope.launch { snackbarHostState.showSnackbar("Configuration restored successfully!") }
+                            navController.navigate("home") {
+                                popUpTo(navController.graph.startDestinationId)
+                                launchSingleTop = true
+                            }
                         }
                     }
                 }
@@ -126,6 +129,7 @@ fun TweakScreen(
         },
         onDismiss = { pendingRestoreData = null }
     )
+
 
     LoadingDialogHost(handle = loadingDialog)
     ConfirmDialogHost(handle = confirmDialog)
