@@ -16,4 +16,30 @@
 # limitations under the License.
 #
 
+install_pkg() {
+
+    local apk_path="/data/adb/modules/AZenith/AZenith.apk"
+
+    if [ -f "$apk_path" ]; then
+        echo "- App Manager is not fully installed. Installing now..."
+        local install_res=$(cmd package install -r -d --user 0 "$apk_path" 2>&1)
+        
+        if echo "$install_res" | grep -iq "Success"; then
+            echo "- App Manager installed successfully."
+            sleep 1
+        else
+            echo "[!] Failed to install APK. Log: $install_res" >&2
+            return 1
+        fi
+    else
+        echo "[!] APK file not found at $apk_path" >&2
+        return 1
+    fi
+}
+
+# Cek kelayakan environment sebelum membuka aplikasi
+if ! command -v sys.azenith-service >/dev/null 2>&1 || ! pm path zx.azenith >/dev/null 2>&1; then
+    install_pkg
+fi
+
 exec sys.azenith-service --appactivity > /dev/null 2>&1

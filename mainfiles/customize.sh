@@ -34,7 +34,7 @@ abort_corrupted() {
   ui_print "! Required installation files were not found."
   ui_print ""
   ui_print "! Please re-download the module and try again."
-  abort "# # # # # # # # # # # # # # # # # # # # #"
+  abort "- # # # # # # # # # # # # # # # # # # # # #"
 }
 abort_arch() {
   ui_print "! Installation Aborted"
@@ -43,7 +43,7 @@ abort_arch() {
   ui_print "! Supported architectures:"
   ui_print "  • arm64-v8a"
   ui_print "  • armeabi-v7a"
-  abort "# # # # # # # # # # # # # # # # # # # # #"
+  abort "- # # # # # # # # # # # # # # # # # # # # #"
 }
 
 installation_complete() {
@@ -52,7 +52,7 @@ installation_complete() {
   ui_print "- Please reboot your device."
   ui_print "- Open Manager from action.sh"
   ui_print "- Don't forget to grant root access."
-  ui_print "# # # # # # # # # # # # # # # # # # # # #"
+  ui_print "- # # # # # # # # # # # # # # # # # # # # #"
 }
 
 # Displaybanner
