@@ -289,7 +289,6 @@ EOF
 }
 
 prefsettings
-wait
 sync
 
 exit 0
