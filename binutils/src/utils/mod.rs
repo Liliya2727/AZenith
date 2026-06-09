@@ -134,7 +134,7 @@ pub fn setrefreshrates(rate: &str) {
     let rate_float = if rate.contains('.') {
         rate.to_string()
     } else {
-        format!("{}.0", rate)
+        format!("{}", rate)
     };
 
     let _ = Command::new("settings")
