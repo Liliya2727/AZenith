@@ -94,6 +94,12 @@ import zx.azenith.ui.viewmodel.TweakViewModel
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 
+// Launcher untuk Buat File (Backup)
+
+
+
+
+
 
 @Composable
 fun TweakScreen(
@@ -117,11 +123,10 @@ fun TweakScreen(
             pendingRestoreData?.let { data ->
                 scope.launch {
                     loadingDialog.withLoading {
-                        viewModel.applyRestoreData(context, data) {
-                            navController.navigate("home") {
-                                popUpTo(navController.graph.startDestinationId)
-                                launchSingleTop = true
-                            }
+                        viewModel.applyRestoreData(context, data)
+                        navController.navigate("home") {
+                            popUpTo(navController.graph.startDestinationId)
+                            launchSingleTop = true
                         }
                     }
                 }
@@ -129,23 +134,18 @@ fun TweakScreen(
         },
         onDismiss = { pendingRestoreData = null }
     )
-
-
+    
     LoadingDialogHost(handle = loadingDialog)
     ConfirmDialogHost(handle = confirmDialog)
 
-    // Launcher untuk Buat File (Backup)
     val createDocLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
         uri?.let {
             showBackupRestoreSheet = false
             scope.launch {
                 loadingDialog.withLoading {
-                    viewModel.createConfigFileBackup(context, it) { success ->
-                        scope.launch {
-                            if (success) snackbarHostState.showSnackbar("Backup saved successfully!")
-                            else snackbarHostState.showSnackbar("Failed to create backup.")
-                        }
-                    }
+                    val success = viewModel.createConfigFileBackup(context, it)
+                    if (success) snackbarHostState.showSnackbar("Backup saved successfully!")
+                    else snackbarHostState.showSnackbar("Failed to create backup.")
                 }
             }
         }
@@ -156,26 +156,23 @@ fun TweakScreen(
             showBackupRestoreSheet = false
             scope.launch {
                 loadingDialog.withLoading {
-                    viewModel.validateAndRestoreFile(context, it) { isValid, message, data ->
-                        if (isValid && data != null) {
-                            // Tampilkan dialog konfirmasi kalau sukses divalidasi
-                            pendingRestoreData = data
-                            val socName = zx.azenith.ui.util.BackupManager.getSocName(data["persist.sys.azenithdebug.soctype"])
-                            confirmDialog.showConfirm(
-                                title = "Restore Configuration?",
-                                content = "A valid AZenith backup for $socName was found. Are you sure you want to overwrite your current settings?",
-                                confirm = "Restore",
-                                dismiss = "Cancel"
-                            )
-                        } else {
-                            // Tampilkan dialog error (Chipset beda / file korup)
-                            confirmDialog.showConfirm(
-                                title = "Restore Failed",
-                                content = message,
-                                confirm = "OK",
-                                dismiss = null // Hilangkan tombol cancel
-                            )
-                        }
+                    val result = viewModel.validateAndRestoreFile(context, it)
+                    if (result.isValid && result.data != null) {
+                        pendingRestoreData = result.data
+                        val socName = zx.azenith.ui.util.BackupManager.getSocName(result.data["persist.sys.azenithdebug.soctype"])
+                        confirmDialog.showConfirm(
+                            title = "Restore Configuration?",
+                            content = "A valid AZenith backup for $socName was found. Are you sure you want to overwrite your current settings?",
+                            confirm = "Restore",
+                            dismiss = "Cancel"
+                        )
+                    } else {
+                        confirmDialog.showConfirm(
+                            title = "Restore Failed",
+                            content = result.message,
+                            confirm = "OK",
+                            dismiss = null 
+                        )
                     }
                 }
             }
