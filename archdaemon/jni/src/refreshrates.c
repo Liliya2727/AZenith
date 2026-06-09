@@ -54,38 +54,17 @@ int get_current_refresh_rate(void) {
 void apply_dynamic_refresh_rate(int target_rr) {
     int max_hw = get_max_refresh_rate();
 
-    int steps[] = {165, 144, 120, 90, 60};
-    int num_steps = sizeof(steps) / sizeof(steps[0]);
-
-    int max_idx = -1;
-    int target_idx = -1;
-
-    for (int i = 0; i < num_steps; i++) {
-        if (max_hw >= steps[i]) {
-            max_idx = i;
-            break;
-        }
+    int final_rr = target_rr;
+    if (final_rr > max_hw) {
+        log_zenith(LOG_WARN, "Requested %dHz exceeds hardware max %dHz. Capping to max.", target_rr, max_hw);
+        final_rr = max_hw;
     }
 
-    for (int i = 0; i < num_steps; i++) {
-        if (target_rr >= steps[i]) {
-            target_idx = i;
-            break;
-        }
-    }
+    log_zenith(LOG_INFO, "Set refresh rates to %dHz", final_rr);
 
-    int mode_to_apply = 0;
-    if (max_idx != -1 && target_idx != -1) {
-        mode_to_apply = target_idx - max_idx;
-    }
-
-    if (mode_to_apply < 0) mode_to_apply = 0;
-    
-    log_zenith(LOG_INFO, "Set refresh rates to %dHz",
-                target_rr);
-
-    systemv("sys.azenith-utilityconf setrefreshrates %d", mode_to_apply);
+    systemv("sys.azenith-utilityconf setrefreshrates %d", final_rr);
 }
+
 
 /***********************************************************************************
  * Function Name      : get_max_refresh_rate

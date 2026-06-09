@@ -131,8 +131,29 @@ pub fn disable_dnd() {
 }
 
 pub fn setrefreshrates(rate: &str) {
-    let _ = Command::new("service").args(["call", "SurfaceFlinger", "1035", "i32", rate]).status();
+    let rate_float = if rate.contains('.') {
+        rate.to_string()
+    } else {
+        format!("{}.0", rate)
+    };
+
+    let _ = Command::new("settings")
+        .args(["put", "system", "min_refresh_rate", &rate_float])
+        .status();
+
+    let _ = Command::new("settings")
+        .args(["put", "system", "peak_refresh_rate", &rate_float])
+        .status();
+
+    let _ = Command::new("settings")
+        .args(["put", "system", "user_refresh_rate", &rate_float])
+        .status();
+
+    let _ = Command::new("settings")
+        .args(["put", "secure", "miui_refresh_rate", &rate_float])
+        .status();
 }
+
 
 pub fn restartservice() {
     let _ = Command::new("pkill").args(["-9", "-f", "sys.azenith-rianixiathermalcore"]).status();
