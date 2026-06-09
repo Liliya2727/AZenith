@@ -239,6 +239,10 @@ int main_daemon(void) {
                                 log_zenith(LOG_INFO, "Module is removed, exiting.");
                                 notify("Module Removed", "Please reboot your device to complete module uninstallation.", false, 0);
                                 should_exit = true;
+                            } else if (strcmp(event->name, "reboot") == 0) {
+                                // Deteksi flag reboot yang dibuat (misal dari hasil restore tweak di App)
+                                log_zenith(LOG_INFO, "Configuration updated, notify user to reboot");
+                                notify("Daemon Info", "Configuration updated. Please reboot your device to take full effect.", false, 0);
                             }
                         }
                         ptr += sizeof(struct inotify_event) + event->len;
