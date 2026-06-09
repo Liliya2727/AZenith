@@ -32,13 +32,14 @@ private fun Context.deleteOldBannerFile(uriString: String?) {
         val path = uri.path ?: uriString 
         val file = File(path)
         
-        if (file.exists() && file.absolutePath.startsWith(cacheDir.absolutePath)) {
+        if (file.exists() && file.absolutePath.startsWith(filesDir.absolutePath)) {
             file.delete()
         }
     } catch (e: Exception) {
         e.printStackTrace()
     }
 }
+
 
 fun Context.getHeaderImage(): String? {
     return getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
