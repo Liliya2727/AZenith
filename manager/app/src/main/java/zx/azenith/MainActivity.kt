@@ -344,6 +344,30 @@ fun MainScreen(isFromTile: Boolean = false) {
                         AppSettingsScreen(navController, pkg)
                     }
                 }
+                
+                AnimatedVisibility(
+                    visible = rootStatus && moduleInstalled && currentRoute in bottomBarRoutes,
+                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                ) {
+                    BottomNavBar(
+                        items = navItems,
+                        selectedRoute = currentRoute ?: "home",
+                        isBlurEnabled = isBlurEnabled,
+                        hazeState = hazeState,
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                        onItemSelected = { route ->
+                            if (currentRoute != route) {
+                                navController.navigate(route) {
+                                    popUpTo(navController.graph.startDestinationId) { saveState = false }
+                                    launchSingleTop = true
+                                    restoreState = false
+                                }
+                            }
+                        }
+                    )
+                }
 
                 AnimatedVisibility(
                     visible = rootStatus && moduleInstalled && pendingReboot && currentRoute in bottomBarRoutes && isFabVisible.value,
@@ -367,37 +391,6 @@ fun MainScreen(isFromTile: Boolean = false) {
                         containerColor = MaterialTheme.colorScheme.errorContainer,
                         contentColor = MaterialTheme.colorScheme.onErrorContainer,
                         elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)
-                    )
-                }
-
-                AnimatedVisibility(
-                    visible = currentRoute in bottomBarRoutes,
-                    enter = slideInVertically(
-                        initialOffsetY = { it }, 
-                        animationSpec = tween(300, easing = FastOutSlowInEasing)
-                    ) + fadeIn(),
-                    exit = slideOutVertically(
-                        targetOffsetY = { it }, 
-                        animationSpec = tween(300, easing = FastOutSlowInEasing)
-                    ) + fadeOut(),
-                    modifier = Modifier.align(Alignment.BottomCenter)
-                ) {
-                    BottomNavBar(
-                        items = navItems,
-                        selectedRoute = currentRoute ?: "home",
-                        onItemSelected = { route ->
-                            if (currentRoute != route) {
-                                navController.navigate(route) {
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            }
-                        },
-                        isBlurEnabled = isBlurEnabled,
-                        hazeState = hazeState
                     )
                 }
             }
