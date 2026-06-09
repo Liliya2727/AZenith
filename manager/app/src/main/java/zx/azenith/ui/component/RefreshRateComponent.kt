@@ -40,14 +40,15 @@ private data class RefreshRatePickerOption(
 @Composable
 private fun getRefreshRatePickerOptions(context: Context): List<RefreshRatePickerOption> {
     val supported = getSupportedRefreshRatesPicker(context)
-    return supported.mapIndexed { index, rate ->
+    return supported.map { rate ->
         RefreshRatePickerOption(
             titleString = context.getString(R.string.refresh_rate_format, rate),
-            reason = index.toString(), 
+            reason = rate,
             icon = Icons.Outlined.WebStories
         )
     }
 }
+
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
