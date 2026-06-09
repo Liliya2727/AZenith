@@ -91,6 +91,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import zx.azenith.ui.viewmodel.TweakViewModel
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+
 
 @Composable
 fun TweakScreen(
@@ -106,6 +109,74 @@ fun TweakScreen(
     var showBackupRestoreSheet by remember { mutableStateOf(false) }
     var showRendererDialog by remember { mutableStateOf(false) }
     var showRefreshRateDialog by remember { mutableStateOf(false) }
+    var pendingRestoreData by remember { mutableStateOf<Map<String, String>?>(null) }
+    
+    val loadingDialog = rememberLoadingDialog()
+    val confirmDialog = rememberConfirmDialog(
+        onConfirm = {
+            pendingRestoreData?.let { data ->
+                scope.launch {
+                    loadingDialog.withLoading {
+                        viewModel.applyRestoreData(context, data) {
+                            scope.launch { snackbarHostState.showSnackbar("Configuration restored successfully!") }
+                        }
+                    }
+                }
+            }
+        },
+        onDismiss = { pendingRestoreData = null }
+    )
+
+    LoadingDialogHost(handle = loadingDialog)
+    ConfirmDialogHost(handle = confirmDialog)
+
+    // Launcher untuk Buat File (Backup)
+    val createDocLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+        uri?.let {
+            showBackupRestoreSheet = false
+            scope.launch {
+                loadingDialog.withLoading {
+                    viewModel.createConfigFileBackup(context, it) { success ->
+                        scope.launch {
+                            if (success) snackbarHostState.showSnackbar("Backup saved successfully!")
+                            else snackbarHostState.showSnackbar("Failed to create backup.")
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    val openDocLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let {
+            showBackupRestoreSheet = false
+            scope.launch {
+                loadingDialog.withLoading {
+                    viewModel.validateAndRestoreFile(context, it) { isValid, message, data ->
+                        if (isValid && data != null) {
+                            // Tampilkan dialog konfirmasi kalau sukses divalidasi
+                            pendingRestoreData = data
+                            val socName = zx.azenith.ui.util.BackupManager.getSocName(data["persist.sys.azenithdebug.soctype"])
+                            confirmDialog.showConfirm(
+                                title = "Restore Configuration?",
+                                content = "A valid AZenith backup for $socName was found. Are you sure you want to overwrite your current settings?",
+                                confirm = "Restore",
+                                dismiss = "Cancel"
+                            )
+                        } else {
+                            // Tampilkan dialog error (Chipset beda / file korup)
+                            confirmDialog.showConfirm(
+                                title = "Restore Failed",
+                                content = message,
+                                confirm = "OK",
+                                dismiss = null // Hilangkan tombol cancel
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.loadAllConfiguration(context)
@@ -479,6 +550,21 @@ fun TweakScreen(
                     )
                 }
             }
+        }
+        
+        RootAppDialog {
+            BackupRestoreBottomSheet(
+                show = showBackupRestoreSheet,
+                onDismiss = { showBackupRestoreSheet = false },
+                onBackup = { 
+                    // Panggil file picker untuk buat file dengan nama default
+                    createDocLauncher.launch("AZenith_Config.zx") 
+                },
+                onRestore = { 
+                    // Panggil file picker dengan filter
+                    openDocLauncher.launch(arrayOf("application/octet-stream", "*/*")) 
+                }
+            )
         }
 
         RootAppDialog {

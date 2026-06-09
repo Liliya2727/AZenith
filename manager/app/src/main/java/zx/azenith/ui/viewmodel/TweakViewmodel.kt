@@ -14,9 +14,9 @@ import kotlinx.coroutines.withContext
 import zx.azenith.ui.util.PropertyUtils
 import kotlin.math.roundToInt
 import kotlinx.coroutines.async
+import android.net.Uri
+import zx.azenith.ui.util.BackupManager
 
-    
-    
     
 class TweakViewModel : ViewModel() {
 
@@ -48,6 +48,89 @@ class TweakViewModel : ViewModel() {
     var currentRenderer by mutableStateOf<String?>(null)
     var currentRefreshRate by mutableStateOf<Int?>(null)
     var thermalState by mutableStateOf<Boolean?>(null)
+    
+    private val configKeysToBackup = listOf(
+        "persist.sys.azenithdebug.soctype", // WAJIB ADA UNTUK VALIDASI
+        "persist.sys.azenithconf.cpulimit",
+        "persist.sys.azenithconf.freqoffset",
+        "persist.sys.azenithconf.APreload",
+        "persist.sys.azenithconf.clearbg",
+        "persist.sys.azenithconf.iosched",
+        "persist.sys.azenithconf.dnd",
+        "persist.sys.azenithconf.fstrim",
+        "persist.sys.azenithconf.thermalcore",
+        "persist.sys.azenithconf.schedtunes",
+        "persist.sys.azenithconf.SFL",
+        "persist.sys.azenithconf.justintime",
+        "persist.sys.azenithconf.fpsged",
+        "persist.sys.azenithconf.malisched",
+        "persist.sys.azenithconf.walttunes",
+        "persist.sys.azenithconf.disabletrace",
+        "persist.sys.azenithconf.logd",
+        "persist.sys.azenithconf.schemeconfig",
+        "persist.sys.azenithconf.DThermal",
+        "persist.sys.azenithconf.usefpsgo",
+        "persist.sys.azenithconf.bypasschg",
+        "persist.sys.azenithconf.bypasschgthreshold",
+        "persist.sys.azenithconf.bypasspath",
+        "persist.sys.azenithconf.preloadbudget",
+        "persist.sys.azenith.custom_default_cpu_gov",
+        "persist.sys.azenith.custom_powersave_cpu_gov",
+        "persist.sys.azenith.custom_default_balanced_IO",
+        "persist.sys.azenith.custom_performance_IO",
+        "persist.sys.azenith.custom_powersave_IO"
+    )
+    
+    fun createConfigFileBackup(context: Context, uri: Uri, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val propsMap = mutableMapOf<String, String>()
+            configKeysToBackup.forEach { key ->
+                propsMap[key] = PropertyUtils.get(key)
+            }
+            val success = BackupManager.createBackup(context, uri, propsMap)
+            withContext(Dispatchers.Main) { onResult(success) }
+        }
+    }
+
+    // Hasil pengecekan: isSuccess, errorMessage, validDataToRestore
+    fun validateAndRestoreFile(context: Context, uri: Uri, onResult: (Boolean, String, Map<String, String>?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val backupData = BackupManager.readBackup(context, uri)
+            
+            if (backupData == null) {
+                withContext(Dispatchers.Main) { onResult(false, "Invalid or corrupted .zx backup file.", null) }
+                return@launch
+            }
+
+            val currentSocType = PropertyUtils.get("persist.sys.azenithdebug.soctype")
+            val backupSocType = backupData["persist.sys.azenithdebug.soctype"]
+
+            if (currentSocType != backupSocType) {
+                val currentName = BackupManager.getSocName(currentSocType)
+                val backupName = BackupManager.getSocName(backupSocType)
+                val errorMsg = "Restore Failed!\nThis backup is for $backupName, but your device is $currentName."
+                withContext(Dispatchers.Main) { onResult(false, errorMsg, null) }
+                return@launch
+            }
+
+            // Jika lolos validasi, kembalikan datanya ke UI untuk konfirmasi
+            withContext(Dispatchers.Main) { onResult(true, "Valid Backup", backupData) }
+        }
+    }
+
+    fun applyRestoreData(context: Context, backupData: Map<String, String>, onFinished: () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            backupData.forEach { (key, value) ->
+                // Jangan timpa soctype saat restore, itu paten milik device
+                if (key != "persist.sys.azenithdebug.soctype" && value.isNotEmpty()) {
+                    PropertyUtils.set(key, value)
+                }
+            }
+            // Muat ulang UI agar sinkron dengan data baru
+            loadAllConfiguration(context)
+            withContext(Dispatchers.Main) { onFinished() }
+        }
+    }
 
     fun loadAllConfiguration(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
