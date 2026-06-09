@@ -23,6 +23,10 @@ until [ "$(getprop sys.boot_completed)" = "1" ]; do
     sleep 5 
 done
 
+if [ -f "$MODDIR/reboot" ]; then
+    rm -f "$MODDIR/reboot"
+fi
+
 STATE=$(getprop persist.sys.azenith.state)
 { [ -z "$STATE" ] || { [ "$STATE" = "running" ] && [ -z "$(/system/bin/toybox pidof sys.azenith-service)" ]; }; } && {
     setprop persist.sys.azenith.state stopped
