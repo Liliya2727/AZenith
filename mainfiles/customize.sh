@@ -20,6 +20,8 @@ SKIPUNZIP=1
 MODULE_CONFIG="/data/adb/.config/AZenith"
 device_codename=$(getprop ro.product.board)
 chip=$(getprop ro.hardware)
+HM_DIR="/data/adb/hybrid-mount"
+HM_CONFIG="$HM_DIR/config.toml"
 
 # Create File
 make_node() {
@@ -108,6 +110,30 @@ if [ ! -f "$MODULE_CONFIG/gamelist/azenithApplist.json" ]; then
 fi
 ui_print "- Extracting module banner..."
 extract "$ZIPFILE" module.banner.avif "$MODPATH"
+
+# Skip mountify
+touch "$MODPATH/skip_mountify"
+
+# Skip hybrid mount
+if [ -f "$HM_CONFIG" ]; then
+    ui_print "- Hybrid Mount detected, configuring rules..."
+
+    if command -v hybrid-mount >/dev/null 2>&1; then
+        hybrid-mount api config-patch --patch '{"rules":{"AZenith":{"default_mode":"ignore"}}}' >/dev/null 2>&1
+        ui_print "- Runtime policy updated to 'ignore'."
+    fi
+
+    if ! grep -q "\[rules\.AZenith\]" "$HM_CONFIG"; then
+        echo "" >> "$HM_CONFIG"
+        echo "[rules.AZenith]" >> "$HM_CONFIG"
+        echo 'default_mode = "ignore"' >> "$HM_CONFIG"
+        ui_print "- Permanent rule added to config.toml."
+    fi
+else
+    ui_print "- Hybrid Mount is not installed. Skipping configuration."
+fi
+
+
 
 # Use Symlink for APatch / KernelSU
 if [ "$KSU" = "true" ] || [ "$APATCH" = "true" ]; then
