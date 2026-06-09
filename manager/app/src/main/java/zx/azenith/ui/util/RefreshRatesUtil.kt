@@ -45,15 +45,28 @@ fun getSupportedRefreshRates(context: Context): List<String> {
     return finalModes
 }
 
-@Composable
-private fun getRefreshRatePickerOptions(context: Context): List<RefreshRatePickerOption> {
-    val supported = getSupportedRefreshRatesPicker(context)
-    return supported.map { rate -> 
-        RefreshRatePickerOption(
-            titleString = context.getString(R.string.refresh_rate_format, rate),
-            reason = rate,
-            icon = Icons.Outlined.WebStories
-        )
+fun getSupportedRefreshRatesPicker(context: Context): List<String> {
+    val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        context.display
+    } else {
+        @Suppress("DEPRECATION")
+        (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
     }
-}
 
+    val supportedRR = display?.supportedModes
+        ?.map { it.refreshRate.toInt() }
+        ?.distinct()
+        ?.sortedDescending() ?: listOf(60)
+    
+    val finalModes = mutableListOf<String>()
+
+    val standardModes = listOf(144, 120, 90, 60)
+    
+    standardModes.forEach { mode ->
+        if (supportedRR.any { it in (mode - 1)..(mode + 1) }) {
+            finalModes.add(mode.toString())
+        }
+    }
+    
+    return finalModes 
+}
