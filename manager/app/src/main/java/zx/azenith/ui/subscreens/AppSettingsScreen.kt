@@ -323,6 +323,37 @@ fun AppSettingsScreen(
                     }
                 }
             }
+            item {
+                AnimatedVisibility(
+                    visible = localMasterOn,
+                    // BARU: Jika bukan user yang nge-klik (misal baru buka app/loading), maka munculkan instan tanpa animasi
+                    enter = if (userToggled) {
+                        expandVertically(animationSpec = tween(400)) + fadeIn()
+                    } else {
+                        EnterTransition.None
+                    },
+                    exit = shrinkVertically(animationSpec = tween(400)) + fadeOut()
+                ) {
+                    val displayConfig = config ?: zx.azenith.ui.util.AppConfig() 
+                    
+                    Column {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        ExpressiveList(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            content = listOf( 
+                               {
+                                   ExpressiveInfoCard(
+                                       supportingContent = { Text(text = "Per-App Refresh rates wouldn't work If you use Disable Vsync module or using Refresh rates tool such as Scene apps because of surfaceFlinger call, AZenith couldn't overwrite those settings until user reboot the device.") },
+                                       leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
+                                       containerColor = colorScheme.surfaceContainerLow,
+                                       onClick = {}
+                                   )
+                               }
+                            )
+                        )
+                    }
+                }
+            }
         }
     }
 }
