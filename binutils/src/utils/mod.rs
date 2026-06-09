@@ -131,28 +131,23 @@ pub fn disable_dnd() {
 }
 
 pub fn setrefreshrates(rate: &str) {
-    let rate_float = if rate.contains('.') {
-        rate.to_string()
-    } else {
-        format!("{}", rate)
-    };
-
     let _ = Command::new("settings")
-        .args(["put", "system", "min_refresh_rate", &rate_float])
+        .args(["put", "system", "min_refresh_rate", rate])
         .status();
 
     let _ = Command::new("settings")
-        .args(["put", "system", "peak_refresh_rate", &rate_float])
+        .args(["put", "system", "peak_refresh_rate", rate])
         .status();
 
     let _ = Command::new("settings")
-        .args(["put", "system", "user_refresh_rate", &rate_float])
+        .args(["put", "system", "user_refresh_rate", rate])
         .status();
 
     let _ = Command::new("settings")
-        .args(["put", "secure", "miui_refresh_rate", &rate_float])
+        .args(["put", "secure", "miui_refresh_rate", rate])
         .status();
 }
+
 
 
 pub fn restartservice() {
