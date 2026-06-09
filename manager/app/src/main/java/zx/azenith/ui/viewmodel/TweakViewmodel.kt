@@ -19,7 +19,8 @@ import zx.azenith.ui.util.BackupManager
 
     
 class TweakViewModel : ViewModel() {
-
+    data class ValidationResult(val isValid: Boolean, val message: String, val data: Map<String, String>?)
+    
     var isUiLoaded by mutableStateOf(false)
         private set
 
@@ -81,49 +82,41 @@ class TweakViewModel : ViewModel() {
         "persist.sys.azenith.custom_powersave_IO"
     )
     
-    fun createConfigFileBackup(context: Context, uri: Uri, onResult: (Boolean) -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
+    suspend fun createConfigFileBackup(context: Context, uri: Uri): Boolean {
+        return withContext(Dispatchers.IO) {
             val propsMap = mutableMapOf<String, String>()
             configKeysToBackup.forEach { key ->
                 propsMap[key] = PropertyUtils.get(key)
             }
-            val success = BackupManager.createBackup(context, uri, propsMap)
-            withContext(Dispatchers.Main) { onResult(success) }
+            BackupManager.createBackup(context, uri, propsMap)
         }
     }
 
     // Hasil pengecekan: isSuccess, errorMessage, validDataToRestore
-    fun validateAndRestoreFile(context: Context, uri: Uri, onResult: (Boolean, String, Map<String, String>?) -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
+    suspend fun validateAndRestoreFile(context: Context, uri: Uri): ValidationResult {
+        return withContext(Dispatchers.IO) {
             val backupData = BackupManager.readBackup(context, uri)
             
             if (backupData == null) {
-                withContext(Dispatchers.Main) { onResult(false, "Invalid or corrupted .zx backup file.", null) }
-                return@launch
+                return@withContext ValidationResult(false, "Invalid or corrupted .zx backup file.", null)
             }
-
+    
             val currentSocType = PropertyUtils.get("persist.sys.azenithdebug.soctype")
             val backupSocType = backupData["persist.sys.azenithdebug.soctype"]
-
+    
             if (currentSocType != backupSocType) {
-                // Ambil nama dari chipset file backup tersebut
                 val backupName = zx.azenith.ui.util.BackupManager.getSocName(backupSocType)
-                
-                // 👇 Pesan error custom sesuai dengan SOC dari file backup
                 val errorMsg = "This backup file is for $backupName devices, restore aborted."
-                
-                withContext(Dispatchers.Main) { onResult(false, errorMsg, null) }
-                return@launch
+                return@withContext ValidationResult(false, errorMsg, null)
             }
-
-            // Jika lolos validasi
-            withContext(Dispatchers.Main) { onResult(true, "Valid Backup", backupData) }
+    
+            ValidationResult(true, "Valid Backup", backupData)
         }
     }
 
     // Di dalam TweakViewModel.kt
-    fun applyRestoreData(context: Context, backupData: Map<String, String>, onFinished: () -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) {
+    suspend fun applyRestoreData(context: Context, backupData: Map<String, String>) {
+        withContext(Dispatchers.IO) {
             backupData.forEach { (key, value) ->
                 if (key != "persist.sys.azenithdebug.soctype" && value.isNotEmpty()) {
                     PropertyUtils.set(key, value)
@@ -133,8 +126,6 @@ class TweakViewModel : ViewModel() {
             Shell.cmd("touch /data/adb/modules/AZenith/reboot").exec()
             loadAllConfiguration(context)
             delay(1200) 
-            
-            withContext(Dispatchers.Main) { onFinished() }
         }
     }
 
@@ -373,3 +364,14 @@ class TweakViewModel : ViewModel() {
         }
     }
 }
+
+// Buat data class kecil untuk menampung hasil validasi
+
+
+// 1. Fungsi createConfigFileBackup
+
+
+// 2. Fungsi validateAndRestoreFile
+
+
+// 3. Fungsi applyRestoreData
