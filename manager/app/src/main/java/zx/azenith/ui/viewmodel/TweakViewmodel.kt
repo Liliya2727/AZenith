@@ -93,7 +93,7 @@ class TweakViewModel : ViewModel() {
     }
 
     // Hasil pengecekan: isSuccess, errorMessage, validDataToRestore
-    fun validateAndRestoreFile(context: Context, uri: Uri, onResult: (Boolean, String, Map<String, String>?) -> Unit) {
+        fun validateAndRestoreFile(context: Context, uri: Uri, onResult: (Boolean, String, Map<String, String>?) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             val backupData = BackupManager.readBackup(context, uri)
             
@@ -106,17 +106,21 @@ class TweakViewModel : ViewModel() {
             val backupSocType = backupData["persist.sys.azenithdebug.soctype"]
 
             if (currentSocType != backupSocType) {
-                val currentName = BackupManager.getSocName(currentSocType)
-                val backupName = BackupManager.getSocName(backupSocType)
-                val errorMsg = "Restore Failed!\nThis backup is for $backupName, but your device is $currentName."
+                // Ambil nama dari chipset file backup tersebut
+                val backupName = zx.azenith.ui.util.BackupManager.getSocName(backupSocType)
+                
+                // 👇 Pesan error custom sesuai dengan SOC dari file backup
+                val errorMsg = "This backup file is for $backupName devices, restore aborted."
+                
                 withContext(Dispatchers.Main) { onResult(false, errorMsg, null) }
                 return@launch
             }
 
-            // Jika lolos validasi, kembalikan datanya ke UI untuk konfirmasi
+            // Jika lolos validasi
             withContext(Dispatchers.Main) { onResult(true, "Valid Backup", backupData) }
         }
     }
+
 
     fun applyRestoreData(context: Context, backupData: Map<String, String>, onFinished: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {

@@ -557,25 +557,16 @@ fun TweakScreen(
                 show = showBackupRestoreSheet,
                 onDismiss = { showBackupRestoreSheet = false },
                 onBackup = { 
-                    // Panggil file picker untuk buat file dengan nama default
-                    createDocLauncher.launch("AZenith_Config.zx") 
+                    val sdf = java.text.SimpleDateFormat("ddMMyyyy_HHmmss", java.util.Locale.getDefault())
+                    val timestamp = sdf.format(java.util.Date())
+                    val dynamicFileName = "AZenithConfig_Backup_$timestamp.zx"
+                    createDocLauncher.launch(dynamicFileName) 
                 },
                 onRestore = { 
-                    // Panggil file picker dengan filter
                     openDocLauncher.launch(arrayOf("application/octet-stream", "*/*")) 
                 }
             )
         }
-
-        RootAppDialog {
-            BackupRestoreBottomSheet(
-                show = showBackupRestoreSheet,
-                onDismiss = { showBackupRestoreSheet = false },
-                onBackup = { scope.launch { snackbarHostState.showSnackbar("Dummy: Backup Started") } },
-                onRestore = { scope.launch { snackbarHostState.showSnackbar("Dummy: Restore Started") } }
-            )
-        }
-
 
         RootAppDialog {
             RendererDialog(
