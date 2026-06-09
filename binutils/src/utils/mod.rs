@@ -131,12 +131,13 @@ pub fn disable_dnd() {
 }
 
 pub fn setrefreshrates(rate: &str) {
-    let _ = Command::new("settings")
-        .args(["put", "system", "min_refresh_rate", rate])
-        .status();
-
+   
     let _ = Command::new("settings")
         .args(["put", "system", "peak_refresh_rate", rate])
+        .status();
+        
+    let _ = Command::new("settings")
+        .args(["put", "system", "min_refresh_rate", rate])
         .status();
 
     let _ = Command::new("settings")
