@@ -37,13 +37,6 @@ int main_daemon(void) {
     systemv("rm -f /data/adb/.config/AZenith/preload/AZenithPR.log");        
     systemv("su -c \"am broadcast -a zx.azenith.ACTION_MANAGE -n zx.azenith/.receiver.ZenithReceiver --ez clearall true >/dev/null 2>&1\"");
     systemv("touch %s", PROFILE_MODE_APP);
-           
-    if (access("/system/bin/dumpsys", F_OK) != 0) {
-        fprintf(stderr, "\033[31mFATAL ERROR:\033[0m /system/bin/dumpsys: inaccessible or not found\n");
-        log_zenith(LOG_FATAL, "/system/bin/dumpsys: inaccessible or not found");
-        notify("Daemon Error", "Something wrong happening in the daemon, please check module log.", false, 0);
-        exit(EXIT_FAILURE);
-    }
 
     if (is_file_empty("/system/bin/dumpsys") == 1) {
         fprintf(stderr, "\033[31mFATAL ERROR:\033[0m /system/bin/dumpsys was tampered by kill logger module.\n");
