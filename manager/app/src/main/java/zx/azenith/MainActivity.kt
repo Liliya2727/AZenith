@@ -147,6 +147,7 @@ fun MainScreen(isFromTile: Boolean = false) {
         rootStatus = RootUtils.requestRootAccess()
         moduleInstalled = RootUtils.isModuleInstalled()
         isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
+        pendingReboot = Shell.cmd("test -f /data/adb/modules/AZenith/reboot").exec().isSuccess
     }
 
     LaunchedEffect(currentRoute) {
@@ -252,14 +253,7 @@ fun MainScreen(isFromTile: Boolean = false) {
             }
         }
     }
-
-    val refreshStatus = {
-        rootStatus = RootUtils.requestRootAccess()
-        moduleInstalled = RootUtils.isModuleInstalled()
-        isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
-        // Cek apakah file flag reboot ada
-        pendingReboot = Shell.cmd("test -f /data/adb/modules/AZenith/reboot").exec().isSuccess
-    }
+   
     
     CompositionLocalProvider(LocalAppHazeState provides hazeState) {
         RootDialogsProvider {

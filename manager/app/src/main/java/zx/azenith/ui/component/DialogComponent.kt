@@ -348,7 +348,7 @@ private fun LoadingDialog(visible: Boolean) {
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                WavyCircularProgressIndicator()
+                CircularWavyProgressIndicator()
             }
         }
     }
