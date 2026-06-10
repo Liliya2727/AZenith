@@ -1,7 +1,7 @@
 # # AZenith 火
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/904b23f2-010a-4447-bcbf-5eea41aec851" alt="AZenith Banner" width="100%">
+  <img src="https://github.com/user-attachments/assets/8061c01d-c5ac-49dd-a6c3-b191aa82862d" alt="AZenith Banner" width="100%">
 </p>
 
 <p align="center">
