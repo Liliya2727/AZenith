@@ -94,32 +94,6 @@ import zx.azenith.ui.viewmodel.TweakViewModel
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 
-// Launcher untuk Buat File (Backup)
-
-@Composable
-fun TweakScreen(
-    navController: NavController,
-    viewModel: TweakViewModel = viewModel()
-) {
-    // ... [Semua inisialisasi state, dialog handle, dan launcher tetap sama persis seperti sebelumnya] ...
-
-    MaterialExpressiveTheme {
-        Scaffold(
-            // ... [TopBar dan LazyColumn Tweaks tetap sama] ...
-        ) { innerPadding ->
-            // ...
-        }
-
-        // 1. Bottom Sheet Utama
-        
-
-        // ... [RootAppDialog Renderer & RefreshRate tetap di bawah] ...
-    }
-}
-
-
-
-
 
 @Composable
 fun TweakScreen(
