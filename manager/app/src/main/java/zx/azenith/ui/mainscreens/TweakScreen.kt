@@ -96,6 +96,26 @@ import androidx.activity.result.contract.ActivityResultContracts
 
 // Launcher untuk Buat File (Backup)
 
+@Composable
+fun TweakScreen(
+    navController: NavController,
+    viewModel: TweakViewModel = viewModel()
+) {
+    // ... [Semua inisialisasi state, dialog handle, dan launcher tetap sama persis seperti sebelumnya] ...
+
+    MaterialExpressiveTheme {
+        Scaffold(
+            // ... [TopBar dan LazyColumn Tweaks tetap sama] ...
+        ) { innerPadding ->
+            // ...
+        }
+
+        // 1. Bottom Sheet Utama
+        
+
+        // ... [RootAppDialog Renderer & RefreshRate tetap di bawah] ...
+    }
+}
 
 
 
@@ -142,14 +162,18 @@ fun TweakScreen(
         uri?.let {
             showBackupRestoreSheet = false
             scope.launch {
-                loadingDialog.withLoading {
-                    val success = viewModel.createConfigFileBackup(context, it)
-                    if (success) snackbarHostState.showSnackbar("Backup saved successfully!")
-                    else snackbarHostState.showSnackbar("Failed to create backup.")
+                val success = loadingDialog.withLoading {
+                    viewModel.createConfigFileBackup(context, it)
+                }
+                if (success) {
+                    snackbarHostState.showSnackbar("Backup saved successfully!")
+                } else {
+                    snackbarHostState.showSnackbar("Failed to create backup.")
                 }
             }
         }
     }
+
     
     val openDocLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {
@@ -558,15 +582,116 @@ fun TweakScreen(
                 show = showBackupRestoreSheet,
                 onDismiss = { showBackupRestoreSheet = false },
                 onBackup = { 
-                    val sdf = java.text.SimpleDateFormat("ddMMyyyy_HHmmss", java.util.Locale.getDefault())
-                    val timestamp = sdf.format(java.util.Date())
-                    val dynamicFileName = "AZenithConfig_Backup_$timestamp.zx"
-                    createDocLauncher.launch(dynamicFileName) 
+                    showBackupRestoreSheet = false
+                    showBackupOptionsDialog = true // Buka custom dialog opsi backup
                 },
                 onRestore = { 
                     openDocLauncher.launch(arrayOf("application/octet-stream", "*/*")) 
                 }
             )
+        }
+
+        // 👇 2. Custom Dialog Backup (Sesuai gayamu)
+        RootAppDialog {
+            CustomContentDialog(
+                visible = showBackupOptionsDialog,
+                title = "Backup Options",
+                confirmText = "Create",
+                confirmEnabled = optBackupTweaks || optBackupApplist,
+                onDismiss = { showBackupOptionsDialog = false },
+                onConfirm = {
+                    showBackupOptionsDialog = false
+                    val sdf = java.text.SimpleDateFormat("ddMMyyyy_HHmmss", java.util.Locale.getDefault())
+                    val timestamp = sdf.format(java.util.Date())
+                    val dynamicFileName = "AZenithConfig_Backup_$timestamp.zx"
+                    createDocLauncher.launch(dynamicFileName) 
+                }
+            ) {
+                Column {
+                    Text(
+                        text = "Select the configurations you want to backup:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { optBackupTweaks = !optBackupTweaks }) {
+                        Checkbox(checked = optBackupTweaks, onCheckedChange = { optBackupTweaks = it })
+                        Text("Tweak Configuration Settings", color = MaterialTheme.colorScheme.onSurface)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { optBackupApplist = !optBackupApplist }) {
+                        Checkbox(checked = optBackupApplist, onCheckedChange = { optBackupApplist = it })
+                        Text("Per-app & Applist Settings", color = MaterialTheme.colorScheme.onSurface)
+                    }
+                }
+            }
+        }
+
+        // 👇 3. Custom Dialog Restore (Sesuai gayamu)
+        if (pendingRestoreResult != null) {
+            val result = pendingRestoreResult!!
+            val socName = zx.azenith.ui.util.BackupManager.getSocName(result.socType)
+            val currentSocType = PropertyUtils.get("persist.sys.azenithdebug.soctype")
+            val isSocMismatch = result.socType != currentSocType
+
+            RootAppDialog {
+                CustomContentDialog(
+                    visible = true, // Selalu true selama pendingRestoreResult != null
+                    title = "Restore Configuration",
+                    confirmText = "Restore",
+                    confirmEnabled = (optRestoreTweaks && !isSocMismatch) || optRestoreApplist,
+                    onDismiss = { pendingRestoreResult = null },
+                    onConfirm = {
+                        val dataToRestore = result.data
+                        pendingRestoreResult = null
+                        if (dataToRestore != null) {
+                            scope.launch {
+                                loadingDialog.withLoading {
+                                    viewModel.applyRestoreData(context, dataToRestore, optRestoreTweaks && !isSocMismatch, optRestoreApplist)
+                                    navController.navigate("home") {
+                                        popUpTo(navController.graph.startDestinationId)
+                                        launchSingleTop = true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ) {
+                    Column {
+                        Text(
+                            text = "Backup content detected. Select what to restore:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        
+                        if (isSocMismatch && result.hasTweaks) {
+                            Text(
+                                "Warning: Backup is for $socName. Restoring tweaks is restricted to prevent bootloops.",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Spacer(Modifier.height(8.dp))
+                        }
+
+                        if (result.hasTweaks) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { if (!isSocMismatch) optRestoreTweaks = !optRestoreTweaks }) {
+                                Checkbox(
+                                    checked = optRestoreTweaks && !isSocMismatch, 
+                                    onCheckedChange = { if (!isSocMismatch) optRestoreTweaks = it },
+                                    enabled = !isSocMismatch
+                                )
+                                Text("Tweak Configuration Settings", color = if (isSocMismatch) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface)
+                            }
+                        }
+                        if (result.hasApplist) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { optRestoreApplist = !optRestoreApplist }) {
+                                Checkbox(checked = optRestoreApplist, onCheckedChange = { optRestoreApplist = it })
+                                Text("Per-app & Applist Settings", color = MaterialTheme.colorScheme.onSurface)
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         RootAppDialog {
