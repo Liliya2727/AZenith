@@ -127,6 +127,6 @@ dependencies {
     implementation(libs.hiddenapibypass)
     implementation(libs.coil.gif)
     implementation(libs.media3.exoplayer)
-    implementation(libs.media3.ui)}
+    implementation(libs.media3.ui)
     
 }
