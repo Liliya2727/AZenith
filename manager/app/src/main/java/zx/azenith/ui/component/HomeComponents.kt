@@ -64,17 +64,19 @@ import androidx.compose.animation.core.tween
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
-import androidx.media3.ui.AspectRatioFrameLayout
+import android.media.MediaPlayer
+import android.view.Surface
+import android.view.TextureView
+import android.graphics.SurfaceTexture
+import android.graphics.Matrix
 import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import android.content.ContentResolver
 import android.net.Uri
 import android.webkit.MimeTypeMap
+import android.view.TextureView
+import android.view.ViewGroup
 
 
 @Composable
@@ -104,26 +106,60 @@ fun MediaBannerRenderer(
     val isVideo = mimeType.startsWith("video/")
 
     if (isVideo) {
-        val exoPlayer = remember {
-            ExoPlayer.Builder(context).build().apply {
-                setMediaItem(MediaItem.fromUri(uri))
-                repeatMode = Player.REPEAT_MODE_ALL
-                volume = 0f
-                prepare()
-                playWhenReady = true
-            }
-        }
-
-        DisposableEffect(Unit) {
-            onDispose { exoPlayer.release() }
-        }
-
+        // 🔥 RENDER VIDEO PAKAI MEDIAPLAYER BAWAAN ANDROID (Super Ringan)
         AndroidView(
             factory = { ctx ->
-                PlayerView(ctx).apply {
-                    player = exoPlayer
-                    useController = false // Hilangkan tombol play/pause
-                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM // Setara ContentScale.Crop
+                TextureView(ctx).apply {
+                    surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+                        var mediaPlayer: MediaPlayer? = null
+
+                        override fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
+                            val surface = Surface(surfaceTexture)
+                            mediaPlayer = MediaPlayer().apply {
+                                setDataSource(ctx, uri)
+                                setSurface(surface)
+                                isLooping = true // Muter terus
+                                setVolume(0f, 0f) // Mute suara
+
+                                // Logika untuk meniru "ContentScale.Crop" (Biar nggak gepeng)
+                                setOnVideoSizeChangedListener { _, videoWidth, videoHeight ->
+                                    val viewWidth = this@apply.width.toFloat()
+                                    val viewHeight = this@apply.height.toFloat()
+                                    
+                                    val videoRatio = videoWidth.toFloat() / videoHeight.toFloat()
+                                    val viewRatio = viewWidth / viewHeight
+
+                                    val scaleX: Float
+                                    val scaleY: Float
+
+                                    if (videoRatio > viewRatio) {
+                                        scaleX = (viewHeight * videoRatio) / viewWidth
+                                        scaleY = 1f
+                                    } else {
+                                        scaleX = 1f
+                                        scaleY = (viewWidth / videoRatio) / viewHeight
+                                    }
+
+                                    val matrix = Matrix()
+                                    matrix.setScale(scaleX, scaleY, viewWidth / 2f, viewHeight / 2f)
+                                    this@apply.setTransform(matrix)
+                                }
+
+                                prepareAsync() 
+                                setOnPreparedListener { start() } 
+                            }
+                        }
+
+                        override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
+                        
+                        override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+                            mediaPlayer?.release()
+                            mediaPlayer = null
+                            return true
+                        }
+                        
+                        override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
+                    }
                 }
             },
             modifier = modifier
@@ -150,6 +186,7 @@ fun MediaBannerRenderer(
         )
     }
 }
+
 
 @Composable
 fun HomeTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onRebootClick: () -> Unit) {

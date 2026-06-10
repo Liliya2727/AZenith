@@ -176,7 +176,7 @@ fun ColorPaletteScreen(navController: NavController) {
             val maxSize = 50 * 1024 * 1024L // 50 MB
             if (sizeBytes > maxSize) {
                 coroutineScope.launch {
-                    snackbarHostState.showSnackbar("File terlalu besar! Maksimal 50MB.")
+                    snackbarHostState.showSnackbar("Max video size are 50MB.")
                 }
                 return@let // Batalkan proses
             }
@@ -197,7 +197,7 @@ fun ColorPaletteScreen(navController: NavController) {
     
                 if (durationMs > 30000L) { // 30.000 ms = 30 detik
                     coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Video terlalu panjang! Maksimal 30 detik.")
+                        snackbarHostState.showSnackbar("Too long!, Max 30 Seconds.")
                     }
                     return@let // Batalkan proses
                 }
@@ -213,7 +213,7 @@ fun ColorPaletteScreen(navController: NavController) {
                     if (savedUriString != null) {
                         context.saveHeaderImage(savedUriString)
                         customBannerUri = savedUriString
-                        snackbarHostState.showSnackbar("Media updated (Cropping skipped)")
+                        snackbarHostState.showSnackbar("Media updated")
                     } else {
                         snackbarHostState.showSnackbar("Failed to save media")
                     }
