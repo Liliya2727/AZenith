@@ -63,7 +63,90 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
+import androidx.media3.ui.AspectRatioFrameLayout
+import coil.ImageLoader
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
+import android.content.ContentResolver
 
+@Composable
+fun MediaBannerRenderer(
+    uriString: String?,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+
+    if (uriString == null) {
+        Image(
+            painter = painterResource(id = R.drawable.banner_bg),
+            contentDescription = null,
+            modifier = modifier,
+            contentScale = ContentScale.Crop
+        )
+        return
+    }
+
+    val uri = Uri.parse(uriString)
+    val mimeType = remember(uriString) {
+        val extension = MimeTypeMap.getFileExtensionFromUrl(uriString)
+        MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) 
+            ?: context.contentResolver.getType(uri) ?: ""
+    }
+
+    val isVideo = mimeType.startsWith("video/")
+
+    if (isVideo) {
+        val exoPlayer = remember {
+            ExoPlayer.Builder(context).build().apply {
+                setMediaItem(MediaItem.fromUri(uri))
+                repeatMode = Player.REPEAT_MODE_ALL
+                volume = 0f
+                prepare()
+                playWhenReady = true
+            }
+        }
+
+        DisposableEffect(Unit) {
+            onDispose { exoPlayer.release() }
+        }
+
+        AndroidView(
+            factory = { ctx ->
+                PlayerView(ctx).apply {
+                    player = exoPlayer
+                    useController = false // Hilangkan tombol play/pause
+                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM // Setara ContentScale.Crop
+                }
+            },
+            modifier = modifier
+        )
+    } else {
+        val imageLoader = remember {
+            ImageLoader.Builder(context)
+                .components {
+                    if (Build.VERSION.SDK_INT >= 28) {
+                        add(ImageDecoderDecoder.Factory())
+                    } else {
+                        add(GifDecoder.Factory())
+                    }
+                }
+                .build()
+        }
+
+        AsyncImage(
+            model = uri,
+            imageLoader = imageLoader,
+            contentDescription = null,
+            modifier = modifier,
+            contentScale = ContentScale.Crop
+        )
+    }
+}
 
 @Composable
 fun HomeTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onRebootClick: () -> Unit) {
@@ -152,20 +235,11 @@ fun BannerCard(
                         .fillMaxSize()
                         .then(if (isBlurEnabled) Modifier.hazeSource(state = bannerHazeState) else Modifier)
                 ) {
-                    if (customBannerUri != null) {
-                        AsyncImage(
-                            model = customBannerUri, contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Image(
-                            painter = painterResource(id = R.drawable.banner_bg), contentDescription = null,
-                            modifier = Modifier.fillMaxSize(), 
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-
+                    MediaBannerRenderer(
+                        uriString = customBannerUri,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                
                     Box(
                         modifier = Modifier.fillMaxSize().background(
                             Brush.verticalGradient(

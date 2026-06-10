@@ -125,5 +125,8 @@ dependencies {
     implementation(libs.ansi.library)
     implementation(libs.ansi.library.ktx)
     implementation(libs.hiddenapibypass)
+    implementation(libs.coil.gif)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.ui)}
     
 }

@@ -68,6 +68,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import zx.azenith.ui.component.*
 import androidx.activity.result.PickVisualMediaRequest
+import android.webkit.MimeTypeMap
+import android.provider.OpenableColumns
+import android.media.MediaMetadataRetriever
 
 
 private val keyColorOptions = listOf(
@@ -149,40 +152,102 @@ fun ColorPaletteScreen(navController: NavController) {
     
     val colorScheme = MaterialTheme.colorScheme 
     
+    
     val imagePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         uri?.let { sourceUri ->
-            val bannerDir = File(context.filesDir, "banners")
-            if (!bannerDir.exists()) {
-                bannerDir.mkdirs()
+            val mimeType = context.contentResolver.getType(sourceUri) ?: ""
+            val isVideo = mimeType.startsWith("video/")
+            val isGif = mimeType == "image/gif"
+            val isVideoOrGif = isVideo || isGif
+    
+            // 👇 1. Cek Ukuran File (Maksimal 50MB)
+            var sizeBytes = 0L
+            context.contentResolver.query(sourceUri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                    if (sizeIndex != -1) {
+                        sizeBytes = cursor.getLong(sizeIndex)
+                    }
+                }
             }
-            
-            val destinationFile = File(bannerDir, "banner_${System.currentTimeMillis()}.jpg")
-            pendingCropUriPath = destinationFile.absolutePath 
-            val destinationUri = Uri.fromFile(destinationFile)
-            
-            val options = UCrop.Options().apply {
-                setHideBottomControls(false)
-                setFreeStyleCropEnabled(false)
-                setToolbarColor(colorScheme.surface.toArgb()) 
-                setToolbarWidgetColor(colorScheme.onSurface.toArgb()) 
-                setRootViewBackgroundColor(colorScheme.surfaceContainerLowest.toArgb()) 
-                setActiveControlsWidgetColor(colorScheme.primary.toArgb()) 
-                setCropFrameColor(colorScheme.primary.toArgb()) 
-                setCropGridColor(colorScheme.primary.copy(alpha = 0.5f).toArgb()) 
-                setDimmedLayerColor(colorScheme.scrim.copy(alpha = 0.6f).toArgb())
+            val maxSize = 50 * 1024 * 1024L // 50 MB
+            if (sizeBytes > maxSize) {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("File terlalu besar! Maksimal 50MB.")
+                }
+                return@let // Batalkan proses
             }
-            
-            val uCrop = UCrop.of(sourceUri, destinationUri)
-                .withAspectRatio(20f, 9f)
-                .withOptions(options)
-
-            cropLauncher.launch(uCrop.getIntent(context))
+    
+            // 👇 2. Cek Durasi Video (Maksimal 30 Detik)
+            if (isVideo) {
+                var durationMs = 0L
+                val retriever = MediaMetadataRetriever()
+                try {
+                    retriever.setDataSource(context, sourceUri)
+                    val timeString = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                    durationMs = timeString?.toLongOrNull() ?: 0L
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    retriever.release()
+                }
+    
+                if (durationMs > 30000L) { // 30.000 ms = 30 detik
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar("Video terlalu panjang! Maksimal 30 detik.")
+                    }
+                    return@let // Batalkan proses
+                }
+            }
+    
+            // --- LANJUT PROSES KALAU LOLOS FILTER ---
+            if (isVideoOrGif) {
+                // Bypass UCrop untuk Video & GIF
+                coroutineScope.launch {
+                    val extension = if (isVideo) "mp4" else "gif"
+                    val savedUriString = context.saveMediaDirectly(sourceUri, extension)
+                    
+                    if (savedUriString != null) {
+                        context.saveHeaderImage(savedUriString)
+                        customBannerUri = savedUriString
+                        snackbarHostState.showSnackbar("Media updated (Cropping skipped)")
+                    } else {
+                        snackbarHostState.showSnackbar("Failed to save media")
+                    }
+                }
+            } else {
+                // Masuk UCrop untuk foto biasa
+                val bannerDir = File(context.filesDir, "banners")
+                if (!bannerDir.exists()) bannerDir.mkdirs()
+                
+                val destinationFile = File(bannerDir, "banner_${System.currentTimeMillis()}.jpg")
+                pendingCropUriPath = destinationFile.absolutePath 
+                val destinationUri = Uri.fromFile(destinationFile)
+                
+                val options = UCrop.Options().apply {
+                    setHideBottomControls(false)
+                    setFreeStyleCropEnabled(false)
+                    setToolbarColor(colorScheme.surface.toArgb()) 
+                    setToolbarWidgetColor(colorScheme.onSurface.toArgb()) 
+                    setRootViewBackgroundColor(colorScheme.surfaceContainerLowest.toArgb()) 
+                    setActiveControlsWidgetColor(colorScheme.primary.toArgb()) 
+                    setCropFrameColor(colorScheme.primary.toArgb()) 
+                    setCropGridColor(colorScheme.primary.copy(alpha = 0.5f).toArgb()) 
+                    setDimmedLayerColor(colorScheme.scrim.copy(alpha = 0.6f).toArgb())
+                }
+                
+                val uCrop = UCrop.of(sourceUri, destinationUri)
+                    .withAspectRatio(20f, 9f)
+                    .withOptions(options)
+    
+                cropLauncher.launch(uCrop.getIntent(context))
+            }
         }
     }
-
-
+    
+    
     var currentColorMode by remember { 
         mutableStateOf(ThemeController.getAppSettings(context).colorMode) 
     }
@@ -505,7 +570,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                     horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
                                 ) {
                                     OutlinedButton(
-                                        onClick = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                                        onClick = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
                                         modifier = Modifier.weight(1f),
                                         shape = RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp, topEnd = 0.dp, bottomEnd = 0.dp),
                                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
@@ -515,7 +580,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                     ) {
                                         Icon(Icons.Filled.Image, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(8.dp))
-                                        Text("Pick Image", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text("Pick Media", maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
                                     
                                     OutlinedButton(
@@ -770,23 +835,11 @@ private fun BannerGradientPreview(gradientAlpha: Float, customBannerUri: String?
                 animationSpec = tween(500),
                 label = "banner_crossfade"
             ) { uri ->
-                if (uri != null) {
-                    AsyncImage(
-                        model = uri, 
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(), 
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Image(
-                        painter = painterResource(id = R.drawable.banner_bg), 
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(), 
-                        contentScale = ContentScale.Crop
-                    )
-                }
+                MediaBannerRenderer(
+                    uriString = uri,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
-
             Box(
                 modifier = Modifier
                     .fillMaxSize()

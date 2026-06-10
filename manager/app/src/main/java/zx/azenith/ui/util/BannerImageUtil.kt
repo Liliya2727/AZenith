@@ -19,11 +19,32 @@ package zx.azenith.ui.util
 import android.content.Context
 import android.net.Uri
 import java.io.File
+import java.io.FileOutputStream
+
 
 private const val PREFS_NAME = "settings"
 private const val KEY_HEADER_IMAGE = "header_image_uri"
 private const val KEY_ENABLE_BANNER = "enable_banner_image"
 private const val KEY_BANNER_GRADIENT_ALPHA = "banner_gradient_alpha"
+
+fun Context.saveMediaDirectly(sourceUri: Uri, extension: String): String? {
+    return try {
+        val bannerDir = File(filesDir, "banners")
+        if (!bannerDir.exists()) bannerDir.mkdirs()
+
+        val destFile = File(bannerDir, "banner_${System.currentTimeMillis()}.$extension")
+        
+        contentResolver.openInputStream(sourceUri)?.use { input ->
+            FileOutputStream(destFile).use { output ->
+                input.copyTo(output)
+            }
+        }
+        Uri.fromFile(destFile).toString()
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
 
 private fun Context.deleteOldBannerFile(uriString: String?) {
     if (uriString.isNullOrEmpty()) return
