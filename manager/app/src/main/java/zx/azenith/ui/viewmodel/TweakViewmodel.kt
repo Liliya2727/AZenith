@@ -16,8 +16,9 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.async
 import android.net.Uri
 import zx.azenith.ui.util.BackupManager
+import com.topjohnwu.superuser.io.SuFile
+import com.topjohnwu.superuser.io.SuFileOutputStream
 
-    
 class TweakViewModel : ViewModel() {
     data class ValidationResult(val isValid: Boolean, val message: String, val data: Map<String, String>?)
     
@@ -82,12 +83,46 @@ class TweakViewModel : ViewModel() {
         "persist.sys.azenith.custom_powersave_IO"
     )
     
-    suspend fun createConfigFileBackup(context: Context, uri: Uri): Boolean {
+    data class ValidationResult(
+        val isValid: Boolean, 
+        val message: String, 
+        val hasTweaks: Boolean, 
+        val hasApplist: Boolean,
+        val socType: String?,
+        val data: Map<String, String>?
+    )
+    
+    private val APPLIST_BACKUP_KEY = "__AZENITH_APPLIST_DATA__"
+    private val APPLIST_PATH = "/data/adb/.config/AZenith/gamelist/azenithApplist.json"
+    
+    suspend fun createConfigFileBackup(
+        context: Context, 
+        uri: Uri, 
+        backupTweaks: Boolean, 
+        backupApplist: Boolean
+    ): Boolean {
         return withContext(Dispatchers.IO) {
             val propsMap = mutableMapOf<String, String>()
-            configKeysToBackup.forEach { key ->
-                propsMap[key] = PropertyUtils.get(key)
+            
+            // Selalu simpan socType buat identifikasi file zx
+            propsMap["persist.sys.azenithdebug.soctype"] = PropertyUtils.get("persist.sys.azenithdebug.soctype")
+
+            if (backupTweaks) {
+                configKeysToBackup.forEach { key ->
+                    if (key != "persist.sys.azenithdebug.soctype") {
+                        propsMap[key] = PropertyUtils.get(key)
+                    }
+                }
             }
+
+            if (backupApplist) {
+                // Ambil raw JSON dari file applist pakai Shell
+                val applistContent = Shell.cmd("cat $APPLIST_PATH").exec().out.joinToString("\n")
+                if (applistContent.isNotBlank()) {
+                    propsMap[APPLIST_BACKUP_KEY] = applistContent
+                }
+            }
+
             BackupManager.createBackup(context, uri, propsMap)
         }
     }
@@ -98,33 +133,51 @@ class TweakViewModel : ViewModel() {
             val backupData = BackupManager.readBackup(context, uri)
             
             if (backupData == null) {
-                return@withContext ValidationResult(false, "Invalid or corrupted .zx backup file.", null)
+                return@withContext ValidationResult(false, "Invalid or corrupted .zx backup file.", false, false, null, null)
             }
     
-            val currentSocType = PropertyUtils.get("persist.sys.azenithdebug.soctype")
             val backupSocType = backupData["persist.sys.azenithdebug.soctype"]
+            val hasApplist = backupData.containsKey(APPLIST_BACKUP_KEY)
+            
+            // Deteksi apakah ada data Tweak (selain socType dan Applist Key)
+            val hasTweaks = backupData.keys.any { it.startsWith("persist.sys.azenith") && it != "persist.sys.azenithdebug.soctype" }
     
-            if (currentSocType != backupSocType) {
-                val backupName = zx.azenith.ui.util.BackupManager.getSocName(backupSocType)
-                val errorMsg = "This backup file is for $backupName devices, restore aborted."
-                return@withContext ValidationResult(false, errorMsg, null)
-            }
-    
-            ValidationResult(true, "Valid Backup", backupData)
+            ValidationResult(true, "Valid Backup", hasTweaks, hasApplist, backupSocType, backupData)
         }
     }
 
     // Di dalam TweakViewModel.kt
-    suspend fun applyRestoreData(context: Context, backupData: Map<String, String>) {
+    suspend fun applyRestoreData(
+        context: Context, 
+        backupData: Map<String, String>, 
+        restoreTweaks: Boolean, 
+        restoreApplist: Boolean
+    ) {
         withContext(Dispatchers.IO) {
-            backupData.forEach { (key, value) ->
-                if (key != "persist.sys.azenithdebug.soctype" && value.isNotEmpty()) {
-                    PropertyUtils.set(key, value)
+            if (restoreTweaks) {
+                backupData.forEach { (key, value) ->
+                    if (key != "persist.sys.azenithdebug.soctype" && key != APPLIST_BACKUP_KEY && value.isNotEmpty()) {
+                        PropertyUtils.set(key, value)
+                    }
+                }
+            }
+
+            if (restoreApplist && backupData.containsKey(APPLIST_BACKUP_KEY)) {
+                val applistContent = backupData[APPLIST_BACKUP_KEY]!!
+                val file = SuFile(APPLIST_PATH)
+                val parent = file.parentFile
+                if (parent != null && !parent.exists()) {
+                    parent.mkdirs()
+                }
+                SuFileOutputStream.open(file).use { outputStream ->
+                    outputStream.write(applistContent.toByteArray())
                 }
             }
             
             Shell.cmd("touch /data/adb/modules/AZenith/reboot").exec()
-            loadAllConfiguration(context)
+            if (restoreTweaks) {
+                loadAllConfiguration(context)
+            }
             delay(1200) 
         }
     }
@@ -364,14 +417,3 @@ class TweakViewModel : ViewModel() {
         }
     }
 }
-
-// Buat data class kecil untuk menampung hasil validasi
-
-
-// 1. Fungsi createConfigFileBackup
-
-
-// 2. Fungsi validateAndRestoreFile
-
-
-// 3. Fungsi applyRestoreData

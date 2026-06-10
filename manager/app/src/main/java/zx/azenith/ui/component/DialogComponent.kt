@@ -447,3 +447,98 @@ private fun ConfirmDialog(
         }
     }
 }
+
+@Composable
+fun CustomContentDialog(
+    visible: Boolean,
+    title: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+    confirmEnabled: Boolean = true,
+    confirmText: String = "OK",
+    dismissText: String = "Cancel",
+    content: @Composable () -> Unit
+) {
+    val context = LocalContext.current
+    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
+    val hazeState = LocalAppHazeState.current
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)),
+        exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
+    ) {
+        BackHandler(onBack = onDismiss)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(100f) 
+                .background(Color.Black.copy(alpha = 0.42f)) 
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss 
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            val scale by animateFloatAsState(
+                targetValue = if (visible) 1f else 0.9f,
+                animationSpec = tween(250, easing = LinearOutSlowInEasing),
+                label = "dialog_scale"
+            )
+
+            Box(
+                modifier = Modifier
+                    .widthIn(min = 350.dp, max = 500.dp) 
+                    .padding(24.dp) 
+                    .scale(scale)
+                    .clip(RoundedCornerShape(28.dp))
+                    .then(
+                        if (isBlurEnabled && hazeState != null) {
+                            Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
+                        } else Modifier
+                    )
+                    .background(
+                        if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f) 
+                        else AlertDialogDefaults.containerColor
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {}
+                    )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp)
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // 👇 Ini bedanya, konten Custom (seperti Checkbox) akan di-render di sini
+                    content()
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = onDismiss) {
+                            Text(text = dismissText)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        TextButton(onClick = onConfirm, enabled = confirmEnabled) {
+                            Text(text = confirmText)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
