@@ -94,7 +94,7 @@ import zx.azenith.ui.viewmodel.TweakViewModel
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 
-
+    
 @Composable
 fun TweakScreen(
     navController: NavController,
@@ -111,33 +111,25 @@ fun TweakScreen(
     var showRefreshRateDialog by remember { mutableStateOf(false) }
     var pendingRestoreData by remember { mutableStateOf<Map<String, String>?>(null) }
     
+    var showBackupOptionsDialog by remember { mutableStateOf(false) }
+    var optBackupTweaks by remember { mutableStateOf(true) }
+    var optBackupApplist by remember { mutableStateOf(true) }
+
+    var pendingRestoreResult by remember { mutableStateOf<TweakViewModel.ValidationResult?>(null) }
+    var optRestoreTweaks by remember { mutableStateOf(true) }
+    var optRestoreApplist by remember { mutableStateOf(true) }
+    
     val loadingDialog = rememberLoadingDialog()
-    val confirmDialog = rememberConfirmDialog(
-        onConfirm = {
-            pendingRestoreData?.let { data ->
-                scope.launch {
-                    loadingDialog.withLoading {
-                        viewModel.applyRestoreData(context, data)
-                        navController.navigate("home") {
-                            popUpTo(navController.graph.startDestinationId)
-                            launchSingleTop = true
-                        }
-                    }
-                }
-            }
-        },
-        onDismiss = { pendingRestoreData = null }
-    )
+    val confirmDialog = rememberConfirmDialog(onConfirm = {}, onDismiss = {})
     
     LoadingDialogHost(handle = loadingDialog)
     ConfirmDialogHost(handle = confirmDialog)
 
     val createDocLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
         uri?.let {
-            showBackupRestoreSheet = false
             scope.launch {
                 val success = loadingDialog.withLoading {
-                    viewModel.createConfigFileBackup(context, it)
+                    viewModel.createConfigFileBackup(context, it, optBackupTweaks, optBackupApplist)
                 }
                 if (success) {
                     snackbarHostState.showSnackbar("Backup saved successfully!")
@@ -147,7 +139,6 @@ fun TweakScreen(
             }
         }
     }
-
     
     val openDocLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {
@@ -156,21 +147,11 @@ fun TweakScreen(
                 loadingDialog.withLoading {
                     val result = viewModel.validateAndRestoreFile(context, it)
                     if (result.isValid && result.data != null) {
-                        pendingRestoreData = result.data
-                        val socName = zx.azenith.ui.util.BackupManager.getSocName(result.data["persist.sys.azenithdebug.soctype"])
-                        confirmDialog.showConfirm(
-                            title = "Restore Configuration?",
-                            content = "A valid AZenith backup for $socName was found. Are you sure you want to overwrite your current settings?",
-                            confirm = "Restore",
-                            dismiss = "Cancel"
-                        )
+                        pendingRestoreResult = result
+                        optRestoreTweaks = result.hasTweaks
+                        optRestoreApplist = result.hasApplist
                     } else {
-                        confirmDialog.showConfirm(
-                            title = "Restore Failed",
-                            content = result.message,
-                            confirm = "OK",
-                            dismiss = null 
-                        )
+                        confirmDialog.showConfirm("Restore Failed", result.message, "OK", null)
                     }
                 }
             }
