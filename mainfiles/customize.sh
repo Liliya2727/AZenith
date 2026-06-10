@@ -22,11 +22,22 @@ device_codename=$(getprop ro.product.board)
 chip=$(getprop ro.hardware)
 HM_DIR="/data/adb/hybrid-mount"
 HM_CONFIG="$HM_DIR/config.toml"
+API_LEVEL=$(getprop ro.build.version.sdk)
 
 # Create File
 make_node() {
 	[ ! -f "$2" ] && echo "$1" >"$2"
 }
+
+abort_api() {
+  ui_print ""
+  ui_print "! Installation Aborted"
+  ui_print "! Unsupported Android Version Detected"
+  ui_print "! AZenith requires Android 11 (API 30) or newer."
+  ui_print "! Your device is currently running API $API_LEVEL."
+  abort "- # # # # # # # # # # # # # # # # # # # # #"
+}
+
 abort_corrupted() {
   ui_print ""
   ui_print "! Installation Aborted"
@@ -36,6 +47,7 @@ abort_corrupted() {
   ui_print "! Please re-download the module and try again."
   abort "- # # # # # # # # # # # # # # # # # # # # #"
 }
+
 abort_arch() {
   ui_print "! Installation Aborted"
   ui_print "! Unsupported CPU Architecture Detected"
@@ -60,6 +72,9 @@ ui_print ""
 ui_print "              AZenith              "
 ui_print ""
 ui_print "- Installing AZenith..."
+
+# API Level Check (Require API 30+)
+[ "$API_LEVEL" -lt 30 ] && abort_api
 
 # Extract Module Directiories
 mkdir -p "$MODULE_CONFIG"
