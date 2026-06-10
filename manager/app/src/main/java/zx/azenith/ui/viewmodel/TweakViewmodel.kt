@@ -123,6 +123,7 @@ class TweakViewModel : ViewModel() {
             }
 
             BackupManager.createBackup(context, uri, propsMap)
+            delay(1500) 
         }
     }
 
