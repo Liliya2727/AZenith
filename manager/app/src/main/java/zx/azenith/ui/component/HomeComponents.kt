@@ -816,7 +816,7 @@ fun RunningGameCard(
                     }
                 } else Modifier
             ),
-        color = MaterialTheme.colorScheme.tertiaryContainer,
+        color = MaterialTheme.colorScheme.secondaryContainer,
         shape = RoundedCornerShape(26.dp)
     ) {
         Row(
@@ -846,7 +846,7 @@ fun RunningGameCard(
                                 modifier = Modifier
                                     .size(48.dp) // Ukuran icon lebih kecil dari container supaya Wavy-nya kelihatan
                                     .clip(CircleShape) // Bikin bulat
-                                    .background(MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.1f))
+                                    .background(MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.1f))
                             )
                         } else {
                             Image(
@@ -860,7 +860,7 @@ fun RunningGameCard(
                         }
                     }
                 } else {
-                    LoadingIndicator()
+                    ContainedLoadingIndicator()
                     
                 }
             }
@@ -873,7 +873,7 @@ fun RunningGameCard(
                     text = appName,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -883,14 +883,14 @@ fun RunningGameCard(
                         imageVector = Icons.Rounded.Timer,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
                         text = "Running for $elapsedTime",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
                     )
                 }
             }
@@ -899,14 +899,14 @@ fun RunningGameCard(
             if (!isNoApp) {
                 Surface(
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.1f),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.1f),
                     modifier = Modifier.size(42.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Rounded.PlayArrow,
                             contentDescription = "Return",
-                            tint = MaterialTheme.colorScheme.onTertiaryContainer
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
                 }
