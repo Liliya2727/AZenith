@@ -16,6 +16,9 @@
 # limitations under the License.
 #
 
+readonly MODDIR="${0%/*}"
+readonly MODULE_CONFIG="/data/adb/.config/AZenith"
+
 get_state() {
     local val
     val=$(getprop "$1")
@@ -31,6 +34,7 @@ FPSGED_STATE=$(get_state persist.sys.azenithconf.fpsged)
 SCHEDTUNES_STATE=$(get_state persist.sys.azenithconf.schedtunes)
 JUSTINTIME_STATE=$(get_state persist.sys.azenithconf.justintime)
 DISTRACE_STATE=$(get_state persist.sys.azenithconf.disabletrace)
+PERSISTENT_DIR="/data/adb/.config/AZenith"
 
 readonly LIST_LOGGER="logd traced statsd tcpdump cnss_diag subsystem_ramdump charge_logger wlan_logging"
 
@@ -57,6 +61,28 @@ write_val() {
         return 1
     fi
 }
+
+# Anti bootloop
+BOOTCOUNT=0
+[ -f "$MODDIR/count.sh" ] && . "$MODDIR/count.sh"
+
+BOOTCOUNT=$(( BOOTCOUNT + 1))
+
+if [ ! -f "$PERSISTENT_DIR/explicit_I_want_a_bootloop" ] && [ $BOOTCOUNT -gt 1 ]; then
+    touch "$MODDIR/disable"
+    rm "$MODDIR/count.sh"
+    
+    string="description=anti-bootloop triggered. module disabled. enable to activate."
+    sed -i "s/^description=.*/$string/g" "$MODDIR/module.prop"
+    exit 1
+else
+    echo "BOOTCOUNT=1" > "$MODDIR/count.sh"
+
+    if [ -f "$MODDIR/module.prop.orig" ]; then
+        cp -f "$MODDIR/module.prop.orig" "$MODDIR/module.prop"
+    fi
+    
+fi
 
 prefsettings() {
 

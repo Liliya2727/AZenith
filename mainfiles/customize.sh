@@ -102,6 +102,7 @@ ui_print "- Extracting action.sh..."
 extract "$ZIPFILE" action.sh "$MODPATH"
 ui_print "- Extracting module.prop..."
 extract "$ZIPFILE" module.prop "$MODPATH"
+cp "$MODPATH/module.prop" "$MODPATH/module.prop.orig"
 ui_print "- Extracting uninstall.sh..."
 extract "$ZIPFILE" uninstall.sh "$MODPATH"
 if [ ! -f "$MODULE_CONFIG/gamelist/azenithApplist.json" ]; then

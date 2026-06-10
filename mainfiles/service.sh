@@ -23,21 +23,27 @@ until [ "$(getprop sys.boot_completed)" = "1" ]; do
     sleep 5 
 done
 
+# Reset anti bootloop
+echo "BOOTCOUNT=0" > "$MODDIR/count.sh"
+
+# Remove reboot flag
 if [ -f "$MODDIR/reboot" ]; then
     rm -f "$MODDIR/reboot"
 fi
 
+# Refresh AZenith daemon state
 STATE=$(getprop persist.sys.azenith.state)
 { [ -z "$STATE" ] || { [ "$STATE" = "running" ] && [ -z "$(/system/bin/toybox pidof sys.azenith-service)" ]; }; } && {
     setprop persist.sys.azenith.state stopped
     setprop persist.sys.azenith.service ""
 }
 
+# Exec Java Companion Daemon
 nohup app_process -Djava.class.path="$MODDIR/AZenith.apk" / \
     --nice-name=sys.azenith-appmonitoring zx.azenith.AppMonitor \
     "$MODULE_CONFIG/app_status" \
     "$MODULE_CONFIG/background_apps" \
     "$MODULE_CONFIG/java.lock" >"$MODULE_CONFIG/sysmon.log" 2>&1 &
     
-
-sleep 1 && exec sys.azenith-service --run
+# Run AZenith service
+sleep 1 && exec $MODDIR/system/bin/sys.azenith-service --run
