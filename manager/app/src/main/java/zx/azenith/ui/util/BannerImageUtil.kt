@@ -21,7 +21,6 @@ import android.net.Uri
 import java.io.File
 import java.io.FileOutputStream
 
-
 private const val PREFS_NAME = "settings"
 private const val KEY_HEADER_IMAGE = "header_image_uri"
 private const val KEY_ENABLE_BANNER = "enable_banner_image"

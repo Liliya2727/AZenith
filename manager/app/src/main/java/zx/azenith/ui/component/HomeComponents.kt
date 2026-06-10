@@ -77,6 +77,41 @@ import android.net.Uri
 import android.webkit.MimeTypeMap
 import android.view.ViewGroup
 import androidx.compose.ui.draw.alpha
+import android.media.MediaMetadataRetriever
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+
+object MediaBannerCache {
+    var cachedUri: String? = null
+    var cachedThumbnail: ImageBitmap? = null
+
+    fun getThumbnail(context: android.content.Context, uriString: String): ImageBitmap? {
+    
+        if (uriString == cachedUri && cachedThumbnail != null) {
+            return cachedThumbnail
+        }
+
+        return try {
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(context, android.net.Uri.parse(uriString))
+            val bitmap = retriever.getFrameAtTime(0)
+            retriever.release()
+
+            val imageBitmap = bitmap?.asImageBitmap()
+
+            cachedUri = uriString
+            cachedThumbnail = imageBitmap
+            
+            imageBitmap
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+}
 
 
 @Composable
@@ -107,21 +142,44 @@ fun MediaBannerRenderer(
 
     if (isVideo) {
         var isVideoReady by remember { mutableStateOf(false) }
+        
+        var videoThumbnail by remember { mutableStateOf(MediaBannerCache.cachedThumbnail) }
+
+        LaunchedEffect(uriString) {
+            if (MediaBannerCache.cachedUri != uriString) {
+                withContext(Dispatchers.IO) {
+                    videoThumbnail = MediaBannerCache.getThumbnail(context, uriString)
+                }
+            }
+        }
 
         val videoAlpha by animateFloatAsState(
             targetValue = if (isVideoReady) 1f else 0f,
-            animationSpec = tween(500),
+            animationSpec = tween(300), // Dipercepat jadi 300ms biar ngebut
             label = "videoFade"
         )
 
         Box(modifier = modifier) {
+            
+            // 👇 Render Placeholder / Thumbnail
             if (!isVideoReady) {
-                Image(
-                    painter = painterResource(id = R.drawable.banner_bg),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
+                if (videoThumbnail != null) {
+                    // Pakai frame pertama video sebagai placeholder (Tampil instan 0 detik!)
+                    Image(
+                        bitmap = videoThumbnail!!,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    // Fallback sementara pas load pertama kali seumur hidup
+                    Image(
+                        painter = painterResource(id = R.drawable.banner_bg),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
             }
 
             AndroidView(
@@ -141,7 +199,7 @@ fun MediaBannerRenderer(
 
                                 setOnInfoListener { _, what, _ ->
                                     if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
-                                        isVideoReady = true 
+                                        isVideoReady = true
                                         true
                                     } else {
                                         false
@@ -206,6 +264,7 @@ fun MediaBannerRenderer(
                         add(GifDecoder.Factory())
                     }
                 }
+                .crossfade(500)
                 .build()
         }
 
@@ -218,8 +277,6 @@ fun MediaBannerRenderer(
         )
     }
 }
-
-
 
 
 @Composable
