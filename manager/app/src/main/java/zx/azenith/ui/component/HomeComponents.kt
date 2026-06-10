@@ -117,7 +117,9 @@ fun MediaBannerRenderer(
         Box(modifier = modifier) {
             if (!isVideoReady) {
                 CircularWavyProgressIndicator(
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .align(Alignment.Center),
                     color = MaterialTheme.colorScheme.primary
                 )
             }
@@ -892,7 +894,7 @@ fun RunningGameCard(
         if (isNoApp) null else try { pm.getApplicationInfo(pkgName, 0) } catch (e: Exception) { null }
     }
     val appName = remember(appInfo, isNoApp) {
-        if (isNoApp) "Performance profile active" else appInfo?.loadLabel(pm)?.toString() ?: pkgName
+        if (isNoApp) "Performance Profile" else appInfo?.loadLabel(pm)?.toString() ?: pkgName
     }
 
     // 3. Siapkan State untuk Icon Bitmap
@@ -966,7 +968,7 @@ fun RunningGameCard(
         shape = RoundedCornerShape(26.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             
@@ -978,7 +980,7 @@ fun RunningGameCard(
                     // Wavy border mengelilingi icon
                     CircularWavyProgressIndicator(
                         modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.primary // Sesuaikan warnanya kalau perlu
+                        color = MaterialTheme.colorScheme.onSecondary// Sesuaikan warnanya kalau perlu
                     )
                     
                     // Render Icon Game di tengah Wavy Indicator
@@ -1011,7 +1013,7 @@ fun RunningGameCard(
                 }
             }
             
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(12.dp))
             
             // Text Detail Info
             Column(modifier = Modifier.weight(1f)) {
@@ -1033,7 +1035,7 @@ fun RunningGameCard(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "Running for $elapsedTime",
+                        text = "Elapsed time $elapsedTime",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
