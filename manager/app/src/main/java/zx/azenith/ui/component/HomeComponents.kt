@@ -73,6 +73,9 @@ import coil.ImageLoader
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import android.content.ContentResolver
+import android.net.Uri
+import android.webkit.MimeTypeMap
+
 
 @Composable
 fun MediaBannerRenderer(
