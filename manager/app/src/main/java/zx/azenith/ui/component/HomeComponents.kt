@@ -738,10 +738,10 @@ fun RunningGameCard(
     val pm = context.packageManager
     val density = LocalDensity.current
     
-    // 👇 1. Cek apakah ini mode CLI (Tidak ada Foreground App)
+    // 1. Cek apakah ini mode CLI (Tidak ada Foreground App)
     val isNoApp = pkgName == "(null)" || pkgName.equals("null", ignoreCase = true) || pkgName.isEmpty()
     
-    // 2. Ambil AppInfo & Nama (Hanya diload jika isNoApp bernilai false)
+    // 2. Ambil AppInfo & Nama
     val appInfo = remember(pkgName, isNoApp) {
         if (isNoApp) null else try { pm.getApplicationInfo(pkgName, 0) } catch (e: Exception) { null }
     }
@@ -768,7 +768,7 @@ fun RunningGameCard(
         }
     }
 
-    // 4. Logika Timer (Berlaku untuk game maupun mode CLI)
+    // 4. Logika Timer
     var elapsedTime by remember { mutableStateOf("00:00:00") }
     
     LaunchedEffect(startTimeStr) {
@@ -805,7 +805,7 @@ fun RunningGameCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(26.dp))
             .then(
-                // 👇 Hilangkan interaksi "Clickable" jika tidak ada game
+                // Hilangkan interaksi "Clickable" jika tidak ada game
                 if (!isNoApp) {
                     Modifier.clickable {
                         val intent = pm.getLaunchIntentForPackage(pkgName)
@@ -823,9 +823,19 @@ fun RunningGameCard(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 👇 Render Container Icon HANYA jika ada game
-            if (!isNoApp) {
-                Box(modifier = Modifier.size(54.dp)) {
+            
+            Box(
+                modifier = Modifier.size(64.dp), // Ukuran diperbesar dikit buat spasi Wavy Indicator
+                contentAlignment = Alignment.Center
+            ) {
+                if (!isNoApp) {
+                    // Wavy border mengelilingi icon
+                    CircularWavyProgressIndicator(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.primary // Sesuaikan warnanya kalau perlu
+                    )
+                    
+                    // Render Icon Game di tengah Wavy Indicator
                     Crossfade(
                         targetState = appIconBitmap,
                         animationSpec = tween(durationMillis = 200),
@@ -834,25 +844,30 @@ fun RunningGameCard(
                         if (icon == null) {
                             Box(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(RoundedCornerShape(14.dp))
+                                    .size(48.dp) // Ukuran icon lebih kecil dari container supaya Wavy-nya kelihatan
+                                    .clip(CircleShape) // Bikin bulat
                                     .background(MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.1f))
                             )
                         } else {
                             Image(
                                 bitmap = icon,
                                 contentDescription = appName,
+                                contentScale = ContentScale.Crop, // Pastikan nge-crop jadi lingkaran sempurna
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(RoundedCornerShape(14.dp))
+                                    .size(48.dp)
+                                    .clip(CircleShape) // Bikin bulat
                             )
                         }
                     }
+                } else {
+                    LoadingIndicator()
+                    
                 }
-                Spacer(Modifier.width(16.dp))
             }
             
-            // Text Detail Info (Judul & Timer akan merapat ke kiri kalau gambar tidak dirender)
+            Spacer(Modifier.width(16.dp))
+            
+            // Text Detail Info
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = appName,
@@ -880,7 +895,7 @@ fun RunningGameCard(
                 }
             }
             
-            // 👇 Tombol Return to Game HANYA jika ada game
+            // Tombol Return to Game HANYA jika ada game
             if (!isNoApp) {
                 Surface(
                     shape = CircleShape,
