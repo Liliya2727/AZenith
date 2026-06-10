@@ -76,6 +76,7 @@ import android.content.ContentResolver
 import android.net.Uri
 import android.webkit.MimeTypeMap
 import android.view.ViewGroup
+import androidx.compose.ui.draw.alpha
 
 
 @Composable
@@ -105,68 +106,96 @@ fun MediaBannerRenderer(
     val isVideo = mimeType.startsWith("video/")
 
     if (isVideo) {
-        AndroidView(
-            factory = { ctx ->
-                val textureView = TextureView(ctx)
-                
-                textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-                    var mediaPlayer: MediaPlayer? = null
+        var isVideoReady by remember { mutableStateOf(false) }
 
-                    override fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
-                        val surface = Surface(surfaceTexture)
-                        mediaPlayer = MediaPlayer().apply {
-                            setDataSource(ctx, uri)
-                            setSurface(surface)
-                            isLooping = true
-                            setVolume(0f, 0f)
+        val videoAlpha by animateFloatAsState(
+            targetValue = if (isVideoReady) 1f else 0f,
+            animationSpec = tween(500),
+            label = "videoFade"
+        )
 
-                            setOnVideoSizeChangedListener { _, videoWidth, videoHeight ->
-                                val viewWidth = textureView.width.toFloat()
-                                val viewHeight = textureView.height.toFloat()
-                                
-                                if (viewWidth == 0f || viewHeight == 0f || videoWidth == 0 || videoHeight == 0) return@setOnVideoSizeChangedListener
+        Box(modifier = modifier) {
+            if (!isVideoReady) {
+                Image(
+                    painter = painterResource(id = R.drawable.banner_bg),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
 
-                                val videoRatio = videoWidth.toFloat() / videoHeight.toFloat()
-                                val viewRatio = viewWidth / viewHeight
+            AndroidView(
+                factory = { ctx ->
+                    val textureView = TextureView(ctx)
+                    
+                    textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+                        var mediaPlayer: MediaPlayer? = null
 
-                                val scaleX: Float
-                                val scaleY: Float
+                        override fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
+                            val surface = Surface(surfaceTexture)
+                            mediaPlayer = MediaPlayer().apply {
+                                setDataSource(ctx, uri)
+                                setSurface(surface)
+                                isLooping = true
+                                setVolume(0f, 0f)
 
-                                if (videoRatio > viewRatio) {
-                                    scaleX = (viewHeight * videoRatio) / viewWidth
-                                    scaleY = 1f
-                                } else {
-                                    scaleX = 1f
-                                    scaleY = (viewWidth / videoRatio) / viewHeight
+                                setOnInfoListener { _, what, _ ->
+                                    if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
+                                        isVideoReady = true 
+                                        true
+                                    } else {
+                                        false
+                                    }
                                 }
 
-                                val matrix = Matrix()
-                                matrix.setScale(scaleX, scaleY, viewWidth / 2f, viewHeight / 2f)
-                                // Pasang matrix-nya ke textureView
-                                textureView.setTransform(matrix)
+                                setOnVideoSizeChangedListener { _, videoWidth, videoHeight ->
+                                    val viewWidth = textureView.width.toFloat()
+                                    val viewHeight = textureView.height.toFloat()
+                                    
+                                    if (viewWidth == 0f || viewHeight == 0f || videoWidth == 0 || videoHeight == 0) return@setOnVideoSizeChangedListener
+
+                                    val videoRatio = videoWidth.toFloat() / videoHeight.toFloat()
+                                    val viewRatio = viewWidth / viewHeight
+
+                                    val scaleX: Float
+                                    val scaleY: Float
+
+                                    if (videoRatio > viewRatio) {
+                                        scaleX = (viewHeight * videoRatio) / viewWidth
+                                        scaleY = 1f
+                                    } else {
+                                        scaleX = 1f
+                                        scaleY = (viewWidth / videoRatio) / viewHeight
+                                    }
+
+                                    val matrix = Matrix()
+                                    matrix.setScale(scaleX, scaleY, viewWidth / 2f, viewHeight / 2f)
+                                    textureView.setTransform(matrix)
+                                }
+
+                                prepareAsync() 
+                                setOnPreparedListener { start() } 
                             }
-
-                            prepareAsync() 
-                            setOnPreparedListener { start() } 
                         }
-                    }
 
-                    override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
-                    
-                    override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-                        mediaPlayer?.release()
-                        mediaPlayer = null
-                        return true
+                        override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
+                        
+                        override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+                            mediaPlayer?.release()
+                            mediaPlayer = null
+                            return true
+                        }
+                        
+                        override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
                     }
                     
-                    override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
-                }
-                
-                // Return TextureView-nya
-                textureView
-            },
-            modifier = modifier
-        )
+                    textureView
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(videoAlpha) 
+            )
+        }
     } else {
         val imageLoader = remember {
             ImageLoader.Builder(context)
@@ -189,6 +218,7 @@ fun MediaBannerRenderer(
         )
     }
 }
+
 
 
 
