@@ -122,10 +122,14 @@ class TweakViewModel : ViewModel() {
                 }
             }
 
-            BackupManager.createBackup(context, uri, propsMap)
+            val isSuccess = BackupManager.createBackup(context, uri, propsMap)
+            
             delay(1500) 
+            
+            isSuccess 
         }
     }
+
 
     // Hasil pengecekan: isSuccess, errorMessage, validDataToRestore
     suspend fun validateAndRestoreFile(context: Context, uri: Uri): ValidationResult {
