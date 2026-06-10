@@ -20,7 +20,9 @@ use std::env;
 use utils::*; use std::process::Command;
 
 fn main() {
-    env::set_var("PATH", MY_PATH);
+    unsafe {
+        env::set_var("PATH", MY_PATH);
+    }
     let args: Vec<String> = env::args().collect();
     
     if args.len() > 1 {
