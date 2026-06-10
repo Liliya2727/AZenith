@@ -491,7 +491,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                     horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
                                 ) {
                                     OutlinedButton(
-                                        onClick = { imagePicker.launch(arrayOf("image/*")) },
+                                        imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                                         modifier = Modifier.weight(1f),
                                         shape = RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp, topEnd = 0.dp, bottomEnd = 0.dp),
                                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
