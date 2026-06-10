@@ -75,7 +75,6 @@ import coil.decode.ImageDecoderDecoder
 import android.content.ContentResolver
 import android.net.Uri
 import android.webkit.MimeTypeMap
-import android.view.TextureView
 import android.view.ViewGroup
 
 
@@ -106,61 +105,65 @@ fun MediaBannerRenderer(
     val isVideo = mimeType.startsWith("video/")
 
     if (isVideo) {
-        // 🔥 RENDER VIDEO PAKAI MEDIAPLAYER BAWAAN ANDROID (Super Ringan)
         AndroidView(
             factory = { ctx ->
-                TextureView(ctx).apply {
-                    surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-                        var mediaPlayer: MediaPlayer? = null
+                val textureView = TextureView(ctx)
+                
+                textureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+                    var mediaPlayer: MediaPlayer? = null
 
-                        override fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
-                            val surface = Surface(surfaceTexture)
-                            mediaPlayer = MediaPlayer().apply {
-                                setDataSource(ctx, uri)
-                                setSurface(surface)
-                                isLooping = true // Muter terus
-                                setVolume(0f, 0f) // Mute suara
+                    override fun onSurfaceTextureAvailable(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
+                        val surface = Surface(surfaceTexture)
+                        mediaPlayer = MediaPlayer().apply {
+                            setDataSource(ctx, uri)
+                            setSurface(surface)
+                            isLooping = true
+                            setVolume(0f, 0f)
 
-                                // Logika untuk meniru "ContentScale.Crop" (Biar nggak gepeng)
-                                setOnVideoSizeChangedListener { _, videoWidth, videoHeight ->
-                                    val viewWidth = this@apply.width.toFloat()
-                                    val viewHeight = this@apply.height.toFloat()
-                                    
-                                    val videoRatio = videoWidth.toFloat() / videoHeight.toFloat()
-                                    val viewRatio = viewWidth / viewHeight
+                            setOnVideoSizeChangedListener { _, videoWidth, videoHeight ->
+                                val viewWidth = textureView.width.toFloat()
+                                val viewHeight = textureView.height.toFloat()
+                                
+                                if (viewWidth == 0f || viewHeight == 0f || videoWidth == 0 || videoHeight == 0) return@setOnVideoSizeChangedListener
 
-                                    val scaleX: Float
-                                    val scaleY: Float
+                                val videoRatio = videoWidth.toFloat() / videoHeight.toFloat()
+                                val viewRatio = viewWidth / viewHeight
 
-                                    if (videoRatio > viewRatio) {
-                                        scaleX = (viewHeight * videoRatio) / viewWidth
-                                        scaleY = 1f
-                                    } else {
-                                        scaleX = 1f
-                                        scaleY = (viewWidth / videoRatio) / viewHeight
-                                    }
+                                val scaleX: Float
+                                val scaleY: Float
 
-                                    val matrix = Matrix()
-                                    matrix.setScale(scaleX, scaleY, viewWidth / 2f, viewHeight / 2f)
-                                    this@apply.setTransform(matrix)
+                                if (videoRatio > viewRatio) {
+                                    scaleX = (viewHeight * videoRatio) / viewWidth
+                                    scaleY = 1f
+                                } else {
+                                    scaleX = 1f
+                                    scaleY = (viewWidth / videoRatio) / viewHeight
                                 }
 
-                                prepareAsync() 
-                                setOnPreparedListener { start() } 
+                                val matrix = Matrix()
+                                matrix.setScale(scaleX, scaleY, viewWidth / 2f, viewHeight / 2f)
+                                // Pasang matrix-nya ke textureView
+                                textureView.setTransform(matrix)
                             }
-                        }
 
-                        override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
-                        
-                        override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-                            mediaPlayer?.release()
-                            mediaPlayer = null
-                            return true
+                            prepareAsync() 
+                            setOnPreparedListener { start() } 
                         }
-                        
-                        override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
                     }
+
+                    override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {}
+                    
+                    override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+                        mediaPlayer?.release()
+                        mediaPlayer = null
+                        return true
+                    }
+                    
+                    override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {}
                 }
+                
+                // Return TextureView-nya
+                textureView
             },
             modifier = modifier
         )
@@ -186,6 +189,7 @@ fun MediaBannerRenderer(
         )
     }
 }
+
 
 
 @Composable
