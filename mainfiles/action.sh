@@ -38,8 +38,8 @@ install_pkg() {
 }
 
 # Cek kelayakan environment sebelum membuka aplikasi
-if ! command -v sys.azenith-service >/dev/null 2>&1 || ! pm path zx.azenith >/dev/null 2>&1; then
+if ! command -v /data/adb/modules/AZenith/system/bin/sys.azenith-service >/dev/null 2>&1 || ! pm path zx.azenith >/dev/null 2>&1; then
     install_pkg
 fi
 
-exec sys.azenith-service --appactivity > /dev/null 2>&1
+exec /data/adb/modules/AZenith/system/bin/sys.azenith-service --appactivity > /dev/null 2>&1
