@@ -110,7 +110,12 @@ fun ColorPaletteScreen(navController: NavController) {
     var customBannerUri by remember { 
         mutableStateOf(context.getHeaderImage()) 
     }
-
+    
+    // Tambahkan ini di bawah customBannerUri
+    var pendingCropUriPath by rememberSaveable { 
+        mutableStateOf<String?>(null) 
+    }
+    
     // STATE UNTUK BLUR UI
     var isBlurEnabled by rememberSaveable {
         mutableStateOf(prefs.getBoolean("expressive_blur_ui", false))
@@ -131,7 +136,15 @@ fun ColorPaletteScreen(navController: NavController) {
                     snackbarHostState.showSnackbar("Image updated")
                 }
             }
+        } else {
+            pendingCropUriPath?.let { path ->
+                val file = File(path)
+                if (file.exists()) {
+                    file.delete()
+                }
+            }
         }
+        pendingCropUriPath = null
     }
     
     val colorScheme = MaterialTheme.colorScheme 
@@ -146,6 +159,7 @@ fun ColorPaletteScreen(navController: NavController) {
             }
             
             val destinationFile = File(bannerDir, "banner_${System.currentTimeMillis()}.jpg")
+            pendingCropUriPath = destinationFile.absolutePath 
             val destinationUri = Uri.fromFile(destinationFile)
             
             val options = UCrop.Options().apply {
