@@ -20,7 +20,14 @@ import com.topjohnwu.superuser.io.SuFile
 import com.topjohnwu.superuser.io.SuFileOutputStream
 
 class TweakViewModel : ViewModel() {
-    data class ValidationResult(val isValid: Boolean, val message: String, val data: Map<String, String>?)
+    data class ValidationResult(
+        val isValid: Boolean, 
+        val message: String, 
+        val hasTweaks: Boolean, 
+        val hasApplist: Boolean,
+        val socType: String?,
+        val data: Map<String, String>?
+    )
     
     var isUiLoaded by mutableStateOf(false)
         private set
@@ -83,14 +90,6 @@ class TweakViewModel : ViewModel() {
         "persist.sys.azenith.custom_powersave_IO"
     )
     
-    data class ValidationResult(
-        val isValid: Boolean, 
-        val message: String, 
-        val hasTweaks: Boolean, 
-        val hasApplist: Boolean,
-        val socType: String?,
-        val data: Map<String, String>?
-    )
     
     private val APPLIST_BACKUP_KEY = "__AZENITH_APPLIST_DATA__"
     private val APPLIST_PATH = "/data/adb/.config/AZenith/gamelist/azenithApplist.json"
