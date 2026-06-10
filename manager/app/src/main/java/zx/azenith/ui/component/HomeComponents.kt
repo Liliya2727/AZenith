@@ -78,7 +78,6 @@ import android.webkit.MimeTypeMap
 import android.view.ViewGroup
 import androidx.compose.ui.draw.alpha
 import android.media.MediaMetadataRetriever
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
