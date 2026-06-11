@@ -29,6 +29,16 @@ make_node() {
 	[ ! -f "$2" ] && echo "$1" >"$2"
 }
 
+start_app() {
+  local count=0
+  until [ $count -ge 5 ]; do
+      count=$((count + 1))
+      sleep 1
+      ui_print "- $count"
+  done
+  /system/bin/am start -a android.intent.action.MAIN zx.azenith/.MainActivity > /dev/null 2>&1
+}
+
 abort_api() {
   ui_print ""
   ui_print "! Installation Aborted"
@@ -64,7 +74,10 @@ installation_complete() {
   ui_print "- Please reboot your device."
   ui_print "- Open Manager from action.sh"
   ui_print "- Don't forget to grant root access."
+  ui_print "- App will Open in 5 Seconds."
   ui_print "- # # # # # # # # # # # # # # # # # # # # #"
+  start_app
+  
 }
 
 # Displaybanner
