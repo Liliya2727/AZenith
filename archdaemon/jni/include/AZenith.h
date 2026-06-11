@@ -58,6 +58,15 @@
 #define IS_AWAKE(state) (strcmp(state, "Awake") == 0 || strcmp(state, "true") == 0)
 #define IS_LOW_POWER(state) (strcmp(state, "true") == 0 || strcmp(state, "1") == 0)
 
+#define EXECUTE(mode_name, func_call) do { \
+    struct timespec start, end; \
+    clock_gettime(CLOCK_MONOTONIC, &start); \
+    func_call; \
+    clock_gettime(CLOCK_MONOTONIC, &end); \
+    double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; \
+    log_zenith(LOG_INFO, "%s executed for %.4f seconds", mode_name, elapsed); \
+} while(0)
+
 // Basic C knowledge: enum starts with 0
 typedef struct {
     char perf_lite_mode[16];

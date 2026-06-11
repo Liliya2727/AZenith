@@ -26,6 +26,7 @@ int game_pid_count = 0;
 bool is_restarting_renderer = false;
 GameOptions opts;
 
+
 int main_daemon(void) {
     if (check_running_state() != 0) {
         fprintf(stderr, "\033[31mERROR:\033[0m Daemon is already running!\n");
@@ -116,12 +117,32 @@ int main_daemon(void) {
 
     int inotify_fd = inotify_init1(IN_NONBLOCK);
     if (inotify_fd >= 0) {
-        inotify_add_watch(inotify_fd, "/data/adb/.config/AZenith/", IN_MODIFY | IN_CREATE | IN_MOVED_TO);
-        inotify_add_watch(inotify_fd, "/data/adb/.config/AZenith/API/", IN_MODIFY | IN_CREATE | IN_MOVED_TO);
-        inotify_add_watch(inotify_fd, "/data/adb/modules/AZenith/", IN_MODIFY | IN_CREATE | IN_MOVED_TO | IN_DELETE);
+        log_zenith(LOG_INFO, "Initializing inotify watchers...");
+        
+        struct WatchTarget {
+            const char* path;
+            uint32_t mask;
+        } targets[] = {
+            {"/data/adb/.config/AZenith/", IN_MODIFY | IN_CREATE | IN_MOVED_TO},
+            {"/data/adb/.config/AZenith/API/", IN_MODIFY | IN_CREATE | IN_MOVED_TO},
+            {"/data/adb/modules/AZenith/", IN_MODIFY | IN_CREATE | IN_MOVED_TO | IN_DELETE}
+        };
+
+        for (int i = 0; i < sizeof(targets) / sizeof(targets[0]); i++) {
+            int wd = inotify_add_watch(inotify_fd, targets[i].path, targets[i].mask);
+            if (wd >= 0) {
+                log_zenith(LOG_INFO, "Added watch for directory: %s", targets[i].path);
+            } else {
+                log_zenith(LOG_WARN, "Failed to add watch for directory: %s", targets[i].path);
+            }
+        }
+    } else {
+        log_zenith(LOG_ERROR, "Failed to initialize inotify");
     }
     
+    log_zenith(LOG_INFO, "Reading initial applist status...");
     read_app_status();
+    log_zenith(LOG_INFO, "Successfully read applist. Starting main monitoring loop...");
 
     while (1) {
         if (!is_java_lock_held(java_lock_path)) {
@@ -440,9 +461,11 @@ int main_daemon(void) {
             cur_mode = PERFORMANCE_PROFILE;
             need_profile_checkup = false;
             
-            run_profiler(PERFORMANCE_PROFILE);
+            EXECUTE("Performance Profile", run_profiler(PERFORMANCE_PROFILE));
+            
             notify("Performance Profile", "Running at %s", false, 0, active_app_name ? active_app_name : gamestart);
             log_zenith(LOG_INFO, "Applying performance profile for %s", active_app_name ? active_app_name : gamestart);
+
             
             toast("Applying Performance Profile");
 
@@ -507,11 +530,12 @@ int main_daemon(void) {
 
             cur_mode = ECO_MODE;                
             need_profile_checkup = false;
+
+            EXECUTE("ECO Mode", run_profiler(ECO_MODE));
             
-            run_profiler(ECO_MODE);
             notify("ECO Mode", "System is now at Endurance state", false, 0);
-            
             log_zenith(LOG_INFO, "Applying ECO Mode");
+
             toast("Applying Eco Mode");
 
             if (saved_refresh_rate > 0) {
@@ -546,10 +570,11 @@ int main_daemon(void) {
             cur_mode = BALANCED_PROFILE;               
             need_profile_checkup = false;
             
-            run_profiler(BALANCED_PROFILE);
-            notify("Balanced Profile", "System is now at Optimal state", false, 0);
+            EXECUTE("Balanced Profile", run_profiler(BALANCED_PROFILE));
             
+            notify("Balanced Profile", "System is now at Optimal state", false, 0);
             log_zenith(LOG_INFO, "Applying Balanced profile");
+
             toast("Applying Balanced profile");
 
             if (saved_refresh_rate > 0) {
