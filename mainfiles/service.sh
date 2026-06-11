@@ -18,10 +18,19 @@
 
 readonly MODDIR="${0%/*}"
 readonly MODULE_CONFIG="/data/adb/.config/AZenith"
+readonly BIN_SVC="$MODDIR/system/bin/sys.azenith-service"
+readonly APK_COMP="$MODDIR/AZenith.apk"
 
+# Wait boot to complete
 until [ "$(getprop sys.boot_completed)" = "1" ]; do 
     sleep 5 
 done
+
+# Clear Old Logs
+"$BIN_SVC" --clearlogs
+
+# Run And Apply Preference Tweaks
+sh "$MODDIR/preferenced-tweaks.sh" &
 
 # Reset anti bootloop
 echo "BOOTCOUNT=0" > "$MODDIR/count.sh"
@@ -39,11 +48,11 @@ STATE=$(getprop persist.sys.azenith.state)
 }
 
 # Exec Java Companion Daemon
-nohup app_process -Djava.class.path="$MODDIR/AZenith.apk" / \
+nohup app_process -Djava.class.path="$APK_COMP" / \
     --nice-name=sys.azenith-appmonitoring zx.azenith.AppMonitor \
     "$MODULE_CONFIG/app_status" \
     "$MODULE_CONFIG/background_apps" \
     "$MODULE_CONFIG/java.lock" >"$MODULE_CONFIG/sysmon.log" 2>&1 &
     
 # Run AZenith service
-sleep 1 && exec $MODDIR/system/bin/sys.azenith-service --run
+sleep 1 && exec "$BIN_SVC" --run
