@@ -18,6 +18,7 @@
 
 readonly MODDIR="${0%/*}"
 readonly MODULE_CONFIG="/data/adb/.config/AZenith"
+readonly BIN_SVC="$MODDIR/system/bin/sys.azenith-service"
 
 get_state() {
     local val
@@ -38,11 +39,11 @@ DISTRACE_STATE=$(get_state persist.sys.azenithconf.disabletrace)
 readonly LIST_LOGGER="logd traced statsd tcpdump cnss_diag subsystem_ramdump charge_logger wlan_logging"
 
 verbose_log() {
-    [ "$DEBUGMODE" = "true" ] && sys.azenith-service --verboselog "AZenith" "0" "$1"
+    [ "$DEBUGMODE" = "true" ] && $BIN_SVC --verboselog "AZenith_Prefs" "0" "$1"
 }
 
 write_log() {
-    sys.azenith-service --log "AZenith" "1" "$1"
+    $BIN_SVC --log "AZenith_Prefs" "1" "$1"
 }
 
 write_val() {
@@ -77,35 +78,62 @@ prefsettings() {
         write_log "Applying Schedtunes for Schedutil and Schedhorizon"
         
         settunes() {
-            local p="$1" schedhorizon="$1/schedhorizon" schedutil="$1/schedutil"
-            [ -d "$p" ] || return
-
-            local freqs selected_freqs num up_delay="" up_rate=6500 down_rate=12000 rate_limit=7000
-            freqs=$(cat "$p/scaling_available_frequencies" 2>/dev/null)
+            local policy_path="$1"
+    
+            [ ! -d "$policy_path" ] && return
+    
+            local freqs
+            freqs="$(cat "$policy_path/scaling_available_frequencies" 2>/dev/null)"
             [ -z "$freqs" ] && return
-
-            selected_freqs=$(echo "$freqs" | awk '{for(i=1;i<=NF;i++) a[i]=$i} END {asort(a); for(i=NF;i>NF-6 && i>0;i--) printf "%s ", a[i]}')
-            num=$(echo "$selected_freqs" | wc -w)
-
-            for i in $(seq 1 "$num"); do up_delay="$up_delay $((50 * i))"; done
+    
+            local selected_freqs
+            selected_freqs="$(echo "$freqs" | tr ' ' '\n' | sort -rn | head -n 6 | tr '\n' ' ' | sed 's/ $//')"
+    
+            local num
+            num="$(echo "$selected_freqs" | wc -w)"
+    
+            local up_delay=""
+            for i in $(seq 1 "$num"); do
+                up_delay="$up_delay $((50 * i))"
+            done
             up_delay="${up_delay# }"
-
-            # Setup Horizon
+    
+            local up_rate=6500
+            local down_rate=12000
+            local rate_limit=7000
+    
+            local schedhorizon="$policy_path/schedhorizon"
+            local schedutil="$policy_path/schedutil"
+    
             if [ -d "$schedhorizon" ]; then
-                write_val "$up_delay" "$schedhorizon/up_delay"
-                write_val "$selected_freqs" "$schedhorizon/efficient_freq"
-                [ -f "$schedhorizon/up_rate_limit_us" ] && write_val "$up_rate" "$schedhorizon/up_rate_limit_us" || write_val "$rate_limit" "$schedhorizon/rate_limit_us"
-                write_val "$down_rate" "$schedhorizon/down_rate_limit_us"
+                [ -f "$schedhorizon/up_delay" ] && write_val "$up_delay" "$schedhorizon/up_delay"
+                [ -f "$schedhorizon/efficient_freq" ] && write_val "$selected_freqs" "$schedhorizon/efficient_freq"
+    
+                if [ -f "$schedhorizon/up_rate_limit_us" ]; then
+                    write_val "$up_rate" "$schedhorizon/up_rate_limit_us"
+                elif [ -f "$schedhorizon/rate_limit_us" ]; then
+                    write_val "$rate_limit" "$schedhorizon/rate_limit_us"
+                fi
+    
+                if [ -f "$schedhorizon/down_rate_limit_us" ]; then
+                    write_val "$down_rate" "$schedhorizon/down_rate_limit_us"
+                fi
             fi
-
-            # Setup Schedutil
+    
             if [ -d "$schedutil" ]; then
-                [ -f "$schedutil/up_rate_limit_us" ] && write_val "$up_rate" "$schedutil/up_rate_limit_us" || write_val "$rate_limit" "$schedutil/rate_limit_us"
-                write_val "$down_rate" "$schedutil/down_rate_limit_us"
+                if [ -f "$schedutil/up_rate_limit_us" ]; then
+                    write_val "$up_rate" "$schedutil/up_rate_limit_us"
+                elif [ -f "$schedutil/rate_limit_us" ]; then
+                    write_val "$rate_limit" "$schedutil/rate_limit_us"
+                fi
+    
+                [ -f "$schedutil/down_rate_limit_us" ] && write_val "$down_rate" "$schedutil/down_rate_limit_us"
             fi
         }
-
-        for policy in /sys/devices/system/cpu/cpufreq/policy*; do settunes "$policy"; done
+    
+        for policy in /sys/devices/system/cpu/cpufreq/policy*; do
+            settunes "$policy"
+        done
     fi
 
     
