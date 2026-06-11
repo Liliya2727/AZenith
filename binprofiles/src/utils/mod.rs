@@ -27,7 +27,7 @@ pub fn az_log(message: &str) {
 
 pub fn dlog(message: &str) {
     let _ = Command::new("sys.azenith-service")
-        .args(["--log", "AZenith", "1", message])
+        .args(["--log", "AZenith_Profiler", "1", message])
         .status();
 }
 
