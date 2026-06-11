@@ -128,7 +128,7 @@ int main_daemon(void) {
             {"/data/adb/modules/AZenith/", IN_MODIFY | IN_CREATE | IN_MOVED_TO | IN_DELETE}
         };
 
-        for (int i = 0; i < sizeof(targets) / sizeof(targets[0]); i++) {
+        for (size_t i = 0; i < sizeof(targets) / sizeof(targets[0]); i++) {
             int wd = inotify_add_watch(inotify_fd, targets[i].path, targets[i].mask);
             if (wd >= 0) {
                 log_zenith(LOG_INFO, "Added watch for directory: %s", targets[i].path);
