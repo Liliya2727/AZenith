@@ -32,11 +32,8 @@ int main_daemon(void) {
         return 1;
     }
 
-    systemv("rm -f /data/adb/.config/AZenith/debug/AZenith.log");
-    systemv("rm -f /data/adb/.config/AZenith/debug/AZenithVerbose.log");
-    systemv("rm -f /data/adb/.config/AZenith/preload/AZenithPR.log");        
-    systemv("su -c \"am broadcast -a zx.azenith.ACTION_MANAGE -n zx.azenith/.receiver.ZenithReceiver --ez clearall true >/dev/null 2>&1\"");
     systemv("touch %s", PROFILE_MODE_APP);
+    systemv("touch %s", GAME_INFO_APP);
 
     if (is_file_empty("/system/bin/dumpsys") == 1) {
         fprintf(stderr, "\033[31mFATAL ERROR:\033[0m /system/bin/dumpsys was tampered by kill logger module.\n");

@@ -117,6 +117,7 @@ int get_battery_level();
 
 // CLI
 void print_help();
+void clearlogs();
 void printversion();
 void openAppMainActivity();
 int require_daemon_running(void);

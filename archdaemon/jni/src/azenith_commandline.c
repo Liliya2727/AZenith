@@ -270,3 +270,16 @@ int require_daemon_running(void) {
     }
     return 1;
 }
+
+/***********************************************************************************
+ * Function Name      : clearlogs
+ * Inputs             : None
+ * Returns            : None
+ * Description        : Clear AZenith Logs
+ ***********************************************************************************/
+void clearlogs() {
+    systemv("rm -f /data/adb/.config/AZenith/debug/AZenith.log");
+    systemv("rm -f /data/adb/.config/AZenith/debug/AZenithVerbose.log");
+    systemv("rm -f /data/adb/.config/AZenith/preload/AZenithPR.log");        
+    systemv("su -c \"am broadcast -a zx.azenith.ACTION_MANAGE -n zx.azenith/.receiver.ZenithReceiver --ez clearall true >/dev/null 2>&1\"");
+}
