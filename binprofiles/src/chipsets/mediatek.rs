@@ -4,14 +4,16 @@ pub fn mediatek_balance() {
     if Path::new("/proc/ppm/policy_status").exists() {
         let content = fs::read_to_string("/proc/ppm/policy_status").unwrap_or_default();
         for line in content.lines() {
-            if line.contains("FORCE_LIMIT") || line.contains("PWR_THRO") || line.contains("THERMAL") || line.contains("USER_LIMIT") {
-                if let Some(idx) = line.split('[').nth(2).and_then(|s: &str| s.split(']').next()) {
-                    zeshia_def(&format!("{} 1", idx), "/proc/ppm/policy_status");
-                }
-            }
-            if line.contains("SYS_BOOST") {
-                if let Some(idx) = line.split('[').nth(2).and_then(|s: &str| s.split(']').next()) {
-                    zeshia_def(&format!("{} 0", idx), "/proc/ppm/policy_status");
+            let is_target_1 = line.contains("FORCE_LIMIT") || line.contains("PWR_THRO") || line.contains("THERMAL") || line.contains("USER_LIMIT");
+            let is_target_2 = line.contains("SYS_BOOST");
+            if is_target_1 || is_target_2 {
+                if let Some(idx_str) = line.split('[').nth(1).and_then(|s| s.split(']').next()) {
+                    if is_target_1 {
+                        zeshia_def(&format!("{} 1", idx_str), "/proc/ppm/policy_status");
+                    }
+                    if is_target_2 {
+                        zeshia_def(&format!("{} 0", idx_str), "/proc/ppm/policy_status");
+                    }
                 }
             }
         }
@@ -21,6 +23,8 @@ pub fn mediatek_balance() {
     
     zeshia_def("2", "/sys/kernel/fpsgo/common/force_onoff");
     zeshia_def("1", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
+    
+    zeshia_def("0", "/sys/devices/platform/boot_dramboost/dramboost/dramboost");
 
     zeshia_def("0", "/proc/cpufreq/cpufreq_cci_mode");
     zeshia_def("1", "/proc/cpufreq/cpufreq_power_mode");
@@ -42,6 +46,7 @@ pub fn mediatek_balance() {
             zeshia_def(&format!("{} 0", setting), "/proc/gpufreq/gpufreq_power_limited");
         }
     }
+    
 
     zeshia_def("0", "/proc/perfmgr/syslimiter/syslimiter_force_disable");
     zeshia_def("stop 0", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
@@ -83,18 +88,21 @@ pub fn mediatek_performance() {
     if Path::new("/proc/ppm/policy_status").exists() {
         let content = fs::read_to_string("/proc/ppm/policy_status").unwrap_or_default();
         for line in content.lines() {
-            if line.contains("FORCE_LIMIT") || line.contains("PWR_THRO") || line.contains("THERMAL") || line.contains("USER_LIMIT") {
-                if let Some(idx) = line.split('[').nth(2).and_then(|s: &str| s.split(']').next()) {
-                    zeshia_def(&format!("{} 0", idx), "/proc/ppm/policy_status");
-                }
-            }
-            if line.contains("SYS_BOOST") {
-                if let Some(idx) = line.split('[').nth(2).and_then(|s: &str| s.split(']').next()) {
-                    zeshia_def(&format!("{} 1", idx), "/proc/ppm/policy_status");
+            let is_target_1 = line.contains("FORCE_LIMIT") || line.contains("PWR_THRO") || line.contains("THERMAL") || line.contains("USER_LIMIT");
+            let is_target_2 = line.contains("SYS_BOOST");
+            if is_target_1 || is_target_2 {
+                if let Some(idx_str) = line.split('[').nth(1).and_then(|s| s.split(']').next()) {
+                    if is_target_1 {
+                        zeshia_def(&format!("{} 0", idx_str), "/proc/ppm/policy_status");
+                    }
+                    if is_target_2 {
+                        zeshia_def(&format!("{} 1", idx_str), "/proc/ppm/policy_status");
+                    }
                 }
             }
         }
     }
+
     
     ppm_fix_freq("0"); 
 
@@ -104,7 +112,8 @@ pub fn mediatek_performance() {
     }
     
     zeshia_def("0", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
-
+    
+    zeshia_def("1", "/sys/devices/platform/boot_dramboost/dramboost/dramboost");
 
     zeshia_def("1", "/proc/cpufreq/cpufreq_cci_mode");
     zeshia_def("3", "/proc/cpufreq/cpufreq_power_mode");
@@ -163,21 +172,23 @@ pub fn mediatek_powersave() {
     if Path::new("/proc/ppm/policy_status").exists() {
         let content = fs::read_to_string("/proc/ppm/policy_status").unwrap_or_default();
         for line in content.lines() {
-            if line.contains("FORCE_LIMIT") || line.contains("PWR_THRO") || line.contains("THERMAL") || line.contains("USER_LIMIT") {
-                if let Some(idx) = line.split('[').nth(2).and_then(|s: &str| s.split(']').next()) {
-                    zeshia_def(&format!("{} 1", idx), "/proc/ppm/policy_status");
-                }
-            }
-            if line.contains("SYS_BOOST") {
-                if let Some(idx) = line.split('[').nth(2).and_then(|s: &str| s.split(']').next()) {
-                    zeshia_def(&format!("{} 0", idx), "/proc/ppm/policy_status");
+            let is_target_1 = line.contains("FORCE_LIMIT") || line.contains("PWR_THRO") || line.contains("THERMAL") || line.contains("USER_LIMIT");
+            let is_target_2 = line.contains("SYS_BOOST");
+            if is_target_1 || is_target_2 {
+                if let Some(idx_str) = line.split('[').nth(1).and_then(|s| s.split(']').next()) {
+                    if is_target_1 {
+                        zeshia_def(&format!("{} 1", idx_str), "/proc/ppm/policy_status");
+                    }
+                    if is_target_2 {
+                        zeshia_def(&format!("{} 0", idx_str), "/proc/ppm/policy_status");
+                    }
                 }
             }
         }
     }
     
     ppm_fix_freq("-1"); 
-    
+    zeshia_def("0", "/sys/devices/platform/boot_dramboost/dramboost/dramboost");
     zeshia_def("1", "/sys/kernel/fpsgo/common/force_onoff");
     zeshia_def("1", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
 
@@ -206,7 +217,7 @@ pub fn mediatek_powersave() {
             "ignore_thermal_protect", "ignore_pbm_limited"
         ];
         for setting in settings {
-            zeshia_def(&format!("{} 1", setting), "/proc/gpufreq/gpufreq_power_limited");
+            zeshia_def(&format!("{} 0", setting), "/proc/gpufreq/gpufreq_power_limited");
         }
     }
 
