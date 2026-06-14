@@ -79,7 +79,6 @@ pub fn performance_profile() {
         }
     }
 
-    zeshia_def("1", "/proc/sys/kernel/perf_cpu_time_max_percent");
     zeshia_def("1", "/proc/sys/kernel/sched_energy_aware");
 
     if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpu*") {
@@ -206,8 +205,6 @@ pub fn balanced_profile() {
         }
     }
 
-    zeshia_def("100", "/proc/sys/kernel/perf_cpu_time_max_percent");
-    zeshia_def("2", "/proc/sys/kernel/perf_cpu_time_max_percent");
     zeshia_def("1", "/proc/sys/kernel/sched_energy_aware");
 
     if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpu*") {
@@ -317,8 +314,6 @@ pub fn eco_mode() {
         }
     }
 
-    zeshia_def("50", "/proc/sys/kernel/perf_cpu_time_max_percent");
-    zeshia_def("0", "/proc/sys/kernel/perf_cpu_time_max_percent");
     zeshia_def("0", "/proc/sys/kernel/sched_energy_aware");
 
     if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpu*") {
