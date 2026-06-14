@@ -53,7 +53,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-
+import androidx.compose.animation.animateContentSize 
 
 
 private val largeCorner = 26.dp
@@ -441,11 +441,15 @@ fun ExpressiveDropdownItem(
     }
 
     ExpressiveListItem(
-        modifier = if (enabled) {
-            Modifier.clickable { expanded = true }
-        } else {
-            Modifier
-        },
+        modifier = Modifier
+            .animateContentSize()
+            .then(
+                if (enabled) {
+                    Modifier.clickable { expanded = true }
+                } else {
+                    Modifier
+                }
+            ),
         leadingContent = icon?.let { { LeadingIcon(icon = it, contentDescription = title) } },
         headlineContent = { Text(text = title) },
         supportingContent = summary?.let { { Text(it) } },
