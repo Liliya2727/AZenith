@@ -23,7 +23,6 @@ import zx.azenith.R
 import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.RootUtils
 import android.app.AlertDialog
-import android.view.WindowManager
 
 class ProfileTileService : TileService() {
 
@@ -71,6 +70,14 @@ class ProfileTileService : TileService() {
         }
     
         showDialog(dialog)
+
+        // PAKSA LEBAR DIALOG DI SINI (85% dari layar)
+        dialog.window?.let { window ->
+            val layoutParams = window.attributes
+            val displayMetrics = resources.displayMetrics
+            layoutParams.width = (displayMetrics.widthPixels * 0.85).toInt()
+            window.attributes = layoutParams
+        }
     }
     
     private fun applyProfile(nextProfile: String) {
@@ -106,7 +113,3 @@ class ProfileTileService : TileService() {
         }
     }
 }
-
-
-
-

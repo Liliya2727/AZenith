@@ -35,9 +35,8 @@
             android:tint="#FFFFFF" />
     
         <TextView
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:text="Performance"
             android:textSize="16sp"
             android:textColor="#FFFFFF"
@@ -65,9 +64,8 @@
             android:tint="#FFFFFF" />
     
         <TextView
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:text="Balanced"
             android:textSize="16sp"
             android:textColor="#FFFFFF"
@@ -95,9 +93,8 @@
             android:tint="#FFFFFF" />
     
         <TextView
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:text="Eco Mode"
             android:textSize="16sp"
             android:textColor="#FFFFFF"
