@@ -20,13 +20,13 @@
     <LinearLayout
         android:id="@+id/item_performance"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="wrap_content"    <!-- ganti dari 64dp ke wrap_content -->
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:background="@drawable/bg_item_rounded"
         android:layout_marginBottom="10dp"
-        android:padding="12dp">
-
+        android:padding="14dp">              <!-- naikin padding dikit -->
+    
         <ImageView
             android:layout_width="40dp"
             android:layout_height="40dp"
@@ -34,13 +34,15 @@
             android:background="@drawable/bg_icon_rounded"
             android:padding="8dp"
             android:tint="#FFFFFF" />
-
+    
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"         <!-- WAJIB ini -->
             android:layout_height="wrap_content"
+            android:layout_weight="1"          <!-- WAJIB ini -->
             android:text="Performance"
             android:textSize="16sp"
             android:textColor="#FFFFFF"
+            android:singleLine="true"          <!-- biar ga wrap -->
             android:layout_marginStart="14dp" />
     </LinearLayout>
 
@@ -48,13 +50,13 @@
     <LinearLayout
         android:id="@+id/item_balanced"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="wrap_content"    <!-- ganti dari 64dp ke wrap_content -->
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:background="@drawable/bg_item_rounded"
         android:layout_marginBottom="10dp"
-        android:padding="12dp">
-
+        android:padding="14dp">              <!-- naikin padding dikit -->
+    
         <ImageView
             android:layout_width="40dp"
             android:layout_height="40dp"
@@ -62,13 +64,15 @@
             android:background="@drawable/bg_icon_rounded"
             android:padding="8dp"
             android:tint="#FFFFFF" />
-
+    
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"         <!-- WAJIB ini -->
             android:layout_height="wrap_content"
+            android:layout_weight="1"          <!-- WAJIB ini -->
             android:text="Balanced"
             android:textSize="16sp"
             android:textColor="#FFFFFF"
+            android:singleLine="true"          <!-- biar ga wrap -->
             android:layout_marginStart="14dp" />
     </LinearLayout>
 
@@ -76,12 +80,13 @@
     <LinearLayout
         android:id="@+id/item_eco"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
+        android:layout_height="wrap_content"    <!-- ganti dari 64dp ke wrap_content -->
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:background="@drawable/bg_item_rounded"
-        android:padding="12dp">
-
+        android:layout_marginBottom="10dp"
+        android:padding="14dp">              <!-- naikin padding dikit -->
+    
         <ImageView
             android:layout_width="40dp"
             android:layout_height="40dp"
@@ -89,13 +94,15 @@
             android:background="@drawable/bg_icon_rounded"
             android:padding="8dp"
             android:tint="#FFFFFF" />
-
+    
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"         <!-- WAJIB ini -->
             android:layout_height="wrap_content"
+            android:layout_weight="1"          <!-- WAJIB ini -->
             android:text="Eco Mode"
             android:textSize="16sp"
             android:textColor="#FFFFFF"
+            android:singleLine="true"          <!-- biar ga wrap -->
             android:layout_marginStart="14dp" />
     </LinearLayout>
 
