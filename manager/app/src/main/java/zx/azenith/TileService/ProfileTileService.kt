@@ -44,34 +44,42 @@ class ProfileTileService : TileService() {
     
         val aiEnabled = PropertyUtils.get(AI_PROP, "0")
         if (aiEnabled != "0" || tile.state == Tile.STATE_UNAVAILABLE || !RootUtils.isRootGranted()) {
-            return 
+            return
         }
     
-        // Berikan tema dialog perangkat standar (menyesuaikan dark/light mode sistem)
-        val builder = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-        builder.setTitle("Select AZenith Profile")
+        val inflater = android.view.LayoutInflater.from(this)
+        val view = inflater.inflate(R.layout.dialog_profile_selector, null)
     
-        // List opsi yang akan tampil di pop-up
-        val items = arrayOf("Performance Mode", "Balanced Mode", "ECO Mode")
-        val profileValues = arrayOf("1", "2", "3")
+        val dialog = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog)
+            .setView(view)
+            .create()
     
-        builder.setItems(items) { dialog, which ->
-            val selectedProfile = profileValues[which]
-            
-            // Eksekusi daemon sesuai profil yang dipilih user
-            Shell.cmd("$DAEMON_BIN -p $selectedProfile").submit { result ->
-                if (result.isSuccess) {
-                    PropertyUtils.set(PROFILE_PROP, selectedProfile)
-                    updateTileState()
-                }
-            }
+        // Bikin background dialog transparan supaya rounded drawable kelihatan
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+    
+        view.findViewById<android.view.View>(R.id.item_performance).setOnClickListener {
+            applyProfile("1")
+            dialog.dismiss()
+        }
+        view.findViewById<android.view.View>(R.id.item_balanced).setOnClickListener {
+            applyProfile("2")
+            dialog.dismiss()
+        }
+        view.findViewById<android.view.View>(R.id.item_eco).setOnClickListener {
+            applyProfile("3")
             dialog.dismiss()
         }
     
-        val dialog = builder.create()
-        
-        // PENTING: Gunakan method bawaan TileService untuk nampilin di atas QS
         showDialog(dialog)
+    }
+    
+    private fun applyProfile(nextProfile: String) {
+        Shell.cmd("$DAEMON_BIN -p $nextProfile").submit { result ->
+            if (result.isSuccess) {
+                PropertyUtils.set(PROFILE_PROP, nextProfile)
+                updateTileState()
+            }
+        }
     }
 
     private fun updateTileState() {
