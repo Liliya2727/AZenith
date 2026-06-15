@@ -43,6 +43,16 @@
             </intent-filter>
         </service>
                 
+        <service
+            android:name=".TileService.ProfileTileService"
+            android:icon="@drawable/ic_profile_icon" android:label="@string/current_profile"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:screenOrientation="portrait"
