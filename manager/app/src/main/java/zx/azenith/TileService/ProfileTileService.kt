@@ -21,12 +21,17 @@ import android.service.quicksettings.TileService
 import com.topjohnwu.superuser.Shell
 import zx.azenith.R
 import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.RootUtils
+import android.app.AlertDialog
+import android.view.WindowManager
 
 class ProfileTileService : TileService() {
 
-    private val AI_PROP = "persist.sys.azenithconf.AIenabled"
-    // Sesuaikan nama properti profil ini dengan yang digunakan oleh daemon/RootUtils AZenith
-    private val PROFILE_PROP = "persist.sys.azenithconf.profile" 
+    companion object {
+        private const val AI_PROP = "persist.sys.azenithconf.AIenabled"
+        private const val PROFILE_PROP = "persist.sys.azenithconf.profile"
+        private const val DAEMON_BIN = "/data/adb/modules/AZenith/system/bin/sys.azenith-service"
+    }
 
     override fun onStartListening() {
         super.onStartListening()
@@ -36,53 +41,52 @@ class ProfileTileService : TileService() {
     override fun onClick() {
         super.onClick()
         val tile = qsTile ?: return
-
-        // Cek status AI seperti di HomeViewModel
+    
         val aiEnabled = PropertyUtils.get(AI_PROP, "0")
-        
-        // Blokir eksekusi jika AI aktif atau Tile tidak tersedia
-        if (aiEnabled != "0" || tile.state == Tile.STATE_UNAVAILABLE) {
+        if (aiEnabled != "0" || tile.state == Tile.STATE_UNAVAILABLE || !RootUtils.isRootGranted()) {
             return 
         }
-
-        // Ambil profil saat ini (Default ke "2" / Balanced jika kosong)
-        val currentProfile = PropertyUtils.get(PROFILE_PROP, "2")
-
-        // Logika rotasi: Balanced (2) -> Performance (1) -> ECO (3) -> kembali ke Balanced (2)
-        val nextProfile = when (currentProfile) {
-            "2" -> "1"
-            "1" -> "3"
-            "3" -> "2"
-            else -> "2"
+    
+        // Berikan tema dialog perangkat standar (menyesuaikan dark/light mode sistem)
+        val builder = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+        builder.setTitle("Select AZenith Profile")
+    
+        // List opsi yang akan tampil di pop-up
+        val items = arrayOf("Performance Mode", "Balanced Mode", "ECO Mode")
+        val profileValues = arrayOf("1", "2", "3")
+    
+        builder.setItems(items) { dialog, which ->
+            val selectedProfile = profileValues[which]
+            
+            // Eksekusi daemon sesuai profil yang dipilih user
+            Shell.cmd("$DAEMON_BIN -p $selectedProfile").submit { result ->
+                if (result.isSuccess) {
+                    PropertyUtils.set(PROFILE_PROP, selectedProfile)
+                    updateTileState()
+                }
+            }
+            dialog.dismiss()
         }
-
-        // Eksekusi perintah shell yang sama dengan di HomeViewModel
-        Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service -p $nextProfile").submit()
+    
+        val dialog = builder.create()
         
-        // Update properti secara lokal untuk mempercepat pembaruan UI di Tile
-        PropertyUtils.set(PROFILE_PROP, nextProfile)
-
-        updateTileState(nextProfile)
+        // PENTING: Gunakan method bawaan TileService untuk nampilin di atas QS
+        showDialog(dialog)
     }
 
-    private fun updateTileState(forcedProfile: String? = null) {
+    private fun updateTileState() {
         val tile = qsTile ?: return
+        
         val aiEnabled = PropertyUtils.get(AI_PROP, "0")
 
         if (aiEnabled != "0") {
             tile.state = Tile.STATE_UNAVAILABLE
-            updateSubtitle(tile, "AI Controlled") // Bisa diganti dengan string resource
+            updateSubtitle(tile, "Auto Mode")
         } else {
             tile.state = Tile.STATE_ACTIVE
-            val currentProfile = forcedProfile ?: PropertyUtils.get(PROFILE_PROP, "2")
             
-            val subtitleText = when (currentProfile) {
-                "1" -> getString(R.string.Profile_Performance)
-                "2" -> getString(R.string.Profile_Balanced)
-                "3" -> getString(R.string.Profile_ECO_mode)
-                else -> getString(R.string.Profile_Balanced)
-            }
-            updateSubtitle(tile, subtitleText)
+            val profileResStr = RootUtils.getCurrentProfileRes()
+            updateSubtitle(tile, getString(profileResStr))
         }
 
         tile.updateTile()
@@ -94,3 +98,7 @@ class ProfileTileService : TileService() {
         }
     }
 }
+
+
+
+
