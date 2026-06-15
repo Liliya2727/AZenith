@@ -76,15 +76,30 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val isFromTile = intent.action == "android.service.quicksettings.action.QS_TILE_PREFERENCES"
+        
+        val fromTileType = if (intent.action == "android.service.quicksettings.action.QS_TILE_PREFERENCES") {
+            val component = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(Intent.EXTRA_COMPONENT_NAME, android.content.ComponentName::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(Intent.EXTRA_COMPONENT_NAME)
+            }
+            
+            when (component?.className) {
+                "zx.azenith.TileService.BypassChgTileService" -> "bypass"
+                "zx.azenith.TileService.ProfileTileService" -> "profile"
+                else -> null
+            }
+        } else null
+
         setContent {
             AZenithTheme {
-                MainScreen(isFromTile)
+                MainScreen(fromTileType)
             }
         }
     }
 }
-    
+
 val ExpressiveShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
     small = RoundedCornerShape(12.dp),
@@ -103,17 +118,28 @@ data class NavItem(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(isFromTile: Boolean = false) {
+fun MainScreen(fromTileType: String? = null) {
     val navController = rememberNavController()
-    LaunchedEffect(isFromTile) {
-        if (isFromTile) {
-            navController.navigate("bypasschg") {
-                popUpTo("home") { saveState = true }
-                launchSingleTop = true
-                restoreState = true
+
+    LaunchedEffect(fromTileType) {
+        when (fromTileType) {
+            "bypass" -> {
+                navController.navigate("bypasschg") {
+                    popUpTo("home") { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+            "profile" -> {
+                navController.navigate("home") {
+                    popUpTo("home") { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
             }
         }
     }
+    
     
     var pendingReboot by remember { mutableStateOf(false) }
         
