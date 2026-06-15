@@ -16,16 +16,15 @@
         android:textColor="#FFFFFF"
         android:layout_marginBottom="16dp" />
 
-    <!-- Item: Performance -->
     <LinearLayout
         android:id="@+id/item_performance"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"    <!-- ganti dari 64dp ke wrap_content -->
+        android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:background="@drawable/bg_item_rounded"
         android:layout_marginBottom="10dp"
-        android:padding="14dp">              <!-- naikin padding dikit -->
+        android:padding="14dp">
     
         <ImageView
             android:layout_width="40dp"
@@ -36,26 +35,26 @@
             android:tint="#FFFFFF" />
     
         <TextView
-            android:layout_width="0dp"         <!-- WAJIB ini -->
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"          <!-- WAJIB ini -->
+            android:layout_weight="1"
             android:text="Performance"
             android:textSize="16sp"
             android:textColor="#FFFFFF"
-            android:singleLine="true"          <!-- biar ga wrap -->
+            android:maxLines="1"
+            android:ellipsize="end"
             android:layout_marginStart="14dp" />
     </LinearLayout>
 
-    <!-- Item: Balanced -->
     <LinearLayout
         android:id="@+id/item_balanced"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"    <!-- ganti dari 64dp ke wrap_content -->
+        android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:background="@drawable/bg_item_rounded"
         android:layout_marginBottom="10dp"
-        android:padding="14dp">              <!-- naikin padding dikit -->
+        android:padding="14dp">
     
         <ImageView
             android:layout_width="40dp"
@@ -66,26 +65,26 @@
             android:tint="#FFFFFF" />
     
         <TextView
-            android:layout_width="0dp"         <!-- WAJIB ini -->
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"          <!-- WAJIB ini -->
+            android:layout_weight="1"
             android:text="Balanced"
             android:textSize="16sp"
             android:textColor="#FFFFFF"
-            android:singleLine="true"          <!-- biar ga wrap -->
+            android:maxLines="1"
+            android:ellipsize="end"
             android:layout_marginStart="14dp" />
     </LinearLayout>
 
-    <!-- Item: Eco Mode -->
     <LinearLayout
         android:id="@+id/item_eco"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"    <!-- ganti dari 64dp ke wrap_content -->
+        android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:background="@drawable/bg_item_rounded"
         android:layout_marginBottom="10dp"
-        android:padding="14dp">              <!-- naikin padding dikit -->
+        android:padding="14dp">
     
         <ImageView
             android:layout_width="40dp"
@@ -96,13 +95,14 @@
             android:tint="#FFFFFF" />
     
         <TextView
-            android:layout_width="0dp"         <!-- WAJIB ini -->
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"          <!-- WAJIB ini -->
+            android:layout_weight="1"
             android:text="Eco Mode"
             android:textSize="16sp"
             android:textColor="#FFFFFF"
-            android:singleLine="true"          <!-- biar ga wrap -->
+            android:maxLines="1"
+            android:ellipsize="end"
             android:layout_marginStart="14dp" />
     </LinearLayout>
 
