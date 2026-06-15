@@ -116,7 +116,7 @@ fun ProfileDialog(
                         .padding(24.dp)
                 ) {
                     Text(
-                        text = stringResource(R.string.RefreshRatePicker_Select),
+                        text = stringResource(R.string.Profile_Select),
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface, // 👈 TAMBAHKAN INI
                         modifier = Modifier.padding(bottom = 16.dp)

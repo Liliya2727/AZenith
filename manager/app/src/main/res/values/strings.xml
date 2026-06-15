@@ -54,7 +54,7 @@
     <string name="prefsdesc">Addons tweak that applied on boot</string>
     
     <string name="bcharging_desc">Configure AZenith Bypass Charging</string>
-    <string name="Profile_Select">Profile Select</string>
+    <string name="Profile_Select">Select Profile</string>
     <string name="RefreshRatePicker_Select">Select Refresh Rates</string>
     <string name="Renderer_Select">Select Renderer</string>
     
