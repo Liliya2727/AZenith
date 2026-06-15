@@ -60,6 +60,7 @@
 
         <activity
             android:name=".MainActivity"
+            android:launchMode="singleTask" 
             android:exported="true"
             android:enabled="true">
             <intent-filter>
@@ -70,6 +71,7 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
             </intent-filter>
         </activity>
+
     
         <activity-alias
             android:name=".Launcher"
