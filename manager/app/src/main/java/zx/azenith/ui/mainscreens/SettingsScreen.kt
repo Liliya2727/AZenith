@@ -78,6 +78,23 @@ fun SettingsScreen(navController: NavController) {
     
     val restartToastText = stringResource(R.string.toast_restarting_service)
     
+    
+    var isLauncherVisible by rememberSaveable { 
+        mutableStateOf(isLauncherIconEnabled(context)) 
+    }
+    
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Inisialisasi Dialog Handlers
+    val loadingDialog = rememberLoadingDialog()
+    val uninstallDialog = rememberConfirmDialog(
+        onConfirm = {
+            Shell.cmd("sh /data/adb/modules/AZenith/uninstall.sh").submit()
+        },
+        onDismiss = {}
+    )
+    
     val createLogLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/gzip")) { uri ->
         uri?.let { destinationUri ->
             coroutineScope.launch {
@@ -113,22 +130,6 @@ fun SettingsScreen(navController: NavController) {
             }
         }
     }
-    
-    var isLauncherVisible by rememberSaveable { 
-        mutableStateOf(isLauncherIconEnabled(context)) 
-    }
-    
-    val snackbarHostState = remember { SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
-    
-    // Inisialisasi Dialog Handlers
-    val loadingDialog = rememberLoadingDialog()
-    val uninstallDialog = rememberConfirmDialog(
-        onConfirm = {
-            Shell.cmd("sh /data/adb/modules/AZenith/uninstall.sh").submit()
-        },
-        onDismiss = {}
-    )
 
     MaterialExpressiveTheme {
         Box(modifier = Modifier.fillMaxSize()) {
