@@ -61,7 +61,6 @@ static int setup_inotify_watchers(void);
 static bool process_inotify_events(int inotify_fd, DaemonContext* ctx);
 static void handle_background_apps_event(void);
 static void handle_dynamic_bypass(DaemonContext* ctx);
-static void handle_screen_and_performance(DaemonContext* ctx, int real_screen_state);
 static void apply_performance_profile(DaemonContext* ctx);
 static void apply_eco_profile(DaemonContext* ctx);
 static void apply_balanced_profile(DaemonContext* ctx);
