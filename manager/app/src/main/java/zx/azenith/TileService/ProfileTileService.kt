@@ -69,7 +69,7 @@ class ProfileTileService : TileService() {
             dialog.dismiss()
         }
         view.findViewById<android.view.View>(R.id.item_eco).setOnClickListener {
-            showApplyingToast(getString(R.string.Profile_Eco_mode))
+            showApplyingToast(getString(R.string.Profile_ECO_mode))
             applyProfile("3")
             dialog.dismiss()
         }
