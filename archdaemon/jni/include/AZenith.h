@@ -77,6 +77,19 @@ typedef struct {
     char renderer[16];
 } GameOptions;
 
+/**
+ * @struct SystemStateCache
+ * @brief Represents the synchronized state received from the Java Companion Daemon.
+ */
+typedef struct {
+    char focused_app[128];
+    char app_name[256];
+    int focused_pid;
+    int zen_mode;
+    int screen_awake;
+    int battery_saver;
+} SystemStateCache;
+
 typedef enum : char {
     LOG_DEBUG,
     LOG_INFO,
@@ -142,17 +155,7 @@ void notify(const char* title, const char* fmt, bool chrono, int timeout_ms, ...
 void toast(const char* message);
 void is_kanged(void);
 void checkstate(void);
-void read_app_status(void);
 void escape_shell_string(char *dest, const char *src, size_t max_size);
-
-// Variabel Cache
-extern char cached_focused_app[128];
-extern char cached_app_name[256];
-extern int cached_zen_mode;
-extern int cached_focused_pid; // Ditambahkan agar dikenali global
-extern int cached_screen_awake;
-extern int cached_battery_saver;
-
 char* timern(void);
 void setspid(void);
 bool return_true(void);
@@ -188,17 +191,18 @@ void set_priority(const pid_t pid);
 int uidof(pid_t pid);
 
 // App Monitor
-char* get_visible_package(void);
+char* get_visible_package(SystemStateCache* cache);
 int get_pids_of(const char* name, pid_t* pids, int max_pids);
 
 // Profiler
 extern bool (*get_screenstate)(void);
 extern bool (*get_low_power_state)(void);
-char* get_gamestart(GameOptions* options);
+char* get_gamestart(GameOptions* options, SystemStateCache* cache);
 bool get_screenstate_normal(void);
 bool get_low_power_state_normal(void);
 void run_profiler(const int profile);
 char* skip_space(char* p);
+void read_app_status(SystemStateCache* cache);
 void extract_string_value(char* dest, const char* start, size_t max_len);
 
 #endif
