@@ -545,7 +545,7 @@ int main_daemon(void) {
         bool should_exit = process_inotify_events(inotify_fd, &ctx);
         if (should_exit) break;
         
-        int real_screen_state = get_screenstate(); 
+        int real_screen_state = get_screenstate(SystemStateCache*); 
         char freqoffset[PROP_VALUE_MAX] = {0};
         
         __system_property_get("persist.sys.azenithconf.freqoffset", freqoffset);            
@@ -700,7 +700,7 @@ int main_daemon(void) {
             
             apply_performance_profile(&ctx);
 
-        } else if (ctx.is_initialize_complete && get_low_power_state()) {
+        } else if (ctx.is_initialize_complete && get_low_power_state(SystemStateCache*)) {
             apply_eco_profile(&ctx);
         } else {
             apply_balanced_profile(&ctx);
