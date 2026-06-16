@@ -77,14 +77,19 @@ pub fn sets_io(scheduler: &str) {
 }
 
 pub fn get_active_fps() -> Option<i32> {
-    let output = Command::new("dumpsys").arg("display").output().ok()?;
+    let output = Command::new("cmd")
+        .args(["display", "get-displays"])
+        .output()
+        .ok()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     for line in stdout.lines() {
-        if line.contains("mActiveMode") && line.contains("fps=") {
-            if let Some(idx) = line.find("fps=") {
-                let num_str: String = line[idx + 4..]
+        if line.contains("renderFrameRate") {
+            if let Some(idx) = line.find("renderFrameRate") {
+                let start_idx = idx + "renderFrameRate".len();
+                let num_str: String = line[start_idx..]
                     .chars()
+                    .skip_while(|c| c.is_whitespace())
                     .take_while(|c| c.is_ascii_digit() || *c == '.')
                     .collect();
                 
@@ -97,10 +102,8 @@ pub fn get_active_fps() -> Option<i32> {
     None
 }
 
-
 pub fn calibrate_sf_modes() -> HashMap<i32, i32> {
     let mut map = HashMap::new();
-    dlog("Searching the right index...");
 
     for idx in 0..=4 {
         let _ = Command::new("service")
@@ -110,22 +113,28 @@ pub fn calibrate_sf_modes() -> HashMap<i32, i32> {
         thread::sleep(Duration::from_millis(600));
 
         if let Some(current_fps) = get_active_fps() {
-
             if !map.contains_key(&current_fps) {
                 map.insert(current_fps, idx);
             }
+        } else {
+            dlog(&format!("Warn: Failed to parse FPS for SF Index {}", idx));
         }
     }
 
     let mut content = String::new();
-    for (fps, idx) in &map {
-        content.push_str(&format!("{}={}\n", fps, idx));
+    if map.is_empty() {
+        dlog("Error: Calibration failed. Mapping data is completely empty!");
+    } else {
+        for (fps, idx) in &map {
+            content.push_str(&format!("{}={}\n", fps, idx));
+        }
     }
     
     let _ = fs::create_dir_all("/data/adb/.config/AZenith/");
-    let _ = fs::write(SF_MAPPING_FILE, content);
+    if fs::write(SF_MAPPING_FILE, content).is_err() {
+        dlog("Error: Failed to save calibration data to file.");
+    }
     
-    dlog("Saved calibration data.");
     map
 }
 
