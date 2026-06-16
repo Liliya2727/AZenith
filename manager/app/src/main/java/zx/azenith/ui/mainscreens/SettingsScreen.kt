@@ -140,7 +140,7 @@ fun SettingsScreen(navController: NavController) {
                     SnackbarHost(
                         hostState = snackbarHostState,
                         modifier = Modifier.padding(
-                            bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                            bottom = 100.dp
                         )
                     ) 
                 },
@@ -342,7 +342,10 @@ fun SettingsScreen(navController: NavController) {
                     AboutDialog(dismiss = { showAboutDialog = false })
                 }
             }
-            
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                            .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp)
             RootAppDialog {
                 CustomBottomSheet(
                     visible = showLogBottomSheet,
@@ -351,7 +354,11 @@ fun SettingsScreen(navController: NavController) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .padding(
+                                horizontal = 16.dp, 
+                                vertical = 8.dp,
+                                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp
+                            )
                     ) {
                         Text(
                             text = "Logs & Diagnostics",

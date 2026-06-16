@@ -74,7 +74,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                 SnackbarHost(
                     hostState = snackbarHostState,
                     modifier = Modifier.padding(
-                        bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                        bottom = 100.dp
                     )
                 )
             },
