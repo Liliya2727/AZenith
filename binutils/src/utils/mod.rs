@@ -189,7 +189,7 @@ pub fn disable_dnd() {
 }
 
 pub fn setrefreshrates(rate: &str) {
-    let target_fps = rate_str.parse::<i32>().unwrap_or(60);
+    let target_fps = rate.parse::<i32>().unwrap_or(60);
     let mut map = HashMap::new();
     let rate_float = if rate.contains('.') {
         rate.to_string()
@@ -212,6 +212,7 @@ pub fn setrefreshrates(rate: &str) {
     let _ = Command::new("settings")
         .args(["put", "secure", "miui_refresh_rate", rate])
         .status();
+
     if let Ok(content) = fs::read_to_string(SF_MAPPING_FILE) {
         for line in content.lines() {
             let parts: Vec<&str> = line.split('=').collect();
@@ -222,17 +223,22 @@ pub fn setrefreshrates(rate: &str) {
             }
         }
     }
+
     if !map.contains_key(&target_fps) {
         map = calibrate_sf_modes();
     }
+
     if let Some(&sf_index) = map.get(&target_fps) {
         let _ = Command::new("service")
             .args(["call", "SurfaceFlinger", "1035", "i32", &sf_index.to_string()])
             .status();
+
+        dlog(&format!("Applied {}Hz via SurfaceFlinger (Index: {})", target_fps, sf_index));
     } else {
-        dlog(&format!("Warn: Failed to apply refresh rates.", target_fps));
+        dlog(&format!("Warn: Failed to apply {}Hz refresh rates.", target_fps));
     }
 }
+
 
 pub fn restartservice() {
     let _ = Command::new("pkill").args(["-9", "-f", "sys.azenith-rianixiathermalcore"]).status();
