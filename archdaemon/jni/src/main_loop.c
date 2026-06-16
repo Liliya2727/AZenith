@@ -460,14 +460,14 @@ static void apply_eco_profile(DaemonContext* ctx) {
 static void apply_balanced_profile(DaemonContext* ctx) {
     if (ctx->cur_mode == BALANCED_PROFILE) return;
     
-    toast("Applying Balanced profile");
+    toast("Applying Balanced Profile");
 
     ctx->cur_mode = BALANCED_PROFILE;               
     ctx->need_profile_checkup = false;
     
     
     notify("Balanced Profile", "System is now at Optimal state", false, 0);
-    log_zenith(LOG_INFO, "Applying Balanced profile");
+    log_zenith(LOG_INFO, "Applying balanced profile");
 
     if (ctx->saved_refresh_rate > 0) {
         apply_dynamic_refresh_rate(ctx->saved_refresh_rate);
