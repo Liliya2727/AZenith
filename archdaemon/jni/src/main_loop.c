@@ -28,6 +28,7 @@ pid_t game_pids[MAX_GAME_PIDS] = {0};
 int game_pid_count = 0;
 bool is_restarting_renderer = false;
 GameOptions opts;
+SystemStateCache current_system_cache;
 
 /**
  * @struct DaemonContext
@@ -229,7 +230,7 @@ static void handle_background_apps_event(void) {
         }
 
         if (new_count == 0) {
-            if (strcmp(cached_focused_app, gamestart) == 0 || is_restarting_renderer) {
+            if (strcmp(current_system_cache.focused_app, gamestart) == 0 || is_restarting_renderer) {
                 log_zenith(LOG_INFO, "Game %s PIDs dropped (Restarting). Waiting to respawn...", active_app_name ? active_app_name : gamestart);
             } else {
                 log_zenith(LOG_INFO, "Game %s completely closed. Exiting performance mode...", active_app_name ? active_app_name : gamestart);
@@ -264,7 +265,7 @@ static bool process_inotify_events(int inotify_fd, DaemonContext* ctx) {
                 struct inotify_event *event = (struct inotify_event *)ptr;
                 if (event->len > 0) {
                     if (strcmp(event->name, "app_status") == 0) {
-                        read_app_status();
+                        read_app_status(&current_system_cache);
                     } else if (strcmp(event->name, "background_apps") == 0) {
                         handle_background_apps_event();
                         if (gamestart == NULL) ctx->need_profile_checkup = true;
@@ -360,7 +361,7 @@ static void apply_performance_profile(DaemonContext* ctx) {
     }
              
     if (ctx->saved_zen_mode < 0) {
-        ctx->saved_zen_mode = cached_zen_mode;
+        ctx->saved_zen_mode = current_system_cache.zen_mode;
     }
 
     if (IS_TRUE(opts.dnd_on_gaming)) {
@@ -528,7 +529,7 @@ int main_daemon(void) {
     int inotify_fd = setup_inotify_watchers();
     
     log_zenith(LOG_INFO, "Reading initial applist status...");
-    read_app_status();
+    read_app_status(&current_system_cache);
     log_zenith(LOG_INFO, "Successfully read applist. Starting main monitoring loop...");
 
     /* Main Daemon Loop */
@@ -590,14 +591,14 @@ int main_daemon(void) {
         }
 
         // Focused Game Resolution
-        char* current_focused_game = get_gamestart(&opts);
+        char* current_focused_game = get_gamestart(&opts, &current_system_cache);
         if (current_focused_game) {
             if (!gamestart || strcmp(gamestart, current_focused_game) != 0) {
                 if (gamestart) free(gamestart);
                 if (active_app_name) free(active_app_name);
                 
                 gamestart = current_focused_game;
-                active_app_name = strdup(cached_app_name); 
+                active_app_name = strdup(current_system_cache.app_name); 
                 
                 log_zenith(LOG_INFO, "New game detected: %s", active_app_name ? active_app_name : gamestart);
                 game_pid_count = 0;
@@ -664,7 +665,7 @@ int main_daemon(void) {
             }
 
             if (game_pid_count == 0) [[clang::unlikely]] {
-                if (strcmp(cached_focused_app, gamestart) == 0) {
+                if (strcmp(current_system_cache.focused_app, gamestart) == 0) {
                     game_pid_count = get_pids_of(gamestart, game_pids, MAX_GAME_PIDS);
                 }
 
