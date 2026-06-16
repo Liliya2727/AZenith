@@ -379,8 +379,8 @@ fun SettingsScreen(navController: NavController) {
                                 },
                                 {
                                     ExpressiveListItem(
-                                        headlineContent = { Text("Send Logs") },
-                                        supportingContent = { Text("Share the generated diagnostic archive") },
+                                        headlineContent = { Text("Send Logs", color = MaterialTheme.colorScheme.onSurface) },
+                                        supportingContent = { Text("Share the generated diagnostic archive", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                                         leadingContent = { LeadingIcon(Icons.Rounded.Share) },
                                         onClick = {
                                             showLogBottomSheet = false
