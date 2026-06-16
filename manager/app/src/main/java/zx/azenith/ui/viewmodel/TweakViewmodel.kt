@@ -85,6 +85,7 @@ class TweakViewModel : ViewModel() {
         "persist.sys.azenithconf.preloadbudget",
         "persist.sys.azenith.custom_default_cpu_gov",
         "persist.sys.azenith.custom_powersave_cpu_gov",
+        "persist.sys.azenith.custom_performance_cpu_gov",
         "persist.sys.azenith.custom_default_balanced_IO",
         "persist.sys.azenith.custom_performance_IO",
         "persist.sys.azenith.custom_powersave_IO"
@@ -242,10 +243,12 @@ class TweakViewModel : ViewModel() {
                 PropertyUtils.get("persist.sys.azenith.default_cpu_gov")
             }
             val currentPowersave = PropertyUtils.get("persist.sys.azenith.custom_powersave_cpu_gov")
+            val currentPerformance = PropertyUtils.get("persist.sys.azenith.custom_performance_cpu_gov")
 
             availableGovernors = govs
             defaultGovIndex = govs.indexOf(currentDefault).coerceAtLeast(0)
             powersaveGovIndex = govs.indexOf(currentPowersave).coerceAtLeast(0)
+            performanceGovIndex = govs.indexOf(currentPerformance).coerceAtLeast(0)
         } else {
             availableGovernors = emptyList() // Fallback jika gagal baca sysfs
         }
@@ -308,6 +311,18 @@ class TweakViewModel : ViewModel() {
         val selectedGov = availableGovernors?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             PropertyUtils.set("persist.sys.azenith.custom_powersave_cpu_gov", selectedGov)
+            val currentProfile = Shell.cmd("cat /data/adb/.config/AZenith/API/current_profile").exec().out.firstOrNull()?.trim()
+            if (currentProfile == "3") {
+                Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsgov $selectedGov").exec()
+            }
+        }
+    }
+    
+    fun updatePerformanceGovernor(index: Int) {
+        powersaveGovIndex = index
+        val selectedGov = availableGovernors?.getOrNull(index) ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            PropertyUtils.set("persist.sys.azenith.custom_performance_cpu_gov", selectedGov)
             val currentProfile = Shell.cmd("cat /data/adb/.config/AZenith/API/current_profile").exec().out.firstOrNull()?.trim()
             if (currentProfile == "3") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsgov $selectedGov").exec()
