@@ -27,6 +27,7 @@ suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File
     }
     
     val script = """
+        saveToDownloads="$saveToDownloads"
         TMP_DIR="/data/local/tmp/az_logs_tmp"
         rm -rf ${'$'}TMP_DIR
         mkdir -p ${'$'}TMP_DIR/debug
@@ -72,7 +73,8 @@ suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File
     """.trimIndent()
     
     // Jalankan skrip dengan membawa parameter boolean ke environment shell
-    val result = Shell.cmd(script).env("saveToDownloads", saveToDownloads.toString()).exec()
+    val result = Shell.cmd(script).exec()
+
     
     // File object yang akan dicek dari sisi User/App space (bukan dari sisi Root)
     // Jika di Downloads, petakan kembali ke jalur publik agar MediaScanner bisa mendeteksi
