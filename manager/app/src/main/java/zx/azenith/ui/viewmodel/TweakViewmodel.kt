@@ -37,6 +37,7 @@ class TweakViewModel : ViewModel() {
     var availableGovernors by mutableStateOf<List<String>?>(null)
     var defaultGovIndex by mutableStateOf<Int?>(null)
     var powersaveGovIndex by mutableStateOf<Int?>(null)
+    var performanceGovIndex by mutableStateOf<Int?>(null)
     var freqOffsetIndex by mutableStateOf<Float?>(null)
     val offsetLabels = listOf("Disabled", "90%", "80%", "70%", "60%", "50%", "40%")
 
