@@ -196,6 +196,10 @@ fun MainScreen(fromTileType: String? = null) {
             coroutineScope.launch {
                 val cacheApk = File(context.cacheDir, "AZenith_update.apk")
                 
+                if (cacheApk.exists()) {
+                    cacheApk.delete()
+                }
+                
                 val copyCmd = """
                     cp /data/adb/modules/AZenith/AZenith.apk ${cacheApk.absolutePath}
                     chmod 644 ${cacheApk.absolutePath}
