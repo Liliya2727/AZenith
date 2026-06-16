@@ -15,37 +15,39 @@
  */
 
 #include <AZenith.h>
-#include <sys/inotify.h>
-#include <poll.h>
 #include <string.h>
 
-char cached_focused_app[128] = {0};
-char cached_app_name[256] = "Unknown";
-int cached_focused_pid = 0;
-int cached_zen_mode = 0; 
-int cached_screen_awake = 1;
-int cached_battery_saver = 0;
+/**
+ * @brief Reads the app status file and populates the SystemStateCache.
+ * @param cache Pointer to the SystemStateCache structure.
+ */
+void read_app_status(SystemStateCache* cache) {
+    if (!cache) return;
 
-void read_app_status() {
     FILE *fp = fopen("/data/adb/.config/AZenith/app_status", "r");
     if (!fp) return;
     
     char line[256];
 
+    // Zero-out or set default values before reading new state
+    memset(cache->focused_app, 0, sizeof(cache->focused_app));
+    strncpy(cache->app_name, "Unknown", sizeof(cache->app_name) - 1);
+    
     while (fgets(line, sizeof(line), fp)) {
         if (strncmp(line, "focused_app ", 12) == 0) {
             int uid;
-            sscanf(line + 12, "%127s %d %d", cached_focused_app, &cached_focused_pid, &uid);
+            sscanf(line + 12, "%127s %d %d", cache->focused_app, &cache->focused_pid, &uid);
         } else if (strncmp(line, "screen_awake ", 13) == 0) {
-            sscanf(line + 13, "%d", &cached_screen_awake);
+            sscanf(line + 13, "%d", &cache->screen_awake);
         } else if (strncmp(line, "battery_saver ", 14) == 0) {
-            sscanf(line + 14, "%d", &cached_battery_saver);
+            sscanf(line + 14, "%d", &cache->battery_saver);
         } else if (strncmp(line, "zen_mode ", 9) == 0) {
-            sscanf(line + 9, "%d", &cached_zen_mode);
+            sscanf(line + 9, "%d", &cache->zen_mode);
         } else if (strncmp(line, "app_name ", 9) == 0) {
-            strncpy(cached_app_name, line + 9, sizeof(cached_app_name) - 1);
-            cached_app_name[strcspn(cached_app_name, "\n")] = 0;
+            strncpy(cache->app_name, line + 9, sizeof(cache->app_name) - 1);
+            cache->app_name[strcspn(cache->app_name, "\n")] = 0; // Strip newline
         }
     }
+    
     fclose(fp);
 }

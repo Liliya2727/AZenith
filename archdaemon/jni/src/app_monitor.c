@@ -16,19 +16,23 @@
 
 #include <AZenith.h>
 
-/************************************************************
- * Function Name   : get_visible_package
- * Description     : Reads the currently visible (foreground) app
- *                   from the cached app status.
- * Returns.        : Returns a malloc()'d string containing the package name,
- *                   or NULL if none is found. Caller must free().
- ************************************************************/
-char* get_visible_package(void) {
-    if (!get_screenstate())
+/**
+ * @brief Reads the currently visible (foreground) app from the cached state.
+ * @param cache Pointer to the SystemStateCache containing current states.
+ * @return Returns a malloc()'d string containing the package name, or NULL if none is found.
+ *         Caller must free() the returned pointer.
+ */
+char* get_visible_package(SystemStateCache* cache) {
+    if (!cache) return NULL;
+
+    // Check if the screen is actually awake via the function pointer
+    // (Assuming the function pointer signature is updated to take cache as argument)
+    if (!get_screenstate(cache))
         return NULL;
 
-    if (strlen(cached_focused_app) > 0) {
-        return strdup(cached_focused_app);
+    if (strlen(cache->focused_app) > 0) {
+        return strdup(cache->focused_app);
     }
+    
     return NULL;
 }

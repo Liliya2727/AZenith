@@ -17,18 +17,38 @@
 #include <AZenith.h>
 #include <time.h>
 
-bool (*get_screenstate)(void) = get_screenstate_normal;
-bool (*get_low_power_state)(void) = get_low_power_state_normal;
+// Forward declarations for default state handlers
+bool get_screenstate_normal(SystemStateCache* cache);
+bool get_low_power_state_normal(SystemStateCache* cache);
 
-/***********************************************************************************
- * Function Name      : run_profiler
- * Inputs             : int - 0 for perfcommon
- * 1 for performance
- * 2 for normal
- * 3 for powersave
- * Returns            : None
- * Description        : Switch to specified performance profile.
- ***********************************************************************************/
+// Function pointers initialized to default handlers
+bool (*get_screenstate)(SystemStateCache*) = get_screenstate_normal;
+bool (*get_low_power_state)(SystemStateCache*) = get_low_power_state_normal;
+
+/**
+ * @brief Retrieves the current screen wakefulness state from cache.
+ * @param cache Pointer to the system state cache.
+ * @return true if screen was awake, false otherwise.
+ */
+bool get_screenstate_normal(SystemStateCache* cache) {
+    if (!cache) return true; // Default to awake if cache is missing
+    return cache->screen_awake != 0;
+}
+
+/**
+ * @brief Checks if the device's Battery Saver mode is enabled from cache.
+ * @param cache Pointer to the system state cache.
+ * @return true if Battery Saver is enabled, false otherwise.
+ */
+bool get_low_power_state_normal(SystemStateCache* cache) {
+    if (!cache) return false;
+    return cache->battery_saver != 0;
+}
+
+/**
+ * @brief Switch to specified performance profile.
+ * @param profile 0 for perfcommon, 1 for performance, 2 for balanced, 3 for powersave.
+ */
 void run_profiler(const int profile) {
     is_kanged();
 
@@ -39,6 +59,7 @@ void run_profiler(const int profile) {
     snprintf(time_str, sizeof(time_str), "%02d:%02d:%02d", tm.tm_hour, tm.tm_min, tm.tm_sec);
 
     if (profile == 1) {
+        // Assuming game_pids and gamestart are still managed globally or passed correctly
         pid_t main_pid = (game_pid_count > 0) ? game_pids[0] : 0;
         write2file(GAME_INFO, false, false, "%s %d %d\nTime: %s\n", gamestart, main_pid, uidof(main_pid), time_str);
         write2file(GAME_INFO_APP, false, false, "%s %d %d\nTime: %s\n", gamestart, main_pid, uidof(main_pid), time_str);
@@ -49,23 +70,19 @@ void run_profiler(const int profile) {
 
     write2file(PROFILE_MODE, false, false, "%d\n", profile);
     write2file(PROFILE_MODE_APP, false, false, "%d\n", profile);
+    
+    // Suggestion for future: Replace systemv with native property setting for performance
     (void)systemv("sys.azenith-profilesettings %d", profile);
 }
 
-
-/***********************************************************************************
- * Function Name      : get_gamestart
- * Inputs             : None
- * Returns            : char* (dynamically allocated string with the game package name)
- * Description        : Searches for the currently visible application that matches
- * any package name listed in gamelist.
- * This helps identify if a specific game is running in the foreground.
- * Uses dumpsys to retrieve visible apps and filters by packages
- * listed in Gamelist.
- * Note               : Caller is responsible for freeing the returned string.
- ***********************************************************************************/
-char* get_gamestart(GameOptions* options) {
-    char* pkg = get_visible_package();
+/**
+ * @brief Searches for the currently visible app that matches a game in the gamelist.
+ * @param options Pointer to extract game specific options.
+ * @param cache Pointer to system state cache to determine visibility.
+ * @return Malloc-ed string containing package name, or NULL. Caller must free.
+ */
+char* get_gamestart(GameOptions* options, SystemStateCache* cache) {
+    char* pkg = get_visible_package(cache);
     if (!pkg) return NULL;
 
     FILE* fp = fopen(GAMELIST, "r");
@@ -103,12 +120,14 @@ char* get_gamestart(GameOptions* options) {
     char key[256];
     snprintf(key, sizeof(key), "\"%s\"", pkg);
     char* entry = strstr(buf, key);
+    
     if (!entry) {
         free(buf);
         free(pkg);
         return NULL;
     }
 
+    // Populate GameOptions if matched
     if (options) {
         char* p;
 
@@ -132,31 +151,8 @@ char* get_gamestart(GameOptions* options) {
     }
 
     free(buf);
-    char* ret_pkg = strdup(pkg);
-    free(pkg);
-    return ret_pkg;
-}
-
-/***********************************************************************************
- * Function Name      : get_screenstate_normal
- * Inputs             : None
- * Returns            : bool - true if screen was awake
- * false if screen was asleep
- * Description        : Retrieves the current screen wakefulness state from cache.
- * Note               : Never call this function, call get_screenstate() instead.
- ***********************************************************************************/
-bool get_screenstate_normal(void) {
-    return cached_screen_awake != 0;
-}
-
-/***********************************************************************************
- * Function Name      : get_low_power_state_normal
- * Inputs             : None
- * Returns            : bool - true if Battery Saver is enabled
- * false otherwise
- * Description        : Checks if the device's Battery Saver mode is enabled from cache.
- * Note               : Never call this function, call get_low_power_state() instead.
- ***********************************************************************************/
-bool get_low_power_state_normal(void) {
-    return cached_battery_saver != 0;
+    
+    // Since 'pkg' is already a dynamically allocated string from get_visible_package,
+    // we can return it directly instead of duplicating it again.
+    return pkg; 
 }
