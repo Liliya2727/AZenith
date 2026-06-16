@@ -108,17 +108,17 @@ int handle_profile(int argc, char** argv) {
              systemv("setprop persist.sys.azenithconf.litemode 0");
         }
         run_profiler(PERFORMANCE_PROFILE);
-        notify("Performance Profile", "System is now at Powerful state", "false", 0);
+        notify("Performance Profile", "System is now at Powerful state", false, 0);
         printf("Applying Performance Profile\n");        
     } else if (!strcmp(profile, "2")) {
         log_zenith(LOG_INFO, "Applying Balanced Profile via execute");
         run_profiler(BALANCED_PROFILE);
-        notify("Balanced Profile", "System is now at Optimal state", "false", 0);
+        notify("Balanced Profile", "System is now at Optimal state", false, 0);
         printf("Applying Balanced Profile\n");
     } else if (!strcmp(profile, "3")) {
         log_zenith(LOG_INFO, "Applying Eco Mode via execute");
         run_profiler(ECO_MODE);
-        notify("ECO Mode", "System is now at Endurance state", "false", 0);
+        notify("ECO Mode", "System is now at Endurance state", false, 0);
         printf("Applying Eco Mode\n");
     } else {
         fprintf(stderr, "Invalid profiles.\n");
