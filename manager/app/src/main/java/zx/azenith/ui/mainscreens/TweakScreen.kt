@@ -110,6 +110,7 @@ fun TweakScreen(
     var showRendererDialog by remember { mutableStateOf(false) }
     var showRefreshRateDialog by remember { mutableStateOf(false) }
     var pendingRestoreData by remember { mutableStateOf<Map<String, String>?>(null) }
+    var showRestoreDialog by remember { mutableStateOf(false) }
     
     var showBackupOptionsDialog by remember { mutableStateOf(false) }
     var optBackupTweaks by remember { mutableStateOf(true) }
@@ -150,6 +151,7 @@ fun TweakScreen(
                         pendingRestoreResult = result
                         optRestoreTweaks = result.hasTweaks
                         optRestoreApplist = result.hasApplist
+                        showRestoreDialog = true 
                     } else {
                         confirmDialog.showConfirm("Restore Failed", result.message, "OK", null)
                     }
@@ -157,6 +159,7 @@ fun TweakScreen(
             }
         }
     }
+
 
     LaunchedEffect(Unit) {
         viewModel.loadAllConfiguration(context)
@@ -581,23 +584,27 @@ fun TweakScreen(
             }
         }
 
-        // 👇 3. Custom Dialog Restore (Sesuai gayamu)
-        if (pendingRestoreResult != null) {
-            val result = pendingRestoreResult!!
-            val socName = zx.azenith.ui.util.BackupManager.getSocName(result.socType)
-            val currentSocType = PropertyUtils.get("persist.sys.azenithdebug.soctype")
-            val isSocMismatch = result.socType != currentSocType
-
-            RootAppDialog {
-                CustomContentDialog(
-                    visible = true, // Selalu true selama pendingRestoreResult != null
-                    title = "Restore Configuration",
-                    confirmText = "Restore",
-                    confirmEnabled = (optRestoreTweaks && !isSocMismatch) || optRestoreApplist,
-                    onDismiss = { pendingRestoreResult = null },
-                    onConfirm = {
+        // 👇 Hapus 'if (pendingRestoreResult != null)', ganti pakai RootAppDialog langsung
+        RootAppDialog {
+            CustomContentDialog(
+                visible = showRestoreDialog, // 👈 Terikat pada state boolean
+                title = "Restore Configuration",
+                confirmText = "Restore",
+                confirmEnabled = pendingRestoreResult?.let { result ->
+                    val currentSocType = PropertyUtils.get("persist.sys.azenithdebug.soctype")
+                    val isSocMismatch = result.socType != currentSocType
+                    (optRestoreTweaks && !isSocMismatch) || optRestoreApplist
+                } ?: false,
+                onDismiss = { showRestoreDialog = false }, // 👈 Memicu animasi tutup
+                onConfirm = {
+                    showRestoreDialog = false // 👈 Memicu animasi tutup
+                    
+                    // Lanjut eksekusi restore dari data yang masih tersimpan
+                    pendingRestoreResult?.let { result ->
                         val dataToRestore = result.data
-                        pendingRestoreResult = null
+                        val currentSocType = PropertyUtils.get("persist.sys.azenithdebug.soctype")
+                        val isSocMismatch = result.socType != currentSocType
+                        
                         if (dataToRestore != null) {
                             scope.launch {
                                 loadingDialog.withLoading {
@@ -610,7 +617,14 @@ fun TweakScreen(
                             }
                         }
                     }
-                ) {
+                }
+            ) {
+                // Konten dialog dibungkus let agar null-safe
+                pendingRestoreResult?.let { result ->
+                    val socName = zx.azenith.ui.util.BackupManager.getSocName(result.socType)
+                    val currentSocType = PropertyUtils.get("persist.sys.azenithdebug.soctype")
+                    val isSocMismatch = result.socType != currentSocType
+        
                     Column {
                         Text(
                             text = "Backup content detected. Select what to restore:",
@@ -627,7 +641,7 @@ fun TweakScreen(
                             )
                             Spacer(Modifier.height(8.dp))
                         }
-
+        
                         if (result.hasTweaks) {
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { if (!isSocMismatch) optRestoreTweaks = !optRestoreTweaks }) {
                                 Checkbox(
@@ -648,7 +662,7 @@ fun TweakScreen(
                 }
             }
         }
-
+        
         RootAppDialog {
             RendererDialog(
                 show = showRendererDialog,

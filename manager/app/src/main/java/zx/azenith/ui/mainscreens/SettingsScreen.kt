@@ -54,6 +54,11 @@ import zx.azenith.BuildConfig
 import zx.azenith.R
 import zx.azenith.ui.util.*
 import zx.azenith.ui.component.* 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 fun isLauncherIconEnabled(context: Context): Boolean {
     val pkg = context.packageManager
@@ -72,6 +77,42 @@ fun SettingsScreen(navController: NavController) {
     var showLogBottomSheet by remember { mutableStateOf(false) }
     
     val restartToastText = stringResource(R.string.toast_restarting_service)
+    
+    val createLogLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/gzip")) { uri ->
+        uri?.let { destinationUri ->
+            coroutineScope.launch {
+                val success = loadingDialog.withLoading {
+                    // 1. Suruh skrip bikin log di cache internal dulu (saveToDownloads = false)
+                    val logFile = dumpDiagnosticLogs(context, saveToDownloads = false)
+                    
+                    if (logFile != null && logFile.exists()) {
+                        // 2. Kopi dari cache ke lokasi yang dipilih user
+                        try {
+                            context.contentResolver.openOutputStream(destinationUri)?.use { outputStream ->
+                                logFile.inputStream().use { inputStream ->
+                                    inputStream.copyTo(outputStream)
+                                }
+                            }
+                            true
+                        } catch (e: Exception) {
+                            false
+                        } finally {
+                            // 3. Bersihin sisa log di cache
+                            logFile.delete() 
+                        }
+                    } else {
+                        false
+                    }
+                }
+                
+                if (success) {
+                    snackbarHostState.showSnackbar("Logs saved successfully!")
+                } else {
+                    snackbarHostState.showSnackbar("Failed to save logs.")
+                }
+            }
+        }
+    }
     
     var isLauncherVisible by rememberSaveable { 
         mutableStateOf(isLauncherIconEnabled(context)) 
@@ -322,22 +363,16 @@ fun SettingsScreen(navController: NavController) {
                             content = listOf(
                                 {
                                     ExpressiveListItem(
-                                        headlineContent = { Text("Save to Downloads") },
-                                        supportingContent = { Text("Save compressed logs directly to internal storage") },
-                                        leadingContent = { LeadingIcon(Icons.Rounded.Download) },
+                                        headlineContent = { Text("Save Diagnostics Log", color = MaterialTheme.colorScheme.onSurface) },
+                                        supportingContent = { Text("Save compressed logs to a specific folder", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                        leadingContent = { LeadingIcon(Icons.Rounded.FolderSpecial) }, // Ganti ikon biar matching
                                         onClick = {
                                             showLogBottomSheet = false 
-                                            coroutineScope.launch {
-                                                val success = loadingDialog.withLoading {
-                                                    dumpDiagnosticLogs(context, saveToDownloads = true) != null
-                                                }
-                                                
-                                                if (success) {
-                                                    snackbarHostState.showSnackbar("Logs successfully saved to Download folder")
-                                                } else {
-                                                    snackbarHostState.showSnackbar("Failed to gather logs")
-                                                }
-                                            }
+                                            
+                                            // Panggil File Picker dengan nama default file
+                                            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+                                            val fileName = "AZenith_Logs_$timeStamp.tar.gz"
+                                            createLogLauncher.launch(fileName)
                                         }
                                     )
                                 },
