@@ -342,10 +342,7 @@ fun SettingsScreen(navController: NavController) {
                     AboutDialog(dismiss = { showAboutDialog = false })
                 }
             }
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
-                            .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp)
+            
             RootAppDialog {
                 CustomBottomSheet(
                     visible = showLogBottomSheet,
@@ -354,20 +351,21 @@ fun SettingsScreen(navController: NavController) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
                             .padding(
-                                horizontal = 16.dp, 
-                                vertical = 8.dp,
                                 bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp
                             )
                     ) {
                         Text(
                             text = "Logs & Diagnostics",
                             style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(bottom = 24.dp, start = 16.dp)
                         )
                         
                         ExpressiveList(
+                            modifier = Modifier.padding(horizontal = 16.dp),
                             content = listOf(
                                 {
                                     ExpressiveListItem(
