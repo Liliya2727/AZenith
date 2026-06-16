@@ -183,13 +183,13 @@ void disable_bypass() {
 }
 
 /***********************************************************************************
- * Function Name      : enable_bypass_logic
+ * Function Name      : enable_bypass
  * Inputs             : None
  * Returns            : int - 0 on success, -1 if unsupported, -2 if node not found
  * Description        : Sets the active bypass node to its 'on' value and locks it 
  * to bypass the battery charging circuit.
  ***********************************************************************************/
-int enable_bypass_logic() {
+int enable_bypass() {
     char path_key[PROP_VALUE_MAX];
     __system_property_get("persist.sys.azenithconf.bypasspath", path_key);
 

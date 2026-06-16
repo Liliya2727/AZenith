@@ -133,7 +133,7 @@ int echo_to_file(const char* path, const char* value, int lock);
 int is_charging();
 int read_current_ma();
 void disable_bypass();
-int enable_bypass_logic();
+int enable_bypass();
 int check_bypass_compatibility();
 int get_battery_level();
 
