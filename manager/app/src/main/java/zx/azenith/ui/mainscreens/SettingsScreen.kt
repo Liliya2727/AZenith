@@ -19,39 +19,41 @@
 package zx.azenith.ui.mainscreens
 
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.ComponentName
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
-import android.content.pm.PackageManager
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import android.content.ComponentName
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.material.icons.rounded.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.topjohnwu.superuser.Shell
+import kotlinx.coroutines.launch
 import zx.azenith.BuildConfig
 import zx.azenith.R
-import zx.azenith.ui.component.* import androidx.compose.ui.res.stringResource
-import androidx.compose.material3.LargeFlexibleTopAppBar
-import kotlinx.coroutines.launch
+import zx.azenith.ui.util.*
+import zx.azenith.ui.component.* 
 
 fun isLauncherIconEnabled(context: Context): Boolean {
     val pkg = context.packageManager
@@ -62,15 +64,14 @@ fun isLauncherIconEnabled(context: Context): Boolean {
 
 @Composable
 fun SettingsScreen(navController: NavController) {
-    
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val listState = rememberLazyListState()
     
     var showAboutDialog by remember { mutableStateOf(false) }
+    var showLogBottomSheet by remember { mutableStateOf(false) }
     
     val restartToastText = stringResource(R.string.toast_restarting_service)
-    val logSavedToastText = stringResource(R.string.toast_log_saved)
     
     var isLauncherVisible by rememberSaveable { 
         mutableStateOf(isLauncherIconEnabled(context)) 
@@ -79,6 +80,8 @@ fun SettingsScreen(navController: NavController) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     
+    // Inisialisasi Dialog Handlers
+    val loadingDialog = rememberLoadingDialog()
     val uninstallDialog = rememberConfirmDialog(
         onConfirm = {
             Shell.cmd("sh /data/adb/modules/AZenith/uninstall.sh").submit()
@@ -111,15 +114,12 @@ fun SettingsScreen(navController: NavController) {
                         bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                     )
                 ) {
-                    
                     item {
                         Spacer(modifier = Modifier.height(16.dp)) 
                         
                         ExpressiveList(
                             content = listOf(
-                                {
-                                    AppInfoHeaderContent()
-                                },
+                                { AppInfoHeaderContent() },
                                 {
                                     ExpressiveListItem(
                                         onClick = { navController.navigate("color_palette") },
@@ -247,15 +247,7 @@ fun SettingsScreen(navController: NavController) {
                                 },
                                 {
                                     ExpressiveListItem(
-                                        onClick = {
-                                            Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf saveLog").submit { result ->
-                                                if (result.isSuccess) {
-                                                    coroutineScope.launch {
-                                                        snackbarHostState.showSnackbar(logSavedToastText)
-                                                    }
-                                                }
-                                            }
-                                        },
+                                        onClick = { showLogBottomSheet = true },
                                         headlineContent = { Text(stringResource(R.string.save_log)) },
                                         supportingContent = { Text(stringResource(R.string.save_log_desc)) },
                                         leadingContent = { LeadingIcon(icon = Icons.Filled.Save) },
@@ -299,11 +291,80 @@ fun SettingsScreen(navController: NavController) {
                 }
             }
             
+            // Registrasi Dialog Host di Root Box
+            LoadingDialogHost(handle = loadingDialog)
             ConfirmDialogHost(handle = uninstallDialog)
 
             if (showAboutDialog) {
                 RootAppDialog {
                     AboutDialog(dismiss = { showAboutDialog = false })
+                }
+            }
+            
+            RootAppDialog {
+                CustomBottomSheet(
+                    visible = showLogBottomSheet,
+                    onDismiss = { showLogBottomSheet = false }
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "Logs & Diagnostics",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
+                        )
+                        
+                        ExpressiveList(
+                            content = listOf(
+                                {
+                                    ExpressiveListItem(
+                                        headlineContent = { Text("Save to Downloads") },
+                                        supportingContent = { Text("Save compressed logs directly to internal storage") },
+                                        leadingContent = { LeadingIcon(Icons.Rounded.Download) },
+                                        onClick = {
+                                            showLogBottomSheet = false 
+                                            coroutineScope.launch {
+                                                val success = loadingDialog.withLoading {
+                                                    dumpDiagnosticLogs(context, saveToDownloads = true) != null
+                                                }
+                                                
+                                                if (success) {
+                                                    snackbarHostState.showSnackbar("Logs successfully saved to Download folder")
+                                                } else {
+                                                    snackbarHostState.showSnackbar("Failed to gather logs")
+                                                }
+                                            }
+                                        }
+                                    )
+                                },
+                                {
+                                    ExpressiveListItem(
+                                        headlineContent = { Text("Send Logs") },
+                                        supportingContent = { Text("Share the generated diagnostic archive") },
+                                        leadingContent = { LeadingIcon(Icons.Rounded.Share) },
+                                        onClick = {
+                                            showLogBottomSheet = false
+                                            coroutineScope.launch {
+                                                val logFile = loadingDialog.withLoading {
+                                                    dumpDiagnosticLogs(context, saveToDownloads = false)
+                                                }
+                                                
+                                                if (logFile != null) {
+                                                    shareLogArchive(context, logFile)
+                                                } else {
+                                                    snackbarHostState.showSnackbar("Failed to gather logs")
+                                                }
+                                            }
+                                        }
+                                    )
+                                }
+                            )
+                        )
+                    }
                 }
             }
         }
