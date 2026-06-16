@@ -268,6 +268,17 @@ static bool process_inotify_events(int inotify_fd, DaemonContext* ctx) {
                     } else if (strcmp(event->name, "background_apps") == 0) {
                         handle_background_apps_event();
                         if (gamestart == NULL) ctx->need_profile_checkup = true;
+                    } else if (strcmp(event->name, "current_profile") == 0) {
+                        FILE* fp_prof = fopen(PROFILE_MODE, "r");
+                        if (fp_prof) {
+                            char prof_val[8] = {0};
+                            if (fgets(prof_val, sizeof(prof_val), fp_prof)) {
+                                trim_newline(prof_val);
+                                int ext_profile = atoi(prof_val);
+                                ctx->cur_mode = (ProfileMode)ext_profile;
+                            }
+                            fclose(fp_prof);
+                        }
                     } else if (strcmp(event->name, "update") == 0) {
                         log_zenith(LOG_INFO, "Module update detected, exiting.");
                         notify("Module Update", "Please reboot your device to complete module update.", false, 0);
@@ -344,8 +355,6 @@ static void apply_performance_profile(DaemonContext* ctx) {
     ctx->cur_mode = PERFORMANCE_PROFILE;
     ctx->need_profile_checkup = false;
     
-    EXECUTE("Performance Profile", run_profiler(PERFORMANCE_PROFILE));
-    
     notify("Performance Profile", "Running at %s", false, 0, active_app_name ? active_app_name : gamestart);
     log_zenith(LOG_INFO, "Applying performance profile for %s", active_app_name ? active_app_name : gamestart);
 
@@ -378,6 +387,8 @@ static void apply_performance_profile(DaemonContext* ctx) {
             ctx->dnd_enabled = true;
         }
     }
+    
+    EXECUTE("Performance Profile", run_profiler(PERFORMANCE_PROFILE));
 
     if (!IS_DEFAULT(opts.refresh_rate)) {
         int rr = atoi(opts.refresh_rate);
@@ -413,7 +424,6 @@ static void apply_eco_profile(DaemonContext* ctx) {
     ctx->cur_mode = ECO_MODE;                
     ctx->need_profile_checkup = false;
 
-    EXECUTE("ECO Mode", run_profiler(ECO_MODE));
     
     notify("ECO Mode", "System is now at Endurance state", false, 0);
     log_zenith(LOG_INFO, "Applying ECO Mode");
@@ -429,7 +439,7 @@ static void apply_eco_profile(DaemonContext* ctx) {
         }
         ctx->dnd_enabled = false;
     }
-    ctx->saved_zen_mode = -1; 
+    ctx->saved_zen_mode = -1;
 
     if (strlen(ctx->saved_renderer) > 0) {
         char current_now[PROP_VALUE_MAX] = {0};
@@ -440,6 +450,8 @@ static void apply_eco_profile(DaemonContext* ctx) {
         }
         memset(ctx->saved_renderer, 0, sizeof(ctx->saved_renderer));
     }
+    
+    EXECUTE("ECO Mode", run_profiler(ECO_MODE));
 }
 
 /**
@@ -453,7 +465,6 @@ static void apply_balanced_profile(DaemonContext* ctx) {
     ctx->cur_mode = BALANCED_PROFILE;               
     ctx->need_profile_checkup = false;
     
-    EXECUTE("Balanced Profile", run_profiler(BALANCED_PROFILE));
     
     notify("Balanced Profile", "System is now at Optimal state", false, 0);
     log_zenith(LOG_INFO, "Applying Balanced profile");
@@ -470,12 +481,7 @@ static void apply_balanced_profile(DaemonContext* ctx) {
         ctx->dnd_enabled = false;
     }
     ctx->saved_zen_mode = -1; 
-
-    if (!ctx->is_initialize_complete) {
-        notify("Daemon Info", "AZenith is running successfully", false, 60000);
-        ctx->is_initialize_complete = true;
-    }
-
+    
     if (strlen(ctx->saved_renderer) > 0) {
         char current_now[PROP_VALUE_MAX] = {0};
         __system_property_get("debug.hwui.renderer", current_now);
@@ -485,6 +491,14 @@ static void apply_balanced_profile(DaemonContext* ctx) {
         }
         memset(ctx->saved_renderer, 0, sizeof(ctx->saved_renderer));
     }
+    
+    EXECUTE("Balanced Profile", run_profiler(BALANCED_PROFILE));
+
+    if (!ctx->is_initialize_complete) {
+        notify("Daemon Info", "AZenith is running successfully", false, 60000);
+        ctx->is_initialize_complete = true;
+    }
+
 }
 
 /**
@@ -583,8 +597,22 @@ int main_daemon(void) {
         if (ctx.is_initialize_complete) {
             if (strcmp(ctx.prev_ai_state, ai_state) != 0) {
                 log_zenith(LOG_INFO, "Dynamic profile toggled, Reapplying Balanced Profiles");
+                ctx.cur_mode = PERFCOMMON;
                 apply_balanced_profile(&ctx);
                 strcpy(ctx.prev_ai_state, ai_state);
+                if (strcmp(ai_state, "1") == 0) {
+                    // Clear gamestart if user still ingame by any chance
+                    if (gamestart) {
+                        free(gamestart);
+                        gamestart = NULL;
+                    }
+                    if (active_app_name) {
+                        free(active_app_name);
+                        active_app_name = NULL;
+                    }
+                    game_pid_count = 0;
+                    ctx.need_profile_checkup = true;
+                }
             }
             if (strcmp(ai_state, "0") == 0) continue;
         }
