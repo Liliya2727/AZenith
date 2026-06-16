@@ -320,7 +320,7 @@ class TweakViewModel : ViewModel() {
     }
     
     fun updatePerformanceGovernor(index: Int) {
-        powersaveGovIndex = index
+        performanceGovIndex = index
         val selectedGov = availableGovernors?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             PropertyUtils.set("persist.sys.azenith.custom_performance_cpu_gov", selectedGov)
