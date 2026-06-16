@@ -59,17 +59,17 @@ class ProfileTileService : TileService() {
     
         view.findViewById<android.view.View>(R.id.item_performance).setOnClickListener {
             // 👇 Tampilkan info nama profil yang sedang dipasang (misal ngambil string resource)
-            showApplyingToast(getString(R.string.profile_performance))
+            showApplyingToast(getString(R.string.Profile_Performance))
             applyProfile("1")
             dialog.dismiss()
         }
         view.findViewById<android.view.View>(R.id.item_balanced).setOnClickListener {
-            showApplyingToast(getString(R.string.profile_balanced))
+            showApplyingToast(getString(R.string.Profile_Balanced))
             applyProfile("2")
             dialog.dismiss()
         }
         view.findViewById<android.view.View>(R.id.item_eco).setOnClickListener {
-            showApplyingToast(getString(R.string.profile_eco))
+            showApplyingToast(getString(R.string.Profile_Eco_mode))
             applyProfile("3")
             dialog.dismiss()
         }
