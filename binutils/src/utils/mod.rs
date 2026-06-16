@@ -3,8 +3,12 @@ use std::process::Command;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use glob::glob;
+use std::collections::HashMap;
+use std::io::{BufRead, BufReader};
 
 pub const MY_PATH: &str = "/system/bin:/system/xbin:/data/adb/ap/bin:/data/adb/ksu/bin:/data/adb/magisk:/debug_ramdisk:/sbin:/sbin/su:/su/bin:/su/xbin:/data/data/com.termux/files/usr/bin";
+const SF_MAPPING_FILE: &str = "/data/adb/.config/AZenith/util_mapping.dat";
+
 
 pub fn getprop(key: &str) -> String {
     if let Ok(output) = Command::new("getprop").arg(key).output() {
@@ -73,6 +77,59 @@ pub fn sets_io(scheduler: &str) {
     dlog(&format!("Set current IO Scheduler to {}", scheduler));
 }
 
+pub fn get_active_fps() -> Option<i32> {
+    let output = Command::new("dumpsys").arg("display").output().ok()?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    for line in stdout.lines() {
+        if line.contains("mActiveMode") || line.contains("fps=") {
+            if let Some(idx) = line.find("fps=") {
+                let num_str: String = line[idx + 4..]
+                    .chars()
+                    .take_while(|c| c.is_ascii_digit() || *c == '.')
+                    .collect();
+                
+                if let Ok(fps) = num_str.parse::<f32>() {
+                    return Some(fps.round() as i32);
+                }
+            }
+        }
+    }
+    None
+}
+
+pub fn calibrate_sf_modes() -> HashMap<i32, i32> {
+    let mut map = HashMap::new();
+    dlog("Searching the right index...");
+
+    for idx in 0..=4 {
+        let _ = Command::new("service")
+            .args(["call", "SurfaceFlinger", "1035", "i32", &idx.to_string()])
+            .status();
+
+        thread::sleep(Duration::from_millis(600));
+
+        if let Some(current_fps) = get_active_fps() {
+
+            if !map.contains_key(&current_fps) {
+                map.insert(current_fps, idx);
+                az_log(&format!("Kalibrasi: Ditemukan {}Hz pada index {}", current_fps, idx));
+            }
+        }
+    }
+
+    let mut content = String::new();
+    for (fps, idx) in &map {
+        content.push_str(&format!("{}={}\n", fps, idx));
+    }
+    
+    let _ = fs::create_dir_all("/data/adb/.config/AZenith/");
+    let _ = fs::write(SF_MAPPING_FILE, content);
+    
+    dlog("Saved calibration data.");
+    map
+}
+
 pub fn setthermalcore(state: &str) {
     if state == "1" {
         // Run in background
@@ -132,6 +189,8 @@ pub fn disable_dnd() {
 }
 
 pub fn setrefreshrates(rate: &str) {
+    let target_fps = rate_str.parse::<i32>().unwrap_or(60);
+    let mut map = HashMap::new();
     let rate_float = if rate.contains('.') {
         rate.to_string()
     } else {
@@ -153,8 +212,27 @@ pub fn setrefreshrates(rate: &str) {
     let _ = Command::new("settings")
         .args(["put", "secure", "miui_refresh_rate", rate])
         .status();
+    if let Ok(content) = fs::read_to_string(SF_MAPPING_FILE) {
+        for line in content.lines() {
+            let parts: Vec<&str> = line.split('=').collect();
+            if parts.len() == 2 {
+                if let (Ok(fps), Ok(idx)) = (parts[0].parse::<i32>(), parts[1].parse::<i32>()) {
+                    map.insert(fps, idx);
+                }
+            }
+        }
+    }
+    if !map.contains_key(&target_fps) {
+        map = calibrate_sf_modes();
+    }
+    if let Some(&sf_index) = map.get(&target_fps) {
+        let _ = Command::new("service")
+            .args(["call", "SurfaceFlinger", "1035", "i32", &sf_index.to_string()])
+            .status();
+    } else {
+        dlog(&format!("Warn: Failed to apply refresh rates.", target_fps));
+    }
 }
-
 
 pub fn restartservice() {
     let _ = Command::new("pkill").args(["-9", "-f", "sys.azenith-rianixiathermalcore"]).status();
