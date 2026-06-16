@@ -195,8 +195,8 @@ char* get_visible_package(SystemStateCache* cache);
 int get_pids_of(const char* name, pid_t* pids, int max_pids);
 
 // Profiler
-extern bool (*get_screenstate)(void);
-extern bool (*get_low_power_state)(void);
+extern bool (*get_screenstate)(SystemStateCache*);
+extern bool (*get_low_power_state)(SystemStateCache*);
 char* get_gamestart(GameOptions* options, SystemStateCache* cache);
 bool get_screenstate_normal(SystemStateCache* cache);
 bool get_low_power_state_normal(SystemStateCache* cache);

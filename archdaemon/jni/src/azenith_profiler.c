@@ -17,10 +17,6 @@
 #include <AZenith.h>
 #include <time.h>
 
-// Forward declarations for default state handlers
-bool get_screenstate_normal(SystemStateCache* cache);
-bool get_low_power_state_normal(SystemStateCache* cache);
-
 // Function pointers initialized to default handlers
 bool (*get_screenstate)(SystemStateCache*) = get_screenstate_normal;
 bool (*get_low_power_state)(SystemStateCache*) = get_low_power_state_normal;
