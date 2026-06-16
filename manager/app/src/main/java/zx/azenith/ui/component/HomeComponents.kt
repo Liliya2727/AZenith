@@ -980,7 +980,7 @@ fun RunningGameCard(
                     // Wavy border mengelilingi icon
                     CircularWavyProgressIndicator(
                         modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.onSecondary// Sesuaikan warnanya kalau perlu
+                        color = MaterialTheme.colorScheme.onSecondaryContainer// Sesuaikan warnanya kalau perlu
                     )
                     
                     // Render Icon Game di tengah Wavy Indicator
