@@ -364,8 +364,8 @@ fun SettingsScreen(navController: NavController) {
                             content = listOf(
                                 {
                                     ExpressiveListItem(
-                                        headlineContent = { Text("Save Diagnostics Log", color = MaterialTheme.colorScheme.onSurface) },
-                                        supportingContent = { Text("Save compressed logs to a specific folder", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                        headlineContent = { Text("Save Log", color = MaterialTheme.colorScheme.onSurface) },
+                                        supportingContent = { Text("Save compressed logs to a folder", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                                         leadingContent = { LeadingIcon(Icons.Rounded.FolderSpecial) }, // Ganti ikon biar matching
                                         onClick = {
                                             showLogBottomSheet = false 
@@ -380,7 +380,7 @@ fun SettingsScreen(navController: NavController) {
                                 {
                                     ExpressiveListItem(
                                         headlineContent = { Text("Send Logs", color = MaterialTheme.colorScheme.onSurface) },
-                                        supportingContent = { Text("Share the generated diagnostic archive", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                        supportingContent = { Text("Share compressed logs to other apps", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                                         leadingContent = { LeadingIcon(Icons.Rounded.Share) },
                                         onClick = {
                                             showLogBottomSheet = false
