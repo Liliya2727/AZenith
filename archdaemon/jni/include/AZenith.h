@@ -143,6 +143,7 @@ void toast(const char* message);
 void is_kanged(void);
 void checkstate(void);
 void read_app_status(void);
+void escape_shell_string(char *dest, const char *src, size_t max_size);
 
 // Variabel Cache
 extern char cached_focused_app[128];
