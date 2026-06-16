@@ -23,6 +23,7 @@ import zx.azenith.R
 import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.RootUtils
 import android.app.AlertDialog
+import android.widget.Toast
 
 class ProfileTileService : TileService() {
 
@@ -57,14 +58,18 @@ class ProfileTileService : TileService() {
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
     
         view.findViewById<android.view.View>(R.id.item_performance).setOnClickListener {
+            // 👇 Tampilkan info nama profil yang sedang dipasang (misal ngambil string resource)
+            showApplyingToast(getString(R.string.profile_performance))
             applyProfile("1")
             dialog.dismiss()
         }
         view.findViewById<android.view.View>(R.id.item_balanced).setOnClickListener {
+            showApplyingToast(getString(R.string.profile_balanced))
             applyProfile("2")
             dialog.dismiss()
         }
         view.findViewById<android.view.View>(R.id.item_eco).setOnClickListener {
+            showApplyingToast(getString(R.string.profile_eco))
             applyProfile("3")
             dialog.dismiss()
         }
@@ -80,11 +85,20 @@ class ProfileTileService : TileService() {
         }
     }
     
+    private fun showApplyingToast(profileName: String) {
+        // Menampilkan pesan "Applying [Nama Profil] Profile..."
+        val message = "Applying $profileName Profile"
+        Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT).show()
+    }
+    
     private fun applyProfile(nextProfile: String) {
         Shell.cmd("$DAEMON_BIN -p $nextProfile").submit { result ->
             if (result.isSuccess) {
                 PropertyUtils.set(PROFILE_PROP, nextProfile)
                 updateTileState()
+                
+                // Opsional: Jika ingin memberi tahu kalau profil sudah sukses berganti total
+                // Toast.makeText(applicationContext, "Profile applied successfully", Toast.LENGTH_SHORT).show()
             }
         }
     }
