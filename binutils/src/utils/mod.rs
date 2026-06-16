@@ -4,7 +4,6 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use glob::glob;
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader};
 
 pub const MY_PATH: &str = "/system/bin:/system/xbin:/data/adb/ap/bin:/data/adb/ksu/bin:/data/adb/magisk:/debug_ramdisk:/sbin:/sbin/su:/su/bin:/su/xbin:/data/data/com.termux/files/usr/bin";
 const SF_MAPPING_FILE: &str = "/data/adb/.config/AZenith/util_mapping.dat";
@@ -82,7 +81,7 @@ pub fn get_active_fps() -> Option<i32> {
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     for line in stdout.lines() {
-        if line.contains("mActiveMode") || line.contains("fps=") {
+        if line.contains("mActiveMode") && line.contains("fps=") {
             if let Some(idx) = line.find("fps=") {
                 let num_str: String = line[idx + 4..]
                     .chars()
@@ -97,6 +96,7 @@ pub fn get_active_fps() -> Option<i32> {
     }
     None
 }
+
 
 pub fn calibrate_sf_modes() -> HashMap<i32, i32> {
     let mut map = HashMap::new();
@@ -113,7 +113,6 @@ pub fn calibrate_sf_modes() -> HashMap<i32, i32> {
 
             if !map.contains_key(&current_fps) {
                 map.insert(current_fps, idx);
-                az_log(&format!("Kalibrasi: Ditemukan {}Hz pada index {}", current_fps, idx));
             }
         }
     }
