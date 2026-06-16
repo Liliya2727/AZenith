@@ -363,7 +363,7 @@ fun SettingsScreen(navController: NavController) {
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(bottom = 24.dp, start = 16.dp)
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
                         )
                         
                         ExpressiveList(

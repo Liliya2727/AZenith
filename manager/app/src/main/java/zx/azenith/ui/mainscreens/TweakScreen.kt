@@ -383,6 +383,7 @@ fun TweakScreen(
                 item {
                     if (viewModel.defaultGovIndex != null && 
                         viewModel.powersaveGovIndex != null && 
+                        viewModel.performanceGovIndex != null && 
                         viewModel.freqOffsetIndex != null) {
                         ExpressiveList(
                             content = listOf(
@@ -394,6 +395,16 @@ fun TweakScreen(
                                         items = viewModel.availableGovernors ?: emptyList(),
                                         selectedIndex = viewModel.defaultGovIndex!!,
                                         onItemSelected = { viewModel.updateDefaultGovernor(it) }
+                                    )
+                                },
+                                {
+                                    ExpressiveDropdownItem(
+                                        icon = Icons.Outlined.OfflineBolt,
+                                        title = "Performance CPU Governor",
+                                        summary = "Governor used in Performance Profiles",
+                                        items = viewModel.availableGovernors ?: emptyList(),
+                                        selectedIndex = viewModel.performanceGovIndex!!,
+                                        onItemSelected = { viewModel.updatePerformanceGovernor(it) }
                                     )
                                 },
                                 {

@@ -6,21 +6,14 @@ use crate::chipsets::unisoc::*;
 use crate::chipsets::tensor::*;
 
 pub fn performance_profile() {
-    let lite_mode = get_litemode();
-
-    if !lite_mode {
-        setgov("performance");
-        dlog("Applying global governor: performance");
-    } else {
-        let big_policy = get_biggest_cluster();
-        if !big_policy.is_empty() {
-            let path = format!("/sys/devices/system/cpu/cpufreq/{}/scaling_governor", big_policy);
-            chmod(&path, 0o644);
-            let _ = fs::write(&path, "performance");
-            chmod(&path, 0o444);
-            dlog(&format!("Applying performance only to biggest cluster: {}", big_policy));
-        }
+    let mut performance_gov = getprop("persist.sys.azenith.custom_performance_cpu_gov");
+    if performance_gov.is_empty() {
+        performance_gov = "powersave".to_string();
     }
+    setgov(&performance_gov);
+    dlog(&format!("Applying governor to : {}", performance_gov));
+    
+    let lite_mode = get_litemode();
 
     let custom_perf_io = getprop("persist.sys.azenith.custom_performance_IO");
     if !custom_perf_io.is_empty() {
@@ -415,6 +408,9 @@ pub fn initialize() {
 
     if getprop("persist.sys.azenith.custom_powersave_cpu_gov").is_empty() {
         setprop_cmd("persist.sys.azenith.custom_powersave_cpu_gov", &default_gov);
+    }
+    if getprop("persist.sys.azenith.custom_performance_cpu_gov").is_empty() {
+        setprop_cmd("persist.sys.azenith.custom_performance_cpu_gov", &default_gov);
     }
     dlog("Parsing CPU Governor complete");
 
