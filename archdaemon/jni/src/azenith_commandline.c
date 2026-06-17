@@ -51,6 +51,8 @@ void print_help() {
         "\n"
         "     -cbc,  --checkbypasschg   Check bypass charge compatibility\n"
         "\n"
+        "     -bpl,  --bypasspathlist   Show all embedded bypass charging paths\n"  // <--- Tambahkan baris ini
+        "\n"
         "     -V,    --version          Show AZenith current version\n"
         "\n"
         "     -h,    --help             Display this help message and exit\n"
@@ -58,11 +60,12 @@ void print_help() {
         "Examples:\n"
         "     sys.azenith-service --run\n"
         "     sys.azenith-service --profile 2\n"
-        "     sys.azenith-service --checkbypasschg\n"
+        "     sys.azenith-service --bypasspathlist\n"                        // <--- Tambahkan baris ini
         "     sys.azenith-service --help\n"
         , MODULE_VERSION
     );
 }
+
 
 /***********************************************************************************
  * Function Name      : handle_profile

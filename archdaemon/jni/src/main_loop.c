@@ -323,7 +323,7 @@ static void handle_dynamic_bypass(DaemonContext* ctx) {
 
             if (strcmp(bypass_toggle, "1") == 0 && is_charging()) {
                 if (current_battery >= threshold) {
-                    if (read_current_ma() > 10) {
+                    if (read_current_ma() > 50) {
                         enable_bypass();
                         if (!ctx->bypass_applied) {
                             log_zenith(LOG_INFO, "Bypass Enabled: Battery (%d%%) >= Threshold (%d%%)", current_battery, threshold);

@@ -278,3 +278,34 @@ int get_battery_level() {
     }
     return capacity;
 }
+
+/***********************************************************************************
+ * Function Name      : print_bypass_path_list
+ * Inputs             : None
+ * Returns            : None
+ * Description        : Displays all hardcoded bypass nodes and checks if they
+ * exist on the current device.
+ ***********************************************************************************/
+void print_bypass_path_list() {
+    printf("\n\033[36m[AZenith Available Bypass Path List]\033[0m\n");
+    printf("------------------------------------------------------------------------------------------\n");
+    printf(" %-30s | %-10s | %s\n", "NODE NAME", "STATUS", "SYSFS/PROC PATH");
+    printf("------------------------------------------------------------------------------------------\n");
+
+    int total_nodes = sizeof(bypass_list) / sizeof(BypassNode);
+    int found_count = 0;
+
+    for (int i = 0; i < total_nodes; i++) {
+        if (access(bypass_list[i].path, F_OK) == 0) {
+            // Berwarna Hijau jika path ada di device
+            printf(" \033[1;32m%-30s\033[0m | \033[32m[FOUND]\033[0m    | %s\n", bypass_list[i].name, bypass_list[i].path);
+            found_count++;
+        } else {
+            // Berwarna Abu-abu gelap jika path tidak ada
+            printf(" \033[90m%-30s | [NOT FOUND] | %s\033[0m\n", bypass_list[i].name, bypass_list[i].path);
+        }
+    }
+
+    printf("------------------------------------------------------------------------------------------\n");
+    printf("\033[36m[SUMMARY]\033[0m Total Nodes: %d | Available on this device: \033[1;32m%d\033[0m\n\n", total_nodes, found_count);
+}
