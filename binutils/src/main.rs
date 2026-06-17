@@ -30,7 +30,9 @@ fn main() {
         match function {
             "setsgov" => if args.len() > 2 { setsgov(&args[2]) },
             "setsIO" => if args.len() > 2 { sets_io(&args[2]) },
+            "setsMaliGov" => if args.len() > 2 { sets_mali_gov(&args[2]) },
             "setthermalcore" => if args.len() > 2 { setthermalcore(&args[2]) },
+            "checkmalipath" => if args.len() > 2 { check_mali_path(&args[2]) },
             "FSTrim" => fstrim(),
             "enableDND" => enable_dnd(),
             "disableDND" => disable_dnd(),
