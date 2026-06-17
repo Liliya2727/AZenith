@@ -30,7 +30,6 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -42,8 +41,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -68,7 +70,6 @@ data class ShellOutput(
 
 @Composable
 fun BypassChargeCheckScreen(navController: NavController) {
-    // UPDATED: Menggunakan exitUntilCollapsedScrollBehavior agar serasi dengan LargeFlexibleTopAppBar
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val colorScheme = MaterialTheme.colorScheme
     val context = LocalContext.current
@@ -86,10 +87,13 @@ fun BypassChargeCheckScreen(navController: NavController) {
     val logs = remember { mutableStateListOf<ShellOutput>() }
     var isRunning by remember { mutableStateOf(false) }
     var hasRunDiagnosis by remember { mutableStateOf(false) }
-    val listState = rememberLazyListState()
+    
+    // Scroll State untuk konsol
+    val logScrollState = rememberScrollState()
 
     // 1. Ambil status properti awal & list path via argumen -bpl ke daemon
-    fun refreshBypassData() {
+    // Ditambah callback onComplete untuk mengeksekusi dialog setelah selesai scan
+    fun refreshBypassData(onComplete: ((List<Pair<String, String>>) -> Unit)? = null) {
         activePath = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "UNSUPPORTED")
         
         scope.launch(Dispatchers.IO) {
@@ -103,6 +107,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
             }
             withContext(Dispatchers.Main) {
                 availablePaths = parsedList
+                onComplete?.invoke(parsedList)
             }
         }
     }
@@ -129,7 +134,21 @@ fun BypassChargeCheckScreen(navController: NavController) {
     // Auto scroll konsol log pas diagnosis jalan
     LaunchedEffect(logs.size) {
         if (logs.isNotEmpty()) {
-            listState.animateScrollToItem(logs.lastIndex)
+            logScrollState.animateScrollTo(logScrollState.maxValue)
+        }
+    }
+
+    // 3. Modifier pencegah bocornya scroll konsol ke parent LazyColumn
+    val blockParentScroll = remember {
+        object : NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                // Return "available" artinya kita memakan semua sisa scroll biar gak nyampai ke parent
+                return available
+            }
         }
     }
 
@@ -151,7 +170,24 @@ fun BypassChargeCheckScreen(navController: NavController) {
             val binaryPath = "/data/adb/modules/AZenith/system/bin/sys.azenith-service"
             Shell.cmd("$binaryPath -cbc 2>&1").to(callbackList).submit {
                 isRunning = false
-                refreshBypassData()
+                refreshBypassData { paths ->
+                    // Memunculkan dialog jika node bypass ditemukan setelah scan selesai
+                    if (paths.isNotEmpty()) {
+                        scope.launch {
+                            val result = confirmDialogHandle.awaitConfirm(
+                                title = "Diagnosis Complete",
+                                content = "Found working nodes for your device! Do you want to automatically apply the recommended node [${paths.first().first}]?",
+                                confirm = "Apply",
+                                dismiss = "Dismiss"
+                            )
+                            if (result == ConfirmResult.Confirmed) {
+                                val targetNode = paths.first().first
+                                PropertyUtils.set("persist.sys.azenithconf.bypasspath", targetNode)
+                                activePath = targetNode
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -184,8 +220,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
             }
         ) { innerPadding ->
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize(),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
                     top = innerPadding.calculateTopPadding(),
                     start = 16.dp,
@@ -208,10 +243,13 @@ fun BypassChargeCheckScreen(navController: NavController) {
                             val isUnsupported = activePath == "UNSUPPORTED" || activePath.isEmpty()
                             ExpressiveListItem(
                                 headlineContent = { 
-                                    Text(
-                                        text = if (isUnsupported) "Bypass Charging Disabled" else activePath,
-                                        fontWeight = FontWeight.Bold
-                                    ) 
+                                    // Animasi perubahan teks saat target berubah
+                                    AnimatedContent(targetState = activePath, label = "activePathAnim") { path ->
+                                        Text(
+                                            text = if (path == "UNSUPPORTED" || path.isEmpty()) "Bypass Charging Disabled" else path,
+                                            fontWeight = FontWeight.Bold
+                                        ) 
+                                    }
                                 },
                                 supportingContent = { 
                                     Text(if (isUnsupported) "No active bypass node mapped to system properties." else "Active charging gateway node bypass channel.") 
@@ -255,16 +293,26 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                         fontWeight = FontWeight.Bold
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = if (!isChargerConnected) "Power cable detached. Plug in charger first to unlock diagnostics."
-                                               else if (isRunning) "Probing kernel sysfs power rails... Please stand by."
-                                               else "Safely test your device compatibility and isolate current values.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = if (!isChargerConnected) colorScheme.error else colorScheme.onSurfaceVariant
-                                    )
+                                    // Animasi perubahan teks deteksi charger / loading
+                                    AnimatedContent(
+                                        targetState = Triple(isChargerConnected, isRunning, hasRunDiagnosis),
+                                        label = "chargerStatusAnim"
+                                    ) { (connected, running, _) ->
+                                        Text(
+                                            text = if (!connected) "Power cable detached. Plug in charger first to unlock diagnostics."
+                                                   else if (running) "Probing kernel sysfs power rails... Please stand by."
+                                                   else "Safely test your device compatibility and isolate current values.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (!connected) colorScheme.error else colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                                 
-                                if (isRunning) {
+                                AnimatedVisibility(
+                                    visible = isRunning,
+                                    enter = fadeIn() + scaleIn(),
+                                    exit = fadeOut() + scaleOut()
+                                ) {
                                     LoadingIndicator(modifier = Modifier.size(28.dp))
                                 }
                             }
@@ -298,12 +346,18 @@ fun BypassChargeCheckScreen(navController: NavController) {
                 }
 
                 // Live Console Terminal Output
-                if (logs.isNotEmpty()) {
-                    item {
+                // Animasi saat container konsol dimunculkan/disembunyikan
+                item {
+                    AnimatedVisibility(
+                        visible = logs.isNotEmpty() || isRunning,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(max = 280.dp),
+                                .heightIn(max = 280.dp)
+                                .nestedScroll(blockParentScroll), // Cegah bocor scroll ke parent
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(containerColor = Color(0xFF0F141C))
                         ) {
@@ -311,14 +365,16 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .horizontalScroll(rememberScrollState())
                                         .padding(12.dp)
                                 ) {
-                                    LazyColumn(
-                                        state = listState,
-                                        modifier = Modifier.fillMaxSize()
+                                    // Diganti ke Column + verticalScroll agar terisolasi lebih rapi dibanding LazyColumn di dalam LazyColumn
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .verticalScroll(logScrollState)
+                                            .horizontalScroll(rememberScrollState())
                                     ) {
-                                        items(logs) { line ->
+                                        logs.forEach { line ->
                                             Text(
                                                 text = line.text.parseAsAnsiAnnotatedString(),
                                                 style = MaterialTheme.typography.labelSmall.copy(
