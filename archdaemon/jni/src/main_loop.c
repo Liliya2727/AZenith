@@ -265,6 +265,7 @@ static bool process_inotify_events(int inotify_fd, DaemonContext* ctx) {
                 if (event->len > 0) {
                     if (strcmp(event->name, "app_status") == 0) {
                         read_app_status(&current_system_cache);
+                        ctx->need_profile_checkup = true;
                     } else if (strcmp(event->name, "background_apps") == 0) {
                         handle_background_apps_event();
                         if (gamestart == NULL) ctx->need_profile_checkup = true;
@@ -581,7 +582,7 @@ int main_daemon(void) {
         struct pollfd pfd_check = { inotify_fd, POLLIN, 0 };
         bool has_event = (poll(&pfd_check, 1, 0) > 0);
 
-        if (ctx.is_initialize_complete && ctx.cur_mode != PERFORMANCE_PROFILE && !has_event && !pending_game_pid) {
+        if (ctx.is_initialize_complete && ctx.cur_mode != PERFORMANCE_PROFILE && !has_event && !pending_game_pid && !ctx.need_profile_checkup) {
             continue;
         }
 
