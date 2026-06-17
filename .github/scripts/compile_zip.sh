@@ -18,6 +18,7 @@ need_integrity=(
 	"mainfiles/libs"
 	"mainfiles/META-INF"
 	"mainfiles/service.sh"
+	"mainfiles/preferenced-tweaks.sh"
 	"mainfiles/post-fs-data.sh"
 	"mainfiles/action.sh"
 	"mainfiles/uninstall.sh"
