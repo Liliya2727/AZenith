@@ -975,7 +975,7 @@ fun ExpressiveTile(
                     
                     // Tampilkan indikator saat loading
                     if (isLoading) {
-                        CircularWavyProgressIndicator(
+                        CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
                             color = colorScheme.primary
                         )

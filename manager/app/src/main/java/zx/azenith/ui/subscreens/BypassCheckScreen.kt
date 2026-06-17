@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import zx.azenith.R
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import zx.azenith.ui.component.*
 import zx.azenith.ui.util.PropertyUtils
@@ -253,136 +254,151 @@ fun BypassChargeCheckScreen(navController: NavController) {
                     )
                 }
                 item {
-                    BypassCheckTitle(text = "Diagnostics")
-                    
-                    Surface(
-                        shape = RoundedCornerShape(26.dp),
-                        color = colorScheme.surfaceColorAtElevation(1.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = if (isRunning) "Diagnostic in Progress..." else "Scan Working Nodes",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    AnimatedContent(
-                                        targetState = Triple(isChargerConnected, isRunning, hasRunDiagnosis),
-                                        label = "chargerStatusAnim"
-                                    ) { (connected, running, _) ->
-                                        Text(
-                                            text = if (!connected) "Power cable detached. Plug in charger first to run diagnostics."
-                                                   else if (running) "Checking devices current Charging... Please wait."
-                                                   else "Safely test your device compatibility.",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = if (!connected) colorScheme.error else colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                                
-                                AnimatedVisibility(
-                                    visible = isRunning,
-                                    enter = fadeIn() + scaleIn(),
-                                    exit = fadeOut() + scaleOut()
-                                ) {
-                                    // PERUBAHAN DI SINI: Diganti jadi CircularProgressIndicator
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(28.dp),
-                                        strokeWidth = 3.dp,
-                                        color = colorScheme.primary
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Button(
-                                onClick = {
-                                    scope.launch {
-                                        val result = confirmDialogHandle.awaitConfirm(
-                                            title = "Start Hardware Test?",
-                                            content = "AZenith will perform current drop tests across embedded battery nodes. This safe diagnostics sequence loops for several seconds.",
-                                            confirm = "Begin Check",
-                                            dismiss = "Cancel"
-                                        )
-                                        if (result == ConfirmResult.Confirmed) {
-                                            runCompatibilityCheck()
-                                        }
-                                    }
-                                },
-                                enabled = isChargerConnected && !isRunning,
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                Icon(Icons.Rounded.PlayArrow, null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Launch Compatibility Check")
-                            }
-                        }
-                    }
-                }
-                
-                
-
-                item {
-                    AnimatedVisibility(
-                        visible = !isRunning && hasRunDiagnosis && logs.isNotEmpty() && !isConsoleClosed,
-                        enter = expandVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy)) + fadeIn(),
-                        exit = shrinkVertically() + fadeOut()
-                    ) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 280.dp)
-                                .nestedScroll(blockParentScroll), 
+                    Column {
+                        BypassCheckTitle(text = "Diagnostics")
+                        
+                        Surface(
                             shape = RoundedCornerShape(26.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F141C))
+                            color = colorScheme.surfaceColorAtElevation(1.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Box(modifier = Modifier.fillMaxSize()) {
-                                SelectionContainer {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(12.dp)
-                                            .padding(top = 28.dp)
-                                            .verticalScroll(logScrollState)
-                                            .horizontalScroll(rememberScrollState())
-                                    ) {
-                                        logs.forEach { line ->
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            AnimatedContent(
+                                                targetState = isRunning,
+                                                label = "scanIconAnim"
+                                            ) { running ->
+                                                Icon(
+                                                    imageVector = if (running) Icons.Rounded.Memory else Icons.Rounded.ManageSearch,
+                                                    contentDescription = "Scan Icon",
+                                                    tint = colorScheme.primary,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(8.dp))
                                             Text(
-                                                text = line.text.parseAsAnsiAnnotatedString(),
-                                                style = MaterialTheme.typography.labelSmall.copy(
-                                                    fontFamily = FontFamily.Monospace,
-                                                    lineHeight = 16.sp
-                                                ),
-                                                color = Color.White,
-                                                softWrap = false
+                                                text = if (isRunning) "Diagnostic in Progress..." else "Scan Working Nodes",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        AnimatedContent(
+                                            targetState = Triple(isChargerConnected, isRunning, hasRunDiagnosis),
+                                            label = "chargerStatusAnim"
+                                        ) { (connected, running, _) ->
+                                            Text(
+                                                text = if (!connected) "Power cable detached. Plug in charger first to run diagnostics."
+                                                       else if (running) "Checking devices current Charging... Please wait."
+                                                       else "Safely test your device compatibility.",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = if (!connected) colorScheme.error else colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
+                                    
+                                    AnimatedVisibility(
+                                        visible = isRunning,
+                                        enter = fadeIn() + scaleIn(),
+                                        exit = fadeOut() + scaleOut()
+                                    ) {
+                                        CircularWavyProgressIndicator(
+                                            modifier = Modifier.size(28.dp),
+                                            strokeWidth = 3.dp,
+                                            color = colorScheme.primary
+                                        )
+                                    }
                                 }
-                                
-                                IconButton(
-                                    onClick = { isConsoleClosed = true },
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .padding(4.dp)
-                                        .size(28.dp)
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Button(
+                                    onClick = {
+                                        scope.launch {
+                                            val result = confirmDialogHandle.awaitConfirm(
+                                                title = "Start Hardware Test?",
+                                                content = "AZenith will perform current drop tests across embedded battery nodes. This safe diagnostics sequence loops for several seconds.",
+                                                confirm = "Begin Check",
+                                                dismiss = "Cancel"
+                                            )
+                                            if (result == ConfirmResult.Confirmed) {
+                                                runCompatibilityCheck()
+                                            }
+                                        }
+                                    },
+                                    enabled = isChargerConnected && !isRunning,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Close,
-                                        contentDescription = "Close Logs",
-                                        tint = Color.White.copy(alpha = 0.6f),
-                                        modifier = Modifier.size(20.dp)
-                                    )
+                                    Icon(Icons.Rounded.PlayArrow, null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Launch Compatibility Check")
+                                }
+                            }
+                        }
+
+                        AnimatedVisibility(
+                            visible = !isRunning && hasRunDiagnosis && logs.isNotEmpty() && !isConsoleClosed,
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut()
+                        ) {
+                            // Penting: Spacer & Card dibungkus Column biar animasinya barengan & gak numpuk
+                            Column {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(max = 280.dp)
+                                        .nestedScroll(blockParentScroll), 
+                                    shape = RoundedCornerShape(26.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F141C))
+                                ) {
+                                    Box(modifier = Modifier.fillMaxSize()) {
+                                        SelectionContainer {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .padding(12.dp)
+                                                    .padding(top = 28.dp)
+                                                    .verticalScroll(logScrollState)
+                                                    .horizontalScroll(rememberScrollState())
+                                            ) {
+                                                logs.forEach { line ->
+                                                    Text(
+                                                        text = line.text.parseAsAnsiAnnotatedString(),
+                                                        style = MaterialTheme.typography.labelSmall.copy(
+                                                            fontFamily = FontFamily.Monospace,
+                                                            lineHeight = 16.sp
+                                                        ),
+                                                        color = Color.White,
+                                                        softWrap = false
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        
+                                        IconButton(
+                                            onClick = { isConsoleClosed = true },
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd)
+                                                .padding(4.dp)
+                                                .size(28.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Close,
+                                                contentDescription = "Close Logs",
+                                                tint = Color.White.copy(alpha = 0.6f),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -408,10 +424,11 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                 {
                                     val isSelected = activePath == pathNode.first
                                     
-                                    // PERUBAHAN DI SINI: Menggunakan tween dengan FastOutSlowInEasing biar smooth
+                                    // PERUBAHAN DI SINI: Pakai LinearOutSlowInEasing & durasi 200ms
+                                    // Efeknya: Langsung ngegas di awal (cepet), lalu melambat mulus di akhir
                                     val textScale by animateFloatAsState(
                                         targetValue = if (isSelected) 1.08f else 1.0f,
-                                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                                        animationSpec = tween(durationMillis = 200, easing = LinearOutSlowInEasing),
                                         label = "textScaleAnim"
                                     )
 
@@ -454,11 +471,11 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                             )
                                         },
                                         trailingContent = {
-                                            // PERUBAHAN DI SINI: Animasi checkmark ikut diubah jadi smooth tanpa bounce
+                                            // PERUBAHAN DI SINI: Animasi checkmark disamakan biar ikutan sat-set
                                             AnimatedVisibility(
                                                 visible = isSelected,
-                                                enter = scaleIn(tween(durationMillis = 300, easing = FastOutSlowInEasing)) + fadeIn(tween(300)),
-                                                exit = scaleOut(tween(durationMillis = 200)) + fadeOut(tween(200))
+                                                enter = scaleIn(tween(durationMillis = 200, easing = LinearOutSlowInEasing)) + fadeIn(tween(200)),
+                                                exit = scaleOut(tween(durationMillis = 150)) + fadeOut(tween(150))
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Rounded.CheckCircle,
