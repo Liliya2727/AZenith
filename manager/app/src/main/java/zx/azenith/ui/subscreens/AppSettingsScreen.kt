@@ -343,7 +343,7 @@ fun AppSettingsScreen(
                             content = listOf( 
                                {
                                    ExpressiveInfoCard(
-                                       supportingContent = { Text(text = "Per-App Refresh rates wouldn't work If you use Disable Vsync module or using Refresh rates tool such as Scene apps because of surfaceFlinger call, AZenith couldn't overwrite those settings until user reboot the device.") },
+                                       supportingContent = { Text(text = "By using per-app refresh rate, your screen refresh rate is fully handled by AZenith.") },
                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
                                        containerColor = colorScheme.surfaceContainerLow,
                                        onClick = {}
