@@ -250,7 +250,6 @@ int check_bypass_compatibility() {
             printf("\n\033[1;32m[SUCCESS]\033[0m Found working node: \033[1m%s\033[0m\n", bypass_list[i].name);
             printf("\033[32m[INFO]\033[0m Process finished. %d nodes skipped.\n", skipped_count);
             
-            __system_property_set("persist.sys.azenithconf.bypasspath", bypass_list[i].name);
             log_zenith(LOG_INFO, "Compatible path found: %s. Skipped: %d", bypass_list[i].name, skipped_count);
             return 0;
         } else {
