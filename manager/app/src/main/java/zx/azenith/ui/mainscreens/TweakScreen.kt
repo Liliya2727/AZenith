@@ -487,7 +487,7 @@ fun TweakScreen(
                 
                 // Cek apakah Mali GPU tersedia sebelum merender Section-nya
                 if (viewModel.isMaliGpuAvailable == true) {
-                    item { TweaksSectionTitle(text = "GPU Settings") } // Ganti judulnya biar nggak IO Settings lagi
+                    item { TweaksSectionTitle(text = "Mali GPU Settings") } // Ganti judulnya biar nggak IO Settings lagi
                     item {
                         if (viewModel.availableMaliGovernors == null) {
                             SectionLoadingIndicator()
