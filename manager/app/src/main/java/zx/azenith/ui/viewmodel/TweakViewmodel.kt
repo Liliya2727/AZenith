@@ -59,6 +59,12 @@ class TweakViewModel : ViewModel() {
     var currentRefreshRate by mutableStateOf<Int?>(null)
     var thermalState by mutableStateOf<Boolean?>(null)
     
+    var isRendererLoading by mutableStateOf(false)
+        private set
+    
+    var isRefreshRateLoading by mutableStateOf(false)
+        private set
+    
     private val configKeysToBackup = listOf(
         "persist.sys.azenithdebug.soctype", // WAJIB ADA UNTUK VALIDASI
         "persist.sys.azenithconf.cpulimit",
@@ -420,20 +426,25 @@ class TweakViewModel : ViewModel() {
     }
 
     fun executeSetRenderer(reason: String, context: Context) {
+        isRendererLoading = true
         Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setrender $reason").submit {
             viewModelScope.launch {
                 delay(1000)
                 loadAllConfiguration(context)
+                isRendererLoading = false
             }
         }
     }
-
+    
     fun executeSetRefreshRates(reason: String, context: Context) {
+        isRefreshRateLoading = true
         Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setrefreshrates $reason").submit {
             viewModelScope.launch {
                 delay(1000)
                 loadAllConfiguration(context)
+                isRefreshRateLoading = false
             }
         }
     }
+
 }
