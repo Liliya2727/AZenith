@@ -343,7 +343,7 @@ fun TweakScreen(
                         SectionLoadingIndicator()
                     }
                 }
-                
+
                 item {
                     Spacer(modifier = Modifier.height(10.dp))
                     if (viewModel.currentRefreshRate != null && viewModel.currentRenderer != null) {
@@ -358,18 +358,20 @@ fun TweakScreen(
                                 label = stringResource(R.string.refreshrates),
                                 value = "${viewModel.currentRefreshRate}Hz",
                                 showArrow = true,
-                                highlight = false
+                                highlight = false,
+                                isLoading = viewModel.isRefreshRateLoading
                             ) {
                                 showRefreshRateDialog = true
                             }
-
+                
                             ExpressiveTile(
                                 modifier = Modifier.weight(1f),
                                 icon = Icons.Rounded.SettingsSuggest,
                                 label = stringResource(R.string.renderengine),
                                 value = viewModel.currentRenderer!!.uppercase(),
                                 showArrow = true,
-                                highlight = false
+                                highlight = false,
+                                isLoading = viewModel.isRendererLoading
                             ) {
                                 showRendererDialog = true
                             }
@@ -378,6 +380,7 @@ fun TweakScreen(
                         SectionLoadingIndicator()
                     }
                 }
+
 
                 item { TweaksSectionTitle(stringResource(R.string.section_CPUSettings)) }
                 item {
@@ -826,6 +829,7 @@ fun ExpressiveTile(
     value: String,
     highlight: Boolean,
     showArrow: Boolean = false,
+    isLoading: Boolean = false, // <-- Tambahkan parameter ini
     onClick: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -897,35 +901,47 @@ fun ExpressiveTile(
                     overflow = TextOverflow.Ellipsis
                 )
                 
-                AnimatedContent(
-                    targetState = value,
-                    transitionSpec = {
-                        // Kombinasi fade in + sedikit scale up untuk masuk
-                        // dan fade out + sedikit scale down untuk keluar (bikin efek "luntur/ngeblur")
-                        (fadeIn(animationSpec = tween(300, delayMillis = 100)) +
-                         scaleIn(initialScale = 0.95f, animationSpec = tween(300, delayMillis = 100)))
-                            .togetherWith(
-                                fadeOut(animationSpec = tween(200)) +
-                                scaleOut(targetScale = 1.05f, animationSpec = tween(200))
-                            )
-                    },
-                    label = "ValueTextAnimation"
-                ) { targetValue ->
-                    Text(
-                        text = targetValue, 
-                        style = MaterialTheme.typography.bodyMedium, 
-                        color = colorScheme.onSurfaceVariant, 
-                        maxLines = 2, 
-                        overflow = TextOverflow.Ellipsis,
-                        lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified
-                    )
+                // Gunakan Row untuk menyejajarkan teks dan indikator loading
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp) // Jarak antara teks dan indikator
+                ) {
+                    AnimatedContent(
+                        targetState = value,
+                        transitionSpec = {
+                            (fadeIn(animationSpec = tween(300, delayMillis = 100)) +
+                             scaleIn(initialScale = 0.95f, animationSpec = tween(300, delayMillis = 100)))
+                                .togetherWith(
+                                    fadeOut(animationSpec = tween(200)) +
+                                    scaleOut(targetScale = 1.05f, animationSpec = tween(200))
+                                )
+                        },
+                        label = "ValueTextAnimation"
+                    ) { targetValue ->
+                        Text(
+                            text = targetValue, 
+                            style = MaterialTheme.typography.bodyMedium, 
+                            color = colorScheme.onSurfaceVariant, 
+                            maxLines = 2, 
+                            overflow = TextOverflow.Ellipsis,
+                            lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified
+                        )
+                    }
+                    
+                    // Tampilkan indikator saat loading
+                    if (isLoading) {
+                        CircularWavyProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = colorScheme.primary
+                        )
+                    }
                 }
-
             }
             Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }
+
 
 @Composable
 fun TweakScreenTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onMoreClick: () -> Unit) {
