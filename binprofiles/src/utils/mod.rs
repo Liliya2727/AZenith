@@ -663,3 +663,154 @@ pub fn ppm_fix_freq(target_index: &str) {
         
     }
 }
+
+fn init_cpu_governor() {
+    let cpu_path = "/sys/devices/system/cpu/cpu0/cpufreq";
+    let gov_file = format!("{}/scaling_governor", cpu_path);
+    chmod(&gov_file, 0o644);
+
+    let mut default_gov = fs::read_to_string(&gov_file)
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+
+    setprop_cmd("persist.sys.azenith.default_cpu_gov", &default_gov);
+    dlog(&format!("Default CPU governor detected: {}", default_gov));
+
+    // Handle fallback if default is 'performance'
+    if default_gov == "performance" && getprop("persist.sys.azenith.custom_default_cpu_gov").is_empty() {
+        dlog("Default governor is 'performance'");
+        let avail_govs = fs::read_to_string(format!("{}/scaling_available_governors", cpu_path)).unwrap_or_default();
+        let fallbacks = [
+            "scx", "schedhorizon", "walt", "sched_pixel", "sugov_ext", "uag",
+            "schedplus", "energy_step", "ondemand", "schedutil", "interactive",
+            "conservative", "powersave"
+        ];
+
+        for gov in &fallbacks {
+            if avail_govs.contains(gov) {
+                setprop_cmd("persist.sys.azenith.default_cpu_gov", gov);
+                default_gov = gov.to_string();
+                dlog(&format!("Fallback governor to: {}", gov));
+                break;
+            }
+        }
+    }
+
+    // Apply custom governor if set
+    let custom_gov = getprop("persist.sys.azenith.custom_default_cpu_gov");
+    if !custom_gov.is_empty() {
+        default_gov = custom_gov;
+    }
+    
+    dlog(&format!("Using CPU governor: {}", default_gov));
+    setgov(&default_gov);
+
+    // Set fallback props
+    if getprop("persist.sys.azenith.custom_powersave_cpu_gov").is_empty() {
+        setprop_cmd("persist.sys.azenith.custom_powersave_cpu_gov", &default_gov);
+    }
+    if getprop("persist.sys.azenith.custom_performance_cpu_gov").is_empty() {
+        setprop_cmd("persist.sys.azenith.custom_performance_cpu_gov", &default_gov);
+    }
+    
+    dlog("Parsing CPU Governor complete");
+}
+
+fn init_io_scheduler() {
+    let mut io_path = String::new();
+    for dev in &["mmcblk0", "mmcblk1", "sda", "sdb", "sdc"] {
+        let p = format!("/sys/block/{}/queue", dev);
+        if Path::new(&format!("{}/scheduler", p)).exists() {
+            io_path = p;
+            dlog(&format!("Detected valid block device: {}", dev));
+            break;
+        }
+    }
+
+    if io_path.is_empty() {
+        dlog("No valid block device with scheduler found");
+        std::process::exit(1);
+    }
+
+    let sched_file = format!("{}/scheduler", io_path);
+    chmod(&sched_file, 0o644);
+
+    // Parse active IO scheduler (the one inside brackets [])
+    let mut default_io = String::new();
+    let sched_content = fs::read_to_string(&sched_file).unwrap_or_default();
+    if let Some(start) = sched_content.find('[') {
+        if let Some(end) = sched_content[start..].find(']') {
+            default_io = sched_content[start + 1..start + end].to_string();
+        }
+    }
+
+    setprop_cmd("persist.sys.azenith.default_balanced_IO", &default_io);
+    dlog(&format!("Default IO Scheduler detected: {}", default_io));
+
+    // Apply custom IO if set
+    let custom_io = getprop("persist.sys.azenith.custom_default_balanced_IO");
+    if !custom_io.is_empty() {
+        default_io = custom_io;
+    }
+    
+    dlog(&format!("Using IO Scheduler: {}", default_gov));
+    sets_io(&default_io);
+
+    // Set fallback props
+    if getprop("persist.sys.azenith.custom_powersave_IO").is_empty() {
+        setprop_cmd("persist.sys.azenith.custom_powersave_IO", &default_io);
+    }
+    if getprop("persist.sys.azenith.custom_performance_IO").is_empty() {
+        setprop_cmd("persist.sys.azenith.custom_performance_IO", &default_io);
+    }
+    
+    dlog("Parsing IO Scheduler complete");
+}
+
+fn init_maligpu_governor() {
+    let mut gpu_path = String::new();
+    
+    if let Ok(paths) = glob::glob("/sys/class/devfreq/*.mali") {
+        for path in paths.flatten() {
+            if let Some(p_str) = path.to_str() {
+                gpu_path = p_str.to_string();
+                dlog(&format!("Detected Mali GPU path: {}", gpu_path));
+                break;
+            }
+        }
+    }
+
+    if gpu_path.is_empty() {
+        return;
+    }
+
+    let gov_file = format!("{}/governor", gpu_path);
+    chmod(&gov_file, 0o644);
+
+    let mut default_maligpu_gov = fs::read_to_string(&gov_file)
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+
+    setprop_cmd("persist.sys.azenith.default_maligpu_gov", &default_maligpu_gov);
+    dlog(&format!("Default Mali GPU governor detected: {}", default_maligpu_gov));
+
+    let custom_maligpu_gov = getprop("persist.sys.azenith.custom_default_maligpu_gov");
+    if !custom_maligpu_gov.is_empty() {
+        default_maligpu_gov = custom_maligpu_gov;
+    }
+
+    dlog(&format!("Using Mali GPU governor: {}", default_maligpu_gov));
+    zeshia_def(&default_maligpu_gov, &gov_file);
+
+    if getprop("persist.sys.azenith.custom_powersave_maligpu_gov").is_empty() {
+        setprop_cmd("persist.sys.azenith.custom_powersave_maligpu_gov", &default_maligpu_gov);
+    }
+    if getprop("persist.sys.azenith.custom_performance_maligpu_gov").is_empty() {
+        setprop_cmd("persist.sys.azenith.custom_performance_maligpu_gov", &default_maligpu_gov);
+    }
+
+    dlog("Parsing Mali GPU Governor complete");
+}
+
