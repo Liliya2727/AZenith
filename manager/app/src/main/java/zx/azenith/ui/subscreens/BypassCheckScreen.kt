@@ -311,7 +311,6 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                     ) {
                                         CircularWavyProgressIndicator(
                                             modifier = Modifier.size(28.dp),
-                                            strokeWidth = 3.dp,
                                             color = colorScheme.primary
                                         )
                                     }
