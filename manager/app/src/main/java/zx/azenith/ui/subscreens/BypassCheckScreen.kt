@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -67,7 +68,8 @@ data class ShellOutput(
 
 @Composable
 fun BypassChargeCheckScreen(navController: NavController) {
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    // UPDATED: Menggunakan exitUntilCollapsedScrollBehavior agar serasi dengan LargeFlexibleTopAppBar
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val colorScheme = MaterialTheme.colorScheme
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -93,7 +95,6 @@ fun BypassChargeCheckScreen(navController: NavController) {
         scope.launch(Dispatchers.IO) {
             val output = Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service -bpl").exec().out
             val parsedList = output.filter { it.contains("FOUND") && !it.contains("NOT FOUND") }.map { line ->
-                // Bersihkan kode warna ANSI bawaan terminal c jika ada
                 val cleanLine = line.replace("\u001B\\[[;\\d]*m".toRegex(), "")
                 val parts = cleanLine.split("|")
                 val name = parts.getOrNull(0)?.trim() ?: "UNKNOWN"
@@ -150,7 +151,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
             val binaryPath = "/data/adb/modules/AZenith/system/bin/sys.azenith-service"
             Shell.cmd("$binaryPath -cbc 2>&1").to(callbackList).submit {
                 isRunning = false
-                refreshBypassData() // Refresh path aktif baru jika ditemukan
+                refreshBypassData()
             }
         }
     }
@@ -184,9 +185,13 @@ fun BypassChargeCheckScreen(navController: NavController) {
         ) { innerPadding ->
             LazyColumn(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(16.dp),
+                    .fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = innerPadding.calculateTopPadding(),
+                    start = 16.dp,
+                    end = 16.dp,
+                    bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                ),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 
@@ -292,7 +297,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                     }
                 }
 
-                // Live Console Terminal Output (Muncul hanya saat berjalan / setelah berjalan)
+                // Live Console Terminal Output
                 if (logs.isNotEmpty()) {
                     item {
                         Card(
@@ -429,11 +434,10 @@ fun BypassChgCheckTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () 
             .background(smoothGradient)
             .statusBarsPadding()
     ) {
-        TopAppBar(
+        LargeFlexibleTopAppBar(
             title = { 
                 Text(
                     text = stringResource(R.string.CompatibilityCheck),
-                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 ) 
             },
