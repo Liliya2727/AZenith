@@ -17,16 +17,26 @@ Monitors system info for performance tweaks as substitute of `dumpsys`.
 ## Usage
 
 ```shell
-app_process -Djava.class.path=/sdcard/app-release.apk / --nice-name=EncoreSysMon com.rem01gaming.systemmonitor.MainKt /path/to/output/file
+nohup app_process -Djava.class.path="$APK_COMP" / \
+    --nice-name=sys.azenith-appmonitoring zx.azenith.AppMonitor \
+    "$MODULE_CONFIG/app_status" \
+    "$MODULE_CONFIG/background_apps" \
+    "$MODULE_CONFIG/java.lock" >"$MODULE_CONFIG/sysmon.log" 2>&1 &
 ```
 
 ### Output file, updated each changes
 
-```text
-focused_app com.rhmsoft.edit.pro 4720 10292
+```app_status
+focused_app zx.azenith 4720 10292
 screen_awake 1
 battery_saver 0
 zen_mode 0
+app_name AZenith
+```
+
+```background_apps
+zx.azenith 4720 10292
+[PKG PID UID]
 ```
 
 ## Lisense

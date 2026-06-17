@@ -288,7 +288,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                         }
 
 
-                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Spacer(modifier = Modifier.height(6.dp))
                                         AnimatedContent(
                                             targetState = Triple(isChargerConnected, isRunning, hasRunDiagnosis),
                                             label = "chargerStatusAnim"
