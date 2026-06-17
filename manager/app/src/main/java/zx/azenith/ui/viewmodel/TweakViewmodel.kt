@@ -46,6 +46,14 @@ class TweakViewModel : ViewModel() {
     var balancedIOIndex by mutableStateOf<Int?>(null)
     var performanceIOIndex by mutableStateOf<Int?>(null)
     var powersaveIOIndex by mutableStateOf<Int?>(null)
+    
+    // Section 3.5 Properti Mali GPU
+    var isMaliGpuAvailable by mutableStateOf<Boolean?>(null)
+    var availableMaliGovernors by mutableStateOf<List<String>?>(null)
+    var balancedMaliGovIndex by mutableStateOf<Int?>(null)
+    var performanceMaliGovIndex by mutableStateOf<Int?>(null)
+    var powersaveMaliGovIndex by mutableStateOf<Int?>(null)
+    
 
     // Section 4 Properti Tambahan
     var preloadState by mutableStateOf<Boolean?>(null)
@@ -227,14 +235,13 @@ class TweakViewModel : ViewModel() {
                 }
             }
 
-            // 2. TUGAS BERAT (Shell/Root): Jalankan secara PARALEL
-            // Menggunakan async agar proses baca Governor & I/O berjalan bersamaan (memotong waktu tunggu 50%)
             val govJob = async { loadGovernorsInternal() }
             val ioJob = async { loadIOSchedulersInternal() }
-            
-            // Tunggu kedua tugas root selesai
+            val maliJob = async { loadMaliGovernorsInternal() }
+
             govJob.await()
             ioJob.await()
+            maliJob.await()
 
             withContext(Dispatchers.Main) {
                 isUiLoaded = true
@@ -293,6 +300,40 @@ class TweakViewModel : ViewModel() {
             availableIOSchedulers = emptyList()
         }
     }
+
+    private fun loadMaliGovernorsInternal() {
+        // Cek pakai utilitas Rust yang baru dibuat
+        val checkResult = Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf checkmalipath").exec()
+        val hasMali = checkResult.out.joinToString("").trim() == "true"
+
+        if (hasMali) {
+            isMaliGpuAvailable = true
+            // Ambil list governor pakai wildcard
+            val govResult = Shell.cmd("cat /sys/class/devfreq/*.mali/available_governors").exec()
+            
+            if (govResult.isSuccess) {
+                val govs = govResult.out.firstOrNull()?.trim()?.split("\\s+".toRegex())
+                    ?.filterNot { it.startsWith("apu", ignoreCase = true) } ?: emptyList()
+                
+                val currentBal = PropertyUtils.get("persist.sys.azenith.custom_default_gpu_gov").ifEmpty {
+                    PropertyUtils.get("persist.sys.azenith.default_gpu_gov")
+                }
+                val currentPerf = PropertyUtils.get("persist.sys.azenith.custom_performance_gpu_gov")
+                val currentEco = PropertyUtils.get("persist.sys.azenith.custom_powersave_gpu_gov")
+
+                availableMaliGovernors = govs
+                balancedMaliGovIndex = govs.indexOf(currentBal).coerceAtLeast(0)
+                performanceMaliGovIndex = govs.indexOf(currentPerf).coerceAtLeast(0)
+                powersaveMaliGovIndex = govs.indexOf(currentEco).coerceAtLeast(0)
+            } else {
+                availableMaliGovernors = emptyList()
+            }
+        } else {
+            isMaliGpuAvailable = false
+        }
+    }
+
+    
 
     fun updateLiteMode(checked: Boolean) {
         liteState = checked
@@ -378,6 +419,43 @@ class TweakViewModel : ViewModel() {
             val currentProfile = Shell.cmd("cat /data/adb/.config/AZenith/API/current_profile").exec().out.firstOrNull()?.trim()
             if (currentProfile == "3") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO $selectedIO").exec()
+            }
+        }
+    }
+    
+    fun updateBalancedMaliGov(index: Int) {
+        balancedMaliGovIndex = index
+        val selectedGov = availableMaliGovernors?.getOrNull(index) ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            PropertyUtils.set("persist.sys.azenith.custom_default_gpu_gov", selectedGov)
+            // Kalau profile aktif adalah Balanced (2), langsung terapkan
+            val currentProfile = Shell.cmd("cat /data/adb/.config/AZenith/API/current_profile").exec().out.firstOrNull()?.trim()
+            if (currentProfile == "2") {
+                Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsMaliGov $selectedGov").exec()
+            }
+        }
+    }
+
+    fun updatePerformanceMaliGov(index: Int) {
+        performanceMaliGovIndex = index
+        val selectedGov = availableMaliGovernors?.getOrNull(index) ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            PropertyUtils.set("persist.sys.azenith.custom_performance_gpu_gov", selectedGov)
+            val currentProfile = Shell.cmd("cat /data/adb/.config/AZenith/API/current_profile").exec().out.firstOrNull()?.trim()
+            if (currentProfile == "1") {
+                Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsMaliGov $selectedGov").exec()
+            }
+        }
+    }
+
+    fun updatePowersaveMaliGov(index: Int) {
+        powersaveMaliGovIndex = index
+        val selectedGov = availableMaliGovernors?.getOrNull(index) ?: return
+        viewModelScope.launch(Dispatchers.IO) {
+            PropertyUtils.set("persist.sys.azenith.custom_powersave_gpu_gov", selectedGov)
+            val currentProfile = Shell.cmd("cat /data/adb/.config/AZenith/API/current_profile").exec().out.firstOrNull()?.trim()
+            if (currentProfile == "3") {
+                Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsMaliGov $selectedGov").exec()
             }
         }
     }
