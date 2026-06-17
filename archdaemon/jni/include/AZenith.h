@@ -136,6 +136,7 @@ void disable_bypass();
 int enable_bypass();
 int check_bypass_compatibility();
 int get_battery_level();
+void print_bypass_path_list();
 
 // CLI
 void print_help();
