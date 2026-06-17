@@ -260,6 +260,11 @@ if [ -z "$(getprop persist.sys.azenithconf.bypasspath)" ]; then
 	setprop persist.sys.azenithconf.bypasspath "UNSUPPORTED"
 fi
 
+# Initiate bypasspath default value
+if [ -z "$(getprop persist.sys.azenithconf.bypasschgthreshold)" ]; then
+	setprop persist.sys.azenithconf.bypasschgthreshold "20"
+fi
+
 # Daemon Configurations
 if [ -z "$(getprop persist.sys.azenithconf.showtoast)" ]; then
 	setprop persist.sys.azenithconf.showtoast 1
