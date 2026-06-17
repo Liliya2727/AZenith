@@ -481,15 +481,60 @@ fun TweakScreen(
                             SectionLoadingIndicator()
                         }
                     } else {
-                        Text(
-                            text = "I/O Scheduler tidak didukung pada perangkat ini.",
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.outline
-                        )
+                        // Dont show anything
                     }
                 }
                 
+                // Cek apakah Mali GPU tersedia sebelum merender Section-nya
+                if (viewModel.isMaliGpuAvailable == true) {
+                    item { TweaksSectionTitle(text = "GPU Settings") } // Ganti judulnya biar nggak IO Settings lagi
+                    item {
+                        if (viewModel.availableMaliGovernors == null) {
+                            SectionLoadingIndicator()
+                        } else if (viewModel.availableMaliGovernors!!.isNotEmpty()) {
+                            if (viewModel.balancedMaliGovIndex != null && 
+                                viewModel.performanceMaliGovIndex != null && 
+                                viewModel.powersaveMaliGovIndex != null) {
+                                ExpressiveList(
+                                    content = listOf(
+                                        {
+                                            ExpressiveDropdownItem(
+                                                icon = Icons.Outlined.Water,
+                                                title = "Balanced Mali GPU Governor",
+                                                summary = "GPU Governor used in Balanced Profiles",
+                                                items = viewModel.availableMaliGovernors ?: emptyList(),
+                                                selectedIndex = viewModel.balancedMaliGovIndex!!,
+                                                onItemSelected = { viewModel.updateBalancedMaliGov(it) } // <-- Panggil fungsi baru
+                                            )
+                                        },
+                                        {
+                                            ExpressiveDropdownItem(
+                                                icon = Icons.Outlined.OfflineBolt,
+                                                title = "Performance Mali GPU Governor",
+                                                summary = "GPU Governor used in Performance Profiles",
+                                                items = viewModel.availableMaliGovernors ?: emptyList(),
+                                                selectedIndex = viewModel.performanceMaliGovIndex!!,
+                                                onItemSelected = { viewModel.updatePerformanceMaliGov(it) } // <-- Panggil fungsi baru
+                                            )
+                                        },
+                                        {
+                                            ExpressiveDropdownItem(
+                                                icon = Icons.Outlined.EnergySavingsLeaf,
+                                                title = "Powersave Mali GPU Governor",
+                                                summary = "GPU Governor used in Powersave Profiles",
+                                                items = viewModel.availableMaliGovernors ?: emptyList(),
+                                                selectedIndex = viewModel.powersaveMaliGovIndex!!,
+                                                onItemSelected = { viewModel.updatePowersaveMaliGov(it) } // <-- Panggil fungsi baru
+                                            )
+                                        }
+                                    )
+                                )
+                            } else {
+                                SectionLoadingIndicator()
+                            }
+                        }
+                    }
+                }
                 
                 item { TweaksSectionTitle(text = "Power & Thermal") }
                 item {
