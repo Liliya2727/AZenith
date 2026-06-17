@@ -664,7 +664,7 @@ pub fn ppm_fix_freq(target_index: &str) {
     }
 }
 
-fn init_cpu_governor() {
+pub fn init_cpu_governor() {
     let cpu_path = "/sys/devices/system/cpu/cpu0/cpufreq";
     let gov_file = format!("{}/scaling_governor", cpu_path);
     chmod(&gov_file, 0o644);
@@ -717,7 +717,7 @@ fn init_cpu_governor() {
     dlog("Parsing CPU Governor complete");
 }
 
-fn init_io_scheduler() {
+pub fn init_io_scheduler() {
     let mut io_path = String::new();
     for dev in &["mmcblk0", "mmcblk1", "sda", "sdb", "sdc"] {
         let p = format!("/sys/block/{}/queue", dev);
@@ -754,7 +754,7 @@ fn init_io_scheduler() {
         default_io = custom_io;
     }
     
-    dlog(&format!("Using IO Scheduler: {}", default_gov));
+    dlog(&format!("Using IO Scheduler: {}", default_io));
     sets_io(&default_io);
 
     // Set fallback props
@@ -768,7 +768,7 @@ fn init_io_scheduler() {
     dlog("Parsing IO Scheduler complete");
 }
 
-fn init_maligpu_governor() {
+pub fn init_maligpu_governor() {
     let mut gpu_path = String::new();
     
     if let Ok(paths) = glob::glob("/sys/class/devfreq/*.mali") {
@@ -814,3 +814,14 @@ fn init_maligpu_governor() {
     dlog("Parsing Mali GPU Governor complete");
 }
 
+pub fn sets_mali_gov(gov: &str) {
+    if let Ok(paths) = glob("/sys/class/devfreq/*.mali/governor") {
+        for path in paths.flatten() {
+            if let Some(p_str) = path.to_str() {
+                chmod(p_str, 0o644);
+                let _ = fs::write(p_str, gov);
+                chmod(p_str, 0o444); 
+            }
+        }
+    }
+}
