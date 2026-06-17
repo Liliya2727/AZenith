@@ -977,6 +977,7 @@ fun ExpressiveTile(
                     if (isLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
                             color = colorScheme.primary
                         )
                     }

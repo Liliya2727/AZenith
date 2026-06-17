@@ -274,20 +274,19 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                                 targetState = isRunning,
                                                 label = "scanIconAnim"
                                             ) { running ->
-                                                Icon(
-                                                    imageVector = if (running) Icons.Rounded.Memory else Icons.Rounded.ManageSearch,
-                                                    contentDescription = "Scan Icon",
-                                                    tint = colorScheme.primary,
-                                                    modifier = Modifier.size(24.dp)
+                                                LeadingIcon(
+                                                    icon = if (running) Icons.Rounded.Memory else Icons.Rounded.ManageSearch,
+                                                    contentDescription = "Scan Icon"
                                                 )
                                             }
-                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Spacer(modifier = Modifier.width(16.dp))
                                             Text(
                                                 text = if (isRunning) "Diagnostic in Progress..." else "Scan Working Nodes",
                                                 style = MaterialTheme.typography.titleMedium,
                                                 fontWeight = FontWeight.Bold
                                             )
                                         }
+
 
                                         Spacer(modifier = Modifier.height(2.dp))
                                         AnimatedContent(
@@ -311,6 +310,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                     ) {
                                         CircularWavyProgressIndicator(
                                             modifier = Modifier.size(28.dp),
+                                            stroke = 3.dp,
                                             color = colorScheme.primary
                                         )
                                     }
