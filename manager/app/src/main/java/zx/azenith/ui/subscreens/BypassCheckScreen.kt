@@ -58,6 +58,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import zx.azenith.R
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import zx.azenith.ui.component.*
 import zx.azenith.ui.util.PropertyUtils
 import com.topjohnwu.superuser.CallbackList
@@ -182,7 +184,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                         scope.launch {
                             val result = confirmDialogHandle.awaitConfirm(
                                 title = "Diagnosis Complete",
-                                content = "Found working nodes for your device! Do you want to automatically apply the recommended node [${paths.first().first}]?",
+                                content = "Found working nodes for your device! Do you want to apply the recommended node [${paths.first().first}]?",
                                 confirm = "Apply",
                                 dismiss = "Dismiss"
                             )
@@ -290,7 +292,12 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                     enter = fadeIn() + scaleIn(),
                                     exit = fadeOut() + scaleOut()
                                 ) {
-                                    LoadingIndicator(modifier = Modifier.size(28.dp))
+                                    // PERUBAHAN DI SINI: Diganti jadi CircularProgressIndicator
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(28.dp),
+                                        strokeWidth = 3.dp,
+                                        color = colorScheme.primary
+                                    )
                                 }
                             }
 
@@ -321,18 +328,22 @@ fun BypassChargeCheckScreen(navController: NavController) {
                         }
                     }
                 }
+                
+                
+
                 item {
                     AnimatedVisibility(
                         visible = !isRunning && hasRunDiagnosis && logs.isNotEmpty() && !isConsoleClosed,
                         enter = expandVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy)) + fadeIn(),
                         exit = shrinkVertically() + fadeOut()
                     ) {
+                        Spacer(modifier = Modifier.height(16.dp))
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(max = 280.dp)
                                 .nestedScroll(blockParentScroll), 
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(26.dp),
                             colors = CardDefaults.cardColors(containerColor = Color(0xFF0F141C))
                         ) {
                             Box(modifier = Modifier.fillMaxSize()) {
@@ -397,9 +408,10 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                 {
                                     val isSelected = activePath == pathNode.first
                                     
+                                    // PERUBAHAN DI SINI: Menggunakan tween dengan FastOutSlowInEasing biar smooth
                                     val textScale by animateFloatAsState(
                                         targetValue = if (isSelected) 1.08f else 1.0f,
-                                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
                                         label = "textScaleAnim"
                                     )
 
@@ -442,10 +454,11 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                             )
                                         },
                                         trailingContent = {
+                                            // PERUBAHAN DI SINI: Animasi checkmark ikut diubah jadi smooth tanpa bounce
                                             AnimatedVisibility(
                                                 visible = isSelected,
-                                                enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
-                                                exit = scaleOut() + fadeOut()
+                                                enter = scaleIn(tween(durationMillis = 300, easing = FastOutSlowInEasing)) + fadeIn(tween(300)),
+                                                exit = scaleOut(tween(durationMillis = 200)) + fadeOut(tween(200))
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Rounded.CheckCircle,
@@ -475,7 +488,6 @@ fun BypassCheckTitle(text: String) {
         modifier = Modifier.padding(
             start = 12.dp,
             end = 12.dp,
-            top = 16.dp,
             bottom = 8.dp
         )
     )
