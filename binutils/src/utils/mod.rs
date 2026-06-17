@@ -76,6 +76,22 @@ pub fn sets_io(scheduler: &str) {
     dlog(&format!("Set current IO Scheduler to {}", scheduler));
 }
 
+pub fn sets_mali_gov(gov: &str) {
+    if let Ok(paths) = glob("/sys/class/devfreq/*.mali/governor") {
+        for path in paths.flatten() {
+            if let Some(p_str) = path.to_str() {
+                // Buka akses write
+                chmod(p_str, 0o644);
+                // Terapkan governor
+                let _ = fs::write(p_str, gov);
+                // Kunci kembali jadi read-only (opsional, tapi disarankan agar konsisten dengan setsgov)
+                chmod(p_str, 0o444); 
+            }
+        }
+    }
+    dlog(&format!("Set current Mali GPU Governor to {}", gov));
+}
+
 pub fn get_active_fps() -> Option<i32> {
     let output = Command::new("cmd")
         .args(["display", "get-displays"])
@@ -310,4 +326,22 @@ pub fn savelog() {
     log_content.push_str(&previous_log);
 
     let _ = fs::write(&log_file, log_content);
+}
+
+pub fn check_mali_path() {
+    let mut found = false;
+    if let Ok(paths) = glob::glob("/sys/class/devfreq/*.mali") {
+        for _path in paths.flatten() {
+            found = true;
+            break;
+        }
+    }
+
+    if found {
+        println!("true");
+        std::process::exit(0);
+    } else {
+        println!("false");
+        std::process::exit(1);
+    }
 }
