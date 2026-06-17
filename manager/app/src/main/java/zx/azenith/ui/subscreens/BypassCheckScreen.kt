@@ -24,6 +24,9 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import androidx.compose.animation.*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -44,6 +47,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -87,12 +92,12 @@ fun BypassChargeCheckScreen(navController: NavController) {
     val logs = remember { mutableStateListOf<ShellOutput>() }
     var isRunning by remember { mutableStateOf(false) }
     var hasRunDiagnosis by remember { mutableStateOf(false) }
+    var isConsoleClosed by remember { mutableStateOf(false) } // State baru untuk close button
     
     // Scroll State untuk konsol
     val logScrollState = rememberScrollState()
 
     // 1. Ambil status properti awal & list path via argumen -bpl ke daemon
-    // Ditambah callback onComplete untuk mengeksekusi dialog setelah selesai scan
     fun refreshBypassData(onComplete: ((List<Pair<String, String>>) -> Unit)? = null) {
         activePath = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "UNSUPPORTED")
         
@@ -131,9 +136,9 @@ fun BypassChargeCheckScreen(navController: NavController) {
         }
     }
 
-    // Auto scroll konsol log pas diagnosis jalan
+    // Auto scroll konsol log ketika dirender
     LaunchedEffect(logs.size) {
-        if (logs.isNotEmpty()) {
+        if (logs.isNotEmpty() && !isRunning) {
             logScrollState.animateScrollTo(logScrollState.maxValue)
         }
     }
@@ -146,7 +151,6 @@ fun BypassChargeCheckScreen(navController: NavController) {
                 available: Offset,
                 source: NestedScrollSource
             ): Offset {
-                // Return "available" artinya kita memakan semua sisa scroll biar gak nyampai ke parent
                 return available
             }
         }
@@ -156,7 +160,8 @@ fun BypassChargeCheckScreen(navController: NavController) {
     fun runCompatibilityCheck() {
         logs.clear()
         isRunning = true
-        hasRunDiagnosis = true
+        hasRunDiagnosis = false
+        isConsoleClosed = false // Reset state console agar bisa muncul lagi setelah kelar
         
         scope.launch(Dispatchers.IO) {
             val callbackList = object : CallbackList<String>() {
@@ -170,8 +175,9 @@ fun BypassChargeCheckScreen(navController: NavController) {
             val binaryPath = "/data/adb/modules/AZenith/system/bin/sys.azenith-service"
             Shell.cmd("$binaryPath -cbc 2>&1").to(callbackList).submit {
                 isRunning = false
+                hasRunDiagnosis = true
                 refreshBypassData { paths ->
-                    // Memunculkan dialog jika node bypass ditemukan setelah scan selesai
+                    // Memunculkan dialog HANYA jika node bypass ditemukan, dan path hanya berubah bila user setuju
                     if (paths.isNotEmpty()) {
                         scope.launch {
                             val result = confirmDialogHandle.awaitConfirm(
@@ -202,22 +208,8 @@ fun BypassChargeCheckScreen(navController: NavController) {
                     scrollBehavior = scrollBehavior, 
                     onBack = { navController.popBackStack() }
                 ) 
-            },
-            floatingActionButton = {
-                AnimatedVisibility(
-                    visible = !isRunning && hasRunDiagnosis,
-                    enter = fadeIn() + scaleIn(initialScale = 0.8f),
-                    exit = fadeOut() + scaleOut()
-                ) {
-                    ExtendedFloatingActionButton(
-                        onClick = { navController.popBackStack() },
-                        containerColor = colorScheme.primary,
-                        contentColor = colorScheme.onPrimary,
-                        icon = { Icon(Icons.Rounded.Check, null) },
-                        text = { Text(stringResource(R.string.done)) }
-                    )
-                }
             }
+            // FAB Done dihapus sesuai request
         ) { innerPadding ->
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -231,22 +223,16 @@ fun BypassChargeCheckScreen(navController: NavController) {
             ) {
                 
                 // SECTION 1: Current Active Path Information
-                item {
-                    Text(
-                        text = "Current Status",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = colorScheme.primary,
-                        modifier = Modifier.padding(start = 8.dp, bottom = 4.dp)
-                    )
+                item { BypassCheckTitle(text = "Current Status") }
+                        
                     ExpressiveList(
                         content = listOf {
                             val isUnsupported = activePath == "UNSUPPORTED" || activePath.isEmpty()
                             ExpressiveListItem(
                                 headlineContent = { 
-                                    // Animasi perubahan teks saat target berubah
                                     AnimatedContent(targetState = activePath, label = "activePathAnim") { path ->
                                         Text(
-                                            text = if (path == "UNSUPPORTED" || path.isEmpty()) "Bypass Charging Disabled" else path,
+                                            text = if (path == "UNSUPPORTED" || path.isEmpty()) "No Active Working Nodes" else path,
                                             fontWeight = FontWeight.Bold
                                         ) 
                                     }
@@ -267,13 +253,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                 }
 
                 // SECTION 2: Diagnosis System Controller
-                item {
-                    Text(
-                        text = "Gateway Diagnostics",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = colorScheme.primary,
-                        modifier = Modifier.padding(start = 8.dp, bottom = 4.dp)
-                    )
+                item { BypassCheckTitle(text = "Diagnostics") }
                     
                     Surface(
                         shape = RoundedCornerShape(26.dp),
@@ -288,20 +268,19 @@ fun BypassChargeCheckScreen(navController: NavController) {
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = if (isRunning) "Diagnostic in Progress" else "Compatibility Automated Scan",
+                                        text = if (isRunning) "Diagnostic in Progress..." else "Scan Working Nodes",
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
-                                    // Animasi perubahan teks deteksi charger / loading
                                     AnimatedContent(
                                         targetState = Triple(isChargerConnected, isRunning, hasRunDiagnosis),
                                         label = "chargerStatusAnim"
                                     ) { (connected, running, _) ->
                                         Text(
-                                            text = if (!connected) "Power cable detached. Plug in charger first to unlock diagnostics."
-                                                   else if (running) "Probing kernel sysfs power rails... Please stand by."
-                                                   else "Safely test your device compatibility and isolate current values.",
+                                            text = if (!connected) "Power cable detached. Plug in charger first to run diagnostics."
+                                                   else if (running) "Checking devices current Charging... Please wait."
+                                                   else "Safely test your device compatibility.",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = if (!connected) colorScheme.error else colorScheme.onSurfaceVariant
                                         )
@@ -346,31 +325,28 @@ fun BypassChargeCheckScreen(navController: NavController) {
                 }
 
                 // Live Console Terminal Output
-                // Animasi saat container konsol dimunculkan/disembunyikan
+                // MUNCUL HANYA SETELAH KELAR & JIKA BELUM DICLOSE
                 item {
                     AnimatedVisibility(
-                        visible = logs.isNotEmpty() || isRunning,
-                        enter = expandVertically() + fadeIn(),
+                        visible = !isRunning && hasRunDiagnosis && logs.isNotEmpty() && !isConsoleClosed,
+                        enter = expandVertically(spring(dampingRatio = Spring.DampingRatioLowBouncy)) + fadeIn(),
                         exit = shrinkVertically() + fadeOut()
                     ) {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(max = 280.dp)
-                                .nestedScroll(blockParentScroll), // Cegah bocor scroll ke parent
+                                .nestedScroll(blockParentScroll), 
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(containerColor = Color(0xFF0F141C))
                         ) {
-                            SelectionContainer {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(12.dp)
-                                ) {
-                                    // Diganti ke Column + verticalScroll agar terisolasi lebih rapi dibanding LazyColumn di dalam LazyColumn
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                SelectionContainer {
                                     Column(
                                         modifier = Modifier
                                             .fillMaxSize()
+                                            .padding(12.dp)
+                                            .padding(top = 28.dp) // Beri jarak buat tombol close di atas
                                             .verticalScroll(logScrollState)
                                             .horizontalScroll(rememberScrollState())
                                     ) {
@@ -387,20 +363,30 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                         }
                                     }
                                 }
+                                
+                                // Tombol Close Console di Pojok Kanan Atas
+                                IconButton(
+                                    onClick = { isConsoleClosed = true },
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(4.dp)
+                                        .size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Close,
+                                        contentDescription = "Close Logs",
+                                        tint = Color.White.copy(alpha = 0.6f),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
                         }
                     }
                 }
 
                 // SECTION 3: Found Available Node Paths
-                item {
-                    Text(
-                        text = "Available Target Nodes (${availablePaths.size})",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = colorScheme.primary,
-                        modifier = Modifier.padding(start = 8.dp, bottom = 4.dp)
-                    )
-                    
+                item { BypassCheckTitle(text = "Available Target Nodes (${availablePaths.size})") }
+                
                     if (availablePaths.isEmpty()) {
                         ExpressiveList(
                             content = listOf {
@@ -416,6 +402,14 @@ fun BypassChargeCheckScreen(navController: NavController) {
                             content = availablePaths.map { pathNode ->
                                 {
                                     val isSelected = activePath == pathNode.first
+                                    
+                                    // Animasi font scale biar membesar saat dipilih
+                                    val textScale by animateFloatAsState(
+                                        targetValue = if (isSelected) 1.08f else 1.0f,
+                                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                                        label = "textScaleAnim"
+                                    )
+
                                     ExpressiveListItemHighlight(
                                         containerColor = if (isSelected) colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent,
                                         onClick = {
@@ -438,7 +432,12 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                             Text(
                                                 text = pathNode.first,
                                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (isSelected) colorScheme.primary else colorScheme.onSurface
+                                                color = if (isSelected) colorScheme.primary else colorScheme.onSurface,
+                                                modifier = Modifier.graphicsLayer {
+                                                    scaleX = textScale
+                                                    scaleY = textScale
+                                                    transformOrigin = TransformOrigin(0f, 0.5f) // Supaya perbesaran font nggak ketengah, tetap rata kiri
+                                                }
                                             ) 
                                         },
                                         supportingContent = { Text(pathNode.second) },
@@ -450,7 +449,12 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                             )
                                         },
                                         trailingContent = {
-                                            if (isSelected) {
+                                            // Animasi checkmark pop-in
+                                            AnimatedVisibility(
+                                                visible = isSelected,
+                                                enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
+                                                exit = scaleOut() + fadeOut()
+                                            ) {
                                                 Icon(
                                                     imageVector = Icons.Rounded.CheckCircle,
                                                     contentDescription = "Active",
@@ -467,6 +471,22 @@ fun BypassChargeCheckScreen(navController: NavController) {
             }
         }
     }
+}
+
+
+@Composable
+fun BypassCheckTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(
+            start = 12.dp,
+            end = 12.dp,
+            top = 16.dp,
+            bottom = 8.dp
+        )
+    )
 }
 
 @Composable
