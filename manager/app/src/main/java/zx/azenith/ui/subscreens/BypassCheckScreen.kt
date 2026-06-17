@@ -209,7 +209,6 @@ fun BypassChargeCheckScreen(navController: NavController) {
                     onBack = { navController.popBackStack() }
                 ) 
             }
-            // FAB Done dihapus sesuai request
         ) { innerPadding ->
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -222,8 +221,8 @@ fun BypassChargeCheckScreen(navController: NavController) {
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 
-                // SECTION 1: Current Active Path Information
-                item { BypassCheckTitle(text = "Current Status") }
+                item {
+                    BypassCheckTitle(text = "Current Status")
                         
                     ExpressiveList(
                         content = listOf {
@@ -251,9 +250,8 @@ fun BypassChargeCheckScreen(navController: NavController) {
                         }
                     )
                 }
-
-                // SECTION 2: Diagnosis System Controller
-                item { BypassCheckTitle(text = "Diagnostics") }
+                item {
+                    BypassCheckTitle(text = "Diagnostics")
                     
                     Surface(
                         shape = RoundedCornerShape(26.dp),
@@ -323,9 +321,6 @@ fun BypassChargeCheckScreen(navController: NavController) {
                         }
                     }
                 }
-
-                // Live Console Terminal Output
-                // MUNCUL HANYA SETELAH KELAR & JIKA BELUM DICLOSE
                 item {
                     AnimatedVisibility(
                         visible = !isRunning && hasRunDiagnosis && logs.isNotEmpty() && !isConsoleClosed,
@@ -346,7 +341,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .padding(12.dp)
-                                            .padding(top = 28.dp) // Beri jarak buat tombol close di atas
+                                            .padding(top = 28.dp)
                                             .verticalScroll(logScrollState)
                                             .horizontalScroll(rememberScrollState())
                                     ) {
@@ -364,7 +359,6 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                     }
                                 }
                                 
-                                // Tombol Close Console di Pojok Kanan Atas
                                 IconButton(
                                     onClick = { isConsoleClosed = true },
                                     modifier = Modifier
@@ -384,8 +378,8 @@ fun BypassChargeCheckScreen(navController: NavController) {
                     }
                 }
 
-                // SECTION 3: Found Available Node Paths
-                item { BypassCheckTitle(text = "Available Target Nodes (${availablePaths.size})") }
+                item { 
+                    BypassCheckTitle(text = "Available Target Nodes (${availablePaths.size})")
                 
                     if (availablePaths.isEmpty()) {
                         ExpressiveList(
@@ -403,7 +397,6 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                 {
                                     val isSelected = activePath == pathNode.first
                                     
-                                    // Animasi font scale biar membesar saat dipilih
                                     val textScale by animateFloatAsState(
                                         targetValue = if (isSelected) 1.08f else 1.0f,
                                         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
@@ -436,7 +429,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                                 modifier = Modifier.graphicsLayer {
                                                     scaleX = textScale
                                                     scaleY = textScale
-                                                    transformOrigin = TransformOrigin(0f, 0.5f) // Supaya perbesaran font nggak ketengah, tetap rata kiri
+                                                    transformOrigin = TransformOrigin(0f, 0.5f)
                                                 }
                                             ) 
                                         },
@@ -449,7 +442,6 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                             )
                                         },
                                         trailingContent = {
-                                            // Animasi checkmark pop-in
                                             AnimatedVisibility(
                                                 visible = isSelected,
                                                 enter = scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
