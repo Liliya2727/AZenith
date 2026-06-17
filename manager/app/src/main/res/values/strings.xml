@@ -62,8 +62,8 @@
     <string name="Renderer_Default">Default</string>
     <string name="Renderer_SkiaGL">SkiaGL</string>
     
-    <string name="CompatibilityCheck">Compatibility Check</string>
-    <string name="CompatibilityCheck_desc">Run a diagnostic to verify if your device supports Bypass Charging. Please ensure your phone is connected to a charger before starting the test.</string>
+    <string name="CompatibilityCheck">Check Availability</string>
+    <string name="CompatibilityCheck_desc">Check and run diagnostic to verify if your device supports Bypass Charging.</string>
 
     
     <string name="Profile_Balanced">Balanced</string>
