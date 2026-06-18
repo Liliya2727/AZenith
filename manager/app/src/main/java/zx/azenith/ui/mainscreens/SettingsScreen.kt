@@ -79,7 +79,6 @@ fun SettingsScreen(navController: NavController) {
     val context = LocalContext.current
     val listState = rememberLazyListState()
     
-    var showAboutDialog by remember { mutableStateOf(false) }
     var showLogBottomSheet by remember { mutableStateOf(false) }
     
     val restartToastText = stringResource(R.string.toast_restarting_service)
@@ -354,12 +353,13 @@ fun SettingsScreen(navController: NavController) {
                         ExpressiveList(
                             content = listOf {
                                 ExpressiveListItem(
-                                    onClick = { showAboutDialog = true }, 
+                                    onClick = { navController.navigate("aboutscreen") }, 
                                     headlineContent = { Text(stringResource(R.string.about_azenith)) },
                                     supportingContent = {
                                         Text(stringResource(R.string.version_format, BuildConfig.VERSION_NAME))
                                     },
-                                    leadingContent = { LeadingIcon(icon = Icons.Filled.ContactPage) }
+                                    leadingContent = { LeadingIcon(icon = Icons.Filled.ContactPage) },
+                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
                                 )
                             }
                         )
@@ -370,12 +370,6 @@ fun SettingsScreen(navController: NavController) {
             // Registrasi Dialog Host di Root Box
             LoadingDialogHost(handle = loadingDialog)
             ConfirmDialogHost(handle = uninstallDialog)
-
-            if (showAboutDialog) {
-                RootAppDialog {
-                    AboutDialog(dismiss = { showAboutDialog = false })
-                }
-            }
             
             RootAppDialog {
                 CustomBottomSheet(
@@ -561,7 +555,7 @@ fun SettingsScreenTopAppBar(
             actions = {
                 IconButton(onClick = onChangelogClick) {
                     Icon(
-                        imageVector = Icons.Rounded.History, // Icon untuk changelog
+                        imageVector = Icons.Rounded.TextSnippet, // Icon untuk changelog
                         contentDescription = "Changelog"
                     )
                 }
