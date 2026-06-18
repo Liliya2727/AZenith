@@ -18,6 +18,8 @@
 #include <libgen.h>
 #include <sys/inotify.h>
 #include <poll.h>
+#include <pthread.h>
+
 
 /**
  * GLOBAL VARIABLES
@@ -29,6 +31,28 @@ int game_pid_count = 0;
 bool is_restarting_renderer = false;
 GameOptions opts;
 SystemStateCache current_system_cache;
+
+/**
+ * @struct PreloadArgs
+ * @brief Arguments passed to the GamePreload thread.
+ */
+typedef struct {
+    char package[256];
+} PreloadArgs;
+
+/**
+ * @brief Thread worker function to run GamePreload asynchronously.
+ */
+static void* async_preload_worker(void* arg) {
+    PreloadArgs* args = (PreloadArgs*)arg;
+    
+    // Panggil fungsi GamePreload yang berat
+    GamePreload(args->package);
+    
+    // Bebaskan alokasi memori yang dibuat sebelum pthread_create
+    free(args);
+    return NULL;
+}
 
 /**
  * @struct DaemonContext
@@ -401,15 +425,32 @@ static void apply_performance_profile(DaemonContext* ctx) {
         }
     }
           
-    if (IS_TRUE(opts.game_preload)) {
-        notify("AZenith Preload", "Preloading Complete at : %s", true, 10000, active_app_name ? active_app_name : gamestart);
-        GamePreload(gamestart);
-    } else if (!IS_FALSE(opts.game_preload)) {
+    if (IS_TRUE(opts.game_preload) || (!IS_FALSE(opts.game_preload) && []() {
         char preload_active[PROP_VALUE_MAX] = {0};
         __system_property_get("persist.sys.azenithconf.APreload", preload_active);
-        if (strcmp(preload_active, "1") == 0) {
-            notify("AZenith Preload", "Preloading Complete at : %s", true, 10000, active_app_name ? active_app_name : gamestart);
-            GamePreload(gamestart);
+        return strcmp(preload_active, "1") == 0;
+    }())) {
+        notify("AZenith Preload", "Preloading initiated for: %s", true, 10000, active_app_name ? active_app_name : gamestart);
+        
+        // Alokasikan memori untuk argumen thread
+        PreloadArgs* p_args = malloc(sizeof(PreloadArgs));
+        if (p_args) {
+            strncpy(p_args->package, gamestart, sizeof(p_args->package) - 1);
+            p_args->package[sizeof(p_args->package) - 1] = '\0'; // Safety
+
+            pthread_t preload_thread;
+            // Gunakan atribut detached agar thread membersihkan dirinya sendiri tanpa perlu pthread_join
+            pthread_attr_t attr;
+            pthread_attr_init(&attr);
+            pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+            if (pthread_create(&preload_thread, &attr, async_preload_worker, p_args) != 0) {
+                log_zenith(LOG_ERROR, "Failed to spawn async preload thread");
+                free(p_args); // Jika gagal spawn, bersihkan memori
+            }
+            pthread_attr_destroy(&attr);
+        } else {
+            log_zenith(LOG_ERROR, "Failed to allocate memory for preload arguments");
         }
     }
 }
@@ -664,7 +705,10 @@ int main_daemon(void) {
         }
 
         if (ctx.is_initialize_complete && gamestart && effective_screen_state) {
-            if (!ctx.need_profile_checkup && ctx.cur_mode == PERFORMANCE_PROFILE) continue;
+            if (ctx.cur_mode == PERFORMANCE_PROFILE && ctx.has_applied_renderer && game_pid_count > 0) {
+                ctx.need_profile_checkup = false;
+                continue;
+            }
             
             bool is_renderer_changing = false;
             

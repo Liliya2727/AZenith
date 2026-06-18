@@ -17,6 +17,7 @@
 #include <AZenith.h>
 #include <dirent.h>
 #include <sys/system_properties.h>
+#include <string.h>
 
 /***********************************************************************************
  * Function Name      : GamePreload
@@ -25,24 +26,28 @@
  * Description        : Preloads all native libraries (.so) inside lib/arm64
  ***********************************************************************************/
 void GamePreload(const char* package) {
+    // PERHATIAN: Ini memblokir thread saat ini selama 5 detik. 
+    // Pastikan dipanggil via pthread_create atau thread pool jika berada di main loop.
     sleep(5);
-    if (!package || strlen(package) == 0) {
+    
+    if (!package || package[0] == '\0') {
         log_zenith(LOG_WARN, "Package is null or empty");
         return;
     }
 
     char apk_path[256] = {0};
     char cmd_apk[512];
+    // Command package memanggil shell dan ActivityManager, lumayan berat tapi wajib di sini
     snprintf(cmd_apk, sizeof(cmd_apk), "cmd package path %s | head -n1 | cut -d: -f2", package);
 
     FILE* apk = popen(cmd_apk, "r");
     if (!apk || !fgets(apk_path, sizeof(apk_path), apk)) {
         log_zenith(LOG_WARN, "Failed to get APK path for %s", package);
-        if (apk)
-            pclose(apk);
+        if (apk) pclose(apk);
         return;
     }
     pclose(apk);
+    
     apk_path[strcspn(apk_path, "\n")] = 0;
 
     char* last_slash = strrchr(apk_path, '/');
@@ -55,13 +60,15 @@ void GamePreload(const char* package) {
     char lib_path[300];
     snprintf(lib_path, sizeof(lib_path), "%s/lib/arm64", apk_path);
 
-    // check if .so exists
+    // Mengecek keberadaan file .so
     bool lib_exists = false;
     DIR* dir = opendir(lib_path);
     if (dir) {
         struct dirent* entry;
         while ((entry = readdir(dir)) != NULL) {
-            if (strstr(entry->d_name, ".so")) {
+            // Optimasi: pastikan .so ada di akhir nama file
+            char* ext = strrchr(entry->d_name, '.');
+            if (ext && strcmp(ext, ".so") == 0) {
                 lib_exists = true;
                 break;
             }
@@ -69,45 +76,33 @@ void GamePreload(const char* package) {
         closedir(dir);
     }
 
+    // Mengambil property dengan cara yang lebih aman
     char budget[32] = {0};
-    __system_property_get("persist.sys.azenithconf.preloadbudget", budget);
-    if (strlen(budget) == 0)
+    if (__system_property_get("persist.sys.azenithconf.preloadbudget", budget) <= 0) {
         strcpy(budget, "500M");
+    }
 
-    // Common variables
-    FILE* fp = NULL;
+    // --- PENGGABUNGAN LOGIKA (DRY Principle) ---
+    const char* target_path = lib_exists ? lib_path : apk_path;
+    const char* target_type = lib_exists ? "libs" : "split apks";
+
+    char preload_cmd[512];
+    snprintf(preload_cmd, sizeof(preload_cmd), "sys.azenith-preloadbin -v -t -m %s \"%s\"", budget, target_path);
+
+    FILE* fp = popen(preload_cmd, "r");
+    if (!fp) {
+        log_zenith(LOG_WARN, "Failed to run preloadbin for %s", package);
+        return;
+    }
+
+    log_zenith(LOG_INFO, "Preloading game %s %s", target_type, package);
+    log_preload(LOG_INFO, "Preloading %s %s with budget %s", target_type, target_path, budget);
+
     char line[1024];
     int total_pages = 0;
     char total_size[32] = {0};
 
-    if (lib_exists) {
-        char preload_cmd[512];
-        snprintf(preload_cmd, sizeof(preload_cmd), "sys.azenith-preloadbin -v -t -m %s \"%s\"", budget, lib_path);
-
-        fp = popen(preload_cmd, "r");
-        if (!fp) {
-            log_zenith(LOG_WARN, "Failed to run preloadbin for %s", package);
-            return;
-        }
-
-        log_zenith(LOG_INFO, "Preloading game libs %s", package);
-        log_preload(LOG_INFO, "Preloading libs %s with budget %s", lib_path, budget);
-
-    } else {
-        // Fallback to split APKs
-        char preload_cmd[512];
-        snprintf(preload_cmd, sizeof(preload_cmd), "sys.azenith-preloadbin -v -t -m %s \"%s\"", budget, apk_path);
-
-        fp = popen(preload_cmd, "r");
-        if (!fp) {
-            log_zenith(LOG_WARN, "Failed to run preloadbin for %s", package);
-            return;
-        }
-
-        log_zenith(LOG_INFO, "Preloading game split apks %s", package);
-        log_preload(LOG_INFO, "Preloading split apks %s with budget %s", apk_path, budget);
-    }
-
+    // --- OPTIMASI LOOP PARSING ---
     while (fgets(line, sizeof(line), fp)) {
         line[strcspn(line, "\n")] = 0;
 
@@ -119,16 +114,24 @@ void GamePreload(const char* package) {
             if (sscanf(p_pages, "Touched Pages: %d (%31[^)])", &pages, size) == 2) {
                 total_pages += pages;
                 strncpy(total_size, size, sizeof(total_size) - 1);
+                total_size[sizeof(total_size) - 1] = '\0'; // Safety null-termination
+                
                 log_zenith(LOG_DEBUG, "Preloading complete: %d memory pages touched", pages);
                 log_zenith(LOG_DEBUG, "Total memory used for preloaded libraries: %s", size);
             } else {
                 log_zenith(LOG_WARN, "Failed to parse Touched Pages");
             }
+            continue; // Skip pengecekan ekstensi jika ini baris summary
         }
 
-        if (strstr(line, ".so") || strstr(line, ".apk") || strstr(line, ".dm") || strstr(line, ".odex") || strstr(line, ".vdex") ||
-            strstr(line, ".art")) {
-            log_preload(LOG_DEBUG, "Touched: %s", line);
+        // Cek ekstensi dengan lebih efisien dan akurat
+        char* ext = strrchr(line, '.');
+        if (ext) {
+            if (strcmp(ext, ".so") == 0   || strcmp(ext, ".apk") == 0 || 
+                strcmp(ext, ".dm") == 0   || strcmp(ext, ".odex") == 0 || 
+                strcmp(ext, ".vdex") == 0 || strcmp(ext, ".art") == 0) {
+                log_preload(LOG_DEBUG, "Touched: %s", line);
+            }
         }
     }
 
