@@ -37,6 +37,9 @@ jobs:
       
       - name: Verify Module
         run: bash .github/scripts/verify.sh
+        
+      - name: Copy changelog file
+        run: bash .github/scripts/changelog.sh
 
       - name: Determine Build Type
         id: build_type
