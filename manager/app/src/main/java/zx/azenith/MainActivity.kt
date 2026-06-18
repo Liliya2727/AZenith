@@ -77,6 +77,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
+        
         val fromTileType = if (intent.action == "android.service.quicksettings.action.QS_TILE_PREFERENCES") {
             val component = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                 intent.getParcelableExtra(Intent.EXTRA_COMPONENT_NAME, android.content.ComponentName::class.java)
@@ -398,6 +402,32 @@ fun MainScreen(fromTileType: String? = null) {
                         }
                     )
                 }
+                
+                val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                if (navBarHeight > 32.dp) {
+                    val colorScheme = MaterialTheme.colorScheme
+                    val bottomScrimGradient = remember(colorScheme) {
+                        Brush.verticalGradient(
+                            0.0f to Color.Transparent,
+                            0.1f to colorScheme.surface.copy(alpha = 0.3f),
+                            0.2f to colorScheme.surface.copy(alpha = 0.4f),
+                            0.3f to colorScheme.surface.copy(alpha = 0.5f),
+                            0.4f to colorScheme.surface.copy(alpha = 0.7f),
+                            0.5f to colorScheme.surface.copy(alpha = 0.8f),
+                            0.6f to colorScheme.surface.copy(alpha = 0.9f),
+                            1.0f to colorScheme.surface
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(navBarHeight + 24.dp)
+                            .align(Alignment.BottomCenter)
+                            .background(bottomScrimGradient)
+                    )
+                }
+
 
                 AnimatedVisibility(
                     visible = rootStatus && moduleInstalled && pendingReboot && currentRoute in bottomBarRoutes && isFabVisible.value,
