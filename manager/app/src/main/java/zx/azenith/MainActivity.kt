@@ -296,6 +296,32 @@ fun MainScreen(fromTileType: String? = null) {
             Box(
                 modifier = Modifier.fillMaxSize()
             ) {
+            
+                val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                if (navBarHeight > 32.dp) {
+                    val colorScheme = MaterialTheme.colorScheme
+                    val bottomScrimGradient = remember(colorScheme) {
+                        Brush.verticalGradient(
+                            0.0f to Color.Transparent,
+                            0.1f to colorScheme.surface.copy(alpha = 0.3f),
+                            0.2f to colorScheme.surface.copy(alpha = 0.4f),
+                            0.3f to colorScheme.surface.copy(alpha = 0.5f),
+                            0.4f to colorScheme.surface.copy(alpha = 0.7f),
+                            0.5f to colorScheme.surface.copy(alpha = 0.8f),
+                            0.6f to colorScheme.surface.copy(alpha = 0.9f),
+                            1.0f to colorScheme.surface
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(navBarHeight + 12.dp)
+                            .align(Alignment.BottomCenter)
+                            .background(bottomScrimGradient)
+                    )
+                }
+                
                 NavHost(
                     navController = navController,
                     startDestination = if (hasCompletedGetStarted) "home" else "get_started",
@@ -405,30 +431,7 @@ fun MainScreen(fromTileType: String? = null) {
                     )
                 }
                 
-                val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                if (navBarHeight > 32.dp) {
-                    val colorScheme = MaterialTheme.colorScheme
-                    val bottomScrimGradient = remember(colorScheme) {
-                        Brush.verticalGradient(
-                            0.0f to Color.Transparent,
-                            0.1f to colorScheme.surface.copy(alpha = 0.3f),
-                            0.2f to colorScheme.surface.copy(alpha = 0.4f),
-                            0.3f to colorScheme.surface.copy(alpha = 0.5f),
-                            0.4f to colorScheme.surface.copy(alpha = 0.7f),
-                            0.5f to colorScheme.surface.copy(alpha = 0.8f),
-                            0.6f to colorScheme.surface.copy(alpha = 0.9f),
-                            1.0f to colorScheme.surface
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(navBarHeight + 24.dp)
-                            .align(Alignment.BottomCenter)
-                            .background(bottomScrimGradient)
-                    )
-                }
+                
 
 
                 AnimatedVisibility(
