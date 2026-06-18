@@ -452,36 +452,46 @@ fun SettingsScreen(navController: NavController) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(
-                                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp
-                            )
+                            .fillMaxHeight(0.85f) 
                     ) {
                         Text(
                             text = "Changelog",
-                            style = MaterialTheme.typography.titleLarge,
+                            style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 16.dp)
                         )
-
-                        Box(
+            
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 24.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+            
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .weight(1f, fill = false) 
+                                .weight(1f)
+                                .verticalScroll(rememberScrollState())
                                 .padding(horizontal = 24.dp)
                         ) {
+                            Spacer(modifier = Modifier.height(16.dp))                            
                             MarkdownText(
                                 markdown = changelogText,
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
-                                modifier = Modifier.verticalScroll(rememberScrollState())
+                                modifier = Modifier.fillMaxWidth() 
                             )
-
+                            Spacer(
+                                modifier = Modifier.height(
+                                    WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 64.dp
+                                )
+                            )
                         }
                     }
                 }
             }
+
         }
     }
 }

@@ -1,26 +1,26 @@
 ## AZenith 4.5
-### Changelog - CI 1213-57ff2ab
+### - Changelog - CI 1213-57ff2ab
 - Fix initiate logic on Limit Freq slider 
 - Added flag to restore normal frequencies when limit freq is Disabled
 
-### Changelog - CI 1210-b24daOd
+### - Changelog - CI 1210-b24daOd
 - Migrate manager from WebUI to Manager APP
-- Improved Bypass Charging logic, and added Compatibility Checks, Go to `Tweak Settings > Bypass Charging > Compatibility Check.`
+- Improved Bypass Charging logic, and added Compatibility Checks, Go to **Tweak Settings > Bypass Charging > Compatibility Check.**
 - Added Per-Apps Tweak Settings
-- Fix a bug where `JIT Compiler` causing screen freeze at Startup
+- Fix a bug where **JIT Compiler** causing screen freeze at Startup
 - Refactoring Disable Thermal Script
 - Added more nodes for Bypass Charge
 - Improved Daemon flow and fixes some Bugs
-  • Added 10s wait after screen off in `Performance Profile` 
-  • Adjusted Polling Interval to 1s
-  • Revert Daemon state use properties, and use .lock file instead
+- Added 10s wait after screen off in **Performance Profile**
+- Adjusted Polling Interval to 1s
+- Revert Daemon state use properties, and use .lock file instead
 
 
 ## AZenith 4.3
-### Changelog - CI 1070-b60aaa9
+### - Changelog - CI 1070-b60aaa9
 - Fix data in Device Recognition Files
 
-### Changelog - CI 1061-1cd43a4
+### - Changelog - CI 1061-1cd43a4
 - Implement native parsing for dumpsys and dropped grep and awk filter
 - Improve App Process detection by switching from /proc/{}/cmdline to dumpsys activity activities for more accurate PID detections
 - Reduced Daemon loops from 5s all condition to 2s and 700ms in-game
@@ -42,7 +42,7 @@
 
 
 ## AZenith 4.2
-### Changelog
+### - Changelog
 - Added ID, KR, JA, JV, and ZN translation in the WebUI
 - Added gpu mali 'power_policy' for MediaTek
 - Fix an issue where I/O Scheduler setting didn't show up in some device
@@ -57,7 +57,7 @@
 
 
 ## AZenith 4.0
-### Changelog
+### - Changelog
 - Underscale settings now using option based on percentage
 - Added light theme on webui(follow system)
 - Readded Manual/Idle Mode with new logic
@@ -73,7 +73,7 @@
 
 
 ## AZenith 3.8
-### Changelog
+### - Changelog
 - Added I/O Scheduler settings
 - Fix an issue where webui causing a random reboot
 - Update sf settings based on carlotta render tweak
@@ -83,7 +83,7 @@
 
 
 ## AZenith 3.6
-### Changelog
+### - Changelog
 - Re Added Lite mode
 - Add Resolution Changer / Underscale
 - Color Scheme a.k.a Color boost now applied on boot
@@ -97,7 +97,7 @@
 
 
 ## AZenith 3.4
-### Changelog 
+### - Changelog 
 - Major changes in backend flow
 - Replace file-based saving value with persistence.prop.
 - Add an option to enable or disable Toast notification(enabled by default).
@@ -113,7 +113,7 @@
 
 
 ## AZenith 3.3
-### Changelog
+### - Changelog
 - Fix CPU Governor Permission and Cpu Frequency anomalies
 - Fix Webui Governor Settings (missing permissions)
 - Remove Scheduler settings
@@ -128,14 +128,14 @@
 
 
 ## AZenith 3.1
-### Changelog
+### - Changelog
 - Add searchbar for gamelist edit in WebUi
 - Update mediatek disable thermal
 - Refactoring codes...
 
 
 ## AZenith 3.0
-### Changelog
+### - Changelog
 - Compile with ndk-build to support MultiArch
 - Rebrand to universal performance module
 - Fix missing function call in script
@@ -147,7 +147,7 @@
 
 
 ## AZenith 2.8
-### Changelog
+### - Changelog
 - Update : Initial Support for Snapdragon
 - Change : FSTrim is not set on boot now
 - Update : Added an Option to Change Performance Governor
@@ -158,7 +158,7 @@
 
 
 ## AZenith 2.6
-### Changelog
+### - Changelog
 - Change : Change the logic of the slider in webUi and optimize it for low end devices
 - Change : Compress webui and convert it gif to Webp
 - Change : Restructure the webui script to make it lighter
@@ -166,7 +166,7 @@
 
 
 ## AZenith 2.5
-### Changelog
+### - Changelog
 - Update : Added color scheme settings based on Zirelia 1.0
 - Change : Removed Lite Mode
 - Change : Migrate to C Daemon based on Encore 4.5 (Thanks to Rem01Project for OpenSource EncoreDaemon)
@@ -196,7 +196,7 @@
 
 
 ## AZenith 2.4
-### Changelog
+### - Changelog
 - Changes : Redesign the WebUI a little bit to enhance stability and user experiences
 - Updates : Add 2 new profiles, ECO Mode(Powersave) and Balanced Performance(Lite Mode)
 - Updates : Remove toggle to force performance profile manually because it's buggy and unstable
@@ -216,7 +216,7 @@
 
 
 ## AZenith 2.0
-### Changelog
+### - Changelog
 - Increase Loop delay to 35 Seconds when Using GamePreload to reduce usage
 - Fix bootloop issue on some devices
 - Fix Bypass Charge Checking when Installing Module
@@ -226,7 +226,7 @@
 
 
 ## AZenith 1.9
-### Changelog
+### - Changelog
 - Introducing Game Preload, Preload game libs to memory to reduce load time and minimize lag
 - Ram Freed, Kill background apps when entering performance profiles to reduce ram usage
 - WebUi: added loading screen on WebUI, let everything to load before accessing WebUI
@@ -238,18 +238,18 @@
 
 
 ## AZenith 1.8 R2
-### Changelog
+### - Changelog
 - Fix Profiler, some settings wouldn't work without this one
 
 
 ## AZenith 1.8 R1
-### Changelog
+### - Changelog
 - Optimizing Script
 - Added a script to clear background apps on Performance Profiles
 
 
 ## AZenith 1.7
-### Changelog
+### - Changelog
 - Optimize Performance Script and Tweak
 - Added Feature to Underclock CPU Frequency
 - Rebrand to Universal MediaTek Modules
@@ -260,7 +260,7 @@
 
 
 ## AZenith 1.2
-### Changelog
+### - Changelog
 - Fix a bug where service won't start again after being disabled
 - Fix Volt Opt wont save the Value before Disabling it
 - Adjust monitoring loop to 10 Seconds
@@ -271,7 +271,7 @@
 
 
 ## AZenith 1.0
-### Changelog
+### - Changelog
 - Initial Release on Github
 - Sync with Encore 2.3 WebUi
 - Added FSTrim (Adjustable in Webui)
