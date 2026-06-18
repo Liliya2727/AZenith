@@ -61,6 +61,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import java.util.Date
 import java.util.Locale
+import java.io.File
 
 fun isLauncherIconEnabled(context: Context): Boolean {
     val pkg = context.packageManager
