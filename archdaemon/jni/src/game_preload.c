@@ -26,8 +26,7 @@
  * Description        : Preloads all native libraries (.so) inside lib/arm64
  ***********************************************************************************/
 void GamePreload(const char* package) {
-    // PERHATIAN: Ini memblokir thread saat ini selama 5 detik. 
-    // Pastikan dipanggil via pthread_create atau thread pool jika berada di main loop.
+
     sleep(5);
     
     if (!package || package[0] == '\0') {
@@ -37,7 +36,6 @@ void GamePreload(const char* package) {
 
     char apk_path[256] = {0};
     char cmd_apk[512];
-    // Command package memanggil shell dan ActivityManager, lumayan berat tapi wajib di sini
     snprintf(cmd_apk, sizeof(cmd_apk), "cmd package path %s | head -n1 | cut -d: -f2", package);
 
     FILE* apk = popen(cmd_apk, "r");
