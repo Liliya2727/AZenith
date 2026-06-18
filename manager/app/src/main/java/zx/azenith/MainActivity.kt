@@ -72,6 +72,8 @@ import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.blur.blurEffect
 import androidx.compose.ui.graphics.Brush
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 
 class MainActivity : ComponentActivity() {
@@ -195,7 +197,7 @@ fun MainScreen(fromTileType: String? = null) {
     }
     
     val bottomBarRoutes = remember { setOf("home", "applist", "tweaks", "settings") }
-    
+    val installingDialog = rememberInstallingDialog()
     val updateDialog = rememberConfirmDialog(
         onConfirm = {
             coroutineScope.launch {
@@ -221,7 +223,6 @@ fun MainScreen(fromTileType: String? = null) {
         }
     )
     
-    val installingDialog = rememberInstallingDialog()
     
     LaunchedEffect(rootStatus) {
         if (rootStatus) {

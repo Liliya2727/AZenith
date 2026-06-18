@@ -57,6 +57,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.parcelize.Parcelize
 import kotlin.coroutines.resume
+import androidx.compose.ui.text.font.FontWeight
 
 private const val TAG = "DialogComponent"
 
