@@ -88,7 +88,7 @@ fun AboutScreen(navController: NavController) {
     val context = LocalContext.current
     val listState = rememberLazyListState()
     
-    // Fungsi pembantu untuk membuka link (GitHub/Telegram)
+    // Fungsi pembantu untuk membuka link
     val openLink = { url: String ->
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
         context.startActivity(intent)
@@ -123,35 +123,60 @@ fun AboutScreen(navController: NavController) {
                             .padding(vertical = 32.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // App Icon
                         Image(
-                            painter = painterResource(id = R.drawable.avatar), // Ganti dengan icon aplikasimu jika berbeda
+                            painter = painterResource(id = R.drawable.avatar),
                             contentDescription = "App Icon",
                             modifier = Modifier
                                 .size(96.dp)
-                                .clip(CircleShape) // Atau RoundedCornerShape(24.dp) kalau mau bentuk kotak melengkung
+                                .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.surfaceVariant)
                         )
                         
                         Spacer(modifier = Modifier.height(16.dp))
                         
-                        // App Name
                         Text(
-                            text = stringResource(id = R.string.app_name), // Atau hardcode "AZenith"
+                            text = stringResource(id = R.string.app_name),
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         
-                        // App Version
                         Text(
                             text = "Version ${BuildConfig.VERSION_NAME}",
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
                         
-                        Spacer(modifier = Modifier.height(32.dp))
-                        
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            FilledTonalButton(
+                                onClick = { openLink("https://t.me/ArchHavenDisc") }
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_telegram), 
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Support Group")
+                            }
+                            
+                            OutlinedButton(
+                                onClick = { openLink("https://t.me/ZeshArch") }
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_telegram), 
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Channel")
+                            }
+                        }
                     }
                 }
 
@@ -164,21 +189,14 @@ fun AboutScreen(navController: NavController) {
                         content = listOf(
                             {
                                 ExpressiveListItem(
-                                    headlineContent = {
-                                        Text(
-                                            text = "Liliya",
-                                            fontWeight = FontWeight.SemiBold
-                                        ) 
-                                    },
+                                    headlineContent = { Text(text = "Liliya", fontWeight = FontWeight.SemiBold) },
                                     supportingContent = { Text("Creator & Maintainer") },
                                     leadingContent = {
                                         Image(
                                             painter = painterResource(R.drawable.avatar_liliya),
                                             contentDescription = "Liliya",
                                             contentScale = ContentScale.Crop,
-                                            modifier = Modifier
-                                                .size(48.dp)
-                                                .clip(CircleShape)
+                                            modifier = Modifier.size(48.dp).clip(CircleShape)
                                         )
                                     },
                                     trailingContent = {
@@ -190,7 +208,7 @@ fun AboutScreen(navController: NavController) {
                                                 Icon(
                                                     painter = painterResource(id = R.drawable.ic_github),
                                                     contentDescription = "GitHub",
-                                                    modifier = Modifier.size(27.dp),
+                                                    modifier = Modifier.size(29.dp),
                                                     tint = MaterialTheme.colorScheme.primary
                                                 )
                                             }
@@ -198,7 +216,7 @@ fun AboutScreen(navController: NavController) {
                                                 Icon(
                                                     painter = painterResource(id = R.drawable.ic_telegram),
                                                     contentDescription = "Telegram",
-                                                    modifier = Modifier.size(25.dp),
+                                                    modifier = Modifier.size(26.dp),
                                                     tint = MaterialTheme.colorScheme.primary
                                                 )
                                             }
@@ -210,6 +228,7 @@ fun AboutScreen(navController: NavController) {
                     )
                 }
 
+                // 3. Collaborators Section
                 item { 
                     AboutSectionTitle("Collaborators") 
                 }
@@ -218,18 +237,14 @@ fun AboutScreen(navController: NavController) {
                         content = listOf(
                             {
                                 ExpressiveListItem(
-                                    headlineContent = { 
-                                        Text(text = "Rianixia", fontWeight = FontWeight.SemiBold) 
-                                    },
+                                    headlineContent = { Text(text = "Rianixia", fontWeight = FontWeight.SemiBold) },
                                     supportingContent = { Text("Co Maintainer") },
                                     leadingContent = {
                                         Image(
                                             painter = painterResource(R.drawable.avatar_xia),
                                             contentDescription = "Xia",
                                             contentScale = ContentScale.Crop,
-                                            modifier = Modifier
-                                                .size(48.dp)
-                                                .clip(CircleShape)
+                                            modifier = Modifier.size(48.dp).clip(CircleShape)
                                         )
                                     },
                                     trailingContent = {
@@ -241,15 +256,15 @@ fun AboutScreen(navController: NavController) {
                                                 Icon(
                                                     painter = painterResource(id = R.drawable.ic_github),
                                                     contentDescription = "GitHub",
-                                                    modifier = Modifier.size(27.dp),
+                                                    modifier = Modifier.size(29.dp),
                                                     tint = MaterialTheme.colorScheme.primary
                                                 )
                                             }
                                             IconButton(onClick = { openLink("https://t.me/rianixia") }) {
                                                 Icon(
-                                                    painter = painterResource(id = R.drawable.ic_telegram), // Siapkan aset ic_telegram.xml
+                                                    painter = painterResource(id = R.drawable.ic_telegram),
                                                     contentDescription = "Telegram",
-                                                    modifier = Modifier.size(25.dp),
+                                                    modifier = Modifier.size(26.dp),
                                                     tint = MaterialTheme.colorScheme.primary
                                                 )
                                             }
@@ -259,18 +274,14 @@ fun AboutScreen(navController: NavController) {
                             },
                             {
                                 ExpressiveListItem(
-                                    headlineContent = { 
-                                        Text(text = "Kanaochar", fontWeight = FontWeight.SemiBold) 
-                                    },
+                                    headlineContent = { Text(text = "Kanaochar", fontWeight = FontWeight.SemiBold) },
                                     supportingContent = { Text("Co Maintainer") },
                                     leadingContent = {
                                         Image(
                                             painter = painterResource(R.drawable.avatar_kanao),
                                             contentDescription = "Kanaochar",
                                             contentScale = ContentScale.Crop,
-                                            modifier = Modifier
-                                                .size(48.dp)
-                                                .clip(CircleShape)
+                                            modifier = Modifier.size(48.dp).clip(CircleShape)
                                         )
                                     },
                                     trailingContent = {
@@ -282,7 +293,7 @@ fun AboutScreen(navController: NavController) {
                                                 Icon(
                                                     painter = painterResource(id = R.drawable.ic_github),
                                                     contentDescription = "GitHub",
-                                                    modifier = Modifier.size(27.dp),
+                                                    modifier = Modifier.size(29.dp),
                                                     tint = MaterialTheme.colorScheme.primary
                                                 )
                                             }
@@ -290,7 +301,7 @@ fun AboutScreen(navController: NavController) {
                                                 Icon(
                                                     painter = painterResource(id = R.drawable.ic_telegram),
                                                     contentDescription = "Telegram",
-                                                    modifier = Modifier.size(25.dp),
+                                                    modifier = Modifier.size(26.dp),
                                                     tint = MaterialTheme.colorScheme.primary
                                                 )
                                             }
@@ -299,6 +310,23 @@ fun AboutScreen(navController: NavController) {
                                 )
                             }
                         )
+                    )
+                }
+                
+                item { 
+                    AboutSectionTitle("Open Source") 
+                }
+                item {
+                    ExpressiveList(
+                        content = listOf {
+                            ExpressiveListItem(
+                                onClick = { openLink("https://github.com/Liliya2727/AZenith") },
+                                headlineContent = { Text("Source Code") },
+                                supportingContent = { Text("View the source code on GitHub") },
+                                leadingContent = { LeadingIcon(icon = Icons.Rounded.Code) },
+                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                            )
+                        }
                     )
                 }
             }
@@ -363,4 +391,4 @@ fun AboutTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit) 
         )
     }
 }
-            
+ 
