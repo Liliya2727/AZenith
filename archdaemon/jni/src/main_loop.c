@@ -425,34 +425,38 @@ static void apply_performance_profile(DaemonContext* ctx) {
         }
     }
           
-    if (IS_TRUE(opts.game_preload) || (!IS_FALSE(opts.game_preload) && []() {
+    bool is_preload_active = false;
+    if (!IS_FALSE(opts.game_preload)) {
         char preload_active[PROP_VALUE_MAX] = {0};
-        __system_property_get("persist.sys.azenithconf.APreload", preload_active);
-        return strcmp(preload_active, "1") == 0;
-    }())) {
+        if (__system_property_get("persist.sys.azenithconf.APreload", preload_active) > 0) {
+            is_preload_active = (strcmp(preload_active, "1") == 0);
+        }
+    }
+
+    if (IS_TRUE(opts.game_preload) || is_preload_active) {
         notify("AZenith Preload", "Preloading initiated for: %s", true, 10000, active_app_name ? active_app_name : gamestart);
-        
-        // Alokasikan memori untuk argumen thread
+
         PreloadArgs* p_args = malloc(sizeof(PreloadArgs));
         if (p_args) {
             strncpy(p_args->package, gamestart, sizeof(p_args->package) - 1);
-            p_args->package[sizeof(p_args->package) - 1] = '\0'; // Safety
+            p_args->package[sizeof(p_args->package) - 1] = '\0'; 
 
             pthread_t preload_thread;
-            // Gunakan atribut detached agar thread membersihkan dirinya sendiri tanpa perlu pthread_join
+
             pthread_attr_t attr;
             pthread_attr_init(&attr);
             pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
             if (pthread_create(&preload_thread, &attr, async_preload_worker, p_args) != 0) {
                 log_zenith(LOG_ERROR, "Failed to spawn async preload thread");
-                free(p_args); // Jika gagal spawn, bersihkan memori
+                free(p_args);
             }
             pthread_attr_destroy(&attr);
         } else {
             log_zenith(LOG_ERROR, "Failed to allocate memory for preload arguments");
         }
     }
+
 }
 
 /**
