@@ -332,7 +332,6 @@ fi
 
 # Set Permissions
 ui_print "- Setting Permissions..."
-pm grant zx.azenith android.permission.REQUEST_INSTALL_PACKAGES
 pm grant zx.azenith android.permission.READ_EXTERNAL_STORAGE
 pm grant zx.azenith android.permission.POST_NOTIFICATIONS
 pm grant zx.azenith android.permission.READ_MEDIA_IMAGES

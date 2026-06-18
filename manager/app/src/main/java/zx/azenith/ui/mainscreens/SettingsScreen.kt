@@ -132,6 +132,17 @@ fun SettingsScreen(navController: NavController) {
             }
         }
     }
+    
+    var logFileToDelete by remember { mutableStateOf<File?>(null) }
+    
+    val shareLogLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { 
+        logFileToDelete?.let { file ->
+            if (file.exists()) {
+                file.delete()
+            }
+            logFileToDelete = null
+        }
+    }
 
     MaterialExpressiveTheme {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -397,7 +408,9 @@ fun SettingsScreen(navController: NavController) {
                                                 }
                                                 
                                                 if (logFile != null) {
-                                                    shareLogArchive(context, logFile)
+                                                    logFileToDelete = logFile
+                                                    val intent = getShareLogIntent(context, logFile)
+                                                    shareLogLauncher.launch(intent)
                                                 } else {
                                                     snackbarHostState.showSnackbar("Failed to gather logs")
                                                 }

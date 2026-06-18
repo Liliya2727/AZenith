@@ -542,3 +542,126 @@ fun CustomContentDialog(
         }
     }
 }
+
+interface InstallingDialogHandle : DialogHandle {
+    suspend fun <R> withInstalling(block: suspend () -> R): R
+    fun showInstalling()
+}
+
+private class InstallingDialogHandleImpl(
+    visible: MutableState<Boolean>,
+    coroutineScope: CoroutineScope
+) : InstallingDialogHandle, DialogHandleBase(visible, coroutineScope) {
+    override suspend fun <R> withInstalling(block: suspend () -> R): R {
+        return coroutineScope.async {
+            try {
+                visible.value = true
+                block()
+            } finally {
+                visible.value = false
+            }
+        }.await()
+    }
+    override fun showInstalling() { show() }
+    override val dialogType: String get() = "InstallingDialog"
+}
+
+@Composable
+fun rememberInstallingDialog(): InstallingDialogHandle {
+    val visible = remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    return remember { InstallingDialogHandleImpl(visible, coroutineScope) }
+}
+
+@Composable
+fun InstallingDialogHost(handle: InstallingDialogHandle) {
+    val dialogs = LocalRootDialogs.current
+    val key = remember { java.util.UUID.randomUUID().toString() }
+    
+    DisposableEffect(key, handle) {
+        dialogs[key] = @Composable {
+            InstallingDialog(visible = handle.isShown)
+        }
+        onDispose {
+            dialogs.remove(key)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun InstallingDialog(visible: Boolean) {
+    val context = LocalContext.current
+    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
+    val hazeState = LocalAppHazeState.current
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)),
+        exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
+    ) {
+        BackHandler(onBack = { }) // Cegah user cancel pakai tombol back
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(100f) 
+                .background(Color.Black.copy(alpha = 0.42f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {} 
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            val scale by animateFloatAsState(
+                targetValue = if (visible) 1f else 0.9f,
+                animationSpec = tween(250, easing = LinearOutSlowInEasing),
+                label = "dialog_scale"
+            )
+
+            Box(
+                modifier = Modifier
+                    .widthIn(min = 280.dp, max = 350.dp)
+                    .scale(scale)
+                    .clip(RoundedCornerShape(28.dp))
+                    .then(
+                        if (isBlurEnabled && hazeState != null) {
+                            Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
+                        } else Modifier
+                    )
+                    .background(
+                        if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)
+                        else AlertDialogDefaults.containerColor
+                    )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Installing Update...",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Please do not close the app.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(32.dp))
+                    
+                    // Menggunakan LinearWavyProgressIndicator
+                    LinearWavyProgressIndicator(
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+}
