@@ -206,7 +206,7 @@ fun MainScreen(fromTileType: String? = null) {
                         // Rantai perintah: salin -> install -> hapus berkas sementara
                         Shell.cmd(
                             "cp /data/adb/modules/AZenith/AZenith.apk /data/local/tmp/AZenith_tmp.apk",
-                            "pm install -r /data/local/tmp/AZenith_tmp.apk",
+                            "sleep 5 && pm install -r /data/local/tmp/AZenith_tmp.apk",
                             "rm -f /data/local/tmp/AZenith_tmp.apk"
                         ).exec()
                     }
