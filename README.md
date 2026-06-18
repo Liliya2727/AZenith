@@ -1,5 +1,3 @@
-# # AZenith 火
-
 <p align="center">
   <img src="https://github.com/user-attachments/assets/904b23f2-010a-4447-bcbf-5eea41aec851" alt="AZenith Banner" width="100%">
 </p>
