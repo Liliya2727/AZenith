@@ -150,16 +150,8 @@ fun AboutScreen(navController: NavController) {
                             color = MaterialTheme.colorScheme.primary
                         )
                         
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(32.dp))
                         
-                        // App Description
-                        Text(
-                            text = "Universal auto Performance module to enhance gaming experience while preserving daily usability",
-                            style = MaterialTheme.typography.bodyMedium,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 24.dp)
-                        )
                     }
                 }
 
@@ -198,16 +190,16 @@ fun AboutScreen(navController: NavController) {
                                                 Icon(
                                                     painter = painterResource(id = R.drawable.ic_github),
                                                     contentDescription = "GitHub",
-                                                    modifier = Modifier.size(24.dp),
-                                                    tint = MaterialTheme.colorScheme.onSurface
+                                                    modifier = Modifier.size(27.dp),
+                                                    tint = MaterialTheme.colorScheme.primary
                                                 )
                                             }
-                                            IconButton(onClick = { openLink("https://github.com/ZeshArch") }) {
+                                            IconButton(onClick = { openLink("https://t.me/Zexshia") }) {
                                                 Icon(
-                                                    painter = painterResource(id = R.drawable.ic_github),
-                                                    contentDescription = "GitHub",
-                                                    modifier = Modifier.size(24.dp),
-                                                    tint = MaterialTheme.colorScheme.onSurface
+                                                    painter = painterResource(id = R.drawable.ic_telegram),
+                                                    contentDescription = "Telegram",
+                                                    modifier = Modifier.size(25.dp),
+                                                    tint = MaterialTheme.colorScheme.primary
                                                 )
                                             }
                                         }
@@ -229,6 +221,7 @@ fun AboutScreen(navController: NavController) {
                                     headlineContent = { 
                                         Text(text = "Rianixia", fontWeight = FontWeight.SemiBold) 
                                     },
+                                    supportingContent = { Text("Co Maintainer") },
                                     leadingContent = {
                                         Image(
                                             painter = painterResource(R.drawable.avatar_xia),
@@ -244,20 +237,20 @@ fun AboutScreen(navController: NavController) {
                                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            IconButton(onClick = { openLink("https://github.com/rianixia") }) {
+                                            IconButton(onClick = { openLink("https://github.com/ryanistr") }) {
                                                 Icon(
                                                     painter = painterResource(id = R.drawable.ic_github),
                                                     contentDescription = "GitHub",
-                                                    modifier = Modifier.size(24.dp),
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    modifier = Modifier.size(27.dp),
+                                                    tint = MaterialTheme.colorScheme.primary
                                                 )
                                             }
                                             IconButton(onClick = { openLink("https://t.me/rianixia") }) {
                                                 Icon(
                                                     painter = painterResource(id = R.drawable.ic_telegram), // Siapkan aset ic_telegram.xml
                                                     contentDescription = "Telegram",
-                                                    modifier = Modifier.size(24.dp),
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    modifier = Modifier.size(25.dp),
+                                                    tint = MaterialTheme.colorScheme.primary
                                                 )
                                             }
                                         }
@@ -269,6 +262,7 @@ fun AboutScreen(navController: NavController) {
                                     headlineContent = { 
                                         Text(text = "Kanaochar", fontWeight = FontWeight.SemiBold) 
                                     },
+                                    supportingContent = { Text("Co Maintainer") },
                                     leadingContent = {
                                         Image(
                                             painter = painterResource(R.drawable.avatar_kanao),
@@ -288,16 +282,16 @@ fun AboutScreen(navController: NavController) {
                                                 Icon(
                                                     painter = painterResource(id = R.drawable.ic_github),
                                                     contentDescription = "GitHub",
-                                                    modifier = Modifier.size(24.dp),
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    modifier = Modifier.size(27.dp),
+                                                    tint = MaterialTheme.colorScheme.primary
                                                 )
                                             }
                                             IconButton(onClick = { openLink("https://t.me/kanaochar") }) {
                                                 Icon(
-                                                    painter = painterResource(id = R.drawable.ic_telegram), // Siapkan aset ic_telegram.xml
+                                                    painter = painterResource(id = R.drawable.ic_telegram),
                                                     contentDescription = "Telegram",
-                                                    modifier = Modifier.size(24.dp),
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    modifier = Modifier.size(25.dp),
+                                                    tint = MaterialTheme.colorScheme.primary
                                                 )
                                             }
                                         }
