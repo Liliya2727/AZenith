@@ -126,5 +126,5 @@ dependencies {
     implementation(libs.ansi.library.ktx)
     implementation(libs.hiddenapibypass)
     implementation(libs.coil.gif)
-    
+    implementation(libs.compose.markdown)
 }

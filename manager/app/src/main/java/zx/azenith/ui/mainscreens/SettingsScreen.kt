@@ -64,6 +64,7 @@ import androidx.compose.foundation.verticalScroll
 import java.util.Date
 import java.util.Locale
 import java.io.File
+import dev.jeziellago.compose.markdowntext.MarkdownText
 
 fun isLauncherIconEnabled(context: Context): Boolean {
     val pkg = context.packageManager
@@ -469,8 +470,8 @@ fun SettingsScreen(navController: NavController) {
                                 .weight(1f, fill = false) 
                                 .padding(horizontal = 24.dp)
                         ) {
-                            Text(
-                                text = changelogText,
+                            MarkdownText(
+                                markdown = changelogText,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.verticalScroll(rememberScrollState())
