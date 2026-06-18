@@ -240,7 +240,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                     }
                                 },
                                 supportingContent = { 
-                                    Text(if (isUnsupported) "No active bypass node mapped to system properties." else "Active charging gateway node bypass channel.") 
+                                    Text(if (isUnsupported) "No active bypass node mapped to system properties" else "Active bypass charging node") 
                                 },
                                 leadingContent = { 
                                     LeadingIcon(
