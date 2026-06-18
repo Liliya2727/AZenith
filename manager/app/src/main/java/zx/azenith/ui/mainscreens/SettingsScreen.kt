@@ -50,6 +50,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import zx.azenith.BuildConfig
 import zx.azenith.R
 import zx.azenith.ui.util.*
