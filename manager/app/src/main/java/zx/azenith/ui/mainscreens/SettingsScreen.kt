@@ -85,6 +85,18 @@ fun SettingsScreen(navController: NavController) {
     var isLauncherVisible by rememberSaveable { 
         mutableStateOf(isLauncherIconEnabled(context)) 
     }
+    var showChangelogSheet by remember { mutableStateOf(false) }
+    var changelogText by remember { mutableStateOf("") }
+    
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.withContext(Dispatchers.IO) {
+            try {
+                changelogText = context.assets.open("changelog.md").bufferedReader().use { it.readText() }
+            } catch (e: Exception) {
+                changelogText = "Failed to load changelog.\n${e.message}"
+            }
+        }
+    }
     
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -149,7 +161,12 @@ fun SettingsScreen(navController: NavController) {
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-                topBar = { SettingsScreenTopAppBar(scrollBehavior) },
+                topBar = { 
+                    SettingsScreenTopAppBar(
+                        scrollBehavior = scrollBehavior,
+                        onChangelogClick = { showChangelogSheet = true }
+                    ) 
+                },
                 snackbarHost = { 
                     SnackbarHost(
                         hostState = snackbarHostState,
@@ -424,6 +441,42 @@ fun SettingsScreen(navController: NavController) {
                     }
                 }
             }
+            RootAppDialog {
+                CustomBottomSheet(
+                    visible = showChangelogSheet,
+                    onDismiss = { showChangelogSheet = false }
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(
+                                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp
+                            )
+                    ) {
+                        Text(
+                            text = "Changelog",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f, fill = false) 
+                                .padding(horizontal = 24.dp)
+                        ) {
+                            Text(
+                                text = changelogText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.verticalScroll(rememberScrollState())
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -444,7 +497,10 @@ fun SettingsSectionTitle(text: String) {
 }
 
 @Composable
-fun SettingsScreenTopAppBar(scrollBehavior: TopAppBarScrollBehavior) {
+fun SettingsScreenTopAppBar(
+    scrollBehavior: TopAppBarScrollBehavior,
+    onChangelogClick: () -> Unit
+) {
     val colorScheme = MaterialTheme.colorScheme
 
     val smoothGradient = Brush.verticalGradient(
@@ -486,6 +542,14 @@ fun SettingsScreenTopAppBar(scrollBehavior: TopAppBarScrollBehavior) {
                     text = stringResource(R.string.settings),
                     fontWeight = FontWeight.Bold
                 )
+            },
+            actions = {
+                IconButton(onClick = onChangelogClick) {
+                    Icon(
+                        imageVector = Icons.Rounded.History, // Icon untuk changelog
+                        contentDescription = "Changelog"
+                    )
+                }
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color.Transparent,
