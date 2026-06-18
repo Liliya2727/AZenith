@@ -472,10 +472,12 @@ fun SettingsScreen(navController: NavController) {
                         ) {
                             MarkdownText(
                                 markdown = changelogText,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
                                 modifier = Modifier.verticalScroll(rememberScrollState())
                             )
+
                         }
                     }
                 }
