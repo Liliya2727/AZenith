@@ -203,19 +203,25 @@ fun MainScreen(fromTileType: String? = null) {
             coroutineScope.launch {
                 installingDialog.withInstalling {
                     val result = kotlinx.coroutines.withContext(Dispatchers.IO) {
-                        Shell.cmd("pm install -r /data/adb/modules/AZenith/AZenith.apk").exec()
+                        // Rantai perintah: salin -> install -> hapus berkas sementara
+                        Shell.cmd(
+                            "cp /data/adb/modules/AZenith/AZenith.apk /data/local/tmp/AZenith_tmp.apk",
+                            "pm install -r /data/local/tmp/AZenith_tmp.apk",
+                            "rm -f /data/local/tmp/AZenith_tmp.apk"
+                        ).exec()
                     }
                     
                     if (result.isSuccess) {
                         Toast.makeText(context, "Update installed successfully!", Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(context, "Failed to install: ${result.out.joinToString()}", Toast.LENGTH_LONG).show()
+                        // Jika gagal, output log shell akan digabung untuk memudahkan debugging
+                        val errorLog = result.out.joinToString("\n").ifEmpty { "Unknown installation error" }
+                        Toast.makeText(context, "Failed to install:\n$errorLog", Toast.LENGTH_LONG).show()
                     }
                 }
             }
         }
     )
-
 
     val rebootDialog = rememberConfirmDialog(
         onConfirm = {
