@@ -145,8 +145,7 @@ fun MainScreen(fromTileType: String? = null) {
             }
         }
     }
-    
-    
+
     var pendingReboot by remember { mutableStateOf(false) }
         
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -200,47 +199,29 @@ fun MainScreen(fromTileType: String? = null) {
     val updateDialog = rememberConfirmDialog(
         onConfirm = {
             coroutineScope.launch {
-                val cacheApk = File(context.cacheDir, "AZenith_update.apk")
-                
-                if (cacheApk.exists()) {
-                    cacheApk.delete()
-                }
-                
-                val copyCmd = """
-                    cp /data/adb/modules/AZenith/AZenith.apk ${cacheApk.absolutePath}
-                    chmod 644 ${cacheApk.absolutePath}
-                """.trimIndent()
-                
-                val result = Shell.cmd(copyCmd).exec()
-                
-                if (result.isSuccess && cacheApk.exists()) {
-                    try {
-                        val apkUri = FileProvider.getUriForFile(
-                            context,
-                            "${context.packageName}.provider",
-                            cacheApk
-                        )
-                        
-                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                            setDataAndType(apkUri, "application/vnd.android.package-archive")
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
-                        }
-                        context.startActivity(intent)
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "Failed to open installer: ${e.message}", Toast.LENGTH_LONG).show()
+                installingDialog.withInstalling {
+                    val result = kotlinx.coroutines.withContext(Dispatchers.IO) {
+                        Shell.cmd("pm install -r /data/adb/modules/AZenith/AZenith.apk").exec()
                     }
-                } else {
-                    Toast.makeText(context, "Failed to copy update file from Root.", Toast.LENGTH_SHORT).show()
+                    
+                    if (result.isSuccess) {
+                        Toast.makeText(context, "Update installed successfully!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Failed to install: ${result.out.joinToString()}", Toast.LENGTH_LONG).show()
+                    }
                 }
             }
         }
     )
+
 
     val rebootDialog = rememberConfirmDialog(
         onConfirm = {
             Shell.cmd("svc power reboot || reboot").submit()
         }
     )
+    
+    val installingDialog = rememberInstallingDialog()
     
     LaunchedEffect(rootStatus) {
         if (rootStatus) {
@@ -325,7 +306,6 @@ fun MainScreen(fromTileType: String? = null) {
                 NavHost(
                     navController = navController,
                     startDestination = if (hasCompletedGetStarted) "home" else "get_started",
-                    // Pasang nested scroll di sini untuk melacak scroll secara global
                     modifier = Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.surface)
@@ -461,6 +441,7 @@ fun MainScreen(fromTileType: String? = null) {
             }
             ConfirmDialogHost(handle = updateDialog)
             ConfirmDialogHost(handle = rebootDialog)
+            InstallingDialogHost(handle = installingDialog)
         }
     }
 }

@@ -103,7 +103,7 @@ suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File
     }
 }
 
-fun shareLogArchive(context: Context, file: File) {
+fun getShareLogIntent(context: Context, file: File): Intent {
     val uri = FileProvider.getUriForFile(
         context,
         "${context.packageName}.provider",
@@ -114,5 +114,6 @@ fun shareLogArchive(context: Context, file: File) {
         putExtra(Intent.EXTRA_STREAM, uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(Intent.createChooser(intent, "Send AZenith Logs"))
+    return Intent.createChooser(intent, "Send AZenith Logs")
 }
+
