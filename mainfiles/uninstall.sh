@@ -16,6 +16,10 @@
 # limitations under the License.
 #
 
+q() {
+    pkill -9 -f "$1"
+}
+
 resetprop | awk -F'[][]' '/persist\.sys\.azenith/ {print $2}' | while read -r prop; do
     resetprop -p --delete "$prop"
 done
@@ -30,7 +34,15 @@ rm -rf \
     "/data/data/zx.azenith"
 : > "/data/adb/modules/AZenith/remove"
 
+q sys.azenith-rianixiathermalcore
+q sys.azenith-service
+q sys.azenith-appmonitoring
+    
 pm uninstall zx.azenith >/dev/null 2>&1 &
+
+for dir in "/data/adb/ap/bin" "/data/adb/ksu/bin"; do
+    [ -d "$dir/zx" ] && rm -rf "$dir/zx"
+done
 
 for dir in "/data/adb/ap/bin" "/data/adb/ksu/bin"; do
     [ -d "$dir" ] && find "$dir" -name "sys.azenith-*" -exec rm -f {} +

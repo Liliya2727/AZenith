@@ -45,7 +45,7 @@ void read_app_status(SystemStateCache* cache) {
             sscanf(line + 9, "%d", &cache->zen_mode);
         } else if (strncmp(line, "app_name ", 9) == 0) {
             strncpy(cache->app_name, line + 9, sizeof(cache->app_name) - 1);
-            cache->app_name[strcspn(cache->app_name, "\n")] = 0; // Strip newline
+            cache->app_name[strcspn(cache->app_name, "\n")] = 0;
         }
     }
     
