@@ -18,12 +18,17 @@
 
 package zx.azenith.ui.subscreens
 
+
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -33,56 +38,53 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Launch
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TopAppBarScrollBehavior
-import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
-import androidx.lifecycle.viewmodel.compose.viewModel
+import java.io.File
 import zx.azenith.R
 import zx.azenith.ui.component.*
-import zx.azenith.ui.viewmodel.ApplistViewmodel
-import androidx.activity.compose.BackHandler
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavController
-import zx.azenith.ui.viewmodel.AppSettingsViewModel
+import zx.azenith.ui.component.ExpressiveDropdownItem
 import zx.azenith.ui.component.ExpressiveList
 import zx.azenith.ui.component.ExpressiveListItem
 import zx.azenith.ui.component.ExpressiveSwitchItem
-import zx.azenith.ui.component.ExpressiveDropdownItem
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.animation.core.tween
 import zx.azenith.ui.util.getSupportedRefreshRates
-import java.io.File
-import androidx.compose.material3.LargeFlexibleTopAppBar
-import androidx.compose.ui.platform.LocalDensity
+import zx.azenith.ui.viewmodel.AppSettingsViewModel
+import zx.azenith.ui.viewmodel.ApplistViewmodel
+
 
 @Composable
 fun AppSettingsScreen(
@@ -124,7 +126,15 @@ fun AppSettingsScreen(
         "skiagl"
     )
 
-    val dynamicRefreshModes = remember { getSupportedRefreshRates(context) }
+    val defaultLabel = stringResource(R.string.default_label)
+    
+    val rawRefreshModes = remember { getSupportedRefreshRates(context) }
+    
+    val dynamicRefreshDisplayModes = remember(rawRefreshModes, defaultLabel) {
+        rawRefreshModes.map { mode ->
+            if (mode.equals("default", ignoreCase = true)) defaultLabel else mode
+        }
+    }
 
     fun getBoolIndex(v: String?): Int = when(v) {
         "true" -> 1
@@ -150,7 +160,7 @@ fun AppSettingsScreen(
                             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             context.startActivity(intent)
                         } else {
-                            Toast.makeText(context, "Aplikasi tidak bisa dibuka", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.toast_app_launch_fail), Toast.LENGTH_SHORT).show()
                         }
                     }
                 },
@@ -186,7 +196,7 @@ fun AppSettingsScreen(
                     content = listOf( 
                        {
                            ExpressiveInfoCard(
-                               supportingContent = { Text(text = "App-specific settings will override global settings. Leave them as default to inherit global settings.") },
+                               supportingContent = { Text(text = stringResource(R.string.str_app_specific_settings_will_ove)) },
                                leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
                                containerColor = colorScheme.surfaceContainerLow,
                                onClick = {}
@@ -210,7 +220,7 @@ fun AppSettingsScreen(
                             summary = stringResource(R.string.master_switch_desc),
                             checked = localMasterOn,
                             onCheckedChange = { isChecked ->
-                                userToggled = true // BARU: Tandai bahwa user yang mengubah state
+                                userToggled = true
                                 localMasterOn = isChecked 
                                 packageName?.let { pkg -> viewModel.toggleMasterSwitch(pkg, isChecked) } 
                             }
@@ -222,7 +232,7 @@ fun AppSettingsScreen(
             item {
                 AnimatedVisibility(
                     visible = localMasterOn,
-                    // BARU: Jika bukan user yang nge-klik (misal baru buka app/loading), maka munculkan instan tanpa animasi
+
                     enter = if (userToggled) {
                         expandVertically(animationSpec = tween(400)) + fadeIn()
                     } else {
@@ -297,10 +307,12 @@ fun AppSettingsScreen(
                                         icon = Icons.Rounded.WebStories,
                                         title = stringResource(R.string.refreshrates),
                                         summary = stringResource(R.string.refreshrates_desc),
-                                        items = dynamicRefreshModes,
-                                        selectedIndex = dynamicRefreshModes.indexOf(displayConfig.refresh_rate).coerceAtLeast(0),
+                                        items = dynamicRefreshDisplayModes,
+                                        selectedIndex = rawRefreshModes.indexOfFirst { 
+                                            it.equals(displayConfig.refresh_rate, ignoreCase = true) 
+                                        }.coerceAtLeast(0),
                                         onItemSelected = { index ->
-                                            val value = dynamicRefreshModes[index]
+                                            val value = rawRefreshModes[index] 
                                             packageName?.let { viewModel.updateSetting(it, "refresh_rate", value) }
                                         }
                                     )
@@ -326,7 +338,7 @@ fun AppSettingsScreen(
             item {
                 AnimatedVisibility(
                     visible = localMasterOn,
-                    // BARU: Jika bukan user yang nge-klik (misal baru buka app/loading), maka munculkan instan tanpa animasi
+
                     enter = if (userToggled) {
                         expandVertically(animationSpec = tween(400)) + fadeIn()
                     } else {
@@ -343,7 +355,7 @@ fun AppSettingsScreen(
                             content = listOf( 
                                {
                                    ExpressiveInfoCard(
-                                       supportingContent = { Text(text = "By using per-app refresh rate, your screen refresh rate is fully handled by AZenith.") },
+                                       supportingContent = { Text(text = stringResource(R.string.str_by_using_per_app_refresh_rate)) },
                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
                                        containerColor = colorScheme.surfaceContainerLow,
                                        onClick = {}
@@ -380,18 +392,18 @@ fun AppHeader(appDetails: Triple<String, android.content.pm.ApplicationInfo?, St
     val pm = context.packageManager
     val density = LocalDensity.current
     
-    // Target ukuran ikon (100.dp kotak luar dikurangi padding 16.dp di setiap sisi = 68.dp)
+
     val iconSize = 68.dp
     val targetSizePx = remember(iconSize, density) {
         with(density) { iconSize.roundToPx() }
     }
 
-    // Ambil dari cache jika sudah ada
+
     var appBitmap by remember(packageName) {
         mutableStateOf(packageName?.let { AppIconCache.get(it) })
     }
 
-    // Load icon di background thread persis seperti ApplistScreen
+
     LaunchedEffect(packageName, targetSizePx) {
         if (appBitmap == null && packageName != null) {
             appDetails.second?.let { appInfo ->
@@ -423,7 +435,7 @@ fun AppHeader(appDetails: Triple<String, android.content.pm.ApplicationInfo?, St
                     label = "HeaderIconFade"
                 ) { icon ->
                     if (icon == null) {
-                        // Kotak loading transparan
+
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -431,7 +443,7 @@ fun AppHeader(appDetails: Triple<String, android.content.pm.ApplicationInfo?, St
                                 .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f))
                         )
                     } else {
-                        // Gambar asli
+
                         Image(
                             bitmap = icon,
                             contentDescription = null,
@@ -466,7 +478,7 @@ fun AppHeader(appDetails: Triple<String, android.content.pm.ApplicationInfo?, St
             modifier = Modifier.padding(top = 12.dp)
         ) {
             Text(
-                text = "v${appDetails.third}",
+                text = stringResource(R.string.str_v_appdetails_third, appDetails.third),
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -482,7 +494,7 @@ fun getAppDetails(context: android.content.Context, packageName: String?): Tripl
         val info = pm.getApplicationInfo(packageName ?: "", 0)
         val packageInfo = pm.getPackageInfo(packageName ?: "", 0)
         val label = pm.getApplicationLabel(info).toString()
-        // Kita tidak lagi me-load icon (Drawable) di sini, cukup teruskan 'info' (ApplicationInfo)
+
         val version = packageInfo.versionName ?: context.getString(R.string.status_unknown)
         Triple(label, info, version)
     } catch (e: Exception) {
@@ -531,18 +543,18 @@ fun AppSettingsTopAppBar(
                 }
             },
             actions = {
-                // Tombol Buka Aplikasi
+
                 IconButton(onClick = onLaunchApp) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.Launch, 
-                        contentDescription = "Launch App"
+                        contentDescription = stringResource(R.string.str_launch_app)
                     )
                 }
-                // Tombol Buka App Info (System Settings)
+
                 IconButton(onClick = onOpenAppInfo) {
                     Icon(
                         imageVector = Icons.Rounded.Info, 
-                        contentDescription = "App Info"
+                        contentDescription = stringResource(R.string.str_app_info)
                     )
                 }
             },
