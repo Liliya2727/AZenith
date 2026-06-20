@@ -1,9 +1,29 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package zx.azenith.ui.component
 
+
 import android.annotation.SuppressLint
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -12,6 +32,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -23,15 +44,19 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
@@ -46,14 +71,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.Surface
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.animateContentSize 
 
 
 private val largeCorner = 26.dp
@@ -106,7 +123,7 @@ fun ExpressiveList(
                 }
                 Column(
                     modifier = Modifier
-                        .clip(shape) // 👇 TAMBAHAN WAJIB DI SINI
+                        .clip(shape)
                         .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp), shape)
                 ) {
                     itemContent()
@@ -153,12 +170,12 @@ fun <T> ExpressiveLazyList(
                 }
                 Column(
                     modifier = Modifier
-                        // 👇 TAMBAHKAN MODIFIER INI SEBELUM CLIP
-                        .animateItem( // Catatan: Gunakan .animateItemPlacement() jika Compose versi < 1.7.0
+
+                        .animateItem(
                             fadeInSpec = null,
                             fadeOutSpec = null,
                             placementSpec = spring(
-                                dampingRatio = Spring.DampingRatioLowBouncy, // Efek mantul dikit pas naik/turun
+                                dampingRatio = Spring.DampingRatioLowBouncy,
                                 stiffness = Spring.StiffnessLow
                             )
                         )
@@ -334,7 +351,7 @@ fun ExpressiveInfoCard(
             }
         }
         
-        // Bagian tengah (menggantikan posisi headlineContent)
+
         if (supportingContent != null) {
             Column(
                 modifier = Modifier
@@ -351,7 +368,7 @@ fun ExpressiveInfoCard(
                 }
             }
         } else {
-            // Spacer agar trailingContent tetap terdorong ke ujung kanan jika tengah kosong
+
             Spacer(modifier = Modifier.weight(1f))
         }
         

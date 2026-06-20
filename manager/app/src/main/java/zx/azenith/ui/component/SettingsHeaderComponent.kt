@@ -1,4 +1,21 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package zx.azenith.ui.component
+
 
 import android.os.SystemClock
 import androidx.compose.foundation.Image
@@ -14,17 +31,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.delay
 import zx.azenith.BuildConfig
-import zx.azenith.ui.util.*
 import zx.azenith.R
+import zx.azenith.ui.util.*
+
 
 @Composable
 fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
@@ -48,13 +67,13 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
 
     val wallpaperBitmap by WallpaperCache.bitmapState
     
-    // 👇 PERHITUNGAN UPTIME DENGAN DETIK
+
     val uptimeMillis = SystemClock.elapsedRealtime()
     val totalSeconds = uptimeMillis / 1000
     val days = totalSeconds / (24 * 3600)
     val hours = (totalSeconds % (24 * 3600)) / 3600
     val minutes = (totalSeconds % 3600) / 60
-    val seconds = totalSeconds % 60 // 👈 Ini untuk mendapatkan sisa detiknya
+    val seconds = totalSeconds % 60
     
     val uptimeString = if (days > 0) {
         "${days}d ${hours}h ${minutes}m ${seconds}s"
@@ -69,7 +88,7 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // --- BAGIAN KIRI: Wallpaper & Jam ---
+
         Box(
             modifier = Modifier
                 .heightIn(max = 280.dp) 
@@ -79,17 +98,17 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
                 .clip(RoundedCornerShape(15.dp)) 
                 .background(MaterialTheme.colorScheme.surfaceVariant) 
         ) {
-            // Render Wallpaper dari Cache
+
             if (wallpaperBitmap != null) {
                 Image(
                     bitmap = wallpaperBitmap!!, 
-                    contentDescription = "Device Wallpaper",
+                    contentDescription = stringResource(R.string.cd_wallpaper),
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
             }
             
-            // Jam Overlay
+
             Column(
                 modifier = Modifier.align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -113,20 +132,20 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
             }
         }
 
-        // --- BAGIAN KANAN: Detail Informasi ---
+
         Column(
             modifier = Modifier
                 .weight(1f)
                 .padding(vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            AppInfoTextItem(title = "App Name", value = context.getString(R.string.app_name))
-            AppInfoTextItem(title = "Author", value = "ArchHaven Developers")
-            AppInfoTextItem(title = "Build Date", value = buildDateString)
-            AppInfoTextItem(title = "Version Code", value = BuildConfig.VERSION_CODE.toString())
-            AppInfoTextItem(title = "Package Name", value = context.packageName)
-            // Uptime yang sudah dilengkapi detik
-            AppInfoTextItem(title = "Device Uptime", value = uptimeString)
+            AppInfoTextItem(title = stringResource(R.string.app_name_settings), value = context.getString(R.string.app_name))
+            AppInfoTextItem(title = stringResource(R.string.str_author), value = stringResource(R.string.str_archhaven_devs))
+            AppInfoTextItem(title = stringResource(R.string.str_build_date), value = buildDateString)
+            AppInfoTextItem(title = stringResource(R.string.str_version_code), value = BuildConfig.VERSION_CODE.toString())
+            AppInfoTextItem(title = stringResource(R.string.str_package_name), value = context.packageName)
+
+            AppInfoTextItem(title = stringResource(R.string.str_device_uptime), value = uptimeString)
         }
     }
 }

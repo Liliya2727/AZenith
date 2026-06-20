@@ -17,36 +17,40 @@
 @file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
  
 package zx.azenith.ui.subscreens
- 
+
+
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
 import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.*
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.*
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -54,22 +58,21 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.fox2code.androidansi.ktx.parseAsAnsiAnnotatedString
+import com.topjohnwu.superuser.CallbackList
+import com.topjohnwu.superuser.Shell
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import zx.azenith.R
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.FastOutSlowInEasing
 import zx.azenith.ui.component.*
 import zx.azenith.ui.util.PropertyUtils
-import com.topjohnwu.superuser.CallbackList
-import kotlinx.coroutines.launch
-import com.topjohnwu.superuser.Shell
-import com.fox2code.androidansi.ktx.parseAsAnsiAnnotatedString
-import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+
 
 data class ShellOutput(
     val text: String,
@@ -83,24 +86,24 @@ fun BypassChargeCheckScreen(navController: NavController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // Dialog Handle
+
     val confirmDialogHandle = rememberConfirmDialog()
 
-    // State Pengaturan Bypass
+
     var activePath by remember { mutableStateOf("") }
     var availablePaths by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     var isChargerConnected by remember { mutableStateOf(false) }
     
-    // State Proses Diagnosis
+
     val logs = remember { mutableStateListOf<ShellOutput>() }
     var isRunning by remember { mutableStateOf(false) }
     var hasRunDiagnosis by remember { mutableStateOf(false) }
-    var isConsoleClosed by remember { mutableStateOf(false) } // State baru untuk close button
+    var isConsoleClosed by remember { mutableStateOf(false) }
     
-    // Scroll State untuk konsol
+
     val logScrollState = rememberScrollState()
 
-    // 1. Ambil status properti awal & list path via argumen -bpl ke daemon
+
     fun refreshBypassData(onComplete: ((List<Pair<String, String>>) -> Unit)? = null) {
         activePath = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "UNSUPPORTED")
         
@@ -109,7 +112,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
             val parsedList = output.filter { it.contains("FOUND") && !it.contains("NOT FOUND") }.map { line ->
                 val cleanLine = line.replace("\u001B\\[[;\\d]*m".toRegex(), "")
                 val parts = cleanLine.split("|")
-                val name = parts.getOrNull(0)?.trim() ?: "UNKNOWN"
+                val name = parts.getOrNull(0)?.trim() ?: context.getString(R.string.status_unknown)
                 val path = parts.getOrNull(2)?.trim() ?: ""
                 Pair(name, path)
             }
@@ -124,7 +127,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
         refreshBypassData()
     }
 
-    // 2. Real-time Charger Connection Observer
+
     DisposableEffect(context) {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context?, intent: Intent?) {
@@ -139,14 +142,14 @@ fun BypassChargeCheckScreen(navController: NavController) {
         }
     }
 
-    // Auto scroll konsol log ketika dirender
+
     LaunchedEffect(logs.size) {
         if (logs.isNotEmpty() && !isRunning) {
             logScrollState.animateScrollTo(logScrollState.maxValue)
         }
     }
 
-    // 3. Modifier pencegah bocornya scroll konsol ke parent LazyColumn
+
     val blockParentScroll = remember {
         object : NestedScrollConnection {
             override fun onPostScroll(
@@ -159,12 +162,12 @@ fun BypassChargeCheckScreen(navController: NavController) {
         }
     }
 
-    // Fungsi trigger proses diagnosis otomatis bawaan daemon (-cbc)
+
     fun runCompatibilityCheck() {
         logs.clear()
         isRunning = true
         hasRunDiagnosis = false
-        isConsoleClosed = false // Reset state console agar bisa muncul lagi setelah kelar
+        isConsoleClosed = false
         
         scope.launch(Dispatchers.IO) {
             val callbackList = object : CallbackList<String>() {
@@ -180,14 +183,14 @@ fun BypassChargeCheckScreen(navController: NavController) {
                 isRunning = false
                 hasRunDiagnosis = true
                 refreshBypassData { paths ->
-                    // Memunculkan dialog HANYA jika node bypass ditemukan, dan path hanya berubah bila user setuju
+
                     if (paths.isNotEmpty()) {
                         scope.launch {
                             val result = confirmDialogHandle.awaitConfirm(
-                                title = "Diagnosis Complete",
-                                content = "Found working nodes for your device! Do you want to apply the recommended node [${paths.first().first}]?",
-                                confirm = "Apply",
-                                dismiss = "Dismiss"
+                                title = context.getString(R.string.dialog_diagnosis_complete_title),
+                                content = context.getString(R.string.dialog_diagnosis_complete_content, paths.first().first),
+                                confirm = context.getString(R.string.dialog_apply),
+                                dismiss = context.getString(R.string.dialog_dismiss)
                             )
                             if (result == ConfirmResult.Confirmed) {
                                 val targetNode = paths.first().first
@@ -225,7 +228,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
             ) {
                 
                 item {
-                    BypassCheckTitle(text = "Current Status")
+                    BypassCheckTitle(text = stringResource(R.string.section_current_status))
                         
                     ExpressiveList(
                         content = listOf {
@@ -234,13 +237,13 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                 headlineContent = { 
                                     AnimatedContent(targetState = activePath, label = "activePathAnim") { path ->
                                         Text(
-                                            text = if (path == "UNSUPPORTED" || path.isEmpty()) "No Active Working Nodes" else path,
+                                            text = if (path == "UNSUPPORTED" || path.isEmpty()) stringResource(R.string.str_no_active_nodes) else path,
                                             fontWeight = FontWeight.Bold
                                         ) 
                                     }
                                 },
                                 supportingContent = { 
-                                    Text(if (isUnsupported) "No active bypass node mapped to system properties" else "Active bypass charging node") 
+                                    Text(if (isUnsupported) stringResource(R.string.str_no_active_nodes_desc) else stringResource(R.string.str_active_bypass_node)) 
                                 },
                                 leadingContent = { 
                                     LeadingIcon(
@@ -255,7 +258,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                 }
                 item {
                     Column {
-                        BypassCheckTitle(text = "Diagnostics")
+                        BypassCheckTitle(text = stringResource(R.string.section_diagnostics))
                         
                         Surface(
                             shape = RoundedCornerShape(26.dp),
@@ -275,13 +278,13 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                                 label = "scanIconAnim"
                                             ) { running ->
                                                 LeadingIcon(
-                                                    icon = if (running) Icons.Rounded.Memory else Icons.Rounded.ManageSearch,
-                                                    contentDescription = "Scan Icon"
+                                                    icon = if (running) Icons.Rounded.Memory else Icons.AutoMirrored.Rounded.ManageSearch,
+                                                    contentDescription = stringResource(R.string.cd_scan_icon)
                                                 )
                                             }
                                             Spacer(modifier = Modifier.width(16.dp))
                                             Text(
-                                                text = if (isRunning) "Diagnostic in Progress..." else "Scan Working Nodes",
+                                                text = if (isRunning) stringResource(R.string.str_diagnostic_in_progress_title) else stringResource(R.string.str_scan_nodes),
                                                 style = MaterialTheme.typography.titleMedium,
                                                 fontWeight = FontWeight.Bold
                                             )
@@ -294,9 +297,9 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                             label = "chargerStatusAnim"
                                         ) { (connected, running, _) ->
                                             Text(
-                                                text = if (!connected) "Power cable detached. Plug in charger first to run diagnostics."
-                                                       else if (running) "Checking devices current Charging... Please wait."
-                                                       else "Safely test your device compatibility.",
+                                                text = if (!connected) stringResource(R.string.str_plug_in_charger)
+                                                       else if (running) stringResource(R.string.str_checking_current)
+                                                       else stringResource(R.string.str_safely_test),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = if (!connected) colorScheme.error else colorScheme.onSurfaceVariant
                                             )
@@ -322,10 +325,10 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                     onClick = {
                                         scope.launch {
                                             val result = confirmDialogHandle.awaitConfirm(
-                                                title = "Start Hardware Test?",
-                                                content = "AZenith will perform current drop tests across embedded battery nodes. This safe diagnostics sequence loops for several seconds.",
-                                                confirm = "Begin Check",
-                                                dismiss = "Cancel"
+                                                title = context.getString(R.string.dialog_start_hw_test_title),
+                                                content = context.getString(R.string.dialog_start_hw_test_content),
+                                                confirm = context.getString(R.string.dialog_begin_check),
+                                                dismiss = context.getString(R.string.dialog_cancel)
                                             )
                                             if (result == ConfirmResult.Confirmed) {
                                                 runCompatibilityCheck()
@@ -338,7 +341,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                 ) {
                                     Icon(Icons.Rounded.PlayArrow, null)
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Launch Compatibility Check")
+                                    Text(stringResource(R.string.str_launch_compatibility_check))
                                 }
                             }
                         }
@@ -348,7 +351,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                             enter = expandVertically() + fadeIn(),
                             exit = shrinkVertically() + fadeOut()
                         ) {
-                            // Penting: Spacer & Card dibungkus Column biar animasinya barengan & gak numpuk
+
                             Column {
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Card(
@@ -392,7 +395,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Rounded.Close,
-                                                contentDescription = "Close Logs",
+                                                contentDescription = stringResource(R.string.str_close_logs),
                                                 tint = Color.White.copy(alpha = 0.6f),
                                                 modifier = Modifier.size(20.dp)
                                             )
@@ -405,14 +408,14 @@ fun BypassChargeCheckScreen(navController: NavController) {
                 }
 
                 item { 
-                    BypassCheckTitle(text = "Available Target Nodes (${availablePaths.size})")
+                    BypassCheckTitle(text = stringResource(R.string.str_available_nodes, availablePaths.size))
                 
                     if (availablePaths.isEmpty()) {
                         ExpressiveList(
                             content = listOf {
                                 ExpressiveListItem(
-                                    headlineContent = { Text("No Compatible Nodes") },
-                                    supportingContent = { Text("Run diagnostics above or check if your kernel has charging bypass nodes.") },
+                                    headlineContent = { Text(stringResource(R.string.str_no_compatible_nodes)) },
+                                    supportingContent = { Text(stringResource(R.string.str_run_diagnostics_above_or_check)) },
                                     leadingContent = { LeadingIcon(icon = Icons.Rounded.SearchOff) }
                                 )
                             }
@@ -423,8 +426,8 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                 {
                                     val isSelected = activePath == pathNode.first
                                     
-                                    // PERUBAHAN DI SINI: Pakai LinearOutSlowInEasing & durasi 200ms
-                                    // Efeknya: Langsung ngegas di awal (cepet), lalu melambat mulus di akhir
+
+
                                     val textScale by animateFloatAsState(
                                         targetValue = if (isSelected) 1.08f else 1.0f,
                                         animationSpec = tween(durationMillis = 200, easing = LinearOutSlowInEasing),
@@ -437,10 +440,10 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                             if (!isRunning) {
                                                 scope.launch {
                                                     val result = confirmDialogHandle.awaitConfirm(
-                                                        title = "Switch Control Node?",
-                                                        content = "Do you want to explicitly force your bypass profile gateway target to [${pathNode.first}]?",
-                                                        confirm = "Apply Path",
-                                                        dismiss = "Dismiss"
+                                                        title = context.getString(R.string.dialog_switch_node_title),
+                                                        content = context.getString(R.string.dialog_switch_node_content, pathNode.first),
+                                                        confirm = context.getString(R.string.dialog_apply_path),
+                                                        dismiss = context.getString(R.string.dialog_dismiss)
                                                     )
                                                     if (result == ConfirmResult.Confirmed) {
                                                         PropertyUtils.set("persist.sys.azenithconf.bypasspath", pathNode.first)
@@ -470,7 +473,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                             )
                                         },
                                         trailingContent = {
-                                            // PERUBAHAN DI SINI: Animasi checkmark disamakan biar ikutan sat-set
+
                                             AnimatedVisibility(
                                                 visible = isSelected,
                                                 enter = scaleIn(tween(durationMillis = 200, easing = LinearOutSlowInEasing)) + fadeIn(tween(200)),
@@ -478,7 +481,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                             ) {
                                                 Icon(
                                                     imageVector = Icons.Rounded.CheckCircle,
-                                                    contentDescription = "Active",
+                                                contentDescription = null,
                                                     tint = colorScheme.primary
                                                 )
                                             }

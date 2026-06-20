@@ -1,4 +1,21 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package zx.azenith.ui.component
+
 
 import android.content.Context
 import androidx.activity.compose.BackHandler
@@ -26,10 +43,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.blur.blurEffect
+import dev.chrisbanes.haze.hazeEffect
 import zx.azenith.R
 import zx.azenith.ui.util.getSupportedRefreshRatesPicker
+
 
 private data class RefreshRatePickerOption(
     val titleString: String,
@@ -117,7 +135,7 @@ fun RefreshRatePickerDialog(
                     Text(
                         text = stringResource(R.string.RefreshRatePicker_Select),
                         style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface, // 👈 TAMBAHKAN INI
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
 
@@ -128,7 +146,7 @@ fun RefreshRatePickerDialog(
                                 headlineContent = { 
                                     Text(
                                         text = option.titleString,
-                                        color = MaterialTheme.colorScheme.onSurface // 👈 TAMBAHKAN INI
+                                        color = MaterialTheme.colorScheme.onSurface
                                     ) 
                                 },
                                 leadingContent = { 

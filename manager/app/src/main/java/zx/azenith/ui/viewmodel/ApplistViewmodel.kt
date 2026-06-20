@@ -16,29 +16,31 @@
 
 package zx.azenith.ui.viewmodel
 
+
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
-import android.os.Parcelable
 import android.graphics.drawable.Drawable
+import android.os.Parcelable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.topjohnwu.superuser.io.SuFile
 import com.topjohnwu.superuser.io.SuFileInputStream
+import java.text.Collator
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
 import org.json.JSONObject
 import zx.azenith.R
-import java.text.Collator
-import java.util.Locale
-import androidx.compose.ui.text.input.TextFieldValue
+
 
 class ApplistViewmodel : ViewModel() {
 
@@ -116,7 +118,7 @@ class ApplistViewmodel : ViewModel() {
             val loadedApps = installed.map { pkg ->
                 val appInfo = pkg.applicationInfo
                 
-                // Cek apakah aplikasi tersebut adalah game menggunakan API Android
+
                 @Suppress("DEPRECATION")
                 val isGame = appInfo != null && (
                     appInfo.category == ApplicationInfo.CATEGORY_GAME ||

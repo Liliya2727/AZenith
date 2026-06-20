@@ -1,7 +1,23 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package zx.azenith.ui.component
 
+
 import android.content.Context
-import androidx.compose.material3.MaterialTheme
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -12,6 +28,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,10 +40,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.blur.blurEffect
-import kotlinx.coroutines.launch
+import dev.chrisbanes.haze.hazeEffect
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
+
 
 @Composable
 fun CustomBottomSheet(
@@ -55,7 +73,7 @@ fun CustomBottomSheet(
         BackHandler(onBack = onDismiss)
     }
 
-    // 1. Lapisan Gelap (Scrim)
+
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn(animationSpec = tween(250)),
@@ -74,7 +92,7 @@ fun CustomBottomSheet(
         )
     }
 
-    // 2. Kontainer Bottom Sheet
+
     AnimatedVisibility(
         visible = visible,
         enter = slideInVertically(
@@ -87,14 +105,14 @@ fun CustomBottomSheet(
         ),
         modifier = Modifier.zIndex(101f)
     ) {
-        // Box utama dengan Alignment.BottomCenter memastikan Card selalu di tengah bawah
+
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.BottomCenter
         ) {
             Column(
                 modifier = Modifier
-                    // 👇 FIX: Batasi lebar maksimal seperti Material 3 (640.dp)
+
                     .widthIn(max = 640.dp)
                     .fillMaxWidth()
                     .offset { 
@@ -119,7 +137,7 @@ fun CustomBottomSheet(
                         onClick = {}
                     )
             ) {
-                // Area Drag Handle
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -160,10 +178,10 @@ fun CustomBottomSheet(
                     )
                 }
                 
-                // Isi konten
+
                 content()
 
-                // Spacer anti-potong
+
                 Spacer(modifier = Modifier.height(extraBottomPadding))
             }
         }

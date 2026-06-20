@@ -18,13 +18,15 @@
 
 package zx.azenith.ui.mainscreens
 
+
 import android.content.Context
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -33,48 +35,47 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDirection
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TopAppBarScrollBehavior
-import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import androidx.lifecycle.viewmodel.compose.viewModel
-import zx.azenith.R
-import zx.azenith.ui.component.AppIconImage
-import zx.azenith.ui.component.*
-import zx.azenith.ui.viewmodel.ApplistViewmodel
-import androidx.activity.compose.BackHandler
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.navigation.NavController
-import androidx.navigation.NavHostController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.compose.ui.res.stringResource
-import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import zx.azenith.R
+import zx.azenith.ui.component.*
+import zx.azenith.ui.component.AppIconImage
+import zx.azenith.ui.viewmodel.ApplistViewmodel
 
 
 @Composable
@@ -156,7 +157,7 @@ fun ApplistScreen(navController: NavController) {
                         state = pullToRefreshState,
                         isRefreshing = viewModel.isRefreshing,
                         onRefresh = { 
-                            AppIconCache.clear() // <-- Membersihkan cache ikon saat melakukan Pull to Refresh
+                            AppIconCache.clear()
                             viewModel.loadApps(context, forceRefresh = true) 
                         }
                     )
@@ -307,7 +308,7 @@ fun ApplistTopAppBar(
                     actions = {
                         if (searchQuery.text.isNotEmpty()) {
                             IconButton(onClick = { onSearchChange(TextFieldValue("")) }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.cd_clear))
                             }
                         }
                     },

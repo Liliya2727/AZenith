@@ -16,8 +16,10 @@
 
 package zx.azenith.ui.util
 
+
 import android.annotation.SuppressLint
 import com.topjohnwu.superuser.Shell
+
 
 object PropertyUtils {
     @SuppressLint("PrivateApi")

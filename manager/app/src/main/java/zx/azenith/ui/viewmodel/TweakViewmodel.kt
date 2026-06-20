@@ -1,23 +1,43 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package zx.azenith.ui.viewmodel
 
+
 import android.content.Context
+import android.net.Uri
 import android.os.Build
 import android.view.WindowManager
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.topjohnwu.superuser.Shell
+import com.topjohnwu.superuser.io.SuFile
+import com.topjohnwu.superuser.io.SuFileOutputStream
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import zx.azenith.ui.util.PropertyUtils
-import kotlin.math.roundToInt
-import kotlinx.coroutines.async
-import android.net.Uri
+import zx.azenith.R
 import zx.azenith.ui.util.BackupManager
-import com.topjohnwu.superuser.io.SuFile
-import com.topjohnwu.superuser.io.SuFileOutputStream
+import zx.azenith.ui.util.PropertyUtils
+
 
 class TweakViewModel : ViewModel() {
     data class ValidationResult(
@@ -32,22 +52,22 @@ class TweakViewModel : ViewModel() {
     var isUiLoaded by mutableStateOf(false)
         private set
 
-    // Section 1 & 2 Properti CPU
+
     var liteState by mutableStateOf<Boolean?>(null)
     var availableGovernors by mutableStateOf<List<String>?>(null)
     var defaultGovIndex by mutableStateOf<Int?>(null)
     var powersaveGovIndex by mutableStateOf<Int?>(null)
     var performanceGovIndex by mutableStateOf<Int?>(null)
     var freqOffsetIndex by mutableStateOf<Float?>(null)
-    val offsetLabels = listOf("Disabled", "90%", "80%", "70%", "60%", "50%", "40%")
+    val offsetLabels = listOf("Disabled", "90%", "80%", "70%", "60%", "50%", "40%") // These are used as values for PropertyUtils, so we should keep them as is or map them
 
-    // Section 3 Properti I/O Scheduler
+
     var availableIOSchedulers by mutableStateOf<List<String>?>(null)
     var balancedIOIndex by mutableStateOf<Int?>(null)
     var performanceIOIndex by mutableStateOf<Int?>(null)
     var powersaveIOIndex by mutableStateOf<Int?>(null)
     
-    // Section 3.5 Properti Mali GPU
+
     var isMaliGpuAvailable by mutableStateOf<Boolean?>(null)
     var availableMaliGovernors by mutableStateOf<List<String>?>(null)
     var balancedMaliGovIndex by mutableStateOf<Int?>(null)
@@ -55,14 +75,14 @@ class TweakViewModel : ViewModel() {
     var powersaveMaliGovIndex by mutableStateOf<Int?>(null)
     
 
-    // Section 4 Properti Tambahan
+
     var preloadState by mutableStateOf<Boolean?>(null)
     var memKillerState by mutableStateOf<Boolean?>(null)
     var appPriorState by mutableStateOf<Boolean?>(null)
     var dndState by mutableStateOf<Boolean?>(null)
     var fstrimState by mutableStateOf<Boolean?>(null)
 
-    // Section 5 Properti Power & Rendering
+
     var currentRenderer by mutableStateOf<String?>(null)
     var currentRefreshRate by mutableStateOf<Int?>(null)
     var thermalState by mutableStateOf<Boolean?>(null)
@@ -74,7 +94,7 @@ class TweakViewModel : ViewModel() {
         private set
     
     private val configKeysToBackup = listOf(
-        "persist.sys.azenithdebug.soctype", // WAJIB ADA UNTUK VALIDASI
+        "persist.sys.azenithdebug.soctype",
         "persist.sys.azenithconf.cpulimit",
         "persist.sys.azenithconf.freqoffset",
         "persist.sys.azenithconf.APreload",
@@ -117,7 +137,7 @@ class TweakViewModel : ViewModel() {
         return withContext(Dispatchers.IO) {
             val propsMap = mutableMapOf<String, String>()
             
-            // Selalu simpan socType buat identifikasi file zx
+
             propsMap["persist.sys.azenithdebug.soctype"] = PropertyUtils.get("persist.sys.azenithdebug.soctype")
 
             if (backupTweaks) {
@@ -129,7 +149,7 @@ class TweakViewModel : ViewModel() {
             }
 
             if (backupApplist) {
-                // Ambil raw JSON dari file applist pakai Shell
+
                 val applistContent = Shell.cmd("cat $APPLIST_PATH").exec().out.joinToString("\n")
                 if (applistContent.isNotBlank()) {
                     propsMap[APPLIST_BACKUP_KEY] = applistContent
@@ -145,26 +165,26 @@ class TweakViewModel : ViewModel() {
     }
 
 
-    // Hasil pengecekan: isSuccess, errorMessage, validDataToRestore
+
     suspend fun validateAndRestoreFile(context: Context, uri: Uri): ValidationResult {
         return withContext(Dispatchers.IO) {
             val backupData = BackupManager.readBackup(context, uri)
             
             if (backupData == null) {
-                return@withContext ValidationResult(false, "Invalid or corrupted .zx backup file.", false, false, null, null)
+                return@withContext ValidationResult(false, context.getString(R.string.err_invalid_backup), false, false, null, null)
             }
     
             val backupSocType = backupData["persist.sys.azenithdebug.soctype"]
             val hasApplist = backupData.containsKey(APPLIST_BACKUP_KEY)
             
-            // Deteksi apakah ada data Tweak (selain socType dan Applist Key)
+
             val hasTweaks = backupData.keys.any { it.startsWith("persist.sys.azenith") && it != "persist.sys.azenithdebug.soctype" }
     
-            ValidationResult(true, "Valid Backup", hasTweaks, hasApplist, backupSocType, backupData)
+            ValidationResult(true, "", hasTweaks, hasApplist, backupSocType, backupData)
         }
     }
 
-    // Di dalam TweakViewModel.kt
+
     suspend fun applyRestoreData(
         context: Context, 
         backupData: Map<String, String>, 
@@ -204,10 +224,10 @@ class TweakViewModel : ViewModel() {
     fun loadAllConfiguration(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             
-            // 1. TUGAS INSTAN: Load semua property langsung di background.
-            // Membaca system property sangat cepat, UI akan langsung memiliki data tanpa loading lama.
+
+
             launch {
-                // Section 1 & FreqOffset (Prioritas)
+
                 liteState = PropertyUtils.get("persist.sys.azenithconf.cpulimit") == "1"
                 
                 val savedOffset = PropertyUtils.get("persist.sys.azenithconf.freqoffset", "Disabled")
@@ -215,7 +235,7 @@ class TweakViewModel : ViewModel() {
                     "90" -> 1f; "80" -> 2f; "70" -> 3f; "60" -> 4f; "50" -> 5f; "40" -> 6f; else -> 0f
                 }            
                 
-                // Section 4 & 5 (Bisa dibaca sekaligus karena sama-sama instan)
+
                 preloadState = PropertyUtils.get("persist.sys.azenithconf.APreload") == "1"
                 memKillerState = PropertyUtils.get("persist.sys.azenithconf.clearbg") == "1"
                 appPriorState = PropertyUtils.get("persist.sys.azenithconf.iosched") == "1"
@@ -226,7 +246,7 @@ class TweakViewModel : ViewModel() {
                 currentRenderer = PropertyUtils.get("debug.hwui.renderer", "skiagl")
                 val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
                 currentRefreshRate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    context.display.refreshRate.toInt() // Menggunakan cara direct seperti pembahasan sebelumnya
+                    context.display.refreshRate.toInt()
                 } else {
                     @Suppress("DEPRECATION")
                     windowManager.defaultDisplay.refreshRate.toInt()
@@ -262,7 +282,7 @@ class TweakViewModel : ViewModel() {
             powersaveGovIndex = govs.indexOf(currentPowersave).coerceAtLeast(0)
             performanceGovIndex = govs.indexOf(currentPerformance).coerceAtLeast(0)
         } else {
-            availableGovernors = emptyList() // Fallback jika gagal baca sysfs
+            availableGovernors = emptyList()
         }
     }
 
@@ -300,13 +320,13 @@ class TweakViewModel : ViewModel() {
     }
 
     private fun loadMaliGovernorsInternal() {
-        // Cek pakai utilitas Rust yang baru dibuat
+
         val checkResult = Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf checkmalipath").exec()
         val hasMali = checkResult.out.joinToString("").trim() == "true"
 
         if (hasMali) {
             isMaliGpuAvailable = true
-            // Ambil list governor pakai wildcard
+
             val govResult = Shell.cmd("cat /sys/class/devfreq/*.mali/available_governors").exec()
             
             if (govResult.isSuccess) {
@@ -426,7 +446,7 @@ class TweakViewModel : ViewModel() {
         val selectedGov = availableMaliGovernors?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             PropertyUtils.set("persist.sys.azenith.custom_default_gpu_gov", selectedGov)
-            // Kalau profile aktif adalah Balanced (2), langsung terapkan
+
             val currentProfile = Shell.cmd("cat /data/adb/.config/AZenith/API/current_profile").exec().out.firstOrNull()?.trim()
             if (currentProfile == "2") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsMaliGov $selectedGov").exec()

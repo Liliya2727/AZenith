@@ -1,12 +1,51 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 @file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 
 package zx.azenith.ui.component
 
+
+import android.content.ContentResolver
+import android.graphics.Matrix
+import android.graphics.SurfaceTexture
+import android.media.MediaPlayer
+import android.net.Uri
 import android.os.Build
 import android.system.Os
+import android.view.Surface
+import android.view.TextureView
+import android.view.ViewGroup
+import android.webkit.MimeTypeMap
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,6 +55,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.*
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.rounded.*
@@ -23,60 +63,37 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import dev.chrisbanes.haze.blur.blurEffect
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
-import zx.azenith.R
-import zx.azenith.ui.util.getAppVersion
-import zx.azenith.ui.util.getChipsetName
-import zx.azenith.ui.util.getRealDeviceName
-import zx.azenith.ui.util.getHeaderImage
-import zx.azenith.ui.util.getSELinuxStatus
-import zx.azenith.ui.util.getBannerGradientAlpha
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.tween
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import android.media.MediaPlayer
-import android.view.Surface
-import android.view.TextureView
-import android.graphics.SurfaceTexture
-import android.graphics.Matrix
 import coil.ImageLoader
+import coil.compose.AsyncImage
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
-import android.content.ContentResolver
-import android.net.Uri
-import android.webkit.MimeTypeMap
-import android.view.ViewGroup
-import androidx.compose.ui.draw.alpha
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.blur.blurEffect
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import zx.azenith.R
+import zx.azenith.ui.util.getAppVersion
+import zx.azenith.ui.util.getBannerGradientAlpha
+import zx.azenith.ui.util.getChipsetName
+import zx.azenith.ui.util.getHeaderImage
+import zx.azenith.ui.util.getRealDeviceName
+import zx.azenith.ui.util.getSELinuxStatus
 
 
 @Composable
@@ -353,7 +370,7 @@ fun BannerCard(
                         }
                     }
 
-                    // Hilangkan expand/shrink, biarkan Column (pembungkusnya) yang meng-animate content size-nya
+
                     if (isAlive) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Surface(
@@ -384,7 +401,7 @@ fun BannerCard(
             }
         }
     } else {
-        // Mode Banner Disabled
+
         Surface(
             modifier = modifier
                 .clip(RoundedCornerShape(26.dp))
@@ -525,8 +542,8 @@ fun InfoTile(
                 AnimatedContent(
                     targetState = value,
                     transitionSpec = {
-                        // Kombinasi fade in + sedikit scale up untuk masuk
-                        // dan fade out + sedikit scale down untuk keluar (bikin efek "luntur/ngeblur")
+
+
                         (fadeIn(animationSpec = tween(300, delayMillis = 100)) +
                          scaleIn(initialScale = 0.95f, animationSpec = tween(300, delayMillis = 100)))
                             .togetherWith(
@@ -591,7 +608,7 @@ fun DeviceInfoCard() {
                 .padding(vertical = 16.dp)
                 .animateContentSize(animationSpec = spring(Spring.DampingRatioLowBouncy, Spring.StiffnessLow))
         ) {
-            // Header Info Card
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -617,12 +634,12 @@ fun DeviceInfoCard() {
 
             Spacer(Modifier.height(12.dp))
 
-            // Grid Container
+
             Column(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp) 
             ) {
-                // Baris 1
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp) 
@@ -639,14 +656,14 @@ fun DeviceInfoCard() {
                     )
                 }
 
-                // Baris 2
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     DeviceInfoGridItem(
                         modifier = Modifier.weight(1f),
-                        title = "Chipset", 
+                        title = stringResource(R.string.str_chipset), 
                         value = chipsetName
                     )
                     DeviceInfoGridItem(
@@ -658,11 +675,11 @@ fun DeviceInfoCard() {
 
                 if (isExpanded) {
                     Column(
-                        verticalArrangement = Arrangement.spacedBy(8.dp) // Jaraknya langsung diatur di sini
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // ❌ HAPUS Spacer yang ada di sini!
+
                         
-                        // Baris 3
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -679,7 +696,7 @@ fun DeviceInfoCard() {
                             )
                         }
 
-                        // Baris 4
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -707,8 +724,8 @@ fun DeviceInfoCard() {
 fun DeviceInfoGridItem(modifier: Modifier = Modifier, title: String, value: String) {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
-        // Cukup pakai modifier yang di-passing (karena sudah ada weight(1f) dari luar),
-        // ditambah aspectRatio untuk bentuk konsisten.
+
+
         modifier = modifier.height(86.dp),
         color = colorScheme.surfaceVariant.copy(alpha = 0.5f), 
         shape = RoundedCornerShape(18.dp) 
@@ -716,35 +733,35 @@ fun DeviceInfoGridItem(modifier: Modifier = Modifier, title: String, value: Stri
         Column(
             modifier = Modifier
                 .padding(12.dp)
-                .fillMaxSize(), // Pastikan Column memenuhi seluruh ruang dalam Surface
+                .fillMaxSize(),
             verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.Start // Pastikan teks rata kiri
+            horizontalAlignment = Alignment.Start
         ) {
             Text(
                 text = title, 
-                style = MaterialTheme.typography.labelSmall, // Balikin ke labelMedium agar proporsional
+                style = MaterialTheme.typography.labelSmall,
                 color = colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             
-            Spacer(modifier = Modifier.height(4.dp)) // Jarak title dan value dibesarkan dikit
+            Spacer(modifier = Modifier.height(4.dp))
             
-            // Box untuk membungkus Value, agar dia ngambil semua sisa space ke bawah
+
             Box(
                 modifier = Modifier.weight(1f), 
                 contentAlignment = Alignment.TopStart
             ) {
                 Text(
                     text = value, 
-                    style = MaterialTheme.typography.titleSmall, // Balikin ke titleSmall
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold, 
                     color = colorScheme.onSurface,
                     maxLines = 2, 
-                    // Kalau ruangannya lega tapi sering kepotong "...",
-                    // hapus saja overflow = TextOverflow.Ellipsis
-                    // Biarkan Compose yang motong secara alami
-                    lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified // Bebaskan line height
+
+
+
+                    lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified
                 )
             }
         }
@@ -769,15 +786,15 @@ fun LinkCard(icon: ImageVector, titleRes: Int, descRes: Int, onClick: () -> Unit
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 18.dp), // Padding disesuaikan biar proporsional
-            verticalAlignment = Alignment.CenterVertically // Bikin icon dan teks sejajar di tengah
+                .padding(horizontal = 16.dp, vertical = 18.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // 1. Icon Sebelah Kiri
+
             SmallLeadingIcon(icon)
             
             Spacer(modifier = Modifier.width(16.dp))
             
-            // 2. Teks Judul & Deskripsi di Tengah (weight = 1f biar dorong icon kanan ke ujung)
+
             Column(
                 modifier = Modifier.weight(1f)
             ) {
@@ -799,10 +816,10 @@ fun LinkCard(icon: ImageVector, titleRes: Int, descRes: Int, onClick: () -> Unit
             
             Spacer(modifier = Modifier.width(12.dp))
             
-            // 3. Icon panah/open link kecil di Kanan
+
             Icon(
-                imageVector = Icons.Rounded.OpenInNew, // Bisa diganti Icons.Rounded.ChevronRight kalau lebih suka panah
-                contentDescription = "Open Link",
+                imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
+                contentDescription = stringResource(R.string.cd_open_link),
                 modifier = Modifier.size(22.dp),
                 tint = colorScheme.onSurfaceVariant
             )
@@ -824,16 +841,16 @@ fun RebootBottomSheet(
     val isUserspaceSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && pm?.isRebootingUserspaceSupported == true
 
     val options = buildList<Triple<String, String, ImageVector>> {
-        add(Triple("Reboot", "", Icons.Outlined.Refresh))
-        if (isUserspaceSupported) add(Triple("Reboot to Userspace", "userspace", Icons.Outlined.RestartAlt))
-        add(Triple("Soft Reboot", "soft_reboot", Icons.Outlined.Refresh))
-        add(Triple("Recovery", "recovery", Icons.Outlined.SystemUpdate))
-        add(Triple("Bootloader", "bootloader", Icons.Outlined.Memory))
-        add(Triple("Download", "download", Icons.Outlined.Download))
-        add(Triple("EDL", "edl", Icons.Outlined.DeveloperMode))
+        add(Triple(stringResource(R.string.reboot), "", Icons.Outlined.Refresh))
+        if (isUserspaceSupported) add(Triple(stringResource(R.string.reboot_userspace), "userspace", Icons.Outlined.RestartAlt))
+        add(Triple(stringResource(R.string.reboot_soft), "soft_reboot", Icons.Outlined.Refresh))
+        add(Triple(stringResource(R.string.reboot_recovery), "recovery", Icons.Outlined.SystemUpdate))
+        add(Triple(stringResource(R.string.reboot_bootloader), "bootloader", Icons.Outlined.Memory))
+        add(Triple(stringResource(R.string.reboot_download), "download", Icons.Outlined.Download))
+        add(Triple(stringResource(R.string.reboot_edl), "edl", Icons.Outlined.DeveloperMode))
     }
 
-    // Gunakan CustomBottomSheet yang baru kita buat
+
     CustomBottomSheet(
         visible = show,
         onDismiss = onDismiss
@@ -849,7 +866,7 @@ fun RebootBottomSheet(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
-                // 👇 UBAH BAGIAN INI (Gunakan start, end, bottom)
+
                 modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 16.dp)
             )
 
@@ -859,7 +876,7 @@ fun RebootBottomSheet(
                 content = options.map { (label, reason, icon) ->
                     {
                         ExpressiveListItem(
-                            // 👇 Jangan lupa suntik warna biar gak hitam di Dark Mode
+
                             headlineContent = { 
                                 Text(text = label, color = MaterialTheme.colorScheme.onSurface) 
                             },
@@ -886,18 +903,18 @@ fun RunningGameCard(
     val pm = context.packageManager
     val density = LocalDensity.current
     
-    // 1. Cek apakah ini mode CLI (Tidak ada Foreground App)
+
     val isNoApp = pkgName == "(null)" || pkgName.equals("null", ignoreCase = true) || pkgName.isEmpty()
     
-    // 2. Ambil AppInfo & Nama
+
     val appInfo = remember(pkgName, isNoApp) {
         if (isNoApp) null else try { pm.getApplicationInfo(pkgName, 0) } catch (e: Exception) { null }
     }
     val appName = remember(appInfo, isNoApp) {
-        if (isNoApp) "Performance Profile" else appInfo?.loadLabel(pm)?.toString() ?: pkgName
+        if (isNoApp) context.getString(R.string.str_performance_profile) else appInfo?.loadLabel(pm)?.toString() ?: pkgName
     }
 
-    // 3. Siapkan State untuk Icon Bitmap
+
     var appIconBitmap by remember(pkgName) { 
         mutableStateOf(if (isNoApp) null else AppIconCache.get(pkgName)) 
     }
@@ -916,7 +933,7 @@ fun RunningGameCard(
         }
     }
 
-    // 4. Logika Timer
+
     var elapsedTime by remember { mutableStateOf("00:00:00") }
     
     LaunchedEffect(startTimeStr) {
@@ -953,7 +970,7 @@ fun RunningGameCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(26.dp))
             .then(
-                // Hilangkan interaksi "Clickable" jika tidak ada game
+
                 if (!isNoApp) {
                     Modifier.clickable {
                         val intent = pm.getLaunchIntentForPackage(pkgName)
@@ -973,17 +990,17 @@ fun RunningGameCard(
         ) {
             
             Box(
-                modifier = Modifier.size(64.dp), // Ukuran diperbesar dikit buat spasi Wavy Indicator
+                modifier = Modifier.size(64.dp),
                 contentAlignment = Alignment.Center
             ) {
                 if (!isNoApp) {
-                    // Wavy border mengelilingi icon
+
                     CircularWavyProgressIndicator(
                         modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.onSecondaryContainer// Sesuaikan warnanya kalau perlu
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                     
-                    // Render Icon Game di tengah Wavy Indicator
+
                     Crossfade(
                         targetState = appIconBitmap,
                         animationSpec = tween(durationMillis = 200),
@@ -992,18 +1009,18 @@ fun RunningGameCard(
                         if (icon == null) {
                             Box(
                                 modifier = Modifier
-                                    .size(48.dp) // Ukuran icon lebih kecil dari container supaya Wavy-nya kelihatan
-                                    .clip(CircleShape) // Bikin bulat
+                                    .size(48.dp)
+                                    .clip(CircleShape)
                                     .background(MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.1f))
                             )
                         } else {
                             Image(
                                 bitmap = icon,
                                 contentDescription = appName,
-                                contentScale = ContentScale.Crop, // Pastikan nge-crop jadi lingkaran sempurna
+                                contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .size(48.dp)
-                                    .clip(CircleShape) // Bikin bulat
+                                    .clip(CircleShape)
                             )
                         }
                     }
@@ -1015,7 +1032,7 @@ fun RunningGameCard(
             
             Spacer(Modifier.width(12.dp))
             
-            // Text Detail Info
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = appName,
@@ -1035,7 +1052,7 @@ fun RunningGameCard(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "Elapsed time $elapsedTime",
+                        text = stringResource(R.string.str_elapsed_time_elapsedtime, elapsedTime),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
@@ -1043,7 +1060,7 @@ fun RunningGameCard(
                 }
             }
             
-            // Tombol Return to Game HANYA jika ada game
+
             if (!isNoApp) {
                 Surface(
                     shape = CircleShape,
@@ -1053,7 +1070,7 @@ fun RunningGameCard(
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Rounded.PlayArrow,
-                            contentDescription = "Return",
+                            contentDescription = stringResource(R.string.cd_return),
                             tint = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }

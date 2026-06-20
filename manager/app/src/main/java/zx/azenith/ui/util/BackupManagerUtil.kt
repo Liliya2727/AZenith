@@ -1,19 +1,37 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package zx.azenith.ui.util
+
 
 import android.content.Context
 import android.net.Uri
 import android.util.Base64
-import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
+import org.json.JSONObject
+
 
 object BackupManager {
-    // Kunci rahasia untuk AES (Harus 16, 24, atau 32 karakter)
+
     private const val SECRET_KEY = "ZexshiaAZenithSecuredKey" 
     private const val ALGORITHM = "AES"
 
-    // Helper untuk mengubah nama SOC
+
     fun getSocName(type: String?): String {
         return when (type) {
             "1" -> "MediaTek"
@@ -25,7 +43,7 @@ object BackupManager {
         }
     }
 
-    // Fungsi enkripsi dan obfuskasi
+
     private fun encryptData(data: String): ByteArray {
         val keySpec = SecretKeySpec(SECRET_KEY.toByteArray(), ALGORITHM)
         val cipher = Cipher.getInstance(ALGORITHM)
@@ -34,7 +52,7 @@ object BackupManager {
         return Base64.encode(encrypted, Base64.NO_WRAP)
     }
 
-    // Fungsi dekripsi
+
     private fun decryptData(data: ByteArray): String {
         val decoded = Base64.decode(data, Base64.NO_WRAP)
         val keySpec = SecretKeySpec(SECRET_KEY.toByteArray(), ALGORITHM)
@@ -43,7 +61,7 @@ object BackupManager {
         return String(cipher.doFinal(decoded))
     }
 
-    // Membuat file Backup
+
     fun createBackup(context: Context, uri: Uri, properties: Map<String, String>): Boolean {
         return try {
             val jsonObject = JSONObject()
@@ -61,7 +79,7 @@ object BackupManager {
         }
     }
 
-    // Membaca file Backup
+
     fun readBackup(context: Context, uri: Uri): Map<String, String>? {
         return try {
             val bytes = context.contentResolver.openInputStream(uri)?.use { inputStream ->
