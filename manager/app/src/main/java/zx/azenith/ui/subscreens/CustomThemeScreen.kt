@@ -1,16 +1,42 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 @file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 
 package zx.azenith.ui.subscreens
 
+
 import android.app.Activity
 import android.content.Context
+import android.media.MediaMetadataRetriever
+import android.net.Uri
 import android.os.Build
-import androidx.compose.ui.graphics.Brush
+import android.provider.OpenableColumns
+import android.webkit.MimeTypeMap
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -20,15 +46,21 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -38,40 +70,25 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.navigation.NavController
-import com.materialkolor.rememberDynamicColorScheme
+import coil.compose.AsyncImage
 import com.materialkolor.dynamiccolor.ColorSpec
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.saveable.rememberSaveable
-import zx.azenith.R
-import zx.azenith.ui.theme.ColorMode
-import zx.azenith.ui.theme.ThemeController
-import zx.azenith.ui.util.saveHeaderImage
-import zx.azenith.ui.util.clearHeaderImage
-import zx.azenith.ui.util.getHeaderImage
-import zx.azenith.ui.util.isBannerImageEnabled
-import zx.azenith.ui.util.setBannerImageEnabled
-import zx.azenith.ui.util.getBannerGradientAlpha
-import zx.azenith.ui.util.setBannerGradientAlpha
-import android.net.Uri
+import com.materialkolor.rememberDynamicColorScheme
 import com.yalantis.ucrop.UCrop
 import java.io.File
-import androidx.compose.foundation.lazy.LazyColumn
-import zx.azenith.ui.theme.animateColorSchemeAsState
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.draw.drawWithContent
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import coil.compose.AsyncImage
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import zx.azenith.R
 import zx.azenith.ui.component.*
-import androidx.activity.result.PickVisualMediaRequest
-import android.webkit.MimeTypeMap
-import android.provider.OpenableColumns
-import android.media.MediaMetadataRetriever
+import zx.azenith.ui.theme.ColorMode
+import zx.azenith.ui.theme.ThemeController
+import zx.azenith.ui.theme.animateColorSchemeAsState
+import zx.azenith.ui.util.clearHeaderImage
+import zx.azenith.ui.util.getBannerGradientAlpha
+import zx.azenith.ui.util.getHeaderImage
+import zx.azenith.ui.util.isBannerImageEnabled
+import zx.azenith.ui.util.saveHeaderImage
 import zx.azenith.ui.util.saveMediaDirectly
+import zx.azenith.ui.util.setBannerGradientAlpha
+import zx.azenith.ui.util.setBannerImageEnabled
 
 
 private val keyColorOptions = listOf(
@@ -115,12 +132,12 @@ fun ColorPaletteScreen(navController: NavController) {
         mutableStateOf(context.getHeaderImage()) 
     }
     
-    // Tambahkan ini di bawah customBannerUri
+
     var pendingCropUriPath by rememberSaveable { 
         mutableStateOf<String?>(null) 
     }
     
-    // STATE UNTUK BLUR UI
+
     var isBlurEnabled by rememberSaveable {
         mutableStateOf(prefs.getBoolean("expressive_blur_ui", false))
     }
@@ -137,7 +154,7 @@ fun ColorPaletteScreen(navController: NavController) {
                 context.saveHeaderImage(uriString)
                 customBannerUri = uriString
                 coroutineScope.launch {
-                    snackbarHostState.showSnackbar("Image updated")
+                    snackbarHostState.showSnackbar(context.getString(R.string.str_banner_updated))
                 }
             }
         } else {
@@ -163,7 +180,7 @@ fun ColorPaletteScreen(navController: NavController) {
             val isGif = mimeType == "image/gif"
             val isVideoOrGif = isVideo || isGif
     
-            // 👇 1. Cek Ukuran File (Maksimal 50MB)
+
             var sizeBytes = 0L
             context.contentResolver.query(sourceUri, null, null, null, null)?.use { cursor ->
                 if (cursor.moveToFirst()) {
@@ -173,15 +190,15 @@ fun ColorPaletteScreen(navController: NavController) {
                     }
                 }
             }
-            val maxSize = 50 * 1024 * 1024L // 50 MB
+            val maxSize = 50 * 1024 * 1024L
             if (sizeBytes > maxSize) {
                 coroutineScope.launch {
-                    snackbarHostState.showSnackbar("Max video size are 50MB.")
+                    snackbarHostState.showSnackbar(context.getString(R.string.str_max_video_size))
                 }
-                return@let // Batalkan proses
+                return@let
             }
     
-            // 👇 2. Cek Durasi Video (Maksimal 30 Detik)
+
             if (isVideo) {
                 var durationMs = 0L
                 val retriever = MediaMetadataRetriever()
@@ -195,17 +212,17 @@ fun ColorPaletteScreen(navController: NavController) {
                     retriever.release()
                 }
     
-                if (durationMs > 30000L) { // 30.000 ms = 30 detik
+                if (durationMs > 30000L) {
                     coroutineScope.launch {
-                        snackbarHostState.showSnackbar("Too long!, Max 30 Seconds.")
+                        snackbarHostState.showSnackbar(context.getString(R.string.str_video_too_long))
                     }
-                    return@let // Batalkan proses
+                    return@let
                 }
             }
     
-            // --- LANJUT PROSES KALAU LOLOS FILTER ---
+
             if (isVideoOrGif) {
-                // Bypass UCrop untuk Video & GIF
+
                 coroutineScope.launch {
                     val extension = if (isVideo) "mp4" else "gif"
                     val savedUriString = context.saveMediaDirectly(sourceUri, extension)
@@ -213,13 +230,13 @@ fun ColorPaletteScreen(navController: NavController) {
                     if (savedUriString != null) {
                         context.saveHeaderImage(savedUriString)
                         customBannerUri = savedUriString
-                        snackbarHostState.showSnackbar("Media updated")
+                        snackbarHostState.showSnackbar(context.getString(R.string.str_pick_media_success))
                     } else {
-                        snackbarHostState.showSnackbar("Failed to save media")
+                        snackbarHostState.showSnackbar(context.getString(R.string.str_pick_media_fail))
                     }
                 }
             } else {
-                // Masuk UCrop untuk foto biasa
+
                 val bannerDir = File(context.filesDir, "banners")
                 if (!bannerDir.exists()) bannerDir.mkdirs()
                 
@@ -314,7 +331,7 @@ fun ColorPaletteScreen(navController: NavController) {
                         isBannerEnabled = isBannerEnabled,
                         bannerGradientAlpha = bannerGradientAlpha,
                         customBannerUri = customBannerUri,
-                        isBlurEnabled = isBlurEnabled, // Teruskan parameter Blur
+                        isBlurEnabled = isBlurEnabled,
                         prefs = prefs,
                         onColorModeChange = { currentColorMode = it },
                         onKeyColorChange = { currentKeyColor = it },
@@ -545,12 +562,12 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
             modifier = Modifier.padding(horizontal = 16.dp),
             content = buildList {
                 
-                // --- KARTU 1: Switch & Tombol (Dibuat berdekatan) ---
+
                 add {
                     Column {
                         ExpressiveSwitchItem(
                             icon = Icons.Outlined.Image,
-                            title = "Enable Banner Image",
+                            title = stringResource(R.string.str_enable_banner),
                             checked = isBannerEnabled,
                             onCheckedChange = onBannerEnabledChange
                         )
@@ -563,7 +580,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    // Padding atas dihilangkan agar lebih dekat dengan switch
+
                                     .padding(start = 16.dp, end = 16.dp, bottom = 16.dp) 
                             ) {
                                 Row(
@@ -581,7 +598,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                     ) {
                                         Icon(Icons.Filled.Image, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(8.dp))
-                                        Text("Pick Media", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(stringResource(R.string.str_pick_media), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
                                     
                                     OutlinedButton(
@@ -589,7 +606,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                             context.clearHeaderImage()
                                             onBannerUpdated(null)
                                             coroutineScope.launch {
-                                                snackbarHostState.showSnackbar("Set to default banner")
+                                                snackbarHostState.showSnackbar(context.getString(R.string.str_default_banner_toast))
                                             }
                                         },
                                         modifier = Modifier.weight(1f),
@@ -601,7 +618,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                     ) {
                                         Icon(Icons.Filled.Restore, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(8.dp))
-                                        Text("Default", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(stringResource(R.string.default_label), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
                                 }
                             }
@@ -622,7 +639,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
         ExpressiveColumn(
             modifier = Modifier.padding(horizontal = 16.dp),
             content = buildList {
-                // --- KARTU 2: Adjust Gradient (Dipisah) ---
+
                 add {
                     AnimatedVisibility(
                         visible = isBannerEnabled,
@@ -639,7 +656,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                 LeadingIcon(icon = Icons.Outlined.Gradient)
                                 Spacer(Modifier.width(16.dp))
                                 Text(
-                                    text = "Adjust Gradient",
+                                    text = stringResource(R.string.str_adjust_gradient),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
@@ -657,7 +674,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "Gradient Opacity",
+                                        text = stringResource(R.string.str_gradient_opacity),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -667,7 +684,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
                                         Text(
-                                            text = "${(bannerGradientAlpha * 100).toInt()}%",
+                                            text = stringResource(R.string.str_bannergradientalpha_100_toint, (bannerGradientAlpha * 100).toInt()),
                                             style = MaterialTheme.typography.labelLarge,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.primary
@@ -678,7 +695,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                         ) {
                                             Icon(
                                                 Icons.Filled.Restore,
-                                                contentDescription = "Reset",
+                                                contentDescription = stringResource(R.string.reset),
                                                 modifier = Modifier.size(18.dp),
                                                 tint = MaterialTheme.colorScheme.primary
                                             )
@@ -708,7 +725,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                "Interface",
+                stringResource(R.string.str_interface),
                 modifier = Modifier.padding(horizontal = 12.dp),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
@@ -721,8 +738,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                 add {
                     ExpressiveSwitchItem(
                         icon = Icons.Filled.BlurOn,
-                        title = "Expressive Blur",
-                        summary = "Enable Frosted glass effect UI",
+                        title = stringResource(R.string.str_expressive_blur),
+                        summary = stringResource(R.string.str_expressive_blur_summary),
                         checked = isBlurEnabled,
                         onCheckedChange = onBlurEnabledChange
                     )
@@ -737,7 +754,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                "Color Specification",
+                stringResource(R.string.str_color_specification),
                 modifier = Modifier.padding(horizontal = 12.dp),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
@@ -859,7 +876,7 @@ private fun BannerGradientPreview(gradientAlpha: Float, customBannerUri: String?
                 shape = CircleShape
             ) {
                 Text(
-                    text = "Preview", 
+                    text = stringResource(R.string.str_preview), 
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp), 
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.labelMedium,
@@ -927,7 +944,7 @@ private fun ThemePreviewCard(keyColor: Int, colorSpec: ColorSpec.SpecVersion, is
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "AZenith", 
+                        stringResource(R.string.app_name), 
                         style = MaterialTheme.typography.labelMedium, 
                         fontWeight = FontWeight.Bold, 
                         color = colorScheme.onSurface,

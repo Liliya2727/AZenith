@@ -16,10 +16,12 @@
 
 package zx.azenith.ui.util
 
+
 import android.content.Context
 import androidx.compose.runtime.Composable
 import com.topjohnwu.superuser.io.SuFile
 import zx.azenith.R
+
 
 fun getSELinuxStatus(context: Context): String = SuFile("/sys/fs/selinux/enforce").run {
     when {

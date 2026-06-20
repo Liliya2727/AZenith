@@ -18,63 +18,65 @@
 
 package zx.azenith.ui.subscreens
 
+
 import android.app.Activity
+import android.content.Context
 import android.os.Build
+import android.view.WindowManager
+import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.automirrored.rounded.List
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import zx.azenith.R
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.*
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.material.icons.rounded.*
-import zx.azenith.ui.component.*
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.platform.LocalContext
-import com.topjohnwu.superuser.Shell
-import androidx.navigation.NavController
-import android.content.Context
-import android.view.WindowManager
-import zx.azenith.ui.util.PropertyUtils
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
+import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
-import android.widget.Toast
-import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.navigation.NavController
+import com.topjohnwu.superuser.Shell
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import zx.azenith.R
+import zx.azenith.ui.component.*
+import zx.azenith.ui.util.PropertyUtils
+
 
 @Composable
 fun FpsGoSettings(navController: NavController) {
@@ -113,7 +115,7 @@ fun FpsGoSettings(navController: NavController) {
                             {
                                 ExpressiveInfoCard(
                                     supportingContent = { 
-                                        Text(text = "FPSGO (Frame Per Second GO) is a MediaTek kernel module that dynamically scales CPU/GPU frequencies based on real-time frame rates. Enabling it helps preserve battery life and reduces heat by scaling down performance during stable frames.") 
+                                        Text(text = stringResource(R.string.str_fpsgo_frame_per_second_go_is_a)) 
                                     },
                                     leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
                                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -137,8 +139,8 @@ fun FpsGoSettings(navController: NavController) {
                                 {
                                      ExpressiveSwitchItem(
                                         icon = Icons.Rounded.Speed,
-                                        title = "Use FPSGO in Performance Profile",
-                                        summary = "Keep it disabled if you want raw power for hardcore gaming. Enable it to balance frame stability with device temperature.",
+                                         title = stringResource(R.string.str_use_fpsgo_title),
+                                         summary = stringResource(R.string.str_use_fpsgo_summary),
                                         checked = fpsgostate!!,
                                         onCheckedChange = { isChecked ->
                                             fpsgostate = isChecked
@@ -186,7 +188,7 @@ fun FpsGoTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit) 
         LargeFlexibleTopAppBar(
             title = { 
                 Text(
-                    text = "FPSGO Settings",
+                    text = stringResource(R.string.str_fpsgo_settings),
                     fontWeight = FontWeight.Bold
                 ) 
             },

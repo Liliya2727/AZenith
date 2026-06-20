@@ -18,63 +18,65 @@
 
 package zx.azenith.ui.subscreens
 
+
 import android.app.Activity
+import android.content.Context
 import android.os.Build
+import android.view.WindowManager
+import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.automirrored.rounded.List
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import zx.azenith.R
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.*
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.material.icons.rounded.*
-import zx.azenith.ui.component.*
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.platform.LocalContext
-import com.topjohnwu.superuser.Shell
-import androidx.navigation.NavController
-import android.content.Context
-import android.view.WindowManager
-import zx.azenith.ui.util.PropertyUtils
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
+import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
-import android.widget.Toast
-import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.navigation.NavController
+import com.topjohnwu.superuser.Shell
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import zx.azenith.R
+import zx.azenith.ui.component.*
+import zx.azenith.ui.util.PropertyUtils
+
 
 @Composable
 fun FasScreen(navController: NavController) {
@@ -112,7 +114,7 @@ fun FasScreen(navController: NavController) {
                         content = listOf( 
                             {
                                 ExpressiveInfoCard(
-                                    supportingContent = { Text(text = "fas is a user-space implementation of FAS (Frame Aware Scheduling), which has the advantage of near-universal compatibility and flexibility on any device compared to the kernel-space MI FEAS. FAS (Frame Aware Scheduling) is this scheduling concept, which tries to control performance by monitoring frame rendering to minimize overhead while ensuring rendering time.") },
+                                    supportingContent = { Text(text = stringResource(R.string.str_fas_is_a_user_space_implementa)) },
                                     leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
                                     containerColor = colorScheme.surfaceContainerLow,
                                     onClick = {}
@@ -165,7 +167,7 @@ fun FasTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit) {
         LargeFlexibleTopAppBar(
             title = { 
                 Text(
-                    text = "Frame Aware Scheduling",
+                    text = stringResource(R.string.str_frame_aware_scheduling),
                     fontWeight = FontWeight.Bold
                 ) 
             },

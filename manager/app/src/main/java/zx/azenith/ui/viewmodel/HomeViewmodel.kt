@@ -1,4 +1,21 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package zx.azenith.ui.viewmodel
+
 
 import android.app.Application
 import android.content.Context
@@ -14,6 +31,7 @@ import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.util.isBannerImageEnabled
+
 
 data class HomeUiState(
     val isBannerEnabled: Boolean = false,
@@ -111,7 +129,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         prefs.unregisterOnSharedPreferenceChangeListener(prefListener)
     }
     
-    // ... di dalam kelas HomeViewModel
+
 
     fun refreshAiMode() {
         viewModelScope.launch(Dispatchers.IO) {

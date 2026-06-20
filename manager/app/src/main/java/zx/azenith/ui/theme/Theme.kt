@@ -16,20 +16,22 @@
 
 package zx.azenith.ui.theme
 
+
 import android.app.Activity
 import android.content.Context
 import android.os.Build
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
+import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowInsetsControllerCompat
-import com.materialkolor.rememberDynamicColorScheme
 import com.materialkolor.dynamiccolor.ColorSpec
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.material3.ColorScheme
+import com.materialkolor.rememberDynamicColorScheme
+
 
 @Composable
 fun animateColorSchemeAsState(

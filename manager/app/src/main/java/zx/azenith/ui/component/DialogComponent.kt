@@ -18,6 +18,7 @@
 
 package zx.azenith.ui.component
 
+
 import android.content.Context
 import android.os.Parcelable
 import androidx.activity.compose.BackHandler
@@ -42,11 +43,13 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.blur.blurEffect
+import dev.chrisbanes.haze.hazeEffect
+import kotlin.coroutines.resume
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
@@ -56,8 +59,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.parcelize.Parcelize
-import kotlin.coroutines.resume
-import androidx.compose.ui.text.font.FontWeight
+import zx.azenith.R
+
 
 private const val TAG = "DialogComponent"
 
@@ -456,8 +459,8 @@ fun CustomContentDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
     confirmEnabled: Boolean = true,
-    confirmText: String = "OK",
-    dismissText: String = "Cancel",
+    confirmText: String = stringResource(id = android.R.string.ok),
+    dismissText: String = stringResource(id = android.R.string.cancel),
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -522,7 +525,7 @@ fun CustomContentDialog(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    // 👇 Ini bedanya, konten Custom (seperti Checkbox) akan di-render di sini
+
                     content()
 
                     Spacer(modifier = Modifier.height(24.dp))
@@ -602,7 +605,7 @@ private fun InstallingDialog(visible: Boolean) {
         enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)),
         exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
     ) {
-        BackHandler(onBack = { }) // Cegah user cancel pakai tombol back
+        BackHandler(onBack = { })
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -643,20 +646,20 @@ private fun InstallingDialog(visible: Boolean) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "Installing Update...",
+                        text = stringResource(R.string.str_installing_update),
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Please do not close the app.",
+                        text = stringResource(R.string.str_please_do_not_close_the_app),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(32.dp))
                     
-                    // Menggunakan LinearWavyProgressIndicator
+
                     LinearWavyProgressIndicator(
                         modifier = Modifier.fillMaxWidth()
                     )

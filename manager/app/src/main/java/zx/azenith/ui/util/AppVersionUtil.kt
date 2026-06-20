@@ -16,9 +16,11 @@
 
 package zx.azenith.ui.util
 
+
 import android.content.Context
 import androidx.core.content.pm.PackageInfoCompat
 import zx.azenith.R
+
 
 fun getAppVersion(context: Context): String {
     return try {

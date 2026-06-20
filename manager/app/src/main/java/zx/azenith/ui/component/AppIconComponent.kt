@@ -1,4 +1,21 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package zx.azenith.ui.component
+
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
@@ -28,18 +45,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import zx.azenith.ui.viewmodel.ApplistViewmodel
 
-// 1. Singleton Cache ala KernelSU yang menyimpan ImageBitmap langsung
+
 object AppIconCache {
-    private val cache = LruCache<String, ImageBitmap>(150) // Max 150 ikon di memori
+    private val cache = LruCache<String, ImageBitmap>(150)
 
     fun get(packageName: String): ImageBitmap? = synchronized(cache) { cache.get(packageName) }
 
     fun clear() = synchronized(cache) { cache.evictAll() }
 
-    // Fungsi loading ikon yang kebal crash berkat draw limit Canvas
+
     suspend fun loadIcon(pm: PackageManager, appInfo: ApplicationInfo, targetSizePx: Int): ImageBitmap =
         withContext(Dispatchers.IO) {
-            // Cek ulang cache barangkali thread lain sudah mendahului
+
             get(appInfo.packageName)?.let { return@withContext it }
 
             val drawable = try {
@@ -48,12 +65,12 @@ object AppIconCache {
                 pm.defaultActivityIcon
             }
 
-            // GAYA KERNELSU: Segede apa pun ukuran file asli icon di APK-nya (bahkan 158MB sekalipun),
-            // Kita batasi alokasi memorinya di Canvas kecil ini (targetSizePx)
+
+
             val bitmap = Bitmap.createBitmap(targetSizePx, targetSizePx, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
 
-            // Paksa drawable untuk menggambar dirinya sendiri agar pas ke dalam frame kecil targetSizePx
+
             drawable.setBounds(0, 0, targetSizePx, targetSizePx)
             drawable.draw(canvas)
 
@@ -67,7 +84,7 @@ object AppIconCache {
         }
 }
 
-// 2. Komponen UI persis KernelSU (pakai Crossfade & Placeholder)
+
 @Composable
 fun AppIconImage(
     app: ApplistViewmodel.AppInfo,
@@ -76,18 +93,18 @@ fun AppIconImage(
     val context = LocalContext.current
     val pm = context.packageManager
     
-    // Hitung ukuran target px secara dinamis berdasarkan densitas layar HP
+
     val density = LocalDensity.current
     val targetSizePx = remember(size, density) {
         with(density) { size.roundToPx() }
     }
     
-    // Cek cache dulu secara instan
+
     var appBitmap by remember(app.packageName) { 
         mutableStateOf(AppIconCache.get(app.packageName)) 
     }
 
-    // Load di background coroutine menggunakan Dispatchers.IO yang sudah dibungkus di loadIcon
+
     LaunchedEffect(app.packageName, targetSizePx) {
         if (appBitmap == null) {
             app.packageInfo.applicationInfo?.let { appInfo ->
@@ -103,14 +120,14 @@ fun AppIconImage(
     Box(modifier = Modifier.size(size)) {
         Crossfade(
             targetState = appBitmap,
-            animationSpec = tween(durationMillis = 200), // Fade effect halus 200ms
+            animationSpec = tween(durationMillis = 200),
             label = "IconFade"
         ) { icon ->
             if (icon == null) {
-                // Tampilkan kotak kerangka (placeholder) ala KernelSU saat masih loading
+
                 PlaceHolderBox(Modifier.fillMaxSize())
             } else {
-                // Tampilkan gambar asli jika sudah siap
+
                 Image(
                     bitmap = icon,
                     contentDescription = app.label,
@@ -128,7 +145,7 @@ private fun PlaceHolderBox(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
-            // Warna kotak loading transparan dikit biar nyatu sama tema gelap/terang
+
             .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)) 
     )
 }

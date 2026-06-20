@@ -1,16 +1,34 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package zx.azenith.ui.util
+
 
 import android.content.Context
 import android.content.Intent
 import android.media.MediaScannerConnection
 import androidx.core.content.FileProvider
 import com.topjohnwu.superuser.Shell
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 
 suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File? = withContext(Dispatchers.IO) {
     val cacheDir = context.cacheDir
@@ -23,10 +41,10 @@ suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File
     val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
     val fileName = "AZenith_Logs_$timeStamp.tar.gz"
     
-    // Ambil UID & GID aplikasi secara dinamis untuk mengatasi masalah izin baca nantinya
+
     val appUid = context.applicationInfo.uid
     
-    // Gunakan /data/media/0 untuk bypass pembatasan mount namespace penyimpanan pada root shell
+
     val targetPath = if (saveToDownloads) {
         "/data/media/0/Download/$fileName"
     } else {
@@ -79,22 +97,22 @@ suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File
         rm -f "$fileName"
     """.trimIndent()
     
-    // Jalankan skrip dengan membawa parameter boolean ke environment shell
+
     val result = Shell.cmd(script).exec()
 
     
-    // File object yang akan dicek dari sisi User/App space (bukan dari sisi Root)
-    // Jika di Downloads, petakan kembali ke jalur publik agar MediaScanner bisa mendeteksi
+
+
     val finalFileForApp = if (saveToDownloads) {
         File("/storage/emulated/0/Download/$fileName")
     } else {
         File(targetPath)
     }
     
-    // Validasi langsung dari sisi non-root App: jika bernilai true, berarti aplikasi legal mengaksesnya
+
     if (result.isSuccess && finalFileForApp.exists()) {
         if (saveToDownloads) {
-            // Trigger media scanner Android supaya file langsung muncul di File Manager tanpa tunda
+
             MediaScannerConnection.scanFile(context, arrayOf(finalFileForApp.absolutePath), null, null)
         }
         finalFileForApp
@@ -110,7 +128,7 @@ fun getShareLogIntent(context: Context, file: File): Intent {
         file
     )
     val intent = Intent(Intent.ACTION_SEND).apply {
-        type = "application/gzip" // atau "application/x-gzip" keduanya aman
+        type = "application/gzip"
         putExtra(Intent.EXTRA_STREAM, uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }

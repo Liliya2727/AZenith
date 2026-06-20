@@ -16,10 +16,12 @@
 
 package zx.azenith.ui.util
 
+
 import android.content.Context
 import android.os.Build
 import android.view.Display
 import android.view.WindowManager
+
 
 fun getSupportedRefreshRates(context: Context): List<String> {
     val display = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
@@ -32,7 +34,7 @@ fun getSupportedRefreshRates(context: Context): List<String> {
 
     val supportedRR = display?.supportedModes?.map { it.refreshRate.toInt() }?.distinct()?.sorted() ?: listOf(60)
     
-    val finalModes = mutableListOf("Default")
+    val finalModes = mutableListOf("default")
 
     val standardModes = listOf(60, 90, 120, 144)
     

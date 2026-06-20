@@ -18,83 +18,83 @@
 
 package zx.azenith.ui.mainscreens
 
+
 import android.app.Activity
+import android.content.Context
 import android.os.Build
+import android.view.WindowManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.graphics.Brush
-import zx.azenith.R
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.material.icons.rounded.*
-import zx.azenith.ui.component.*
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.platform.LocalContext
-import com.topjohnwu.superuser.Shell
-import androidx.navigation.NavController
-import android.content.Context
-import android.view.WindowManager
-import zx.azenith.ui.util.PropertyUtils
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import androidx.compose.ui.draw.alpha
-import kotlinx.coroutines.delay
+import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
-import androidx.compose.ui.text.style.TextOverflow
-import kotlin.math.roundToInt
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import com.topjohnwu.superuser.Shell
+import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import zx.azenith.R
+import zx.azenith.ui.component.*
+import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.viewmodel.TweakViewModel
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 
-    
+
 @Composable
 fun TweakScreen(
     navController: NavController,
@@ -133,9 +133,9 @@ fun TweakScreen(
                     viewModel.createConfigFileBackup(context, it, optBackupTweaks, optBackupApplist)
                 }
                 if (success) {
-                    snackbarHostState.showSnackbar("Backup saved successfully!")
+                    snackbarHostState.showSnackbar(context.getString(R.string.dialog_backup_success))
                 } else {
-                    snackbarHostState.showSnackbar("Failed to create backup.")
+                    snackbarHostState.showSnackbar(context.getString(R.string.dialog_backup_fail))
                 }
             }
         }
@@ -153,7 +153,7 @@ fun TweakScreen(
                         optRestoreApplist = result.hasApplist
                         showRestoreDialog = true 
                     } else {
-                        confirmDialog.showConfirm("Restore Failed", result.message, "OK", null)
+                        confirmDialog.showConfirm(context.getString(R.string.dialog_restore_fail_title), result.message, context.getString(android.R.string.ok), null)
                     }
                 }
             }
@@ -202,7 +202,7 @@ fun TweakScreen(
                         content = listOf( 
                             {
                                 ExpressiveInfoCard(
-                                    supportingContent = { Text(text = "These settings apply to all enabled apps by default. You can override them for specific apps in the Applist.") },
+                                    supportingContent = { Text(text = stringResource(R.string.str_these_settings_apply_to_all_en)) },
                                     leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
                                     containerColor = colorScheme.surfaceContainerLow,
                                     onClick = {}
@@ -212,7 +212,7 @@ fun TweakScreen(
                     )
                 }
 
-                item { TweaksSectionTitle(text = "Performance") }
+                item { TweaksSectionTitle(text = stringResource(R.string.section_performance)) }
                 item {
                     var socType by remember { mutableStateOf<String?>(null) }
                     LaunchedEffect(Unit) {
@@ -241,13 +241,13 @@ fun TweakScreen(
                                                     navController.navigate("FasScreen") 
                                                 }
                                             },
-                                            headlineContent = { Text(text = "Frame Aware Scheduling (FAS)" ) },
+                                            headlineContent = { Text(text = stringResource(R.string.str_frame_aware_scheduling_fas) ) },
                                             supportingContent = { 
                                                 Text(
                                                     text = if (available)
-                                                        "Frame aware scheduling for Android" 
+                                                        stringResource(R.string.str_frame_aware_scheduling_desc) 
                                                     else
-                                                        "Unavailable"
+                                                        stringResource(R.string.str_unavailable)
                                                 ) 
                                             },
                                             trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
@@ -263,13 +263,13 @@ fun TweakScreen(
                                                     navController.navigate("fpsgoscreen") 
                                                 }
                                             },
-                                            headlineContent = { Text(text = "FPSGO Settings") },
+                                            headlineContent = { Text(text = stringResource(R.string.str_fpsgo_settings)) },
                                             supportingContent = { 
                                                 Text(
                                                     text = if (isMediaTek) 
-                                                        "Frame Per Second GO Settings for MediaTek" 
+                                                        stringResource(R.string.str_fpsgo_desc) 
                                                     else 
-                                                        "This option is only available for MediaTek Devices"
+                                                        stringResource(R.string.str_fpsgo_unavailable)
                                                 ) 
                                             },
                                             trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
@@ -356,7 +356,7 @@ fun TweakScreen(
                                 modifier = Modifier.weight(1f),
                                 icon = Icons.Rounded.WebStories,
                                 label = stringResource(R.string.refreshrates),
-                                value = "${viewModel.currentRefreshRate}Hz",
+                                value = stringResource(R.string.refresh_rate_format, viewModel.currentRefreshRate.toString()),
                                 showArrow = true,
                                 highlight = false,
                                 isLoading = viewModel.isRefreshRateLoading
@@ -403,8 +403,8 @@ fun TweakScreen(
                                 {
                                     ExpressiveDropdownItem(
                                         icon = Icons.Outlined.OfflineBolt,
-                                        title = "Performance CPU Governor",
-                                        summary = "Governor used in Performance Profiles",
+                                        title = stringResource(R.string.performance_cpu_gov),
+                                        summary = stringResource(R.string.performance_cpu_gov_desc),
                                         items = viewModel.availableGovernors ?: emptyList(),
                                         selectedIndex = viewModel.performanceGovIndex!!,
                                         onItemSelected = { viewModel.updatePerformanceGovernor(it) }
@@ -481,13 +481,13 @@ fun TweakScreen(
                             SectionLoadingIndicator()
                         }
                     } else {
-                        // Dont show anything
+
                     }
                 }
                 
-                // Cek apakah Mali GPU tersedia sebelum merender Section-nya
+
                 if (viewModel.isMaliGpuAvailable == true) {
-                    item { TweaksSectionTitle(text = "Mali GPU Settings") } // Ganti judulnya biar nggak IO Settings lagi
+                    item { TweaksSectionTitle(text = stringResource(R.string.section_mali_gpu)) }
                     item {
                         if (viewModel.availableMaliGovernors == null) {
                             SectionLoadingIndicator()
@@ -500,31 +500,31 @@ fun TweakScreen(
                                         {
                                             ExpressiveDropdownItem(
                                                 icon = Icons.Outlined.Water,
-                                                title = "Balanced Mali GPU Governor",
-                                                summary = "GPU Governor used in Balanced Profiles",
+                                                title = stringResource(R.string.balanced_mali_gov),
+                                                summary = stringResource(R.string.balanced_mali_gov_desc),
                                                 items = viewModel.availableMaliGovernors ?: emptyList(),
                                                 selectedIndex = viewModel.balancedMaliGovIndex!!,
-                                                onItemSelected = { viewModel.updateBalancedMaliGov(it) } // <-- Panggil fungsi baru
+                                                onItemSelected = { viewModel.updateBalancedMaliGov(it) }
                                             )
                                         },
                                         {
                                             ExpressiveDropdownItem(
                                                 icon = Icons.Outlined.OfflineBolt,
-                                                title = "Performance Mali GPU Governor",
-                                                summary = "GPU Governor used in Performance Profiles",
+                                                title = stringResource(R.string.performance_mali_gov),
+                                                summary = stringResource(R.string.performance_mali_gov_desc),
                                                 items = viewModel.availableMaliGovernors ?: emptyList(),
                                                 selectedIndex = viewModel.performanceMaliGovIndex!!,
-                                                onItemSelected = { viewModel.updatePerformanceMaliGov(it) } // <-- Panggil fungsi baru
+                                                onItemSelected = { viewModel.updatePerformanceMaliGov(it) }
                                             )
                                         },
                                         {
                                             ExpressiveDropdownItem(
                                                 icon = Icons.Outlined.EnergySavingsLeaf,
-                                                title = "Powersave Mali GPU Governor",
-                                                summary = "GPU Governor used in Powersave Profiles",
+                                                title = stringResource(R.string.powersave_mali_gov),
+                                                summary = stringResource(R.string.powersave_mali_gov_desc),
                                                 items = viewModel.availableMaliGovernors ?: emptyList(),
                                                 selectedIndex = viewModel.powersaveMaliGovIndex!!,
-                                                onItemSelected = { viewModel.updatePowersaveMaliGov(it) } // <-- Panggil fungsi baru
+                                                onItemSelected = { viewModel.updatePowersaveMaliGov(it) }
                                             )
                                         }
                                     )
@@ -536,7 +536,7 @@ fun TweakScreen(
                     }
                 }
                 
-                item { TweaksSectionTitle(text = "Power & Thermal") }
+                item { TweaksSectionTitle(text = stringResource(R.string.section_power_thermal)) }
                 item {
                     if (viewModel.thermalState != null) {
                         ExpressiveList(
@@ -600,7 +600,7 @@ fun TweakScreen(
                 onDismiss = { showBackupRestoreSheet = false },
                 onBackup = { 
                     showBackupRestoreSheet = false
-                    showBackupOptionsDialog = true // Buka custom dialog opsi backup
+                    showBackupOptionsDialog = true
                 },
                 onRestore = { 
                     openDocLauncher.launch(arrayOf("application/octet-stream", "*/*")) 
@@ -608,12 +608,12 @@ fun TweakScreen(
             )
         }
 
-        // 👇 2. Custom Dialog Backup (Sesuai gayamu)
+
         RootAppDialog {
             CustomContentDialog(
                 visible = showBackupOptionsDialog,
-                title = "Backup Options",
-                confirmText = "Create",
+                title = context.getString(R.string.dialog_backup_options_title),
+                confirmText = context.getString(R.string.dialog_backup_options_confirm),
                 confirmEnabled = optBackupTweaks || optBackupApplist,
                 onDismiss = { showBackupOptionsDialog = false },
                 onConfirm = {
@@ -626,39 +626,39 @@ fun TweakScreen(
             ) {
                 Column {
                     Text(
-                        text = "Select the configurations you want to backup:",
+                        text = stringResource(R.string.str_select_the_configurations_you),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { optBackupTweaks = !optBackupTweaks }) {
                         Checkbox(checked = optBackupTweaks, onCheckedChange = { optBackupTweaks = it })
-                        Text("Tweak Configuration Settings", color = MaterialTheme.colorScheme.onSurface)
+                        Text(stringResource(R.string.str_tweak_configuration_settings), color = MaterialTheme.colorScheme.onSurface)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { optBackupApplist = !optBackupApplist }) {
                         Checkbox(checked = optBackupApplist, onCheckedChange = { optBackupApplist = it })
-                        Text("Per-app & Applist Settings", color = MaterialTheme.colorScheme.onSurface)
+                        Text(stringResource(R.string.str_per_app_applist_settings), color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }
         }
 
-        // 👇 Hapus 'if (pendingRestoreResult != null)', ganti pakai RootAppDialog langsung
+
         RootAppDialog {
             CustomContentDialog(
-                visible = showRestoreDialog, // 👈 Terikat pada state boolean
-                title = "Restore Configuration",
-                confirmText = "Restore",
+                visible = showRestoreDialog,
+                title = context.getString(R.string.str_restore_configuration),
+                confirmText = context.getString(R.string.dialog_restore_confirm),
                 confirmEnabled = pendingRestoreResult?.let { result ->
                     val currentSocType = PropertyUtils.get("persist.sys.azenithdebug.soctype")
                     val isSocMismatch = result.socType != currentSocType
                     (optRestoreTweaks && !isSocMismatch) || optRestoreApplist
                 } ?: false,
-                onDismiss = { showRestoreDialog = false }, // 👈 Memicu animasi tutup
+                onDismiss = { showRestoreDialog = false },
                 onConfirm = {
-                    showRestoreDialog = false // 👈 Memicu animasi tutup
+                    showRestoreDialog = false
                     
-                    // Lanjut eksekusi restore dari data yang masih tersimpan
+
                     pendingRestoreResult?.let { result ->
                         val dataToRestore = result.data
                         val currentSocType = PropertyUtils.get("persist.sys.azenithdebug.soctype")
@@ -678,7 +678,7 @@ fun TweakScreen(
                     }
                 }
             ) {
-                // Konten dialog dibungkus let agar null-safe
+
                 pendingRestoreResult?.let { result ->
                     val socName = zx.azenith.ui.util.BackupManager.getSocName(result.socType)
                     val currentSocType = PropertyUtils.get("persist.sys.azenithdebug.soctype")
@@ -686,7 +686,7 @@ fun TweakScreen(
         
                     Column {
                         Text(
-                            text = "Backup content detected. Select what to restore:",
+                            text = stringResource(R.string.str_backup_content_detected_select),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -694,7 +694,7 @@ fun TweakScreen(
                         
                         if (isSocMismatch && result.hasTweaks) {
                             Text(
-                                "Warning: Backup is for $socName. Restoring tweaks is restricted to prevent bootloops.",
+                                stringResource(R.string.str_warning_backup_is_for_socname, socName),
                                 color = MaterialTheme.colorScheme.error,
                                 style = MaterialTheme.typography.bodySmall
                             )
@@ -708,13 +708,13 @@ fun TweakScreen(
                                     onCheckedChange = { if (!isSocMismatch) optRestoreTweaks = it },
                                     enabled = !isSocMismatch
                                 )
-                                Text("Tweak Configuration Settings", color = if (isSocMismatch) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface)
+                                Text(stringResource(R.string.str_tweak_configuration_settings), color = if (isSocMismatch) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface)
                             }
                         }
                         if (result.hasApplist) {
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { optRestoreApplist = !optRestoreApplist }) {
                                 Checkbox(checked = optRestoreApplist, onCheckedChange = { optRestoreApplist = it })
-                                Text("Per-app & Applist Settings", color = MaterialTheme.colorScheme.onSurface)
+                                Text(stringResource(R.string.str_per_app_applist_settings), color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
                     }
@@ -861,7 +861,7 @@ fun FreqLimitSliderItem(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(stringResource(R.string.disabled), style = MaterialTheme.typography.labelSmall, color = colorScheme.outline)
-            Text("40%", style = MaterialTheme.typography.labelSmall, color = colorScheme.outline)
+            Text(stringResource(R.string.str_40), style = MaterialTheme.typography.labelSmall, color = colorScheme.outline)
         }
     }
 }
@@ -874,7 +874,7 @@ fun ExpressiveTile(
     value: String,
     highlight: Boolean,
     showArrow: Boolean = false,
-    isLoading: Boolean = false, // <-- Tambahkan parameter ini
+    isLoading: Boolean = false,
     onClick: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -946,10 +946,10 @@ fun ExpressiveTile(
                     overflow = TextOverflow.Ellipsis
                 )
                 
-                // Gunakan Row untuk menyejajarkan teks dan indikator loading
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp) // Jarak antara teks dan indikator
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     AnimatedContent(
                         targetState = value,
@@ -973,7 +973,7 @@ fun ExpressiveTile(
                         )
                     }
                     
-                    // Tampilkan indikator saat loading
+
                     if (isLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
@@ -1041,7 +1041,7 @@ fun TweakScreenTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onMoreClick: (
                 IconButton(onClick = onMoreClick) {
                     Icon(
                         imageVector = Icons.Outlined.Cloud,
-                        contentDescription = "More Options"
+                        contentDescription = stringResource(R.string.cd_menu)
                     )
                 }
             },

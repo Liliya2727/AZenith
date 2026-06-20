@@ -16,7 +16,9 @@
 
 package zx.azenith.ui.util
 
+
 import kotlinx.serialization.Serializable
+
 
 @Serializable
 data class AppConfig(

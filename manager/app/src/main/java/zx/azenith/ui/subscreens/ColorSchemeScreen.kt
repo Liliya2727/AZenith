@@ -18,69 +18,70 @@
 
 package zx.azenith.ui.subscreens
 
+
 import android.app.Activity
+import android.content.Context
 import android.os.Build
+import android.view.WindowManager
+import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.automirrored.rounded.List
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import zx.azenith.R
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.*
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.material.icons.rounded.*
-import zx.azenith.ui.component.*
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.platform.LocalContext
-import com.topjohnwu.superuser.Shell
-import androidx.navigation.NavController
-import android.content.Context
-import android.view.WindowManager
-import zx.azenith.ui.util.PropertyUtils
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
+import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
-import android.widget.Toast
-import coil.compose.AsyncImage
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.animateFloatAsState
-import kotlin.math.roundToInt
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import com.topjohnwu.superuser.Shell
+import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import zx.azenith.R
+import zx.azenith.ui.component.*
+import zx.azenith.ui.util.PropertyUtils
 
 
 @Composable
@@ -154,7 +155,7 @@ fun ColorSchemeSettings(navController: NavController) {
                                 {
                                     ExpressiveInfoCard(
                                         supportingContent = { 
-                                            Text(text = "Adjust and calibrate your screen color and saturation by using Surface Flinger services, no kernel level support needed.") 
+                                            Text(text = stringResource(R.string.str_adjust_and_calibrate_your_scre)) 
                                         },
                                         leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
                                         containerColor = colorScheme.surfaceContainerLow,
@@ -333,7 +334,7 @@ fun ColorSliderItem(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.BottomCenter
         ) {
-            // Track Abu-abu (Background)
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -342,7 +343,7 @@ fun ColorSliderItem(
                     .background(colorScheme.surfaceContainerHighest)
             )
             
-            // Track Warna (Active Progress)
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth(animatedProgress)
@@ -362,11 +363,11 @@ fun ColorSliderItem(
         Slider(
             value = value,
             onValueChange = { newValue ->
-                // 👇 Logika "Lengket" (Sticky)
+
                 val stickyValue = when {
-                    newValue < 60f -> 0f              // Lengket di 0
-                    newValue in 960f..1040f -> 1000f  // Lengket di 1000 (Default)
-                    newValue > 1940f -> 2000f         // Lengket di 2000 (Max)
+                    newValue < 60f -> 0f
+                    newValue in 960f..1040f -> 1000f
+                    newValue > 1940f -> 2000f
                     else -> newValue
                 }
                 onValueChange(stickyValue)

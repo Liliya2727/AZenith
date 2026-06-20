@@ -18,69 +18,70 @@
 
 package zx.azenith.ui.subscreens
 
+
 import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.view.WindowManager
+import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.automirrored.rounded.List
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import zx.azenith.R
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.List
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.*
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.*
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.material.icons.rounded.*
-import zx.azenith.ui.component.*
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.platform.LocalContext
-import com.topjohnwu.superuser.Shell
-import androidx.navigation.NavController
-import android.content.Context
-import android.view.WindowManager
-import zx.azenith.ui.util.PropertyUtils
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
+import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
-import android.widget.Toast
-import androidx.compose.material3.LargeFlexibleTopAppBar
-// ... (Pertahankan import yang sudah ada)
-import android.content.Intent
-import android.net.Uri
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import zx.azenith.BuildConfig // Pastikan import BuildConfig ini ada untuk versi app
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.navigation.NavController
+import com.topjohnwu.superuser.Shell
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import zx.azenith.BuildConfig
+import zx.azenith.R
+import zx.azenith.ui.component.*
+import zx.azenith.ui.util.PropertyUtils
+
 
 @Composable
 fun AboutScreen(navController: NavController) {
@@ -88,7 +89,7 @@ fun AboutScreen(navController: NavController) {
     val context = LocalContext.current
     val listState = rememberLazyListState()
     
-    // Fungsi pembantu untuk membuka link
+
     val openLink = { url: String ->
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
         context.startActivity(intent)
@@ -115,7 +116,7 @@ fun AboutScreen(navController: NavController) {
                     bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                 )
             ) {
-                // 1. App Header Section
+
                 item {
                     Column(
                         modifier = Modifier
@@ -125,7 +126,7 @@ fun AboutScreen(navController: NavController) {
                     ) {
                         Image(
                             painter = painterResource(id = R.drawable.avatar),
-                            contentDescription = "App Icon",
+                            contentDescription = stringResource(R.string.app_name),
                             modifier = Modifier
                                 .size(96.dp)
                                 .clip(CircleShape)
@@ -142,7 +143,7 @@ fun AboutScreen(navController: NavController) {
                         )
                         
                         Text(
-                            text = "Version ${BuildConfig.VERSION_NAME}",
+                            text = stringResource(R.string.str_version_buildconfig_version_na, BuildConfig.VERSION_NAME),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -162,7 +163,7 @@ fun AboutScreen(navController: NavController) {
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Support Group")
+                                Text(stringResource(R.string.str_support_group))
                             }
                             
                             OutlinedButton(
@@ -174,27 +175,27 @@ fun AboutScreen(navController: NavController) {
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Channel")
+                                Text(stringResource(R.string.str_channel))
                             }
                         }
                     }
                 }
 
-                // 2. Maintainer Section
+
                 item { 
-                    AboutSectionTitle("Maintainer") 
+                    AboutSectionTitle(stringResource(R.string.str_maintainer)) 
                 }
                 item {
                     ExpressiveList(
                         content = listOf(
                             {
                                 ExpressiveListItem(
-                                    headlineContent = { Text(text = "Liliya", fontWeight = FontWeight.SemiBold) },
-                                    supportingContent = { Text("Creator & Maintainer") },
+                                    headlineContent = { Text(text = stringResource(R.string.str_liliya), fontWeight = FontWeight.SemiBold) },
+                                    supportingContent = { Text(stringResource(R.string.str_creator_maintainer)) },
                                     leadingContent = {
                                         Image(
                                             painter = painterResource(R.drawable.avatar_liliya),
-                                            contentDescription = "Liliya",
+                                            contentDescription = stringResource(R.string.str_liliya),
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier.size(48.dp).clip(CircleShape)
                                         )
@@ -207,7 +208,7 @@ fun AboutScreen(navController: NavController) {
                                             IconButton(onClick = { openLink("https://github.com/Liliya2727") }) {
                                                 Icon(
                                                     painter = painterResource(id = R.drawable.ic_github),
-                                                    contentDescription = "GitHub",
+                                                    contentDescription = stringResource(R.string.cd_github),
                                                     modifier = Modifier.size(29.dp),
                                                     tint = MaterialTheme.colorScheme.primary
                                                 )
@@ -215,7 +216,7 @@ fun AboutScreen(navController: NavController) {
                                             IconButton(onClick = { openLink("https://t.me/Zexshia") }) {
                                                 Icon(
                                                     painter = painterResource(id = R.drawable.ic_telegram),
-                                                    contentDescription = "Telegram",
+                                                    contentDescription = stringResource(R.string.cd_telegram),
                                                     modifier = Modifier.size(26.dp),
                                                     tint = MaterialTheme.colorScheme.primary
                                                 )
@@ -228,21 +229,21 @@ fun AboutScreen(navController: NavController) {
                     )
                 }
 
-                // 3. Collaborators Section
+
                 item { 
-                    AboutSectionTitle("Collaborators") 
+                    AboutSectionTitle(stringResource(R.string.str_collaborators)) 
                 }
                 item {
                     ExpressiveList(
                         content = listOf(
                             {
                                 ExpressiveListItem(
-                                    headlineContent = { Text(text = "Rianixia", fontWeight = FontWeight.SemiBold) },
-                                    supportingContent = { Text("Co Maintainer") },
+                                    headlineContent = { Text(text = stringResource(R.string.str_rianixia), fontWeight = FontWeight.SemiBold) },
+                                    supportingContent = { Text(stringResource(R.string.str_co_maintainer)) },
                                     leadingContent = {
                                         Image(
                                             painter = painterResource(R.drawable.avatar_xia),
-                                            contentDescription = "Xia",
+                                            contentDescription = stringResource(R.string.str_rianixia),
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier.size(48.dp).clip(CircleShape)
                                         )
@@ -255,7 +256,7 @@ fun AboutScreen(navController: NavController) {
                                             IconButton(onClick = { openLink("https://github.com/ryanistr") }) {
                                                 Icon(
                                                     painter = painterResource(id = R.drawable.ic_github),
-                                                    contentDescription = "GitHub",
+                                                    contentDescription = stringResource(R.string.cd_github),
                                                     modifier = Modifier.size(29.dp),
                                                     tint = MaterialTheme.colorScheme.primary
                                                 )
@@ -263,7 +264,7 @@ fun AboutScreen(navController: NavController) {
                                             IconButton(onClick = { openLink("https://t.me/rianixia") }) {
                                                 Icon(
                                                     painter = painterResource(id = R.drawable.ic_telegram),
-                                                    contentDescription = "Telegram",
+                                                    contentDescription = stringResource(R.string.cd_telegram),
                                                     modifier = Modifier.size(26.dp),
                                                     tint = MaterialTheme.colorScheme.primary
                                                 )
@@ -274,12 +275,12 @@ fun AboutScreen(navController: NavController) {
                             },
                             {
                                 ExpressiveListItem(
-                                    headlineContent = { Text(text = "Kanaochar", fontWeight = FontWeight.SemiBold) },
-                                    supportingContent = { Text("Co Maintainer") },
+                                    headlineContent = { Text(text = stringResource(R.string.str_kanaochar), fontWeight = FontWeight.SemiBold) },
+                                    supportingContent = { Text(stringResource(R.string.str_co_maintainer)) },
                                     leadingContent = {
                                         Image(
                                             painter = painterResource(R.drawable.avatar_kanao),
-                                            contentDescription = "Kanaochar",
+                                            contentDescription = stringResource(R.string.str_kanaochar),
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier.size(48.dp).clip(CircleShape)
                                         )
@@ -292,7 +293,7 @@ fun AboutScreen(navController: NavController) {
                                             IconButton(onClick = { openLink("https://github.com/kanaodnd") }) {
                                                 Icon(
                                                     painter = painterResource(id = R.drawable.ic_github),
-                                                    contentDescription = "GitHub",
+                                                    contentDescription = stringResource(R.string.cd_github),
                                                     modifier = Modifier.size(29.dp),
                                                     tint = MaterialTheme.colorScheme.primary
                                                 )
@@ -300,7 +301,7 @@ fun AboutScreen(navController: NavController) {
                                             IconButton(onClick = { openLink("https://t.me/kanaochar") }) {
                                                 Icon(
                                                     painter = painterResource(id = R.drawable.ic_telegram),
-                                                    contentDescription = "Telegram",
+                                                    contentDescription = stringResource(R.string.cd_telegram),
                                                     modifier = Modifier.size(26.dp),
                                                     tint = MaterialTheme.colorScheme.primary
                                                 )
@@ -314,15 +315,15 @@ fun AboutScreen(navController: NavController) {
                 }
                 
                 item { 
-                    AboutSectionTitle("Open Source") 
+                    AboutSectionTitle(stringResource(R.string.str_open_source)) 
                 }
                 item {
                     ExpressiveList(
                         content = listOf {
                             ExpressiveListItem(
                                 onClick = { openLink("https://github.com/Liliya2727/AZenith") },
-                                headlineContent = { Text("Source Code") },
-                                supportingContent = { Text("View the source code on GitHub") },
+                                headlineContent = { Text(stringResource(R.string.str_source_code)) },
+                                supportingContent = { Text(stringResource(R.string.str_view_the_source_code_on_github)) },
                                 leadingContent = { LeadingIcon(icon = Icons.Rounded.Code) },
                                 trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
                             )
@@ -373,7 +374,7 @@ fun AboutTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit) 
         LargeFlexibleTopAppBar(
             title = { 
                 Text(
-                    text = "About",
+                    text = stringResource(R.string.section_about),
                     fontWeight = FontWeight.Bold
                 ) 
             },

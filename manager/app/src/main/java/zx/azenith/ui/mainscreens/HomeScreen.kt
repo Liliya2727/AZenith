@@ -1,8 +1,31 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 @file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 
 package zx.azenith.ui.mainscreens
 
+
 import android.content.Context
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -16,21 +39,15 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.core.spring
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.viewmodel.HomeViewModel
-                
+
 
 @Composable
 fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
@@ -108,15 +125,15 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                     }
                 
                     if (isLandscape) {
-                        // MODE LANDSCAPE
-                        // 👇 1. HAPUS verticalArrangement = Arrangement.spacedBy(16.dp) di sini
+
+
                         Column() {
-                            // Barisan Atas (Banner + InfoTile berdampingan)
+
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(IntrinsicSize.Max),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp) // Ini biarkan, karena horizontal
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                                     BannerCard(
@@ -155,9 +172,9 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 enter = expandVertically(animationSpec = spring()) + fadeIn(),
                                 exit = shrinkVertically(animationSpec = spring()) + fadeOut()
                             ) {
-                                // 👇 2. BUNGKUS DENGAN COLUMN DAN MASUKKAN SPACER KE DALAM ANIMASI
+
                                 Column {
-                                    Spacer(modifier = Modifier.height(16.dp)) // Jarak ini akan ikut ter-animasi!
+                                    Spacer(modifier = Modifier.height(16.dp))
                                     if (retainedPkg.isNotEmpty()) {
                                         RunningGameCard(
                                             pkgName = retainedPkg,
@@ -168,8 +185,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                             }
                         }
                     } else {
-                        // MODE PORTRAIT
-                        // 👇 3. HAPUS verticalArrangement = Arrangement.spacedBy(16.dp) di sini juga
+
+
                         Column() {
                             BannerCard(
                                 status = bannerStatus, pid = uiState.servicePid,
@@ -183,9 +200,9 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 enter = expandVertically(animationSpec = spring()) + fadeIn(),
                                 exit = shrinkVertically(animationSpec = spring()) + fadeOut()
                             ) {
-                                // 👇 4. BUNGKUS DENGAN COLUMN DAN MASUKKAN SPACER
+
                                 Column {
-                                    Spacer(modifier = Modifier.height(16.dp)) // Jarak bagian atas card ikut ter-animasi
+                                    Spacer(modifier = Modifier.height(16.dp))
                                     if (retainedPkg.isNotEmpty()) { 
                                         RunningGameCard(
                                             pkgName = retainedPkg,
@@ -195,7 +212,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 }
                             }
                 
-                            // 👇 5. TAMBAHKAN SPACER MANUAL DI SINI (Jarak antara Banner/GameCard dengan InfoTile)
+
                             Spacer(modifier = Modifier.height(16.dp))
 
                             Row(
@@ -240,7 +257,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
             )
         }
 
-        // 👇 KEMBALIKAN KODE INI SEPERTI SEMULA
+
         RootAppDialog {
             ProfileDialog(
                 show = showProfileDialog,

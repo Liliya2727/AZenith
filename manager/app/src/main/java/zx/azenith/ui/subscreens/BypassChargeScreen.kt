@@ -18,38 +18,56 @@
 
 package zx.azenith.ui.subscreens
 
-import android.app.Activity
+
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
+import android.net.Uri
 import android.os.Build
-import androidx.compose.ui.graphics.Brush
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.*
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -58,39 +76,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.materialkolor.rememberDynamicColorScheme
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.saveable.rememberSaveable
+import com.topjohnwu.superuser.Shell
+import com.yalantis.ucrop.UCrop
+import java.io.File
+import kotlin.math.roundToInt
 import zx.azenith.R
-import androidx.compose.foundation.lazy.rememberLazyListState
+import zx.azenith.ui.component.*
 import zx.azenith.ui.theme.ColorMode
 import zx.azenith.ui.theme.ThemeController
-import zx.azenith.ui.util.saveHeaderImage
+import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.clearHeaderImage
 import zx.azenith.ui.util.getHeaderImage
-import zx.azenith.ui.component.*
-import android.net.Uri
-import com.yalantis.ucrop.UCrop
-import coil.compose.AsyncImage
-import androidx.compose.ui.layout.ContentScale
-import zx.azenith.ui.component.*
-import java.io.File
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.layout.PaddingValues
-import com.topjohnwu.superuser.Shell
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.animateFloatAsState
-import kotlin.math.roundToInt
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
-import zx.azenith.ui.util.PropertyUtils
-import androidx.compose.material3.LargeFlexibleTopAppBar
-import androidx.compose.foundation.Image
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.graphics.ColorFilter
+import zx.azenith.ui.util.saveHeaderImage
 
 
 @Composable
@@ -139,7 +138,7 @@ fun BypassChargeScreen(navController: NavController) {
                         content = listOf( 
                             {
                                 ExpressiveInfoCard(
-                                    supportingContent = { Text(text = "Pause battery charging when plugged in. Power is routed directly to the motherboard, significantly reducing heat while gaming and protecting battery lifespan.") },
+                                    supportingContent = { Text(text = stringResource(R.string.str_pause_battery_charging_when_pl)) },
                                     leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
                                     containerColor = colorScheme.surfaceContainerLow,
                                     onClick = {}
@@ -235,9 +234,9 @@ fun BypassChargeScreen(navController: NavController) {
                                         )
                                     }
                                     
-                                    // Teks Persentase di kanan
+
                                     Text(
-                                        text = "${currentVal.toInt()}%",
+                                        text = stringResource(R.string.str_currentval_toint, currentVal.toInt()),
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = if (isUnsupported) colorScheme.outline else colorScheme.primary
@@ -312,8 +311,8 @@ fun BypassChargeScreen(navController: NavController) {
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("20%", style = MaterialTheme.typography.labelSmall, color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
-                                    Text("50%", style = MaterialTheme.typography.labelSmall, color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                    Text(stringResource(R.string.str_20), style = MaterialTheme.typography.labelSmall, color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                    Text(stringResource(R.string.str_50), style = MaterialTheme.typography.labelSmall, color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                                 }
                             }
                         }

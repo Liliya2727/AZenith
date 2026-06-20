@@ -1,4 +1,21 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package zx.azenith.ui.util
+
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
@@ -6,26 +23,27 @@ import android.os.Build
 import java.io.File
 import java.io.FileOutputStream
 
+
 fun getRealDeviceName(context: Context): String {
     val mfg = Build.MANUFACTURER
     val model = Build.MODEL
     val device = Build.DEVICE
 
-    // 1. Perbaiki fallback agar tidak dobel
+
     val defaultName = if (model.contains(mfg, ignoreCase = true)) {
         model
     } else {
         "$mfg $model"
     }
 
-    // 2. Bikin versi "Bersih" dengan menghapus nama pabrikan
+
     val cleanModel = model.replace(mfg, "", ignoreCase = true).trim(' ', '-', '_')
     val cleanDevice = device.replace(mfg, "", ignoreCase = true).trim(' ', '-', '_')
 
     val dbName = "devices.db"
     val dbFile = context.getDatabasePath(dbName)
 
-    // Ekstrak database jika belum ada
+
     if (!dbFile.exists()) {
         try {
             dbFile.parentFile?.mkdirs()
@@ -36,7 +54,7 @@ fun getRealDeviceName(context: Context): String {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            // Jika ekstrak gagal, kembalikan fallback
+
             return if (defaultName.contains(device, ignoreCase = true)) defaultName else "$defaultName ($device)"
         }
     }
@@ -48,7 +66,7 @@ fun getRealDeviceName(context: Context): String {
         try {
             db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READONLY)
             
-            // 3. Query diperbaiki: HANYA SELECT name (karena kolom brand tidak ada)
+
             val query = """
                 SELECT name 
                 FROM devices 
@@ -59,12 +77,12 @@ fun getRealDeviceName(context: Context): String {
             
             db.rawQuery(query, arrayOf(model, cleanModel, device, cleanDevice)).use { cursor ->
                 if (cursor.moveToFirst()) {
-                    // Ambil string dari kolom index 0 (yaitu kolom 'name')
+
                     val nameFromDb = cursor.getString(0)
                     
-                    // Terkadang database berisi nilai null atau kosong
+
                     if (!nameFromDb.isNullOrBlank()) {
-                        // Tambahkan nama pabrikan (mfg) jika belum ada di dalam nama marketing
+
                         marketingName = if (nameFromDb.contains(mfg, ignoreCase = true)) {
                             nameFromDb.trim()
                         } else {
@@ -80,7 +98,7 @@ fun getRealDeviceName(context: Context): String {
         }
     }
 
-    // 4. Tahap Akhir: Pembersihan Duplikat Codename dan Penggabungan
+
     val finalName = marketingName.ifEmpty { defaultName }
     
     var cleanFinal = finalName.replace("($device)", "", ignoreCase = true).trim()

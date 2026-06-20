@@ -18,18 +18,24 @@
 
 package zx.azenith.ui.mainscreens
 
+
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.ComponentName
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -38,8 +44,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -49,22 +55,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.topjohnwu.superuser.Shell
-import kotlinx.coroutines.launch
+import dev.jeziellago.compose.markdowntext.MarkdownText
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zx.azenith.BuildConfig
 import zx.azenith.R
+import zx.azenith.ui.component.*
 import zx.azenith.ui.util.*
-import zx.azenith.ui.component.* 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import java.text.SimpleDateFormat
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import java.util.Date
-import java.util.Locale
-import java.io.File
-import dev.jeziellago.compose.markdowntext.MarkdownText
+
 
 fun isLauncherIconEnabled(context: Context): Boolean {
     val pkg = context.packageManager
@@ -95,7 +98,7 @@ fun SettingsScreen(navController: NavController) {
             try {
                 changelogText = context.assets.open("changelog.md").bufferedReader().use { it.readText() }
             } catch (e: Exception) {
-                changelogText = "Failed to load changelog.\n${e.message}"
+                changelogText = context.getString(R.string.err_failed_load_changelog) + "\n${e.message}"
             }
         }
     }
@@ -103,7 +106,7 @@ fun SettingsScreen(navController: NavController) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     
-    // Inisialisasi Dialog Handlers
+
     val loadingDialog = rememberLoadingDialog()
     val uninstallDialog = rememberConfirmDialog(
         onConfirm = {
@@ -116,11 +119,11 @@ fun SettingsScreen(navController: NavController) {
         uri?.let { destinationUri ->
             coroutineScope.launch {
                 val success = loadingDialog.withLoading {
-                    // 1. Suruh skrip bikin log di cache internal dulu (saveToDownloads = false)
+
                     val logFile = dumpDiagnosticLogs(context, saveToDownloads = false)
                     
                     if (logFile != null && logFile.exists()) {
-                        // 2. Kopi dari cache ke lokasi yang dipilih user
+
                         try {
                             context.contentResolver.openOutputStream(destinationUri)?.use { outputStream ->
                                 logFile.inputStream().use { inputStream ->
@@ -131,7 +134,7 @@ fun SettingsScreen(navController: NavController) {
                         } catch (e: Exception) {
                             false
                         } finally {
-                            // 3. Bersihin sisa log di cache
+
                             logFile.delete() 
                         }
                     } else {
@@ -140,9 +143,9 @@ fun SettingsScreen(navController: NavController) {
                 }
                 
                 if (success) {
-                    snackbarHostState.showSnackbar("Logs saved successfully!")
+                    snackbarHostState.showSnackbar(context.getString(R.string.toast_log_save_success))
                 } else {
-                    snackbarHostState.showSnackbar("Failed to save logs.")
+                    snackbarHostState.showSnackbar(context.getString(R.string.toast_log_save_fail))
                 }
             }
         }
@@ -367,7 +370,7 @@ fun SettingsScreen(navController: NavController) {
                 }
             }
             
-            // Registrasi Dialog Host di Root Box
+
             LoadingDialogHost(handle = loadingDialog)
             ConfirmDialogHost(handle = uninstallDialog)
             
@@ -385,7 +388,7 @@ fun SettingsScreen(navController: NavController) {
                             )
                     ) {
                         Text(
-                            text = "Logs & Diagnostics",
+                            text = stringResource(R.string.str_logs_diagnostics),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -397,13 +400,13 @@ fun SettingsScreen(navController: NavController) {
                             content = listOf(
                                 {
                                     ExpressiveListItem(
-                                        headlineContent = { Text("Save Log", color = MaterialTheme.colorScheme.onSurface) },
-                                        supportingContent = { Text("Save compressed logs to a folder", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                        leadingContent = { LeadingIcon(Icons.Rounded.FolderSpecial) }, // Ganti ikon biar matching
+                                        headlineContent = { Text(stringResource(R.string.save_log), color = MaterialTheme.colorScheme.onSurface) },
+                                        supportingContent = { Text(stringResource(R.string.str_save_compressed_logs_to_a_fold), color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                        leadingContent = { LeadingIcon(Icons.Rounded.FolderSpecial) },
                                         onClick = {
                                             showLogBottomSheet = false 
                                             
-                                            // Panggil File Picker dengan nama default file
+
                                             val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
                                             val fileName = "AZenith_Logs_$timeStamp.tar.gz"
                                             createLogLauncher.launch(fileName)
@@ -412,8 +415,8 @@ fun SettingsScreen(navController: NavController) {
                                 },
                                 {
                                     ExpressiveListItem(
-                                        headlineContent = { Text("Send Logs", color = MaterialTheme.colorScheme.onSurface) },
-                                        supportingContent = { Text("Share compressed logs to other apps", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                        headlineContent = { Text(stringResource(R.string.str_send_logs), color = MaterialTheme.colorScheme.onSurface) },
+                                        supportingContent = { Text(stringResource(R.string.str_share_compressed_logs_to_other), color = MaterialTheme.colorScheme.onSurfaceVariant) },
                                         leadingContent = { LeadingIcon(Icons.Rounded.Share) },
                                         onClick = {
                                             showLogBottomSheet = false
@@ -427,7 +430,7 @@ fun SettingsScreen(navController: NavController) {
                                                     val intent = getShareLogIntent(context, logFile)
                                                     shareLogLauncher.launch(intent)
                                                 } else {
-                                                    snackbarHostState.showSnackbar("Failed to gather logs")
+                                                    snackbarHostState.showSnackbar(context.getString(R.string.toast_log_gather_fail))
                                                 }
                                             }
                                         }
@@ -449,7 +452,7 @@ fun SettingsScreen(navController: NavController) {
                             .fillMaxHeight(0.85f) 
                     ) {
                         Text(
-                            text = "Changelog",
+                            text = stringResource(R.string.str_changelog),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -555,8 +558,8 @@ fun SettingsScreenTopAppBar(
             actions = {
                 IconButton(onClick = onChangelogClick) {
                     Icon(
-                        imageVector = Icons.Rounded.TextSnippet, // Icon untuk changelog
-                        contentDescription = "Changelog"
+                        imageVector = Icons.AutoMirrored.Rounded.TextSnippet,
+                        contentDescription = stringResource(R.string.cd_changelog)
                     )
                 }
             },

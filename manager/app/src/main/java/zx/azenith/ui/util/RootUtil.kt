@@ -16,18 +16,19 @@
 
 package zx.azenith.ui.util
 
+
+import android.os.FileObserver
 import com.topjohnwu.superuser.Shell
+import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import java.io.File
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
-import android.os.FileObserver
 import zx.azenith.R
-    
+
 
 object RootUtils {
     private const val MODULE_DIR = "/data/adb/modules/AZenith"
@@ -46,7 +47,7 @@ object RootUtils {
         ).exec()
     }
     
-    // Tambahkan fungsi ini di dalam object RootUtils kamu
+
     fun getModuleVersionCode(): Int {
         val result = Shell.cmd("grep '^versionCode=' /data/adb/modules/AZenith/module.prop | cut -d= -f2").exec().out
         return result.firstOrNull()?.trim()?.toIntOrNull() ?: -1
@@ -64,21 +65,21 @@ object RootUtils {
                 val lines = result.out
                 val firstLine = lines[0].split(" ")
                 
-                // Ambil Package Name (Cegah jika string kosong atau bernilai "NULL")
+
                 val pkg = firstLine.getOrNull(0)?.takeIf { it != "NULL" && it.isNotBlank() }
                 
-                // Cari baris yang depannya "Time: " lalu potong stringnya
+
                 val time = lines.find { it.startsWith("Time:") }?.substringAfter("Time:")?.trim()
                 
                 currentInfo = GameInfo(pkg, time)
             }
             
-            // Hanya emit jika ada perubahan untuk mencegah UI terus-terusan merender
+
             if (currentInfo != lastInfo) {
                 emit(currentInfo)
                 lastInfo = currentInfo
             }
-            delay(2000) // Polling tiap 2 detik, aman untuk efisiensi
+            delay(2000)
         }
     }.flowOn(Dispatchers.IO)
 
@@ -122,13 +123,13 @@ object RootUtils {
     }
     
     fun requestRootAccess(): Boolean {
-        // Jika sebelumnya shell sudah terbuka tapi bukan root, tutup dulu
+
         val currentShell = Shell.getCachedShell()
         if (currentShell != null && !currentShell.isRoot) {
             currentShell.close()
         }
         
-        // Memaksa meminta sesi shell baru
+
         return Shell.getShell().isRoot
     }
 
@@ -151,7 +152,7 @@ object RootUtils {
             currentShell.close()
         }
         
-        // Memaksa meminta sesi shell baru
+
         return Shell.getShell().isRoot
     }
     
