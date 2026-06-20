@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
     if (IS_CMD(cmd, "--run", "-r"))            { main_daemon(); return 0; }
     if (IS_CMD(cmd, "--version", "-V"))        { printversion(); return 0; }
     if (IS_CMD(cmd, "--clearlogs", "-c"))       { clearlogs(); return 0; }
-    if (IS_CMD(cmd, "--bypasspathlist", "-bpl")) { print_bypass_path_list(); return 0; } // <--- Tambahkan baris ini
+    if (IS_CMD(cmd, "--bypasspathlist", "-bpl")) { print_bypass_path_list(); return 0; }
     
     if (!require_daemon_running()) {
         return 1;

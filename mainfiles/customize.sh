@@ -186,6 +186,7 @@ if [ "$KSU" = "true" ] || [ "$APATCH" = "true" ]; then
 		[ -d "$dir" ] && {
 			ui_print "- Creating symlink in $dir"
 			ln -sf "$BIN_PATH/sys.azenith-service" "$dir/sys.azenith-service"
+			ln -sf "$BIN_PATH/sys.azenith-service" "$dir/zx" # Binary calls for CLI
 			ln -sf "$BIN_PATH/sys.azenith-profilesettings" "$dir/sys.azenith-profilesettings"
 			ln -sf "$BIN_PATH/sys.azenith-utilityconf" "$dir/sys.azenith-utilityconf"
 			ln -sf "$BIN_PATH/sys.azenith-preloadbin" "$dir/sys.azenith-preloadbin"
