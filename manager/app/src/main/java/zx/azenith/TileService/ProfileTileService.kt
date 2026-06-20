@@ -16,14 +16,16 @@
 
 package zx.azenith.TileService
 
+
+import android.app.AlertDialog
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
+import android.widget.Toast
 import com.topjohnwu.superuser.Shell
 import zx.azenith.R
 import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.RootUtils
-import android.app.AlertDialog
-import android.widget.Toast
+
 
 class ProfileTileService : TileService() {
 
@@ -46,19 +48,19 @@ class ProfileTileService : TileService() {
         if (aiEnabled != "0" || tile.state == Tile.STATE_UNAVAILABLE || !RootUtils.isRootGranted()) {
             return
         }
-    
-        val inflater = android.view.LayoutInflater.from(this)
+        
+        val themedContext = android.view.ContextThemeWrapper(this, android.R.style.Theme_DeviceDefault_DayNight)
+        val inflater = android.view.LayoutInflater.from(themedContext)
         val view = inflater.inflate(R.layout.dialog_profile_selector, null)
-    
-        val dialog = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog)
+
+        val dialog = AlertDialog.Builder(themedContext, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setView(view)
             .create()
-    
-        // Bikin background dialog transparan supaya rounded drawable kelihatan
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+ 
+        // dialog.window?.setBackgroundDrawableResource(android.R.drawable.dialog_holo_light_frame)
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
     
         view.findViewById<android.view.View>(R.id.item_performance).setOnClickListener {
-            // 👇 Tampilkan info nama profil yang sedang dipasang (misal ngambil string resource)
             showApplyingToast(getString(R.string.Profile_Performance))
             applyProfile("1")
             dialog.dismiss()
@@ -76,7 +78,6 @@ class ProfileTileService : TileService() {
     
         showDialog(dialog)
 
-        // PAKSA LEBAR DIALOG DI SINI (85% dari layar)
         dialog.window?.let { window ->
             val layoutParams = window.attributes
             val displayMetrics = resources.displayMetrics
@@ -84,9 +85,10 @@ class ProfileTileService : TileService() {
             window.attributes = layoutParams
         }
     }
+
     
     private fun showApplyingToast(profileName: String) {
-        // Menampilkan pesan "Applying [Nama Profil] Profile..."
+
         val message = "Applying $profileName Profile"
         Toast.makeText(applicationContext, message, Toast.LENGTH_SHORT).show()
     }
@@ -97,8 +99,8 @@ class ProfileTileService : TileService() {
                 PropertyUtils.set(PROFILE_PROP, nextProfile)
                 updateTileState()
                 
-                // Opsional: Jika ingin memberi tahu kalau profil sudah sukses berganti total
-                // Toast.makeText(applicationContext, "Profile applied successfully", Toast.LENGTH_SHORT).show()
+
+
             }
         }
     }
@@ -110,7 +112,7 @@ class ProfileTileService : TileService() {
 
         if (aiEnabled != "0") {
             tile.state = Tile.STATE_UNAVAILABLE
-            updateSubtitle(tile, "Auto Mode")
+            updateSubtitle(tile, getString(R.string.str_auto_mode))
         } else {
             tile.state = Tile.STATE_ACTIVE
             
