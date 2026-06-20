@@ -16,9 +16,12 @@
 
 package zx.azenith
 
+
+import android.content.Context
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Bundle
-import android.content.Context
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -31,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
+import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,42 +42,39 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-import androidx.compose.ui.res.stringResource
 import androidx.navigation.compose.*
-import android.content.pm.PackageManager
-import android.widget.Toast
-import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.navArgument
+import com.topjohnwu.superuser.Shell
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.blur.blurEffect
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import zx.azenith.R
+import zx.azenith.ui.component.* import android.content.Intent
 import zx.azenith.ui.mainscreens.*
 import zx.azenith.ui.subscreens.*
 import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.util.*
-import kotlinx.coroutines.launch
-import com.topjohnwu.superuser.Shell
-import zx.azenith.ui.component.* import android.content.Intent
-import androidx.core.content.FileProvider
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.material.icons.rounded.RestartAlt
-import java.io.File
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.blur.blurEffect
-import androidx.compose.ui.graphics.Brush
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 
 class MainActivity : ComponentActivity() {
@@ -203,7 +204,7 @@ fun MainScreen(fromTileType: String? = null) {
             coroutineScope.launch {
                 installingDialog.withInstalling {
                     val result = kotlinx.coroutines.withContext(Dispatchers.IO) {
-                        // Rantai perintah: salin -> install -> hapus berkas sementara
+
                         Shell.cmd(
                             "cp /data/adb/modules/AZenith/AZenith.apk /data/local/tmp/AZenith_tmp.apk",
                             "sleep 5 && pm install -r /data/local/tmp/AZenith_tmp.apk",
@@ -212,11 +213,11 @@ fun MainScreen(fromTileType: String? = null) {
                     }
                     
                     if (result.isSuccess) {
-                        Toast.makeText(context, "Update installed successfully!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.toast_update_success), Toast.LENGTH_SHORT).show()
                     } else {
-                        // Jika gagal, output log shell akan digabung untuk memudahkan debugging
-                        val errorLog = result.out.joinToString("\n").ifEmpty { "Unknown installation error" }
-                        Toast.makeText(context, "Failed to install:\n$errorLog", Toast.LENGTH_LONG).show()
+
+                        val errorLog = result.out.joinToString("\n").ifEmpty { context.getString(R.string.status_unknown) }
+                        Toast.makeText(context, context.getString(R.string.toast_install_fail, errorLog), Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -243,19 +244,19 @@ fun MainScreen(fromTileType: String? = null) {
 
             if (appVC < moduleVC && RootUtils.isUpdateApkAvailable()) {
                 updateDialog.showConfirm(
-                    title = "App Update Available",
-                    content = "Your app manager version ($appVC) is older than the module version ($moduleVC).\n\nUpdate now to get the latest features?",
-                    confirm = "Update Now",
-                    dismiss = "Later"
+                    title = context.getString(R.string.dialog_update_available_title),
+                    content = context.getString(R.string.dialog_update_available_content, appVC, moduleVC),
+                    confirm = context.getString(R.string.dialog_update_available_confirm),
+                    dismiss = context.getString(R.string.dialog_update_available_dismiss)
                 )
             }
 
             if (RootUtils.isModuleUpdatePendingReboot()) {
                 rebootDialog.showConfirm(
-                    title = "Module Update Available",
-                    content = "Module update is pending to be applied. Reboot the device now?",
-                    confirm = "Reboot Now",
-                    dismiss = "Not Now"
+                    title = context.getString(R.string.dialog_module_update_title),
+                    content = context.getString(R.string.dialog_module_update_content),
+                    confirm = context.getString(R.string.dialog_module_update_confirm),
+                    dismiss = context.getString(R.string.dialog_module_update_dismiss)
                 )
             }
         }
@@ -265,11 +266,11 @@ fun MainScreen(fromTileType: String? = null) {
     val nestedScrollConnection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                // Jika scroll ke bawah (y negatif), sembunyikan FAB
+
                 if (available.y < -10f) {
                     isFabVisible.value = false
                 } 
-                // Jika scroll ke atas (y positif), munculkan FAB
+
                 else if (available.y > 10f) {
                     isFabVisible.value = true
                 }
@@ -431,14 +432,14 @@ fun MainScreen(fromTileType: String? = null) {
                     ExtendedFloatingActionButton(
                         onClick = {
                             rebootDialog.showConfirm(
-                                title = "Reboot Required",
-                                content = "A configuration has been restored. Reboot the device now to apply changes?",
-                                confirm = "Reboot",
-                                dismiss = "Later"
+                                title = context.getString(R.string.dialog_reboot_required_title),
+                                content = context.getString(R.string.dialog_reboot_required_content),
+                                confirm = context.getString(R.string.reboot),
+                                dismiss = context.getString(R.string.dialog_update_available_dismiss)
                             )
                         },
-                        icon = { Icon(Icons.Rounded.RestartAlt, contentDescription = "Reboot") },
-                        text = { Text("Reboot", fontWeight = FontWeight.Bold) },
+                        icon = { Icon(Icons.Rounded.RestartAlt, contentDescription = stringResource(R.string.reboot)) },
+                        text = { Text(stringResource(R.string.reboot), fontWeight = FontWeight.Bold) },
                         containerColor = MaterialTheme.colorScheme.errorContainer,
                         contentColor = MaterialTheme.colorScheme.onErrorContainer,
                         elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)

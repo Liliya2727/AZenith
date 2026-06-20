@@ -16,7 +16,7 @@
 
 package zx.azenith
 
-import org.lsposed.hiddenapibypass.HiddenApiBypass
+
 import android.annotation.SuppressLint
 import android.app.ActivityManager
 import android.content.ComponentName
@@ -31,6 +31,8 @@ import java.lang.reflect.Method
 import java.nio.channels.FileChannel
 import java.nio.channels.FileLock
 import java.nio.file.StandardOpenOption
+import org.lsposed.hiddenapibypass.HiddenApiBypass
+
 
 @SuppressLint("StaticFieldLeak", "DiscouragedPrivateApi", "PrivateApi")
 object AppMonitor {
@@ -589,8 +591,8 @@ object AppMonitor {
             val appInfo = pm.getApplicationInfo(pkgName, 0)
             appInfo.loadLabel(pm).toString()
         } catch (e: Exception) {
-            // Jika gagal (misal aplikasi sudah di-uninstall saat dicek), 
-            // kembalikan package name sebagai fallback
+
+
             pkgName 
         }
     }
