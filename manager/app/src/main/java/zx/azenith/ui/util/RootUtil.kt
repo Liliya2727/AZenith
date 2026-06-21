@@ -19,6 +19,7 @@ package zx.azenith.ui.util
 
 import android.os.FileObserver
 import com.topjohnwu.superuser.Shell
+import com.topjohnwu.superuser.io.SuFile
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
@@ -35,45 +36,61 @@ object RootUtils {
     private const val API_DIR_PATH = "/data/data/zx.azenith/API"
     private const val PROFILE_FILE_NAME = "current_profile"
     private const val PROFILE_PATH = "$API_DIR_PATH/$PROFILE_FILE_NAME"
+    private const val DAEMON_PROFILE_PATH = "/data/adb/.config/AZenith/API/current_profile"
+
+    private fun readRootFile(path: String): String? {
+        return try {
+            val file = SuFile(path)
+            if (!file.exists()) return null
+            file.newInputStream().bufferedReader().use { it.readText().trim() }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun writeRootFile(path: String, content: String) {
+        try {
+            SuFile(path).newOutputStream().use { it.write(content.toByteArray()) }
+        } catch (e: Exception) {
+            // no-op
+        }
+    }
 
     private fun syncProfileState() {
-        val daemonProfilePath = "/data/adb/.config/AZenith/API/current_profile"
-        
-        Shell.cmd(
-            "mkdir -p $API_DIR_PATH",
-            "chmod 755 $API_DIR_PATH",
-            "if [ -f $daemonProfilePath ]; then cat $daemonProfilePath > $PROFILE_PATH; fi",
-            "chmod 644 $PROFILE_PATH"
-        ).exec()
+        val apiDir = SuFile(API_DIR_PATH)
+        if (!apiDir.exists()) {
+            apiDir.mkdirs()
+        }
+
+        val daemonFile = SuFile(DAEMON_PROFILE_PATH)
+        if (daemonFile.exists()) {
+            val content = daemonFile.newInputStream().bufferedReader().use { it.readText() }
+            writeRootFile(PROFILE_PATH, content)
+        }
     }
-    
 
     fun getModuleVersionCode(): Int {
         val result = Shell.cmd("grep '^versionCode=' /data/adb/modules/AZenith/module.prop | cut -d= -f2").exec().out
         return result.firstOrNull()?.trim()?.toIntOrNull() ?: -1
     }
-    
+
     data class GameInfo(val pkg: String?, val startTime: String?)
 
     fun observeGameInfo(): Flow<GameInfo> = flow {
         var lastInfo: GameInfo? = null
         while (true) {
-            val result = Shell.cmd("cat /data/data/zx.azenith/API/gameinfo").exec()
+            val raw = readRootFile("/data/data/zx.azenith/API/gameinfo")
             var currentInfo = GameInfo(null, null)
-            
-            if (result.isSuccess && result.out.isNotEmpty()) {
-                val lines = result.out
+
+            if (!raw.isNullOrBlank()) {
+                val lines = raw.lines()
                 val firstLine = lines[0].split(" ")
-                
 
                 val pkg = firstLine.getOrNull(0)?.takeIf { it != "NULL" && it.isNotBlank() }
-                
-
                 val time = lines.find { it.startsWith("Time:") }?.substringAfter("Time:")?.trim()
-                
+
                 currentInfo = GameInfo(pkg, time)
             }
-            
 
             if (currentInfo != lastInfo) {
                 emit(currentInfo)
@@ -85,12 +102,12 @@ object RootUtils {
 
     fun observeProfileRes(): Flow<Int> = callbackFlow {
         syncProfileState()
-        
+
         trySend(getCurrentProfileRes())
 
         val apiDir = File(API_DIR_PATH)
         if (!apiDir.exists()) {
-            Shell.cmd("mkdir -p $API_DIR_PATH && chmod 755 $API_DIR_PATH").exec()
+            SuFile(API_DIR_PATH).mkdirs()
         }
 
         val observer = object : FileObserver(apiDir, MODIFY or CREATE or MOVED_TO) {
@@ -106,14 +123,12 @@ object RootUtils {
     }.flowOn(Dispatchers.IO)
 
     fun getCurrentProfileRes(): Int {
-        val result = Shell.cmd("cat $PROFILE_PATH").exec()
-        val content = if (result.isSuccess) result.out.firstOrNull()?.trim() else null
-        
+        val content = readRootFile(PROFILE_PATH)
+
         return when (content) {
             "0" -> R.string.status_initializing
             "1" -> {
-                val liteProp = Shell.cmd("getprop persist.sys.azenithconf.litemode").exec()
-                val isLite = liteProp.out.firstOrNull()?.trim() == "1"                
+                val isLite = PropertyUtils.get("persist.sys.azenithconf.litemode", "0") == "1"
                 if (isLite) R.string.profile_perflite else R.string.Profile_Performance
             }
             "2" -> R.string.Profile_Balanced
@@ -121,18 +136,14 @@ object RootUtils {
             else -> R.string.status_unknown
         }
     }
-    
-    fun requestRootAccess(): Boolean {
 
+    fun requestRootAccess(): Boolean {
         val currentShell = Shell.getCachedShell()
         if (currentShell != null && !currentShell.isRoot) {
             currentShell.close()
         }
-        
-
         return Shell.getShell().isRoot
     }
-
 
     fun observeServiceStatusRes(): Flow<Pair<Int, String>> = flow {
         var lastStatus: Pair<Int, String>? = null
@@ -145,20 +156,17 @@ object RootUtils {
             delay(2000)
         }
     }.flowOn(Dispatchers.IO)
-    
+
     fun isRootGranted(): Boolean {
         val currentShell = Shell.getCachedShell()
         if (currentShell != null && !currentShell.isRoot) {
             currentShell.close()
         }
-        
-
         return Shell.getShell().isRoot
     }
-    
+
     fun isModuleInstalled(): Boolean {
-        val result = Shell.cmd("[ -d $MODULE_DIR ] && echo yes || echo no").exec()
-        return result.isSuccess && result.out.firstOrNull() == "yes"
+        return SuFile(MODULE_DIR).exists()
     }
 
     fun getServiceStatusRes(): Pair<Int, String> {
@@ -170,14 +178,12 @@ object RootUtils {
             R.string.status_suspended to ""
         }
     }
-    
+
     fun isUpdateApkAvailable(): Boolean {
-        return Shell.cmd("[ -f /data/adb/modules/AZenith/AZenith.apk ]").exec().isSuccess
+        return SuFile("/data/adb/modules/AZenith/AZenith.apk").exists()
     }
 
     fun isModuleUpdatePendingReboot(): Boolean {
-        val result = Shell.cmd("[ -f /data/adb/modules/AZenith/update ] && echo yes || echo no").exec()
-        return result.isSuccess && result.out.firstOrNull() == "yes"
+        return SuFile("/data/adb/modules/AZenith/update").exists()
     }
-    
 }
