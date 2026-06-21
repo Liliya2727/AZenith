@@ -1,4 +1,4 @@
-*.zip
-*.o
-*.vscode
-libs/
+target/
+target/
+target/
+target/

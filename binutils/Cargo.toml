@@ -1,0 +1,15 @@
+[package]
+name = "azenith-utilityconf"
+version = "1.0.0"
+edition = "2024"
+description = "AZenith Utility binaries"
+
+[dependencies]
+glob = "0.3.1"
+
+[profile.release]
+opt-level = 'z'
+lto = true
+codegen-units = 1
+panic = 'abort'
+strip = true

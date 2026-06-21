@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,8 +16,12 @@
 
 package zx.azenith
 
+
+import android.content.Context
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -30,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
+import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,35 +42,73 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-import androidx.compose.ui.res.stringResource
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
+import com.topjohnwu.superuser.Shell
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.blur.blurEffect
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import zx.azenith.R
-import zx.azenith.ui.screens.*
+import zx.azenith.ui.component.* import android.content.Intent
+import zx.azenith.ui.mainscreens.*
+import zx.azenith.ui.subscreens.*
 import zx.azenith.ui.theme.AZenithTheme
-import zx.azenith.ui.util.RootUtils
+import zx.azenith.ui.util.*
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        val isFromTile = intent.action == "android.service.quicksettings.action.QS_TILE_PREFERENCES"
+        
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
+        
+        val fromTileType = if (intent.action == "android.service.quicksettings.action.QS_TILE_PREFERENCES") {
+            val component = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(Intent.EXTRA_COMPONENT_NAME, android.content.ComponentName::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(Intent.EXTRA_COMPONENT_NAME)
+            }
+            
+            when (component?.className) {
+                "zx.azenith.TileService.BypassChgTileService" -> "bypass"
+                "zx.azenith.TileService.ProfileTileService" -> "profile"
+                else -> null
+            }
+        } else null
+
         setContent {
             AZenithTheme {
-                MainScreen(isFromTile)
+                MainScreen(fromTileType)
             }
         }
     }
 }
-    
+
 val ExpressiveShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
     small = RoundedCornerShape(12.dp),
@@ -81,27 +124,69 @@ data class NavItem(
     val gradientColors: List<Color> = listOf(Color.Transparent, Color.Transparent)
 )
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(isFromTile: Boolean = false) {
+fun MainScreen(fromTileType: String? = null) {
     val navController = rememberNavController()
-    LaunchedEffect(isFromTile) {
-        if (isFromTile) {
-            navController.navigate("bypasschg") {
-                popUpTo("home") { saveState = true }
-                launchSingleTop = true
-                restoreState = true
+
+    LaunchedEffect(fromTileType) {
+        when (fromTileType) {
+            "bypass" -> {
+                navController.navigate("bypasschg") {
+                    popUpTo("home") { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }
+            "profile" -> {
+                navController.navigate("home") {
+                    popUpTo("home") { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
             }
         }
     }
+
+    var pendingReboot by remember { mutableStateOf(false) }
+        
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    val rootStatus by produceState(initialValue = false) { value = RootUtils.isRootGranted() }
-    val moduleInstalled by produceState(initialValue = false) { value = RootUtils.isModuleInstalled() }
+    val appPrefs = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
+    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+
+    val hasCompletedGetStarted = remember {
+        appPrefs.getBoolean("has_completed_get_started", false)
+    }
+    
+    LaunchedEffect(Unit) {
+        WallpaperCache.init(context)
+    }
+    
+    var isBlurEnabled by remember { mutableStateOf(settingsPrefs.getBoolean("expressive_blur_ui", false)) }
+    val hazeState = remember { HazeState() }
+
+    var rootStatus by remember { mutableStateOf(false) }
+    var moduleInstalled by remember { mutableStateOf(false) }
+
+    val refreshStatus = {
+        rootStatus = RootUtils.requestRootAccess()
+        moduleInstalled = RootUtils.isModuleInstalled()
+        isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
+        pendingReboot = Shell.cmd("test -f /data/adb/modules/AZenith/reboot").exec().isSuccess
+    }
+
+    LaunchedEffect(currentRoute) {
+        refreshStatus()
+    }
 
     val navItems = remember {
         listOf(
@@ -113,99 +198,270 @@ fun MainScreen(isFromTile: Boolean = false) {
     }
     
     val bottomBarRoutes = remember { setOf("home", "applist", "tweaks", "settings") }
+    val installingDialog = rememberInstallingDialog()
+    val updateDialog = rememberConfirmDialog(
+        onConfirm = {
+            coroutineScope.launch {
+                installingDialog.withInstalling {
+                    val result = kotlinx.coroutines.withContext(Dispatchers.IO) {
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        
-        Row(modifier = Modifier.fillMaxSize()) {
-            if (rootStatus && moduleInstalled && isLandscape && currentRoute in bottomBarRoutes) {
-                SideBar(navController, navItems, currentRoute)
-            }
+                        Shell.cmd(
+                            "cp /data/adb/modules/AZenith/AZenith.apk /data/local/tmp/AZenith_tmp.apk",
+                            "sleep 5 && pm install -r /data/local/tmp/AZenith_tmp.apk",
+                            "rm -f /data/local/tmp/AZenith_tmp.apk"
+                        ).exec()
+                    }
+                    
+                    if (result.isSuccess) {
+                        Toast.makeText(context, context.getString(R.string.toast_update_success), Toast.LENGTH_SHORT).show()
+                    } else {
 
-            NavHost(
-                navController = navController,
-                startDestination = "home",
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surface),                
-                enterTransition = {
-                    if (targetState.destination.route !in bottomBarRoutes) {
-                        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(400))
-                    } else {
-                        fadeIn(animationSpec = tween(340))
+                        val errorLog = result.out.joinToString("\n").ifEmpty { context.getString(R.string.status_unknown) }
+                        Toast.makeText(context, context.getString(R.string.toast_install_fail, errorLog), Toast.LENGTH_LONG).show()
                     }
-                },
-                exitTransition = {
-                    if (initialState.destination.route in bottomBarRoutes && targetState.destination.route !in bottomBarRoutes) {
-                        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, targetOffset = { it / 4 }, animationSpec = tween(400)) + fadeOut()
-                    } else {
-                        fadeOut(animationSpec = tween(340))
-                    }
-                },
-                popEnterTransition = {
-                    if (initialState.destination.route !in bottomBarRoutes && targetState.destination.route in bottomBarRoutes) {
-                        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, initialOffset = { it / 4 }, animationSpec = tween(400)) + fadeIn()
-                    } else {
-                        fadeIn(animationSpec = tween(340))
-                    }
-                },
-                popExitTransition = {
-                    if (initialState.destination.route !in bottomBarRoutes) {
-                        scaleOut(targetScale = 0.9f, animationSpec = tween(300)) + fadeOut()
-                    } else {
-                        fadeOut(animationSpec = tween(340))
-                    }
-                }
-            ) {
-                composable("home") { HomeScreen() }
-                composable("applist") { ApplistScreen(navController) }
-                composable("tweaks") { TweakScreen(navController) }
-                composable("settings") { SettingsScreen(navController) }
-                composable("color_palette") { ColorPaletteScreen(navController) }
-                composable("colorscheme") { ColorSchemeSettings(navController) }
-                composable("bypasschg") { BypassChargeScreen(navController) }
-                composable("bypasschg_check") { BypassChargeCheckScreen(navController) }
-                composable("preferenced") { PreferenceTweakScreen(navController) }
-                composable(
-                    route = "app_settings/{pkg}",
-                    arguments = listOf(navArgument("pkg") { type = NavType.StringType })
-                ) { backStackEntry ->
-                    val pkg = backStackEntry.arguments?.getString("pkg")
-                    AppSettingsScreen(navController, pkg)
                 }
             }
         }
+    )
 
-        AnimatedVisibility(
-            visible = rootStatus && moduleInstalled && !isLandscape && currentRoute in bottomBarRoutes,
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            BottomNavBar(
-                items = navItems,
-                selectedRoute = currentRoute ?: "home",
-                modifier = Modifier
-                    .align(Alignment.BottomCenter),
-                onItemSelected = { route ->
-                    if (currentRoute != route) {
-                        navController.navigate(route) {
-                            popUpTo(navController.graph.startDestinationId) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
+    val rebootDialog = rememberConfirmDialog(
+        onConfirm = {
+            Shell.cmd("svc power reboot || reboot").submit()
+        }
+    )
+    
+    
+    LaunchedEffect(rootStatus) {
+        if (rootStatus) {
+            val moduleVC = RootUtils.getModuleVersionCode()
+
+            val appVC = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode.toInt()
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(context.packageName, 0).versionCode
+            }
+
+            if (appVC < moduleVC && RootUtils.isUpdateApkAvailable()) {
+                updateDialog.showConfirm(
+                    title = context.getString(R.string.dialog_update_available_title),
+                    content = context.getString(R.string.dialog_update_available_content, appVC, moduleVC),
+                    confirm = context.getString(R.string.dialog_update_available_confirm),
+                    dismiss = context.getString(R.string.dialog_update_available_dismiss)
+                )
+            }
+
+            if (RootUtils.isModuleUpdatePendingReboot()) {
+                rebootDialog.showConfirm(
+                    title = context.getString(R.string.dialog_module_update_title),
+                    content = context.getString(R.string.dialog_module_update_content),
+                    confirm = context.getString(R.string.dialog_module_update_confirm),
+                    dismiss = context.getString(R.string.dialog_module_update_dismiss)
+                )
+            }
+        }
+    }
+    
+    val isFabVisible = remember { mutableStateOf(true) }
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+
+                if (available.y < -10f) {
+                    isFabVisible.value = false
+                } 
+
+                else if (available.y > 10f) {
+                    isFabVisible.value = true
+                }
+                return Offset.Zero
+            }
+        }
+    }
+   
+    
+    CompositionLocalProvider(LocalAppHazeState provides hazeState) {
+        RootDialogsProvider {
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ) {
+            
+                
+                NavHost(
+                    navController = navController,
+                    startDestination = if (hasCompletedGetStarted) "home" else "get_started",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .nestedScroll(nestedScrollConnection)
+                        .then(
+                            if (isBlurEnabled) Modifier.hazeSource(state = hazeState) else Modifier
+                        ),
+                    enterTransition = {
+                        if (initialState.destination.route == "get_started" && targetState.destination.route == "home") {
+                            fadeIn(animationSpec = tween(700)) 
+                        } else if (targetState.destination.route !in bottomBarRoutes) {
+                            slideInHorizontally(
+                                initialOffsetX = { fullWidth -> fullWidth },
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + fadeIn(animationSpec = tween(300))
+                        } else {
+                            fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
+                            scaleIn(
+                                initialScale = 0.96f,
+                                animationSpec = tween(220, easing = FastOutSlowInEasing)
+                            )
+                        }
+                    },
+                    exitTransition = {
+                        if (initialState.destination.route == "get_started" && targetState.destination.route == "home") {
+                            fadeOut(animationSpec = tween(700))
+                        } else if (initialState.destination.route in bottomBarRoutes && targetState.destination.route !in bottomBarRoutes) {
+                            slideOutHorizontally(
+                                targetOffsetX = { fullWidth -> -(fullWidth / 4) },
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + fadeOut(animationSpec = tween(300))
+                        } else {
+                            fadeOut(animationSpec = tween(150))
+                        }
+                    },
+                    popEnterTransition = {
+                        if (initialState.destination.route !in bottomBarRoutes && targetState.destination.route in bottomBarRoutes) {
+                            slideInHorizontally(
+                                initialOffsetX = { fullWidth -> -(fullWidth / 4) },
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + fadeIn(animationSpec = tween(300))
+                        } else {
+                            fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
+                            scaleIn(
+                                initialScale = 0.96f,
+                                animationSpec = tween(220, easing = FastOutSlowInEasing)
+                            )
+                        }
+                    },
+                    popExitTransition = {
+                        if (initialState.destination.route !in bottomBarRoutes) {
+                            slideOutHorizontally(
+                                targetOffsetX = { fullWidth -> fullWidth },
+                                animationSpec = tween(300, easing = FastOutSlowInEasing)
+                            ) + fadeOut(animationSpec = tween(300))
+                        } else {
+                            fadeOut(animationSpec = tween(150))
                         }
                     }
+                ) {
+                    composable("get_started") { GetStartedScreen(navController) }
+                    composable("home") { HomeScreen() }
+                    composable("applist") { ApplistScreen(navController) }
+                    composable("tweaks") { TweakScreen(navController) }
+                    composable("settings") { SettingsScreen(navController) }
+                    composable("color_palette") { ColorPaletteScreen(navController) }
+                    composable("colorscheme") { ColorSchemeSettings(navController) }
+                    composable("FasScreen") { FasScreen(navController) }
+                    composable("bypasschg") { BypassChargeScreen(navController) }
+                    composable("bypasschg_check") { BypassChargeCheckScreen(navController) }
+                    composable("preferenced") { PreferenceTweakScreen(navController) }
+                    composable("aboutscreen") { AboutScreen(navController) }
+                    composable("fpsgoscreen") { FpsGoSettings(navController) }
+                    composable(
+                        route = "app_settings/{pkg}",
+                        arguments = listOf(navArgument("pkg") { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        val pkg = backStackEntry.arguments?.getString("pkg")
+                        AppSettingsScreen(navController, pkg)
+                    }
                 }
-            )
+                
+                AnimatedVisibility(
+                    visible = rootStatus && moduleInstalled && currentRoute in bottomBarRoutes,
+                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                ) {
+                    BottomNavBar(
+                        items = navItems,
+                        selectedRoute = currentRoute ?: "home",
+                        isBlurEnabled = isBlurEnabled,
+                        hazeState = hazeState,
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                        onItemSelected = { route ->
+                            if (currentRoute != route) {
+                                navController.navigate(route) {
+                                    popUpTo(navController.graph.startDestinationId) { saveState = false }
+                                    launchSingleTop = true
+                                    restoreState = false
+                                }
+                            }
+                        }
+                    )
+                }
+                
+                val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                if (navBarHeight > 32.dp) {
+                    val colorScheme = MaterialTheme.colorScheme
+                    val bottomScrimGradient = remember(colorScheme) {
+                        Brush.verticalGradient(
+                            0.0f to Color.Transparent,
+                            0.1f to colorScheme.surface.copy(alpha = 0.3f),
+                            0.2f to colorScheme.surface.copy(alpha = 0.4f),
+                            0.3f to colorScheme.surface.copy(alpha = 0.5f),
+                            0.4f to colorScheme.surface.copy(alpha = 0.7f),
+                            0.5f to colorScheme.surface.copy(alpha = 0.8f),
+                            0.6f to colorScheme.surface.copy(alpha = 0.9f),
+                            1.0f to colorScheme.surface
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(navBarHeight + 12.dp)
+                            .align(Alignment.BottomCenter)
+                            .background(bottomScrimGradient)
+                    )
+                }
+
+                AnimatedVisibility(
+                    visible = rootStatus && moduleInstalled && pendingReboot && currentRoute in bottomBarRoutes && isFabVisible.value,
+                    enter = scaleIn(animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeIn(),
+                    exit = scaleOut(animationSpec = tween(200, easing = FastOutLinearInEasing)) + fadeOut(),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 24.dp, bottom = 116.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())
+                ) {
+                    ExtendedFloatingActionButton(
+                        onClick = {
+                            rebootDialog.showConfirm(
+                                title = context.getString(R.string.dialog_reboot_required_title),
+                                content = context.getString(R.string.dialog_reboot_required_content),
+                                confirm = context.getString(R.string.reboot),
+                                dismiss = context.getString(R.string.dialog_update_available_dismiss)
+                            )
+                        },
+                        icon = { Icon(Icons.Rounded.RestartAlt, contentDescription = stringResource(R.string.reboot)) },
+                        text = { Text(stringResource(R.string.reboot), fontWeight = FontWeight.Bold) },
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                        elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp)
+                    )
+                }
+            }
+            ConfirmDialogHost(handle = updateDialog)
+            ConfirmDialogHost(handle = rebootDialog)
+            InstallingDialogHost(handle = installingDialog)
         }
     }
 }
+
 
 @Composable
 fun BottomNavBar(
     items: List<NavItem>,
     selectedRoute: String,
     onItemSelected: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isBlurEnabled: Boolean = false,
+    hazeState: HazeState? = null
 ) {
     Box(
         modifier = modifier
@@ -217,10 +473,20 @@ fun BottomNavBar(
         Surface(
             modifier = Modifier
                 .widthIn(max = 350.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(28.dp)) 
+                .then(
+                    if (isBlurEnabled && hazeState != null) {
+                        Modifier.hazeEffect(state = hazeState) {
+                            blurEffect {
+                                blurRadius = 24.dp
+                            }
+                        }
+                    } else Modifier
+                ),
             shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            shadowElevation = 8.dp
+            color = if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceContainer,
+            shadowElevation = if (isBlurEnabled) 0.dp else 8.dp
         ) {
             Row(
                 modifier = Modifier
@@ -234,6 +500,7 @@ fun BottomNavBar(
                     NavPill(
                         item = item,
                         isSelected = isSelected,
+                        isBlurEnabled = isBlurEnabled, 
                         onClick = { onItemSelected(item.route) },
                         modifier = if (isSelected) Modifier.weight(1f) else Modifier
                     )
@@ -247,6 +514,7 @@ fun BottomNavBar(
 private fun NavPill(
     item: NavItem,
     isSelected: Boolean,
+    isBlurEnabled: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -255,96 +523,78 @@ private fun NavPill(
     
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.95f else 1f,
-        animationSpec = tween(100), label = "scale"
+        animationSpec = tween(150), label = "scale"
+    )
+
+    val animationSpec = tween<Color>(durationMillis = 300, easing = FastOutSlowInEasing)
+    
+    val bgColor by animateColorAsState(
+        targetValue = when {
+            isSelected && isBlurEnabled -> MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+            isSelected && !isBlurEnabled -> MaterialTheme.colorScheme.primary
+            !isSelected && isBlurEnabled -> Color.Transparent
+            else -> MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+        },
+        animationSpec = animationSpec,
+        label = "bgColor"
     )
     
-    val labelAlpha by animateFloatAsState(
-        targetValue = if (isSelected) 1f else 0f,
-        animationSpec = tween(200), label = "labelAlpha"
+    val contentColor by animateColorAsState(
+        targetValue = when {
+            isSelected && isBlurEnabled -> MaterialTheme.colorScheme.primary
+            isSelected && !isBlurEnabled -> MaterialTheme.colorScheme.onPrimary
+            else -> MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        animationSpec = animationSpec,
+        label = "contentColor"
     )
 
     val shape = if (isSelected) RoundedCornerShape(24.dp) else CircleShape
     
-    Box(
+    Row(
         modifier = modifier
             .scale(scale)
             .height(48.dp)
-            .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                )
-            )
-            .then(if (!isSelected) Modifier.aspectRatio(1f) else Modifier)
+            .defaultMinSize(minWidth = 48.dp) 
             .clip(shape)
-            .background(
-                if (isSelected) MaterialTheme.colorScheme.primary 
-                else MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
-            )
+            .background(bgColor)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(horizontal = 8.dp)
-        ) {
-            Icon(
-                imageVector = item.icon,
-                contentDescription = null,
-                tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(22.dp)
             )
-            
-            if (isSelected && labelAlpha > 0.01f) {
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(item.labelRes),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.alpha(labelAlpha),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SideBar(
-    navController: NavHostController,
-    items: List<NavItem>,
-    currentRoute: String?
-) {
-    NavigationRail(modifier = Modifier.fillMaxHeight()) {
-        Column(
-            modifier = Modifier.fillMaxHeight(),
-            verticalArrangement = Arrangement.Center
+            .padding(horizontal = 12.dp), 
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            imageVector = item.icon,
+            contentDescription = null,
+            tint = contentColor,
+            modifier = Modifier.size(24.dp)
+        )
+        
+        AnimatedVisibility(
+            visible = isSelected,
+            enter = expandHorizontally(
+                animationSpec = tween(300, easing = FastOutSlowInEasing),
+                expandFrom = Alignment.Start
+            ) + fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)),
+            exit = shrinkHorizontally(
+                animationSpec = tween(300, easing = FastOutSlowInEasing),
+                shrinkTowards = Alignment.Start
+            ) + fadeOut(animationSpec = tween(300, easing = FastOutSlowInEasing))
         ) {
-            items.forEach { item ->
-                val isSelected = currentRoute == item.route
-                NavigationRailItem(
-                    selected = isSelected,
-                    onClick = {
-                        if (!isSelected) {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.startDestinationId)
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
-                    },
-                    icon = { Icon(item.icon, contentDescription = stringResource(item.labelRes)) },
-                    label = { Text(stringResource(item.labelRes)) },
-                    alwaysShowLabel = false
-                )
-            }
+            Text(
+                text = stringResource(item.labelRes),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = contentColor,
+                maxLines = 1,
+                softWrap = false, 
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 5.dp) 
+            )
         }
     }
 }

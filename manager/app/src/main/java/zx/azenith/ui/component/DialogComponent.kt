@@ -1,0 +1,671 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+
+package zx.azenith.ui.component
+
+
+import android.content.Context
+import android.os.Parcelable
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.blur.blurEffect
+import dev.chrisbanes.haze.hazeEffect
+import kotlin.coroutines.resume
+import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.parcelize.Parcelize
+import zx.azenith.R
+
+
+private const val TAG = "DialogComponent"
+
+val LocalAppHazeState = compositionLocalOf<HazeState?> { null }
+val LocalRootDialogs = compositionLocalOf<MutableMap<String, @Composable () -> Unit>> { error("RootDialogsProvider not found") }
+
+@Composable
+fun RootDialogsProvider(content: @Composable () -> Unit) {
+    val dialogs = remember { mutableStateMapOf<String, @Composable () -> Unit>() }
+    CompositionLocalProvider(LocalRootDialogs provides dialogs) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            content()
+            dialogs.values.forEach { it() }
+        }
+    }
+}
+
+@Composable
+fun RootAppDialog(content: @Composable () -> Unit) {
+    val dialogs = LocalRootDialogs.current
+    val key = remember { java.util.UUID.randomUUID().toString() }
+    
+    DisposableEffect(key) {
+        dialogs[key] = content
+        onDispose {
+            dialogs.remove(key)
+        }
+    }
+}
+
+interface ConfirmDialogVisuals : Parcelable {
+    val title: String
+    val content: String?
+    val confirm: String?
+    val dismiss: String?
+}
+
+@Parcelize
+private data class ConfirmDialogVisualsImpl(
+    override val title: String,
+    override val content: String?,
+    override val confirm: String?,
+    override val dismiss: String?,
+) : ConfirmDialogVisuals {
+    companion object {
+        val Empty: ConfirmDialogVisuals = ConfirmDialogVisualsImpl("", "", null, null)
+    }
+}
+
+interface DialogHandle {
+    val isShown: Boolean
+    val dialogType: String
+    fun show()
+    fun hide()
+}
+
+interface LoadingDialogHandle : DialogHandle {
+    suspend fun <R> withLoading(block: suspend () -> R): R
+    fun showLoading()
+}
+
+sealed interface ConfirmResult {
+    object Confirmed : ConfirmResult
+    object Canceled : ConfirmResult
+}
+
+interface ConfirmDialogHandle : DialogHandle {
+    val visuals: ConfirmDialogVisuals
+    fun showConfirm(title: String, content: String? = null, confirm: String? = null, dismiss: String? = null)
+    suspend fun awaitConfirm(title: String, content: String? = null, confirm: String? = null, dismiss: String? = null): ConfirmResult
+    fun accept() 
+    fun cancel() 
+}
+
+private abstract class DialogHandleBase(
+    val visible: MutableState<Boolean>,
+    val coroutineScope: CoroutineScope
+) : DialogHandle {
+    override val isShown: Boolean get() = visible.value
+    override fun show() { coroutineScope.launch { visible.value = true } }
+    final override fun hide() { coroutineScope.launch { visible.value = false } }
+}
+
+private class LoadingDialogHandleImpl(
+    visible: MutableState<Boolean>,
+    coroutineScope: CoroutineScope
+) : LoadingDialogHandle, DialogHandleBase(visible, coroutineScope) {
+    override suspend fun <R> withLoading(block: suspend () -> R): R {
+        return coroutineScope.async {
+            try {
+                visible.value = true
+                block()
+            } finally {
+                visible.value = false
+            }
+        }.await()
+    }
+    override fun showLoading() { show() }
+    override val dialogType: String get() = "LoadingDialog"
+}
+
+typealias NullableCallback = (() -> Unit)?
+
+interface ConfirmCallback {
+    val onConfirm: NullableCallback
+    val onDismiss: NullableCallback
+    val isEmpty: Boolean get() = onConfirm == null && onDismiss == null
+    companion object {
+        operator fun invoke(onConfirmProvider: () -> NullableCallback, onDismissProvider: () -> NullableCallback) =
+            object : ConfirmCallback {
+                override val onConfirm: NullableCallback get() = onConfirmProvider()
+                override val onDismiss: NullableCallback get() = onDismissProvider()
+            }
+    }
+}
+
+private class ConfirmDialogHandleImpl(
+    visible: MutableState<Boolean>,
+    coroutineScope: CoroutineScope,
+    private val callback: ConfirmCallback,
+    initialVisuals: ConfirmDialogVisuals,
+    private val resultChannel: Channel<ConfirmResult>
+) : ConfirmDialogHandle, DialogHandleBase(visible, coroutineScope) {
+
+    private val _visuals = mutableStateOf(initialVisuals)
+    override var visuals: ConfirmDialogVisuals
+        get() = _visuals.value
+        set(value) { _visuals.value = value }
+
+    init {
+        coroutineScope.launch {
+            resultChannel.consumeAsFlow()
+                .onEach { result ->
+                    awaitContinuation?.let {
+                        awaitContinuation = null
+                        if (it.isActive) it.resume(result)
+                    }
+                    when (result) {
+                        ConfirmResult.Confirmed -> callback.onConfirm?.invoke()
+                        ConfirmResult.Canceled -> callback.onDismiss?.invoke()
+                    }
+                }
+                .onEach { hide() }
+                .collect {}
+        }
+    }
+
+    private var awaitContinuation: CancellableContinuation<ConfirmResult>? = null
+
+    private suspend fun awaitResult(): ConfirmResult {
+        return suspendCancellableCoroutine {
+            awaitContinuation = it.apply {
+                if (callback.isEmpty) invokeOnCancellation { visible.value = false }
+            }
+        }
+    }
+
+    override fun show() { if (visuals !== ConfirmDialogVisualsImpl.Empty) super.show() }
+
+    override fun showConfirm(title: String, content: String?, confirm: String?, dismiss: String?) {
+        coroutineScope.launch {
+            visuals = ConfirmDialogVisualsImpl(title, content, confirm, dismiss)
+            show()
+        }
+    }
+
+    override suspend fun awaitConfirm(title: String, content: String?, confirm: String?, dismiss: String?): ConfirmResult {
+        coroutineScope.launch {
+            visuals = ConfirmDialogVisualsImpl(title, content, confirm, dismiss)
+            show()
+        }
+        return awaitResult()
+    }
+
+    override fun accept() { coroutineScope.launch { resultChannel.send(ConfirmResult.Confirmed) } }
+    override fun cancel() { coroutineScope.launch { resultChannel.send(ConfirmResult.Canceled) } }
+    override val dialogType: String get() = "ConfirmDialog"
+
+    companion object {
+        fun Saver(visible: MutableState<Boolean>, coroutineScope: CoroutineScope, callback: ConfirmCallback, resultChannel: Channel<ConfirmResult>) =
+            Saver<ConfirmDialogHandle, ConfirmDialogVisuals>(
+                save = { it.visuals },
+                restore = { ConfirmDialogHandleImpl(visible, coroutineScope, callback, it, resultChannel) }
+            )
+    }
+}
+
+@Composable
+fun rememberLoadingDialog(): LoadingDialogHandle {
+    val visible = remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    return remember { LoadingDialogHandleImpl(visible, coroutineScope) }
+}
+
+@Composable
+fun rememberConfirmDialog(onConfirm: NullableCallback = null, onDismiss: NullableCallback = null): ConfirmDialogHandle {
+    val currentOnConfirm by rememberUpdatedState(onConfirm)
+    val currentOnDismiss by rememberUpdatedState(onDismiss)
+    val callback = remember { ConfirmCallback({ currentOnConfirm }, { currentOnDismiss }) }
+    val visible = rememberSaveable { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    val resultChannel = remember { Channel<ConfirmResult>() }
+
+    return rememberSaveable(
+        saver = ConfirmDialogHandleImpl.Saver(visible, coroutineScope, callback, resultChannel),
+        init = { ConfirmDialogHandleImpl(visible, coroutineScope, callback, ConfirmDialogVisualsImpl.Empty, resultChannel) }
+    )
+}
+
+@Composable
+fun LoadingDialogHost(handle: LoadingDialogHandle) {
+    val dialogs = LocalRootDialogs.current
+    val key = remember { java.util.UUID.randomUUID().toString() }
+    
+    DisposableEffect(key, handle) {
+        dialogs[key] = @Composable {
+            LoadingDialog(visible = handle.isShown)
+        }
+        onDispose {
+            dialogs.remove(key)
+        }
+    }
+}
+
+@Composable
+fun ConfirmDialogHost(handle: ConfirmDialogHandle) {
+    val dialogs = LocalRootDialogs.current
+    val key = remember { java.util.UUID.randomUUID().toString() }
+    
+    DisposableEffect(key, handle) {
+        dialogs[key] = @Composable {
+            ConfirmDialog(
+                visible = handle.isShown,
+                visuals = handle.visuals,
+                confirm = { handle.accept() },
+                dismiss = { handle.cancel() }
+            )
+        }
+        onDispose {
+            dialogs.remove(key)
+        }
+    }
+}
+
+@Composable
+private fun LoadingDialog(visible: Boolean) {
+    val context = LocalContext.current
+    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
+    val hazeState = LocalAppHazeState.current
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)),
+        exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
+    ) {
+        BackHandler(onBack = { })
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(100f) 
+                .background(Color.Black.copy(alpha = 0.42f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {} 
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            val scale by animateFloatAsState(
+                targetValue = if (visible) 1f else 0.9f,
+                animationSpec = tween(250, easing = LinearOutSlowInEasing),
+                label = "dialog_scale"
+            )
+
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .scale(scale)
+                    .clip(RoundedCornerShape(24.dp))
+                    .then(
+                        if (isBlurEnabled && hazeState != null) {
+                            Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
+                        } else Modifier
+                    )
+                    .background(
+                        if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)
+                        else MaterialTheme.colorScheme.surface
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularWavyProgressIndicator()
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConfirmDialog(
+    visible: Boolean, 
+    visuals: ConfirmDialogVisuals, 
+    confirm: () -> Unit, 
+    dismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
+    val hazeState = LocalAppHazeState.current
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)),
+        exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
+    ) {
+        BackHandler(onBack = dismiss)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(100f) 
+                .background(Color.Black.copy(alpha = 0.42f)) 
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = dismiss 
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            val scale by animateFloatAsState(
+                targetValue = if (visible) 1f else 0.9f,
+                animationSpec = tween(250, easing = LinearOutSlowInEasing),
+                label = "dialog_scale"
+            )
+
+            Box(
+                modifier = Modifier
+                    .widthIn(min = 350.dp, max = 500.dp) 
+                    .padding(24.dp) 
+                    .scale(scale)
+                    .clip(RoundedCornerShape(28.dp))
+                    .then(
+                        if (isBlurEnabled && hazeState != null) {
+                            Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
+                        } else Modifier
+                    )
+                    .background(
+                        if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f) 
+                        else AlertDialogDefaults.containerColor
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {}
+                    )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp)
+                ) {
+                    Text(
+                        text = visuals.title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    visuals.content?.let { contentText ->
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = contentText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = dismiss) {
+                            Text(text = visuals.dismiss ?: stringResource(id = android.R.string.cancel))
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        TextButton(onClick = confirm) {
+                            Text(text = visuals.confirm ?: stringResource(id = android.R.string.ok))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CustomContentDialog(
+    visible: Boolean,
+    title: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+    confirmEnabled: Boolean = true,
+    confirmText: String = stringResource(id = android.R.string.ok),
+    dismissText: String = stringResource(id = android.R.string.cancel),
+    content: @Composable () -> Unit
+) {
+    val context = LocalContext.current
+    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
+    val hazeState = LocalAppHazeState.current
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)),
+        exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
+    ) {
+        BackHandler(onBack = onDismiss)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(100f) 
+                .background(Color.Black.copy(alpha = 0.42f)) 
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss 
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            val scale by animateFloatAsState(
+                targetValue = if (visible) 1f else 0.9f,
+                animationSpec = tween(250, easing = LinearOutSlowInEasing),
+                label = "dialog_scale"
+            )
+
+            Box(
+                modifier = Modifier
+                    .widthIn(min = 350.dp, max = 500.dp) 
+                    .padding(24.dp) 
+                    .scale(scale)
+                    .clip(RoundedCornerShape(28.dp))
+                    .then(
+                        if (isBlurEnabled && hazeState != null) {
+                            Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
+                        } else Modifier
+                    )
+                    .background(
+                        if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f) 
+                        else AlertDialogDefaults.containerColor
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {}
+                    )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp)
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+
+                    content()
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = onDismiss) {
+                            Text(text = dismissText)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        TextButton(onClick = onConfirm, enabled = confirmEnabled) {
+                            Text(text = confirmText)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+interface InstallingDialogHandle : DialogHandle {
+    suspend fun <R> withInstalling(block: suspend () -> R): R
+    fun showInstalling()
+}
+
+private class InstallingDialogHandleImpl(
+    visible: MutableState<Boolean>,
+    coroutineScope: CoroutineScope
+) : InstallingDialogHandle, DialogHandleBase(visible, coroutineScope) {
+    override suspend fun <R> withInstalling(block: suspend () -> R): R {
+        return coroutineScope.async {
+            try {
+                visible.value = true
+                block()
+            } finally {
+                visible.value = false
+            }
+        }.await()
+    }
+    override fun showInstalling() { show() }
+    override val dialogType: String get() = "InstallingDialog"
+}
+
+@Composable
+fun rememberInstallingDialog(): InstallingDialogHandle {
+    val visible = remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    return remember { InstallingDialogHandleImpl(visible, coroutineScope) }
+}
+
+@Composable
+fun InstallingDialogHost(handle: InstallingDialogHandle) {
+    val dialogs = LocalRootDialogs.current
+    val key = remember { java.util.UUID.randomUUID().toString() }
+    
+    DisposableEffect(key, handle) {
+        dialogs[key] = @Composable {
+            InstallingDialog(visible = handle.isShown)
+        }
+        onDispose {
+            dialogs.remove(key)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun InstallingDialog(visible: Boolean) {
+    val context = LocalContext.current
+    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
+    val hazeState = LocalAppHazeState.current
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)),
+        exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
+    ) {
+        BackHandler(onBack = { })
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(100f) 
+                .background(Color.Black.copy(alpha = 0.42f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {} 
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            val scale by animateFloatAsState(
+                targetValue = if (visible) 1f else 0.9f,
+                animationSpec = tween(250, easing = LinearOutSlowInEasing),
+                label = "dialog_scale"
+            )
+
+            Box(
+                modifier = Modifier
+                    .widthIn(min = 280.dp, max = 350.dp)
+                    .scale(scale)
+                    .clip(RoundedCornerShape(28.dp))
+                    .then(
+                        if (isBlurEnabled && hazeState != null) {
+                            Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
+                        } else Modifier
+                    )
+                    .background(
+                        if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)
+                        else AlertDialogDefaults.containerColor
+                    )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = stringResource(R.string.str_installing_update),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.str_please_do_not_close_the_app),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(32.dp))
+                    
+
+                    LinearWavyProgressIndicator(
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+}

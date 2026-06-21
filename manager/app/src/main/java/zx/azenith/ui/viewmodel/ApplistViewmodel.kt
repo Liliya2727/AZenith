@@ -16,30 +16,31 @@
 
 package zx.azenith.ui.viewmodel
 
+
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
-import android.os.Parcelable
 import android.graphics.drawable.Drawable
+import android.os.Parcelable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.topjohnwu.superuser.io.SuFile
 import com.topjohnwu.superuser.io.SuFileInputStream
+import java.text.Collator
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
 import org.json.JSONObject
 import zx.azenith.R
-import zx.azenith.ui.util.AppConfig
-import java.text.Collator
-import java.util.Locale
-import androidx.compose.ui.text.input.TextFieldValue
+
 
 class ApplistViewmodel : ViewModel() {
 
@@ -111,19 +112,23 @@ class ApplistViewmodel : ViewModel() {
             isRefreshing = true
             val pm = context.packageManager
 
-            val gameList = try {
-                context.assets.open("gamelist.txt").bufferedReader().useLines { it.toSet() }
-            } catch (e: Exception) { emptySet() }
-
             val enabledList = getEnabledPackages()
-
             val installed = pm.getInstalledPackages(PackageManager.GET_META_DATA)
 
             val loadedApps = installed.map { pkg ->
+                val appInfo = pkg.applicationInfo
+                
+
+                @Suppress("DEPRECATION")
+                val isGame = appInfo != null && (
+                    appInfo.category == ApplicationInfo.CATEGORY_GAME ||
+                    (appInfo.flags and ApplicationInfo.FLAG_IS_GAME) != 0
+                )
+
                 AppInfo(
-                    label = pkg.applicationInfo?.loadLabel(pm)?.toString() ?: context.getString(R.string.status_unknown),
+                    label = appInfo?.loadLabel(pm)?.toString() ?: context.getString(R.string.status_unknown),
                     packageInfo = pkg,
-                    isRecommended = gameList.contains(pkg.packageName),
+                    isRecommended = isGame,
                     isEnabledInConfig = enabledList.contains(pkg.packageName)
                 )
             }
