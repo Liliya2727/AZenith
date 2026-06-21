@@ -16,10 +16,12 @@
 
 package zx.azenith.TileService
 
+
 import android.service.quicksettings.Tile
-import zx.azenith.R
 import android.service.quicksettings.TileService
+import zx.azenith.R
 import zx.azenith.ui.util.PropertyUtils
+
 
 class BypassChgTileService : TileService() {
 
