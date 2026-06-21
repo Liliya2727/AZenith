@@ -17,6 +17,14 @@ pub fn getprop(key: &str) -> String {
     }
 }
 
+pub fn resetprop(key: &str, val: &str) {
+    if val.is_empty() {
+        let _ = Command::new("resetprop").arg("--delete").arg(key).status();
+    } else {
+        let _ = Command::new("resetprop").arg(key).arg(val).status();
+    }
+}
+
 pub fn setprop(key: &str, val: &str) {
     let _ = Command::new("setprop").arg(key).arg(val).status();
 }
@@ -51,7 +59,6 @@ pub fn chmod(path: &str, mode: u32) {
     }
 }
 
-
 pub fn setsgov(gov: &str) {
     if let Ok(paths) = glob("/sys/devices/system/cpu/cpu*/cpufreq/scaling_governor") {
         for path in paths.flatten() {
@@ -80,11 +87,8 @@ pub fn sets_mali_gov(gov: &str) {
     if let Ok(paths) = glob("/sys/class/devfreq/*.mali/governor") {
         for path in paths.flatten() {
             if let Some(p_str) = path.to_str() {
-                // Buka akses write
                 chmod(p_str, 0o644);
-                // Terapkan governor
                 let _ = fs::write(p_str, gov);
-                // Kunci kembali jadi read-only (opsional, tapi disarankan agar konsisten dengan setsgov)
                 chmod(p_str, 0o444); 
             }
         }
@@ -152,6 +156,21 @@ pub fn calibrate_sf_modes() -> HashMap<i32, i32> {
     }
     
     map
+}
+
+pub fn check_and_calibrate_mapping() {
+    dlog("Starting standalone SurfaceFlinger refresh rate mapping...");
+    
+    let map = calibrate_sf_modes();
+    
+    if !map.is_empty() {
+        dlog(&format!("Successfully generated standalone mapping with {} active profiles.", map.len()));
+        for (fps, idx) in &map {
+            println!("{}Hz = SurfaceFlinger Index {}", fps, idx);
+        }
+    } else {
+        dlog("Error: Standalone mapping generation failed.");
+    }
 }
 
 pub fn setthermalcore(state: &str) {
@@ -268,30 +287,68 @@ pub fn restartservice() {
     let _ = Command::new("pkill").args(["-9", "-f", "sys.azenith-rianixiathermalcore"]).status();
     let _ = Command::new("pkill").args(["-9", "-f", "sys.azenith-service"]).status();
     let _ = Command::new("pkill").args(["-9", "-f", "sys.azenith-appmonitoring"]).status();
-
     setprop("persist.sys.azenith.state", "stopped");
-
-    // Spawn script in background, detached (equivalent to & disown)
     let _ = Command::new("sh").arg("/data/adb/modules/AZenith/service.sh").spawn();
 }
 
 pub fn setrender(renderer: &str) {
-    match renderer {
-        "skiavk" => {
-            setprop("debug.hwui.renderer", "skiavk");
+    if renderer == "default" || renderer.is_empty() {
+        setprop("debug.hwui.renderer", "");
+        setprop("debug.renderengine.backend", "");
+
+        setprop("debug.hwui.render_thread", "");
+        setprop("debug.skia.threaded_mode", "");
+
+        resetprop("ro.hwui.use_vulkan", ""); 
+        
+        dlog("Resetting all renderers to system default");
+        return;
+    }
+
+    setprop("debug.hwui.renderer", renderer);
+
+    if renderer.contains("threaded") {
+        setprop("debug.hwui.render_thread", "true");
+        if renderer.contains("skia") {
+            setprop("debug.skia.threaded_mode", "true");
+        } else {
+            setprop("debug.skia.threaded_mode", "false");
         }
-        "skiagl" => {
-            setprop("debug.hwui.renderer", "skiagl");
+    } else {
+        setprop("debug.hwui.render_thread", "false");
+        setprop("debug.skia.threaded_mode", "false");
+    }
+
+    match renderer {
+        "skiavk" | "skiavkthreaded" | "vulkan" => {
+            setprop("debug.renderengine.backend", "vulkan");
+            resetprop("ro.hwui.use_vulkan", "true"); 
+        }
+        "skiagl" | "skiaglthreaded" | "gles" | "opengl" | "openglthreaded" => {
+            setprop("debug.renderengine.backend", "gles");
+            resetprop("ro.hwui.use_vulkan", "false");
+        }
+        "software" => {
+            setprop("debug.renderengine.backend", "");
+            resetprop("ro.hwui.use_vulkan", "false");
         }
         _ => {
-            // Ignore
+            if renderer.contains("vk") || renderer.contains("vulkan") {
+                setprop("debug.renderengine.backend", "vulkan");
+                resetprop("ro.hwui.use_vulkan", "true");
+            } else if renderer.contains("gl") || renderer.contains("gles") {
+                setprop("debug.renderengine.backend", "gles");
+                resetprop("ro.hwui.use_vulkan", "false");
+            } else {
+                setprop("debug.renderengine.backend", "");
+            }
         }
     }
-    dlog(&format!("Set current renderer to: {}", renderer));
+    dlog(&format!("Successfully applied renderer: {}", renderer));
 }
 
 pub fn savelog() {
-    // Generate date string via shell to strictly mirror `date +"%Y-%m-%d_%H-%M"` without pulling in the `chrono` crate.
+
     let date_output = Command::new("date").arg("+%Y-%m-%d_%H-%M").output().expect("Failed to get date");
     let date_str = String::from_utf8_lossy(&date_output.stdout).trim().to_string();
     let log_file = format!("/sdcard/AZenithLog_{}.txt", date_str);
