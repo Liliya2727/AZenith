@@ -358,7 +358,7 @@ fun TweakScreen(
                                 label = stringResource(R.string.refreshrates),
                                 value = stringResource(R.string.refresh_rate_format, viewModel.currentRefreshRate.toString()),
                                 showArrow = true,
-                                highlight = false,
+                                highlight = true,
                                 isLoading = viewModel.isRefreshRateLoading
                             ) {
                                 showRefreshRateDialog = true
@@ -369,11 +369,11 @@ fun TweakScreen(
                                 icon = Icons.Rounded.SettingsSuggest,
                                 label = stringResource(R.string.renderengine),
                                 value = viewModel.currentRenderer!!.uppercase(),
-                                showArrow = true,
+                                showArrow = false,
                                 highlight = false,
                                 isLoading = viewModel.isRendererLoading
                             ) {
-                                showRendererDialog = true
+                                // showRendererDialog = true
                             }
                         }
                     } else {
