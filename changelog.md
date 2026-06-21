@@ -1,4 +1,36 @@
 ## AZenith 4.5
+### • Changelog
+- **Major UI Overhaul**: Implemented a significant redesign of the user interface for a cleaner and more modern experience.
+- Added a new Setup Screen/Onboarding wizard for first-time installations.
+- Added a shortcut button in the top-right corner to quickly access Reboot options.
+- Added options to Backup and Export configurations.
+- Enhanced the "Save Log" feature with options to either share/send or save the log files directly.
+- Added a feature to explicitly select available Bypass Charging paths on the user's device.
+- Added a **Quick Settings (QS) Tile** shortcut to easily switch profiles while in Manual Mode.
+- Added a new toggle option to enable or disable **FPSGO** in the Performance Profile.
+- Added an option to change the **Custom Governor** specifically for the Performance Profile.
+- Added an option to change the **Mali GPU Governor** (for MediaTek devices).
+- Added a new toggle option allowing users to enable or disable the homescreen banner.
+- Added a new "ExpressiveBlur" option.
+- Added a new "Spec2025" option.
+- Removed the option to manually select renderers directly from the Tweak Page.
+- Added translations for Arabic, German, Spanish, French, Hindi, Indonesian, Italian, Japanese, Korean, Polish, Portuguese, Russian, Tagalog, Turkish, Vietnamese, and Chinese.
+
+**Backend & Performance:**
+- **Compatibility Update**: Raised the minimum supported Android version to **Android 11 (SDK 30)**.
+- Fully migrated the **Tweak script** and **Utility script** to **Rust** for maximum execution speed and safety.
+- Integrated a new **Java Companion (System Monitor)** directly into the AZenith App.
+- Refactored AZenith Service to a **semi Event-Driven** architecture for faster response times and improved efficiency.
+- Added a simple **Antibootloop** protection mechanism to prevent system hangs on startup.
+- Added file-based configuration saving for **Refresh Rate mapping**, fixing a widespread bug where devices incorrectly applied refresh rate values.
+- Added new system optimizations including **TCP tweaks, Schedstat, IO tweaks, and Virtual Memory (VM) tuning**.
+- Fixed an issue where **DND (Do Not Disturb) Mode** would automatically turn off upon exiting a game, even if it was manually enabled beforehand.
+- Fixed erratic behavior in the **Renderer engine** where it occasionally failed to apply selected renderers or fallback to correct default values.
+- Fixed an issue where some devices unexpectedly locked to the lowest frequency continuously.
+- Fixed a bug where **MediaTek** devices failed to lock to maximum frequencies in Performance Mode.
+
+
+## AZenith 4.5
 ### • Changelog - CI 1213-57ff2ab
 - Fix initiate logic on Limit Freq slider 
 - Added flag to restore normal frequencies when limit freq is Disabled
