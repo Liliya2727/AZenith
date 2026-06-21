@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/904b23f2-010a-4447-bcbf-5eea41aec851" alt="AZenith Banner" width="100%">
+  <img src="https://github.com/user-attachments/assets/a3ac7f35-ff7e-4d73-8952-0fcd985a6f26" alt="AZenith Banner" width="100%">
 </p>
 
 <p align="center">
