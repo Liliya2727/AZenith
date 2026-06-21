@@ -1,4 +1,4 @@
-## AZenith 4.5
+## AZenith 5.0
 ### • Changelog
 - **Major UI Overhaul**: Implemented a significant redesign of the user interface for a cleaner and more modern experience.
 - Added a new Setup Screen/Onboarding wizard for first-time installations.
