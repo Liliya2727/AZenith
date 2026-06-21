@@ -243,7 +243,13 @@ class TweakViewModel : ViewModel() {
                 fstrimState = PropertyUtils.get("persist.sys.azenithconf.fstrim") == "1"
                 thermalState = PropertyUtils.get("persist.sys.azenithconf.thermalcore") == "1"
 
-                currentRenderer = PropertyUtils.get("debug.hwui.renderer", "skiagl")
+                val rawRenderer = PropertyUtils.get("debug.hwui.renderer")
+                currentRenderer = if (rawRenderer.isEmpty() || rawRenderer.equals("default", ignoreCase = true)) {
+                    "Default"
+                } else {
+                    rawRenderer
+                }
+
                 val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
                 currentRefreshRate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     context.display.refreshRate.toInt()

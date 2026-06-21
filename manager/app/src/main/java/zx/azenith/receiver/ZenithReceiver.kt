@@ -16,6 +16,7 @@
 
 package zx.azenith.receiver
 
+
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -25,13 +26,15 @@ import android.content.Intent
 import android.os.Build
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zx.azenith.MainActivity
 import zx.azenith.R
-import java.util.Locale
+
 
 class ZenithReceiver : BroadcastReceiver() {
 
@@ -65,8 +68,8 @@ class ZenithReceiver : BroadcastReceiver() {
             }
 
             ACTION_RESHOW -> {
-                // Menggunakan goAsync() agar OS tidak membunuh proses receiver 
-                // sebelum delay 3 detik selesai dijalankan.
+
+
                 val pendingResult = goAsync()
                 CoroutineScope(Dispatchers.Default).launch {
                     delay(3000)
@@ -75,7 +78,7 @@ class ZenithReceiver : BroadcastReceiver() {
                         putExtras(intent.extras ?: return@launch)
                     }
                     context.sendBroadcast(reshow)
-                    pendingResult.finish() // Beritahu OS bahwa tugas receiver selesai
+                    pendingResult.finish()
                 }
             }
         }
@@ -96,45 +99,45 @@ class ZenithReceiver : BroadcastReceiver() {
 
         val channelId = if (isProfile) CH_PROFILE else CH_SYSTEM
 
-        // Setup Notification Channel untuk Android O+
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = if (isProfile) "AZenith Profiles" else "AZenith System"
-            // Menggunakan IMPORTANCE_LOW agar tidak memunculkan pop-up/suara berisik di background
+            val name = if (isProfile) context.getString(R.string.notif_ch_profiles) else context.getString(R.string.notif_ch_system)
+
             val channel = NotificationChannel(channelId, name, NotificationManager.IMPORTANCE_LOW)
             manager.createNotificationChannel(channel)
         }
 
-        // Ambil flag immutable standar sesuai versi Android
+
         val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         } else {
             PendingIntent.FLAG_UPDATE_CURRENT
         }
 
-        // Intent saat notifikasi diklik (Membuka Aplikasi)
+
         val clickIntent = Intent(context, MainActivity::class.java)
         val clickPI = PendingIntent.getActivity(context, 0, clickIntent, pendingIntentFlags)
 
-        // Menggunakan NotificationCompat agar kode lebih clean tanpa branching SDK manual
+
         val builder = NotificationCompat.Builder(context, channelId).apply {
-            // REKOMENDASI: Ganti dengan ikon flat monokrom khusus (misal: R.drawable.ic_az_notification)
+
             setSmallIcon(context.applicationInfo.icon) 
             setContentTitle(title)
             setContentText(message)
             setUsesChronometer(chrono)
             setOngoing(isProfile)
             setAutoCancel(!isProfile)
-            setContentIntent(clickPI) // Klik notifikasi untuk buka aplikasi
+            setContentIntent(clickPI)
             
-            // Integrasikan warna primer tema AZenith agar tampilan notifikasi serasi
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                // Gantilah dengan color resource primer aplikasimu jika ada
-                setColor(context.resources.getColor(android.R.color.holo_blue_dark))
+
+                setColor(ContextCompat.getColor(context, android.R.color.holo_blue_dark))
             }
 
             if (isProfile) {
-                // Di Android 14+, user bisa meng-swipe ongoing notification. 
-                // Logika Reshow ini tetap aman berjalan di sini.
+
+
                 val reshowIntent = Intent(context, ZenithReceiver::class.java).apply {
                     this.action = ACTION_RESHOW
                     putExtra("notifytitle", title)
@@ -144,7 +147,7 @@ class ZenithReceiver : BroadcastReceiver() {
                 val deletePI = PendingIntent.getBroadcast(context, title.hashCode(), reshowIntent, pendingIntentFlags)
                 setDeleteIntent(deletePI)
             } else {
-                // Jika ini notifikasi sistem biasa, masukkan ke dalam grup agar tidak spamming
+
                 setGroup(GROUP_SYSTEM_LOGS)
             }
 
