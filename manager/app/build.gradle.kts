@@ -11,17 +11,19 @@ plugins {
     id("kotlin-parcelize")
 }
 
+
 android {
     namespace = "zx.azenith"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "zx.azenith"
-        minSdk = 26
-        targetSdk = 36
+        minSdk = 30
+        targetSdk = 37
         versionCode = (Placeholder)
         versionName = "Placeholder"
         vectorDrawables.useSupportLibrary = true
+        buildConfigField("long", "BUILD_TIME", "${System.currentTimeMillis()}L")
     }
 
     signingConfigs {
@@ -105,6 +107,7 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.material.kolor)
     implementation(libs.haze)
+    implementation(libs.haze.blur)
     implementation(libs.me.zhanghai.android.appiconloader.coil)
     implementation(libs.io.coil.kt.coil.compose)
 
@@ -122,4 +125,6 @@ dependencies {
     implementation(libs.ansi.library)
     implementation(libs.ansi.library.ktx)
     implementation(libs.hiddenapibypass)
+    implementation(libs.coil.gif)
+    implementation(libs.compose.markdown)
 }

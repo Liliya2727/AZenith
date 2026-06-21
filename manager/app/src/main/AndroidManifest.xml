@@ -2,23 +2,37 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
     </queries>
-    
+        
     <application
+        android:enableOnBackInvokedCallback="true"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.AZenith"> 
         
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        
         <service
-            android:name=".BypassChgTileService"
+            android:name=".TileService.BypassChgTileService"
             android:icon="@drawable/bypasschgicon"
             android:label="Bypass Charge"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
@@ -28,6 +42,16 @@
             </intent-filter>
         </service>
                 
+        <service
+            android:name=".TileService.ProfileTileService"
+            android:icon="@drawable/ic_profile_icon" android:label="@string/current_profile"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+        
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"
             android:screenOrientation="portrait"
@@ -35,6 +59,7 @@
 
         <activity
             android:name=".MainActivity"
+            android:launchMode="singleTask" 
             android:exported="true"
             android:enabled="true">
             <intent-filter>
@@ -45,6 +70,7 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
             </intent-filter>
         </activity>
+
     
         <activity-alias
             android:name=".Launcher"

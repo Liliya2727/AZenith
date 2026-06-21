@@ -16,40 +16,35 @@
 # limitations under the License.
 #
 
-# Remove Persistent Properties
-props=$(resetprop | grep "persist.sys.azenith" | awk -F'[][]' '{print $2}' | sed 's/:.*//')
-for prop in $props; do
-	resetprop -p --delete "$prop"
+q() {
+    pkill -9 -f "$1"
+}
+
+resetprop | awk -F'[][]' '/persist\.sys\.azenith/ {print $2}' | while read -r prop; do
+    resetprop -p --delete "$prop"
 done
 
-# Remove AI Thermal Properties
-propsrn="\
-persist.sys.rianixia.learning_enabled \
-persist.sys.rianixia.thermalcore-bigdata.path "
-for prop in $propsrn; do
-	resetprop -p --delete "$prop"
+for prop in persist.sys.rianixia.learning_enabled persist.sys.rianixia.thermalcore-bigdata.path; do
+    resetprop -p --delete "$prop"
 done
 
-# Remove module directories
-rm -rf "/data/adb/.config/AZenith"
-rm -rf "/data/AZenith"
-rm -rf "/data/data/zx.azenith"
+rm -rf \
+    "/data/adb/.config/AZenith" \
+    "/data/AZenith" \
+    "/data/data/zx.azenith"
+: > "/data/adb/modules/AZenith/remove"
 
-# Add remove flag to module directories
-touch "/data/adb/modules/AZenith/remove"
+q sys.azenith-rianixiathermalcore
+q sys.azenith-service
+q sys.azenith-appmonitoring
+    
+pm uninstall zx.azenith >/dev/null 2>&1 &
 
-# Remove apk
-pm uninstall zx.azenith 2>/dev/null
-
-# Unlink AZenith binaries
-manager_paths="/data/adb/ap/bin /data/adb/ksu/bin"
-binaries="sys.azenith-service \
-          sys.azenith-profilesettings sys.azenith-utilityconf \
-          sys.azenith-preloadbin sys.azenith-rianixiathermalcore"
-for dir in $manager_paths; do
-	[ -d "$dir" ] || continue
-	for remove in $binaries; do
-		link="$dir/$remove"
-		unlink "$link"
-	done
+for dir in "/data/adb/ap/bin" "/data/adb/ksu/bin"; do
+    [ -d "$dir/zx" ] && rm -rf "$dir/zx"
 done
+
+for dir in "/data/adb/ap/bin" "/data/adb/ksu/bin"; do
+    [ -d "$dir" ] && find "$dir" -name "sys.azenith-*" -exec rm -f {} +
+done
+
