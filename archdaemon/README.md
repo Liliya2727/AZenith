@@ -2,7 +2,7 @@
 
 Core Program of AZenith
 
-Based on Encore Tweaks 4.2, ArchDaemon is the central engine that controls all AZenith operations to ensure it runs flawlessly. Its handling everything in AZenith including: Switching profiles, Handling bypass charging logic, Writing game statuses to the manager, Displaying notifications and toast messages, Writing and managing logs, Monitoring crucial processes.
+This C AZenith Service is Based on Encore Tweaks Daemon 4.0, ArchDaemon is the central engine that controls all AZenith operations to ensure it runs flawlessly. Its handling everything in AZenith including: Switching profiles, Handling bypass charging logic, Writing game statuses to the manager, Displaying notifications and toast messages, Writing and managing logs, Monitoring crucial processes.
 
 This Daemon is reading app status from App Companion API File
 - Foreground Apps
