@@ -323,6 +323,9 @@ else
     ui_print "  Log: $install_res"
 fi
 
+# Enable Launcher by Default
+pm enable --user 0 zx.azenith/.Launcher
+
 # Remove old module files if available
 ui_print "- Cleaning old files..."
 [ -f "/data/local/tmp/module.avatar.webp" ] && rm -f "/data/local/tmp/module.avatar.webp"
@@ -338,4 +341,29 @@ pm grant zx.azenith android.permission.POST_NOTIFICATIONS
 pm grant zx.azenith android.permission.READ_MEDIA_IMAGES
 set_perm_recursive "$MODPATH/system/bin" 0 0 0755 0755
 
+# Save device refreshrates mapping
+ui_print "- # # # # # # # # # # # # # # # # # # # # #"
+ui_print "- Preparing the final configuration, Please wait..."
+LOCAL_UTIL_BIN="$MODPATH/system/bin/sys.azenith-utilityconf"
+TEMP_UTIL_BIN="$TMPDIR/sys.azenith-utilityconf"
+if [ -f "$LOCAL_UTIL_BIN" ]; then
+    cp "$LOCAL_UTIL_BIN" "$TEMP_UTIL_BIN"
+    chmod 0755 "$TEMP_UTIL_BIN"
+    
+    $TEMP_UTIL_BIN checkrefreshrate > /dev/null 2>&1
+    
+    if [ -f "$MODULE_CONFIG/util_mapping.dat" ]; then
+        ui_print "- Successful! Mapping cache saved."
+    else
+        ui_print "! Warning : Mapping cache data was empty."
+    fi
+    
+    rm -f "$TEMP_UTIL_BIN"
+    ui_print "- Cleaning up."
+else
+    ui_print "! Error: Utility binary not found. Skipping..."
+fi
+ui_print "- # # # # # # # # # # # # # # # # # # # # #"
+
 installation_complete
+
