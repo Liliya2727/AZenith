@@ -27,12 +27,13 @@ fn main() {
     
     if args.len() > 1 {
         let function = args[1].as_str();
-        match function {
+                match function {
             "setsgov" => if args.len() > 2 { setsgov(&args[2]) },
             "setsIO" => if args.len() > 2 { sets_io(&args[2]) },
             "setsMaliGov" => if args.len() > 2 { sets_mali_gov(&args[2]) },
             "setthermalcore" => if args.len() > 2 { setthermalcore(&args[2]) },
             "checkmalipath" => check_mali_path(),
+            "checkrefreshrate" => check_and_calibrate_mapping(),
             "FSTrim" => fstrim(),
             "enableDND" => enable_dnd(),
             "disableDND" => disable_dnd(),
@@ -41,7 +42,6 @@ fn main() {
             "setrender" => if args.len() > 2 { setrender(&args[2]) },
             "saveLog" => savelog(),
             _ => {
-                // Fallback to execute custom bash commands passed to it just in case
                 let _ = Command::new(function).args(&args[2..]).status();
             }
         }
