@@ -13,62 +13,61 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+ 
 package zx.azenith.ui.util
 
-
 import android.content.Context
-import android.os.Build
-import android.view.Display
-import android.view.WindowManager
+import com.topjohnwu.superuser.Shell
 
+private const val REFRESH_RATE_MAPPING_PATH = "/data/adb/.config/AZenith/util_mapping.dat"
+
+/**
+ * Reads util_mapping.dat and extracts just the hz keys.
+ * Expected format per line: "hz=index" e.g. "120=0"
+ */
+private fun getMappedRefreshRates(): List<Int> {
+    return try {
+        val result = Shell.cmd("cat $REFRESH_RATE_MAPPING_PATH").exec()
+        if (!result.isSuccess) return emptyList()
+
+        result.out
+            .mapNotNull { line ->
+                val trimmed = line.trim()
+                if (trimmed.isEmpty() || !trimmed.contains("=")) return@mapNotNull null
+                trimmed.substringBefore("=").trim().toIntOrNull()
+            }
+            .distinct()
+    } catch (e: Exception) {
+        emptyList()
+    }
+}
 
 fun getSupportedRefreshRates(context: Context): List<String> {
-    val display = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-        context.display
-    } else {
-        @Suppress("DEPRECATION")
-        (context.getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager).defaultDisplay
-    }
+    val mappedRR = getMappedRefreshRates().sorted()
 
-
-    val supportedRR = display?.supportedModes?.map { it.refreshRate.toInt() }?.distinct()?.sorted() ?: listOf(60)
-    
     val finalModes = mutableListOf("default")
-
     val standardModes = listOf(60, 90, 120, 144)
-    
+
     standardModes.forEach { mode ->
-        if (supportedRR.any { it >= mode - 1 && it <= mode + 1 }) {
+        if (mappedRR.any { it in (mode - 1)..(mode + 1) }) {
             finalModes.add(mode.toString())
         }
     }
-    
+
     return finalModes
 }
 
 fun getSupportedRefreshRatesPicker(context: Context): List<String> {
-    val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        context.display
-    } else {
-        @Suppress("DEPRECATION")
-        (context.getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
-    }
+    val mappedRR = getMappedRefreshRates().sortedDescending()
 
-    val supportedRR = display?.supportedModes
-        ?.map { it.refreshRate.toInt() }
-        ?.distinct()
-        ?.sortedDescending() ?: listOf(60)
-    
     val finalModes = mutableListOf<String>()
-
     val standardModes = listOf(144, 120, 90, 60)
-    
+
     standardModes.forEach { mode ->
-        if (supportedRR.any { it in (mode - 1)..(mode + 1) }) {
+        if (mappedRR.any { it in (mode - 1)..(mode + 1) }) {
             finalModes.add(mode.toString())
         }
     }
-    
-    return finalModes 
+
+    return finalModes
 }
