@@ -117,13 +117,23 @@ fun AppSettingsScreen(
     val rendererModes = listOf(
         stringResource(R.string.Renderer_Default),
         "SkiaVK",
-        "SkiaGL"
+        "SkiaVK (Threaded)",
+        "SkiaGL",
+        "SkiaGL (Threaded)",
+        "OpenGL ES",
+        "OpenGL ES (Threaded)",
+        "Vulkan"
     )
 
     val rendererValues = listOf(
         "default", 
         "skiavk",
-        "skiagl"
+        "skiavkthreaded", 
+        "skiagl",
+        "skiaglthreaded", 
+        "opengl",
+        "openglthreaded", 
+        "vulkan"
     )
 
     val defaultLabel = stringResource(R.string.default_label)
