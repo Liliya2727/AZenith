@@ -69,28 +69,33 @@ void apply_dynamic_refresh_rate(int target_rr) {
 /***********************************************************************************
  * Function Name      : get_max_refresh_rate
  * Inputs             : None
- * Returns            : int - Max Refresh Rate in Hz
- * Description        : Detects max hardware refresh rate via dumpsys
+ * Returns            : int - Max Refresh Rate dalam Hz berdasarkan berkas pemetaan
+ * Description        : Mendeteksi refresh rate maksimum dari cache file util_mapping.dat
  ***********************************************************************************/
 int get_max_refresh_rate(void) {
-    const char* cmd = "dumpsys display | grep -oE \"fps=[0-9.]+|refreshRate=[0-9.]+\" | grep -oE \"[0-9.]+\" | sort -rn | head -n1";
+    const char* mapping_path = "/data/adb/.config/AZenith/util_mapping.dat";
+    FILE *fp = fopen(mapping_path, "r");
 
-    FILE *fp = popen(cmd, "r");
     if (!fp) {
-        log_zenith(LOG_WARN, "Failed to execute dumpsys for RR detection");
+        log_zenith(LOG_WARN, "Mapping file not found in %s", mapping_path);
         return 60;
     }
 
-    char buf[32] = {0};
-    float max_rr_f = 60.0f;
-
-    if (fgets(buf, sizeof(buf), fp)) {
-        max_rr_f = atof(buf);
+    char line[64];
+    int max_rr = 60;
+    while (fgets(line, sizeof(line), fp)) {
+        char *delimiter = strchr(line, '=');
+        if (delimiter != NULL) {
+            *delimiter = '\0';
+            
+            int current_fps = atoi(line);
+            if (current_fps > max_rr) {
+                max_rr = current_fps;
+            }
+        }
     }
-    pclose(fp);
 
-    int max_rr = (int)(max_rr_f + 0.5f);
-    if (max_rr <= 0) max_rr = 60;
-
+    fclose(fp);
     return max_rr;
 }
+
