@@ -490,9 +490,17 @@ static void apply_eco_profile(DaemonContext* ctx) {
     if (strlen(ctx->saved_renderer) > 0) {
         char current_now[PROP_VALUE_MAX] = {0};
         __system_property_get("debug.hwui.renderer", current_now);
+        
+        if (strlen(current_now) == 0) strcpy(current_now, "default");
+    
         if (strcmp(current_now, ctx->saved_renderer) != 0) {
             log_zenith(LOG_INFO, "Restoring original system renderer: %s", ctx->saved_renderer);
-            systemv("sys.azenith-utilityconf setrender %s", ctx->saved_renderer);
+            
+            if (strcmp(ctx->saved_renderer, "default") == 0) {
+                systemv("sys.azenith-utilityconf setrender default");
+            } else {
+                systemv("sys.azenith-utilityconf setrender %s", ctx->saved_renderer);
+            }
         }
         memset(ctx->saved_renderer, 0, sizeof(ctx->saved_renderer));
     }
@@ -531,9 +539,17 @@ static void apply_balanced_profile(DaemonContext* ctx) {
     if (strlen(ctx->saved_renderer) > 0) {
         char current_now[PROP_VALUE_MAX] = {0};
         __system_property_get("debug.hwui.renderer", current_now);
+        
+        if (strlen(current_now) == 0) strcpy(current_now, "default");
+    
         if (strcmp(current_now, ctx->saved_renderer) != 0) {
             log_zenith(LOG_INFO, "Restoring original system renderer: %s", ctx->saved_renderer);
-            systemv("sys.azenith-utilityconf setrender %s", ctx->saved_renderer);
+            
+            if (strcmp(ctx->saved_renderer, "default") == 0) {
+                systemv("sys.azenith-utilityconf setrender default");
+            } else {
+                systemv("sys.azenith-utilityconf setrender %s", ctx->saved_renderer);
+            }
         }
         memset(ctx->saved_renderer, 0, sizeof(ctx->saved_renderer));
     }
@@ -570,6 +586,14 @@ int main_daemon(void) {
 
     log_zenith(LOG_INFO, "Daemon started as PID %d", getpid());
     setspid();
+    
+    const char* mapping_file_path = "/data/adb/.config/AZenith/util_mapping.dat";
+    if (access(mapping_file_path, F_OK) != 0) {
+        log_zenith(LOG_WARN, "Mapping cache not found at startup. Generating fallback mapping...");
+        systemv("sys.azenith-utilityconf checkrefreshrate");
+    } else {
+        log_zenith(LOG_INFO, "Mapping cache verified successfully.");
+    }
 
     systemv("setprop persist.sys.rianixia.learning_enabled true");
     systemv("setprop persist.sys.azenith.state running");
@@ -721,17 +745,13 @@ int main_daemon(void) {
                 
                 if (!IS_DEFAULT(opts.renderer)) {
                     is_renderer_changing = apply_smart_renderer(opts.renderer, gamestart, ctx.saved_renderer);
-                } else {
-                    char global_renderer[PROP_VALUE_MAX] = {0};
-                    __system_property_get("debug.hwui.renderer", global_renderer);
-                    if (strcmp(global_renderer, "default") != 0) {
-                        is_renderer_changing = apply_smart_renderer(global_renderer, gamestart, ctx.saved_renderer);
-                    }
                 }
 
                 if (is_renderer_changing) {
                     log_zenith(LOG_INFO, "Changing renderer. Waiting for app to respawn...");
-                    sleep(5);
+                    
+                    usleep(500000); 
+                    
                     game_pid_count = 0;
                     ctx.pid_retries = 0;
                 }
