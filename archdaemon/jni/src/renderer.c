@@ -30,18 +30,20 @@ bool apply_smart_renderer(const char* target_type, const char* pkg, char* saved_
     char current_renderer[PROP_VALUE_MAX] = {0};
     __system_property_get("debug.hwui.renderer", current_renderer);
 
+    if (strlen(current_renderer) == 0) {
+        strcpy(current_renderer, "default");
+    }
+    
     if (strlen(saved_ref) == 0) {
         strncpy(saved_ref, current_renderer, PROP_VALUE_MAX - 1);
     }
 
-    const char* real_target = (strcmp(target_type, "skiavk") == 0) ? "skiavk" : "skiagl";
+    if (strcmp(current_renderer, target_type) != 0) {
+        log_zenith(LOG_INFO, "Renderer mismatch! Current: %s | Target: %s. Switching...", current_renderer, target_type);
 
-    if (strcmp(current_renderer, real_target) != 0) {
-        log_zenith(LOG_INFO, "Renderer changed: User is on %s, Target app using %s. Switching...", current_renderer, real_target);
-
-        systemv("sys.azenith-utilityconf setrender %s", real_target);
+        systemv("sys.azenith-utilityconf setrender %s", target_type);
         
-        sleep(3);
+        usleep(200000); 
 
         systemv("am force-stop %s && am start -n $(cmd package resolve-activity --brief %s | tail -n 1)", pkg, pkg);
 
@@ -49,3 +51,5 @@ bool apply_smart_renderer(const char* target_type, const char* pkg, char* saved_
     }
     return false;
 }
+
+
