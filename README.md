@@ -5,7 +5,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Status-Stable-green?style=for-the-badge" alt="Status">
   <img src="https://img.shields.io/badge/License-Apache%202.0-orange?style=for-the-badge" alt="License">
-  <img src="https://img.shields.io/badge/Android-10+-blue?style=for-the-badge&logo=android" alt="Android Version">
+  <img src="https://img.shields.io/badge/Android-11+-blue?style=for-the-badge&logo=android" alt="Android Version">
 </p>
 
 ---
