@@ -16,31 +16,39 @@
 
 package zx.azenith.ui.util
 
-
 import android.annotation.SuppressLint
 import com.topjohnwu.superuser.Shell
 
-
+@SuppressLint("PrivateApi")
 object PropertyUtils {
-    @SuppressLint("PrivateApi")
+
+    private val systemPropertiesClass by lazy {
+        Class.forName("android.os.SystemProperties")
+    }
+
+    private val getMethod by lazy {
+        systemPropertiesClass.getMethod("get", String::class.java, String::class.java)
+    }
+
+    private val setMethod by lazy {
+        systemPropertiesClass.getMethod("set", String::class.java, String::class.java)
+    }
+
     fun get(key: String, def: String = ""): String {
         return try {
-            val systemProperties = Class.forName("android.os.SystemProperties")
-            val get = systemProperties.getMethod("get", String::class.java, String::class.java)
-            get.invoke(null, key, def) as String
+            getMethod.invoke(null, key, def) as String
         } catch (e: Exception) {
             def
         }
     }
 
-    @SuppressLint("PrivateApi")
     fun set(key: String, value: String) {
         try {
-            val systemProperties = Class.forName("android.os.SystemProperties")
-            val set = systemProperties.getMethod("set", String::class.java, String::class.java)
-            set.invoke(null, key, value)
+            setMethod.invoke(null, key, value)
         } catch (e: Exception) {
-            Shell.cmd("setprop $key '$value'").submit()
+            val safeValue = value.replace("'", "'\\''")
+            Shell.cmd("setprop $key '$safeValue'").submit()
         }
     }
 }
+
