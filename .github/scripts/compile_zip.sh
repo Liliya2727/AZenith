@@ -79,7 +79,7 @@ else
 fi
 
 # Parse version info to module prop
-zipName="AZenithNext-$version-$release_code.zip"
+zipName="AZenith-$version-$release_code.zip"
 echo "zipName=$zipName" >>"$GITHUB_OUTPUT"
 artifactName="${zipName%.zip}"
 echo "artifactName=$artifactName" >>"$GITHUB_OUTPUT"

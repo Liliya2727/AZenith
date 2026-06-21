@@ -324,7 +324,7 @@ else
 fi
 
 # Enable Launcher by Default
-pm enable --user 0 zx.azenith/.Launcher
+pm enable --user 0 zx.azenith/.Launcher > /dev/null 2>&1
 
 # Remove old module files if available
 ui_print "- Cleaning old files..."
