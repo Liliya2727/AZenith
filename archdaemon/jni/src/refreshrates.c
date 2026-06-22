@@ -18,32 +18,6 @@
 #include <sys/system_properties.h>
 #include <time.h>
 
- /***********************************************************************************
- * Function Name      : get_current_refresh_rate
- * Inputs             : None
- * Returns            : int - Current Refresh Rate in Hz
- * Description        : Retrieves current render frame rate
- ***********************************************************************************/
-int get_current_refresh_rate(void) {
-    FILE *fp = popen(
-        "cmd display get-displays | "
-        "grep -oE \"renderFrameRate [0-9.]+\" | "
-        "awk '{print int($2+0.5)}'",
-        "r"
-    );
-
-    if (!fp)
-        return -1;
-
-    char buf[32] = {0};
-    if (!fgets(buf, sizeof(buf), fp)) {
-        pclose(fp);
-        return -1;
-    }
-
-    pclose(fp);
-    return atoi(buf);
-}
 
 /***********************************************************************************
  * Function Name      : apply_dynamic_refresh_rate
@@ -53,15 +27,12 @@ int get_current_refresh_rate(void) {
  ***********************************************************************************/
 void apply_dynamic_refresh_rate(int target_rr) {
     int max_hw = get_max_refresh_rate();
-
     int final_rr = target_rr;
     if (final_rr > max_hw) {
         log_zenith(LOG_WARN, "Requested %dHz exceeds hardware max %dHz. Capping to max.", target_rr, max_hw);
         final_rr = max_hw;
     }
-
     log_zenith(LOG_INFO, "Set refresh rates to %dHz", final_rr);
-
     systemv("sys.azenith-utilityconf setrefreshrates %d", final_rr);
 }
 
