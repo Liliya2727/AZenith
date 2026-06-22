@@ -97,28 +97,68 @@ pub fn sets_mali_gov(gov: &str) {
 }
 
 pub fn get_active_fps() -> Option<i32> {
-    let output = Command::new("cmd")
-        .args(["display", "get-displays"])
-        .output()
-        .ok()?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut samples: Vec<i32> = Vec::new();
 
-    for line in stdout.lines() {
-        if line.contains("renderFrameRate") {
-            if let Some(idx) = line.find("renderFrameRate") {
-                let start_idx = idx + "renderFrameRate".len();
-                let num_str: String = line[start_idx..]
-                    .chars()
-                    .skip_while(|c| c.is_whitespace())
-                    .take_while(|c| c.is_ascii_digit() || *c == '.')
-                    .collect();
-                
-                if let Ok(fps) = num_str.parse::<f32>() {
-                    return Some(fps.round() as i32);
+    for _ in 0..8 {
+        if let Ok(output) = Command::new("dumpsys")
+            .args(["SurfaceFlinger", "--latency"])
+            .output() 
+        {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            
+            if let Some(first_line) = stdout.lines().next() {
+                if let Ok(period) = first_line.trim().parse::<i64>() {
+                    if period > 0 {
+                        let rate = (1_000_000_000 + (period / 2)) / period;
+                        
+                        if (30..=240).contains(&rate) {
+                            samples.push(rate as i32);
+                        }
+                    }
+                }
+            }
+        }
+        thread::sleep(Duration::from_millis(50)); 
+    }
+
+    if !samples.is_empty() {
+        samples.sort_unstable();
+        let count = samples.len();
+        let mid = count / 2;
+
+        let median = if count % 2 != 0 {
+            samples[mid]
+        } else {
+            (samples[mid - 1] + samples[mid]) / 2
+        };
+        
+        return Some(median);
+    }
+
+    if let Ok(output) = Command::new("cmd").args(["display", "get-displays"]).output() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let keywords = ["renderFrameRate", "refreshRate", "fps="];
+        
+        for line in stdout.lines() {
+            for &kw in &keywords {
+                if let Some(idx) = line.find(kw) {
+                    let start_idx = idx + kw.len();
+                    let num_str: String = line[start_idx..]
+                        .chars()
+                        .skip_while(|c| !c.is_ascii_digit())
+                        .take_while(|c| c.is_ascii_digit() || *c == '.')
+                        .collect();
+                    
+                    if let Ok(fps) = num_str.parse::<f32>() {
+                        if fps > 0.0 {
+                            return Some(fps.round() as i32);
+                        }
+                    }
                 }
             }
         }
     }
+
     None
 }
 
