@@ -315,7 +315,21 @@ done
 # Install Manager Apk
 extract "$ZIPFILE" AZenith.apk "$MODPATH"
 ui_print "- Installing AZenith apk..."
-local install_res=$(cmd package install -r -d --user 0 "$MODPATH/AZenith.apk" 2>&1)
+INSTALLER_SCRIPT="$TMPDIR/app_installer.sh"
+
+cat << 'EOF' > "$INSTALLER_SCRIPT"
+#!/system/bin/sh
+APK_PATH="$1"
+OUTPUT=$(cmd package install -r -d --user 0 "$APK_PATH" 2>&1)
+if ! echo "$OUTPUT" | grep -iq "Success"; then
+    OUTPUT=$(pm install -r -d --user 0 "$APK_PATH" 2>&1)
+fi
+echo "$OUTPUT"
+EOF
+
+chmod 0755 "$INSTALLER_SCRIPT"
+local install_res=$("$INSTALLER_SCRIPT" "$MODPATH/AZenith.apk")
+
 if echo "$install_res" | grep -iq "Success"; then
     ui_print "- AZenith.apk installed successfully."
 else
@@ -324,6 +338,7 @@ else
 fi
 
 # Enable Launcher by Default
+ui_print "- Enabling Launcher..."
 pm enable --user 0 zx.azenith/.Launcher > /dev/null 2>&1
 
 # Remove old module files if available
