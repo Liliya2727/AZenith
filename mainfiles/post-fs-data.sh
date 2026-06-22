@@ -18,6 +18,14 @@
 
 readonly MODDIR="${0%/*}"
 PERSISTENT_DIR="/data/adb/.config/AZenith"
+LOCK_FILE="/dev/.azenithSingleInstance"
+
+# Single Instance Lock
+# Ksu in Metamodule mode, post-fs-data runs twice
+if [ -f "$LOCK_FILE" ]; then
+    exit 0
+fi
+touch "$LOCK_FILE"
 
 # Anti bootloop
 BOOTCOUNT=0
@@ -25,7 +33,7 @@ BOOTCOUNT=0
 
 BOOTCOUNT=$(( BOOTCOUNT + 1))
 
-if [ ! -f "$PERSISTENT_DIR/explicit_I_want_a_bootloop" ] && [ $BOOTCOUNT -gt 1 ]; then
+if [ $BOOTCOUNT -gt 1 ]; then
     touch "$MODDIR/disable"
     rm "$MODDIR/count.sh"
     
@@ -40,7 +48,5 @@ else
     fi
     
 fi
-
-sync
 
 exit 0
