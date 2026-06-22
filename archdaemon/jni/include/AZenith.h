@@ -164,7 +164,6 @@ bool return_false(void);
 void runthermalcore(void);
 void check_module_version(void);
 void runtask(void);
-int get_current_refresh_rate(void);
 void apply_dynamic_refresh_rate(int target_rr);
 int get_max_refresh_rate(void);
 bool apply_smart_renderer(const char* target_type, const char* pkg, char* saved_ref);
