@@ -46,12 +46,13 @@ fun getSupportedRefreshRates(context: Context): List<String> {
     val mappedRR = getMappedRefreshRates().sorted()
 
     val finalModes = mutableListOf("default")
-    val standardModes = listOf(60, 90, 120, 144)
+    
+    mappedRR.forEach { mode ->
+        finalModes.add(mode.toString())
+    }
 
-    standardModes.forEach { mode ->
-        if (mappedRR.any { it in (mode - 1)..(mode + 1) }) {
-            finalModes.add(mode.toString())
-        }
+    if (finalModes.size == 1) {
+        finalModes.addAll(listOf("60", "90", "120"))
     }
 
     return finalModes
@@ -59,14 +60,11 @@ fun getSupportedRefreshRates(context: Context): List<String> {
 
 fun getSupportedRefreshRatesPicker(context: Context): List<String> {
     val mappedRR = getMappedRefreshRates().sortedDescending()
+    
+    val finalModes = mappedRR.map { it.toString() }.toMutableList()
 
-    val finalModes = mutableListOf<String>()
-    val standardModes = listOf(144, 120, 90, 60)
-
-    standardModes.forEach { mode ->
-        if (mappedRR.any { it in (mode - 1)..(mode + 1) }) {
-            finalModes.add(mode.toString())
-        }
+    if (finalModes.isEmpty()) {
+        finalModes.addAll(listOf("120", "90", "60"))
     }
 
     return finalModes
