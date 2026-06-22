@@ -23,14 +23,14 @@ readonly APK_COMP="$MODDIR/AZenith.apk"
 
 # Wait boot to complete
 until [ "$(getprop sys.boot_completed)" = "1" ]; do 
-    sleep 5 
+    sleep 1
 done
-
-# Clear Old Logs
-"$BIN_SVC" --clearlogs
 
 # Reset anti bootloop
 echo "BOOTCOUNT=0" > "$MODDIR/count.sh"
+
+# Clear Old Logs
+"$BIN_SVC" --clearlogs
 
 # Remove reboot flag
 if [ -f "$MODDIR/reboot" ]; then
