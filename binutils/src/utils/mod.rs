@@ -1,4 +1,6 @@
-use std::fs; use std::thread; use std::time::Duration;
+use std::fs;
+use std::thread;
+use std::time::Duration;
 use std::process::Command;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
@@ -7,7 +9,6 @@ use std::collections::HashMap;
 
 pub const MY_PATH: &str = "/system/bin:/system/xbin:/data/adb/ap/bin:/data/adb/ksu/bin:/data/adb/magisk:/debug_ramdisk:/sbin:/sbin/su:/su/bin:/su/xbin:/data/data/com.termux/files/usr/bin";
 const SF_MAPPING_FILE: &str = "/data/adb/.config/AZenith/util_mapping.dat";
-
 
 pub fn getprop(key: &str) -> String {
     if let Ok(output) = Command::new("getprop").arg(key).output() {
@@ -96,6 +97,55 @@ pub fn sets_mali_gov(gov: &str) {
     dlog(&format!("Set current Mali GPU Governor to {}", gov));
 }
 
+pub fn is_sf_index_supported() -> bool {
+    let sdk_str = getprop("ro.build.version.sdk");
+    if let Ok(sdk) = sdk_str.parse::<i32>() {
+        sdk >= 33
+    } else {
+        false
+    }
+}
+
+pub fn get_supported_refresh_rates() -> Vec<i32> {
+    let mut rates = Vec::new();
+    if let Ok(output) = Command::new("cmd").args(["display", "get-displays"]).output() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        
+        if let Some(start_idx) = stdout.find("supportedRefreshRates [") {
+            let content_start = start_idx + "supportedRefreshRates [".len();
+            if let Some(end_idx) = stdout[content_start..].find(']') {
+                let rates_str = &stdout[content_start..content_start + end_idx];
+                for rate_str in rates_str.split(',') {
+                    if let Ok(fps) = rate_str.trim().parse::<f32>() {
+                        rates.push(fps.round() as i32);
+                    }
+                }
+            }
+        }
+
+        if rates.is_empty() {
+            let mut search_idx = 0;
+            while let Some(idx) = stdout[search_idx..].find("fps=") {
+                let start = search_idx + idx + 4;
+                let end = stdout[start..].find(',').unwrap_or(stdout[start..].len());
+                if let Ok(fps) = stdout[start..start + end].trim().parse::<f32>() {
+                    rates.push(fps.round() as i32);
+                }
+                search_idx = start + end;
+            }
+        }
+    }
+
+    if rates.is_empty() {
+        dlog("Warn: Failed to parse supported display modes. Using default fallback.");
+        rates = vec![60, 90, 120, 144]; 
+    }
+
+    rates.sort_unstable();
+    rates.dedup();
+    rates
+}
+
 pub fn get_active_fps() -> Option<i32> {
     let mut samples: Vec<i32> = Vec::new();
 
@@ -165,19 +215,28 @@ pub fn get_active_fps() -> Option<i32> {
 pub fn calibrate_sf_modes() -> HashMap<i32, i32> {
     let mut map = HashMap::new();
 
-    for idx in 0..=4 {
-        let _ = Command::new("service")
-            .args(["call", "SurfaceFlinger", "1035", "i32", &idx.to_string()])
-            .status();
+    if is_sf_index_supported() {
+        for idx in 0..=5 {
+            let _ = Command::new("service")
+                .args(["call", "SurfaceFlinger", "1035", "i32", &idx.to_string()])
+                .status();
 
-        thread::sleep(Duration::from_millis(600));
+            thread::sleep(Duration::from_millis(600));
 
-        if let Some(current_fps) = get_active_fps() {
-            if !map.contains_key(&current_fps) {
-                map.insert(current_fps, idx);
+            if let Some(current_fps) = get_active_fps() {
+                if !map.contains_key(&current_fps) {
+                    map.insert(current_fps, idx);
+                }
+            } else {
+                dlog(&format!("Warn: Failed to parse FPS for SF Index {}", idx));
             }
-        } else {
-            dlog(&format!("Warn: Failed to parse FPS for SF Index {}", idx));
+        }
+    } else {
+        dlog("Info: SurfaceFlinger index skipped for this Android version. Generating mapping from display modes...");
+        let rates = get_supported_refresh_rates();
+        for (i, &fps) in rates.iter().enumerate() {
+            let idx = (i + 1) as i32;
+            map.insert(fps, idx);
         }
     }
 
@@ -215,7 +274,6 @@ pub fn check_and_calibrate_mapping() {
 
 pub fn setthermalcore(state: &str) {
     if state == "1" {
-        // Run in background
         let _ = Command::new("sys.azenith-rianixiathermalcore").spawn();
         thread::sleep(Duration::from_secs(1));
 
@@ -296,6 +354,11 @@ pub fn setrefreshrates(rate: &str) {
         .args(["put", "secure", "miui_refresh_rate", rate])
         .status();
 
+    if !is_sf_index_supported() {
+        dlog(&format!("Applied {}Hz via Setput", target_fps));
+        return; 
+    }
+
     if let Ok(content) = fs::read_to_string(SF_MAPPING_FILE) {
         for line in content.lines() {
             let parts: Vec<&str> = line.split('=').collect();
@@ -318,10 +381,9 @@ pub fn setrefreshrates(rate: &str) {
 
         dlog(&format!("Applied {}Hz via SurfaceFlinger (Index: {})", target_fps, sf_index));
     } else {
-        dlog(&format!("Warn: Failed to apply {}Hz refresh rates.", target_fps));
+        dlog(&format!("Warn: Failed to apply {}Hz via SurfaceFlinger.", target_fps));
     }
 }
-
 
 pub fn restartservice() {
     let _ = Command::new("pkill").args(["-9", "-f", "sys.azenith-rianixiathermalcore"]).status();
