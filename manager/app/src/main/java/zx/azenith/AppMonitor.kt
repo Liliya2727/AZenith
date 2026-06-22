@@ -487,17 +487,25 @@ object AppMonitor {
             if (looperClass.getMethod("getMainLooper").invoke(null) == null) {
                 looperClass.getMethod("prepareMainLooper").invoke(null)
             }
-
+    
             val activityThreadClass = Class.forName("android.app.ActivityThread")
-
-            val thread = activityThreadClass.getMethod("systemMain").invoke(null)
-                ?: activityThreadClass.getMethod("currentActivityThread").invoke(null)
-                ?: error("Both systemMain() and currentActivityThread() returned null")
-
-            systemContext =
-                activityThreadClass.getMethod("getSystemContext").invoke(thread) as? Context
-                    ?: error("getSystemContext() returned null")
-
+            var thread: Any? = null
+    
+            try {
+                thread = activityThreadClass.getMethod("systemMain").invoke(null)
+            } catch (e: Exception) {
+                System.err.println("WARN: systemMain() failed (MIUI?): ${e.cause?.message ?: e.message}")
+            }
+    
+            if (thread == null) {
+                thread = activityThreadClass.getMethod("currentActivityThread").invoke(null)
+            }
+    
+            thread ?: error("Both systemMain() and currentActivityThread() returned null")
+    
+            systemContext = activityThreadClass.getMethod("getSystemContext").invoke(thread) as? Context
+                ?: error("getSystemContext() returned null")
+    
         } catch (e: Exception) {
             e.printStackTrace()
         }
