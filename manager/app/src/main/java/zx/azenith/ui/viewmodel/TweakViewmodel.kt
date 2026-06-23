@@ -408,6 +408,7 @@ class TweakViewModel : ViewModel() {
         val propValue = if (index == 0) "Disabled" else offsetLabels[index].replace("%", "")
         viewModelScope.launch(Dispatchers.IO) {
             PropertyUtils.set("persist.sys.azenithconf.freqoffset", propValue)
+            Shell.cmd("echo $propValue > /data/adb/.config/AZenith/freqoffset")
         }
     }
 

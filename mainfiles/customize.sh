@@ -94,6 +94,7 @@ mkdir -p "$MODULE_CONFIG"
 mkdir -p "$MODULE_CONFIG/debug"
 mkdir -p "$MODULE_CONFIG/API"
 mkdir -p "$MODULE_CONFIG/preload"
+mkdir -p "$MODULE_CONFIG/bypasschgconfig"
 mkdir -p "$MODULE_CONFIG/gamelist"
 mkdir -p "$MODPATH/system/bin"
 ui_print "- Create module config"
@@ -244,6 +245,8 @@ esac
 # Set default freqoffset
 if [ -z "$(getprop persist.sys.azenithconf.freqoffset)" ]; then
 	setprop persist.sys.azenithconf.freqoffset "Disabled"
+	touch "$MODULE_CONFIG/freqoffset"
+	echo "Disabled" > "$MODULE_CONFIG/freqoffset"
 fi
 
 # Set default renderer
@@ -259,11 +262,22 @@ fi
 # Initiate bypasspath default value
 if [ -z "$(getprop persist.sys.azenithconf.bypasspath)" ]; then
 	setprop persist.sys.azenithconf.bypasspath "UNSUPPORTED"
+	touch "$MODULE_CONFIG/bypasschgconfig/bypasspath"
+	echo "UNSUPPORTED" > "$MODULE_CONFIG/bypasschgconfig/bypasspath"
 fi
 
 # Initiate bypasspath default value
 if [ -z "$(getprop persist.sys.azenithconf.bypasschgthreshold)" ]; then
 	setprop persist.sys.azenithconf.bypasschgthreshold "20"
+	touch "$MODULE_CONFIG/bypasschgconfig/bypasschgthreshold"
+	echo "20" > "$MODULE_CONFIG/bypasschgconfig/bypasschgthreshold"
+fi
+
+# Initiate bypasscharging state
+if [ -z "$(getprop persist.sys.azenithconf.bypasschg)" ]; then
+	setprop persist.sys.azenithconf.bypasschg "0"
+	touch "$MODULE_CONFIG/bypasschgconfig/bypasschg"
+	echo "0" > "$MODULE_CONFIG/bypasschgconfig/bypasschg"
 fi
 
 # Daemon Configurations
@@ -294,7 +308,6 @@ persist.sys.azenithconf.malisched
 persist.sys.azenithconf.fpsged
 persist.sys.azenithconf.schedtunes
 persist.sys.azenithconf.clearbg
-persist.sys.azenithconf.bypasschg
 persist.sys.azenithconf.APreload
 persist.sys.azenithconf.iosched
 persist.sys.azenithconf.cpulimit
