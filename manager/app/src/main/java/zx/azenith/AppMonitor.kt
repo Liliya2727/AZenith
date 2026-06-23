@@ -291,10 +291,9 @@ object AppMonitor {
                 appendLine("battery_level $batteryLevel")
                 appendLine("is_charging $isCharging")
                 appendLine("app_name $appName")
-            }
         }
     }
-
+    
 
     private fun getZenMode(): Int {
         return try {
