@@ -174,9 +174,10 @@ fun BypassChargeScreen(navController: NavController) {
                                     checked = bypassChgState!!,
                                     enabled = !isUnsupported,
                                     onCheckedChange = { isChecked ->
+                                        bypassChgState = isChecked
                                         val value = if (isChecked) "1" else "0"
                                         PropertyUtils.set("persist.sys.azenithconf.bypasschg", value)
-                                        Shell.cmd("echo $value > /data/adb/.config/AZenith/bypasschgconfig/bypasschgt").exec()
+                                        Shell.cmd("echo $value > /data/adb/.config/AZenith/bypasschgconfig/bypasschg").exec()
                                     }
                                 )
                             }

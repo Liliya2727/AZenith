@@ -65,6 +65,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.fox2code.androidansi.ktx.parseAsAnsiAnnotatedString
 import com.topjohnwu.superuser.CallbackList
+import com.topjohnwu.superuser.io.SuFile
+import com.topjohnwu.superuser.io.SuFileOutputStream
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -195,7 +197,12 @@ fun BypassChargeCheckScreen(navController: NavController) {
                             if (result == ConfirmResult.Confirmed) {
                                 val targetNode = paths.first().first
                                 PropertyUtils.set("persist.sys.azenithconf.bypasspath", targetNode)
-                                Shell.cmd("echo $targetNode > /data/adb/.config/AZenith/bypasschgconfig/bypasspath").exec()
+                                withContext(Dispatchers.IO) {
+                                    val file = SuFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath")
+                                    SuFileOutputStream.open(file).writer().use { writer ->
+                                        writer.write(targetNode)
+                                    }
+                                }
                                 activePath = targetNode
                             }
                         }
@@ -448,7 +455,12 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                                     )
                                                     if (result == ConfirmResult.Confirmed) {
                                                         PropertyUtils.set("persist.sys.azenithconf.bypasspath", pathNode.first)
-                                                        Shell.cmd("echo $pathNode > /data/adb/.config/AZenith/bypasschgconfig/bypasspath").exec()
+                                                        withContext(Dispatchers.IO) {
+                                                            val file = SuFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath")
+                                                            SuFileOutputStream.open(file).writer().use { writer ->
+                                                                writer.write(pathNode.first)
+                                                            }
+                                                        }
                                                         activePath = pathNode.first
                                                     }
                                                 }
