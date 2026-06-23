@@ -21,6 +21,7 @@ import android.annotation.SuppressLint
 import android.app.ActivityManager
 import android.content.ComponentName
 import android.content.Context
+import android.os.BatteryManager
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
@@ -67,6 +68,7 @@ object AppMonitor {
     private var powerManager: PowerManager? = null
     private var activityManager: ActivityManager? = null
     private var notificationManager: Any? = null
+    private var batteryManager: BatteryManager? = null
     private var getZenModeMethod: Method? = null
 
     private var bruteForceCandidates: List<Method>? = null
@@ -273,18 +275,23 @@ object AppMonitor {
         appInfo != NONE_APP && appInfo.endsWith(" 0 0")
 
         private fun buildStatus(focusedApp: String): String {
-        val screenAwake = if (powerManager?.isInteractive == true) 1 else 0
-        val batterySaver = if (powerManager?.isPowerSaveMode == true) 1 else 0
-        val zenMode = getZenMode()
-        val pkgName = focusedApp.substringBefore(" ")
-        val appName = getAppName(pkgName)
-
-        return buildString {
-            appendLine("focused_app $focusedApp")
-            appendLine("screen_awake $screenAwake")
-            appendLine("battery_saver $batterySaver")
-            appendLine("zen_mode $zenMode")
-            appendLine("app_name $appName")
+            val screenAwake = if (powerManager?.isInteractive == true) 1 else 0
+            val batterySaver = if (powerManager?.isPowerSaveMode == true) 1 else 0
+            val zenMode = getZenMode()
+            val batteryLevel = getBatteryLevel()
+            val isCharging = getChargingStatus()
+            val pkgName = focusedApp.substringBefore(" ")
+            val appName = getAppName(pkgName)
+        
+            return buildString {
+                appendLine("focused_app $focusedApp")
+                appendLine("screen_awake $screenAwake")
+                appendLine("battery_saver $batterySaver")
+                appendLine("zen_mode $zenMode")
+                appendLine("battery_level $batteryLevel")
+                appendLine("is_charging $isCharging")
+                appendLine("app_name $appName")
+            }
         }
     }
 
@@ -520,6 +527,7 @@ object AppMonitor {
             val ctx = systemContext ?: return false
             powerManager = ctx.getSystemService(Context.POWER_SERVICE) as PowerManager
             activityManager = ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            batteryManager = ctx.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
             initActivityTaskManager()
             initNotificationManager()
             true
@@ -605,4 +613,21 @@ object AppMonitor {
         }
     }
     
+    private fun getBatteryLevel(): Int {
+        return try {
+            batteryManager?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1
+        } catch (e: Exception) {
+            -1
+        }
+    }
+    
+    private fun getChargingStatus(): Int {
+        return try {
+            val status = batteryManager?.getIntProperty(BatteryManager.BATTERY_PROPERTY_STATUS) ?: BatteryManager.BATTERY_STATUS_UNKNOWN
+            if (status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL) 1 else 0
+        } catch (e: Exception) {
+            0
+        }
+    }
+
 }
