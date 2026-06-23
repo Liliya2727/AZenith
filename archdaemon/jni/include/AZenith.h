@@ -18,6 +18,7 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <pthread.h> // FIX: Ditambahkan untuk pthread_mutex_t
 
 #define TASK_INTERVAL_SEC (12 * 60 * 60)
 #define LOOP_INTERVAL_MS 1000
@@ -47,10 +48,13 @@
 #define MODULE_PROP "/data/adb/modules/AZenith/module.prop"
 #define MODULE_UPDATE "/data/adb/modules/AZenith/update"
 #define MODULE_REMOVE "/data/adb/modules/AZenith/remove"
+#define BYPASSCHG_CONFIG "/data/adb/.config/AZenith/bypasschgconfig"
 #define MODULE_VERSION ".placeholder"
+
 #define IS_TRUE(v)    ((v) && strcmp((v), "true") == 0)
 #define IS_FALSE(v)   ((v) && strcmp((v), "false") == 0)
 #define IS_DEFAULT(v) (!(v) || strcmp((v), "default") == 0)
+
 #define MY_PATH                                                                                                                    \
     "PATH=/system/bin:/system/xbin:/data/adb/ap/bin:/data/adb/ksu/bin:/data/adb/magisk:/debug_ramdisk:/sbin:/sbin/su:/su/bin:/su/" \
     "xbin:/data/data/com.termux/files/usr/bin"
@@ -67,15 +71,20 @@
     log_zenith(LOG_INFO, "%s executed for %.4f seconds", mode_name, elapsed); \
 } while(0)
 
-// Basic C knowledge: enum starts with 0
 typedef struct {
+    char package[128];
     char perf_lite_mode[16];
     char dnd_on_gaming[16];
     char app_priority[16];
     char game_preload[16];
     char refresh_rate[16];
-    char renderer[16];
-} GameOptions;
+    char renderer[64];
+} GameConfig;
+
+// FIX: Gunakan extern agar variabel ini menjadi Global Shared di semua file .c
+extern GameConfig* g_game_cache;
+extern int g_game_cache_count;
+extern pthread_mutex_t cache_mutex;
 
 /**
  * @struct SystemStateCache
@@ -88,6 +97,8 @@ typedef struct {
     int zen_mode;
     int screen_awake;
     int battery_saver;
+    int battery_level;
+    int is_charging;
 } SystemStateCache;
 
 typedef enum : char {
@@ -116,17 +127,12 @@ extern BypassNode bypass_list[];
 extern char* gamestart;
 extern char* custom_log_tag;
 
-// Mengganti game_pid lama dengan array PID baru
 extern pid_t game_pids[MAX_GAME_PIDS];
 extern int game_pid_count;
 
-/*
- * If you're here for function comments, you
- * are in the wrong place.
- */
-
 // Main Loop
 int main_daemon(void);
+void free_gamelist_cache(void);
 
 // Bypass Charging
 int echo_to_file(const char* path, const char* value, int lock);
@@ -163,7 +169,6 @@ bool return_true(void);
 bool return_false(void);
 void runthermalcore(void);
 void check_module_version(void);
-void runtask(void);
 void apply_dynamic_refresh_rate(int target_rr);
 int get_max_refresh_rate(void);
 bool apply_smart_renderer(const char* target_type, const char* pkg, char* saved_ref);
@@ -197,7 +202,7 @@ int get_pids_of(const char* name, pid_t* pids, int max_pids);
 // Profiler
 extern bool (*get_screenstate)(SystemStateCache*);
 extern bool (*get_low_power_state)(SystemStateCache*);
-char* get_gamestart(GameOptions* options, SystemStateCache* cache);
+char* get_gamestart(GameConfig* options, SystemStateCache* cache); // FIX: GameOptions -> GameConfig
 bool get_screenstate_normal(SystemStateCache* cache);
 bool get_low_power_state_normal(SystemStateCache* cache);
 void run_profiler(const int profile);

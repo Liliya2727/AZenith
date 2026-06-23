@@ -77,78 +77,44 @@ void run_profiler(const int profile) {
  * @param cache Pointer to system state cache to determine visibility.
  * @return Malloc-ed string containing package name, or NULL. Caller must free.
  */
-char* get_gamestart(GameOptions* options, SystemStateCache* cache) {
+char* get_gamestart(GameConfig* options, SystemStateCache* cache) {
     char* pkg = get_visible_package(cache);
     if (!pkg) return NULL;
 
-    FILE* fp = fopen(GAMELIST, "r");
-    if (!fp) {
-        free(pkg);
-        return NULL;
-    }
-
-    fseek(fp, 0, SEEK_END);
-    long size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-
-    if (size <= 0) {
-        fclose(fp);
-        free(pkg);
-        return NULL;
-    }
-
-    char* buf = malloc(size + 1);
-    if (!buf) {
-        fclose(fp);
-        free(pkg);
-        return NULL;
-    }
-
-    if (fread(buf, 1, size, fp) != (size_t)size) {
-        fclose(fp);
-        free(buf);
-        free(pkg);
-        return NULL;
-    }
-    fclose(fp);
-    buf[size] = '\0';
-
-    char key[256];
-    snprintf(key, sizeof(key), "\"%s\"", pkg);
-    char* entry = strstr(buf, key);
+    pthread_mutex_lock(&cache_mutex);
     
-    if (!entry) {
-        free(buf);
+    if (g_game_cache == NULL || g_game_cache_count == 0) {
+        pthread_mutex_unlock(&cache_mutex);
         free(pkg);
         return NULL;
     }
 
-    // Populate GameOptions if matched
-    if (options) {
-        char* p;
+    bool match_found = false;
 
-        p = strstr(entry, "\"perf_lite_mode\":");
-        extract_string_value(options->perf_lite_mode, p, sizeof(options->perf_lite_mode));
-
-        p = strstr(entry, "\"dnd_on_gaming\":");
-        extract_string_value(options->dnd_on_gaming, p, sizeof(options->dnd_on_gaming));
-
-        p = strstr(entry, "\"app_priority\":");
-        extract_string_value(options->app_priority, p, sizeof(options->app_priority));
-
-        p = strstr(entry, "\"game_preload\":");
-        extract_string_value(options->game_preload, p, sizeof(options->game_preload));
-
-        p = strstr(entry, "\"refresh_rate\":");
-        extract_string_value(options->refresh_rate, p, sizeof(options->refresh_rate));
-
-        p = strstr(entry, "\"renderer\":");
-        extract_string_value(options->renderer, p, sizeof(options->renderer));
+    for (int i = 0; i < g_game_cache_count; i++) {
+        if (strcmp(g_game_cache[i].package, pkg) == 0) {
+            match_found = true;
+            
+            if (options) {
+                strcpy(options->perf_lite_mode, g_game_cache[i].perf_lite_mode);
+                strcpy(options->dnd_on_gaming, g_game_cache[i].dnd_on_gaming);
+                strcpy(options->app_priority, g_game_cache[i].app_priority);
+                strcpy(options->game_preload, g_game_cache[i].game_preload);
+                strcpy(options->refresh_rate, g_game_cache[i].refresh_rate);
+                strcpy(options->renderer, g_game_cache[i].renderer);
+            }
+            break;
+        }
     }
 
-    free(buf);
-    
-    // Since 'pkg' is already a dynamically allocated string from get_visible_package,
-    // we can return it directly instead of duplicating it again.
+    pthread_mutex_unlock(&cache_mutex);
+
+    if (!match_found) {
+        free(pkg);
+        return NULL;
+    }
+
     return pkg; 
 }
+
+
