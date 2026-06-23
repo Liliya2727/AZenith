@@ -195,6 +195,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                             if (result == ConfirmResult.Confirmed) {
                                 val targetNode = paths.first().first
                                 PropertyUtils.set("persist.sys.azenithconf.bypasspath", targetNode)
+                                Shell.cmd("echo $targetNode > /data/adb/.config/AZenith/bypasschgconfig/bypasspath").exec()
                                 activePath = targetNode
                             }
                         }
@@ -447,6 +448,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                                     )
                                                     if (result == ConfirmResult.Confirmed) {
                                                         PropertyUtils.set("persist.sys.azenithconf.bypasspath", pathNode.first)
+                                                        Shell.cmd("echo $pathNode > /data/adb/.config/AZenith/bypasschgconfig/bypasspath").exec()
                                                         activePath = pathNode.first
                                                     }
                                                 }
