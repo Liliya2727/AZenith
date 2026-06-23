@@ -29,9 +29,10 @@ void read_app_status(SystemStateCache* cache) {
     
     char line[256];
 
-    // Zero-out or set default values before reading new state
     memset(cache->focused_app, 0, sizeof(cache->focused_app));
     strncpy(cache->app_name, "Unknown", sizeof(cache->app_name) - 1);
+    cache->battery_level = -1;
+    cache->is_charging = 0;
     
     while (fgets(line, sizeof(line), fp)) {
         if (strncmp(line, "focused_app ", 12) == 0) {
@@ -46,8 +47,13 @@ void read_app_status(SystemStateCache* cache) {
         } else if (strncmp(line, "app_name ", 9) == 0) {
             strncpy(cache->app_name, line + 9, sizeof(cache->app_name) - 1);
             cache->app_name[strcspn(cache->app_name, "\n")] = 0;
+        } else if (strncmp(line, "battery_level ", 14) == 0) {
+            sscanf(line + 14, "%d", &cache->battery_level);
+        } else if (strncmp(line, "is_charging ", 12) == 0) {
+            sscanf(line + 12, "%d", &cache->is_charging);
         }
     }
     
     fclose(fp);
 }
+

@@ -265,6 +265,9 @@ int check_bypass_compatibility() {
     __system_property_set("persist.sys.azenithconf.bypasspath", "UNSUPPORTED");
     __system_property_set("persist.sys.azenithconf.bypasschg", "0");
     __system_property_set("persist.sys.azenithconf.bypasschgthreshold", "20");
+    systemv("echo UNSUPPORTED > %s/bypasspath", BYPASSCHG_CONFIG);
+    systemv("echo 0 > %s/bypasschg", BYPASSCHG_CONFIG);
+    systemv("echo 20 > %s/bypasschgthreshold", BYPASSCHG_CONFIG);
     return 1;
 }
 

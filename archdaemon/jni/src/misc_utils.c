@@ -17,7 +17,6 @@
 #include <AZenith.h>
 #include <sys/system_properties.h>
 #include <time.h>
-static time_t last_task_run = 0;
 
 /***********************************************************************************
  * Function Name      : trim_newline
@@ -315,33 +314,6 @@ void runthermalcore(void) {
         }
 
         pclose(fp);
-    }
-}
-
-/***********************************************************************************
- * Function Name      : runtask
- * Inputs             : none
- * Returns            : None
- * Description        : run a command periodically for every 12hours
- ***********************************************************************************/
-void runtask(void) {
-    struct timespec now;
-
-    clock_gettime(CLOCK_MONOTONIC, &now);
-
-    if (last_task_run == 0) {
-        last_task_run = now.tv_sec;
-        log_zenith(LOG_INFO, "Running scheduled task for the next 12h");
-        systemv("sys.azenith-utilityconf FSTrim");
-        return;
-    }
-
-    if ((now.tv_sec - last_task_run) >= TASK_INTERVAL_SEC) {
-        last_task_run = now.tv_sec;
-        log_zenith(LOG_INFO, "Executing scheduled task, next task will be run in next 12h");
-        notify("Daemon Info", "12 hours passed — AZenith doing its routine check. All good.", "false", 0);
-
-        systemv("sys.azenith-utilityconf FSTrim");
     }
 }
 
