@@ -58,7 +58,6 @@ suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File
         "Unknown"
     }
     
-    // TRIK AMPUH: Gunakan variabel ini untuk memanggil variabel Bash agar tidak bentrok dengan Kotlin
     val d = "$" 
     
     val script = """
