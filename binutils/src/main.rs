@@ -33,7 +33,6 @@ fn main() {
             "setsMaliGov" => if args.len() > 2 { sets_mali_gov(&args[2]) },
             "setthermalcore" => if args.len() > 2 { setthermalcore(&args[2]) },
             "checkmalipath" => check_mali_path(),
-            "checkrefreshrate" => check_and_calibrate_mapping(),
             "FSTrim" => fstrim(),
             "enableDND" => enable_dnd(),
             "disableDND" => disable_dnd(),

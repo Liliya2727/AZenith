@@ -97,181 +97,6 @@ pub fn sets_mali_gov(gov: &str) {
     dlog(&format!("Set current Mali GPU Governor to {}", gov));
 }
 
-pub fn is_sf_index_supported() -> bool {
-    let sdk_str = getprop("ro.build.version.sdk");
-    if let Ok(sdk) = sdk_str.parse::<i32>() {
-        sdk >= 33
-    } else {
-        false
-    }
-}
-
-pub fn get_supported_refresh_rates() -> Vec<i32> {
-    let mut rates = Vec::new();
-    if let Ok(output) = Command::new("cmd").args(["display", "get-displays"]).output() {
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        
-        if let Some(start_idx) = stdout.find("supportedRefreshRates [") {
-            let content_start = start_idx + "supportedRefreshRates [".len();
-            if let Some(end_idx) = stdout[content_start..].find(']') {
-                let rates_str = &stdout[content_start..content_start + end_idx];
-                for rate_str in rates_str.split(',') {
-                    if let Ok(fps) = rate_str.trim().parse::<f32>() {
-                        rates.push(fps.round() as i32);
-                    }
-                }
-            }
-        }
-
-        if rates.is_empty() {
-            let mut search_idx = 0;
-            while let Some(idx) = stdout[search_idx..].find("fps=") {
-                let start = search_idx + idx + 4;
-                let end = stdout[start..].find(',').unwrap_or(stdout[start..].len());
-                if let Ok(fps) = stdout[start..start + end].trim().parse::<f32>() {
-                    rates.push(fps.round() as i32);
-                }
-                search_idx = start + end;
-            }
-        }
-    }
-
-    if rates.is_empty() {
-        dlog("Warn: Failed to parse supported display modes. Using default fallback.");
-        rates = vec![60, 90, 120, 144]; 
-    }
-
-    rates.sort_unstable();
-    rates.dedup();
-    rates
-}
-
-pub fn get_active_fps() -> Option<i32> {
-    let mut samples: Vec<i32> = Vec::new();
-
-    for _ in 0..8 {
-        if let Ok(output) = Command::new("dumpsys")
-            .args(["SurfaceFlinger", "--latency"])
-            .output() 
-        {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            
-            if let Some(first_line) = stdout.lines().next() {
-                if let Ok(period) = first_line.trim().parse::<i64>() {
-                    if period > 0 {
-                        let rate = (1_000_000_000 + (period / 2)) / period;
-                        
-                        if (30..=240).contains(&rate) {
-                            samples.push(rate as i32);
-                        }
-                    }
-                }
-            }
-        }
-        thread::sleep(Duration::from_millis(50)); 
-    }
-
-    if !samples.is_empty() {
-        samples.sort_unstable();
-        let count = samples.len();
-        let mid = count / 2;
-
-        let median = if count % 2 != 0 {
-            samples[mid]
-        } else {
-            (samples[mid - 1] + samples[mid]) / 2
-        };
-        
-        return Some(median);
-    }
-
-    if let Ok(output) = Command::new("cmd").args(["display", "get-displays"]).output() {
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let keywords = ["renderFrameRate", "refreshRate", "fps="];
-        
-        for line in stdout.lines() {
-            for &kw in &keywords {
-                if let Some(idx) = line.find(kw) {
-                    let start_idx = idx + kw.len();
-                    let num_str: String = line[start_idx..]
-                        .chars()
-                        .skip_while(|c| !c.is_ascii_digit())
-                        .take_while(|c| c.is_ascii_digit() || *c == '.')
-                        .collect();
-                    
-                    if let Ok(fps) = num_str.parse::<f32>() {
-                        if fps > 0.0 {
-                            return Some(fps.round() as i32);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    None
-}
-
-pub fn calibrate_sf_modes() -> HashMap<i32, i32> {
-    let mut map = HashMap::new();
-
-    if is_sf_index_supported() {
-        for idx in 0..=5 {
-            let _ = Command::new("service")
-                .args(["call", "SurfaceFlinger", "1035", "i32", &idx.to_string()])
-                .status();
-
-            thread::sleep(Duration::from_millis(600));
-
-            if let Some(current_fps) = get_active_fps() {
-                if !map.contains_key(&current_fps) {
-                    map.insert(current_fps, idx);
-                }
-            } else {
-                dlog(&format!("Warn: Failed to parse FPS for SF Index {}", idx));
-            }
-        }
-    } else {
-        dlog("Info: SurfaceFlinger index skipped for this Android version. Generating mapping from display modes...");
-        let rates = get_supported_refresh_rates();
-        for (i, &fps) in rates.iter().enumerate() {
-            let idx = (i + 1) as i32;
-            map.insert(fps, idx);
-        }
-    }
-
-    let mut content = String::new();
-    if map.is_empty() {
-        dlog("Error: Calibration failed. Mapping data is completely empty!");
-    } else {
-        for (fps, idx) in &map {
-            content.push_str(&format!("{}={}\n", fps, idx));
-        }
-    }
-    
-    let _ = fs::create_dir_all("/data/adb/.config/AZenith/");
-    if fs::write(SF_MAPPING_FILE, content).is_err() {
-        dlog("Error: Failed to save calibration data to file.");
-    }
-    
-    map
-}
-
-pub fn check_and_calibrate_mapping() {
-    dlog("Starting standalone SurfaceFlinger refresh rate mapping...");
-    
-    let map = calibrate_sf_modes();
-    
-    if !map.is_empty() {
-        dlog(&format!("Successfully generated standalone mapping with {} active profiles.", map.len()));
-        for (fps, idx) in &map {
-            println!("{}Hz = SurfaceFlinger Index {}", fps, idx);
-        }
-    } else {
-        dlog("Error: Standalone mapping generation failed.");
-    }
-}
-
 pub fn setthermalcore(state: &str) {
     if state == "1" {
         let _ = Command::new("sys.azenith-rianixiathermalcore").spawn();
@@ -331,59 +156,23 @@ pub fn disable_dnd() {
 
 pub fn setrefreshrates(rate: &str) {
     let target_fps = rate.parse::<i32>().unwrap_or(60);
-    let mut map = HashMap::new();
-    let rate_float = if rate.contains('.') {
-        rate.to_string()
+
+    let status = Command::new("am")
+        .args([
+            "broadcast", 
+            "-a", "zx.azenith.SET_FPS", 
+            "-n", "zx.azenith/.RefreshRateReceiver", 
+            "--ei", "fps", &target_fps.to_string()
+        ])
+        .status();
+
+    if status.map(|s| s.success()).unwrap_or(false) {
+        dlog(&format!("Triggered receiver app to apply {}Hz", target_fps));
     } else {
-        format!("{}.0", rate)
-    };
-
-    let _ = Command::new("settings")
-        .args(["put", "system", "peak_refresh_rate", rate])
-        .status();
-
-    let _ = Command::new("settings")
-        .args(["put", "system", "min_refresh_rate", &rate_float])
-        .status();
-
-    let _ = Command::new("settings")
-        .args(["put", "system", "user_refresh_rate", rate])
-        .status();
-
-    let _ = Command::new("settings")
-        .args(["put", "secure", "miui_refresh_rate", rate])
-        .status();
-
-    if !is_sf_index_supported() {
-        dlog(&format!("Applied {}Hz via Setput", target_fps));
-        return; 
-    }
-
-    if let Ok(content) = fs::read_to_string(SF_MAPPING_FILE) {
-        for line in content.lines() {
-            let parts: Vec<&str> = line.split('=').collect();
-            if parts.len() == 2 {
-                if let (Ok(fps), Ok(idx)) = (parts[0].parse::<i32>(), parts[1].parse::<i32>()) {
-                    map.insert(fps, idx);
-                }
-            }
-        }
-    }
-
-    if !map.contains_key(&target_fps) {
-        map = calibrate_sf_modes();
-    }
-
-    if let Some(&sf_index) = map.get(&target_fps) {
-        let _ = Command::new("service")
-            .args(["call", "SurfaceFlinger", "1035", "i32", &sf_index.to_string()])
-            .status();
-
-        dlog(&format!("Applied {}Hz via SurfaceFlinger (Index: {})", target_fps, sf_index));
-    } else {
-        dlog(&format!("Warn: Failed to apply {}Hz via SurfaceFlinger.", target_fps));
+        dlog("Failed to trigger native app");
     }
 }
+
 
 pub fn restartservice() {
     let _ = Command::new("pkill").args(["-9", "-f", "sys.azenith-rianixiathermalcore"]).status();
