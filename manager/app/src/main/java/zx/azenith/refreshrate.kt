@@ -21,24 +21,51 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.util.Log
+import com.topjohnwu.superuser.Shell
 
 class RefreshRateReceiver : BroadcastReceiver() {
+
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == "zx.azenith.SET_FPS") {
             val fps = intent.getIntExtra("fps", 60).toFloat()
             
-            try {
-                val contentResolver = context.contentResolver
-                
-                Settings.System.putFloat(contentResolver, "peak_refresh_rate", fps)
-                Settings.System.putFloat(contentResolver, "min_refresh_rate", fps)
-                Settings.System.putFloat(contentResolver, "user_refresh_rate", fps)
-                Settings.Secure.putFloat(contentResolver, "miui_refresh_rate", fps)
-                
-                Log.d("AZenith", "Successfully applied native refresh rate: $fps Hz")
-            } catch (e: Exception) {
-                Log.e("AZenith", "Failed to set native refresh rate", e)
-            }
+            Log.d("AZenith", "Attempting to apply refresh rate: $fps")
+
+            // Terapkan ke masing-masing key dengan helper yang aman
+            applySetting(context, "peak_refresh_rate", fps, isSecure = false)
+            applySetting(context, "min_refresh_rate", fps, isSecure = false)
+            applySetting(context, "user_refresh_rate", fps, isSecure = false)
+            applySetting(context, "miui_refresh_rate", fps, isSecure = true)
+            
+            Log.d("AZenith", "Finished applying refresh rate tweaks")
         }
+    }
+
+    private fun applySetting(context: Context, key: String, value: Float, isSecure: Boolean) {
+        val resolver = context.contentResolver
+        try {
+            if (isSecure) {
+                Settings.Secure.putFloat(resolver, key, value)
+            } else {
+                Settings.System.putFloat(resolver, key, value)
+            }
+        } catch (e: IllegalArgumentException) {
+            Log.w("AZenith", "Key $key rejected by System, falling back to Secure.")
+            try {
+                Settings.Secure.putFloat(resolver, key, value)
+            } catch (e2: Exception) {
+                fallbackToRoot(key, value)
+            }
+        } catch (e: SecurityException) {
+            Log.w("AZenith", "Lacking WRITE_SETTINGS permission for $key, using Root Shell.")
+            fallbackToRoot(key, value)
+        } catch (e: Exception) {
+            fallbackToRoot(key, value)
+        }
+    }
+
+    private fun fallbackToRoot(key: String, value: Float) {
+        Shell.cmd("settings put system $key $value").exec()
+        Shell.cmd("settings put secure $key $value").exec()
     }
 }
