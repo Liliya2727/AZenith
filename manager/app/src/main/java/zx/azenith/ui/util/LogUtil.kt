@@ -64,15 +64,15 @@ suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File
     val script = """
         TMP_DIR="/data/local/tmp/az_logs_tmp"
         rm -rf ${d}TMP_DIR
-        mkdir -p ${d}TMP_DIR
         
-        # Salin seluruh berkas dan struktur direktori AZenith tanpa terkecuali
-        cp -r /data/adb/.config/AZenith/* ${d}TMP_DIR/ 2>/dev/null
+        # PERBAIKAN: Bikin sub-folder nya sekalian
+        mkdir -p ${d}TMP_DIR/AZenithConfig
+        mkdir -p ${d}TMP_DIR/log
         
-        # Buat berkas system_info baru di root arsip sementara
-        INFO_FILE="${d}TMP_DIR/system_info.txt"
+        cp -r /data/adb/.config/AZenith/* ${d}TMP_DIR/AZenithConfig/ 2>/dev/null
         
-        # UBAH: Gunakan perintah sub-shell bash yang benar tanpa escape \ yang merusak
+        INFO_FILE="${d}TMP_DIR/log/AZenith.log"
+        
         MODULE_VER=${d}(grep '^version=' /data/adb/modules/AZenith/module.prop 2>/dev/null | cut -d= -f2)
         [ -z "${d}MODULE_VER" ] && MODULE_VER="Unknown"
         
@@ -94,7 +94,7 @@ suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File
         echo "    SELinux Status: ${d}SELINUX_STATUS" >> "${d}INFO_FILE"
         echo "    Fingerprint   : ${d}FINGERPRINT" >> "${d}INFO_FILE"
         echo "" >> "${d}INFO_FILE"
-        echo "  [AZenith Software]" >> "${d}INFO_FILE"
+        echo "  [AZenith]" >> "${d}INFO_FILE"
         echo "    App Version   : $appVersion" >> "${d}INFO_FILE"
         echo "    Module Version: ${d}MODULE_VER" >> "${d}INFO_FILE"
         echo "" >> "${d}INFO_FILE"
@@ -102,30 +102,36 @@ suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File
         echo "" >> "${d}INFO_FILE"
         
         if [ -f "/data/adb/.config/AZenith/debug/AZenith.log" ]; then
-            echo "--- START OF AZENITH EXECUTION LOG ---" >> "${d}INFO_FILE"
+            echo "--- START OF AZENITH SERVICE ---" >> "${d}INFO_FILE"
             cat /data/adb/.config/AZenith/debug/AZenith.log >> "${d}INFO_FILE"
         fi
 
         cp -r /sys/fs/pstore ${d}TMP_DIR/ 2>/dev/null
         
-        dmesg > ${d}TMP_DIR/dmesg.txt 2>/dev/null
-        logcat -d > ${d}TMP_DIR/logcat.txt 2>/dev/null
+        # PERBAIKAN: Gunakan >> (append) untuk log APatch/Magisk agar tidak menimpa log KSU jika foldernya beririsan
+        cat /data/adb/ksu/log/logcat.log > ${d}TMP_DIR/log/logcat.log 2>/dev/null
+        cat /data/adb/ap/log/logcat.log >> ${d}TMP_DIR/log/logcat.log 2>/dev/null
         
-        cat /data/adb/ksu/log/* > ${d}TMP_DIR/ksu.log 2>/dev/null
-        cat /cache/magisk.log > ${d}TMP_DIR/magisk.log 2>/dev/null
-        cat /data/adb/magisk.log >> ${d}TMP_DIR/magisk.log 2>/dev/null
-        cat /data/adb/ap/log/* > ${d}TMP_DIR/apatch.log 2>/dev/null
-        cat /data/adb/apatch/log/* >> ${d}TMP_DIR/apatch.log 2>/dev/null
+        cat /data/adb/ksu/log/logcat.old.log > ${d}TMP_DIR/log/logcat.old.log 2>/dev/null
+        cat /data/adb/ap/log/logcat.old.log >> ${d}TMP_DIR/log/logcat.old.log 2>/dev/null
+        
+        cat /data/adb/ksu/log/dmesg.log > ${d}TMP_DIR/log/dmesg.log 2>/dev/null
+        cat /data/adb/ap/log/dmesg.log >> ${d}TMP_DIR/log/dmesg.log 2>/dev/null
+        
+        cat /data/adb/ksu/log/dmesg.old.log > ${d}TMP_DIR/log/dmesg.old.log 2>/dev/null
+        cat /data/adb/ap/log/dmesg.old.log >> ${d}TMP_DIR/log/dmesg.old.log 2>/dev/null
+        
+        cat /cache/magisk.log > ${d}TMP_DIR/log/magisk.log 2>/dev/null
+        cat /data/adb/magisk.log >> ${d}TMP_DIR/log/magisk.log 2>/dev/null
+        cat /data/adb/apatch/log/* >> ${d}TMP_DIR/log/apatch.log 2>/dev/null
         
         cd /data/local/tmp
         tar -czf "$fileName" -C az_logs_tmp .
         
-        # Pastikan folder target ada sebelum di-copy
         mkdir -p "${d}(dirname "$targetPath")"
         cp "$fileName" "$targetPath"
         
         if [ "$saveToDownloads" = "true" ]; then
-            # UBAH: Jangan gunakan chown 1023, biarkan FUSE Android yang mengatur
             chmod 666 "$targetPath"
         else
             chown $appUid:$appUid "$targetPath"
@@ -136,6 +142,7 @@ suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File
         rm -rf az_logs_tmp
         rm -f "$fileName"
     """.trimIndent()
+
 
     val result = Shell.cmd(script).exec()
 
