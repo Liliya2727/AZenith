@@ -886,14 +886,6 @@ int main_daemon(void) {
     log_zenith(LOG_INFO, "Daemon started as PID %d", getpid());
     setspid();
     
-    const char* mapping_file_path = "/data/adb/.config/AZenith/util_mapping.dat";
-    if (access(mapping_file_path, F_OK) != 0) {
-        log_zenith(LOG_WARN, "Mapping cache not found at startup. Generating fallback mapping...");
-        systemv("sys.azenith-utilityconf checkrefreshrate");
-    } else {
-        log_zenith(LOG_INFO, "Mapping cache verified successfully.");
-    }
-
     systemv("setprop persist.sys.rianixia.learning_enabled true");
     systemv("setprop persist.sys.azenith.state running");
     notify("Initializing...", "Starting AZenith service...", false, 0);
