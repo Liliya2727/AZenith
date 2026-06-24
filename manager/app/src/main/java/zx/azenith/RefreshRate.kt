@@ -23,6 +23,9 @@ import android.hardware.display.DisplayManager
 import android.view.Display
 import android.util.Log
 import com.topjohnwu.superuser.Shell
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class RefreshRateReceiver : BroadcastReceiver() {
 
@@ -36,7 +39,15 @@ class RefreshRateReceiver : BroadcastReceiver() {
         val fps = intent.getIntExtra("fps", 60)
         Log.d(TAG, "Applying refresh rate: ${fps}Hz")
 
-        applyRefreshRate(context, fps)
+        val pendingResult = goAsync()
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                applyRefreshRate(context, fps)
+            } finally {
+                pendingResult.finish()
+            }
+        }
     }
 
     private fun applyRefreshRate(context: Context, fps: Int) {
@@ -48,7 +59,6 @@ class RefreshRateReceiver : BroadcastReceiver() {
             return
         }
 
-        // Sort descending → index 0 = highest rate (SF behavior)
         val supportedRates = display.supportedModes
             .map { Math.round(it.refreshRate) }
             .distinct()
@@ -59,22 +69,23 @@ class RefreshRateReceiver : BroadcastReceiver() {
         val sfIndex = supportedRates.indexOf(fps)
 
         if (sfIndex == -1) {
-            Log.w(TAG, "FPS $fps not supported on this device. Supported: $supportedRates")
+            Log.w(TAG, "FPS $fps not supported. Supported: $supportedRates")
             return
         }
 
         val commands = arrayOf(
             "service call SurfaceFlinger 1035 i32 $sfIndex",
             "setprop persist.vendor.display.refresh_rate $fps",
-            "setprop persist.sys.display.refresh_rate $fps",
+            "setprop persist.sys.display.refresh_rate $fps"
         )
 
         val result = Shell.cmd(*commands).exec()
-
+        
         if (result.isSuccess) {
-            Log.d(TAG, "Refresh rate → ${fps}Hz (SF index: $sfIndex of $supportedRates) ✓")
+            Log.d(TAG, "Refresh rate → ${fps}Hz (SF index: $sfIndex) ✓")
         } else {
-            Log.w(TAG, "Failed to set ${fps}Hz: ${result.err}")
+            Log.w(TAG, "Failed: ${result.err}")
         }
     }
+
 }
