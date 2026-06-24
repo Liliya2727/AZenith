@@ -199,6 +199,7 @@ int uidof(pid_t pid);
 // App Monitor
 char* get_visible_package(SystemStateCache* cache);
 int get_pids_of(const char* name, pid_t* pids, int max_pids);
+int get_current_refresh_rate(void);
 
 // Profiler
 extern bool (*get_screenstate)(SystemStateCache*);
