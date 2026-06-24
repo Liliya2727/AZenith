@@ -33,6 +33,8 @@ import java.nio.channels.FileChannel
 import java.nio.channels.FileLock
 import java.nio.file.StandardOpenOption
 import org.lsposed.hiddenapibypass.HiddenApiBypass
+import android.hardware.display.DisplayManager
+import android.view.Display
 
 
 @SuppressLint("StaticFieldLeak", "DiscouragedPrivateApi", "PrivateApi")
@@ -282,6 +284,7 @@ object AppMonitor {
             val isCharging = getChargingStatus()
             val pkgName = focusedApp.substringBefore(" ")
             val appName = getAppName(pkgName)
+            val currentRefreshRate = getCurrentRefreshRate()
         
             return buildString {
                 appendLine("focused_app $focusedApp")
@@ -291,10 +294,10 @@ object AppMonitor {
                 appendLine("battery_level $batteryLevel")
                 appendLine("is_charging $isCharging")
                 appendLine("app_name $appName")
+                appendLine("refresh_rate $currentRefreshRate")
         }
     }
     
-
     private fun getZenMode(): Int {
         return try {
             getZenModeMethod?.invoke(notificationManager) as? Int ?: 0
@@ -628,5 +631,17 @@ object AppMonitor {
             0
         }
     }
-
+    
+    private fun getCurrentRefreshRate(): Int {
+        return try {
+            val dm = systemContext?.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
+            val display = dm?.getDisplay(Display.DEFAULT_DISPLAY)
+            
+            val refreshRate = display?.refreshRate ?: 60.0f
+            Math.round(refreshRate)
+        } catch (e: Exception) {
+            -1
+        }
+    }
+    
 }
