@@ -20,9 +20,8 @@
 #include <poll.h>
 #include <pthread.h>
 
-
 /**
- * GLOBAL VARIABLES
+ * @brief GLOBAL VARIABLES
  */
 char* gamestart = NULL;
 char* active_app_name = NULL;
@@ -44,18 +43,6 @@ pthread_mutex_t cache_mutex = PTHREAD_MUTEX_INITIALIZER;
 typedef struct {
     char package[256];
 } PreloadArgs;
-
-/**
- * @brief Thread worker function to run GamePreload asynchronously.
- */
-static void* async_preload_worker(void* arg) {
-    PreloadArgs* args = (PreloadArgs*)arg;
-    
-    GamePreload(args->package);
-    
-    free(args);
-    return NULL;
-}
 
 /**
  * @struct DaemonContext
@@ -85,11 +72,14 @@ typedef struct {
 } DaemonContext;
 
 /**
- * PRIVATE FUNCTION PROTOTYPES
+ * @brief PRIVATE FUNCTION PROTOTYPES
  */
+static void* async_preload_worker(void* arg);
+static void* java_lock_watcher_thread(void* arg);
 static void init_daemon_context(DaemonContext* ctx);
 static void verify_system_integrity(void);
 static void wait_for_java_companion(DaemonContext* ctx);
+static void load_initial_config_files(DaemonContext* ctx);
 static int setup_inotify_watchers(void);
 static bool process_inotify_events(int inotify_fd, DaemonContext* ctx, int timeout_ms);
 static void handle_background_apps_event(void);
@@ -100,8 +90,20 @@ static void apply_balanced_profile(DaemonContext* ctx);
 static void reload_gamelist_cache(DaemonContext* ctx);
 
 /**
+ * @brief Thread worker function to run GamePreload asynchronously.
+ * @param arg Pointer to PreloadArgs structure.
+ * @return NULL
+ */
+static void* async_preload_worker(void* arg) {
+    PreloadArgs* args = (PreloadArgs*)arg;
+    GamePreload(args->package);
+    free(args);
+    return NULL;
+}
+
+/**
  * @brief Initializes the daemon context with default values.
- * * @param ctx Pointer to the DaemonContext structure.
+ * @param ctx Pointer to the DaemonContext structure.
  */
 static void init_daemon_context(DaemonContext* ctx) {
     memset(ctx, 0, sizeof(DaemonContext));
@@ -123,7 +125,7 @@ static void init_daemon_context(DaemonContext* ctx) {
 }
 
 /**
- * @brief Safely frees the gamelist cache memory.
+ * @brief Safely frees the gamelist cache memory under mutex lock.
  */
 void free_gamelist_cache(void) {
     pthread_mutex_lock(&cache_mutex);
@@ -135,6 +137,10 @@ void free_gamelist_cache(void) {
     pthread_mutex_unlock(&cache_mutex);
 }
 
+/**
+ * @brief Loads the initial config file values from disk into context.
+ * @param ctx Pointer to the DaemonContext structure.
+ */
 static void load_initial_config_files(DaemonContext* ctx) {
     FILE *fp;
     char val[16];
@@ -169,10 +175,9 @@ static void load_initial_config_files(DaemonContext* ctx) {
                ctx->config_freqoffset, ctx->config_bypasspath);
 }
 
-
 /**
  * @brief Reads GAMELIST (JSON) from disk and caches it in memory.
- * Designed to be memory-leak safe and non-blocking for I/O in the main loop.
+ * @param ctx Pointer to the DaemonContext structure.
  */
 void reload_gamelist_cache(DaemonContext* ctx) {
     free_gamelist_cache();
@@ -222,7 +227,6 @@ void reload_gamelist_cache(DaemonContext* ctx) {
 
     char* ptr = buf;
     while ((ptr = strstr(ptr, "\": {")) != NULL) {
-        
         char* start_quote = ptr - 1;
         while (start_quote > buf && *start_quote != '"') {
             start_quote--;
@@ -250,7 +254,6 @@ void reload_gamelist_cache(DaemonContext* ctx) {
             g_game_cache[g_game_cache_count].package[pkg_len] = '\0';
 
             char* next_block = strstr(ptr + 4, "\": {");
-
             char* p;
 
             p = strstr(ptr, "\"perf_lite_mode\":");
@@ -285,22 +288,21 @@ void reload_gamelist_cache(DaemonContext* ctx) {
 
             g_game_cache_count++;
         }
-        
         ptr += 4;
     }
 
     free(buf);
-    
     pthread_mutex_unlock(&cache_mutex);
+    
     if (!ctx->is_initialize_complete) {
         log_zenith(LOG_INFO, "Gamelist in-memory cache loaded successfully. Total: %d games registered.", g_game_cache_count);
     }
-    
 }
-
 
 /**
  * @brief Background thread to monitor Java daemon liveness via fcntl blocking.
+ * @param arg Pointer to lock path string.
+ * @return NULL
  */
 static void* java_lock_watcher_thread(void* arg) {
     const char* lock_path = (const char*)arg;
@@ -321,7 +323,6 @@ static void* java_lock_watcher_thread(void* arg) {
 
     char signal_byte = '1';
     write(java_lock_pipe[1], &signal_byte, 1);
-    
     return NULL;
 }
 
@@ -356,6 +357,7 @@ static void verify_system_integrity(void) {
 
 /**
  * @brief Waits for the Java companion daemon to acquire its lock file.
+ * @param ctx Pointer to the DaemonContext structure.
  */
 static void wait_for_java_companion(DaemonContext* ctx) {
     log_zenith(LOG_INFO, "Waiting for Java companion daemon to initialize...");
@@ -380,7 +382,7 @@ static void wait_for_java_companion(DaemonContext* ctx) {
 
 /**
  * @brief Sets up inotify watchers for relevant module directories.
- * * @return File descriptor for inotify, or -1 on failure.
+ * @return File descriptor for inotify, or -1 on failure.
  */
 static int setup_inotify_watchers(void) {
     int fd = inotify_init1(IN_NONBLOCK);
@@ -402,7 +404,6 @@ static int setup_inotify_watchers(void) {
     }
     return fd;
 }
-
 
 /**
  * @brief Processes PID adjustments when background_apps event is triggered.
@@ -432,10 +433,14 @@ static void handle_background_apps_event(void) {
             bool found = false;
             for (int j = 0; j < game_pid_count; j++) {
                 if (new_pids[i] == game_pids[j]) {
-                    found = true; break;
+                    found = true; 
+                    break;
                 }
             }
-            if (!found) { pids_changed = true; break; }
+            if (!found) { 
+                pids_changed = true; 
+                break; 
+            }
         }
     }
 
@@ -479,7 +484,10 @@ static void handle_background_apps_event(void) {
 
 /**
  * @brief Reads events from inotify descriptor and routes actions.
- * * @return true if an exit command was received, false otherwise.
+ * @param inotify_fd Watcher file descriptor.
+ * @param ctx Pointer to DaemonContext structure.
+ * @param timeout_ms Poll timeout in milliseconds.
+ * @return true if an exit command was received, false otherwise.
  */
 static bool process_inotify_events(int inotify_fd, DaemonContext* ctx, int timeout_ms) {
     if (inotify_fd < 0) return false;
@@ -542,10 +550,9 @@ static bool process_inotify_events(int inotify_fd, DaemonContext* ctx, int timeo
                                     if (ctx->is_initialize_complete && strcmp(ctx->prev_ai_state, ai_state) != 0) {
                                         log_zenith(LOG_INFO, "Dynamic profile toggled, Reapplying Balanced Profiles");
                                         ctx->cur_mode = PERFCOMMON;
-                                        
                                         apply_balanced_profile(ctx);
-                                        
                                         strcpy(ctx->prev_ai_state, ai_state);
+                                        
                                         if (strcmp(ai_state, "1") == 0) {
                                             if (gamestart) { free(gamestart); gamestart = NULL; }
                                             if (active_app_name) { free(active_app_name); active_app_name = NULL; }
@@ -574,10 +581,10 @@ static bool process_inotify_events(int inotify_fd, DaemonContext* ctx, int timeo
                             log_zenith(LOG_INFO, "Configuration updated, notify user to reboot");
                             notify("Daemon Info", "Configuration updated. Please reboot your device to take full effect.", false, 0);
                         }
+                        
                         if (strcmp(event->name, "freqoffset") == 0) {
                             char path[PATH_MAX];
                             snprintf(path, sizeof(path), "/data/adb/.config/AZenith/freqoffset");
-                            
                             FILE *fp = fopen(path, "r");
                             if (fp) {
                                 if (fgets(ctx->config_freqoffset, sizeof(ctx->config_freqoffset), fp)) {
@@ -586,8 +593,7 @@ static bool process_inotify_events(int inotify_fd, DaemonContext* ctx, int timeo
                                 }
                                 fclose(fp);
                             }
-                        }
-                        else if (strcmp(event->name, "bypasspath") == 0) {
+                        } else if (strcmp(event->name, "bypasspath") == 0) {
                             char path[PATH_MAX];
                             snprintf(path, sizeof(path), "/data/adb/.config/AZenith/bypasschgconfig/bypasspath");
                             FILE *fp = fopen(path, "r");
@@ -597,8 +603,7 @@ static bool process_inotify_events(int inotify_fd, DaemonContext* ctx, int timeo
                                 }
                                 fclose(fp);
                             }
-                        } 
-                        else if (strcmp(event->name, "bypasschg") == 0) {
+                        } else if (strcmp(event->name, "bypasschg") == 0) {
                             char path[PATH_MAX], val[16] = {0};
                             snprintf(path, sizeof(path), "/data/adb/.config/AZenith/bypasschgconfig/bypasschg");
                             FILE *fp = fopen(path, "r");
@@ -606,8 +611,7 @@ static bool process_inotify_events(int inotify_fd, DaemonContext* ctx, int timeo
                                 if (fgets(val, sizeof(val), fp)) ctx->config_bypasschg = atoi(val);
                                 fclose(fp);
                             }
-                        } 
-                        else if (strcmp(event->name, "bypasschgthreshold") == 0) {
+                        } else if (strcmp(event->name, "bypasschgthreshold") == 0) {
                             char path[PATH_MAX], val[16] = {0};
                             snprintf(path, sizeof(path), "/data/adb/.config/AZenith/bypasschgconfig/bypasschgthreshold");
                             FILE *fp = fopen(path, "r");
@@ -625,14 +629,13 @@ static bool process_inotify_events(int inotify_fd, DaemonContext* ctx, int timeo
     return false;
 }
 
-
 /**
  * @brief Evaluates and applies dynamic battery bypass threshold logic.
+ * @param ctx Pointer to DaemonContext structure.
  */
 static void handle_dynamic_bypass(DaemonContext* ctx) {
     if (strcmp(ctx->config_bypasspath, "UNSUPPORTED") != 0 && strlen(ctx->config_bypasspath) > 0) {
         if (ctx->cur_mode == PERFORMANCE_PROFILE) {
-            
             int threshold = ctx->config_bypasschgthreshold;
             int current_battery = current_system_cache.battery_level;
             int is_device_charging = current_system_cache.is_charging;
@@ -664,6 +667,7 @@ static void handle_dynamic_bypass(DaemonContext* ctx) {
 
 /**
  * @brief Applies system tuning parameters specifically for Performance Mode.
+ * @param ctx Pointer to DaemonContext structure.
  */
 static void apply_performance_profile(DaemonContext* ctx) {
     toast("Applying Performance Profile");
@@ -731,7 +735,6 @@ static void apply_performance_profile(DaemonContext* ctx) {
             p_args->package[sizeof(p_args->package) - 1] = '\0'; 
 
             pthread_t preload_thread;
-
             pthread_attr_t attr;
             pthread_attr_init(&attr);
             pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
@@ -745,11 +748,11 @@ static void apply_performance_profile(DaemonContext* ctx) {
             log_zenith(LOG_ERROR, "Failed to allocate memory for preload arguments");
         }
     }
-
 }
 
 /**
- * @brief Reverts system to Endurace state (Eco Mode).
+ * @brief Reverts system to Endurance state (Eco Mode).
+ * @param ctx Pointer to DaemonContext structure.
  */
 static void apply_eco_profile(DaemonContext* ctx) {
     if (ctx->cur_mode == ECO_MODE) return;
@@ -759,7 +762,6 @@ static void apply_eco_profile(DaemonContext* ctx) {
     ctx->cur_mode = ECO_MODE;                
     ctx->need_profile_checkup = false;
 
-    
     notify("ECO Mode", "System is now at Endurance state", false, 0);
     log_zenith(LOG_INFO, "Applying ECO Mode");
 
@@ -784,7 +786,6 @@ static void apply_eco_profile(DaemonContext* ctx) {
     
         if (strcmp(current_now, ctx->saved_renderer) != 0) {
             log_zenith(LOG_INFO, "Restoring original system renderer: %s", ctx->saved_renderer);
-            
             if (strcmp(ctx->saved_renderer, "default") == 0) {
                 systemv("sys.azenith-utilityconf setrender default");
             } else {
@@ -799,6 +800,7 @@ static void apply_eco_profile(DaemonContext* ctx) {
 
 /**
  * @brief Reverts system to Optimal state (Balanced Mode).
+ * @param ctx Pointer to DaemonContext structure.
  */
 static void apply_balanced_profile(DaemonContext* ctx) {
     if (ctx->is_initialize_complete && ctx->cur_mode == BALANCED_PROFILE) return;
@@ -832,7 +834,6 @@ static void apply_balanced_profile(DaemonContext* ctx) {
     
         if (strcmp(current_now, ctx->saved_renderer) != 0) {
             log_zenith(LOG_INFO, "Restoring original system renderer: %s", ctx->saved_renderer);
-            
             if (strcmp(ctx->saved_renderer, "default") == 0) {
                 systemv("sys.azenith-utilityconf setrender default");
             } else {
@@ -850,9 +851,9 @@ static void apply_balanced_profile(DaemonContext* ctx) {
     }
 }
 
-
 /**
  * @brief Main entry point for the daemon logic.
+ * @return 0 on clean exit, 1 on initialization failure.
  */
 int main_daemon(void) {
     verify_system_integrity();
@@ -872,7 +873,7 @@ int main_daemon(void) {
 
     wait_for_java_companion(&ctx);
     
-        if (pipe(java_lock_pipe) != 0) {
+    if (pipe(java_lock_pipe) != 0) {
         log_zenith(LOG_ERROR, "Failed to create java lock pipe");
     } else {
         pthread_t lock_thread;
@@ -893,6 +894,7 @@ int main_daemon(void) {
     systemv("setprop persist.sys.rianixia.thermalcore-bigdata.path /data/adb/.config/AZenith/debug");
     runthermalcore();
     run_profiler(PERFCOMMON);
+    systemv("sys.azenith-utilityconf FSTrim");
 
     FILE* fp_ai_init = fopen(DAEMON_MODES, "r");
     if (fp_ai_init) {
@@ -901,7 +903,6 @@ int main_daemon(void) {
     }
 
     int inotify_fd = setup_inotify_watchers();
-    
     load_initial_config_files(&ctx);
 
     log_zenith(LOG_INFO, "Reading initial applist status...");
@@ -918,7 +919,6 @@ int main_daemon(void) {
     
     /* Main Daemon Loop */
     while (1) {
-    
         int poll_timeout = -1;
         if (need_loop) {
             poll_timeout = 0;
@@ -932,7 +932,6 @@ int main_daemon(void) {
         }
 
         bool should_exit = process_inotify_events(inotify_fd, &ctx, poll_timeout);
-        
         need_loop = false; 
         
         if (java_daemon_died) {
@@ -1026,7 +1025,6 @@ int main_daemon(void) {
             if (!ctx.need_profile_checkup && ctx.cur_mode == PERFORMANCE_PROFILE && ctx.has_applied_renderer && game_pid_count > 0) {
                 continue;
             }
-
             
             bool is_renderer_changing = false;
             
@@ -1061,7 +1059,10 @@ int main_daemon(void) {
                         log_zenith(LOG_ERROR, "Unable to fetch any PIDs for %s after 5 retries. Dropping.", active_app_name ? active_app_name : gamestart);
                         free(gamestart);
                         gamestart = NULL;
-                        if (active_app_name) { free(active_app_name); active_app_name = NULL; }
+                        if (active_app_name) { 
+                            free(active_app_name); 
+                            active_app_name = NULL; 
+                        }
                         ctx.pid_retries = 0;
                         ctx.need_profile_checkup = true;
                         continue;
@@ -1080,7 +1081,6 @@ int main_daemon(void) {
                     }
                 }
             }
-            
             apply_performance_profile(&ctx);
 
         } else if (ctx.is_initialize_complete && get_low_power_state(&current_system_cache)) {
@@ -1089,7 +1089,6 @@ int main_daemon(void) {
             apply_balanced_profile(&ctx);
         }
     }
-
 
     if (inotify_fd >= 0) close(inotify_fd);
     return 0;

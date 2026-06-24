@@ -367,8 +367,6 @@ ui_print "- Setting Permissions..."
 pm grant zx.azenith android.permission.READ_EXTERNAL_STORAGE
 pm grant zx.azenith android.permission.POST_NOTIFICATIONS
 pm grant zx.azenith android.permission.READ_MEDIA_IMAGES
-pm grant zx.azenith android.permission.WRITE_SETTINGS
-pm grant zx.azenith android.permission.WRITE_SECURE_SETTINGS
 set_perm_recursive "$MODPATH/system/bin" 0 0 0755 0755
 ui_print "- # # # # # # # # # # # # # # # # # # # # #"
 

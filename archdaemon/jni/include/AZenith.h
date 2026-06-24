@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #ifndef AZENITH_H
 #define AZENITH_H
 
@@ -142,7 +158,6 @@ int read_current_ma();
 void disable_bypass();
 int enable_bypass();
 int check_bypass_compatibility();
-int get_battery_level();
 void print_bypass_path_list();
 
 // CLI
@@ -204,7 +219,7 @@ int get_current_refresh_rate(void);
 // Profiler
 extern bool (*get_screenstate)(SystemStateCache*);
 extern bool (*get_low_power_state)(SystemStateCache*);
-char* get_gamestart(GameConfig* options, SystemStateCache* cache); // FIX: GameOptions -> GameConfig
+char* get_gamestart(GameConfig* options, SystemStateCache* cache);
 bool get_screenstate_normal(SystemStateCache* cache);
 bool get_low_power_state_normal(SystemStateCache* cache);
 void run_profiler(const int profile);

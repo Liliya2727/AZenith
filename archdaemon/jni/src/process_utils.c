@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,12 +17,13 @@
 #include <AZenith.h>
 #include <sys/system_properties.h>
 
-/***********************************************************************************
- * Function Name      : get_pids_of
- * Inputs             : name (char *), pids (pid_t array), max_pids (int)
- * Returns            : int - jumlah PID yang berhasil ditemukan
- * Description        : Menarik semua PID dari background_apps untuk package tertentu.
- ***********************************************************************************/
+/**
+ * @brief Retrieves all PIDs associated with a specific package name from the background apps cache.
+ * @param name The target package name.
+ * @param pids Array to store the found PIDs.
+ * @param max_pids Maximum number of PIDs the array can hold.
+ * @return The total number of PIDs successfully found and stored.
+ */
 int get_pids_of(const char* name, pid_t* pids, int max_pids) {
     if (!name || !name[0] || max_pids < 1) return 0;
     
@@ -49,13 +50,11 @@ int get_pids_of(const char* name, pid_t* pids, int max_pids) {
     return count;
 }
 
-/***********************************************************************************
- * Function Name      : uidof
- * Inputs             : pid (pid_t) - PID of process
- * Returns            : uid (int) - UID of process
- * Description        : Fetch UID from background_apps cache.
- * Note               : Returns -1 on error.
- ***********************************************************************************/
+/**
+ * @brief Fetches the UID of a process from the background apps cache using its PID.
+ * @param pid The PID of the process.
+ * @return The UID of the process, or -1 on error/not found.
+ */
 int uidof(pid_t pid) {
     if (pid <= 0) return -1;
 
@@ -80,14 +79,10 @@ int uidof(pid_t pid) {
     return -1;
 }
 
-
-/***********************************************************************************
- * Function Name      : set_priority
- * Inputs             : pid (pid_t) - PID to be boosted
- * Returns            : None
- * Description        : Sets the maximum CPU nice priority and I/O priority of a
- *                      given process.
- ***********************************************************************************/
+/**
+ * @brief Sets the maximum CPU nice priority (-20) and real-time I/O priority for a given process.
+ * @param pid The PID of the process to boost.
+ */
 void set_priority(const pid_t pid) {    
     if (setpriority(PRIO_PROCESS, pid, -20) == -1)
         log_zenith(LOG_ERROR, "Unable to set nice priority for %d", pid);

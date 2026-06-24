@@ -18,13 +18,11 @@
 #include <sys/system_properties.h>
 #include <time.h>
 
-/***********************************************************************************
- * Function Name      : trim_newline
- * Inputs             : str (char *) - string to trim newline from
- * Returns            : char * - string without newline
- * Description        : Trims a newline character at the end of a string if
- * present.
- ***********************************************************************************/
+/**
+ * @brief Trims a newline character at the end of a string if present.
+ * @param string The string to trim.
+ * @return Pointer to the modified string, or NULL if input was NULL.
+ */
 [[gnu::always_inline]] char* trim_newline(char* string) {
     if (string == NULL)
         return NULL;
@@ -36,13 +34,36 @@
     return string;
 }
 
-/***********************************************************************************
- * Function Name      : notify
- * Inputs             : const char* title, const char* fmt, bool chrono, int timeout
- * Returns            : None
- * Description        : Push a notification.
- ***********************************************************************************/
- void notify(const char* title, const char* fmt, bool chrono, int timeout_ms, ...) {
+/**
+ * @brief Escape single quotes in a string to make it safe for shell execution.
+ * @param dest Destination buffer.
+ * @param src Source string.
+ * @param max_size Maximum size of destination buffer.
+ */
+void escape_shell_string(char *dest, const char *src, size_t max_size) {
+    size_t j = 0;
+    while (*src && j < max_size - 5) { 
+        if (*src == '\'') {
+            dest[j++] = '\'';
+            dest[j++] = '\\';
+            dest[j++] = '\'';
+            dest[j++] = '\'';
+        } else {
+            dest[j++] = *src;
+        }
+        src++;
+    }
+    dest[j] = '\0';
+}
+
+/**
+ * @brief Push an Android broadcast notification.
+ * @param title Notification title.
+ * @param fmt Format string for the message.
+ * @param chrono Chronometer flag as bool.
+ * @param timeout_ms Timeout in milliseconds (0 for no timeout).
+ */
+void notify(const char* title, const char* fmt, bool chrono, int timeout_ms, ...) {
     char message[512];
     va_list args;
     va_start(args, timeout_ms);
@@ -76,36 +97,10 @@
     }
 }
 
-/***********************************************************************************
- * Function Name      : escape shell string
- * Inputs             : String
- * Returns            : None
- * Description        : Keep Quote in Notify
- ***********************************************************************************/
-void escape_shell_string(char *dest, const char *src, size_t max_size) {
-    size_t j = 0;
-    while (*src && j < max_size - 5) { 
-        if (*src == '\'') {
-            dest[j++] = '\'';
-            dest[j++] = '\\';
-            dest[j++] = '\'';
-            dest[j++] = '\'';
-        } else {
-            dest[j++] = *src;
-        }
-        src++;
-    }
-    dest[j] = '\0';
-}
-
-/***********************************************************************************
- * Function Name      : timern
- * Inputs             : None
- * Returns            : char * - pointer to a statically allocated string
- * with the formatted time.
- * Description        : Generates a timestamp with the format
- * [YYYY-MM-DD HH:MM:SS.milliseconds].
- ***********************************************************************************/
+/**
+ * @brief Generates a timestamp with the format [YYYY-MM-DD HH:MM:SS.milliseconds].
+ * @return Pointer to a statically allocated string containing the timestamp.
+ */
 char* timern(void) {
     static char timestamp[64];
     struct timeval tv;
@@ -132,36 +127,31 @@ char* timern(void) {
     return timestamp;
 }
 
-/***********************************************************************************
- * Function Name      : sighandler
- * Inputs             : int signal - exit signal
- * Returns            : None
- * Description        : Handle exit signal.
- ***********************************************************************************/
+/**
+ * @brief Handles termination signals and exits cleanly.
+ * @param signal The received exit signal.
+ */
 [[noreturn]] void sighandler(const int signal) {
     switch (signal) {
-    case SIGTERM:
-        log_zenith(LOG_INFO, "Received SIGTERM, exiting.");
-        break;
-    case SIGINT:
-        log_zenith(LOG_INFO, "Received SIGINT, exiting.");
-        break;
+        case SIGTERM:
+            log_zenith(LOG_INFO, "Received SIGTERM, exiting.");
+            break;
+        case SIGINT:
+            log_zenith(LOG_INFO, "Received SIGINT, exiting.");
+            break;
     }
 
     _exit(EXIT_SUCCESS);
 }
 
-/***********************************************************************************
- * Function Name      : toast
- * Inputs             : message (const char *) - Message to display
- * Returns            : None
- * Description        : Display a toast notification using bellavita.toast app.
- ***********************************************************************************/
+/**
+ * @brief Display a toast notification using Zenith receiver.
+ * @param message Message to display.
+ */
 void toast(const char* message) {
     char val[PROP_VALUE_MAX] = {0};
 
     if (__system_property_get("persist.sys.azenithconf.showtoast", val) > 0 && val[0] == '1') {
-
         int exit = systemv("su -c \"am broadcast "
                            "-a zx.azenith.ACTION_MANAGE "
                            "-n zx.azenith/.receiver.ZenithReceiver "
@@ -175,12 +165,9 @@ void toast(const char* message) {
     }
 }
 
-/***********************************************************************************
- * Function Name      : is_kanged
- * Inputs             : None
- * Returns            : None
- * Description        : Checks if the module renamed/modified by 3rd party.
- ***********************************************************************************/
+/**
+ * @brief Checks if the module properties have been renamed or modified by a 3rd party.
+ */
 void is_kanged(void) {
     if (systemv("grep -q '^name=AZenith火$' %s", MODULE_PROP) != 0) [[clang::unlikely]] {
         goto doorprize;
@@ -194,45 +181,34 @@ void is_kanged(void) {
 
 doorprize:
     log_zenith(LOG_FATAL, "Module modified by 3rd party, exiting.");
-    notify("Daemon Error", "Trying to rename me?", "false", 0);
+    notify("Daemon Error", "Trying to rename me?", true, 0);
     systemv("setprop persist.sys.azenith.service \"\"");
     systemv("setprop persist.sys.azenith.state stopped");
     exit(EXIT_FAILURE);
 }
 
-/***********************************************************************************
- * Function Name      : check_module_version
- * Inputs             : None
- * Returns            : None
- * Description        : Compares version inside module.prop with daemon version.
- ***********************************************************************************/
+/**
+ * @brief Compares the version inside module.prop with the daemon version.
+ */
 void check_module_version(void) {
     char DAEMON_VERSION[MAX_LINE] = {0};
 
     snprintf(DAEMON_VERSION, sizeof(DAEMON_VERSION), "%s", MODULE_VERSION);
 
-    int ret = systemv(
-        "grep -q '^version=%s$' %s",
-        DAEMON_VERSION,
-        MODULE_PROP
-    );
+    int ret = systemv("grep -q '^version=%s$' %s", DAEMON_VERSION, MODULE_PROP);
 
     if (ret != 0) [[clang::unlikely]] {
-        log_zenith(LOG_FATAL,
-                   "AZenith version mismatch with daemon version! please reinstall the module!");
-        notify("Daemon Error", "AZenith version mismatch, please reinstall!", "false", 0);
+        log_zenith(LOG_FATAL, "AZenith version mismatch with daemon version! please reinstall the module!");
+        notify("Daemon Error", "AZenith version mismatch, please reinstall!", true, 0);
         systemv("setprop persist.sys.azenith.service \"\"");
         systemv("setprop persist.sys.azenith.state stopped");
         exit(EXIT_FAILURE);
     }
 }
 
-/***********************************************************************************
- * Function Name      : checkstate
- * Inputs             : None
- * Returns            : None
- * Description        : Exits if the module prop is "stopped" or not set
- ***********************************************************************************/
+/**
+ * @brief Exits the program if the module state is set to "stopped" or is empty.
+ */
 void checkstate(void) {
     char state[64] = {0};
     FILE* fp = popen("getprop persist.sys.azenith.state", "r");
@@ -252,34 +228,27 @@ killsvc:
     exit(EXIT_FAILURE);
 }
 
-/***********************************************************************************
- * Function Name      : return_true
- * Inputs             : None
- * Returns            : bool - only true
- * Description        : Will be used for error fallback.
- * Note               : Never call this function.
- ***********************************************************************************/
+/**
+ * @brief Error fallback function that always returns true.
+ * @note Never call this function directly.
+ * @return Always true.
+ */
 bool return_true(void) {
     return true;
 }
 
-/***********************************************************************************
- * Function Name      : return_false
- * Inputs             : None
- * Returns            : bool - only false
- * Description        : Will be used for error fallback.
- * Note               : Never call this function.
- ***********************************************************************************/
+/**
+ * @brief Error fallback function that always returns false.
+ * @note Never call this function directly.
+ * @return Always false.
+ */
 bool return_false(void) {
     return false;
 }
 
-/***********************************************************************************
- * Function Name      : setspid
- * Inputs             : None
- * Returns            : Service PID
- * Description        : Set Service PID Properties
- ***********************************************************************************/
+/**
+ * @brief Sets the service PID into the Android system properties.
+ */
 void setspid(void) {
     char cmd[128];
     pid_t pid = getpid();
@@ -288,12 +257,9 @@ void setspid(void) {
     systemv(cmd);
 }
 
-/***********************************************************************************
- * Function Name      : runthermalcore
- * Inputs             : none
- * Returns            : None
- * Description        : run thermalcore service if enabled
- ***********************************************************************************/
+/**
+ * @brief Runs the thermalcore service in the background if enabled in properties.
+ */
 void runthermalcore(void) {
     char thermalcore[PROP_VALUE_MAX] = {0};
     __system_property_get("persist.sys.azenithconf.thermalcore", thermalcore);
@@ -317,23 +283,22 @@ void runthermalcore(void) {
     }
 }
 
-/***********************************************************************************
- * Function Name      : skip_space
- * Inputs             : p (char *)
- * Returns            : char * - pointer to first non-space character
- * Description        : Skips whitespace characters in a string
- ***********************************************************************************/
+/**
+ * @brief Skips whitespace characters in a string.
+ * @param p Pointer to the string.
+ * @return Pointer to the first non-space character.
+ */
 char* skip_space(char* p) {
     while (*p && isspace(*p)) p++;
     return p;
 }
 
-/***********************************************************************************
- * Function Name      : extract_string_value
- * Inputs             : dest, key_pos, max_len
- * Returns            : None
- * Description        : Extracts value from key: "value" string format
- ***********************************************************************************/
+/**
+ * @brief Extracts value from a "key: value" string format.
+ * @param dest Destination buffer for the extracted value.
+ * @param key_pos Pointer to the start of the key/string.
+ * @param max_len Maximum length to copy into dest.
+ */
 void extract_string_value(char* dest, const char* key_pos, size_t max_len) {
     if (!key_pos) {
         strncpy(dest, "default", max_len-1);
@@ -365,5 +330,3 @@ void extract_string_value(char* dest, const char* key_pos, size_t max_len) {
     strncpy(dest, start, len);
     dest[len] = '\0';
 }
-
-
