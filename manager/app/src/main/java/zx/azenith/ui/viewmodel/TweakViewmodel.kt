@@ -186,7 +186,6 @@ class TweakViewModel : ViewModel() {
         }
     }
 
-
     suspend fun applyRestoreData(
         context: Context, 
         backupData: Map<String, String>, 
@@ -197,7 +196,12 @@ class TweakViewModel : ViewModel() {
             if (restoreTweaks) {
                 backupData.forEach { (key, value) ->
                     if (key != "persist.sys.azenithdebug.soctype" && key != APPLIST_BACKUP_KEY && value.isNotEmpty()) {
+                        
                         PropertyUtils.set(key, value)
+                        
+                        if (key == "persist.sys.azenithconf.freqoffset") {
+                            Shell.cmd("echo $value > /data/adb/.config/AZenith/freqoffset").exec()
+                        }
                     }
                 }
             }
@@ -221,7 +225,6 @@ class TweakViewModel : ViewModel() {
             delay(1200) 
         }
     }
-
     
     fun loadAllConfiguration(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -410,7 +413,7 @@ class TweakViewModel : ViewModel() {
         val propValue = if (index == 0) "Disabled" else offsetLabels[index].replace("%", "")
         viewModelScope.launch(Dispatchers.IO) {
             PropertyUtils.set("persist.sys.azenithconf.freqoffset", propValue)
-            Shell.cmd("echo $propValue > /data/adb/.config/AZenith/freqoffset")
+            Shell.cmd("echo $propValue > /data/adb/.config/AZenith/freqoffset").exec()
         }
     }
 
