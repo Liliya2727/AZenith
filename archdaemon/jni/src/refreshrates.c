@@ -20,6 +20,34 @@
 
 
 /***********************************************************************************
+ * Function Name      : get_current_refresh_rate
+ * Inputs             : None
+ * Returns            : int - Current Refresh Rate in Hz (atau -1 jika gagal)
+ * Description        : Retrieves current refresh rate from app_monitor file
+ ***********************************************************************************/
+int get_current_refresh_rate(void) {
+    FILE *fp = fopen(APP_MONITOR_FILE, "r");
+    if (!fp) {
+        return -1;
+    }
+
+    char line[256];
+    int refresh_rate = -1;
+
+    while (fgets(line, sizeof(line), fp)) {
+        if (strncmp(line, "refresh_rate ", 13) == 0) {
+            if (sscanf(line, "refresh_rate %d", &refresh_rate) == 1) {
+                break;
+            }
+        }
+    }
+
+    fclose(fp);
+    return refresh_rate;
+}
+
+
+/***********************************************************************************
  * Function Name      : apply_dynamic_refresh_rate
  * Inputs             : target_rr (int)
  * Returns            : None

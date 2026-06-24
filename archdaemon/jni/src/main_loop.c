@@ -708,6 +708,9 @@ static void apply_performance_profile(DaemonContext* ctx) {
 
     if (!IS_DEFAULT(opts.refresh_rate)) {
         int rr = atoi(opts.refresh_rate);
+        if (ctx->saved_refresh_rate < 0) {
+            ctx->saved_refresh_rate = get_current_refresh_rate();
+        }
         apply_dynamic_refresh_rate(rr);
     }
           

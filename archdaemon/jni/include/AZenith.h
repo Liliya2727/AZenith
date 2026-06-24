@@ -50,6 +50,7 @@
 #define MODULE_REMOVE "/data/adb/modules/AZenith/remove"
 #define BYPASSCHG_CONFIG "/data/adb/.config/AZenith/bypasschgconfig"
 #define MODULE_VERSION ".placeholder"
+#define APP_MONITOR_FILE "/data/adb/.config/AZenith/app_status" 
 
 #define IS_TRUE(v)    ((v) && strcmp((v), "true") == 0)
 #define IS_FALSE(v)   ((v) && strcmp((v), "false") == 0)
