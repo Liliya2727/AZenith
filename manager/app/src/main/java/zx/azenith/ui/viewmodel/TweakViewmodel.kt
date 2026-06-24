@@ -18,6 +18,7 @@ package zx.azenith.ui.viewmodel
 
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.view.WindowManager
@@ -35,6 +36,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zx.azenith.R
+import zx.azenith.RefreshRateReceiver
 import zx.azenith.ui.util.BackupManager
 import zx.azenith.ui.util.PropertyUtils
 
@@ -541,12 +543,18 @@ class TweakViewModel : ViewModel() {
     
     fun executeSetRefreshRates(reason: String, context: Context) {
         isRefreshRateLoading = true
-        Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setrefreshrates $reason").submit {
-            viewModelScope.launch {
-                delay(1000)
-                loadAllConfiguration(context)
-                isRefreshRateLoading = false
-            }
+    
+        val fps = reason.toIntOrNull() ?: 60
+        val intent = Intent(context, RefreshRateReceiver::class.java).apply {
+            action = "zx.azenith.SET_FPS"
+            putExtra("fps", fps)
+        }
+        context.sendBroadcast(intent)
+    
+        viewModelScope.launch {
+            delay(1000)
+            loadAllConfiguration(context)
+            isRefreshRateLoading = false
         }
     }
 
