@@ -1,3 +1,12 @@
+## AZenith 5.0.4
+### • Changelog
+- Fixed an Anti-Bootloop issue on KSU Metamodule mode
+- Refactored AZenith Service to a **Fully Event-Driven** 
+- Removed the refresh rates mapping data (everything related to refresh rates are maintained by manager now)
+- Try Fix an issue where Java Daemon always crashed in Miui Roms
+- Lower the minimum supported Android to **Android 10 (SDK 29)**
+
+
 ## AZenith 5.0
 ### • Changelog
 - **Major UI Overhaul**: Implemented a significant redesign of the user interface for a cleaner and more modern experience.
