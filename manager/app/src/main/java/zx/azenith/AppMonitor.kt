@@ -505,14 +505,19 @@ object AppMonitor {
     
             try {
                 thread = activityThreadClass.getMethod("systemMain").invoke(null)
-            } catch (e: Exception) {
-                System.err.println("WARN: systemMain() failed (MIUI?): ${e.cause?.message ?: e.message}")
+            } catch (t: Throwable) {
+                val cause = generateSequence(t) { it.cause }.lastOrNull()
+                System.err.println("WARN: systemMain() failed (${t.javaClass.simpleName}): ${cause?.message}")
             }
     
             if (thread == null) {
-                thread = activityThreadClass.getMethod("currentActivityThread").invoke(null)
+                try {
+                    thread = activityThreadClass.getMethod("currentActivityThread").invoke(null)
+                } catch (t: Throwable) {
+                    System.err.println("WARN: currentActivityThread() also failed: ${t.message}")
+                }
             }
-    
+
             thread ?: error("Both systemMain() and currentActivityThread() returned null")
     
             systemContext = activityThreadClass.getMethod("getSystemContext").invoke(thread) as? Context
