@@ -56,10 +56,12 @@ int get_current_refresh_rate(void) {
 void apply_dynamic_refresh_rate(int target_rr) {
     int max_hw = get_max_refresh_rate();
     int final_rr = target_rr;
+    
     if (final_rr > max_hw) {
         log_zenith(LOG_WARN, "Requested %dHz exceeds hardware max %dHz. Capping to max.", target_rr, max_hw);
         final_rr = max_hw;
     }
+    
     log_zenith(LOG_INFO, "Set refresh rates to %dHz", final_rr);
     systemv("sys.azenith-utilityconf setrefreshrates %d", final_rr);
 }
@@ -68,33 +70,27 @@ void apply_dynamic_refresh_rate(int target_rr) {
 /***********************************************************************************
  * Function Name      : get_max_refresh_rate
  * Inputs             : None
- * Returns            : int - Max Refresh Rate dalam Hz berdasarkan berkas pemetaan
- * Description        : Mendeteksi refresh rate maksimum dari cache file util_mapping.dat
+ * Returns            : int - Max Refresh Rate dalam Hz
+ * Description        : Mendeteksi refresh rate maksimum dari app_monitor file
  ***********************************************************************************/
 int get_max_refresh_rate(void) {
-    const char* mapping_path = "/data/adb/.config/AZenith/util_mapping.dat";
-    FILE *fp = fopen(mapping_path, "r");
-
+    FILE *fp = fopen(APP_MONITOR_FILE, "r");
     if (!fp) {
-        log_zenith(LOG_WARN, "Mapping file not found in %s", mapping_path);
+        log_zenith(LOG_WARN, "App monitor file not found, defaulting max refresh rate to 60Hz");
         return 60;
     }
 
-    char line[64];
+    char line[256];
     int max_rr = 60;
+
     while (fgets(line, sizeof(line), fp)) {
-        char *delimiter = strchr(line, '=');
-        if (delimiter != NULL) {
-            *delimiter = '\0';
-            
-            int current_fps = atoi(line);
-            if (current_fps > max_rr) {
-                max_rr = current_fps;
+        if (strncmp(line, "max_refresh_rate ", 17) == 0) {
+            if (sscanf(line, "max_refresh_rate %d", &max_rr) == 1) {
+                break;
             }
         }
     }
 
     fclose(fp);
-    return max_rr;
+    return max_rr > 0 ? max_rr : 60;
 }
-
