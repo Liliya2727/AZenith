@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,13 +16,12 @@
 
 #include <AZenith.h>
 
-/***********************************************************************************
- * Function Name      : execute_command
- * Inputs             : command (const char *) - shell command to execute
- * Returns            : char * - Pointer to the dynamically allocated output of the command
- *                      variadic arguments - Additional arguments for command
- * Description        : Executes a shell command and captures its output.
- ***********************************************************************************/
+/**
+ * @brief Executes a shell command via Android standard shell and captures its standard output.
+ * @note The caller is fully responsible for freeing the returned dynamically allocated string.
+ * @param format Format string for the shell command, followed by variable arguments.
+ * @return Pointer to the captured output string (trimmed), or NULL if the execution or fork fails.
+ */
 char* execute_command(const char* format, ...) {
     char command[MAX_COMMAND_LENGTH];
     va_list args;
@@ -78,17 +77,15 @@ char* execute_command(const char* format, ...) {
     return strdup(trim_newline(output));
 }
 
-/***********************************************************************************
- * Function Name      : execute_direct
- * Inputs             : path (const char *) - Path to the executable
- *                      arg0 (const char *) - First argument (typically the program name)
- *                      variadic arguments - Additional arguments, must end with NULL
- * Returns            : char * - Pointer to the dynamically allocated output of the command
- * Description        : Executes a binary directly with specified arguments and captures output.
- * Note               : Caller is responsible for freeing the returned string.
- ***********************************************************************************/
+/**
+ * @brief Executes a binary directly without spawning a shell and captures its standard output.
+ * @note The caller is fully responsible for freeing the returned dynamically allocated string.
+ * @param path Absolute path to the executable binary.
+ * @param arg0 The first argument passed to the program (typically the program name itself).
+ * @return Pointer to the captured output string (trimmed), or NULL if execution or fork fails.
+ */
 char* execute_direct(const char* path, const char* arg0, ...) {
-    // Supports up to 15 arguments + NULL
+    /* Supports up to 15 arguments + NULL */
     const char* argv[16];
     int argc = 0;
     argv[argc++] = arg0;
@@ -149,15 +146,11 @@ char* execute_direct(const char* path, const char* arg0, ...) {
     return strdup(trim_newline(output));
 }
 
-/***********************************************************************************
- * Function Name      : systemv
- * Inputs             : format (const char *) - shell command to execute
- *                      variadic arguments - other arguments
- * Returns            : int - 0 if execution success
- *                           -1 if execution failed
- *                            * other if command returns an error
- * Description        : Executes a shell command just like system() with additional format.
- ***********************************************************************************/
+/**
+ * @brief Executes a shell command using a formatted string, mimicking standard system() behavior.
+ * @param format Format string for the shell command, followed by variable arguments.
+ * @return The exit status code of the command (WEXITSTATUS), or -1 if fork/execution fails.
+ */
 int systemv(const char* format, ...) {
     char command[MAX_COMMAND_LENGTH];
     va_list args;
@@ -175,7 +168,7 @@ int systemv(const char* format, ...) {
         char* env[] = {MY_PATH, NULL};
         execle("/system/bin/sh", "sh", "-c", command, NULL, env);
 
-        // If exec fails
+        /* If exec fails */
         _exit(127);
     }
 

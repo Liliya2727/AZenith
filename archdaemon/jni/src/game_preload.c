@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,14 +19,11 @@
 #include <sys/system_properties.h>
 #include <string.h>
 
-/***********************************************************************************
- * Function Name      : GamePreload
- * Inputs             : const char* package - target application package name
- * Returns            : void
- * Description        : Preloads all native libraries (.so) inside lib/arm64
- ***********************************************************************************/
+/**
+ * @brief Preloads all native libraries (.so) or split APKs inside the target application into memory.
+ * @param package Target application package name.
+ */
 void GamePreload(const char* package) {
-
     sleep(5);
     
     if (!package || package[0] == '\0') {
@@ -58,13 +55,11 @@ void GamePreload(const char* package) {
     char lib_path[300];
     snprintf(lib_path, sizeof(lib_path), "%s/lib/arm64", apk_path);
 
-    // Mengecek keberadaan file .so
     bool lib_exists = false;
     DIR* dir = opendir(lib_path);
     if (dir) {
         struct dirent* entry;
         while ((entry = readdir(dir)) != NULL) {
-            // Optimasi: pastikan .so ada di akhir nama file
             char* ext = strrchr(entry->d_name, '.');
             if (ext && strcmp(ext, ".so") == 0) {
                 lib_exists = true;
@@ -74,13 +69,11 @@ void GamePreload(const char* package) {
         closedir(dir);
     }
 
-    // Mengambil property dengan cara yang lebih aman
     char budget[32] = {0};
     if (__system_property_get("persist.sys.azenithconf.preloadbudget", budget) <= 0) {
         strcpy(budget, "500M");
     }
 
-    // --- PENGGABUNGAN LOGIKA (DRY Principle) ---
     const char* target_path = lib_exists ? lib_path : apk_path;
     const char* target_type = lib_exists ? "libs" : "split apks";
 
@@ -100,7 +93,6 @@ void GamePreload(const char* package) {
     int total_pages = 0;
     char total_size[32] = {0};
 
-    // --- OPTIMASI LOOP PARSING ---
     while (fgets(line, sizeof(line), fp)) {
         line[strcspn(line, "\n")] = 0;
 
@@ -112,17 +104,16 @@ void GamePreload(const char* package) {
             if (sscanf(p_pages, "Touched Pages: %d (%31[^)])", &pages, size) == 2) {
                 total_pages += pages;
                 strncpy(total_size, size, sizeof(total_size) - 1);
-                total_size[sizeof(total_size) - 1] = '\0'; // Safety null-termination
+                total_size[sizeof(total_size) - 1] = '\0';
                 
                 log_zenith(LOG_DEBUG, "Preloading complete: %d memory pages touched", pages);
                 log_zenith(LOG_DEBUG, "Total memory used for preloaded libraries: %s", size);
             } else {
                 log_zenith(LOG_WARN, "Failed to parse Touched Pages");
             }
-            continue; // Skip pengecekan ekstensi jika ini baris summary
+            continue;
         }
 
-        // Cek ekstensi dengan lebih efisien dan akurat
         char* ext = strrchr(line, '.');
         if (ext) {
             if (strcmp(ext, ".so") == 0   || strcmp(ext, ".apk") == 0 || 

@@ -11,5 +11,8 @@ This Daemon is reading app status from App Companion API File
 - User current DND status
 - Battery Saver status
 - Screen state
+- Battery level
+- Charging status
+- Device Refresh rates
 
 Ultimately, ArchDaemon serves as the bridge that allows the apps and the underlying binaries to work together seamlessly.

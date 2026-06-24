@@ -18,12 +18,13 @@
 #include <sys/system_properties.h>
 #include <time.h>
 
-/***********************************************************************************
- * Function Name      : apply_smart_renderer
- * Inputs             : target_type, pkg, saved_ref
- * Returns            : bool - true if renderer switched
- * Description        : Checks current renderer and switches if necessary
- ***********************************************************************************/
+/**
+ * @brief Checks the current HWUI renderer and switches it to the target type if needed, then restarts the app.
+ * @param target_type The desired renderer type (e.g., "skiagl", "vulkan").
+ * @param pkg The target package name to restart after switching.
+ * @param saved_ref Buffer to store the original/previous renderer state.
+ * @return true if the renderer was changed and the app was restarted, false otherwise.
+ */
 bool apply_smart_renderer(const char* target_type, const char* pkg, char* saved_ref) {
     if (target_type == NULL || strcmp(target_type, "default") == 0 || strlen(target_type) == 0) return false;
 
@@ -51,5 +52,3 @@ bool apply_smart_renderer(const char* target_type, const char* pkg, char* saved_
     }
     return false;
 }
-
-

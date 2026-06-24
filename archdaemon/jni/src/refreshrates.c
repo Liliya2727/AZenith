@@ -18,13 +18,10 @@
 #include <sys/system_properties.h>
 #include <time.h>
 
-
-/***********************************************************************************
- * Function Name      : get_current_refresh_rate
- * Inputs             : None
- * Returns            : int - Current Refresh Rate in Hz (atau -1 jika gagal)
- * Description        : Retrieves current refresh rate from app_monitor file
- ***********************************************************************************/
+/**
+ * @brief Retrieves the current screen refresh rate from the app monitor file.
+ * @return The current refresh rate in Hz, or -1 if the file cannot be read.
+ */
 int get_current_refresh_rate(void) {
     FILE *fp = fopen(APP_MONITOR_FILE, "r");
     if (!fp) {
@@ -46,33 +43,10 @@ int get_current_refresh_rate(void) {
     return refresh_rate;
 }
 
-
-/***********************************************************************************
- * Function Name      : apply_dynamic_refresh_rate
- * Inputs             : target_rr (int)
- * Returns            : None
- * Description        : Calculates and applies refresh rate mode based on target
- ***********************************************************************************/
-void apply_dynamic_refresh_rate(int target_rr) {
-    int max_hw = get_max_refresh_rate();
-    int final_rr = target_rr;
-    
-    if (final_rr > max_hw) {
-        log_zenith(LOG_WARN, "Requested %dHz exceeds hardware max %dHz. Capping to max.", target_rr, max_hw);
-        final_rr = max_hw;
-    }
-    
-    log_zenith(LOG_INFO, "Set refresh rates to %dHz", final_rr);
-    systemv("sys.azenith-utilityconf setrefreshrates %d", final_rr);
-}
-
-
-/***********************************************************************************
- * Function Name      : get_max_refresh_rate
- * Inputs             : None
- * Returns            : int - Max Refresh Rate dalam Hz
- * Description        : Mendeteksi refresh rate maksimum dari app_monitor file
- ***********************************************************************************/
+/**
+ * @brief Detects the maximum supported hardware refresh rate from the app monitor file.
+ * @return The maximum refresh rate in Hz, defaulting to 60Hz if undetected or on error.
+ */
 int get_max_refresh_rate(void) {
     FILE *fp = fopen(APP_MONITOR_FILE, "r");
     if (!fp) {
@@ -93,4 +67,21 @@ int get_max_refresh_rate(void) {
 
     fclose(fp);
     return max_rr > 0 ? max_rr : 60;
+}
+
+/**
+ * @brief Calculates and applies the refresh rate mode, capping it to the hardware maximum if needed.
+ * @param target_rr The desired target refresh rate in Hz.
+ */
+void apply_dynamic_refresh_rate(int target_rr) {
+    int max_hw = get_max_refresh_rate();
+    int final_rr = target_rr;
+    
+    if (final_rr > max_hw) {
+        log_zenith(LOG_WARN, "Requested %dHz exceeds hardware max %dHz. Capping to max.", target_rr, max_hw);
+        final_rr = max_hw;
+    }
+    
+    log_zenith(LOG_INFO, "Set refresh rates to %dHz", final_rr);
+    systemv("sys.azenith-utilityconf setrefreshrates %d", final_rr);
 }

@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,9 +16,10 @@
 
 #include <sys/system_properties.h>
 #include <AZenith.h>
+#include <dirent.h>
+#include <string.h>
 
 BypassNode bypass_list[] = {
-
     {"COMMON_INPUT_SUSPEND", "/sys/class/power_supply/battery/input_suspend", "1", "0"},
     {"COMMON_BATT_INPUT_SUSPEND", "/sys/class/power_supply/battery/battery_input_suspend", "1", "0"},
     {"COMMON_CHG_CONTROL", "/sys/class/power_supply/battery/charger_control", "0", "1"},
@@ -102,13 +103,14 @@ BypassNode bypass_list[] = {
     {"RESTRICTED_CHG_WIRELESS", "/sys/class/power_supply/wireless/restricted_charging", "1", "0"}
 };
 
-/***********************************************************************************
- * Function Name      : echo_to_file
- * Inputs             : path (const char*), value (const char*), lock (int)
- * Returns            : int - Status result of systemv execution
- * Description        : Writes a value to a sysfs/proc node and optionally sets 
- * it to read-only (chmod 0444) to lock the value.
- ***********************************************************************************/
+
+/**
+ * @brief Writes a value to a sysfs/proc node and optionally sets it to read-only (chmod 0444) to lock the value.
+ * @param path Path to the sysfs or proc target file.
+ * @param value String value to write.
+ * @param lock Set to 1 to lock file as read-only, 0 to leave it writeable.
+ * @return Status result of systemv execution.
+ */
 int echo_to_file(const char* path, const char* value, int lock) {
     if (access(path, F_OK) != 0) return -1;
     chmod(path, 0644);
@@ -117,13 +119,10 @@ int echo_to_file(const char* path, const char* value, int lock) {
     return res;
 }
 
-/***********************************************************************************
- * Function Name      : is_charging
- * Inputs             : None
- * Returns            : int - 1 if charging/full, 0 otherwise
- * Description        : Checks the battery status via sysfs to determine if a 
- * power source is connected.
- ***********************************************************************************/
+/**
+ * @brief Checks the battery status via sysfs to determine if a power source is connected.
+ * @return 1 if status is Charging or Full, 0 otherwise.
+ */
 int is_charging() {
     char status[32] = {0};
     int fd = open("/sys/class/power_supply/battery/status", O_RDONLY);
@@ -133,13 +132,10 @@ int is_charging() {
     return (strstr(status, "Charging") || strstr(status, "Full")) ? 1 : 0;
 }
 
-/***********************************************************************************
- * Function Name      : read_current_ma
- * Inputs             : None
- * Returns            : int - Battery current in mA (positive value)
- * Description        : Reads battery current from common sysfs paths and 
- * normalizes the value to milliAmperes.
- ***********************************************************************************/
+/**
+ * @brief Reads battery current from common sysfs paths and normalizes the value to milliAmperes.
+ * @return Battery current in mA (always a positive value), or 9999 if paths are inaccessible.
+ */
 int read_current_ma() {
     const char* current_paths[] = {
         "/sys/class/power_supply/battery/current_now",
@@ -159,13 +155,9 @@ int read_current_ma() {
     return 9999;
 }
 
-/***********************************************************************************
- * Function Name      : disable_bypass
- * Inputs             : None
- * Returns            : void
- * Description        : Retrieves the saved bypass path from system properties and 
- * restores the node to its normal charging state.
- ***********************************************************************************/
+/**
+ * @brief Retrieves the saved bypass path from system properties and restores the node to its normal charging state.
+ */
 void disable_bypass() {
     char path_key[PROP_VALUE_MAX];
     __system_property_get("persist.sys.azenithconf.bypasspath", path_key);
@@ -182,13 +174,10 @@ void disable_bypass() {
     }
 }
 
-/***********************************************************************************
- * Function Name      : enable_bypass
- * Inputs             : None
- * Returns            : int - 0 on success, -1 if unsupported, -2 if node not found
- * Description        : Sets the active bypass node to its 'on' value and locks it 
- * to bypass the battery charging circuit.
- ***********************************************************************************/
+/**
+ * @brief Sets the active bypass node to its 'on' value and locks it to bypass the battery charging circuit.
+ * @return 0 on success, -1 if unsupported, -2 if node not found in internal structure.
+ */
 int enable_bypass() {
     char path_key[PROP_VALUE_MAX];
     __system_property_get("persist.sys.azenithconf.bypasspath", path_key);
@@ -205,14 +194,10 @@ int enable_bypass() {
     return -2;
 }
 
-/***********************************************************************************
- * Function Name      : check_bypass_compatibility
- * Inputs             : None
- * Returns            : int - 0 if found, 1 if not found, -1 if no charger
- * Description        : Iterates through the bypass_list to find a working node.
- * Prints specific node names that are skipped due to 
- * non-existent paths.
- ***********************************************************************************/
+/**
+ * @brief Iterates through the bypass_list to find a working node by analyzing current drops under load.
+ * @return 0 if compatible node found, 1 if no node matches, -1 if charger is disconnected.
+ */
 int check_bypass_compatibility() {
     printf("\n\033[36m[Bypass Charge Compatibility Check]\033[0m Initializing...\n");
 
@@ -271,23 +256,9 @@ int check_bypass_compatibility() {
     return 1;
 }
 
-int get_battery_level() {
-    int capacity = 0;
-    FILE *fp = fopen("/sys/class/power_supply/battery/capacity", "r");
-    if (fp) {
-        fscanf(fp, "%d", &capacity);
-        fclose(fp);
-    }
-    return capacity;
-}
-
-/***********************************************************************************
- * Function Name      : print_bypass_path_list
- * Inputs             : None
- * Returns            : None
- * Description        : Displays all hardcoded bypass nodes and checks if they
- * exist on the current device.
- ***********************************************************************************/
+/**
+ * @brief Displays all hardcoded bypass nodes and checks if they exist on the current device.
+ */
 void print_bypass_path_list() {
     printf("\n\033[36m[AZenith Available Bypass Path List]\033[0m\n");
     printf("------------------------------------------------------------------------------------------\n");
@@ -299,11 +270,11 @@ void print_bypass_path_list() {
 
     for (int i = 0; i < total_nodes; i++) {
         if (access(bypass_list[i].path, F_OK) == 0) {
-            // Berwarna Hijau jika path ada di device
+            /* Berwarna Hijau jika path ada di device */
             printf(" \033[1;32m%-30s\033[0m | \033[32m[FOUND]\033[0m    | %s\n", bypass_list[i].name, bypass_list[i].path);
             found_count++;
         } else {
-            // Berwarna Abu-abu gelap jika path tidak ada
+            /* Berwarna Abu-abu gelap jika path tidak ada */
             printf(" \033[90m%-30s | [NOT FOUND] | %s\033[0m\n", bypass_list[i].name, bypass_list[i].path);
         }
     }

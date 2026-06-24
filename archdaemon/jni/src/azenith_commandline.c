@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,15 +17,10 @@
 #include <AZenith.h>
 #include <sys/system_properties.h>
 
-/***********************************************************************************
- * Function Name      : print_help
- * Inputs             : None
- * Returns            : None
- * Description        : Prints all available AZenith Daemon CLI commands to stdout.
- * Displays usage instructions for running the daemon,
- * selecting profiles, and sending log messages.
- ***********************************************************************************/
-void print_help() {
+/**
+ * @brief Prints all available AZenith Daemon CLI commands, usage instructions, and examples to stdout.
+ */
+void print_help(void) {
     printf(
         "AZenith Daemon CLI (by @Zexshia)\n"
         "Version: %s\n"
@@ -51,7 +46,7 @@ void print_help() {
         "\n"
         "     -cbc,  --checkbypasschg   Check bypass charge compatibility\n"
         "\n"
-        "     -bpl,  --bypasspathlist   Show all embedded bypass charging paths\n"  // <--- Tambahkan baris ini
+        "     -bpl,  --bypasspathlist   Show all embedded bypass charging paths\n"
         "\n"
         "     -V,    --version          Show AZenith current version\n"
         "\n"
@@ -60,26 +55,19 @@ void print_help() {
         "Examples:\n"
         "     sys.azenith-service --run\n"
         "     sys.azenith-service --profile 2\n"
-        "     sys.azenith-service --bypasspathlist\n"                        // <--- Tambahkan baris ini
-        "     sys.azenith-service --help\n"
-        , MODULE_VERSION
+        "     sys.azenith-service --bypasspathlist\n"
+        "     sys.azenith-service --help\n",
+        MODULE_VERSION
     );
 }
 
-
-/***********************************************************************************
- * Function Name      : handle_profile
- * Inputs             : argc - number of CLI arguments
- *                      argv - array of CLI argument strings
- * Returns            : int - 0 on success, non-zero on failure
- * Description        : Handles manual profile selection. Validates that Auto Mode
- *                      is disabled, reads the requested profile (1/2/3), logs the
- *                      action, sends a toast message, and executes the profiler.
- *                      Profiles:
- *                          1 = Performance
- *                          2 = Balanced
- *                          3 = Eco Mode
- ***********************************************************************************/
+/**
+ * @brief Handles manual performance profile selection via CLI argument.
+ * @note Blocks execution if AI/Auto Mode is active in system properties.
+ * @param argc Number of CLI arguments.
+ * @param argv Array of CLI argument strings.
+ * @return 0 on success, or 1 if an invalid profile is requested or Auto Mode is enabled.
+ */
 int handle_profile(int argc, char** argv) {
     if (argc < 3 || !argv[2] || !argv[2][0]) {
         fprintf(stderr, "ERROR: Missing profile number. Use --profile <1|2|3>\n");
@@ -131,22 +119,12 @@ int handle_profile(int argc, char** argv) {
     return 0;
 }
 
-/***********************************************************************************
- * Function Name      : handle_log
- * Inputs             : argc - number of CLI arguments
- *                      argv - array of CLI argument strings
- * Returns            : int - 0 on success, non-zero on failure
- * Description        : Handles the --log command. Validates log level (0..4),
- *                      concatenates the message arguments into a single string,
- *                      and forwards the formatted log entry to the external log
- *                      handler.
- *                      Log Levels:
- *                          0 = DEBUG
- *                          1 = INFO
- *                          2 = WARN
- *                          3 = ERROR
- *                          4 = FATAL
- ***********************************************************************************/
+/**
+ * @brief Validates input log levels and forwards the combined message string to the external standard logger.
+ * @param argc Number of CLI arguments.
+ * @param argv Array of CLI argument strings.
+ * @return 0 on success, or 1 on parameter validation errors.
+ */
 int handle_log(int argc, char** argv) {
     if (argc < 5) {
         fprintf(stderr,
@@ -187,22 +165,12 @@ int handle_log(int argc, char** argv) {
     return 0;
 }
 
-/***********************************************************************************
- * Function Name      : handle_verboselog
- * Inputs             : argc - number of CLI arguments
- *                      argv - array of CLI argument strings
- * Returns            : int - 0 on success, non-zero on failure
- * Description        : Handles the --log command. Validates log level (0..4),
- *                      concatenates the message arguments into a single string,
- *                      and forwards the formatted log entry to the external log
- *                      handler.
- *                      Log Levels:
- *                          0 = DEBUG
- *                          1 = INFO
- *                          2 = WARN
- *                          3 = ERROR
- *                          4 = FATAL
- ***********************************************************************************/
+/**
+ * @brief Validates input log levels and forwards the combined message string to the external verbose logger.
+ * @param argc Number of CLI arguments.
+ * @param argv Array of CLI argument strings.
+ * @return 0 on success, or 1 on parameter validation errors.
+ */
 int handle_verboselog(int argc, char** argv) {
     if (argc < 5) {
         fprintf(stderr,
@@ -243,26 +211,24 @@ int handle_verboselog(int argc, char** argv) {
     return 0;
 }
 
-/***********************************************************************************
- * Function Name      : printversion
- * Inputs             : None
- * Returns            : None
- * Description        : Show current AZenith daemon version
- ***********************************************************************************/
-void printversion() {
+/**
+ * @brief Prints the current AZenith module version string to stdout.
+ */
+void printversion(void) {
     printf("%s\n", MODULE_VERSION);
 }
 
-void openAppMainActivity() {
+/**
+ * @brief Directly launches the primary Android MainActivity of the AZenith application interface.
+ */
+void openAppMainActivity(void) {
     systemv("/system/bin/am start -a android.intent.action.MAIN zx.azenith/.MainActivity");
 }
 
-/***********************************************************************************
- * Function Name      : require_daemon_running
- * Inputs             : None
- * Returns            : None
- * Description        : block CLI execution if daemon is not running
- ***********************************************************************************/
+/**
+ * @brief Restricts execution of specific CLI components if the backend daemon engine is not active.
+ * @return 1 if the daemon state check passes, 0 otherwise.
+ */
 int require_daemon_running(void) {
     if (!check_running_state()) {
         fprintf(stderr,
@@ -274,13 +240,10 @@ int require_daemon_running(void) {
     return 1;
 }
 
-/***********************************************************************************
- * Function Name      : clearlogs
- * Inputs             : None
- * Returns            : None
- * Description        : Clear AZenith Logs
- ***********************************************************************************/
-void clearlogs() {
+/**
+ * @brief Clears all historical and active log caches from storage nodes and triggers an internal app broadcast reset.
+ */
+void clearlogs(void) {
     systemv("rm -f /data/adb/.config/AZenith/debug/AZenith.log");
     systemv("rm -f /data/adb/.config/AZenith/debug/AZenithVerbose.log");
     systemv("rm -f /data/adb/.config/AZenith/preload/AZenithPR.log");        
