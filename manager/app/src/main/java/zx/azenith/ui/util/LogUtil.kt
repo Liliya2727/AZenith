@@ -40,10 +40,7 @@ suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File
 
     val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
     val fileName = "AZenith_Logs_$timeStamp.tar.gz"
-    
-
     val appUid = context.applicationInfo.uid
-    
 
     val targetPath = if (saveToDownloads) {
         "/data/media/0/Download/$fileName"
@@ -51,68 +48,98 @@ suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File
         "${context.cacheDir.absolutePath}/$fileName"
     }
     
+    val realDeviceName = getRealDeviceName(context)
+    val chipsetName = getChipsetName(context)
+    val appVersion = try {
+        context.packageManager.getPackageInfo(context.packageName, 0).versionName
+    } catch (e: Exception) {
+        "Unknown"
+    }
+    
     val script = """
         saveToDownloads="$saveToDownloads"
         TMP_DIR="/data/local/tmp/az_logs_tmp"
         rm -rf ${'$'}TMP_DIR
-        mkdir -p ${'$'}TMP_DIR/debug
+        mkdir -p ${'$'}TMP_DIR
         
-        # Copy file utama yang diminta
+        # Salin seluruh berkas dan struktur direktori AZenith tanpa terkecuali
+        cp -r /data/adb/.config/AZenith/* ${'$'}TMP_DIR/ 2>/dev/null
+        
+        # Buat berkas system_info baru di root arsip sementara
+        INFO_FILE="${'$'}TMP_DIR/system_info.txt"
+        
+        MODULE_VER=\$(grep '^version=' /data/adb/modules/AZenith/module.prop | cut -d= -f2)
+        [ -z "${'$'}MODULE_VER" ] && MODULE_VER="Unknown"
+        
+        KERNEL_INFO=\$(uname -r -m)
+        ANDROID_VER=\$(getprop ro.build.version.release)
+        API_LEVEL=\$(getprop ro.build.version.sdk)
+        FINGERPRINT=\$(getprop ro.build.fingerprint)
+        SELINUX_STATUS=\$(getenforce 2>/dev/null)
+        
+        echo "################################################################" > "${"$"}${"{INFO_FILE}"}"
+        echo "                       AZenith Diagnostics                      " >> "${"$"}${"{INFO_FILE}"}"
+        echo "################################################################" >> "${"$"}${"{INFO_FILE}"}"
+        echo "" >> "${"$"}${"{INFO_FILE}"}"
+        echo "  [Device Information]" >> "${"$"}${"{INFO_FILE}"}"
+        echo "    Device Name   : $realDeviceName" >> "${"$"}${"{INFO_FILE}"}"
+        echo "    Chipset       : $chipsetName" >> "${"$"}${"{INFO_FILE}"}"
+        echo "    Android Ver   : ${'$'}ANDROID_VER (API ${'$'}API_LEVEL)" >> "${"$"}${"{INFO_FILE}"}"
+        echo "    Kernel        : ${'$'}KERNEL_INFO" >> "${"$"}${"{INFO_FILE}"}"
+        echo "    SELinux Status: ${'$'}SELINUX_STATUS" >> "${"$"}${"{INFO_FILE}"}"
+        echo "    Fingerprint   : ${'$'}FINGERPRINT" >> "${"$"}${"{INFO_FILE}"}"
+        echo "" >> "${"$"}${"{INFO_FILE}"}"
+        echo "  [AZenith Software]" >> "${"$"}${"{INFO_FILE}"}"
+        echo "    App Version   : $appVersion" >> "${"$"}${"{INFO_FILE}"}"
+        echo "    Module Version: ${'$'}MODULE_VER" >> "${"$"}${"{INFO_FILE}"}"
+        echo "" >> "${"$"}${"{INFO_FILE}"}"
+        echo "################################################################" >> "${"$"}${"{INFO_FILE}"}"
+        echo "" >> "${"$"}${"{INFO_FILE}"}"
+        
+        if [ -f "/data/adb/.config/AZenith/debug/AZenith.log" ]; then
+            echo "--- START OF AZENITH EXECUTION LOG ---" >> "${"$"}${"{INFO_FILE}"}"
+            cat /data/adb/.config/AZenith/debug/AZenith.log >> "${"$"}${"{INFO_FILE}"}"
+        fi
+
         cp -r /sys/fs/pstore ${'$'}TMP_DIR/ 2>/dev/null
-        cp /data/adb/.config/AZenith/sysmon.log ${'$'}TMP_DIR/ 2>/dev/null
-        cp -r /data/adb/.config/AZenith/debug/* ${'$'}TMP_DIR/debug/ 2>/dev/null
         
-        # Dump dmesg & logcat
         dmesg > ${'$'}TMP_DIR/dmesg.txt
         logcat -d > ${'$'}TMP_DIR/logcat.txt
         
-        # Grab root manager logs (ditambahkan alternatif path magisk yang umum)
         cat /data/adb/ksu/log/* > ${'$'}TMP_DIR/ksu.log 2>/dev/null
         cat /cache/magisk.log > ${'$'}TMP_DIR/magisk.log 2>/dev/null
         cat /data/adb/magisk.log >> ${'$'}TMP_DIR/magisk.log 2>/dev/null
         cat /data/adb/ap/log/* > ${'$'}TMP_DIR/apatch.log 2>/dev/null
         cat /data/adb/apatch/log/* >> ${'$'}TMP_DIR/apatch.log 2>/dev/null
         
-        # Compress jadi tar.gz
         cd /data/local/tmp
         tar -czf "$fileName" -C az_logs_tmp .
         
-        # Pindahkan ke tujuan akhir
         cp "$fileName" "$targetPath"
         
-        # Penanganan khusus berdasarkan lokasi penyimpanan
         if [ "$saveToDownloads" = "true" ]; then
-            # Berikan izin ke group media_rw (1023) agar kebaca sistem
             chown 1023:1023 "$targetPath"
             chmod 664 "$targetPath"
         else
-            # WAJIB: Kembalikan kepemilikan ke aplikasi dan perbaiki SELinux Context
             chown $appUid:$appUid "$targetPath"
             chmod 600 "$targetPath"
             restorecon "$targetPath"
         fi
         
-        # Bersihin temp files
         rm -rf az_logs_tmp
         rm -f "$fileName"
     """.trimIndent()
-    
 
     val result = Shell.cmd(script).exec()
-
-    
-
 
     val finalFileForApp = if (saveToDownloads) {
         File("/storage/emulated/0/Download/$fileName")
     } else {
         File(targetPath)
     }
-    
 
     if (result.isSuccess && finalFileForApp.exists()) {
         if (saveToDownloads) {
-
             MediaScannerConnection.scanFile(context, arrayOf(finalFileForApp.absolutePath), null, null)
         }
         finalFileForApp
