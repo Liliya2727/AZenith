@@ -43,7 +43,7 @@ abort_api() {
   ui_print ""
   ui_print "! Installation Aborted"
   ui_print "! Unsupported Android Version Detected"
-  ui_print "! AZenith requires Android 11 (API 30) or newer."
+  ui_print "! AZenith requires Android 10 (API 29) or newer."
   ui_print "! Your device is currently running API $API_LEVEL."
   abort "- # # # # # # # # # # # # # # # # # # # # #"
 }
@@ -86,8 +86,8 @@ ui_print "              AZenith              "
 ui_print ""
 ui_print "- Installing AZenith..."
 
-# API Level Check (Require API 30+)
-[ "$API_LEVEL" -lt 30 ] && abort_api
+# API Level Check (Require API 29+)
+[ "$API_LEVEL" -lt 29 ] && abort_api
 
 # Extract Module Directiories
 mkdir -p "$MODULE_CONFIG"

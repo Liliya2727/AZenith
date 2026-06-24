@@ -18,7 +18,7 @@ android {
 
     defaultConfig {
         applicationId = "zx.azenith"
-        minSdk = 30
+        minSdk = 29
         targetSdk = 37
         versionCode = (Placeholder)
         versionName = "Placeholder"
