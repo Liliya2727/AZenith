@@ -19,7 +19,8 @@ package zx.azenith
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.provider.Settings
+import android.hardware.display.DisplayManager
+import android.view.Display
 import android.util.Log
 import com.topjohnwu.superuser.Shell
 
@@ -33,47 +34,47 @@ class RefreshRateReceiver : BroadcastReceiver() {
         if (intent.action != "zx.azenith.SET_FPS") return
 
         val fps = intent.getIntExtra("fps", 60)
-        Log.d(TAG, "Applying refresh rate: $fps")
+        Log.d(TAG, "Applying refresh rate: ${fps}Hz")
 
         applyRefreshRate(context, fps)
     }
 
     private fun applyRefreshRate(context: Context, fps: Int) {
-        val resolver = context.contentResolver
+        val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY)
 
-        listOf("peak_refresh_rate", "min_refresh_rate", "user_refresh_rate").forEach { key ->
-            try {
-                Settings.System.putFloat(resolver, key, fps.toFloat())
-                Log.d(TAG, "System.$key = $fps ✓")
-            } catch (e: Exception) {
-                Log.w(TAG, "System.$key failed: ${e.message}")
-            }
+        if (display == null) {
+            Log.w(TAG, "Display not available")
+            return
         }
 
-        try {
-            Settings.Secure.putInt(resolver, "miui_refresh_rate", fps)
-            Log.d(TAG, "Secure.miui_refresh_rate = $fps ✓")
-        } catch (e: Exception) {
-            Log.w(TAG, "Secure.miui_refresh_rate failed: ${e.message}")
+        // Sort descending → index 0 = highest rate (SF behavior)
+        val supportedRates = display.supportedModes
+            .map { Math.round(it.refreshRate) }
+            .distinct()
+            .sortedDescending()
+
+        Log.d(TAG, "Supported rates: $supportedRates")
+
+        val sfIndex = supportedRates.indexOf(fps)
+
+        if (sfIndex == -1) {
+            Log.w(TAG, "FPS $fps not supported on this device. Supported: $supportedRates")
+            return
         }
 
-        applyViaRoot(fps)
-    }
-
-    private fun applyViaRoot(fps: Int) {
         val commands = arrayOf(
-            // System
-            "settings put system peak_refresh_rate $fps",
-            "settings put system min_refresh_rate $fps",
-            "settings put system user_refresh_rate $fps",
-            // Global (Android 12+)
-            "settings put global peak_refresh_rate $fps",
-            "settings put global min_refresh_rate $fps",
-            // MIUI (integer, secure)
-            "settings put secure miui_refresh_rate $fps",
+            "service call SurfaceFlinger 1035 i32 $sfIndex",
+            "setprop persist.vendor.display.refresh_rate $fps",
+            "setprop persist.sys.display.refresh_rate $fps",
         )
 
         val result = Shell.cmd(*commands).exec()
-        Log.d("AZenith", "Root result: ${result.isSuccess}, out: ${result.out}")
+
+        if (result.isSuccess) {
+            Log.d(TAG, "Refresh rate → ${fps}Hz (SF index: $sfIndex of $supportedRates) ✓")
+        } else {
+            Log.w(TAG, "Failed to set ${fps}Hz: ${result.err}")
+        }
     }
 }
