@@ -17,37 +17,35 @@
 package zx.azenith.ui.util
 
 import android.content.Context
-import com.topjohnwu.superuser.Shell
-
-private const val REFRESH_RATE_MAPPING_PATH = "/data/adb/.config/AZenith/util_mapping.dat"
+import android.hardware.display.DisplayManager
+import android.view.Display
+import kotlin.math.roundToInt
 
 /**
- * Reads util_mapping.dat and extracts just the hz keys.
- * Expected format per line: "hz=index" e.g. "120=0"
+ * Mengambil list refresh rate langsung dari DisplayManager Android native.
+ * Secara otomatis membulatkan angka desimal (misal 119.9f jadi 120) 
+ * dan menghapus nilai yang duplikat.
  */
-private fun getMappedRefreshRates(): List<Int> {
+private fun getSystemRefreshRates(context: Context): List<Int> {
     return try {
-        val result = Shell.cmd("cat $REFRESH_RATE_MAPPING_PATH").exec()
-        if (!result.isSuccess) return emptyList()
+        val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        val display = displayManager.getDisplay(Display.DEFAULT_DISPLAY) ?: return emptyList()
 
-        result.out
-            .mapNotNull { line ->
-                val trimmed = line.trim()
-                if (trimmed.isEmpty() || !trimmed.contains("=")) return@mapNotNull null
-                trimmed.substringBefore("=").trim().toIntOrNull()
-            }
+        display.supportedModes
+            .map { it.refreshRate.roundToInt() }
             .distinct()
+            .sorted() 
     } catch (e: Exception) {
         emptyList()
     }
 }
 
 fun getSupportedRefreshRates(context: Context): List<String> {
-    val mappedRR = getMappedRefreshRates().sorted()
+    val systemRR = getSystemRefreshRates(context)
 
     val finalModes = mutableListOf("default")
     
-    mappedRR.forEach { mode ->
+    systemRR.forEach { mode ->
         finalModes.add(mode.toString())
     }
 
@@ -59,9 +57,9 @@ fun getSupportedRefreshRates(context: Context): List<String> {
 }
 
 fun getSupportedRefreshRatesPicker(context: Context): List<String> {
-    val mappedRR = getMappedRefreshRates().sortedDescending()
+    val systemRR = getSystemRefreshRates(context).sortedDescending()
     
-    val finalModes = mappedRR.map { it.toString() }.toMutableList()
+    val finalModes = systemRR.map { it.toString() }.toMutableList()
 
     if (finalModes.isEmpty()) {
         finalModes.addAll(listOf("120", "90", "60"))
