@@ -276,27 +276,30 @@ object AppMonitor {
     private fun hasMissingPid(appInfo: String): Boolean =
         appInfo != NONE_APP && appInfo.endsWith(" 0 0")
 
-        private fun buildStatus(focusedApp: String): String {
-            val screenAwake = if (powerManager?.isInteractive == true) 1 else 0
-            val batterySaver = if (powerManager?.isPowerSaveMode == true) 1 else 0
-            val zenMode = getZenMode()
-            val batteryLevel = getBatteryLevel()
-            val isCharging = getChargingStatus()
-            val pkgName = focusedApp.substringBefore(" ")
-            val appName = getAppName(pkgName)
-            val currentRefreshRate = getCurrentRefreshRate()
-        
-            return buildString {
-                appendLine("focused_app $focusedApp")
-                appendLine("screen_awake $screenAwake")
-                appendLine("battery_saver $batterySaver")
-                appendLine("zen_mode $zenMode")
-                appendLine("battery_level $batteryLevel")
-                appendLine("is_charging $isCharging")
-                appendLine("app_name $appName")
-                appendLine("refresh_rate $currentRefreshRate")
+    private fun buildStatus(focusedApp: String): String {
+        val screenAwake = if (powerManager?.isInteractive == true) 1 else 0
+        val batterySaver = if (powerManager?.isPowerSaveMode == true) 1 else 0
+        val zenMode = getZenMode()
+        val batteryLevel = getBatteryLevel()
+        val isCharging = getChargingStatus()
+        val pkgName = focusedApp.substringBefore(" ")
+        val appName = getAppName(pkgName)
+        val currentRefreshRate = getCurrentRefreshRate()
+        val maxRefreshRate = getMaxRefreshRate()
+    
+        return buildString {
+            appendLine("focused_app $focusedApp")
+            appendLine("screen_awake $screenAwake")
+            appendLine("battery_saver $batterySaver")
+            appendLine("zen_mode $zenMode")
+            appendLine("battery_level $batteryLevel")
+            appendLine("is_charging $isCharging")
+            appendLine("app_name $appName")
+            appendLine("refresh_rate $currentRefreshRate")
+            appendLine("max_refresh_rate $maxRefreshRate")
         }
     }
+
     
     private fun getZenMode(): Int {
         return try {
@@ -644,4 +647,20 @@ object AppMonitor {
         }
     }
     
+    private fun getMaxRefreshRate(): Int {
+        return try {
+            val dm = systemContext?.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
+            val display = dm?.getDisplay(Display.DEFAULT_DISPLAY)
+            
+            val modes = display?.supportedModes
+            if (modes != null && modes.isNotEmpty()) {
+                val maxRate = modes.maxOf { it.refreshRate }
+                Math.round(maxRate)
+            } else {
+                60
+            }
+        } catch (e: Exception) {
+            -1
+        }
+    }
 }
