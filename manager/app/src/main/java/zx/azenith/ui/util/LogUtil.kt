@@ -31,6 +31,7 @@ import kotlinx.coroutines.withContext
 
 
 suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File? = withContext(Dispatchers.IO) {
+    // Bersihkan file log lama di cache
     val cacheDir = context.cacheDir
     cacheDir.listFiles()?.forEach { file ->
         if (file.name.startsWith("AZenith_Logs_") && file.name.endsWith(".tar.gz")) {
@@ -42,8 +43,9 @@ suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File
     val fileName = "AZenith_Logs_$timeStamp.tar.gz"
     val appUid = context.applicationInfo.uid
 
+    // UBAH: Gunakan /storage/emulated/0 agar lewat FUSE Android (Otomatis ngatur permission)
     val targetPath = if (saveToDownloads) {
-        "/data/media/0/Download/$fileName"
+        "/storage/emulated/0/Download/$fileName"
     } else {
         "${context.cacheDir.absolutePath}/$fileName"
     }
@@ -56,74 +58,79 @@ suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File
         "Unknown"
     }
     
+    // TRIK AMPUH: Gunakan variabel ini untuk memanggil variabel Bash agar tidak bentrok dengan Kotlin
+    val d = "$" 
+    
     val script = """
-        saveToDownloads="$saveToDownloads"
         TMP_DIR="/data/local/tmp/az_logs_tmp"
-        rm -rf ${'$'}TMP_DIR
-        mkdir -p ${'$'}TMP_DIR
+        rm -rf ${d}TMP_DIR
+        mkdir -p ${d}TMP_DIR
         
         # Salin seluruh berkas dan struktur direktori AZenith tanpa terkecuali
-        cp -r /data/adb/.config/AZenith/* ${'$'}TMP_DIR/ 2>/dev/null
+        cp -r /data/adb/.config/AZenith/* ${d}TMP_DIR/ 2>/dev/null
         
         # Buat berkas system_info baru di root arsip sementara
-        INFO_FILE="${'$'}TMP_DIR/system_info.txt"
+        INFO_FILE="${d}TMP_DIR/system_info.txt"
         
-        MODULE_VER=\$(grep '^version=' /data/adb/modules/AZenith/module.prop | cut -d= -f2)
-        [ -z "${'$'}MODULE_VER" ] && MODULE_VER="Unknown"
+        # UBAH: Gunakan perintah sub-shell bash yang benar tanpa escape \ yang merusak
+        MODULE_VER=${d}(grep '^version=' /data/adb/modules/AZenith/module.prop 2>/dev/null | cut -d= -f2)
+        [ -z "${d}MODULE_VER" ] && MODULE_VER="Unknown"
         
-        KERNEL_INFO=\$(uname -r -m)
-        ANDROID_VER=\$(getprop ro.build.version.release)
-        API_LEVEL=\$(getprop ro.build.version.sdk)
-        FINGERPRINT=\$(getprop ro.build.fingerprint)
-        SELINUX_STATUS=\$(getenforce 2>/dev/null)
+        KERNEL_INFO=${d}(uname -r -m)
+        ANDROID_VER=${d}(getprop ro.build.version.release)
+        API_LEVEL=${d}(getprop ro.build.version.sdk)
+        FINGERPRINT=${d}(getprop ro.build.fingerprint)
+        SELINUX_STATUS=${d}(getenforce 2>/dev/null)
         
-        echo "################################################################" > "${"$"}${"{INFO_FILE}"}"
-        echo "                       AZenith Diagnostics                      " >> "${"$"}${"{INFO_FILE}"}"
-        echo "################################################################" >> "${"$"}${"{INFO_FILE}"}"
-        echo "" >> "${"$"}${"{INFO_FILE}"}"
-        echo "  [Device Information]" >> "${"$"}${"{INFO_FILE}"}"
-        echo "    Device Name   : $realDeviceName" >> "${"$"}${"{INFO_FILE}"}"
-        echo "    Chipset       : $chipsetName" >> "${"$"}${"{INFO_FILE}"}"
-        echo "    Android Ver   : ${'$'}ANDROID_VER (API ${'$'}API_LEVEL)" >> "${"$"}${"{INFO_FILE}"}"
-        echo "    Kernel        : ${'$'}KERNEL_INFO" >> "${"$"}${"{INFO_FILE}"}"
-        echo "    SELinux Status: ${'$'}SELINUX_STATUS" >> "${"$"}${"{INFO_FILE}"}"
-        echo "    Fingerprint   : ${'$'}FINGERPRINT" >> "${"$"}${"{INFO_FILE}"}"
-        echo "" >> "${"$"}${"{INFO_FILE}"}"
-        echo "  [AZenith Software]" >> "${"$"}${"{INFO_FILE}"}"
-        echo "    App Version   : $appVersion" >> "${"$"}${"{INFO_FILE}"}"
-        echo "    Module Version: ${'$'}MODULE_VER" >> "${"$"}${"{INFO_FILE}"}"
-        echo "" >> "${"$"}${"{INFO_FILE}"}"
-        echo "################################################################" >> "${"$"}${"{INFO_FILE}"}"
-        echo "" >> "${"$"}${"{INFO_FILE}"}"
+        echo "################################################################" > "${d}INFO_FILE"
+        echo "                       AZenith Diagnostics                      " >> "${d}INFO_FILE"
+        echo "################################################################" >> "${d}INFO_FILE"
+        echo "" >> "${d}INFO_FILE"
+        echo "  [Device Information]" >> "${d}INFO_FILE"
+        echo "    Device Name   : $realDeviceName" >> "${d}INFO_FILE"
+        echo "    Chipset       : $chipsetName" >> "${d}INFO_FILE"
+        echo "    Android Ver   : ${d}ANDROID_VER (API ${d}API_LEVEL)" >> "${d}INFO_FILE"
+        echo "    Kernel        : ${d}KERNEL_INFO" >> "${d}INFO_FILE"
+        echo "    SELinux Status: ${d}SELINUX_STATUS" >> "${d}INFO_FILE"
+        echo "    Fingerprint   : ${d}FINGERPRINT" >> "${d}INFO_FILE"
+        echo "" >> "${d}INFO_FILE"
+        echo "  [AZenith Software]" >> "${d}INFO_FILE"
+        echo "    App Version   : $appVersion" >> "${d}INFO_FILE"
+        echo "    Module Version: ${d}MODULE_VER" >> "${d}INFO_FILE"
+        echo "" >> "${d}INFO_FILE"
+        echo "################################################################" >> "${d}INFO_FILE"
+        echo "" >> "${d}INFO_FILE"
         
         if [ -f "/data/adb/.config/AZenith/debug/AZenith.log" ]; then
-            echo "--- START OF AZENITH EXECUTION LOG ---" >> "${"$"}${"{INFO_FILE}"}"
-            cat /data/adb/.config/AZenith/debug/AZenith.log >> "${"$"}${"{INFO_FILE}"}"
+            echo "--- START OF AZENITH EXECUTION LOG ---" >> "${d}INFO_FILE"
+            cat /data/adb/.config/AZenith/debug/AZenith.log >> "${d}INFO_FILE"
         fi
 
-        cp -r /sys/fs/pstore ${'$'}TMP_DIR/ 2>/dev/null
+        cp -r /sys/fs/pstore ${d}TMP_DIR/ 2>/dev/null
         
-        dmesg > ${'$'}TMP_DIR/dmesg.txt
-        logcat -d > ${'$'}TMP_DIR/logcat.txt
+        dmesg > ${d}TMP_DIR/dmesg.txt 2>/dev/null
+        logcat -d > ${d}TMP_DIR/logcat.txt 2>/dev/null
         
-        cat /data/adb/ksu/log/* > ${'$'}TMP_DIR/ksu.log 2>/dev/null
-        cat /cache/magisk.log > ${'$'}TMP_DIR/magisk.log 2>/dev/null
-        cat /data/adb/magisk.log >> ${'$'}TMP_DIR/magisk.log 2>/dev/null
-        cat /data/adb/ap/log/* > ${'$'}TMP_DIR/apatch.log 2>/dev/null
-        cat /data/adb/apatch/log/* >> ${'$'}TMP_DIR/apatch.log 2>/dev/null
+        cat /data/adb/ksu/log/* > ${d}TMP_DIR/ksu.log 2>/dev/null
+        cat /cache/magisk.log > ${d}TMP_DIR/magisk.log 2>/dev/null
+        cat /data/adb/magisk.log >> ${d}TMP_DIR/magisk.log 2>/dev/null
+        cat /data/adb/ap/log/* > ${d}TMP_DIR/apatch.log 2>/dev/null
+        cat /data/adb/apatch/log/* >> ${d}TMP_DIR/apatch.log 2>/dev/null
         
         cd /data/local/tmp
         tar -czf "$fileName" -C az_logs_tmp .
         
+        # Pastikan folder target ada sebelum di-copy
+        mkdir -p "${d}(dirname "$targetPath")"
         cp "$fileName" "$targetPath"
         
         if [ "$saveToDownloads" = "true" ]; then
-            chown 1023:1023 "$targetPath"
-            chmod 664 "$targetPath"
+            # UBAH: Jangan gunakan chown 1023, biarkan FUSE Android yang mengatur
+            chmod 666 "$targetPath"
         else
             chown $appUid:$appUid "$targetPath"
             chmod 600 "$targetPath"
-            restorecon "$targetPath"
+            restorecon "$targetPath" 2>/dev/null
         fi
         
         rm -rf az_logs_tmp
@@ -132,11 +139,7 @@ suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File
 
     val result = Shell.cmd(script).exec()
 
-    val finalFileForApp = if (saveToDownloads) {
-        File("/storage/emulated/0/Download/$fileName")
-    } else {
-        File(targetPath)
-    }
+    val finalFileForApp = File(targetPath)
 
     if (result.isSuccess && finalFileForApp.exists()) {
         if (saveToDownloads) {
@@ -147,6 +150,7 @@ suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File
         null
     }
 }
+
 
 fun getShareLogIntent(context: Context, file: File): Intent {
     val uri = FileProvider.getUriForFile(
