@@ -25,30 +25,48 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "\033[31mERROR:\033[0m Please run this program as root\n");
         return 1;
     }
-    
+
     if (argc == 1 || IS_CMD(argv[1], "--help", "-h")) {
         print_help();
         return 0;
     }
 
     char* cmd = argv[1];
-    
-    if (IS_CMD(cmd, "--appactivity", "-actv")) { openAppMainActivity(); return 0; }
-    if (IS_CMD(cmd, "--run", "-r"))            { main_daemon(); return 0; }
-    if (IS_CMD(cmd, "--version", "-V"))        { printversion(); return 0; }
-    if (IS_CMD(cmd, "--clearlogs", "-c"))       { clearlogs(); return 0; }
-    if (IS_CMD(cmd, "--bypasspathlist", "-bpl")) { print_bypass_path_list(); return 0; }
-    
+
+    if (IS_CMD(cmd, "--appactivity", "-actv")) {
+        openAppMainActivity();
+        return 0;
+    }
+    if (IS_CMD(cmd, "--run", "-r")) {
+        main_daemon();
+        return 0;
+    }
+    if (IS_CMD(cmd, "--version", "-V")) {
+        printversion();
+        return 0;
+    }
+    if (IS_CMD(cmd, "--clearlogs", "-c")) {
+        clearlogs();
+        return 0;
+    }
+    if (IS_CMD(cmd, "--bypasspathlist", "-bpl")) {
+        print_bypass_path_list();
+        return 0;
+    }
+
     if (!require_daemon_running()) {
         return 1;
     }
 
-    if (IS_CMD(cmd, "--profile", "-p"))          return handle_profile(argc, argv);
-    if (IS_CMD(cmd, "--log", "-l"))              return handle_log(argc, argv);
-    if (IS_CMD(cmd, "--verboselog", "-vl"))      return handle_verboselog(argc, argv);
-    if (IS_CMD(cmd, "--checkbypasschg", "-cbc")) return check_bypass_compatibility();
-    
+    if (IS_CMD(cmd, "--profile", "-p"))
+        return handle_profile(argc, argv);
+    if (IS_CMD(cmd, "--log", "-l"))
+        return handle_log(argc, argv);
+    if (IS_CMD(cmd, "--verboselog", "-vl"))
+        return handle_verboselog(argc, argv);
+    if (IS_CMD(cmd, "--checkbypasschg", "-cbc"))
+        return check_bypass_compatibility();
+
     fprintf(stderr, "\033[31mERROR:\033[0m Unknown command: %s\n", cmd);
     return 1;
 }
-

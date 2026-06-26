@@ -22,18 +22,20 @@
  * @param cache Pointer to the SystemStateCache structure.
  */
 void read_app_status(SystemStateCache* cache) {
-    if (!cache) return;
+    if (!cache)
+        return;
 
-    FILE *fp = fopen("/data/adb/.config/AZenith/app_status", "r");
-    if (!fp) return;
-    
+    FILE* fp = fopen("/data/adb/.config/AZenith/app_status", "r");
+    if (!fp)
+        return;
+
     char line[256];
 
     memset(cache->focused_app, 0, sizeof(cache->focused_app));
     strncpy(cache->app_name, "Unknown", sizeof(cache->app_name) - 1);
     cache->battery_level = -1;
     cache->is_charging = 0;
-    
+
     while (fgets(line, sizeof(line), fp)) {
         if (strncmp(line, "focused_app ", 12) == 0) {
             int uid;
@@ -53,7 +55,6 @@ void read_app_status(SystemStateCache* cache) {
             sscanf(line + 12, "%d", &cache->is_charging);
         }
     }
-    
+
     fclose(fp);
 }
-

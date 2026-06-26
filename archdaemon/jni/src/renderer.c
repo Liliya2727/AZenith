@@ -13,20 +13,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 #include <AZenith.h>
 #include <sys/system_properties.h>
 #include <time.h>
 
 /**
- * @brief Checks the current HWUI renderer and switches it to the target type if needed, then restarts the app.
+ * @brief Checks the current HWUI renderer and switches it to the target type if needed, then
+ * restarts the app.
  * @param target_type The desired renderer type (e.g., "skiagl", "vulkan").
  * @param pkg The target package name to restart after switching.
  * @param saved_ref Buffer to store the original/previous renderer state.
  * @return true if the renderer was changed and the app was restarted, false otherwise.
  */
 bool apply_smart_renderer(const char* target_type, const char* pkg, char* saved_ref) {
-    if (target_type == NULL || strcmp(target_type, "default") == 0 || strlen(target_type) == 0) return false;
+    if (target_type == NULL || strcmp(target_type, "default") == 0 || strlen(target_type) == 0)
+        return false;
 
     char current_renderer[PROP_VALUE_MAX] = {0};
     __system_property_get("debug.hwui.renderer", current_renderer);
@@ -34,19 +36,22 @@ bool apply_smart_renderer(const char* target_type, const char* pkg, char* saved_
     if (strlen(current_renderer) == 0) {
         strcpy(current_renderer, "default");
     }
-    
+
     if (strlen(saved_ref) == 0) {
         strncpy(saved_ref, current_renderer, PROP_VALUE_MAX - 1);
     }
 
     if (strcmp(current_renderer, target_type) != 0) {
-        log_zenith(LOG_INFO, "Renderer mismatch! Current: %s | Target: %s. Switching...", current_renderer, target_type);
+        log_zenith(LOG_INFO, "Renderer mismatch! Current: %s | Target: %s. Switching...",
+                   current_renderer, target_type);
 
         systemv("sys.azenith-utilityconf setrender %s", target_type);
-        
-        usleep(200000); 
 
-        systemv("am force-stop %s && am start -n $(cmd package resolve-activity --brief %s | tail -n 1)", pkg, pkg);
+        usleep(200000);
+
+        systemv("am force-stop %s && am start -n $(cmd package resolve-activity --brief %s | tail "
+                "-n 1)",
+                pkg, pkg);
 
         return true;
     }

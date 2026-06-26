@@ -34,7 +34,8 @@ void log_zenith(LogLevel level, const char* message, ...) {
     vsnprintf(logMesg, sizeof(logMesg), message, args);
     va_end(args);
 
-    write2file(LOG_FILE, true, true, "%s %s %s: %s\n", timestamp, level_str[level], LOG_TAG, logMesg);
+    write2file(LOG_FILE, true, true, "%s %s %s: %s\n", timestamp, level_str[level], LOG_TAG,
+               logMesg);
 
     int android_log_level;
     switch (level) {
@@ -71,7 +72,8 @@ void log_preload(LogLevel level, const char* message, ...) {
             vsnprintf(logMesg, sizeof(logMesg), message, args);
             va_end(args);
 
-            write2file(LOG_FILE_PRELOAD, true, true, "%s %s %s: %s\n", timestamp, level_str[level], LOG_TAG, logMesg);
+            write2file(LOG_FILE_PRELOAD, true, true, "%s %s %s: %s\n", timestamp, level_str[level],
+                       LOG_TAG, logMesg);
 
             int android_log_level;
             switch (level) {
@@ -110,7 +112,8 @@ void log_verbose(LogLevel level, const char* message, ...) {
             vsnprintf(logMesg, sizeof(logMesg), message, args);
             va_end(args);
 
-            write2file(LOG_FILE, true, true, "%s %s %s: %s\n", timestamp, level_str[level], LOG_TAG, logMesg);
+            write2file(LOG_FILE, true, true, "%s %s %s: %s\n", timestamp, level_str[level], LOG_TAG,
+                       logMesg);
 
             int android_log_level;
             switch (level) {

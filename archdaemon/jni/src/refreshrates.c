@@ -23,7 +23,7 @@
  * @return The current refresh rate in Hz, or -1 if the file cannot be read.
  */
 int get_current_refresh_rate(void) {
-    FILE *fp = fopen(APP_MONITOR_FILE, "r");
+    FILE* fp = fopen(APP_MONITOR_FILE, "r");
     if (!fp) {
         return -1;
     }
@@ -48,7 +48,7 @@ int get_current_refresh_rate(void) {
  * @return The maximum refresh rate in Hz, defaulting to 60Hz if undetected or on error.
  */
 int get_max_refresh_rate(void) {
-    FILE *fp = fopen(APP_MONITOR_FILE, "r");
+    FILE* fp = fopen(APP_MONITOR_FILE, "r");
     if (!fp) {
         log_zenith(LOG_WARN, "App monitor file not found, defaulting max refresh rate to 60Hz");
         return 60;
@@ -70,18 +70,20 @@ int get_max_refresh_rate(void) {
 }
 
 /**
- * @brief Calculates and applies the refresh rate mode, capping it to the hardware maximum if needed.
+ * @brief Calculates and applies the refresh rate mode, capping it to the hardware maximum if
+ * needed.
  * @param target_rr The desired target refresh rate in Hz.
  */
 void apply_dynamic_refresh_rate(int target_rr) {
     int max_hw = get_max_refresh_rate();
     int final_rr = target_rr;
-    
+
     if (final_rr > max_hw) {
-        log_zenith(LOG_WARN, "Requested %dHz exceeds hardware max %dHz. Capping to max.", target_rr, max_hw);
+        log_zenith(LOG_WARN, "Requested %dHz exceeds hardware max %dHz. Capping to max.", target_rr,
+                   max_hw);
         final_rr = max_hw;
     }
-    
+
     log_zenith(LOG_INFO, "Set refresh rates to %dHz", final_rr);
     systemv("sys.azenith-utilityconf setrefreshrates %d", final_rr);
 }

@@ -27,7 +27,8 @@ bool (*get_low_power_state)(SystemStateCache*) = get_low_power_state_normal;
  * @return true if screen was awake, false otherwise.
  */
 bool get_screenstate_normal(SystemStateCache* cache) {
-    if (!cache) return true; // Default to awake if cache is missing
+    if (!cache)
+        return true; // Default to awake if cache is missing
     return cache->screen_awake != 0;
 }
 
@@ -37,7 +38,8 @@ bool get_screenstate_normal(SystemStateCache* cache) {
  * @return true if Battery Saver is enabled, false otherwise.
  */
 bool get_low_power_state_normal(SystemStateCache* cache) {
-    if (!cache) return false;
+    if (!cache)
+        return false;
     return cache->battery_saver != 0;
 }
 
@@ -57,8 +59,10 @@ void run_profiler(const int profile) {
     if (profile == 1) {
         // Assuming game_pids and gamestart are still managed globally or passed correctly
         pid_t main_pid = (game_pid_count > 0) ? game_pids[0] : 0;
-        write2file(GAME_INFO, false, false, "%s %d %d\nTime: %s\n", gamestart, main_pid, uidof(main_pid), time_str);
-        write2file(GAME_INFO_APP, false, false, "%s %d %d\nTime: %s\n", gamestart, main_pid, uidof(main_pid), time_str);
+        write2file(GAME_INFO, false, false, "%s %d %d\nTime: %s\n", gamestart, main_pid,
+                   uidof(main_pid), time_str);
+        write2file(GAME_INFO_APP, false, false, "%s %d %d\nTime: %s\n", gamestart, main_pid,
+                   uidof(main_pid), time_str);
     } else {
         write2file(GAME_INFO, false, false, "NULL 0 0\nTime: %s\n", time_str);
         write2file(GAME_INFO_APP, false, false, "NULL 0 0\nTime: %s\n", time_str);
@@ -66,7 +70,7 @@ void run_profiler(const int profile) {
 
     write2file(PROFILE_MODE, false, false, "%d\n", profile);
     write2file(PROFILE_MODE_APP, false, false, "%d\n", profile);
-    
+
     // Suggestion for future: Replace systemv with native property setting for performance
     (void)systemv("sys.azenith-profilesettings %d", profile);
 }
@@ -79,10 +83,11 @@ void run_profiler(const int profile) {
  */
 char* get_gamestart(GameConfig* options, SystemStateCache* cache) {
     char* pkg = get_visible_package(cache);
-    if (!pkg) return NULL;
+    if (!pkg)
+        return NULL;
 
     pthread_mutex_lock(&cache_mutex);
-    
+
     if (g_game_cache == NULL || g_game_cache_count == 0) {
         pthread_mutex_unlock(&cache_mutex);
         free(pkg);
@@ -94,7 +99,7 @@ char* get_gamestart(GameConfig* options, SystemStateCache* cache) {
     for (int i = 0; i < g_game_cache_count; i++) {
         if (strcmp(g_game_cache[i].package, pkg) == 0) {
             match_found = true;
-            
+
             if (options) {
                 strcpy(options->perf_lite_mode, g_game_cache[i].perf_lite_mode);
                 strcpy(options->dnd_on_gaming, g_game_cache[i].dnd_on_gaming);
@@ -114,7 +119,5 @@ char* get_gamestart(GameConfig* options, SystemStateCache* cache) {
         return NULL;
     }
 
-    return pkg; 
+    return pkg;
 }
-
-

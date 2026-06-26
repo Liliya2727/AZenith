@@ -25,10 +25,12 @@
  * @return The total number of PIDs successfully found and stored.
  */
 int get_pids_of(const char* name, pid_t* pids, int max_pids) {
-    if (!name || !name[0] || max_pids < 1) return 0;
-    
+    if (!name || !name[0] || max_pids < 1)
+        return 0;
+
     FILE* fp = fopen("/data/adb/.config/AZenith/background_apps", "r");
-    if (!fp) return 0;
+    if (!fp)
+        return 0;
 
     char line[256];
     int count = 0;
@@ -37,7 +39,7 @@ int get_pids_of(const char* name, pid_t* pids, int max_pids) {
         char pkg[128];
         pid_t pid;
         int uid;
-        
+
         if (sscanf(line, "%127s %d %d", pkg, &pid, &uid) == 3) {
             if (strcmp(pkg, name) == 0) {
                 pids[count] = pid;
@@ -56,17 +58,19 @@ int get_pids_of(const char* name, pid_t* pids, int max_pids) {
  * @return The UID of the process, or -1 on error/not found.
  */
 int uidof(pid_t pid) {
-    if (pid <= 0) return -1;
+    if (pid <= 0)
+        return -1;
 
     FILE* fp = fopen("/data/adb/.config/AZenith/background_apps", "r");
-    if (!fp) return -1;
+    if (!fp)
+        return -1;
 
     char line[256];
     while (fgets(line, sizeof(line), fp)) {
         char pkg[128];
         pid_t current_pid;
         int current_uid;
-        
+
         if (sscanf(line, "%127s %d %d", pkg, &current_pid, &current_uid) == 3) {
             if (current_pid == pid) {
                 fclose(fp);
@@ -83,7 +87,7 @@ int uidof(pid_t pid) {
  * @brief Sets the maximum CPU nice priority (-20) and real-time I/O priority for a given process.
  * @param pid The PID of the process to boost.
  */
-void set_priority(const pid_t pid) {    
+void set_priority(const pid_t pid) {
     if (setpriority(PRIO_PROCESS, pid, -20) == -1)
         log_zenith(LOG_ERROR, "Unable to set nice priority for %d", pid);
 

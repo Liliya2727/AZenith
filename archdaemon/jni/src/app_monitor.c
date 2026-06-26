@@ -23,7 +23,8 @@
  *         Caller must free() the returned pointer.
  */
 char* get_visible_package(SystemStateCache* cache) {
-    if (!cache) return NULL;
+    if (!cache)
+        return NULL;
 
     // Check if the screen is actually awake via the function pointer
     // (Assuming the function pointer signature is updated to take cache as argument)
@@ -33,6 +34,6 @@ char* get_visible_package(SystemStateCache* cache) {
     if (strlen(cache->focused_app) > 0) {
         return strdup(cache->focused_app);
     }
-    
+
     return NULL;
 }

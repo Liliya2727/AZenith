@@ -18,7 +18,8 @@
 #include <sys/system_properties.h>
 
 /**
- * @brief Prints all available AZenith Daemon CLI commands, usage instructions, and examples to stdout.
+ * @brief Prints all available AZenith Daemon CLI commands, usage instructions, and examples to
+ * stdout.
  */
 void print_help(void) {
     printf(
@@ -30,12 +31,12 @@ void print_help(void) {
         "Options:\n"
         "     -r,    --run              Start AZenith daemon service\n"
         "\n"
-        "     -p,    --profile <1|2|3>  Apply AZenith profiles via CLI\n" 
+        "     -p,    --profile <1|2|3>  Apply AZenith profiles via CLI\n"
         "                               1 : Performance\n"
         "                               2 : Balanced\n"
         "                               3 : Eco Mode\n"
         "\n"
-        "     -l,    --log <TAG> <LVL> <MSG>\n"     
+        "     -l,    --log <TAG> <LVL> <MSG>\n"
         "                               Write a log message via AZenith logging service\n"
         "                               LEVELs: 0=DEBUG, 1=INFO, 2=WARN, 3=ERROR, 4=FATAL\n"
         "\n"
@@ -57,8 +58,7 @@ void print_help(void) {
         "     sys.azenith-service --profile 2\n"
         "     sys.azenith-service --bypasspathlist\n"
         "     sys.azenith-service --help\n",
-        MODULE_VERSION
-    );
+        MODULE_VERSION);
 }
 
 /**
@@ -78,29 +78,28 @@ int handle_profile(int argc, char** argv) {
     __system_property_get("persist.sys.azenithconf.AIenabled", ai_state);
 
     if (!strcmp(ai_state, "1")) {
-        fprintf(stderr,
-            "ERROR: Auto Mode is enabled.\n"
-            "       Manual profile selection is blocked.\n");
+        fprintf(stderr, "ERROR: Auto Mode is enabled.\n"
+                        "       Manual profile selection is blocked.\n");
         return 1;
     }
 
     const char* profile = argv[2];
-    
+
     if (!strcmp(profile, "0")) {
         log_zenith(LOG_WARN, "WARN: Cannot Apply Profile 0 (Initialize)");
-        printf("WARN: Cannot Apply Profile 0 (Initialize)\n");                
+        printf("WARN: Cannot Apply Profile 0 (Initialize)\n");
     } else if (!strcmp(profile, "1")) {
         log_zenith(LOG_INFO, "Applying Performance Profile via execute");
         char lite_prop[PROP_VALUE_MAX] = {0};
         __system_property_get("persist.sys.azenithconf.cpulimit", lite_prop);
         if (strcmp(lite_prop, "1") == 0) {
-             systemv("setprop persist.sys.azenithconf.litemode 1");                 
+            systemv("setprop persist.sys.azenithconf.litemode 1");
         } else {
-             systemv("setprop persist.sys.azenithconf.litemode 0");
+            systemv("setprop persist.sys.azenithconf.litemode 0");
         }
         run_profiler(PERFORMANCE_PROFILE);
         notify("Performance Profile", "System is now at Powerful state", false, 0);
-        printf("Applying Performance Profile\n");        
+        printf("Applying Performance Profile\n");
     } else if (!strcmp(profile, "2")) {
         log_zenith(LOG_INFO, "Applying Balanced Profile via execute");
         run_profiler(BALANCED_PROFILE);
@@ -120,21 +119,21 @@ int handle_profile(int argc, char** argv) {
 }
 
 /**
- * @brief Validates input log levels and forwards the combined message string to the external standard logger.
+ * @brief Validates input log levels and forwards the combined message string to the external
+ * standard logger.
  * @param argc Number of CLI arguments.
  * @param argv Array of CLI argument strings.
  * @return 0 on success, or 1 on parameter validation errors.
  */
 int handle_log(int argc, char** argv) {
     if (argc < 5) {
-        fprintf(stderr,
-            "Usage: --log <TAG> <LEVEL> <MESSAGE>\n"
-            "Levels: 0=DEBUG, 1=INFO, 2=WARN, 3=ERROR, 4=FATAL\n");
+        fprintf(stderr, "Usage: --log <TAG> <LEVEL> <MESSAGE>\n"
+                        "Levels: 0=DEBUG, 1=INFO, 2=WARN, 3=ERROR, 4=FATAL\n");
         return 1;
     }
 
-    const char *tag = argv[2];
-    const char *level_str = argv[3];
+    const char* tag = argv[2];
+    const char* level_str = argv[3];
 
     int level = atoi(level_str);
     if (level < LOG_DEBUG || level > LOG_FATAL) {
@@ -147,13 +146,8 @@ int handle_log(int argc, char** argv) {
 
     size_t remaining = sizeof(message);
     for (int i = 4; i < argc; i++) {
-        size_t written = snprintf(
-            message + strlen(message),
-            remaining,
-            "%s%s",
-            argv[i],
-            (i == argc - 1) ? "" : " "
-        );
+        size_t written = snprintf(message + strlen(message), remaining, "%s%s", argv[i],
+                                  (i == argc - 1) ? "" : " ");
         if (written >= remaining) {
             fprintf(stderr, "ERROR: Log message too long.\n");
             return 1;
@@ -166,21 +160,21 @@ int handle_log(int argc, char** argv) {
 }
 
 /**
- * @brief Validates input log levels and forwards the combined message string to the external verbose logger.
+ * @brief Validates input log levels and forwards the combined message string to the external
+ * verbose logger.
  * @param argc Number of CLI arguments.
  * @param argv Array of CLI argument strings.
  * @return 0 on success, or 1 on parameter validation errors.
  */
 int handle_verboselog(int argc, char** argv) {
     if (argc < 5) {
-        fprintf(stderr,
-            "Usage: --log <TAG> <LEVEL> <MESSAGE>\n"
-            "Levels: 0=DEBUG, 1=INFO, 2=WARN, 3=ERROR, 4=FATAL\n");
+        fprintf(stderr, "Usage: --log <TAG> <LEVEL> <MESSAGE>\n"
+                        "Levels: 0=DEBUG, 1=INFO, 2=WARN, 3=ERROR, 4=FATAL\n");
         return 1;
     }
 
-    const char *tag = argv[2];
-    const char *level_str = argv[3];
+    const char* tag = argv[2];
+    const char* level_str = argv[3];
 
     int level = atoi(level_str);
     if (level < LOG_DEBUG || level > LOG_FATAL) {
@@ -193,13 +187,8 @@ int handle_verboselog(int argc, char** argv) {
 
     size_t remaining = sizeof(message);
     for (int i = 4; i < argc; i++) {
-        size_t written = snprintf(
-            message + strlen(message),
-            remaining,
-            "%s%s",
-            argv[i],
-            (i == argc - 1) ? "" : " "
-        );
+        size_t written = snprintf(message + strlen(message), remaining, "%s%s", argv[i],
+                                  (i == argc - 1) ? "" : " ");
         if (written >= remaining) {
             fprintf(stderr, "ERROR: Log message too long.\n");
             return 1;
@@ -214,9 +203,7 @@ int handle_verboselog(int argc, char** argv) {
 /**
  * @brief Prints the current AZenith module version string to stdout.
  */
-void printversion(void) {
-    printf("%s\n", MODULE_VERSION);
-}
+void printversion(void) { printf("%s\n", MODULE_VERSION); }
 
 /**
  * @brief Directly launches the primary Android MainActivity of the AZenith application interface.
@@ -231,21 +218,22 @@ void openAppMainActivity(void) {
  */
 int require_daemon_running(void) {
     if (!check_running_state()) {
-        fprintf(stderr,
-            "\033[31mERROR:\033[0m AZenith daemon is not running.\n"
-            "Run: sys.azenith-service --run\n"
-        );
+        fprintf(stderr, "\033[31mERROR:\033[0m AZenith daemon is not running.\n"
+                        "Run: sys.azenith-service --run\n");
         return 0;
     }
     return 1;
 }
 
 /**
- * @brief Clears all historical and active log caches from storage nodes and triggers an internal app broadcast reset.
+ * @brief Clears all historical and active log caches from storage nodes and triggers an internal
+ * app broadcast reset.
  */
 void clearlogs(void) {
     systemv("rm -f /data/adb/.config/AZenith/debug/AZenith.log");
     systemv("rm -f /data/adb/.config/AZenith/debug/AZenithVerbose.log");
-    systemv("rm -f /data/adb/.config/AZenith/preload/AZenithPR.log");        
-    systemv("su -c \"am broadcast -a zx.azenith.ACTION_MANAGE -n zx.azenith/.receiver.ZenithReceiver --ez clearall true >/dev/null 2>&1\"");
+    systemv("rm -f /data/adb/.config/AZenith/preload/AZenithPR.log");
+    systemv("su -c \"am broadcast -a zx.azenith.ACTION_MANAGE -n "
+            "zx.azenith/.receiver.ZenithReceiver --ez clearall true >/dev/null "
+            "2>&1\"");
 }
