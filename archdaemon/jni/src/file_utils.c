@@ -15,19 +15,21 @@
  */
 
 #include <AZenith.h>
-#include <fcntl.h>
 #include <errno.h>
+#include <fcntl.h>
 
 /**
- * @brief Checks if the Java companion daemon is alive by verifying the lock status of the specified file.
- * @note This function only inspects the lock state using fcntl F_GETLK and does not acquire the lock itself.
+ * @brief Checks if the Java companion daemon is alive by verifying the lock status of the specified
+ * file.
+ * @note This function only inspects the lock state using fcntl F_GETLK and does not acquire the
+ * lock itself.
  * @param lock_path Path to the Java lock file.
  * @return true if the file is currently locked (Java companion is alive), false otherwise.
  */
 bool is_java_lock_held(const char* lock_path) {
     int fd = open(lock_path, O_RDONLY);
     if (fd < 0) {
-        return false; 
+        return false;
     }
 
     struct flock fl;
@@ -42,12 +44,13 @@ bool is_java_lock_held(const char* lock_path) {
     }
 
     close(fd);
-    
+
     return (fl.l_type != F_UNLCK);
 }
 
 /**
- * @brief Writes formatted content to the specified file with optional appending and flock protection.
+ * @brief Writes formatted content to the specified file with optional appending and flock
+ * protection.
  * @note Avoid using flock on /sdcard due to Android FUSE limitations.
  * @param filename Path to the target file.
  * @param append Set to true for append mode, false for overwrite (truncate) mode.
@@ -55,7 +58,8 @@ bool is_java_lock_held(const char* lock_path) {
  * @param data Format string for content, followed by variable arguments.
  * @return 0 if the content was written successfully, -1 on any error or truncation.
  */
-int write2file(const char* filename, const bool append, const bool use_flock, const char* data, ...) {
+int write2file(const char* filename, const bool append, const bool use_flock, const char* data,
+               ...) {
     if (!data)
         return -1;
 
@@ -92,8 +96,10 @@ int write2file(const char* filename, const bool append, const bool use_flock, co
 }
 
 /**
- * @brief Checks if the daemon is already running by attempting to acquire a non-blocking exclusive flock.
- * @return 0 if the lock is successfully acquired (daemon not running), -1 if it fails (already running).
+ * @brief Checks if the daemon is already running by attempting to acquire a non-blocking exclusive
+ * flock.
+ * @return 0 if the lock is successfully acquired (daemon not running), -1 if it fails (already
+ * running).
  */
 int check_running_state(void) {
     int fd = open(LOCK_FILE, O_WRONLY | O_CREAT, 0644);
@@ -115,13 +121,13 @@ int check_running_state(void) {
  * @param filename Path to the target file.
  * @return 1 if the file is empty, 0 if it contains data, or -1 if the file cannot be opened.
  */
-int is_file_empty(const char *filename) {
-    FILE *file = fopen(filename, "rb");
+int is_file_empty(const char* filename) {
+    FILE* file = fopen(filename, "rb");
     if (!file) {
         perror("fopen failed");
         return -1;
     }
-    
+
     int ch = fgetc(file);
     if (ch == EOF) {
         if (feof(file)) {
@@ -133,7 +139,7 @@ int is_file_empty(const char *filename) {
             return -1;
         }
     }
-    
+
     fclose(file);
     return 0;
 }

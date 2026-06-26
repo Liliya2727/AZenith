@@ -14,21 +14,23 @@
  * limitations under the License.
  */
 
-#include <sys/system_properties.h>
 #include <AZenith.h>
 #include <dirent.h>
 #include <string.h>
+#include <sys/system_properties.h>
 
 BypassNode bypass_list[] = {
     {"COMMON_INPUT_SUSPEND", "/sys/class/power_supply/battery/input_suspend", "1", "0"},
-    {"COMMON_BATT_INPUT_SUSPEND", "/sys/class/power_supply/battery/battery_input_suspend", "1", "0"},
+    {"COMMON_BATT_INPUT_SUSPEND", "/sys/class/power_supply/battery/battery_input_suspend", "1",
+     "0"},
     {"COMMON_CHG_CONTROL", "/sys/class/power_supply/battery/charger_control", "0", "1"},
     {"COMMON_CHG_DISABLE", "/sys/class/power_supply/battery/charge_disable", "1", "0"},
     {"COMMON_CHG_ENABLED_V1", "/sys/class/power_supply/battery/charging_enabled", "0", "1"},
     {"COMMON_CHG_ENABLED_V2", "/sys/class/power_supply/battery/charge_enabled", "0", "1"},
-    {"COMMON_BATT_CHG_ENABLED", "/sys/class/power_supply/battery/battery_charging_enabled", "0", "1"},
+    {"COMMON_BATT_CHG_ENABLED", "/sys/class/power_supply/battery/battery_charging_enabled", "0",
+     "1"},
     {"COMMON_DEVICE_CHG_EN", "/sys/class/power_supply/battery/device/Charging_Enable", "0", "1"},
-    
+
     {"MTK_BYPASS_CHG", "/sys/devices/platform/charger/bypass_charger", "1", "0"},
     {"MTK_CURRENT_CMD", "/proc/mtk_battery_cmd/current_cmd", "0 1", "0 0"},
     {"TRAN_AICHG_DISABLE", "/sys/devices/platform/charger/tran_aichg_disable_charger", "1", "0"},
@@ -38,9 +40,13 @@ BypassNode bypass_list[] = {
     {"OPLUS_MMI_1", "/sys/class/oplus_chg/battery/mmi_charging_enable", "0", "1"},
     {"OPLUS_MMI_2", "/sys/class/power_supply/battery/mmi_charging_enable", "0", "1"},
     {"OPLUS_MMI_3", "/sys/devices/virtual/oplus_chg/battery/mmi_charging_enable", "0", "1"},
-    {"OPLUS_MMI_SOC", "/sys/devices/platform/soc/soc:oplus,chg_intf/oplus_chg/battery/mmi_charging_enable", "0", "1"},
-    {"OPLUS_EXP_CHG_ENABLE", "/sys/devices/platform/soc/soc:oplus,chg_intf/oplus_chg/battery/chg_enable", "0", "1"},
-    {"OPLUS_COOLDOWN_STATE", "/sys/devices/platform/soc/soc:oplus,chg_intf/oplus_chg/battery/cool_down", "1", "0"},    
+    {"OPLUS_MMI_SOC",
+     "/sys/devices/platform/soc/soc:oplus,chg_intf/oplus_chg/battery/mmi_charging_enable", "0",
+     "1"},
+    {"OPLUS_EXP_CHG_ENABLE",
+     "/sys/devices/platform/soc/soc:oplus,chg_intf/oplus_chg/battery/chg_enable", "0", "1"},
+    {"OPLUS_COOLDOWN_STATE",
+     "/sys/devices/platform/soc/soc:oplus,chg_intf/oplus_chg/battery/cool_down", "1", "0"},
 
     {"AC_CHG_ENABLED", "/sys/class/power_supply/ac/charging_enabled", "0", "1"},
     {"CHG_DATA_ENABLE", "/sys/class/power_supply/charge_data/enable_charger", "0", "1"},
@@ -48,14 +54,19 @@ BypassNode bypass_list[] = {
     {"OP_DISABLE_CHG", "/sys/class/power_supply/battery/op_disable_charge", "1", "0"},
     {"CHGALG_DISABLE_CHG", "/sys/class/power_supply/chargalg/disable_charging", "1", "0"},
     {"BATT_CONNECT_DISABLE", "/sys/class/power_supply/battery/connect_disable", "1", "0"},
-    {"I2C_CHG_ENABLE", "/sys/devices/platform/omap/omap_i2c.3/i2c-3/3-005f/charge_enable", "0", "1"},
-    {"QPNP_SMB_BATT_EN", "/sys/devices/soc/qpnp-smbcharger-18/power_supply/battery/battery_charging_enabled", "0", "1"},
+    {"I2C_CHG_ENABLE", "/sys/devices/platform/omap/omap_i2c.3/i2c-3/3-005f/charge_enable", "0",
+     "1"},
+    {"QPNP_SMB_BATT_EN",
+     "/sys/devices/soc/qpnp-smbcharger-18/power_supply/battery/battery_charging_enabled", "0", "1"},
 
     {"QCOM_SUSPEND", "/sys/class/qcom-battery/input_suspend", "0", "1"},
     {"QCOM_EN_CHG", "/sys/class/qcom-battery/charging_enabled", "0", "1"},
     {"QCOM_COOL_MODE", "/sys/class/qcom-battery/cool_mode", "1", "0"},
     {"QCOM_PROTECT_EN", "/sys/class/qcom-battery/batt_protect_en", "1", "0"},
-    {"QCOM_PMIC_GLINK_SUSPEND", "/sys/devices/platform/soc/soc:qcom,pmic_glink/soc:qcom,pmic_glink:qcom,battery_charger/force_charger_suspend", "1", "0"},
+    {"QCOM_PMIC_GLINK_SUSPEND",
+     "/sys/devices/platform/soc/soc:qcom,pmic_glink/soc:qcom,pmic_glink:qcom,battery_charger/"
+     "force_charger_suspend",
+     "1", "0"},
 
     {"PM8058_DISABLE", "/sys/module/pmic8058_charger/parameters/disabled", "1", "0"},
     {"PM8921_DISABLE", "/sys/module/pm8921_charger/parameters/disabled", "1", "0"},
@@ -83,10 +94,12 @@ BypassNode bypass_list[] = {
     {"MANTA_CHG_EN", "/sys/devices/virtual/power_supply/manta-battery/charge_enabled", "0", "1"},
     {"CAT_CHG_SWITCH", "/sys/devices/platform/battery/CCIChargerSwitch", "0", "1"},
     {"SPREADTRUM_STOP_CHG", "/sys/class/power_supply/battery/stop_charge", "1", "0"},
-    {"TEGRA_I2C_STATE", "/sys/devices/platform/tegra12-i2c.0/i2c-0/0-006b/charging_state", "disabled", "enabled"},
+    {"TEGRA_I2C_STATE", "/sys/devices/platform/tegra12-i2c.0/i2c-0/0-006b/charging_state",
+     "disabled", "enabled"},
 
     {"SIOP_LEVEL_CTRL", "/sys/class/power_supply/battery/siop_level", "0", "100"},
-    {"SMART_INTERRUPT_CHG", "/sys/class/power_supply/battery_ext/smart_charging_interruption", "1", "0"},
+    {"SMART_INTERRUPT_CHG", "/sys/class/power_supply/battery_ext/smart_charging_interruption", "1",
+     "0"},
     {"CHG_LIMIT_ENABLE", "/proc/driver/charger_limit_enable", "1", "0"},
     {"CHG_LIMIT_VAL", "/proc/driver/charger_limit", "5", "100"},
     {"QPNP_ADAPTIVE_BLOCK", "/sys/module/qpnp_adaptive_charge/parameters/blocking", "1", "0"},
@@ -100,22 +113,23 @@ BypassNode bypass_list[] = {
     {"MAXFG_OFF_CHG", "/sys/class/power_supply/maxfg/offmode_charger", "1", "0"},
     {"COOL_MODE_MAIN", "/sys/class/power_supply/main/cool_mode", "1", "0"},
     {"RESTRICTED_CHG_BATT", "/sys/class/power_supply/battery/restricted_charging", "1", "0"},
-    {"RESTRICTED_CHG_WIRELESS", "/sys/class/power_supply/wireless/restricted_charging", "1", "0"}
-};
-
+    {"RESTRICTED_CHG_WIRELESS", "/sys/class/power_supply/wireless/restricted_charging", "1", "0"}};
 
 /**
- * @brief Writes a value to a sysfs/proc node and optionally sets it to read-only (chmod 0444) to lock the value.
+ * @brief Writes a value to a sysfs/proc node and optionally sets it to read-only (chmod 0444) to
+ * lock the value.
  * @param path Path to the sysfs or proc target file.
  * @param value String value to write.
  * @param lock Set to 1 to lock file as read-only, 0 to leave it writeable.
  * @return Status result of systemv execution.
  */
 int echo_to_file(const char* path, const char* value, int lock) {
-    if (access(path, F_OK) != 0) return -1;
+    if (access(path, F_OK) != 0)
+        return -1;
     chmod(path, 0644);
     int res = systemv("echo '%s' > %s", value, path);
-    if (lock) chmod(path, 0444);
+    if (lock)
+        chmod(path, 0444);
     return res;
 }
 
@@ -126,7 +140,8 @@ int echo_to_file(const char* path, const char* value, int lock) {
 int is_charging() {
     char status[32] = {0};
     int fd = open("/sys/class/power_supply/battery/status", O_RDONLY);
-    if (fd < 0) return 0;
+    if (fd < 0)
+        return 0;
     read(fd, status, sizeof(status) - 1);
     close(fd);
     return (strstr(status, "Charging") || strstr(status, "Full")) ? 1 : 0;
@@ -137,10 +152,8 @@ int is_charging() {
  * @return Battery current in mA (always a positive value), or 9999 if paths are inaccessible.
  */
 int read_current_ma() {
-    const char* current_paths[] = {
-        "/sys/class/power_supply/battery/current_now",
-        "/sys/class/power_supply/battery/BatteryAverageCurrent"
-    };
+    const char* current_paths[] = {"/sys/class/power_supply/battery/current_now",
+                                   "/sys/class/power_supply/battery/BatteryAverageCurrent"};
     for (int i = 0; i < 2; i++) {
         int fd = open(current_paths[i], O_RDONLY);
         if (fd >= 0) {
@@ -148,7 +161,8 @@ int read_current_ma() {
             read(fd, buf, sizeof(buf) - 1);
             close(fd);
             long val = atol(buf);
-            if (val < 0) val = -val;
+            if (val < 0)
+                val = -val;
             return (val > 1000) ? (int)(val / 1000) : (int)val;
         }
     }
@@ -156,13 +170,15 @@ int read_current_ma() {
 }
 
 /**
- * @brief Retrieves the saved bypass path from system properties and restores the node to its normal charging state.
+ * @brief Retrieves the saved bypass path from system properties and restores the node to its normal
+ * charging state.
  */
 void disable_bypass() {
     char path_key[PROP_VALUE_MAX];
     __system_property_get("persist.sys.azenithconf.bypasspath", path_key);
 
-    if (strlen(path_key) == 0 || strcmp(path_key, "UNSUPPORTED") == 0) return;
+    if (strlen(path_key) == 0 || strcmp(path_key, "UNSUPPORTED") == 0)
+        return;
 
     int total_nodes = sizeof(bypass_list) / sizeof(BypassNode);
     for (int i = 0; i < total_nodes; i++) {
@@ -175,27 +191,30 @@ void disable_bypass() {
 }
 
 /**
- * @brief Sets the active bypass node to its 'on' value and locks it to bypass the battery charging circuit.
+ * @brief Sets the active bypass node to its 'on' value and locks it to bypass the battery charging
+ * circuit.
  * @return 0 on success, -1 if unsupported, -2 if node not found in internal structure.
  */
 int enable_bypass() {
     char path_key[PROP_VALUE_MAX];
     __system_property_get("persist.sys.azenithconf.bypasspath", path_key);
 
-    if (strlen(path_key) == 0 || strcmp(path_key, "UNSUPPORTED") == 0) return -1;
+    if (strlen(path_key) == 0 || strcmp(path_key, "UNSUPPORTED") == 0)
+        return -1;
 
     int total_nodes = sizeof(bypass_list) / sizeof(BypassNode);
     for (int i = 0; i < total_nodes; i++) {
         if (strcmp(bypass_list[i].name, path_key) == 0) {
             echo_to_file(bypass_list[i].path, bypass_list[i].on_val, 1);
-            return 0; 
+            return 0;
         }
     }
     return -2;
 }
 
 /**
- * @brief Iterates through the bypass_list to find a working node by analyzing current drops under load.
+ * @brief Iterates through the bypass_list to find a working node by analyzing current drops under
+ * load.
  * @return 0 if compatible node found, 1 if no node matches, -1 if charger is disconnected.
  */
 int check_bypass_compatibility() {
@@ -215,11 +234,12 @@ int check_bypass_compatibility() {
         if (access(bypass_list[i].path, F_OK) != 0) {
             printf("\033[90m[-] Node %-25s: Not Found, skipping...\033[0m\n", bypass_list[i].name);
             skipped_count++;
-            continue; 
+            continue;
         }
 
         tested_count++;
-        printf("\n\033[1;32m[+]\033[0m Testing Node (%d/%d): \033[1;37m%s\033[0m\n", i + 1, total_nodes, bypass_list[i].name);
+        printf("\n\033[1;32m[+]\033[0m Testing Node (%d/%d): \033[1;37m%s\033[0m\n", i + 1,
+               total_nodes, bypass_list[i].name);
         echo_to_file(bypass_list[i].path, bypass_list[i].on_val, 0);
 
         int last_ma = 9999;
@@ -232,21 +252,25 @@ int check_bypass_compatibility() {
         echo_to_file(bypass_list[i].path, bypass_list[i].off_val, 0);
 
         if (last_ma < 50) {
-            printf("\n\033[1;32m[SUCCESS]\033[0m Found working node: \033[1m%s\033[0m\n", bypass_list[i].name);
+            printf("\n\033[1;32m[SUCCESS]\033[0m Found working node: \033[1m%s\033[0m\n",
+                   bypass_list[i].name);
             printf("\033[32m[INFO]\033[0m Process finished. %d nodes skipped.\n", skipped_count);
-            
-            log_zenith(LOG_INFO, "Compatible path found: %s. Skipped: %d", bypass_list[i].name, skipped_count);
+
+            log_zenith(LOG_INFO, "Compatible path found: %s. Skipped: %d", bypass_list[i].name,
+                       skipped_count);
             return 0;
         } else {
-            printf("\033[31m[FAILED]\033[0m Current drop test failed for %s (%d mA)\n", bypass_list[i].name, last_ma);
+            printf("\033[31m[FAILED]\033[0m Current drop test failed for %s (%d mA)\n",
+                   bypass_list[i].name, last_ma);
             printf("------------------------------------------\n");
-            usleep(300000); 
+            usleep(300000);
         }
     }
 
     printf("\n\033[1;31m[-]\033[0m Final Result: No compatible bypass node found.\n");
-    printf("\033[33m[INFO]\033[0m Summary: %d Scanned, %d Tested, %d Skipped.\033[0m\n", total_nodes, tested_count, skipped_count);
-    
+    printf("\033[33m[INFO]\033[0m Summary: %d Scanned, %d Tested, %d Skipped.\033[0m\n",
+           total_nodes, tested_count, skipped_count);
+
     __system_property_set("persist.sys.azenithconf.bypasspath", "UNSUPPORTED");
     __system_property_set("persist.sys.azenithconf.bypasschg", "0");
     __system_property_set("persist.sys.azenithconf.bypasschgthreshold", "20");
@@ -261,9 +285,11 @@ int check_bypass_compatibility() {
  */
 void print_bypass_path_list() {
     printf("\n\033[36m[AZenith Available Bypass Path List]\033[0m\n");
-    printf("------------------------------------------------------------------------------------------\n");
+    printf("---------------------------------------------------------------------------------------"
+           "---\n");
     printf(" %-30s | %-10s | %s\n", "NODE NAME", "STATUS", "SYSFS/PROC PATH");
-    printf("------------------------------------------------------------------------------------------\n");
+    printf("---------------------------------------------------------------------------------------"
+           "---\n");
 
     int total_nodes = sizeof(bypass_list) / sizeof(BypassNode);
     int found_count = 0;
@@ -271,14 +297,19 @@ void print_bypass_path_list() {
     for (int i = 0; i < total_nodes; i++) {
         if (access(bypass_list[i].path, F_OK) == 0) {
             /* Berwarna Hijau jika path ada di device */
-            printf(" \033[1;32m%-30s\033[0m | \033[32m[FOUND]\033[0m    | %s\n", bypass_list[i].name, bypass_list[i].path);
+            printf(" \033[1;32m%-30s\033[0m | \033[32m[FOUND]\033[0m    | %s\n",
+                   bypass_list[i].name, bypass_list[i].path);
             found_count++;
         } else {
             /* Berwarna Abu-abu gelap jika path tidak ada */
-            printf(" \033[90m%-30s | [NOT FOUND] | %s\033[0m\n", bypass_list[i].name, bypass_list[i].path);
+            printf(" \033[90m%-30s | [NOT FOUND] | %s\033[0m\n", bypass_list[i].name,
+                   bypass_list[i].path);
         }
     }
 
-    printf("------------------------------------------------------------------------------------------\n");
-    printf("\033[36m[SUMMARY]\033[0m Total Nodes: %d | Available on this device: \033[1;32m%d\033[0m\n\n", total_nodes, found_count);
+    printf("---------------------------------------------------------------------------------------"
+           "---\n");
+    printf("\033[36m[SUMMARY]\033[0m Total Nodes: %d | Available on this device: "
+           "\033[1;32m%d\033[0m\n\n",
+           total_nodes, found_count);
 }

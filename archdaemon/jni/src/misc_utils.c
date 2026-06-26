@@ -40,9 +40,9 @@
  * @param src Source string.
  * @param max_size Maximum size of destination buffer.
  */
-void escape_shell_string(char *dest, const char *src, size_t max_size) {
+void escape_shell_string(char* dest, const char* src, size_t max_size) {
     size_t j = 0;
-    while (*src && j < max_size - 5) { 
+    while (*src && j < max_size - 5) {
         if (*src == '\'') {
             dest[j++] = '\'';
             dest[j++] = '\\';
@@ -85,15 +85,13 @@ void notify(const char* title, const char* fmt, bool chrono, int timeout_ms, ...
                 "--es notifytitle '%s' --es notifytext '%s' "
                 "--ez chrono_bool %s --es timeout '%d' "
                 ">/dev/null 2>&1\"",
-                action, component, safe_title, safe_message,
-                chrono_str, timeout_ms);
+                action, component, safe_title, safe_message, chrono_str, timeout_ms);
     } else {
         systemv("su -c \"am broadcast -a %s -n %s "
                 "--es notifytitle '%s' --es notifytext '%s' "
                 "--ez chrono_bool %s "
                 ">/dev/null 2>&1\"",
-                action, component, safe_title, safe_message,
-                chrono_str);
+                action, component, safe_title, safe_message, chrono_str);
     }
 }
 
@@ -122,7 +120,8 @@ char* timern(void) {
         return timestamp;
     }
 
-    snprintf(timestamp + strlen(timestamp), sizeof(timestamp) - strlen(timestamp), ".%03ld", tv.tv_usec / 1000);
+    snprintf(timestamp + strlen(timestamp), sizeof(timestamp) - strlen(timestamp), ".%03ld",
+             tv.tv_usec / 1000);
 
     return timestamp;
 }
@@ -173,7 +172,8 @@ void is_kanged(void) {
         goto doorprize;
     }
 
-    if (systemv("grep -q '^author=ArchHaven Developers$' %s", MODULE_PROP) != 0) [[clang::unlikely]] {
+    if (systemv("grep -q '^author=ArchHaven Developers$' %s", MODULE_PROP) != 0)
+        [[clang::unlikely]] {
         goto doorprize;
     }
 
@@ -198,7 +198,8 @@ void check_module_version(void) {
     int ret = systemv("grep -q '^version=%s$' %s", DAEMON_VERSION, MODULE_PROP);
 
     if (ret != 0) [[clang::unlikely]] {
-        log_zenith(LOG_FATAL, "AZenith version mismatch with daemon version! please reinstall the module!");
+        log_zenith(LOG_FATAL,
+                   "AZenith version mismatch with daemon version! please reinstall the module!");
         notify("Daemon Error", "AZenith version mismatch, please reinstall!", true, 0);
         systemv("setprop persist.sys.azenith.service \"\"");
         systemv("setprop persist.sys.azenith.state stopped");
@@ -233,18 +234,14 @@ killsvc:
  * @note Never call this function directly.
  * @return Always true.
  */
-bool return_true(void) {
-    return true;
-}
+bool return_true(void) { return true; }
 
 /**
  * @brief Error fallback function that always returns false.
  * @note Never call this function directly.
  * @return Always false.
  */
-bool return_false(void) {
-    return false;
-}
+bool return_false(void) { return false; }
 
 /**
  * @brief Sets the service PID into the Android system properties.
@@ -289,7 +286,8 @@ void runthermalcore(void) {
  * @return Pointer to the first non-space character.
  */
 char* skip_space(char* p) {
-    while (*p && isspace(*p)) p++;
+    while (*p && isspace(*p))
+        p++;
     return p;
 }
 
@@ -301,32 +299,35 @@ char* skip_space(char* p) {
  */
 void extract_string_value(char* dest, const char* key_pos, size_t max_len) {
     if (!key_pos) {
-        strncpy(dest, "default", max_len-1);
-        dest[max_len-1] = '\0';
+        strncpy(dest, "default", max_len - 1);
+        dest[max_len - 1] = '\0';
         return;
     }
 
     const char* colon = strchr(key_pos, ':');
     if (!colon) {
-        strncpy(dest, "default", max_len-1);
-        dest[max_len-1] = '\0';
+        strncpy(dest, "default", max_len - 1);
+        dest[max_len - 1] = '\0';
         return;
     }
 
     const char* start = colon + 1;
-    while (*start == ' ' || *start == '\t') start++;
+    while (*start == ' ' || *start == '\t')
+        start++;
 
-    if (*start == '\"') start++;
+    if (*start == '\"')
+        start++;
 
     const char* end = strchr(start, '\"');
     if (!end) {
-        strncpy(dest, "default", max_len-1);
-        dest[max_len-1] = '\0';
+        strncpy(dest, "default", max_len - 1);
+        dest[max_len - 1] = '\0';
         return;
     }
 
     size_t len = end - start;
-    if (len >= max_len) len = max_len - 1;
+    if (len >= max_len)
+        len = max_len - 1;
     strncpy(dest, start, len);
     dest[len] = '\0';
 }
