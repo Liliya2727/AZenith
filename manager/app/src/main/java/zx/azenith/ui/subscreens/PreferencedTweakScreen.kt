@@ -71,11 +71,14 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.navigation.NavController
 import com.topjohnwu.superuser.Shell
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.getChipsetVendor
 
 
 @Composable
@@ -134,7 +137,7 @@ fun PreferenceTweakScreen(navController: NavController) {
                     var distherm by remember { mutableStateOf<Boolean?>(null) }
     
                     LaunchedEffect(Unit) {
-                        socType = PropertyUtils.get("persist.sys.azenithdebug.soctype")
+                        socType = withContext(Dispatchers.IO) { getChipsetVendor(context) }
                         schedTunes = PropertyUtils.get("persist.sys.azenithconf.schedtunes") == "1"
                         sflstate = PropertyUtils.get("persist.sys.azenithconf.SFL") == "1"
                         jitstate = PropertyUtils.get("persist.sys.azenithconf.justintime") == "1"
@@ -148,8 +151,8 @@ fun PreferenceTweakScreen(navController: NavController) {
     
                     if (socType != null && schedTunes != null && distherm != null && dlogcat != null && DTraces != null && waltTunes != null && sflstate != null && jitstate != null && fpsgogedstate != null && malischedstate != null) { 
                         
-                        val isMediaTek = socType == "1"
-                        val isSnapdragon = socType == "2"
+                        val isMediaTek   = socType == "mediatek"
+                        val isSnapdragon = socType == "qualcomm"
 
                         ExpressiveList(
                             content = listOf(
