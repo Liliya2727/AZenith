@@ -20,8 +20,8 @@ android {
         applicationId = "zx.azenith"
         minSdk = 29
         targetSdk = 37
-        versionCode = (Placeholder)
-        versionName = "Placeholder"
+        versionCode = 1
+        versionName = "1.0"
         vectorDrawables.useSupportLibrary = true
         buildConfigField("long", "BUILD_TIME", "${System.currentTimeMillis()}L")
     }

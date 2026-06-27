@@ -23,7 +23,7 @@
     <string name="learn_more">Pelajari Lebih Lanjut</string>
     <string name="learn_more_desc">Dokumentasi, kode sumber, log perubahan, dan penjelasan mendetail tentang cara kerja AZenith. Pelajari cara fitur diterapkan dan cara menyesuaikannya dengan aman.</string>
     <string name="settings">Pengaturan</string>
-    <string name="section_personalization">Personalisasi</string>
+    <string name="section_personalization">个性化</string>
     <string name="section_additionalsettings">Pengaturan Tambahan</string>
     <string name="section_features">Fitur</string>
     <string name="section_others">Yang lain</string>
@@ -31,7 +31,7 @@
     <string name="section_addons">tambahan</string>
     <string name="section_CPUSettings">Pengaturan CPU</string>
     <string name="refreshrates">Refresh Rate</string>
-    <string name="schemecolor">Skema Warna Layar</string>
+    <string name="schemecolor">屏幕配色方案</string>
     <string name="schemecolordesc">Sesuaikan Saturasi warna layar dan Kekuatan RGB</string>
     <string name="renderengine">Render Saat Ini</string>
     <string name="bcharging">Bypass Charging</string>
@@ -43,14 +43,14 @@
     <string name="Profile_Select">Pilihan Profil</string>
     <string name="RefreshRatePicker_Select">Pilih Kecepatan Refresh</string>
     <string name="Renderer_Select">Pilih Perender</string>
-    <string name="Renderer_Vulkan">Vulkan</string>
+    <string name="Renderer_Vulkan">伏尔甘</string>
     <string name="Renderer_Default">Bawaan</string>
-    <string name="Renderer_SkiaGL">SkiaGL</string>
+    <string name="Renderer_SkiaGL">斯基亚GL</string>
     <string name="CompatibilityCheck">Pemeriksaan Kompatibilitas</string>
     <string name="CompatibilityCheck_desc">Jalankan diagnostik untuk memverifikasi apakah perangkat Anda mendukung Bypass Charging. Harap pastikan ponsel Anda terhubung ke pengisi daya sebelum memulai tes.</string>
     <string name="Profile_Balanced">Balance</string>
     <string name="Profile_Performance">Performance</string>
-    <string name="Profile_ECO_mode">Powersave</string>
+    <string name="Profile_ECO_mode">Mode Eco</string>
     <string name="theme">Tema</string>
     <string name="theme_desc">Sesuaikan warna dan aksen</string>
     <string name="show_toast">Tampilkan toast notification</string>
@@ -61,7 +61,7 @@
     <string name="save_log">Simpan Log</string>
     <string name="save_log_desc">Ekspor log debug ke /sdcard</string>
     <string name="toast_restarting_service">Memulai Ulang Daemon</string>
-    <string name="toast_log_saved">Log disimpan ke /sdcard/AZenith.log</string>
+    <string name="toast_log_saved">日志保存到/sdcard/AZenith.log</string>
     <string name="toast_log_save_success">Log berhasil disimpan!</string>
     <string name="toast_log_save_fail">Gagal menyimpan log.</string>
     <string name="toast_log_gather_fail">Gagal mengumpulkan log</string>
@@ -69,7 +69,7 @@
     <string name="version_format">Versi %1$s</string>
     <string name="support_us">Dukung Kami</string>
     <string name="support_us_desc">Membantu mendukung pengembangan dan terus meningkatkan AZenith.</string>
-    <string name="about_source_code">Lihat kode sumber di %1$s<br />Bergabunglah dengan saluran %2$s kami</string>
+    <string name="about_source_code">在 %1$s 查看源代码<br />加入我们的 %2$s 频道</string>
     <string name="applist_title">Daftar Aplikasi</string>
     <string name="search_apps">Telusuri aplikasi...</string>
     <string name="label_enabled">AKTIF</string>
@@ -103,7 +103,7 @@
     <string name="powersave_io_scheduler_desc">Penjadwal yang digunakan di Profil Powersave</string>
     <string name="game_preload">Preload Permainan</string>
     <string name="game_preload_desc">Preload library saat permainan dimulai</string>
-    <string name="memory_killer">Pembunuh Memori</string>
+    <string name="memory_killer">Pembersih Memori</string>
     <string name="memory_killer_desc">Bersihkan penggunaan ram saat gamestart</string>
     <string name="app_priority_control">Kontrol Prioritas Aplikasi</string>
     <string name="app_priority_control_desc">Tingkatkan prioritas penjadwalan I/O game yang sedang berjalan di profil Performa</string>
@@ -113,8 +113,8 @@
     <string name="trim_filesystem_desc">Pangkas blok yang tidak digunakan di partisi sistem untuk Meningkatkan Performa I/O</string>
     <string name="thermalcore_service">Layanan ThermalCore</string>
     <string name="thermalcore_service_desc">Secara otomatis mengelola termal sistem berdasarkan perilaku perangkat, mencegah ponsel menjadi terlalu panas dalam penggunaan sehari-hari sambil menjaga stabilitas perangkat</string>
-    <string name="toast_applied_renderer">Diterapkan: %1$s</string>
-    <string name="toast_applied_refresh_rate">Menerapkan Kecepatan Refresh Terpilih</string>
+    <string name="toast_applied_renderer">已应用：%1$s</string>
+    <string name="toast_applied_refresh_rate">应用选定的刷新率</string>
     <string name="toast_applying_profile">Menerapkan Profil yang Dipilih</string>
     <string name="profile_perflite">PerfLite</string>
     <string name="status_unknown">Tidak dikenal</string>
@@ -126,11 +126,11 @@
     <string name="enable_bypass_charge_desc">Gunakan Bypass Charging di Profil Performa</string>
     <string name="charging_threshold">Batas Pengisian</string>
     <string name="charging_threshold_desc">Mulai mengisi daya jika level baterai di bawah batas pengisian daya</string>
-    <string name="done">Selesai</string>
-    <string name="diagnostic_in_progress">Diagnostik sedang berlangsung</string>
-    <string name="diagnostic_complete">Diagnostik selesai</string>
-    <string name="please_wait">Harap tunggu...</string>
-    <string name="all_checks_finished">Semua pemeriksaan selesai</string>
+    <string name="done">完毕</string>
+    <string name="diagnostic_in_progress">诊断正在进行中</string>
+    <string name="diagnostic_complete">诊断完成</string>
+    <string name="please_wait">请稍等...</string>
+    <string name="all_checks_finished">全部检查完毕</string>
     <string name="toast_settings_reset">Pengaturan Ulang</string>
     <string name="color_scheme">Skema Warna</string>
     <string name="color_red">Merah</string>
@@ -184,21 +184,21 @@
     <string name="accent_color">Warna Aksen</string>
     <string name="appearance">Penampilan</string>
     <string name="banner">Banner</string>
-    <string name="custom">Kustom</string>
+    <string name="custom">风俗</string>
     <string name="selinux_enforcing">Enforcing</string>
     <string name="selinux_permissive">Permisif</string>
     <string name="selinux_disabled">Nonaktif</string>
     <string name="refresh_rate_format">%1$s Hz</string>
-    <string name="welcome_azenith">Selamat datang di AZenith</string>
+    <string name="welcome_azenith">欢迎来到AZenith</string>
     <string name="setting_up">Menyiapkan AZenith...</string>
-    <string name="check_root_access">Periksa Akses Root</string>
-    <string name="root_access_found">Akses root ditemukan</string>
-    <string name="root_access_not_found">Akses root tidak ditemukan</string>
-    <string name="all_set">Semua sudah siap, Anda dapat menggunakan AZenith sekarang</string>
+    <string name="check_root_access">检查根访问权限</string>
+    <string name="root_access_found">找到根访问权限</string>
+    <string name="root_access_not_found">未找到 root 访问权限</string>
+    <string name="all_set">一切就绪，您现在可以使用 AZenith 了</string>
     <string name="lets_go">Ayo Pergi</string>
     <string name="next">Berikutnya</string>
     <string name="reboot">Menyalakan ulang</string>
-    <string name="prev">Sebelumnya</string>
+    <string name="prev">上一篇</string>
     <string name="str_welcome_to">Selamat Datang di</string>
     <string name="str_let_s_grant_azenith_a_root_acc">Mari berikan AZenith akses root.</string>
     <string name="str_check_environment">Periksa Lingkungan</string>
@@ -260,9 +260,12 @@
     <string name="str_color_specification">Spesifikasi Warna</string>
     <string name="str_preview">Pratinjau</string>
     <string name="toast_update_success">Pembaruan berhasil diinstal!</string>
-    <string name="toast_install_fail">Gagal menginstal:\n%1$s</string>
+    <string name="toast_install_fail">Gagal menginstal:
+%1$s</string>
     <string name="dialog_update_available_title">Pembaruan Aplikasi Tersedia</string>
-    <string name="dialog_update_available_content">Versi manajer aplikasi Anda (%1$d) lebih lama dari versi modul (%2$d).\n\nPerbarui sekarang untuk mendapatkan fitur terbaru?</string>
+    <string name="dialog_update_available_content">Versi manajer aplikasi Anda (%1$d) lebih lama dari versi modul (%2$d).
+
+Perbarui sekarang untuk mendapatkan fitur terbaru?</string>
     <string name="dialog_update_available_confirm">Perbarui Sekarang</string>
     <string name="dialog_update_available_dismiss">Nanti</string>
     <string name="dialog_module_update_title">Pembaruan Modul Tersedia</string>
@@ -277,7 +280,7 @@
     <string name="dialog_backup_fail">Gagal membuat cadangan.</string>
     <string name="dialog_restore_fail_title">Pemulihan Gagal</string>
     <string name="section_performance">Performa</string>
-    <string name="str_frame_aware_scheduling_desc">Penjadwalan sadar frame untuk Android</string>
+    <string name="str_frame_aware_scheduling_desc">适用于 Android 的帧感知调度</string>
     <string name="str_unavailable">Tidak tersedia</string>
     <string name="str_fpsgo_desc">Pengaturan FPSGO untuk MediaTek</string>
     <string name="str_fpsgo_unavailable">Opsi ini hanya tersedia untuk perangkat MediaTek</string>
@@ -354,7 +357,7 @@
     <string name="err_invalid_backup">File cadangan .zx tidak valid atau rusak.</string>
     <string name="str_archhaven_devs">Pengembang ArchHaven</string>
     <string name="cd_wallpaper">Wallpaper Perangkat</string>
-    <string name="cd_app_icon">Ikon Aplikasi</string>
+    <string name="cd_app_icon">应用图标</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_telegram">Telegram</string>
     <string name="str_author">Penulis</string>
@@ -362,4 +365,4 @@
     <string name="str_version_code">Kode Versi</string>
     <string name="str_package_name">Nama Paket</string>
     <string name="str_device_uptime">Waktu Aktif Perangkat</string>
-    </resources>
+</resources>

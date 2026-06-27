@@ -83,6 +83,7 @@ We welcome contributions to make **AZenith** even better!
 | **Collaborator / 合作者** | [@kanaochar](https://github.com/kanaodnd) |
 
 ### Sources & References / 来源与参考
+- **App Translation and Internationalization / 应用翻译与国际化:** @YIDYIF
 - **Tweak Sources / 优化来源:** @Rem01Gaming, @MiAzami, @KanagawaYamadaVTeacher, @ShiraXblood, @Laynsb, @Koneko_dev
 - **Game Preload / 游戏预加载:** @HoyoSlave, @KutuMoba, @Feravolt, @iamlooper
 
