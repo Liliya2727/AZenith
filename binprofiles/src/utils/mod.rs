@@ -101,29 +101,6 @@ pub fn setprop_cmd(key: &str, value: &str) {
     let _ = Command::new("setprop").arg(key).arg(value).status();
 }
 
-pub fn get_biggest_cluster() -> String {
-    let mut max_freq: u64 = 0;
-    let mut target = String::new();
-
-    if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpufreq/policy*") {
-        for path in paths.flatten() {
-            let p_str = path.to_str().unwrap();
-            let cur_freq: u64 = fs::read_to_string(format!("{}/cpuinfo_max_freq", p_str))
-                .unwrap_or_default()
-                .trim()
-                .parse()
-                .unwrap_or(0);
-
-            if cur_freq > max_freq {
-                max_freq = cur_freq;
-                target = path.file_name().unwrap_or_default().to_string_lossy().into_owned();
-            }
-        }
-    }
-
-    target
-}
-
 pub fn applyfreqbalance() {
     if Path::new("/proc/ppm").exists() {
         dsetfreqppm();
