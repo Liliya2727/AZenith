@@ -31,21 +31,55 @@ fun getSystemProperty(key: String, defaultValue: String = ""): String {
     }
 }
 
+private fun readSysFile(path: String): String {
+    return try {
+        java.io.File(path).readText().trim()
+    } catch (e: Exception) {
+        ""
+    }
+}
+
+private fun extractChipVariants(code: String): List<String> {
+    val variants = mutableListOf(code)
+
+    val beforeSlash = code.substringBefore("/").trim()
+    if (beforeSlash != code && beforeSlash.isNotEmpty()) variants.add(beforeSlash)
+
+    val beforeUnderscore = beforeSlash.substringBefore("_").trim()
+    if (beforeUnderscore != beforeSlash && beforeUnderscore.isNotEmpty()) variants.add(beforeUnderscore)
+
+    val basePattern = Regex("^([A-Za-z]+\\d+)")
+    basePattern.find(beforeUnderscore)?.groupValues?.get(1)?.let { base ->
+        if (base !in variants && base.isNotEmpty()) variants.add(base)
+    }
+
+    return variants
+}
+
 private const val MIN_FUZZY_LEN = 5
 
 fun getChipsetName(context: Context): String {
 
     val boardPlatform = getSystemProperty("ro.board.platform").trim()
-    val hardware = Build.HARDWARE.trim()
-    val board = Build.BOARD.trim()
+    val hardware      = Build.HARDWARE.trim()
+    val board         = Build.BOARD.trim()
+    val chipname      = getSystemProperty("ro.hardware.chipname").trim()
+    val mtPlatform    = getSystemProperty("ro.mediatek.platform").trim()
+
+    val socMachine = readSysFile("/sys/devices/soc0/machine")
+    val socFamily  = readSysFile("/sys/devices/soc0/family")
+    val socId      = readSysFile("/sys/devices/soc0/soc_id")
 
     val socModel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         Build.SOC_MODEL.trim()
     } else ""
 
-    val rawCodes = listOf(socModel, boardPlatform, hardware, board).filter {
-        it.isNotEmpty() && it != Build.UNKNOWN
-    }
+    val rawCodes = listOf(
+        socModel, chipname, boardPlatform,
+        socMachine, socFamily, socId,
+        hardware, board,
+        mtPlatform
+    ).filter { it.isNotEmpty() && it != Build.UNKNOWN }
 
     if (rawCodes.isEmpty()) return fallbackLabel("SoC")
 
@@ -63,14 +97,33 @@ fun getChipsetName(context: Context): String {
                 return extractSocName(jsonObject, key) ?: fallbackLabel(code)
             }
         }
-
         for (code in rawCodes) {
             findNormalizedMatch(keys, code)?.let { key ->
                 return extractSocName(jsonObject, key) ?: fallbackLabel(code)
             }
         }
-
         for (code in rawCodes) {
+            findBestFuzzyMatch(keys, code)?.let { key ->
+                return extractSocName(jsonObject, key) ?: fallbackLabel(code)
+            }
+        }
+
+        val strippedCodes = rawCodes
+            .flatMap { extractChipVariants(it) }
+            .filter { it !in rawCodes }
+            .distinct()
+
+        for (code in strippedCodes) {
+            findExactMatch(keys, code)?.let { key ->
+                return extractSocName(jsonObject, key) ?: fallbackLabel(code)
+            }
+        }
+        for (code in strippedCodes) {
+            findNormalizedMatch(keys, code)?.let { key ->
+                return extractSocName(jsonObject, key) ?: fallbackLabel(code)
+            }
+        }
+        for (code in strippedCodes) {
             findBestFuzzyMatch(keys, code)?.let { key ->
                 return extractSocName(jsonObject, key) ?: fallbackLabel(code)
             }
@@ -80,6 +133,37 @@ fun getChipsetName(context: Context): String {
     } catch (e: Exception) {
         e.printStackTrace()
         fallbackLabel(rawCodes.first())
+    }
+}
+
+fun getChipsetVendor(context: Context): String {
+    val chipsetName = getChipsetName(context).lowercase()
+
+    if (!chipsetName.startsWith("unknown")) {
+        return when {
+            "mediatek" in chipsetName -> "mediatek"
+            "qualcomm" in chipsetName || "snapdragon" in chipsetName -> "qualcomm"
+            else -> "unknown"
+        }
+    }
+
+    val socModel      = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Build.SOC_MODEL.lowercase() else ""
+    val boardPlatform = getSystemProperty("ro.board.platform").lowercase()
+    val chipname      = getSystemProperty("ro.hardware.chipname").lowercase()
+    val mtPlatform    = getSystemProperty("ro.mediatek.platform").lowercase()
+
+    return when {
+        socModel.startsWith("mt")      ||
+        boardPlatform.startsWith("mt") ||
+        chipname.startsWith("mt")      ||
+        mtPlatform.isNotEmpty()            -> "mediatek"
+
+        socModel.startsWith("sm")      ||
+        socModel.startsWith("msm")     ||
+        boardPlatform.startsWith("sm") ||
+        boardPlatform.startsWith("msm")    -> "qualcomm"
+
+        else -> "unknown"
     }
 }
 
@@ -125,7 +209,7 @@ private fun findBestFuzzyMatch(keys: List<String>, searchKey: String): String? {
 private fun extractSocName(json: JSONObject, key: String): String? {
     val socObj = json.getJSONObject(key)
     val vendor = socObj.optString("VENDOR", "").trim()
-    val name = socObj.optString("NAME", "").trim()
+    val name   = socObj.optString("NAME", "").trim()
 
     return when {
         vendor.isNotEmpty() && name.isNotEmpty() -> "$vendor $name"
