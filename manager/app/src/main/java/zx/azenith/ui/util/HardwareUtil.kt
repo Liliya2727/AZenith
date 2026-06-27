@@ -16,11 +16,10 @@
 
 package zx.azenith.ui.util
 
-
 import android.content.Context
 import android.os.Build
 import org.json.JSONObject
-
+import kotlin.math.abs
 
 fun getSystemProperty(key: String, defaultValue: String = ""): String {
     return try {
@@ -32,85 +31,106 @@ fun getSystemProperty(key: String, defaultValue: String = ""): String {
     }
 }
 
+private const val MIN_FUZZY_LEN = 5
 
 fun getChipsetName(context: Context): String {
 
     val boardPlatform = getSystemProperty("ro.board.platform").trim()
     val hardware = Build.HARDWARE.trim()
     val board = Build.BOARD.trim()
-    
 
     val socModel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         Build.SOC_MODEL.trim()
     } else ""
 
-
-    val rawCodes = listOf(socModel, boardPlatform, hardware, board).filter { 
-        it.isNotEmpty() && it != Build.UNKNOWN 
+    val rawCodes = listOf(socModel, boardPlatform, hardware, board).filter {
+        it.isNotEmpty() && it != Build.UNKNOWN
     }
 
-    return try {
+    if (rawCodes.isEmpty()) return fallbackLabel("SoC")
 
+    return try {
         val inputStream = context.assets.open("socs.json")
         val jsonString = inputStream.bufferedReader().use { it.readText() }
         val jsonObject = JSONObject(jsonString)
 
-        var matchedName: String? = null
-
+        val keys = mutableListOf<String>()
+        val keysIterator = jsonObject.keys()
+        while (keysIterator.hasNext()) keys.add(keysIterator.next())
 
         for (code in rawCodes) {
-            matchedName = findSocInJson(jsonObject, code)
-            if (matchedName != null) break
+            findExactMatch(keys, code)?.let { key ->
+                return extractSocName(jsonObject, key) ?: fallbackLabel(code)
+            }
         }
 
+        for (code in rawCodes) {
+            findNormalizedMatch(keys, code)?.let { key ->
+                return extractSocName(jsonObject, key) ?: fallbackLabel(code)
+            }
+        }
 
-        matchedName ?: "Unknown (${rawCodes.firstOrNull() ?: "SoC"})"
+        for (code in rawCodes) {
+            findBestFuzzyMatch(keys, code)?.let { key ->
+                return extractSocName(jsonObject, key) ?: fallbackLabel(code)
+            }
+        }
+
+        fallbackLabel(rawCodes.first())
     } catch (e: Exception) {
         e.printStackTrace()
-        "Unknown (${rawCodes.firstOrNull() ?: "SoC"})"
+        fallbackLabel(rawCodes.first())
     }
 }
 
+private fun fallbackLabel(code: String) = "Unknown ($code)"
 
-private fun findSocInJson(json: JSONObject, searchKey: String): String? {
-    val lowerSearchKey = searchKey.lowercase()
-    
+private fun normalize(s: String): String = s.lowercase().filter { it.isLetterOrDigit() }
 
-    val keys = mutableListOf<String>()
-    val keysIterator = json.keys()
-    while (keysIterator.hasNext()) {
-        keys.add(keysIterator.next())
-    }
-
-
-    for (key in keys) {
-        if (key.lowercase() == lowerSearchKey) {
-            return extractSocName(json, key)
-        }
-    }
-
-
-
-    for (key in keys) {
-        val lowerKey = key.lowercase()
-
-        if (lowerKey.contains(lowerSearchKey) || lowerSearchKey.contains(lowerKey)) {
-            return extractSocName(json, key)
-        }
-    }
-
-    return null
+private fun findExactMatch(keys: List<String>, searchKey: String): String? {
+    val lower = searchKey.lowercase()
+    return keys.firstOrNull { it.lowercase() == lower }
 }
 
+private fun findNormalizedMatch(keys: List<String>, searchKey: String): String? {
+    val norm = normalize(searchKey)
+    if (norm.isEmpty()) return null
+    return keys.firstOrNull { normalize(it) == norm }
+}
+
+private fun findBestFuzzyMatch(keys: List<String>, searchKey: String): String? {
+    val normSearch = normalize(searchKey)
+    if (normSearch.length < MIN_FUZZY_LEN) return null
+
+    var bestKey: String? = null
+    var bestScore = -1
+
+    for (key in keys) {
+        val normKey = normalize(key)
+        if (normKey.length < MIN_FUZZY_LEN) continue
+
+        val isPrefixMatch = normKey.startsWith(normSearch) || normSearch.startsWith(normKey)
+        if (!isPrefixMatch) continue
+
+        val score = minOf(normKey.length, normSearch.length) - abs(normKey.length - normSearch.length)
+        if (score > bestScore) {
+            bestScore = score
+            bestKey = key
+        }
+    }
+
+    return bestKey
+}
 
 private fun extractSocName(json: JSONObject, key: String): String? {
     val socObj = json.getJSONObject(key)
     val vendor = socObj.optString("VENDOR", "").trim()
     val name = socObj.optString("NAME", "").trim()
-    
+
     return when {
         vendor.isNotEmpty() && name.isNotEmpty() -> "$vendor $name"
         name.isNotEmpty() -> name
+        vendor.isNotEmpty() -> vendor
         else -> null
     }
 }
