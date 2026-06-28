@@ -1026,8 +1026,6 @@ int main_daemon(void) {
         }
         strcpy(ctx.last_freqoffset, ctx.config_freqoffset);
 
-        bool pending_game_pid = (gamestart != NULL && game_pid_count == 0);
-
         handle_dynamic_bypass(&ctx);
 
         if (ctx.is_initialize_complete && strcmp(ctx.prev_ai_state, "0") == 0) {
@@ -1054,7 +1052,7 @@ int main_daemon(void) {
                     ctx.has_applied_renderer = false;
                     ctx.need_profile_checkup = true;
                 }
-            } else {
+            } else if (ctx.cur_mode != BALANCED_PROFILE && ctx.cur_mode != ECO_MODE) {
                 ctx.need_profile_checkup = false;
             }
         }
@@ -1094,7 +1092,7 @@ int main_daemon(void) {
         }
 
         if (ctx.is_initialize_complete && ctx.cur_mode != PERFORMANCE_PROFILE &&
-            !pending_game_pid && !ctx.need_profile_checkup) {
+            gamestart == NULL && !ctx.need_profile_checkup) {
             continue;
         }
 
