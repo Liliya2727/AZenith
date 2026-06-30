@@ -204,32 +204,32 @@ case "$(echo "$chipset" | tr '[:upper:]' '[:lower:]')" in
 *mt* | *MT*)
 	soc="MediaTek"
 	ui_print "- Applying Tweaks for $soc"
-	# setprop persist.sys.azenithdebug.soctype 1
+	setprop persist.sys.azenith.soctype 1
 	;;
 *sm* | *qcom* | *SM* | *QCOM* | *Qualcomm* | *sdm* | *snapdragon*)
 	soc="Snapdragon"
 	ui_print "- Applying Tweaks for $soc"
-	# setprop persist.sys.azenithdebug.soctype 2
+	setprop persist.sys.azenith.soctype 2
 	;;
 *exynos* | *Exynos* | *EXYNOS* | *universal* | *samsung* | *erd* | *s5e*)
 	soc="Exynos"
 	ui_print "- Applying Tweaks for $soc"
-	# setprop persist.sys.azenithdebug.soctype 3
+	setprop persist.sys.azenith.soctype 3
 	;;
 *Unisoc* | *unisoc* | *ums*)
 	soc="Unisoc"
 	ui_print "- Applying Tweaks for $soc"
-	# setprop persist.sys.azenithdebug.soctype 4
+	setprop persist.sys.azenith.soctype 4
 	;;
 *gs* | *Tensor* | *tensor*)
 	soc="Tensor"
 	ui_print "- Applying Tweaks for $soc"
-	# setprop persist.sys.azenithdebug.soctype 5
+	setprop persist.sys.azenith.soctype 5
 	;;
 *)
 	soc="Unknown"
 	ui_print "- Applying Tweaks for $chipset"
-	# setprop persist.sys.azenithdebug.soctype 0
+	setprop persist.sys.azenith.soctype 0
 	;;
 esac
 

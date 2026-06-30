@@ -96,7 +96,7 @@ class TweakViewModel : ViewModel() {
         private set
     
     private val configKeysToBackup = listOf(
-        "persist.sys.azenithdebug.soctype",
+        "persist.sys.azenith.soctype",
         "persist.sys.azenithconf.cpulimit",
         "persist.sys.azenithconf.freqoffset",
         "persist.sys.azenithconf.APreload",
@@ -140,11 +140,11 @@ class TweakViewModel : ViewModel() {
             val propsMap = mutableMapOf<String, String>()
             
 
-            propsMap["persist.sys.azenithdebug.soctype"] = PropertyUtils.get("persist.sys.azenithdebug.soctype")
+            propsMap["persist.sys.azenith.soctype"] = PropertyUtils.get("persist.sys.azenith.soctype")
 
             if (backupTweaks) {
                 configKeysToBackup.forEach { key ->
-                    if (key != "persist.sys.azenithdebug.soctype") {
+                    if (key != "persist.sys.azenith.soctype") {
                         propsMap[key] = PropertyUtils.get(key)
                     }
                 }
@@ -176,11 +176,11 @@ class TweakViewModel : ViewModel() {
                 return@withContext ValidationResult(false, context.getString(R.string.err_invalid_backup), false, false, null, null)
             }
     
-            val backupSocType = backupData["persist.sys.azenithdebug.soctype"]
+            val backupSocType = backupData["persist.sys.azenith.soctype"]
             val hasApplist = backupData.containsKey(APPLIST_BACKUP_KEY)
             
 
-            val hasTweaks = backupData.keys.any { it.startsWith("persist.sys.azenith") && it != "persist.sys.azenithdebug.soctype" }
+            val hasTweaks = backupData.keys.any { it.startsWith("persist.sys.azenith") && it != "persist.sys.azenith.soctype" }
     
             ValidationResult(true, "", hasTweaks, hasApplist, backupSocType, backupData)
         }
@@ -195,7 +195,7 @@ class TweakViewModel : ViewModel() {
         withContext(Dispatchers.IO) {
             if (restoreTweaks) {
                 backupData.forEach { (key, value) ->
-                    if (key != "persist.sys.azenithdebug.soctype" && key != APPLIST_BACKUP_KEY && value.isNotEmpty()) {
+                    if (key != "persist.sys.azenith.soctype" && key != APPLIST_BACKUP_KEY && value.isNotEmpty()) {
                         
                         PropertyUtils.set(key, value)
                         

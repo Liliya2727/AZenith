@@ -92,6 +92,7 @@ import kotlinx.coroutines.withContext
 import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.*
 import zx.azenith.ui.viewmodel.TweakViewModel
 
 
@@ -216,10 +217,10 @@ fun TweakScreen(
                 item {
                     var socType by remember { mutableStateOf<String?>(null) }
                     LaunchedEffect(Unit) {
-                        socType = PropertyUtils.get("persist.sys.azenithdebug.soctype")
+                        socType = withContext(Dispatchers.IO) { getChipsetVendor(context) }
                     }
                     if (socType != null && viewModel.liteState != null) {
-                        val isMediaTek = socType == "1"
+                        val isMediaTek   = socType == "mediatek"
                         val available = false
                         ExpressiveList(
                             content = listOf(
@@ -650,7 +651,7 @@ fun TweakScreen(
                 title = context.getString(R.string.str_restore_configuration),
                 confirmText = context.getString(R.string.dialog_restore_confirm),
                 confirmEnabled = pendingRestoreResult?.let { result ->
-                    val currentSocType = PropertyUtils.get("persist.sys.azenithdebug.soctype")
+                    val currentSocType = PropertyUtils.get("persist.sys.azenith.soctype")
                     val isSocMismatch = result.socType != currentSocType
                     (optRestoreTweaks && !isSocMismatch) || optRestoreApplist
                 } ?: false,
@@ -661,7 +662,7 @@ fun TweakScreen(
 
                     pendingRestoreResult?.let { result ->
                         val dataToRestore = result.data
-                        val currentSocType = PropertyUtils.get("persist.sys.azenithdebug.soctype")
+                        val currentSocType = PropertyUtils.get("persist.sys.azenith.soctype")
                         val isSocMismatch = result.socType != currentSocType
                         
                         if (dataToRestore != null) {
@@ -681,7 +682,7 @@ fun TweakScreen(
 
                 pendingRestoreResult?.let { result ->
                     val socName = zx.azenith.ui.util.BackupManager.getSocName(result.socType)
-                    val currentSocType = PropertyUtils.get("persist.sys.azenithdebug.soctype")
+                    val currentSocType = PropertyUtils.get("persist.sys.azenith.soctype")
                     val isSocMismatch = result.socType != currentSocType
         
                     Column {
