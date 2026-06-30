@@ -200,37 +200,36 @@ fi
 ui_print "- Checking device soc"
 chipset=$(grep -i 'hardware' /proc/cpuinfo | uniq | cut -d ':' -f2 | sed 's/^[ \t]*//')
 [ -z "$chipset" ] && chipset="$(getprop ro.board.platform) $(getprop ro.hardware)"
-
 case "$(echo "$chipset" | tr '[:upper:]' '[:lower:]')" in
 *mt* | *MT*)
 	soc="MediaTek"
 	ui_print "- Applying Tweaks for $soc"
-	setprop persist.sys.azenithdebug.soctype 1
+	# setprop persist.sys.azenithdebug.soctype 1
 	;;
 *sm* | *qcom* | *SM* | *QCOM* | *Qualcomm* | *sdm* | *snapdragon*)
 	soc="Snapdragon"
 	ui_print "- Applying Tweaks for $soc"
-	setprop persist.sys.azenithdebug.soctype 2
+	# setprop persist.sys.azenithdebug.soctype 2
 	;;
 *exynos* | *Exynos* | *EXYNOS* | *universal* | *samsung* | *erd* | *s5e*)
 	soc="Exynos"
 	ui_print "- Applying Tweaks for $soc"
-	setprop persist.sys.azenithdebug.soctype 3
+	# setprop persist.sys.azenithdebug.soctype 3
 	;;
 *Unisoc* | *unisoc* | *ums*)
 	soc="Unisoc"
 	ui_print "- Applying Tweaks for $soc"
-	setprop persist.sys.azenithdebug.soctype 4
+	# setprop persist.sys.azenithdebug.soctype 4
 	;;
 *gs* | *Tensor* | *tensor*)
 	soc="Tensor"
 	ui_print "- Applying Tweaks for $soc"
-	setprop persist.sys.azenithdebug.soctype 5
+	# setprop persist.sys.azenithdebug.soctype 5
 	;;
 *)
 	soc="Unknown"
 	ui_print "- Applying Tweaks for $chipset"
-	setprop persist.sys.azenithdebug.soctype 0
+	# setprop persist.sys.azenithdebug.soctype 0
 	;;
 esac
 
@@ -333,15 +332,15 @@ INSTALLER_SCRIPT="$TMPDIR/app_installer.sh"
 cat << 'EOF' > "$INSTALLER_SCRIPT"
 #!/system/bin/sh
 APK_PATH="$1"
-OUTPUT=$(cmd package install -r -d --user 0 "$APK_PATH" 2>&1)
+OUTPUT=$(pm install -r -d --user 0 "$APK_PATH" 2>&1)
 if ! echo "$OUTPUT" | grep -iq "Success"; then
-    OUTPUT=$(pm install -r -d --user 0 "$APK_PATH" 2>&1)
+    OUTPUT=$(cmd package install -r -d --user 0 "$APK_PATH" 2>&1)
 fi
 echo "$OUTPUT"
 EOF
 
 chmod 0755 "$INSTALLER_SCRIPT"
-local install_res=$("$INSTALLER_SCRIPT" "$MODPATH/AZenith.apk")
+install_res=$("$INSTALLER_SCRIPT" "$MODPATH/AZenith.apk")
 
 if echo "$install_res" | grep -iq "Success"; then
     ui_print "- AZenith.apk installed successfully."
