@@ -1,11 +1,5 @@
-CC = clang
+CC     = clang
 TARGET = sys.azenith-service
-
-CFLAGS = -Iinclude -DNDEBUG -Wall -Wextra -Werror \
-         -pedantic-errors -Wpedantic \
-         -O2 -std=c23 -fPIC -flto
-
-LDFLAGS = -llog -flto
 
 SRCS = \
     main.c \
@@ -24,10 +18,32 @@ SRCS = \
     src/renderer.c \
     src/app_monitor.c
 
+PROD_CFLAGS  = -Iinclude -DNDEBUG -Wall -Wextra -Werror \
+               -pedantic-errors -Wpedantic \
+               -O2 -std=c23 -fPIC -flto
+
+PROD_LDFLAGS = -llog -flto
+
+ASAN_FLAGS = -fsanitize=address,undefined \
+             -fno-omit-frame-pointer \
+             -fno-optimize-sibling-calls
+
+DBG_CFLAGS  = -Iinclude -Wall -Wextra -std=c23 \
+              $(ASAN_FLAGS) -g
+
+DBG_LDFLAGS = -llog $(ASAN_FLAGS)
+
+.PHONY: all debug clean
+
 all: $(TARGET)
 
 $(TARGET): $(SRCS)
-	$(CC) $(CFLAGS) $(SRCS) $(LDFLAGS) -o $(TARGET)
+	$(CC) $(PROD_CFLAGS) $(SRCS) $(PROD_LDFLAGS) -o $@
+
+debug: $(TARGET)_asan
+
+$(TARGET)_asan: $(SRCS)
+	$(CC) $(DBG_CFLAGS) $(SRCS) $(DBG_LDFLAGS) -o $@
 
 clean:
-	rm -f $(TARGET)
+	rm -f $(TARGET) $(TARGET)_asan

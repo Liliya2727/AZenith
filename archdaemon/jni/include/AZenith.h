@@ -50,6 +50,7 @@
 
 #define NOTIFY_TITLE "AZenith"
 #define LOG_TAG "AZenith"
+#define LOG_TAG_PROFILE "AZenith_Profiles"
 
 #define LOCK_FILE "/data/adb/.config/AZenith/API/.lock"
 #define LOG_FILE "/data/adb/.config/AZenith/debug/AZenith.log"
@@ -204,8 +205,8 @@ bool is_java_lock_held(const char* lock_path);
 void log_preload(LogLevel level, const char* message, ...);
 void log_verbose(LogLevel level, const char* message, ...);
 void log_zenith(LogLevel level, const char* message, ...);
-void external_log(LogLevel level, const char* tag, const char* message);
-void external_vlog(LogLevel level, const char* tag, const char* message);
+void external_log(LogLevel level, const char* tag, const char* message, ...);
+void external_vlog(LogLevel level, const char* tag, const char* message, ...);
 
 // Utilities
 void set_priority(const pid_t pid);
@@ -223,7 +224,6 @@ char* get_gamestart(GameConfig* options, SystemStateCache* cache);
 bool get_screenstate_normal(SystemStateCache* cache);
 bool get_low_power_state_normal(SystemStateCache* cache);
 void run_profiler(const int profile);
-char* skip_space(char* p);
 void read_app_status(SystemStateCache* cache);
 void extract_string_value(char* dest, const char* start, size_t max_len);
 

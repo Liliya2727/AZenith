@@ -281,17 +281,6 @@ void runthermalcore(void) {
 }
 
 /**
- * @brief Skips whitespace characters in a string.
- * @param p Pointer to the string.
- * @return Pointer to the first non-space character.
- */
-char* skip_space(char* p) {
-    while (*p && isspace(*p))
-        p++;
-    return p;
-}
-
-/**
  * @brief Extracts value from a "key: value" string format.
  * @param dest Destination buffer for the extracted value.
  * @param key_pos Pointer to the start of the key/string.

@@ -142,9 +142,33 @@ void log_verbose(LogLevel level, const char* message, ...) {
  * @param tag Custom log tag identifying the external app.
  * @param message Raw log message string.
  */
-void external_log(LogLevel level, const char* tag, const char* message) {
+void external_log(LogLevel level, const char* tag, const char* message, ...) {
     char* timestamp = timern();
+    char logMesg[MAX_OUTPUT_LENGTH];
+    va_list args;
+    va_start(args, message);
+    vsnprintf(logMesg, sizeof(logMesg), message, args);
+    va_end(args);
+    
     write2file(LOG_FILE, true, true, "%s %s %s: %s\n", timestamp, level_str[level], tag, message);
+    
+    int android_log_level;
+    switch (level) {
+        case LOG_INFO:
+            android_log_level = ANDROID_LOG_INFO;
+            break;
+        case LOG_WARN:
+            android_log_level = ANDROID_LOG_WARN;
+            break;
+        case LOG_ERROR:
+            android_log_level = ANDROID_LOG_ERROR;
+            break;
+        default:
+            android_log_level = ANDROID_LOG_DEBUG;
+            break;
+    }
+
+    __android_log_print(android_log_level, LOG_TAG_PROFILE, "%s", logMesg);
 }
 
 /**
@@ -153,7 +177,31 @@ void external_log(LogLevel level, const char* tag, const char* message) {
  * @param tag Custom log tag identifying the external app.
  * @param message Raw log message string.
  */
-void external_vlog(LogLevel level, const char* tag, const char* message) {
+void external_vlog(LogLevel level, const char* tag, const char* message, ...) {
     char* timestamp = timern();
+    char logMesg[MAX_OUTPUT_LENGTH];
+    va_list args;
+    va_start(args, message);
+    vsnprintf(logMesg, sizeof(logMesg), message, args);
+    va_end(args);
+    
     write2file(LOG_VFILE, true, true, "%s %s %s: %s\n", timestamp, level_str[level], tag, message);
+    
+    int android_log_level;
+    switch (level) {
+        case LOG_INFO:
+            android_log_level = ANDROID_LOG_INFO;
+            break;
+        case LOG_WARN:
+            android_log_level = ANDROID_LOG_WARN;
+            break;
+        case LOG_ERROR:
+            android_log_level = ANDROID_LOG_ERROR;
+            break;
+        default:
+            android_log_level = ANDROID_LOG_DEBUG;
+            break;
+    }
+    
+    __android_log_print(android_log_level, LOG_TAG_PROFILE, "%s", logMesg);
 }
