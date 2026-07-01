@@ -18,50 +18,6 @@
 #include <sys/system_properties.h>
 
 /**
- * @brief Prints all available AZenith Daemon CLI commands, usage instructions, and examples to
- * stdout.
- */
-void print_help(void) {
-    printf(
-        "AZenith Daemon CLI (by @Zexshia)\n"
-        "Version: %s\n"
-        "\n"
-        "Usage: sys.azenith-service [options]\n"
-        "\n"
-        "Options:\n"
-        "     -r,    --run              Start AZenith daemon service\n"
-        "\n"
-        "     -p,    --profile <1|2|3>  Apply AZenith profiles via CLI\n"
-        "                               1 : Performance\n"
-        "                               2 : Balanced\n"
-        "                               3 : Eco Mode\n"
-        "\n"
-        "     -l,    --log <TAG> <LVL> <MSG>\n"
-        "                               Write a log message via AZenith logging service\n"
-        "                               LEVELs: 0=DEBUG, 1=INFO, 2=WARN, 3=ERROR, 4=FATAL\n"
-        "\n"
-        "     -vl,   --verboselog <TAG> <LVL> <MSG>\n"
-        "                               Write a verbose log message via AZenith logging service\n"
-        "\n"
-        "     -actv, --appactivity      Open AZenith App Main Activity\n"
-        "\n"
-        "     -cbc,  --checkbypasschg   Check bypass charge compatibility\n"
-        "\n"
-        "     -bpl,  --bypasspathlist   Show all embedded bypass charging paths\n"
-        "\n"
-        "     -V,    --version          Show AZenith current version\n"
-        "\n"
-        "     -h,    --help             Display this help message and exit\n"
-        "\n"
-        "Examples:\n"
-        "     sys.azenith-service --run\n"
-        "     sys.azenith-service --profile 2\n"
-        "     sys.azenith-service --bypasspathlist\n"
-        "     sys.azenith-service --help\n",
-        MODULE_VERSION);
-}
-
-/**
  * @brief Handles manual performance profile selection via CLI argument.
  * @note Blocks execution if AI/Auto Mode is active in system properties.
  * @param argc Number of CLI arguments.
@@ -146,8 +102,7 @@ int handle_log(int argc, char** argv) {
 
     size_t remaining = sizeof(message);
     for (int i = 4; i < argc; i++) {
-        size_t written = snprintf(message + strlen(message), remaining, "%s%s", argv[i],
-                                  (i == argc - 1) ? "" : " ");
+        size_t written = snprintf(message + strlen(message), remaining, "%s%s", argv[i], (i == argc - 1) ? "" : " ");
         if (written >= remaining) {
             fprintf(stderr, "ERROR: Log message too long.\n");
             return 1;
@@ -187,8 +142,7 @@ int handle_verboselog(int argc, char** argv) {
 
     size_t remaining = sizeof(message);
     for (int i = 4; i < argc; i++) {
-        size_t written = snprintf(message + strlen(message), remaining, "%s%s", argv[i],
-                                  (i == argc - 1) ? "" : " ");
+        size_t written = snprintf(message + strlen(message), remaining, "%s%s", argv[i], (i == argc - 1) ? "" : " ");
         if (written >= remaining) {
             fprintf(stderr, "ERROR: Log message too long.\n");
             return 1;
@@ -203,7 +157,9 @@ int handle_verboselog(int argc, char** argv) {
 /**
  * @brief Prints the current AZenith module version string to stdout.
  */
-void printversion(void) { printf("%s\n", MODULE_VERSION); }
+void printversion(void) {
+    printf("%s\n", MODULE_VERSION);
+}
 
 /**
  * @brief Directly launches the primary Android MainActivity of the AZenith application interface.

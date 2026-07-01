@@ -3,20 +3,20 @@ TARGET = sys.azenith-service
 
 SRCS = \
     main.c \
-    src/cmd_utils.c \
-    src/azenith_log.c \
-    src/azenith_profiler.c \
-    src/file_utils.c \
-    src/process_utils.c \
-    src/misc_utils.c \
-    src/game_preload.c \
-    src/main_loop.c \
-    src/azenith_commandline.c \
-    src/bypass_charge.c \
-    src/app_status_monitor.c \
-    src/refreshrates.c \
-    src/renderer.c \
-    src/app_monitor.c
+    src/androidffi/*.c \
+    src/charging/*.c \
+    src/cmdline/*.c \
+    src/cmdutils/*.c \
+    src/fileutils/*.c \
+    src/gamelist/*.c \
+    src/handler/*.c \
+    src/init/*.c \
+    src/inotifyhandler/*.c \
+    src/misc/*.c \
+    src/pidmgr/*.c \
+    src/preloads/*.c \
+    src/profiling/*.c \
+    src/system/*.c
 
 PROD_CFLAGS  = -Iinclude -DNDEBUG -Wall -Wextra -Werror \
                -pedantic-errors -Wpedantic \

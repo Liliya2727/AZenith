@@ -80,8 +80,7 @@ void GamePreload(const char* package) {
     const char* target_type = lib_exists ? "libs" : "split apks";
 
     char preload_cmd[512];
-    snprintf(preload_cmd, sizeof(preload_cmd), "sys.azenith-preloadbin -v -t -m %s \"%s\"", budget,
-             target_path);
+    snprintf(preload_cmd, sizeof(preload_cmd), "sys.azenith-preloadbin -v -t -m %s \"%s\"", budget, target_path);
 
     FILE* fp = popen(preload_cmd, "r");
     if (!fp) {
@@ -119,16 +118,14 @@ void GamePreload(const char* package) {
 
         char* ext = strrchr(line, '.');
         if (ext) {
-            if (strcmp(ext, ".so") == 0 || strcmp(ext, ".apk") == 0 || strcmp(ext, ".dm") == 0 ||
-                strcmp(ext, ".odex") == 0 || strcmp(ext, ".vdex") == 0 ||
-                strcmp(ext, ".art") == 0) {
+            if (strcmp(ext, ".so") == 0 || strcmp(ext, ".apk") == 0 || strcmp(ext, ".dm") == 0 || strcmp(ext, ".odex") == 0 ||
+                strcmp(ext, ".vdex") == 0 || strcmp(ext, ".art") == 0) {
                 log_preload(LOG_DEBUG, "Touched: %s", line);
             }
         }
     }
 
-    log_preload(LOG_INFO, "Game %s preloaded success: total %d pages touched (~%s)", package,
-                total_pages, total_size);
+    log_preload(LOG_INFO, "Game %s preloaded success: total %d pages touched (~%s)", package, total_pages, total_size);
 
     pclose(fp);
 }

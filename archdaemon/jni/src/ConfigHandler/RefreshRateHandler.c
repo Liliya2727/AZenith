@@ -79,8 +79,7 @@ void apply_dynamic_refresh_rate(int target_rr) {
     int final_rr = target_rr;
 
     if (final_rr > max_hw) {
-        log_zenith(LOG_WARN, "Requested %dHz exceeds hardware max %dHz. Capping to max.", target_rr,
-                   max_hw);
+        log_zenith(LOG_WARN, "Requested %dHz exceeds hardware max %dHz. Capping to max.", target_rr, max_hw);
         final_rr = max_hw;
     }
 
