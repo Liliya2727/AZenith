@@ -165,9 +165,7 @@ class TweakViewModel : ViewModel() {
             isSuccess 
         }
     }
-
-
-
+    
     suspend fun validateAndRestoreFile(context: Context, uri: Uri): ValidationResult {
         return withContext(Dispatchers.IO) {
             val backupData = BackupManager.readBackup(context, uri)
@@ -175,12 +173,16 @@ class TweakViewModel : ViewModel() {
             if (backupData == null) {
                 return@withContext ValidationResult(false, context.getString(R.string.err_invalid_backup), false, false, null, null)
             }
-    
-            val backupSocType = backupData["persist.sys.azenith.soctype"]
+            val backupSocType = backupData["persist.sys.azenith.soctype"] 
+                ?: backupData["persist.sys.azenithdebug.soctype"]
+                
             val hasApplist = backupData.containsKey(APPLIST_BACKUP_KEY)
             
-
-            val hasTweaks = backupData.keys.any { it.startsWith("persist.sys.azenith") && it != "persist.sys.azenith.soctype" }
+            val hasTweaks = backupData.keys.any { 
+                it.startsWith("persist.sys.azenith") && 
+                it != "persist.sys.azenith.soctype" &&
+                it != "persist.sys.azenithdebug.soctype" 
+            }
     
             ValidationResult(true, "", hasTweaks, hasApplist, backupSocType, backupData)
         }
@@ -195,7 +197,10 @@ class TweakViewModel : ViewModel() {
         withContext(Dispatchers.IO) {
             if (restoreTweaks) {
                 backupData.forEach { (key, value) ->
-                    if (key != "persist.sys.azenith.soctype" && key != APPLIST_BACKUP_KEY && value.isNotEmpty()) {
+                    if (key != "persist.sys.azenith.soctype" && 
+                        key != "persist.sys.azenithdebug.soctype" && 
+                        key != APPLIST_BACKUP_KEY && 
+                        value.isNotEmpty()) {
                         
                         PropertyUtils.set(key, value)
                         
@@ -229,10 +234,7 @@ class TweakViewModel : ViewModel() {
     fun loadAllConfiguration(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             
-
-
             launch {
-
                 liteState = PropertyUtils.get("persist.sys.azenithconf.cpulimit") == "1"
                 
                 val savedOffset = PropertyUtils.get("persist.sys.azenithconf.freqoffset", "Disabled")
@@ -240,7 +242,6 @@ class TweakViewModel : ViewModel() {
                     "90" -> 1f; "80" -> 2f; "70" -> 3f; "60" -> 4f; "50" -> 5f; "40" -> 6f; else -> 0f
                 }            
                 
-
                 preloadState = PropertyUtils.get("persist.sys.azenithconf.APreload") == "1"
                 memKillerState = PropertyUtils.get("persist.sys.azenithconf.clearbg") == "1"
                 appPriorState = PropertyUtils.get("persist.sys.azenithconf.iosched") == "1"
