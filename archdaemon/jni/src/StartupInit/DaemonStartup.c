@@ -55,8 +55,8 @@ void wait_for_java_companion(DaemonContext* ctx) {
         if (++java_check_retries > MAX_JAVA_RETRIES) {
             log_zenith(LOG_FATAL, "Java companion daemon absent after %d checks, exiting", MAX_JAVA_RETRIES);
             notify("Daemon Error", "Java companion daemon crashed or failed to start.", false, 0);
-            systemv("setprop persist.sys.azenith.service \"\"");
-            systemv("setprop persist.sys.azenith.state stopped");
+            __system_property_set("persist.sys.azenith.service", "");
+            __system_property_set("persist.sys.azenith.state", "stopped");
             exit(EXIT_FAILURE);
         }
         if (java_check_retries <= 1) {

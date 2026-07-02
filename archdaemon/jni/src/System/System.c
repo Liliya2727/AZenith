@@ -21,8 +21,8 @@ int main_daemon(void) {
 
     if (daemon(0, 0)) {
         log_zenith(LOG_FATAL, "Unable to daemonize service");
-        systemv("setprop persist.sys.azenith.service \"\"");
-        systemv("setprop persist.sys.azenith.state stopped");
+        __system_property_set("persist.sys.azenith.service", "");
+        __system_property_set("persist.sys.azenith.state", "stopped");
         return 1;
     }
 
@@ -31,7 +31,6 @@ int main_daemon(void) {
 
     DaemonContext ctx;
     init_daemon_context(&ctx);
-
     wait_for_java_companion(&ctx);
 
     if (pipe(java_lock_pipe) != 0) {
@@ -44,41 +43,39 @@ int main_daemon(void) {
         pthread_create(&lock_thread, &attr, java_lock_watcher_thread, (void*)ctx.java_lock_path);
         pthread_attr_destroy(&attr);
     }
+    
+    log_zenith(LOG_INFO, "Reading initial applist status...");
+    read_app_status(&current_system_cache);
+    reload_gamelist_cache(&ctx);
+    log_zenith(LOG_INFO, "Successfully reading applist");
 
+    // Initiate PID
     log_zenith(LOG_INFO, "Daemon started as PID %d", getpid());
-    setspid();
-
-    systemv("setprop persist.sys.rianixia.learning_enabled true");
-    systemv("setprop persist.sys.azenith.state running");
+    __system_property_set("persist.sys.rianixia.learning_enabled", "true");
+    __system_property_set("persist.sys.azenith.state", "running");
     notify("Initializing...", "Starting AZenith service...", false, 0);
-
-    systemv("setprop persist.sys.rianixia.thermalcore-bigdata.path /data/adb/.config/AZenith/debug");
-    runthermalcore();
-    run_profiler(PERFCOMMON);
-    systemv("sys.azenith-utilityconf FSTrim");
-
+    setspid();
+    
     FILE* fp_ai_init = fopen(DAEMON_MODES, "r");
     if (fp_ai_init) {
         if (fgets(ctx.prev_ai_state, sizeof(ctx.prev_ai_state), fp_ai_init))
             trim_newline(ctx.prev_ai_state);
         fclose(fp_ai_init);
     }
-
     int inotify_fd = setup_inotify_watchers();
     load_initial_config_files(&ctx);
-
-    log_zenith(LOG_INFO, "Reading initial applist status...");
-    read_app_status(&current_system_cache);
-    reload_gamelist_cache(&ctx);
-
-    log_zenith(LOG_INFO, "Successfully read applist. Starting main monitoring loop...");
+    
     checkstate();
     is_kanged();
     check_module_version();
-
+    log_zenith(LOG_INFO, "Module Integrity Passed");
+    
+    log_zenith(LOG_INFO, "Daemon is Ready!");
     ctx.need_profile_checkup = true;
     bool need_loop = true;
-
+    runthermalcore();
+    run_profiler(PERFCOMMON);
+    
     /* Main Daemon Loop */
     while (1) {
         int poll_timeout = -1;
@@ -98,8 +95,8 @@ int main_daemon(void) {
         if (java_daemon_died) {
             log_zenith(LOG_FATAL, "Java daemon lock released, companion daemon exited, stopping daemon");
             notify("Daemon Error", "Java companion daemon crashed. Stopping AZenith.", false, 0);
-            systemv("setprop persist.sys.azenith.service \"\"");
-            systemv("setprop persist.sys.azenith.state stopped");
+            __system_property_set("persist.sys.azenith.service", "");
+            __system_property_set("persist.sys.azenith.state", "stopped");
             break;
         }
 

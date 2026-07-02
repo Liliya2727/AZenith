@@ -180,8 +180,8 @@ void checkstate(void) {
     return;
 killsvc:
     log_zenith(LOG_FATAL, "Service killed by checkstate().");
-    systemv("setprop persist.sys.azenith.service \"\"");
-    systemv("setprop persist.sys.azenith.state stopped");
+    __system_property_set("persist.sys.azenith.service", "");
+    __system_property_set("persist.sys.azenith.state", "stopped");
     exit(EXIT_FAILURE);
 }
 
@@ -210,6 +210,7 @@ void runthermalcore(void) {
     char thermalcore[PROP_VALUE_MAX] = {0};
     __system_property_get("persist.sys.azenithconf.thermalcore", thermalcore);
     if (strcmp(thermalcore, "1") == 0) {
+        __system_property_set("persist.sys.rianixia.thermalcore-bigdata.path", "/data/adb/.config/AZenith/debug");
         systemv("sys.azenith-rianixiathermalcore &");
         FILE* fp = popen("pidof sys.azenith-rianixiathermalcore", "r");
         if (fp == NULL) {

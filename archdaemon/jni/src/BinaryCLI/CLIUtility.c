@@ -49,9 +49,9 @@ int handle_profile(int argc, char** argv) {
         char lite_prop[PROP_VALUE_MAX] = {0};
         __system_property_get("persist.sys.azenithconf.cpulimit", lite_prop);
         if (strcmp(lite_prop, "1") == 0) {
-            systemv("setprop persist.sys.azenithconf.litemode 1");
+            __system_property_set("persist.sys.azenithconf.litemode", "1");
         } else {
-            systemv("setprop persist.sys.azenithconf.litemode 0");
+            __system_property_set("persist.sys.azenithconf.litemode", "0");
         }
         run_profiler(PERFORMANCE_PROFILE);
         notify("Performance Profile", "System is now at Powerful state", false, 0);

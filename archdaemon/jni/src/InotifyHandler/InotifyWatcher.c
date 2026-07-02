@@ -202,8 +202,8 @@ bool process_inotify_events(int inotify_fd, DaemonContext* ctx, int timeout_ms) 
                         } else if (strcmp(event->name, "update") == 0) {
                             log_zenith(LOG_INFO, "Module update detected, exiting.");
                             notify("Module Update", "Please reboot your device to complete module update.", false, 0);
-                            systemv("setprop persist.sys.azenith.service \"\"");
-                            systemv("setprop persist.sys.azenith.state stopped");
+                            __system_property_set("persist.sys.azenith.service", "");
+                            __system_property_set("persist.sys.azenith.state", "stopped");
                             return true;
                         } else if (strcmp(event->name, "remove") == 0) {
                             log_zenith(LOG_INFO, "Module is removed, exiting.");

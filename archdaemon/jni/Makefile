@@ -1,49 +1,20 @@
 CC     = clang
 TARGET = sys.azenith-service
 
-SRCS = \
-    main.c \
-    src/androidffi/*.c \
-    src/charging/*.c \
-    src/cmdline/*.c \
-    src/cmdutils/*.c \
-    src/fileutils/*.c \
-    src/gamelist/*.c \
-    src/handler/*.c \
-    src/init/*.c \
-    src/inotifyhandler/*.c \
-    src/misc/*.c \
-    src/pidmgr/*.c \
-    src/preloads/*.c \
-    src/profiling/*.c \
-    src/system/*.c
+SRCS = Main.c $(wildcard src/*/*.c)
 
-PROD_CFLAGS  = -Iinclude -DNDEBUG -Wall -Wextra -Werror \
-               -pedantic-errors -Wpedantic \
-               -O2 -std=c23 -fPIC -flto
+CFLAGS  = -Iinclude -DNDEBUG -Wall -Wextra -Werror \
+          -pedantic-errors -Wpedantic \
+          -O2 -std=c23 -fPIC -flto
 
-PROD_LDFLAGS = -llog -flto
+LDFLAGS = -llog -flto
 
-ASAN_FLAGS = -fsanitize=address,undefined \
-             -fno-omit-frame-pointer \
-             -fno-optimize-sibling-calls
-
-DBG_CFLAGS  = -Iinclude -Wall -Wextra -std=c23 \
-              $(ASAN_FLAGS) -g
-
-DBG_LDFLAGS = -llog $(ASAN_FLAGS)
-
-.PHONY: all debug clean
+.PHONY: all clean
 
 all: $(TARGET)
 
 $(TARGET): $(SRCS)
-	$(CC) $(PROD_CFLAGS) $(SRCS) $(PROD_LDFLAGS) -o $@
-
-debug: $(TARGET)_asan
-
-$(TARGET)_asan: $(SRCS)
-	$(CC) $(DBG_CFLAGS) $(SRCS) $(DBG_LDFLAGS) -o $@
+	$(CC) $(CFLAGS) $(SRCS) $(LDFLAGS) -o $@
 
 clean:
-	rm -f $(TARGET) $(TARGET)_asan
+	rm -f $(TARGET)

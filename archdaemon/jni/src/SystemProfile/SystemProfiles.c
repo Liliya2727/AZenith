@@ -42,13 +42,13 @@ void apply_performance_profile(DaemonContext* ctx) {
     log_zenith(LOG_INFO, "Applying performance profile for %s", active_app_name ? active_app_name : gamestart);
 
     if (IS_TRUE(opts.perf_lite_mode)) {
-        systemv("setprop persist.sys.azenithconf.litemode 1");
+        __system_property_set("persist.sys.azenithconf.litemode", "1");
     } else if (IS_FALSE(opts.perf_lite_mode)) {
-        systemv("setprop persist.sys.azenithconf.litemode 0");
+        __system_property_set("persist.sys.azenithconf.litemode", "0");
     } else {
         char lite_prop[PROP_VALUE_MAX] = {0};
         __system_property_get("persist.sys.azenithconf.cpulimit", lite_prop);
-        systemv("setprop persist.sys.azenithconf.litemode %s", (strcmp(lite_prop, "1") == 0) ? "1" : "0");
+        __system_property_set("persist.sys.azenithconf.litemode", (strcmp(lite_prop, "1") == 0) ? "1" : "0");
     }
 
     if (ctx->saved_zen_mode < 0) {
