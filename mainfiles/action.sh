@@ -16,30 +16,118 @@
 # limitations under the License.
 #
 
-install_pkg() {
+readonly MODDIR="${0%/*}"
+readonly BIN_SVC="$MODDIR/system/bin/sys.azenith-service"
+readonly APK_COMP="$MODDIR/AZenith.apk"
+readonly TMP_DIR="/data/local/tmp"
+readonly TMP_APK="$TMP_DIR/AZenith_install.apk"
 
-    local apk_path="/data/adb/modules/AZenith/AZenith.apk"
-
-    if [ -f "$apk_path" ]; then
-        echo "- App Manager is not fully installed. Installing now..."
-        local install_res=$(cmd package install -r -d --user 0 "$apk_path" 2>&1)
-        
-        if echo "$install_res" | grep -iq "Success"; then
-            echo "- App Manager installed successfully."
-            sleep 1
-        else
-            echo "[!] Failed to install APK. Log: $install_res" >&2
-            return 1
-        fi
-    else
-        echo "[!] APK file not found at $apk_path" >&2
-        return 1
-    fi
+# Check if app is installed
+_app_installed() {
+	pm path zx.azenith >/dev/null 2>&1
 }
 
-# Cek kelayakan environment sebelum membuka aplikasi
-if ! command -v /data/adb/modules/AZenith/system/bin/sys.azenith-service >/dev/null 2>&1 || ! pm path zx.azenith >/dev/null 2>&1; then
-    install_pkg
-fi
+# Check if service binary exists
+_service_exists() {
+	[ -f "$BIN_SVC" ]
+}
 
-exec /data/adb/modules/AZenith/system/bin/sys.azenith-service --appactivity > /dev/null 2>&1
+# Prepare app files safely
+_prepare_apk() {
+	if [ ! -f "$APK_COMP" ]; then
+		echo "[!] APK not found at $APK_COMP" >&2
+		return 1
+	fi
+	cp "$APK_COMP" "$TMP_APK" || return 1
+	chmod 644 "$TMP_APK" || return 1
+	return 0
+}
+
+# Cleanup temporary APK
+_cleanup_apk() {
+	[ -f "$TMP_APK" ] && rm -f "$TMP_APK"
+}
+
+# Install APK
+install_manager() {
+	local tmp_log="$TMP_DIR/action_install_log.txt"
+
+	(
+		local install_output
+		install_output=$(pm install -r -d --user 0 "$TMP_APK" 2>&1)
+		if ! echo "$install_output" | grep -iq "Success"; then
+			install_output=$(cmd package install -r -d --user 0 "$TMP_APK" 2>&1)
+		fi
+		echo "$install_output" >"$tmp_log"
+	) &
+	local pid=$!
+
+	local i=0
+	while kill -0 $pid 2>/dev/null; do
+		clear
+		case $((i % 4)) in
+		0) echo "[-] Installing AZenith Manager..." ;;
+		1) echo "[/] Installing AZenith Manager..." ;;
+		2) echo "[|] Installing AZenith Manager..." ;;
+		3) echo "[\] Installing AZenith Manager..." ;;
+		esac
+		sleep 0.1
+		i=$((i + 1))
+	done
+
+	wait $pid
+	clear
+
+	local result
+	[ -f "$tmp_log" ] && result=$(cat "$tmp_log")
+	rm -f "$tmp_log"
+
+	if echo "$result" | grep -iq "Success"; then
+		printf "[✓] AZenith Manager installed successfully\n"
+
+		pm enable --user 0 zx.azenith/.Launcher >/dev/null 2>&1
+		pm grant zx.azenith android.permission.READ_EXTERNAL_STORAGE >/dev/null 2>&1
+		pm grant zx.azenith android.permission.POST_NOTIFICATIONS >/dev/null 2>&1
+		pm grant zx.azenith android.permission.READ_MEDIA_IMAGES >/dev/null 2>&1
+
+		echo "- Launching manager..."
+		sleep 1
+		return 0
+	else
+		echo "[!] Failed to install AZenith Manager"
+		echo "  Log: $result"
+		return 1
+	fi
+}
+
+clear
+
+if ! _app_installed; then
+	echo "[*] App not detected. Preparing installation..."
+	sleep 1
+
+	if _prepare_apk; then
+		if install_manager; then
+			_cleanup_apk
+			if _service_exists; then
+				exec "$BIN_SVC" --appactivity >/dev/null 2>&1
+			else
+				echo "[!] Service binary not found at $BIN_SVC" >&2
+				exit 1
+			fi
+		else
+			_cleanup_apk
+			exit 1
+		fi
+	else
+		exit 1
+	fi
+else
+	if _service_exists; then
+		echo "[*] Launching AZenith Manager..."
+		exec "$BIN_SVC" --appactivity >/dev/null 2>&1
+	else
+		echo "[!] Service binary not found at $BIN_SVC" >&2
+		exit 1
+	fi
+fi
