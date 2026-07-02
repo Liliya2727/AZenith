@@ -49,11 +49,13 @@ _cleanup_apk() {
     [ -f "$TMP_APK" ] && rm -f "$TMP_APK"
 }
 
-# Install APK with spinner animation during installation
+# Install APK with spinner animation and timeout protection
 install_manager() {
     local apk_path="$1"
     local app_name="$2"
     local tmp_log="$TMP_DIR/install_log.txt"
+
+    local MAX_TIMEOUT=100
 
     (
         local install_output
@@ -76,9 +78,16 @@ install_manager() {
         esac
         sleep 0.1
         i=$((i + 1))
+
+        if [ $i -ge $MAX_TIMEOUT ]; then
+            echo "[!] Installation took too long. Stopping..."
+            kill -9 $pid 2>/dev/null
+            echo "Timeout: Installation exceeded 10 seconds" > "$tmp_log"
+            break
+        fi
     done
 
-    wait $pid
+    wait $pid 2>/dev/null
     clear
 
     local result
@@ -90,14 +99,21 @@ install_manager() {
         return 0
     else
         echo "[!] Failed to install $app_name"
+        if echo "$result" | grep -iq "Timeout"; then
+            echo "  Error: Installation failed due to Timeout"
+            echo "  Possible reason: Your Rom blocking background install."
+        else
+            echo "  Error log: $(echo "$result" | head -n 2)"
+        fi
         echo "! Run module Action"
         echo "! Or unzip the module file, and"
         echo "! Install it manually"
         echo "- Continuing module installation..."
-        sleep 2
+        sleep 3
         return 1
     fi
 }
+
 
 abort_api() {
   echo ""

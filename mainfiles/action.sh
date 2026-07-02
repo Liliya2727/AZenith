@@ -48,9 +48,10 @@ _cleanup_apk() {
 	[ -f "$TMP_APK" ] && rm -f "$TMP_APK"
 }
 
-# Install APK
+# Install APK with timeout protection
 install_manager() {
 	local tmp_log="$TMP_DIR/action_install_log.txt"
+	local MAX_TIMEOUT=100
 
 	(
 		local install_output
@@ -73,9 +74,17 @@ install_manager() {
 		esac
 		sleep 0.1
 		i=$((i + 1))
+		
+		# Pengecekan batas waktu
+		if [ $i -ge $MAX_TIMEOUT ]; then
+			echo "[!] Installation took too long. Stopping..."
+			kill -9 $pid 2>/dev/null
+			echo "Timeout: Installation exceeded 10 seconds" > "$tmp_log"
+			break
+		fi
 	done
 
-	wait $pid
+	wait $pid 2>/dev/null
 	clear
 
 	local result
@@ -95,7 +104,14 @@ install_manager() {
 		return 0
 	else
 		echo "[!] Failed to install AZenith Manager"
-		echo "  Log: $result"
+		if echo "$result" | grep -iq "Timeout"; then
+			echo "  Error: Installation failed due to Timeout"
+            echo "  Possible reason: Your Rom blocking background install."
+		else
+			echo "  Log: $result"
+		fi
+		echo "  Please install AZenith.apk manually."
+		sleep 3
 		return 1
 	fi
 }
