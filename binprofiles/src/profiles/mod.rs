@@ -487,6 +487,9 @@ pub fn initialize() {
     write_lock(libs, "/proc/sys/kernel/sched_lib_name");
     write_lock("255", "/proc/sys/kernel/sched_lib_mask_force");
 
+    systemv("sys.azenith-utilityconf FSTrim");
+    systemv("sh /data/adb/modules/AZenith/preferenced-tweaks.sh");
+    
     // 11. Final Sync & Logs
     let _ = Command::new("sync").status();
     log_verbose("Initializing Complete");
