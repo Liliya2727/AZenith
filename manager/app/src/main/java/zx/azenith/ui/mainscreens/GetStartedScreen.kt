@@ -567,16 +567,6 @@ fun GetStartedScreen(navController: NavController) {
                                             )
                                         }
                                     }
-
-                                    if (rootAccessGranted == false) {
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        Text(
-                                            text = "Akses Root diperlukan untuk melanjutkan.",
-                                            color = MaterialTheme.colorScheme.error,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
                                 }
                             }
                         }
