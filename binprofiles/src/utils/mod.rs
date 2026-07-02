@@ -1,12 +1,12 @@
 use std::os::unix::fs::PermissionsExt;
-use std::fs; use std::path::Path; use std::process::Command;
-
+use std::fs; 
+use std::path::Path; 
+use std::process::Command;
 use glob::glob;
 use std::collections::HashSet;
 
 pub const CONFIG_PATH: &str = "/data/adb/.config/AZenith";
 pub const MY_PATH: &str = "/system/bin:/system/xbin:/data/adb/ap/bin:/data/adb/ksu/bin:/data/adb/magisk:/debug_ramdisk:/sbin:/sbin/su:/su/bin:/su/xbin:/data/data/com.termux/files/usr/bin";
-
 
 pub fn getprop(key: &str) -> String {
     if let Ok(output) = Command::new("getprop").arg(key).output() {
@@ -67,6 +67,21 @@ pub fn write_unlock(value: &str, path_str: &str) {
 
 pub fn write_lock(value: &str, path_str: &str) {
     write_unlock_core(value, path_str, true);
+}
+
+pub fn systemv(command: &str) -> i32 {
+    match Command::new("/system/bin/sh")
+        .arg("-c")
+        .arg(command)
+        .env("PATH", MY_PATH)
+        .status()
+    {
+        Ok(status) => status.code().unwrap_or(-1),
+        Err(e) => {
+            log_info(&format!("systemv failed for '{}': {}", command, e));
+            -1
+        }
+    }
 }
 
 pub fn get_limiter() -> u64 {
