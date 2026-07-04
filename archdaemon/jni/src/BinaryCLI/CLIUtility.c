@@ -195,8 +195,18 @@ void clearlogs(void) {
 }
 
 /**
- * @brief Restart AZenith Service
+ * @brief Restarts the AZenith service daemon by spawning a detached child
+ *        process. The caller returns immediately without blocking on the
+ *        actual restart sequence.
+ * @return 0 if the detach/fork succeeded, 1 if fork failed.
  */
-void restart_service(void) {
-    systemv("sys.azenith-utilityconf restartservice");
+int restart_service(void) {
+    if (daemon(0, 0)) {
+        log_zenith(LOG_FATAL, "Unable to daemonize service");
+        return 1;
+    }
+
+    system("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf restartservice");
+
+    return 0;
 }

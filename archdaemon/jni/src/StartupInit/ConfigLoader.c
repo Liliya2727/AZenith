@@ -52,5 +52,5 @@ void load_initial_config_files(DaemonContext* ctx) {
         fclose(fp);
     }
 
-    log_zenith(LOG_INFO, "Initial configs loaded. Freqoffset: [%s], Bypass: [%s]", ctx->config_freqoffset, ctx->config_bypasspath);
+    log_zenith(LOG_INFO, "ConfigLoader: Initial configs loaded. Freqoffset: [%s], Bypass: [%s]", ctx->config_freqoffset, ctx->config_bypasspath);
 }

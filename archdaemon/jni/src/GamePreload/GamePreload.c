@@ -88,8 +88,8 @@ void GamePreload(const char* package) {
         return;
     }
 
-    log_zenith(LOG_INFO, "Preloading game %s %s", target_type, package);
-    log_preload(LOG_INFO, "Preloading %s %s with budget %s", target_type, target_path, budget);
+    log_zenith(LOG_INFO, "GamePreload: Preloading game %s %s", target_type, package);
+    log_preload(LOG_INFO, "GamePreload: Preloading %s %s with budget %s", target_type, target_path, budget);
 
     char line[1024];
     int total_pages = 0;
@@ -108,10 +108,10 @@ void GamePreload(const char* package) {
                 strncpy(total_size, size, sizeof(total_size) - 1);
                 total_size[sizeof(total_size) - 1] = '\0';
 
-                log_zenith(LOG_DEBUG, "Preloading complete: %d memory pages touched", pages);
-                log_zenith(LOG_DEBUG, "Total memory used for preloaded libraries: %s", size);
+                log_zenith(LOG_DEBUG, "GamePreload: Preloading complete: %d memory pages touched", pages);
+                log_zenith(LOG_DEBUG, "GamePreload: Total memory used for preloaded libraries: %s", size);
             } else {
-                log_zenith(LOG_WARN, "Failed to parse Touched Pages");
+                log_zenith(LOG_WARN, "GamePreload: Failed to parse Touched Pages");
             }
             continue;
         }
@@ -125,7 +125,7 @@ void GamePreload(const char* package) {
         }
     }
 
-    log_preload(LOG_INFO, "Game %s preloaded success: total %d pages touched (~%s)", package, total_pages, total_size);
+    log_preload(LOG_INFO, "GamePreload: Game %s preloaded success: total %d pages touched (~%s)", package, total_pages, total_size);
 
     pclose(fp);
 }

@@ -68,6 +68,7 @@ int main_daemon(void) {
     checkstate();
     is_kanged();
     check_module_version();
+    validateprop();
     log_zenith(LOG_INFO, "Module Integrity Passed");
     
     log_zenith(LOG_INFO, "Daemon is Ready!");

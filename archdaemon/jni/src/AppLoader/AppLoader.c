@@ -30,7 +30,7 @@ void reload_gamelist_cache(DaemonContext* ctx) {
     free_gamelist_cache();
     FILE* fp = fopen(GAMELIST, "r");
     if (!fp) {
-        log_zenith(LOG_ERROR, "Failed to open GAMELIST for caching.");
+        log_zenith(LOG_ERROR, "AppLoader: Failed to open GAMELIST for caching.");
         return;
     }
     fseek(fp, 0, SEEK_END);
@@ -39,21 +39,21 @@ void reload_gamelist_cache(DaemonContext* ctx) {
 
     if (size <= 0) {
         fclose(fp);
-        log_zenith(LOG_WARN, "GAMELIST is empty or invalid.");
+        log_zenith(LOG_WARN, "AppLoader: GAMELIST is empty or invalid.");
         return;
     }
 
     char* buf = malloc(size + 1);
     if (!buf) {
         fclose(fp);
-        log_zenith(LOG_FATAL, "OOM: Failed to allocate GAMELIST read buffer");
+        log_zenith(LOG_FATAL, "AppLoader: Failed to allocate GAMELIST read buffer");
         return;
     }
 
     if (fread(buf, 1, size, fp) != (size_t)size) {
         fclose(fp);
         free(buf);
-        log_zenith(LOG_ERROR, "Failed to read data from GAMELIST file");
+        log_zenith(LOG_ERROR, "AppLoader: Failed to read data from GAMELIST file");
         return;
     }
     fclose(fp);
@@ -65,7 +65,7 @@ void reload_gamelist_cache(DaemonContext* ctx) {
     if (!g_game_cache) {
         free(buf);
         pthread_mutex_unlock(&cache_mutex);
-        log_zenith(LOG_FATAL, "OOM: Failed to allocate game cache array");
+        log_zenith(LOG_FATAL, "AppLoader: Failed to allocate game cache array");
         return;
     }
 
@@ -80,7 +80,7 @@ void reload_gamelist_cache(DaemonContext* ctx) {
                 capacity *= 2;
                 GameConfig* temp = realloc(g_game_cache, capacity * sizeof(GameConfig));
                 if (!temp) {
-                    log_zenith(LOG_FATAL, "OOM: Realloc failed while parsing gamelist");
+                    log_zenith(LOG_FATAL, "AppLoader: Realloc failed while parsing gamelist");
                     free(g_game_cache);
                     g_game_cache = NULL;
                     g_game_cache_count = 0;
@@ -148,6 +148,6 @@ void reload_gamelist_cache(DaemonContext* ctx) {
     pthread_mutex_unlock(&cache_mutex);
 
     if (!ctx->is_initialize_complete) {
-        log_zenith(LOG_INFO, "Gamelist in-memory cache loaded successfully. Total: %d games registered.", g_game_cache_count);
+        log_zenith(LOG_INFO, "AppLoader: Gamelist in-memory cache loaded successfully. Total: %d games registered.", g_game_cache_count);
     }
 }

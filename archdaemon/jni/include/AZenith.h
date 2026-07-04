@@ -75,6 +75,11 @@
 #define IS_FALSE(v)   ((v) && strcmp((v), "false") == 0)
 #define IS_DEFAULT(v) (!(v) || strcmp((v), "default") == 0)
 
+#define AZENITH_PROPERTIES      "persist.sys.azenith"
+#define AZENITH_PROPERTIES_LEN  (sizeof(AZENITH_PROPERTIES) - 1)
+#define MAX_PENDING_DELETE      128
+#define MAX_PROP_NAME_BUF       192
+
 #define MY_PATH                                                                                                                    \
     "PATH=/system/bin:/system/xbin:/data/adb/ap/bin:/data/adb/ksu/bin:/data/adb/magisk:/debug_ramdisk:/sbin:/sbin/su:/su/bin:/su/" \
     "xbin:/data/data/com.termux/files/usr/bin"
@@ -169,6 +174,10 @@ typedef struct {
     int config_bypasschgthreshold;
 } DaemonContext;
 
+extern const char* VALID_AZENITH_PROPS[];
+extern const size_t VALID_AZENITH_PROPS_COUNT;
+void validateprop(void);
+
 extern BypassNode bypass_list[];
 extern const int bypass_list_size;
 
@@ -217,7 +226,7 @@ int require_daemon_running(void);
 int handle_profile(int argc, char** argv);
 int handle_log(int argc, char** argv);
 int handle_verboselog(int argc, char** argv);
-void restart_service(void);
+int restart_service(void);
 
 // Misc Utilities
 extern void GamePreload(const char* package);
