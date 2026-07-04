@@ -69,11 +69,7 @@ pub fn performance_profile() {
     write_lock("80", "/proc/sys/vm/vfs_cache_pressure");
     write_lock("3", "/proc/sys/vm/drop_caches");
     write_lock("N", "/sys/module/workqueue/parameters/power_efficient");
-    write_lock("N", "/sys/module/workqueue/parameters/disable_numa");
-    write_lock("0", "/sys/kernel/eara_thermal/enable");
     write_lock("0", "/sys/devices/system/cpu/eas/enable");
-    write_lock("1", "/sys/devices/system/cpu/cpu2/online");
-    write_lock("1", "/sys/devices/system/cpu/cpu3/online");
 
     if let Ok(paths) = glob::glob("/dev/stune/*") {
         for path in paths.flatten() {
@@ -84,16 +80,6 @@ pub fn performance_profile() {
                 write_lock("0", &format!("{}/schedtune.prefer_idle", p_str));
                 write_lock("0", &format!("{}/schedtune.colocate", p_str));
             }
-        }
-    }
-
-    write_lock("1", "/proc/sys/kernel/sched_energy_aware");
-
-    if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpu*") {
-        for path in paths.flatten() {
-            let p_str = path.to_str().unwrap();
-            write_lock("0", &format!("{}/core_ctl/enable", p_str));
-            write_lock("0", &format!("{}/core_ctl/core_ctl_boost", p_str));
         }
     }
 
@@ -136,7 +122,7 @@ pub fn performance_profile() {
     }
 
     if !lite_mode {
-        match getprop("persist.sys.azenithdebug.soctype").as_str() {
+        match getprop("persist.sys.azenith.soctype").as_str() {
             "1" => mediatek_performance(),
             "2" => snapdragon_performance(),
             "3" => exynos_performance(),
@@ -202,8 +188,6 @@ pub fn balanced_profile() {
 
     write_lock("120", "/proc/sys/vm/vfs_cache_pressure");
     write_lock("Y", "/sys/module/workqueue/parameters/power_efficient");
-    write_lock("Y", "/sys/module/workqueue/parameters/disable_numa");
-    write_lock("1", "/sys/kernel/eara_thermal/enable");
     write_lock("1", "/sys/devices/system/cpu/eas/enable");
 
     if let Ok(paths) = glob::glob("/dev/stune/*") {
@@ -215,16 +199,6 @@ pub fn balanced_profile() {
                 write_lock("0", &format!("{}/schedtune.prefer_idle", p_str));
                 write_lock("0", &format!("{}/schedtune.colocate", p_str));
             }
-        }
-    }
-
-    write_lock("1", "/proc/sys/kernel/sched_energy_aware");
-
-    if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpu*") {
-        for path in paths.flatten() {
-            let p_str = path.to_str().unwrap();
-            write_lock("0", &format!("{}/core_ctl/enable", p_str));
-            write_lock("0", &format!("{}/core_ctl/core_ctl_boost", p_str));
         }
     }
 
@@ -262,7 +236,7 @@ pub fn balanced_profile() {
         }
     });
 
-    match getprop("persist.sys.azenithdebug.soctype").as_str() {
+    match getprop("persist.sys.azenith.soctype").as_str() {
         "1" => mediatek_balance(),
         "2" => snapdragon_balance(),
         "3" => exynos_balance(),
@@ -321,8 +295,6 @@ pub fn eco_mode() {
 
     write_lock("120", "/proc/sys/vm/vfs_cache_pressure");
     write_lock("Y", "/sys/module/workqueue/parameters/power_efficient");
-    write_lock("Y", "/sys/module/workqueue/parameters/disable_numa");
-    write_lock("1", "/sys/kernel/eara_thermal/enable");
     write_lock("1", "/sys/devices/system/cpu/eas/enable");
 
     if let Ok(paths) = glob::glob("/dev/stune/*") {
@@ -334,16 +306,6 @@ pub fn eco_mode() {
                 write_lock("0", &format!("{}/schedtune.prefer_idle", p_str));
                 write_lock("0", &format!("{}/schedtune.colocate", p_str));
             }
-        }
-    }
-
-    write_lock("0", "/proc/sys/kernel/sched_energy_aware");
-
-    if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpu*") {
-        for path in paths.flatten() {
-            let p_str = path.to_str().unwrap();
-            write_lock("0", &format!("{}/core_ctl/enable", p_str));
-            write_lock("0", &format!("{}/core_ctl/core_ctl_boost", p_str));
         }
     }
 
@@ -376,7 +338,7 @@ pub fn eco_mode() {
         }
     }
 
-    match getprop("persist.sys.azenithdebug.soctype").as_str() {
+    match getprop("persist.sys.azenith.soctype").as_str() {
         "1" => mediatek_powersave(),
         "2" => snapdragon_powersave(),
         "3" => exynos_powersave(),

@@ -140,6 +140,7 @@ pub fn mediatek_performance() {
 
     write_lock("0", "/proc/perfmgr/syslimiter/syslimiter_force_disable");
     write_lock("stop 1", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
+    
     write_lock("0", "/sys/kernel/eara_thermal/enable");
 
     write_lock("0", "/sys/kernel/helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp");
@@ -191,6 +192,8 @@ pub fn mediatek_powersave() {
     write_lock("0", "/sys/devices/platform/boot_dramboost/dramboost/dramboost");
     write_lock("1", "/sys/kernel/fpsgo/common/force_onoff");
     write_lock("1", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
+    
+    write_lock("1", "/sys/kernel/eara_thermal/enable");
 
     write_lock("-1", "/sys/kernel/helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp");
     write_lock("powersave", "/sys/class/devfreq/mtk-dvfsrc-devfreq/governor");
@@ -225,7 +228,6 @@ pub fn mediatek_powersave() {
     write_lock("stop 0", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
     write_lock("stop 0", "/proc/pbm/pbm_stop");
     write_lock("stop 0", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
-    write_lock("1", "/sys/kernel/eara_thermal/enable");
 
     if let Ok(mut paths) = glob::glob("/sys/devices/platform/*.mali") {
         if let Some(Ok(path)) = paths.next() {
