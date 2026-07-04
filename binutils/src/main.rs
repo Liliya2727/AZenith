@@ -17,12 +17,42 @@
 mod utils;
 
 use std::env;
-use utils::*;
 use std::process::Command;
+use std::fs;
+use utils::*;
+
+fn get_parent_pid() -> Option<u32> {
+    fs::read_to_string("/proc/self/stat")
+        .ok()
+        .and_then(|stat| {
+            stat.split_whitespace()
+                .nth(3)
+                .and_then(|ppid| ppid.parse::<u32>().ok())
+        })
+}
+
+fn get_process_cmdline(pid: u32) -> Option<String> {
+    fs::read_to_string(format!("/proc/{}/cmdline", pid))
+        .ok()
+        .map(|s| s.replace('\0', " ").trim().to_string())
+}
+
+fn verify_caller() -> bool {
+    if let Some(ppid) = get_parent_pid() {
+        if let Some(cmdline) = get_process_cmdline(ppid) {
+            return cmdline.contains("sys.azenith-service") || cmdline.contains("sys.azenith");
+        }
+    }
+    false
+}
 
 fn main() {
-
     let args: Vec<String> = env::args().collect();
+
+    if !verify_caller() {
+        eprintln!("\x1b[31mError: This utility can only be called by sys.azenith-service\x1b[0m");
+        std::process::exit(1);
+    }
     
     if args.len() > 1 {
         let function = args[1].as_str();
