@@ -193,3 +193,10 @@ void clearlogs(void) {
             "zx.azenith/.receiver.ZenithReceiver --ez clearall true >/dev/null "
             "2>&1\"");
 }
+
+/**
+ * @brief Restart AZenith Service
+ */
+void restart_service(void) {
+    systemv("sys.azenith-utilityconf restartservice");
+}

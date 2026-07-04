@@ -62,6 +62,8 @@ int main(int argc, char* argv[]) {
         return handle_profile(argc, argv);
     if (IS_CMD(cmd, "--log", "-l"))
         return handle_log(argc, argv);
+    if (IS_CMD(cmd, "--rerun", "-rr"))
+        return restart_service();
     if (IS_CMD(cmd, "--verboselog", "-vl"))
         return handle_verboselog(argc, argv);
     if (IS_CMD(cmd, "--checkbypasschg", "-cbc"))

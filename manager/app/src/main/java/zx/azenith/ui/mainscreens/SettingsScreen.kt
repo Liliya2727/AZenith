@@ -309,7 +309,7 @@ fun SettingsScreen(navController: NavController) {
                                 {
                                     ExpressiveListItem(
                                         onClick = {
-                                            Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf restartservice").submit { result ->
+                                            Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service --rerun").submit { result ->
                                                 if (result.isSuccess) {
                                                     coroutineScope.launch {
                                                         snackbarHostState.showSnackbar(restartToastText)

@@ -217,6 +217,7 @@ int require_daemon_running(void);
 int handle_profile(int argc, char** argv);
 int handle_log(int argc, char** argv);
 int handle_verboselog(int argc, char** argv);
+void restart_service(void);
 
 // Misc Utilities
 extern void GamePreload(const char* package);
