@@ -1,3 +1,22 @@
+## AZenith 5.1
+### • Changelog
+- Fixed an issue where app Force Closed issue in Miui and HyperOS Roms
+- Fixed an issue where MediaTek Settings / Snapdragon Settings Labeled as unavailable in some Roms
+- Fixed an issue where profile got stuck between powersave and balanced profiles
+- Fixed an issue where module installation got stuck while installing manager apps
+- Update the FSTrim script
+- Optimizing Daemon Flows
+feat(i18n): expand localization from 17 to 84 languages with revised translations
+- Add 67 new language localizations (af, am, as, az, be, bg, bn, bs,
+  ca, cs, da, el, en-rAU, en-rCA, en-rGB, en-rIN, es-rUS, et, eu, fa,
+  fi, fr-rCA, gl, gu, hr, hu, hy, iw, ka, kk, km, kn, ko, ky, lo, lt,
+  lv, mk, ml, mn, mr, ms, my, nb, ne, nl, or, pa, pt-rBR, pt-rPT, ro,
+  si, sk, sl, sq, sr, b+sr+Latn, sv, sw, ta, te, th, uk, ur, uz, zh-rHK,
+  zh-rTW, zu) by @YIDYIF
+- Revise all existing translations (ar, de, es, fr, hi, in, it, ja, ko,
+  pl, pt, ru, tl, tr, vi, zh-rCN) by @YIDYIF
+
+
 ## AZenith 5.0.4
 ### • Changelog
 - Fixed an Anti-Bootloop issue on KSU Metamodule mode
