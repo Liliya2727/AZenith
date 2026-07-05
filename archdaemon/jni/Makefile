@@ -1,33 +1,22 @@
-CC = clang
+CC     = clang
 TARGET = sys.azenith-service
+TARGET_TRIPLE = aarch64-unknown-linux-android26
 
-CFLAGS = -Iinclude -DNDEBUG -Wall -Wextra -Werror \
-         -pedantic-errors -Wpedantic \
-         -O2 -std=c23 -fPIC -flto
+SRCS = Main.c $(wildcard src/*/*.c)
 
-LDFLAGS = -llog -flto
+CFLAGS  = -Iinclude -DNDEBUG -Wall -Wextra -Werror \
+          -pedantic-errors -Wpedantic \
+          --target=$(TARGET_TRIPLE) \
+          -O2 -std=c23 -fPIC -flto
 
-SRCS = \
-    main.c \
-    src/cmd_utils.c \
-    src/azenith_log.c \
-    src/azenith_profiler.c \
-    src/file_utils.c \
-    src/process_utils.c \
-    src/misc_utils.c \
-    src/game_preload.c \
-    src/main_loop.c \
-    src/azenith_commandline.c \
-    src/bypass_charge.c \
-    src/app_status_monitor.c \
-    src/refreshrates.c \
-    src/renderer.c \
-    src/app_monitor.c
+LDFLAGS = -llog -flto --target=$(TARGET_TRIPLE)
+
+.PHONY: all clean
 
 all: $(TARGET)
 
 $(TARGET): $(SRCS)
-	$(CC) $(CFLAGS) $(SRCS) $(LDFLAGS) -o $(TARGET)
+	$(CC) $(CFLAGS) $(SRCS) $(LDFLAGS) -o $@
 
 clean:
 	rm -f $(TARGET)

@@ -52,4 +52,4 @@ nohup app_process -Djava.class.path="$APK_COMP" / \
     "$MODULE_CONFIG/java.lock" >"$MODULE_CONFIG/sysmon.log" 2>&1 &
     
 # Run AZenith service
-sleep 1 && "$BIN_SVC" --run && exec sh "$MODDIR/preferenced-tweaks.sh" &
+sleep 1 && exec "$BIN_SVC" --run

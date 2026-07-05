@@ -1,12 +1,12 @@
 use std::os::unix::fs::PermissionsExt;
-use std::fs; use std::path::Path; use std::process::Command;
-
+use std::fs; 
+use std::path::Path; 
+use std::process::Command;
 use glob::glob;
 use std::collections::HashSet;
 
 pub const CONFIG_PATH: &str = "/data/adb/.config/AZenith";
 pub const MY_PATH: &str = "/system/bin:/system/xbin:/data/adb/ap/bin:/data/adb/ksu/bin:/data/adb/magisk:/debug_ramdisk:/sbin:/sbin/su:/su/bin:/su/xbin:/data/data/com.termux/files/usr/bin";
-
 
 pub fn getprop(key: &str) -> String {
     if let Ok(output) = Command::new("getprop").arg(key).output() {
@@ -17,7 +17,7 @@ pub fn getprop(key: &str) -> String {
 }
 
 
-pub fn az_log(message: &str) {
+pub fn log_verbose(message: &str) {
     if get_debugmode() {
         let _ = Command::new("sys.azenith-service")
             .args(["--verboselog", "AZLog", "0", message])
@@ -25,7 +25,7 @@ pub fn az_log(message: &str) {
     }
 }
 
-pub fn dlog(message: &str) {
+pub fn log_info(message: &str) {
     let _ = Command::new("sys.azenith-service")
         .args(["--log", "AZenith_Profiler", "1", message])
         .status();
@@ -39,7 +39,7 @@ pub fn chmod(path: &str, mode: u32) {
     }
 }
 
-pub fn zeshia_core(value: &str, path_str: &str, lock: bool) {
+pub fn write_unlock_core(value: &str, path_str: &str, lock: bool) {
     let path = Path::new(path_str);
     let parent_name = path.parent().and_then(|p| p.file_name()).unwrap_or_default().to_string_lossy();
     let file_name = path.file_name().unwrap_or_default().to_string_lossy();
@@ -52,21 +52,36 @@ pub fn zeshia_core(value: &str, path_str: &str, lock: bool) {
     let val_with_newline = format!("{}\n", value);
     
     if fs::write(path, val_with_newline).is_err() {
-        az_log(&format!("Cannot write to /{} (permission denied)", pathname));
+        log_verbose(&format!("Cannot write to /{} (permission denied)", pathname));
         if lock { chmod(path_str, 0o444); }
         return;
     }
 
-    az_log(&format!("Set /{} to {}", pathname, value));
+    log_verbose(&format!("Set /{} to {}", pathname, value));
     if lock { chmod(path_str, 0o444); }
 }
 
-pub fn zeshia(value: &str, path_str: &str) {
-    zeshia_core(value, path_str, false);
+pub fn write_unlock(value: &str, path_str: &str) {
+    write_unlock_core(value, path_str, false);
 }
 
-pub fn zeshia_def(value: &str, path_str: &str) {
-    zeshia_core(value, path_str, true);
+pub fn write_lock(value: &str, path_str: &str) {
+    write_unlock_core(value, path_str, true);
+}
+
+pub fn systemv(command: &str) -> i32 {
+    match Command::new("/system/bin/sh")
+        .arg("-c")
+        .arg(command)
+        .env("PATH", MY_PATH)
+        .status()
+    {
+        Ok(status) => status.code().unwrap_or(-1),
+        Err(e) => {
+            log_info(&format!("systemv failed for '{}': {}", command, e));
+            -1
+        }
+    }
 }
 
 pub fn get_limiter() -> u64 {
@@ -209,20 +224,19 @@ pub fn setfreqppm() {
             let new_maxfreq = setfreqs(&avail_file, new_max_target);
 
             if curprofile == "3" {
-                // Eco Mode (Profile 3)
                 let target_min_target = cpu_maxfreq * 40 / 100;
                 let new_minfreq = setfreqs(&avail_file, target_min_target);
 
-                zeshia_def(&format!("{} {}", cluster, new_maxfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
-                zeshia_def(&format!("{} {}", cluster, new_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
+                write_lock(&format!("{} {}", cluster, new_maxfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
+                write_lock(&format!("{} {}", cluster, new_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
 
-                dlog(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_maxfreq, new_minfreq));
+                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_maxfreq, new_minfreq));
             } else {
-                // Default Mode
-                zeshia_def(&format!("{} {}", cluster, new_maxfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
-                zeshia_def(&format!("{} {}", cluster, cpu_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
 
-                dlog(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_maxfreq, cpu_minfreq));
+                write_unlock(&format!("{} {}", cluster, new_maxfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
+                write_unlock(&format!("{} {}", cluster, cpu_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
+
+                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_maxfreq, cpu_minfreq));
             }
             cluster += 1;
         }
@@ -237,8 +251,6 @@ pub fn setfreq() {
         for path in paths.flatten() {
             let p_str = path.to_str().unwrap();
 
-            // Di Bash, `basename /.../cpu0/cpufreq` menghasilkan "cpufreq".
-            // Di Rust, agar log lebih informatif (menampilkan "cpu0"), kita ambil parent-nya.
             let policy_name = path.parent()
                 .and_then(|p: &std::path::Path| p.file_name())
                 .unwrap_or_default()
@@ -254,23 +266,20 @@ pub fn setfreq() {
             let new_maxfreq = setfreqs(&avail_file, new_max_target);
 
             if curprofile == "3" {
-                // Eco Mode (Profile 3)
                 let target_min_target = cpu_maxfreq * 40 / 100;
                 let new_minfreq = setfreqs(&avail_file, target_min_target);
 
-                zeshia_def(&new_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
-                zeshia_def(&new_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
+                write_lock(&new_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
+                write_lock(&new_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
 
-                dlog(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_maxfreq, new_minfreq));
-                // Setara dengan `continue` di bash
+                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_maxfreq, new_minfreq));
             } else {
-                // Default Mode
-                zeshia_def(&new_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
-                zeshia_def(&cpu_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
 
-                dlog(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_maxfreq, cpu_minfreq));
+                write_unlock(&new_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
+                write_unlock(&cpu_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
 
-                // Logika chmod ini hanya berjalan jika BUKAN di profile 3 (sama persis dengan bash)
+                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_maxfreq, cpu_minfreq));
+
                 if let Ok(sc_paths) = glob("/sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq") {
                     for sp in sc_paths.flatten() {
                         chmod(sp.to_str().unwrap(), 0o444);
@@ -305,15 +314,15 @@ pub fn setgamefreqppm() {
                 let cpu_minfreq: u64 = fs::read_to_string(format!("{}/cpuinfo_min_freq", p_str))
                     .unwrap_or_default().trim().parse().unwrap_or(0);
 
-                zeshia_def(&format!("{} {}", cluster, new_midfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
-                zeshia_def(&format!("{} {}", cluster, cpu_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
+                write_lock(&format!("{} {}", cluster, new_midfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
+                write_lock(&format!("{} {}", cluster, cpu_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
 
-                dlog(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
+                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
             } else {
-                zeshia_def(&format!("{} {}", cluster, cpu_maxfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");             
-                zeshia_def(&format!("{} {}", cluster, cpu_maxfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
+                write_lock(&format!("{} {}", cluster, cpu_maxfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");             
+                write_lock(&format!("{} {}", cluster, cpu_maxfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
 
-                dlog(&format!("Set {} maxfreq={} minfreq={}", policy_name, cpu_maxfreq, new_midfreq));
+                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, cpu_maxfreq, new_midfreq));
             }
             cluster += 1;
         }
@@ -344,15 +353,15 @@ pub fn setgamefreq() {
                     .unwrap_or_default().trim().parse().unwrap_or(0);
 
                 // Bugfix: Menulis ke jalur sysfs standar, bukan ke /proc/ppm
-                zeshia(&new_midfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
-                zeshia(&cpu_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
+                write_unlock(&new_midfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
+                write_unlock(&cpu_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
 
-                dlog(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
+                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
             } else {
-                zeshia(&cpu_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
-                zeshia(&cpu_maxfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
+                write_unlock(&cpu_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
+                write_unlock(&cpu_maxfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
 
-                dlog(&format!("Set {} maxfreq={} minfreq={}", policy_name, cpu_maxfreq, new_midfreq));
+                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, cpu_maxfreq, new_midfreq));
 
             }
         }
@@ -455,10 +464,10 @@ pub fn dsetgamefreqppm() {
                 let cpu_minfreq: u64 = fs::read_to_string(format!("{}/cpuinfo_min_freq", p_str))
                     .unwrap_or_default().trim().parse().unwrap_or(0);
 
-                zeshia(&format!("{} {}", cluster, new_midfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
-                zeshia(&format!("{} {}", cluster, cpu_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
+                write_unlock(&format!("{} {}", cluster, new_midfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
+                write_unlock(&format!("{} {}", cluster, cpu_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
 
-                dlog(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
+                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
             } else {
                 applyppmnfreqsets(&format!("{} {}", cluster, new_midfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
             }
@@ -489,10 +498,10 @@ pub fn dsetgamefreq() {
                 let cpu_minfreq: u64 = fs::read_to_string(format!("{}/cpuinfo_min_freq", p_str))
                     .unwrap_or_default().trim().parse().unwrap_or(0);
 
-                zeshia(&new_midfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
-                zeshia(&cpu_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
+                write_unlock(&new_midfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
+                write_unlock(&cpu_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
 
-                dlog(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
+                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
             } else {
                 applyppmnfreqsets(&cpu_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
                 applyppmnfreqsets(&new_midfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
@@ -512,8 +521,8 @@ pub fn devfreq_max_perf(path: &str) {
     if !Path::new(&avail).exists() { return; }
 
     if let Some(max_freq) = which_maxfreq(&avail) {
-        zeshia(&max_freq.to_string(), &format!("{}/max_freq", path));
-        zeshia(&max_freq.to_string(), &format!("{}/min_freq", path));
+        write_unlock(&max_freq.to_string(), &format!("{}/max_freq", path));
+        write_unlock(&max_freq.to_string(), &format!("{}/min_freq", path));
     }
 }
 
@@ -522,8 +531,8 @@ pub fn devfreq_mid_perf(path: &str) {
     if !Path::new(&avail).exists() { return; }
 
     if let (Some(max_freq), Some(mid_freq)) = (which_maxfreq(&avail), which_midfreq(&avail)) {
-        zeshia_def(&max_freq.to_string(), &format!("{}/max_freq", path));
-        zeshia(&mid_freq.to_string(), &format!("{}/min_freq", path));
+        write_lock(&max_freq.to_string(), &format!("{}/max_freq", path));
+        write_unlock(&mid_freq.to_string(), &format!("{}/min_freq", path));
     }
 }
 
@@ -532,8 +541,8 @@ pub fn devfreq_unlock(path: &str) {
     if !Path::new(&avail).exists() { return; }
 
     if let (Some(max_freq), Some(min_freq)) = (which_maxfreq(&avail), which_minfreq(&avail)) {
-        zeshia_def(&max_freq.to_string(), &format!("{}/max_freq", path));
-        zeshia_def(&min_freq.to_string(), &format!("{}/min_freq", path));
+        write_lock(&max_freq.to_string(), &format!("{}/max_freq", path));
+        write_lock(&min_freq.to_string(), &format!("{}/min_freq", path));
     }
 }
 
@@ -542,8 +551,8 @@ pub fn devfreq_min_perf(path: &str) {
     if !Path::new(&avail).exists() { return; }
 
     if let Some(freq) = which_minfreq(&avail) {
-        zeshia_def(&freq.to_string(), &format!("{}/min_freq", path));
-        zeshia_def(&freq.to_string(), &format!("{}/max_freq", path));
+        write_lock(&freq.to_string(), &format!("{}/min_freq", path));
+        write_lock(&freq.to_string(), &format!("{}/max_freq", path));
     }
 }
 
@@ -596,11 +605,11 @@ pub fn clear_background_apps() {
                 .args(["force-stop", &pkg])
                 .status();
 
-            az_log(&format!("Stopped app: {}", pkg));
+            log_verbose(&format!("Stopped app: {}", pkg));
         }
     }
 
-    dlog("Cleared background apps");
+    log_info("Cleared background apps");
 }
 
 pub fn get_mtk_gpu_max_freq() -> Option<u64> {
@@ -636,7 +645,7 @@ pub fn ppm_fix_freq(target_index: &str) {
     if cluster_count > 0 {
         let payload = vec![target_index; cluster_count].join(" ");
 
-        zeshia_def(&payload, ppm_path);
+        write_lock(&payload, ppm_path);
         
     }
 }
@@ -652,11 +661,11 @@ pub fn init_cpu_governor() {
         .to_string();
 
     setprop_cmd("persist.sys.azenith.default_cpu_gov", &default_gov);
-    dlog(&format!("Default CPU governor detected: {}", default_gov));
+    log_info(&format!("Default CPU governor detected: {}", default_gov));
 
     // Handle fallback if default is 'performance'
     if default_gov == "performance" && getprop("persist.sys.azenith.custom_default_cpu_gov").is_empty() {
-        dlog("Default governor is 'performance'");
+        log_info("Default governor is 'performance'");
         let avail_govs = fs::read_to_string(format!("{}/scaling_available_governors", cpu_path)).unwrap_or_default();
         let fallbacks = [
             "scx", "schedhorizon", "walt", "sched_pixel", "sugov_ext", "uag",
@@ -668,7 +677,7 @@ pub fn init_cpu_governor() {
             if avail_govs.contains(gov) {
                 setprop_cmd("persist.sys.azenith.default_cpu_gov", gov);
                 default_gov = gov.to_string();
-                dlog(&format!("Fallback governor to: {}", gov));
+                log_info(&format!("Fallback governor to: {}", gov));
                 break;
             }
         }
@@ -680,7 +689,7 @@ pub fn init_cpu_governor() {
         default_gov = custom_gov;
     }
     
-    dlog(&format!("Using CPU governor: {}", default_gov));
+    log_info(&format!("Using CPU governor: {}", default_gov));
     setgov(&default_gov);
 
     // Set fallback props
@@ -691,7 +700,7 @@ pub fn init_cpu_governor() {
         setprop_cmd("persist.sys.azenith.custom_performance_cpu_gov", &default_gov);
     }
     
-    dlog("Parsing CPU Governor complete");
+    log_info("Parsing CPU Governor complete");
 }
 
 pub fn init_io_scheduler() {
@@ -700,13 +709,13 @@ pub fn init_io_scheduler() {
         let p = format!("/sys/block/{}/queue", dev);
         if Path::new(&format!("{}/scheduler", p)).exists() {
             io_path = p;
-            dlog(&format!("Detected valid block device: {}", dev));
+            log_info(&format!("Detected valid block device: {}", dev));
             break;
         }
     }
 
     if io_path.is_empty() {
-        dlog("No valid block device with scheduler found");
+        log_info("No valid block device with scheduler found");
         std::process::exit(1);
     }
 
@@ -723,7 +732,7 @@ pub fn init_io_scheduler() {
     }
 
     setprop_cmd("persist.sys.azenith.default_balanced_IO", &default_io);
-    dlog(&format!("Default IO Scheduler detected: {}", default_io));
+    log_info(&format!("Default IO Scheduler detected: {}", default_io));
 
     // Apply custom IO if set
     let custom_io = getprop("persist.sys.azenith.custom_default_balanced_IO");
@@ -731,7 +740,7 @@ pub fn init_io_scheduler() {
         default_io = custom_io;
     }
     
-    dlog(&format!("Using IO Scheduler: {}", default_io));
+    log_info(&format!("Using IO Scheduler: {}", default_io));
     sets_io(&default_io);
 
     // Set fallback props
@@ -742,7 +751,7 @@ pub fn init_io_scheduler() {
         setprop_cmd("persist.sys.azenith.custom_performance_IO", &default_io);
     }
     
-    dlog("Parsing IO Scheduler complete");
+    log_info("Parsing IO Scheduler complete");
 }
 
 pub fn init_maligpu_governor() {
@@ -752,7 +761,7 @@ pub fn init_maligpu_governor() {
         for path in paths.flatten() {
             if let Some(p_str) = path.to_str() {
                 gpu_path = p_str.to_string();
-                dlog(&format!("Detected Mali GPU path: {}", gpu_path));
+                log_info(&format!("Detected Mali GPU path: {}", gpu_path));
                 break;
             }
         }
@@ -771,15 +780,15 @@ pub fn init_maligpu_governor() {
         .to_string();
 
     setprop_cmd("persist.sys.azenith.default_maligpu_gov", &default_maligpu_gov);
-    dlog(&format!("Default Mali GPU governor detected: {}", default_maligpu_gov));
+    log_info(&format!("Default Mali GPU governor detected: {}", default_maligpu_gov));
 
     let custom_maligpu_gov = getprop("persist.sys.azenith.custom_default_maligpu_gov");
     if !custom_maligpu_gov.is_empty() {
         default_maligpu_gov = custom_maligpu_gov;
     }
 
-    dlog(&format!("Using Mali GPU governor: {}", default_maligpu_gov));
-    zeshia_def(&default_maligpu_gov, &gov_file);
+    log_info(&format!("Using Mali GPU governor: {}", default_maligpu_gov));
+    write_lock(&default_maligpu_gov, &gov_file);
 
     if getprop("persist.sys.azenith.custom_powersave_maligpu_gov").is_empty() {
         setprop_cmd("persist.sys.azenith.custom_powersave_maligpu_gov", &default_maligpu_gov);
@@ -788,7 +797,7 @@ pub fn init_maligpu_governor() {
         setprop_cmd("persist.sys.azenith.custom_performance_maligpu_gov", &default_maligpu_gov);
     }
 
-    dlog("Parsing Mali GPU Governor complete");
+    log_info("Parsing Mali GPU Governor complete");
 }
 
 pub fn sets_mali_gov(gov: &str) {

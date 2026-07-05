@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Rem01Gaming
+ * Copyright (C) 2024-2025 Zexshia
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,10 +59,8 @@ void run_profiler(const int profile) {
     if (profile == 1) {
         // Assuming game_pids and gamestart are still managed globally or passed correctly
         pid_t main_pid = (game_pid_count > 0) ? game_pids[0] : 0;
-        write2file(GAME_INFO, false, false, "%s %d %d\nTime: %s\n", gamestart, main_pid,
-                   uidof(main_pid), time_str);
-        write2file(GAME_INFO_APP, false, false, "%s %d %d\nTime: %s\n", gamestart, main_pid,
-                   uidof(main_pid), time_str);
+        write2file(GAME_INFO, false, false, "%s %d %d\nTime: %s\n", gamestart, main_pid, uidof(main_pid), time_str);
+        write2file(GAME_INFO_APP, false, false, "%s %d %d\nTime: %s\n", gamestart, main_pid, uidof(main_pid), time_str);
     } else {
         write2file(GAME_INFO, false, false, "NULL 0 0\nTime: %s\n", time_str);
         write2file(GAME_INFO_APP, false, false, "NULL 0 0\nTime: %s\n", time_str);

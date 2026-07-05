@@ -84,13 +84,12 @@ int uidof(pid_t pid) {
 }
 
 /**
- * @brief Sets the maximum CPU nice priority (-20) and real-time I/O priority for a given process.
- * @param pid The PID of the process to boost.
+ * @brief Sets the service PID into the Android system properties.
  */
-void set_priority(const pid_t pid) {
-    if (setpriority(PRIO_PROCESS, pid, -20) == -1)
-        log_zenith(LOG_ERROR, "Unable to set nice priority for %d", pid);
+void setspid(void) {
+    char cmd[128];
+    pid_t pid = getpid();
 
-    if (syscall(SYS_ioprio_set, 1, pid, (1 << 13) | 0) == -1)
-        log_zenith(LOG_ERROR, "Unable to set IO priority for %d", pid);
+    snprintf(cmd, sizeof(cmd), "setprop persist.sys.azenith.service %d", pid);
+    systemv(cmd);
 }

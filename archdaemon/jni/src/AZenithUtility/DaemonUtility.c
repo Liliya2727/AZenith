@@ -120,8 +120,7 @@ char* timern(void) {
         return timestamp;
     }
 
-    snprintf(timestamp + strlen(timestamp), sizeof(timestamp) - strlen(timestamp), ".%03ld",
-             tv.tv_usec / 1000);
+    snprintf(timestamp + strlen(timestamp), sizeof(timestamp) - strlen(timestamp), ".%03ld", tv.tv_usec / 1000);
 
     return timestamp;
 }
@@ -132,12 +131,12 @@ char* timern(void) {
  */
 [[noreturn]] void sighandler(const int signal) {
     switch (signal) {
-        case SIGTERM:
-            log_zenith(LOG_INFO, "Received SIGTERM, exiting.");
-            break;
-        case SIGINT:
-            log_zenith(LOG_INFO, "Received SIGINT, exiting.");
-            break;
+    case SIGTERM:
+        log_zenith(LOG_INFO, "Received SIGTERM, exiting.");
+        break;
+    case SIGINT:
+        log_zenith(LOG_INFO, "Received SIGINT, exiting.");
+        break;
     }
 
     _exit(EXIT_SUCCESS);
@@ -165,49 +164,6 @@ void toast(const char* message) {
 }
 
 /**
- * @brief Checks if the module properties have been renamed or modified by a 3rd party.
- */
-void is_kanged(void) {
-    if (systemv("grep -q '^name=AZenith火$' %s", MODULE_PROP) != 0) [[clang::unlikely]] {
-        goto doorprize;
-    }
-
-    if (systemv("grep -q '^author=ArchHaven Developers$' %s", MODULE_PROP) != 0)
-        [[clang::unlikely]] {
-        goto doorprize;
-    }
-
-    return;
-
-doorprize:
-    log_zenith(LOG_FATAL, "Module modified by 3rd party, exiting.");
-    notify("Daemon Error", "Trying to rename me?", true, 0);
-    systemv("setprop persist.sys.azenith.service \"\"");
-    systemv("setprop persist.sys.azenith.state stopped");
-    exit(EXIT_FAILURE);
-}
-
-/**
- * @brief Compares the version inside module.prop with the daemon version.
- */
-void check_module_version(void) {
-    char DAEMON_VERSION[MAX_LINE] = {0};
-
-    snprintf(DAEMON_VERSION, sizeof(DAEMON_VERSION), "%s", MODULE_VERSION);
-
-    int ret = systemv("grep -q '^version=%s$' %s", DAEMON_VERSION, MODULE_PROP);
-
-    if (ret != 0) [[clang::unlikely]] {
-        log_zenith(LOG_FATAL,
-                   "AZenith version mismatch with daemon version! please reinstall the module!");
-        notify("Daemon Error", "AZenith version mismatch, please reinstall!", true, 0);
-        systemv("setprop persist.sys.azenith.service \"\"");
-        systemv("setprop persist.sys.azenith.state stopped");
-        exit(EXIT_FAILURE);
-    }
-}
-
-/**
  * @brief Exits the program if the module state is set to "stopped" or is empty.
  */
 void checkstate(void) {
@@ -224,8 +180,8 @@ void checkstate(void) {
     return;
 killsvc:
     log_zenith(LOG_FATAL, "Service killed by checkstate().");
-    systemv("setprop persist.sys.azenith.service \"\"");
-    systemv("setprop persist.sys.azenith.state stopped");
+    __system_property_set("persist.sys.azenith.service", "");
+    __system_property_set("persist.sys.azenith.state", "stopped");
     exit(EXIT_FAILURE);
 }
 
@@ -234,24 +190,17 @@ killsvc:
  * @note Never call this function directly.
  * @return Always true.
  */
-bool return_true(void) { return true; }
+bool return_true(void) {
+    return true;
+}
 
 /**
  * @brief Error fallback function that always returns false.
  * @note Never call this function directly.
  * @return Always false.
  */
-bool return_false(void) { return false; }
-
-/**
- * @brief Sets the service PID into the Android system properties.
- */
-void setspid(void) {
-    char cmd[128];
-    pid_t pid = getpid();
-
-    snprintf(cmd, sizeof(cmd), "setprop persist.sys.azenith.service %d", pid);
-    systemv(cmd);
+bool return_false(void) {
+    return false;
 }
 
 /**
@@ -261,6 +210,7 @@ void runthermalcore(void) {
     char thermalcore[PROP_VALUE_MAX] = {0};
     __system_property_get("persist.sys.azenithconf.thermalcore", thermalcore);
     if (strcmp(thermalcore, "1") == 0) {
+        __system_property_set("persist.sys.rianixia.thermalcore-bigdata.path", "/data/adb/.config/AZenith/debug");
         systemv("sys.azenith-rianixiathermalcore &");
         FILE* fp = popen("pidof sys.azenith-rianixiathermalcore", "r");
         if (fp == NULL) {
@@ -278,17 +228,6 @@ void runthermalcore(void) {
 
         pclose(fp);
     }
-}
-
-/**
- * @brief Skips whitespace characters in a string.
- * @param p Pointer to the string.
- * @return Pointer to the first non-space character.
- */
-char* skip_space(char* p) {
-    while (*p && isspace(*p))
-        p++;
-    return p;
 }
 
 /**

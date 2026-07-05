@@ -34,7 +34,9 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include <pthread.h> // FIX: Ditambahkan untuk pthread_mutex_t
+#include <sys/inotify.h>
+#include <pthread.h>
+#include <poll.h>
 
 #define TASK_INTERVAL_SEC (12 * 60 * 60)
 #define LOOP_INTERVAL_MS 1000
@@ -50,6 +52,7 @@
 
 #define NOTIFY_TITLE "AZenith"
 #define LOG_TAG "AZenith"
+#define LOG_TAG_PROFILE "AZenith_Profiles"
 
 #define LOCK_FILE "/data/adb/.config/AZenith/API/.lock"
 #define LOG_FILE "/data/adb/.config/AZenith/debug/AZenith.log"
@@ -71,6 +74,11 @@
 #define IS_TRUE(v)    ((v) && strcmp((v), "true") == 0)
 #define IS_FALSE(v)   ((v) && strcmp((v), "false") == 0)
 #define IS_DEFAULT(v) (!(v) || strcmp((v), "default") == 0)
+
+#define AZENITH_PROPERTIES      "persist.sys.azenith"
+#define AZENITH_PROPERTIES_LEN  (sizeof(AZENITH_PROPERTIES) - 1)
+#define MAX_PENDING_DELETE      128
+#define MAX_PROP_NAME_BUF       192
 
 #define MY_PATH                                                                                                                    \
     "PATH=/system/bin:/system/xbin:/data/adb/ap/bin:/data/adb/ksu/bin:/data/adb/magisk:/debug_ramdisk:/sbin:/sbin/su:/su/bin:/su/" \
@@ -98,7 +106,6 @@ typedef struct {
     char renderer[64];
 } GameConfig;
 
-// FIX: Gunakan extern agar variabel ini menjadi Global Shared di semua file .c
 extern GameConfig* g_game_cache;
 extern int g_game_cache_count;
 extern pthread_mutex_t cache_mutex;
@@ -140,6 +147,56 @@ typedef struct {
     const char* off_val;
 } BypassNode;
 
+typedef struct {
+    char package[256];
+} PreloadArgs;
+
+typedef struct {
+    bool is_initialize_complete;
+    bool dnd_enabled;
+    bool need_profile_checkup;
+    bool bypass_applied;
+    bool has_applied_renderer;
+    bool grace_period_active;
+    int prev_screen_state;
+    int saved_refresh_rate;
+    int saved_zen_mode;
+    int pid_retries;
+    time_t screen_off_timer;
+    ProfileMode cur_mode;
+    char saved_renderer[PROP_VALUE_MAX];
+    char last_freqoffset[PROP_VALUE_MAX];
+    char prev_ai_state[16];
+    const char* java_lock_path;
+    char config_freqoffset[PROP_VALUE_MAX];
+    char config_bypasspath[PROP_VALUE_MAX];
+    int config_bypasschg;
+    int config_bypasschgthreshold;
+} DaemonContext;
+
+extern const char* VALID_AZENITH_PROPS[];
+extern const size_t VALID_AZENITH_PROPS_COUNT;
+void validateprop(void);
+
+extern BypassNode bypass_list[];
+extern const int bypass_list_size;
+
+extern char* gamestart;
+extern char* active_app_name;
+extern pid_t game_pids[MAX_GAME_PIDS];
+extern int game_pid_count;
+extern bool is_restarting_renderer;
+extern GameConfig opts;
+extern SystemStateCache current_system_cache;
+extern int java_lock_pipe[2];
+extern bool java_daemon_died;
+extern GameConfig* g_game_cache;
+extern int g_game_cache_count;
+extern pthread_mutex_t cache_mutex;
+
+void load_initial_config_files(DaemonContext* ctx);
+void init_daemon_context(DaemonContext* ctx);
+
 extern BypassNode bypass_list[]; 
 extern char* gamestart;
 extern char* custom_log_tag;
@@ -169,6 +226,7 @@ int require_daemon_running(void);
 int handle_profile(int argc, char** argv);
 int handle_log(int argc, char** argv);
 int handle_verboselog(int argc, char** argv);
+int restart_service(void);
 
 // Misc Utilities
 extern void GamePreload(const char* package);
@@ -204,12 +262,14 @@ bool is_java_lock_held(const char* lock_path);
 void log_preload(LogLevel level, const char* message, ...);
 void log_verbose(LogLevel level, const char* message, ...);
 void log_zenith(LogLevel level, const char* message, ...);
-void external_log(LogLevel level, const char* tag, const char* message);
-void external_vlog(LogLevel level, const char* tag, const char* message);
+void external_log(LogLevel level, const char* tag, const char* message, ...);
+void external_vlog(LogLevel level, const char* tag, const char* message, ...);
 
 // Utilities
 void set_priority(const pid_t pid);
 int uidof(pid_t pid);
+void free_gamelist_cache(void);
+void reload_gamelist_cache(DaemonContext* ctx);
 
 // App Monitor
 char* get_visible_package(SystemStateCache* cache);
@@ -223,8 +283,18 @@ char* get_gamestart(GameConfig* options, SystemStateCache* cache);
 bool get_screenstate_normal(SystemStateCache* cache);
 bool get_low_power_state_normal(SystemStateCache* cache);
 void run_profiler(const int profile);
-char* skip_space(char* p);
 void read_app_status(SystemStateCache* cache);
 void extract_string_value(char* dest, const char* start, size_t max_len);
+void handle_dynamic_bypass(DaemonContext* ctx);
+void apply_performance_profile(DaemonContext* ctx);
+void apply_eco_profile(DaemonContext* ctx);
+void apply_balanced_profile(DaemonContext* ctx);
+
+// inotifyhandler
+void verify_system_integrity(void);
+void wait_for_java_companion(DaemonContext* ctx);
+void* java_lock_watcher_thread(void* arg);
+int setup_inotify_watchers(void);
+bool process_inotify_events(int inotify_fd, DaemonContext* ctx, int timeout_ms);
 
 #endif

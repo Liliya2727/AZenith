@@ -17,14 +17,12 @@
 mod utils;
 
 use std::env;
-use utils::*; use std::process::Command;
+use std::process::Command;
+use utils::*;
 
 fn main() {
-    unsafe {
-        env::set_var("PATH", MY_PATH);
-    }
     let args: Vec<String> = env::args().collect();
-    
+
     if args.len() > 1 {
         let function = args[1].as_str();
                 match function {
@@ -39,7 +37,6 @@ fn main() {
             "setrefreshrates" => if args.len() > 2 { setrefreshrates(&args[2]) },
             "restartservice" => restartservice(),
             "setrender" => if args.len() > 2 { setrender(&args[2]) },
-            "saveLog" => savelog(),
             _ => {
                 let _ = Command::new(function).args(&args[2..]).status();
             }

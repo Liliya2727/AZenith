@@ -6,26 +6,37 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use glob::glob;
 
+pub mod logger;
+use crate::utils::logger::{log_info, verbose, log_warn, log_error};
+
 pub const MY_PATH: &str = "/system/bin:/system/xbin:/data/adb/ap/bin:/data/adb/ksu/bin:/data/adb/magisk:/debug_ramdisk:/sbin:/sbin/su:/su/bin:/su/xbin:/data/data/com.termux/files/usr/bin";
 
 pub fn getprop(key: &str) -> String {
-    if let Ok(output) = Command::new("getprop").arg(key).output() {
-        String::from_utf8_lossy(&output.stdout).trim().to_string()
-    } else {
-        String::new()
+    match Command::new("getprop").arg(key).output() {
+        Ok(output) => String::from_utf8_lossy(&output.stdout).trim().to_string(),
+        Err(e) => {
+            log_error(&format!("Failed to getprop '{}': {}", key, e));
+            String::new()
+        }
     }
 }
 
 pub fn resetprop(key: &str, val: &str) {
-    if val.is_empty() {
-        let _ = Command::new("resetprop").arg("--delete").arg(key).status();
+    let status = if val.is_empty() {
+        Command::new("resetprop").arg("--delete").arg(key).status()
     } else {
-        let _ = Command::new("resetprop").arg(key).arg(val).status();
+        Command::new("resetprop").arg(key).arg(val).status()
+    };
+
+    if let Err(e) = status {
+        log_error(&format!("Failed to resetprop '{}': {}", key, e));
     }
 }
 
 pub fn setprop(key: &str, val: &str) {
-    let _ = Command::new("setprop").arg(key).arg(val).status();
+    if let Err(e) = Command::new("setprop").arg(key).arg(val).status() {
+        log_error(&format!("Failed to setprop '{}' to '{}': {}", key, val, e));
+    }
 }
 
 pub fn get_debugmode() -> bool {
@@ -36,161 +47,225 @@ pub fn get_fstrim_state() -> String {
     getprop("persist.sys.azenithconf.fstrim")
 }
 
-pub fn az_log(message: &str) {
-    if get_debugmode() {
-        let _ = Command::new("sys.azenith-service")
-            .args(["--verboselog", "AZLog", "0", message])
-            .status();
+pub fn chmod(path: &str, mode: u32) {
+    match fs::metadata(path) {
+        Ok(metadata) => {
+            let mut perms = metadata.permissions();
+            perms.set_mode(mode);
+            if let Err(e) = fs::set_permissions(path, perms) {
+                log_error(&format!("Failed to set permissions for {}: {}", path, e));
+            }
+        },
+        Err(e) => log_warn(&format!("Failed to read metadata (chmod) for {}: {}", path, e)),
     }
 }
 
-pub fn dlog(message: &str) {
-    let _ = Command::new("sys.azenith-service")
-        .args(["--log", "AZenith_Utility", "1", message])
-        .status();
+pub fn systemv(command: &str) -> i32 {
+    match Command::new("/system/bin/sh")
+        .arg("-c")
+        .arg(command)
+        .env("PATH", MY_PATH)
+        .status()
+    {
+        Ok(status) => status.code().unwrap_or(-1),
+        Err(e) => {
+            log_error(&format!("systemv failed for '{}': {}", command, e));
+            -1
+        }
+    }
 }
 
-pub fn chmod(path: &str, mode: u32) {
-    if let Ok(metadata) = fs::metadata(path) {
-        let mut perms = metadata.permissions();
-        perms.set_mode(mode);
-        let _ = fs::set_permissions(path, perms);
+pub fn execute_command(command: &str) -> Option<String> {
+    match Command::new("/system/bin/sh")
+        .arg("-c")
+        .arg(command)
+        .env("PATH", MY_PATH)
+        .output()
+    {
+        Ok(output) if output.status.success() => {
+            Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
+        },
+        Ok(output) => {
+            log_warn(&format!("Command '{}' failed with status: {}", command, output.status));
+            None
+        },
+        Err(e) => {
+            log_error(&format!("execute_command failed for '{}': {}", command, e));
+            None
+        }
     }
 }
 
 pub fn setsgov(gov: &str) {
-    if let Ok(paths) = glob("/sys/devices/system/cpu/cpu*/cpufreq/scaling_governor") {
-        for path in paths.flatten() {
-            let p_str = path.to_str().unwrap();
-            chmod(p_str, 0o644);
-            let _ = fs::write(p_str, gov);
-            chmod(p_str, 0o444);
-        }
+    match glob("/sys/devices/system/cpu/cpu*/cpufreq/scaling_governor") {
+        Ok(paths) => {
+            let mut applied = false;
+            for path in paths.flatten() {
+                if let Some(p_str) = path.to_str() {
+                    chmod(p_str, 0o644);
+                    if let Err(e) = fs::write(p_str, gov) {
+                        log_error(&format!("Failed to write CPU governor to {}: {}", p_str, e));
+                    } else {
+                        applied = true;
+                    }
+                    chmod(p_str, 0o444);
+                }
+            }
+            if applied {
+                log_info(&format!("Set current CPU Governor to {}", gov));
+            } else {
+                log_warn(&format!("Failed to set CPU Governor to {}. No paths updated.", gov));
+            }
+        },
+        Err(e) => log_error(&format!("Glob pattern failed for CPU scaling_governor: {}", e)),
     }
-    dlog(&format!("Set current CPU Governor to {}", gov));
 }
 
 pub fn sets_io(scheduler: &str) {
+    let mut applied = false;
     for block in &["sda", "sdb", "sdc", "mmcblk0", "mmcblk1"] {
         let path = format!("/sys/block/{}/queue/scheduler", block);
         if Path::new(&path).exists() {
             chmod(&path, 0o644);
-            let _ = fs::write(&path, scheduler);
+            if let Err(e) = fs::write(&path, scheduler) {
+                log_error(&format!("Failed to write IO scheduler to {}: {}", path, e));
+            } else {
+                applied = true;
+            }
             chmod(&path, 0o444);
         }
     }
-    dlog(&format!("Set current IO Scheduler to {}", scheduler));
+    if applied {
+        log_info(&format!("Set current IO Scheduler to {}", scheduler));
+    } else {
+        log_warn(&format!("IO Scheduler path not found or failed for {}", scheduler));
+    }
 }
 
 pub fn sets_mali_gov(gov: &str) {
-    if let Ok(paths) = glob("/sys/class/devfreq/*.mali/governor") {
-        for path in paths.flatten() {
-            if let Some(p_str) = path.to_str() {
-                chmod(p_str, 0o644);
-                let _ = fs::write(p_str, gov);
-                chmod(p_str, 0o444); 
+    match glob("/sys/class/devfreq/*.mali/governor") {
+        Ok(paths) => {
+            let mut applied = false;
+            for path in paths.flatten() {
+                if let Some(p_str) = path.to_str() {
+                    chmod(p_str, 0o644);
+                    if let Err(e) = fs::write(p_str, gov) {
+                        log_error(&format!("Failed to write Mali Governor to {}: {}", p_str, e));
+                    } else {
+                        applied = true;
+                    }
+                    chmod(p_str, 0o444); 
+                }
             }
-        }
+            if applied {
+                log_info(&format!("Set current Mali GPU Governor to {}", gov));
+            } else {
+                log_warn("No Mali GPU governor paths found or updated.");
+            }
+        },
+        Err(e) => log_error(&format!("Glob pattern failed for Mali governor: {}", e)),
     }
-    dlog(&format!("Set current Mali GPU Governor to {}", gov));
 }
 
 pub fn setthermalcore(state: &str) {
     if state == "1" {
-        let _ = Command::new("sys.azenith-rianixiathermalcore").spawn();
+        if systemv("sys.azenith-rianixiathermalcore &") != 0 {
+            log_error("Failed to spawn Thermalcore service");
+            return;
+        }
         thread::sleep(Duration::from_secs(1));
 
-        let output = Command::new("pgrep").args(["-f", "sys.azenith-rianixiathermalcore"]).output().unwrap();
-        let pid = String::from_utf8_lossy(&output.stdout).trim().to_string();
-
-        if !pid.is_empty() {
-            dlog(&format!("Starting Thermalcore Service with pid {}", pid));
+        if let Some(pid) = execute_command("pgrep -f sys.azenith-rianixiathermalcore") {
+            if !pid.is_empty() {
+                log_info(&format!("Starting Thermalcore Service with pid {}", pid));
+            } else {
+                log_warn("Thermalcore service started but PID not found");
+            }
         } else {
-            dlog("Thermalcore service started but PID not found");
+            log_error("Failed to execute pgrep for Thermalcore");
         }
     } else {
-        let _ = Command::new("pkill").args(["-9", "-f", "sys.azenith-rianixiathermalcore"]).status();
-        dlog("Stopped Thermalcore service");
+        if systemv("pkill -9 -f sys.azenith-rianixiathermalcore") != 0 {
+            log_error("Failed to stop Thermalcore service");
+        } else {
+            log_info("Stopped Thermalcore service");
+        }
     }
 }
 
 pub fn fstrim() {
     if get_fstrim_state() == "1" {
-        let mounts = ["/system", "/vendor", "/data", "/cache", "/metadata", "/odm", "/system_ext", "/product"];
-        for mount in mounts {
-            let is_mounted = Command::new("mountpoint")
-                .arg("-q")
-                .arg(mount)
-                .status()
-                .map(|s| s.success())
-                .unwrap_or(false);
-
-            if is_mounted {
-                let _ = Command::new("fstrim").arg("-v").arg(mount).status();
-                az_log(&format!("Trimmed: {}", mount));
-            } else {
-                az_log(&format!("Skipped (not mounted): {}", mount));
-            }
+        verbose("Triggering Android native fstrim...");
+        
+        let mut status = systemv("vdc fstrim dotrim");
+        
+        if status != 0 {
+            verbose("fstrim failed or not found, retry...");
+            status = systemv("sm fstrim");
         }
-        dlog("Trimmed unused blocks");
+
+        if status == 0 {
+            log_info("Trimmed unused blocks successfully via Android native framework");
+        } else {
+            log_error(&format!("All native fstrim commands failed to execute. Status: {}", status));
+        }
     }
 }
 
 pub fn enable_dnd() {
-    if Command::new("cmd").args(["notification", "set_dnd", "priority"]).status().map(|s| s.success()).unwrap_or(false) {
-        dlog("DND enabled");
+    if systemv("cmd notification set_dnd priority") == 0 {
+        log_info("DND enabled");
     } else {
-        dlog("Failed to enable DND");
+        log_error("Failed to enable DND");
     }
 }
 
 pub fn disable_dnd() {
-    if Command::new("cmd").args(["notification", "set_dnd", "off"]).status().map(|s| s.success()).unwrap_or(false) {
-        dlog("DND disabled");
+    if systemv("cmd notification set_dnd off") == 0 {
+        log_info("DND disabled");
     } else {
-        dlog("Failed to disable DND");
+        log_error("Failed to disable DND");
     }
 }
 
 pub fn setrefreshrates(rate: &str) {
     let target_fps = rate.parse::<i32>().unwrap_or(60);
 
-    let status = Command::new("am")
-        .args([
-            "broadcast", 
-            "-a", "zx.azenith.SET_FPS", 
-            "-n", "zx.azenith/.RefreshRateReceiver", 
-            "--ei", "fps", &target_fps.to_string()
-        ])
-        .status();
+    let status = systemv(&format!(
+        "am broadcast -a zx.azenith.SET_FPS -n zx.azenith/.RefreshRateReceiver --ei fps {}", 
+        target_fps
+    ));
 
-    if status.map(|s| s.success()).unwrap_or(false) {
-        dlog(&format!("Triggered receiver app to apply {}Hz", target_fps));
+    if status == 0 {
+        log_info(&format!("Triggered receiver app to apply {}Hz", target_fps));
     } else {
-        dlog("Failed to trigger native app");
+        log_warn("Triggered receiver app, but command did not report success");
     }
 }
 
-
 pub fn restartservice() {
-    let _ = Command::new("pkill").args(["-9", "-f", "sys.azenith-rianixiathermalcore"]).status();
-    let _ = Command::new("pkill").args(["-9", "-f", "sys.azenith-service"]).status();
-    let _ = Command::new("pkill").args(["-9", "-f", "sys.azenith-appmonitoring"]).status();
+    let _ = systemv("pkill -9 -f sys.azenith-rianixiathermalcore");
+    let _ = systemv("pkill -9 -f sys.azenith-service");
+    let _ = systemv("pkill -9 -f sys.azenith-appmonitoring");
+    
     setprop("persist.sys.azenith.state", "stopped");
-    let _ = Command::new("sh").arg("/data/adb/modules/AZenith/service.sh").spawn();
+    
+    if systemv("sh /data/adb/modules/AZenith/service.sh &") != 0 {
+        log_error("Failed to restart service script");
+    } else {
+        log_info("Restarted AZenith services");
+    }
 }
 
 pub fn setrender(renderer: &str) {
     if renderer == "default" || renderer.is_empty() {
         setprop("debug.hwui.renderer", "");
         setprop("debug.renderengine.backend", "");
-
         setprop("debug.hwui.render_thread", "");
         setprop("debug.skia.threaded_mode", "");
-
         resetprop("ro.hwui.use_vulkan", ""); 
         
-        dlog("Resetting all renderers to system default");
+        log_info("Resetting all renderers to system default");
         return;
     }
 
@@ -233,45 +308,7 @@ pub fn setrender(renderer: &str) {
             }
         }
     }
-    dlog(&format!("Successfully applied renderer: {}", renderer));
-}
-
-pub fn savelog() {
-
-    let date_output = Command::new("date").arg("+%Y-%m-%d_%H-%M").output().expect("Failed to get date");
-    let date_str = String::from_utf8_lossy(&date_output.stdout).trim().to_string();
-    let log_file = format!("/sdcard/AZenithLog_{}.txt", date_str);
-
-    println!("{}", log_file);
-
-    let module_prop = fs::read_to_string("/data/adb/modules/AZenith/module.prop").unwrap_or_default();
-    let module_ver = module_prop.lines()
-        .find(|line| line.starts_with("version="))
-        .map(|line| line.replace("version=", ""))
-        .unwrap_or_default();
-
-    let android_sdk = getprop("ro.build.version.sdk");
-
-    let kernel_output = Command::new("uname").args(["-r", "-m"]).output().unwrap();
-    let kernel_info = String::from_utf8_lossy(&kernel_output.stdout).trim().to_string();
-
-    let fingerprint = getprop("ro.build.fingerprint");
-
-    let mut log_content = format!(
-        "##########################################\n\n\
-         \x20            AZenith Process Log\n\n\
-         \x20   Module: {}\n\
-         \x20   Android: {}\n\
-         \x20   Kernel: {}\n\
-         \x20   Fingerprint: {}\n\
-         ##########################################\n\n",
-        module_ver, android_sdk, kernel_info, fingerprint
-    );
-
-    let previous_log = fs::read_to_string("/data/adb/.config/AZenith/debug/AZenith.log").unwrap_or_default();
-    log_content.push_str(&previous_log);
-
-    let _ = fs::write(&log_file, log_content);
+    log_info(&format!("Successfully applied renderer: {}", renderer));
 }
 
 pub fn check_mali_path() {

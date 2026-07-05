@@ -53,6 +53,8 @@ int main(int argc, char* argv[]) {
         print_bypass_path_list();
         return 0;
     }
+    if (IS_CMD(cmd, "--rerun", "-rr")) 
+        return restart_service();
 
     if (!require_daemon_running()) {
         return 1;
