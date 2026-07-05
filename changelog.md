@@ -6,7 +6,7 @@
 - Fixed an issue where module installation got stuck while installing manager apps
 - Update the FSTrim script
 - Optimizing Daemon Flows
-feat(i18n): expand localization from 17 to 84 languages with revised translations
+- feat(i18n): expand localization from 17 to 84 languages with revised translations
 - Add 67 new language localizations (af, am, as, az, be, bg, bn, bs,
   ca, cs, da, el, en-rAU, en-rCA, en-rGB, en-rIN, es-rUS, et, eu, fa,
   fi, fr-rCA, gl, gu, hr, hu, hy, iw, ka, kk, km, kn, ko, ky, lo, lt,
