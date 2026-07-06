@@ -198,6 +198,10 @@ int main_daemon(void) {
                 is_restarting_renderer = false;
                 ctx.has_applied_renderer = true;
             }
+            
+            if (!IS_DEFAULT(opts.resolution_target)) {
+                apply_resolution_target(&ctx, atoi(opts.resolution_target));
+            }
 
             if (game_pid_count == 0) [[clang::unlikely]] {
                 if (strcmp(current_system_cache.focused_app, gamestart) == 0) {

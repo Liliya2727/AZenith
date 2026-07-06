@@ -125,6 +125,8 @@ void apply_eco_profile(DaemonContext* ctx) {
 
     ctx->cur_mode = ECO_MODE;
     ctx->need_profile_checkup = false;
+    
+    restore_window_resolution(ctx);
 
     notify("ECO Mode", "System is now at Endurance state", false, 0);
     log_zenith(LOG_INFO, "Applying ECO Mode");
@@ -175,6 +177,8 @@ void apply_balanced_profile(DaemonContext* ctx) {
 
     ctx->cur_mode = BALANCED_PROFILE;
     ctx->need_profile_checkup = false;
+    
+    restore_window_resolution(ctx);
 
     notify("Balanced Profile", "System is now at Optimal state", false, 0);
     log_zenith(LOG_INFO, "Applying balanced profile");

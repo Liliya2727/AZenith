@@ -104,6 +104,7 @@ typedef struct {
     char game_preload[16];
     char refresh_rate[16];
     char renderer[64];
+    char resolution_target[16];
 } GameConfig;
 
 extern GameConfig* g_game_cache;
@@ -172,6 +173,10 @@ typedef struct {
     char config_bypasspath[PROP_VALUE_MAX];
     int config_bypasschg;
     int config_bypasschgthreshold;
+    int saved_width;
+    int saved_height;
+    int saved_density;
+    bool resolution_applied;
 } DaemonContext;
 
 extern const char* VALID_AZENITH_PROPS[];
@@ -246,6 +251,8 @@ void check_module_version(void);
 void apply_dynamic_refresh_rate(int target_rr);
 int get_max_refresh_rate(void);
 bool apply_smart_renderer(const char* target_type, const char* pkg, char* saved_ref);
+void apply_resolution_target(DaemonContext* ctx, int target_width);
+void restore_window_resolution(DaemonContext* ctx);
 
 // Shell and Command execution
 char* execute_command(const char* format, ...);

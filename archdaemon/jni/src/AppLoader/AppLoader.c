@@ -140,6 +140,13 @@ void reload_gamelist_cache(DaemonContext* ctx) {
             else
                 strcpy(g_game_cache[g_game_cache_count].renderer, "default");
 
+            p = strstr(ptr, "\"resolution_target\":");
+            if (p && (!next_block || p < next_block))
+                extract_string_value(g_game_cache[g_game_cache_count].resolution_target, p,
+                                     sizeof(g_game_cache[g_game_cache_count].resolution_target));
+            else
+                strcpy(g_game_cache[g_game_cache_count].resolution_target, "default");
+
             g_game_cache_count++;
         }
         ptr += 4;
