@@ -106,6 +106,7 @@ class AppSettingsViewModel : ViewModel() {
             "game_preload" -> currentAppConfig.copy(game_preload = value)
             "refresh_rate" -> currentAppConfig.copy(refresh_rate = value)
             "renderer" -> currentAppConfig.copy(renderer = value)
+            "resolution_target" -> currentAppConfig.copy(resolution_target = value)
             else -> currentAppConfig
         }
         

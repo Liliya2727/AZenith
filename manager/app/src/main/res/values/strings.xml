@@ -366,4 +366,6 @@
     <string name="str_version_code">Version Code</string>
     <string name="str_package_name">Package Name</string>
     <string name="str_device_uptime">Device Uptime</string>
+    <string name="resolution_target">Downscale Resolution</string>
+    <string name="resolution_target_desc">Set the target Resolution for this app</string>
     </resources>

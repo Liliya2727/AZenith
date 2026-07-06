@@ -82,6 +82,7 @@ import zx.azenith.ui.component.ExpressiveList
 import zx.azenith.ui.component.ExpressiveListItem
 import zx.azenith.ui.component.ExpressiveSwitchItem
 import zx.azenith.ui.util.getSupportedRefreshRates
+import zx.azenith.ui.util.getSupportedResolutions
 import zx.azenith.ui.viewmodel.AppSettingsViewModel
 import zx.azenith.ui.viewmodel.ApplistViewmodel
 
@@ -139,6 +140,14 @@ fun AppSettingsScreen(
     val defaultLabel = stringResource(R.string.default_label)
     
     val rawRefreshModes = remember { getSupportedRefreshRates(context) }
+    
+    val rawResolutionModes = remember { getSupportedResolutions(context) }
+
+    val dynamicResolutionDisplayModes = remember(rawResolutionModes, defaultLabel) {
+        rawResolutionModes.map { mode ->
+            if (mode.equals("default", ignoreCase = true)) defaultLabel else "${mode}p"
+        }
+    }
     
     val dynamicRefreshDisplayModes = remember(rawRefreshModes, defaultLabel) {
         rawRefreshModes.map { mode ->
@@ -337,6 +346,21 @@ fun AppSettingsScreen(
                                         onItemSelected = { index ->
                                             val value = rendererValues[index]
                                             packageName?.let { viewModel.updateSetting(it, "renderer", value) }
+                                        }
+                                    )
+                                },
+                                {
+                                    ExpressiveDropdownItem(
+                                        icon = Icons.Rounded.AspectRatio,
+                                        title = stringResource(R.string.resolution_target),
+                                        summary = stringResource(R.string.resolution_target_desc),
+                                        items = dynamicResolutionDisplayModes,
+                                        selectedIndex = rawResolutionModes.indexOfFirst {
+                                            it.equals(displayConfig.resolution_target, ignoreCase = true)
+                                        }.coerceAtLeast(0),
+                                        onItemSelected = { index ->
+                                            val value = rawResolutionModes[index]
+                                            packageName?.let { viewModel.updateSetting(it, "resolution_target", value) }
                                         }
                                     )
                                 }
