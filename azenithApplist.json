@@ -5,7 +5,8 @@
     "app_priority": "default",
     "game_preload": "default",
     "refresh_rate": "default",
-    "renderer": "default"
+    "renderer": "default",
+    "resolution_target": "default"
   },
   "com.netease.yysls": {
     "perf_lite_mode": "default",
@@ -13,7 +14,8 @@
     "app_priority": "default",
     "game_preload": "default",
     "refresh_rate": "default",
-    "renderer": "default"
+    "renderer": "default",
+    "resolution_target": "default"
   },
   "com.kurogame.wutheringwaves.global": {
     "perf_lite_mode": "default",
@@ -21,7 +23,8 @@
     "app_priority": "default",
     "game_preload": "default",
     "refresh_rate": "default",
-    "renderer": "default"
+    "renderer": "default",
+    "resolution_target": "default"
   },
   "com.HoYoverse.hkrpgoversea": {
     "perf_lite_mode": "default",
@@ -29,7 +32,8 @@
     "app_priority": "default",
     "game_preload": "default",
     "refresh_rate": "default",
-    "renderer": "default"
+    "renderer": "default",
+    "resolution_target": "default"
   },
   "com.bluepoch.m.en.reverse1999": {
     "perf_lite_mode": "default",
@@ -37,7 +41,8 @@
     "app_priority": "default",
     "game_preload": "default",
     "refresh_rate": "default",
-    "renderer": "default"
+    "renderer": "default",
+    "resolution_target": "default"
   },
   "com.nexon.bluearchive": {
     "perf_lite_mode": "default",
@@ -45,7 +50,8 @@
     "app_priority": "default",
     "game_preload": "default",
     "refresh_rate": "default",
-    "renderer": "default"
+    "renderer": "default",
+    "resolution_target": "default"
   },
   "com.sega.ColorfulStage.en": {
     "perf_lite_mode": "default",
@@ -53,7 +59,8 @@
     "app_priority": "default",
     "game_preload": "default",
     "refresh_rate": "default",
-    "renderer": "default"
+    "renderer": "default",
+    "resolution_target": "default"
   },
   "com.serenityforge.dokidokiliteratureclub": {
     "perf_lite_mode": "default",
@@ -61,7 +68,8 @@
     "app_priority": "default",
     "game_preload": "default",
     "refresh_rate": "default",
-    "renderer": "default"
+    "renderer": "default",
+    "resolution_target": "default"
   },
   "com.YoStarEN.StellaSora": {
     "perf_lite_mode": "default",
@@ -69,7 +77,8 @@
     "app_priority": "default",
     "game_preload": "default",
     "refresh_rate": "default",
-    "renderer": "default"
+    "renderer": "default",
+    "resolution_target": "default"
   },
   "com.cygames.umamusume": {
     "perf_lite_mode": "default",
@@ -77,7 +86,8 @@
     "app_priority": "default",
     "game_preload": "default",
     "refresh_rate": "default",
-    "renderer": "default"
+    "renderer": "default",
+    "resolution_target": "default"
   },
   "com.FFhouse.ImoutoToIchaLoveSeikatsu": {
     "perf_lite_mode": "default",
@@ -85,6 +95,7 @@
     "app_priority": "default",
     "game_preload": "default",
     "refresh_rate": "default",
-    "renderer": "default"
+    "renderer": "default",
+    "resolution_target": "default"
   }
 }
