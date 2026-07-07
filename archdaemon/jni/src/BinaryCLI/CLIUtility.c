@@ -205,8 +205,6 @@ int restart_service(void) {
         log_zenith(LOG_FATAL, "Unable to daemonize service");
         return 1;
     }
-
     system("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf restartservice");
-
     return 0;
 }

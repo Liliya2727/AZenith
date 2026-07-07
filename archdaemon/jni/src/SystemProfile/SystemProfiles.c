@@ -111,6 +111,11 @@ void apply_performance_profile(DaemonContext* ctx) {
             log_zenith(LOG_ERROR, "Failed to allocate memory for preload arguments");
         }
     }
+        
+    EXECUTE("ECO Mode", run_profiler(ECO_MODE));
+    
+    save_daemon_state(ctx);
+    
 }
 
 /**
@@ -161,8 +166,9 @@ void apply_eco_profile(DaemonContext* ctx) {
         }
         memset(ctx->saved_renderer, 0, sizeof(ctx->saved_renderer));
     }
+    
+    save_daemon_state(ctx);
 
-    EXECUTE("ECO Mode", run_profiler(ECO_MODE));
 }
 
 /**
@@ -220,4 +226,7 @@ void apply_balanced_profile(DaemonContext* ctx) {
         notify("Daemon Info", "AZenith is running successfully", false, 60000);
         ctx->is_initialize_complete = true;
     }
+    
+    save_daemon_state(ctx);
+    
 }

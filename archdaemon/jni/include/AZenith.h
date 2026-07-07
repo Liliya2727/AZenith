@@ -70,6 +70,7 @@
 #define BYPASSCHG_CONFIG "/data/adb/.config/AZenith/bypasschgconfig"
 #define MODULE_VERSION ".placeholder"
 #define APP_MONITOR_FILE "/data/adb/.config/AZenith/app_status"
+#define DAEMON_STATE_FILE "/data/adb/.config/AZenith/daemon_state"
 
 #define IS_TRUE(v)    ((v) && strcmp((v), "true") == 0)
 #define IS_FALSE(v)   ((v) && strcmp((v), "false") == 0)
@@ -277,6 +278,8 @@ void set_priority(const pid_t pid);
 int uidof(pid_t pid);
 void free_gamelist_cache(void);
 void reload_gamelist_cache(DaemonContext* ctx);
+void restore_daemon_state(DaemonContext* ctx);
+void save_daemon_state(DaemonContext* ctx);
 
 // App Monitor
 char* get_visible_package(SystemStateCache* cache);

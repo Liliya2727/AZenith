@@ -31,6 +31,7 @@ int main_daemon(void) {
 
     DaemonContext ctx;
     init_daemon_context(&ctx);
+    restore_daemon_state(&ctx);
     wait_for_java_companion(&ctx);
 
     if (pipe(java_lock_pipe) != 0) {
