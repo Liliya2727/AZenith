@@ -195,7 +195,7 @@ int main_daemon(void) {
                 }
 
                 bool reso_changed = false;
-                if (!IS_DEFAULT(opts.resolution_downscale) || !IS_DEFAULT(opts.resolution_fps)) {
+                if (!IS_DEFAULT(opts.resolution_downscale)) {
                     reso_changed = apply_resolution_target(&ctx, gamestart,
                                                             opts.resolution_downscale,
                                                             opts.resolution_fps);
