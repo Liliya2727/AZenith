@@ -111,8 +111,6 @@ void apply_performance_profile(DaemonContext* ctx) {
             log_zenith(LOG_ERROR, "Failed to allocate memory for preload arguments");
         }
     }
-        
-    EXECUTE("ECO Mode", run_profiler(ECO_MODE));
     
     save_daemon_state(ctx);
     
@@ -130,8 +128,6 @@ void apply_eco_profile(DaemonContext* ctx) {
 
     ctx->cur_mode = ECO_MODE;
     ctx->need_profile_checkup = false;
-    
-    restore_window_resolution(ctx);
 
     notify("ECO Mode", "System is now at Endurance state", false, 0);
     log_zenith(LOG_INFO, "Applying ECO Mode");
@@ -167,7 +163,7 @@ void apply_eco_profile(DaemonContext* ctx) {
         memset(ctx->saved_renderer, 0, sizeof(ctx->saved_renderer));
     }
     
-    save_daemon_state(ctx);
+    systemv("rm -rf /data/adb/.config/AZenith/daemon_state");
 
 }
 
@@ -183,8 +179,6 @@ void apply_balanced_profile(DaemonContext* ctx) {
 
     ctx->cur_mode = BALANCED_PROFILE;
     ctx->need_profile_checkup = false;
-    
-    restore_window_resolution(ctx);
 
     notify("Balanced Profile", "System is now at Optimal state", false, 0);
     log_zenith(LOG_INFO, "Applying balanced profile");
@@ -227,6 +221,6 @@ void apply_balanced_profile(DaemonContext* ctx) {
         ctx->is_initialize_complete = true;
     }
     
-    save_daemon_state(ctx);
+    systemv("rm -rf /data/adb/.config/AZenith/daemon_state");
     
 }
