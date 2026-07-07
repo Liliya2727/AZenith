@@ -212,6 +212,7 @@ int main_daemon(void) {
                         ctx.pid_retries++;
                         log_zenith(LOG_WARN, "Waiting for %s to spawn (Retry %d/5)...", active_app_name ? active_app_name : gamestart,
                                    ctx.pid_retries);
+                        usleep(200000);
                         need_loop = true;
                         continue;
                     } else {
