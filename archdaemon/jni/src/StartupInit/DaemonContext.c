@@ -53,8 +53,6 @@ void init_daemon_context(DaemonContext* ctx) {
     strcpy(ctx->last_freqoffset, "Initial");
     strcpy(ctx->prev_ai_state, "0");
     ctx->java_lock_path = "/data/adb/.config/AZenith/java.lock";
-    ctx->saved_width = 0;
-    ctx->saved_height = 0;
-    ctx->saved_density = 0;
     ctx->resolution_applied = false;
+    ctx->used_legacy_fallback = false;
 }

@@ -72,6 +72,6 @@ void restore_daemon_state(DaemonContext* ctx) {
     }
 
     fclose(fp);
-    remove(DAEMON_STATE_FILE);
+    systemv("rm -rf /data/adb/.config/AZenith/daemon_state");
     log_zenith(LOG_INFO, "Restored daemon state from previous session, will reconcile on next profile checkup");
 }

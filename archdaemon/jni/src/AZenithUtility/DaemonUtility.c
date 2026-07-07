@@ -270,3 +270,18 @@ void extract_string_value(char* dest, const char* key_pos, size_t max_len) {
     strncpy(dest, start, len);
     dest[len] = '\0';
 }
+
+/**
+ * @brief Force-restarts the target app so pending Game Mode / renderer
+ *        interventions take effect. Shared by renderer and resolution
+ *        handlers to avoid double restarts.
+ * @param pkg Target package name to restart.
+ */
+void restart_target_app(const char* pkg) {
+    log_zenith(LOG_INFO, "RestartHandler: Restarting %s to apply pending changes...", pkg);
+    is_restarting_renderer = true; // reuse existing flag, guards inotify/pid logic during respawn
+    systemv("am force-stop %s && am start -n $(cmd package resolve-activity --brief %s | tail -n 1)",
+            pkg, pkg);
+    usleep(500000);
+    is_restarting_renderer = false;
+}

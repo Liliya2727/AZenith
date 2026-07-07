@@ -105,7 +105,8 @@ typedef struct {
     char game_preload[16];
     char refresh_rate[16];
     char renderer[64];
-    char resolution_target[16];
+    char resolution_downscale[8];
+    char resolution_fps[8];  
 } GameConfig;
 
 extern GameConfig* g_game_cache;
@@ -174,10 +175,8 @@ typedef struct {
     char config_bypasspath[PROP_VALUE_MAX];
     int config_bypasschg;
     int config_bypasschgthreshold;
-    int saved_width;
-    int saved_height;
-    int saved_density;
     bool resolution_applied;
+    bool used_legacy_fallback;
 } DaemonContext;
 
 extern const char* VALID_AZENITH_PROPS[];
@@ -251,9 +250,10 @@ void runthermalcore(void);
 void check_module_version(void);
 void apply_dynamic_refresh_rate(int target_rr);
 int get_max_refresh_rate(void);
-bool apply_smart_renderer(const char* target_type, const char* pkg, char* saved_ref);
-void apply_resolution_target(DaemonContext* ctx, int target_width);
-void restore_window_resolution(DaemonContext* ctx);
+bool apply_smart_renderer(const char* target_type, char* saved_ref);
+bool apply_resolution_target(DaemonContext* ctx, const char* pkg,
+                               const char* downscale, const char* fps);
+void restore_resolution_target(DaemonContext* ctx, const char* pkg);
 
 // Shell and Command execution
 char* execute_command(const char* format, ...);
@@ -280,6 +280,7 @@ void free_gamelist_cache(void);
 void reload_gamelist_cache(DaemonContext* ctx);
 void restore_daemon_state(DaemonContext* ctx);
 void save_daemon_state(DaemonContext* ctx);
+void restart_target_app(const char* pkg);
 
 // App Monitor
 char* get_visible_package(SystemStateCache* cache);

@@ -19,7 +19,7 @@
 /**
  * @brief Processes PID adjustments when background_apps event is triggered.
  */
-static void handle_background_apps_event(void) {
+static void handle_background_apps_event(DaemonContext* ctx) {
     if (!gamestart)
         return;
     pid_t new_pids[MAX_GAME_PIDS];
@@ -83,6 +83,7 @@ static void handle_background_apps_event(void) {
             } else {
                 log_zenith(LOG_INFO, "InotifyHandler: Game %s completely closed. Exiting performance mode...",
                            active_app_name ? active_app_name : gamestart);
+                restore_resolution_target(ctx, gamestart);
                 free(gamestart);
                 gamestart = NULL;
                 if (active_app_name) {
@@ -159,7 +160,7 @@ bool process_inotify_events(int inotify_fd, DaemonContext* ctx, int timeout_ms) 
                             read_app_status(&current_system_cache);
                             ctx->need_profile_checkup = true;
                         } else if (strcmp(event->name, "background_apps") == 0) {
-                            handle_background_apps_event();
+                            handle_background_apps_event(ctx);
                             if (gamestart == NULL)
                                 ctx->need_profile_checkup = true;
                         } else if (strcmp(event->name, "current_profile") == 0) {

@@ -44,7 +44,7 @@ int main_daemon(void) {
         pthread_create(&lock_thread, &attr, java_lock_watcher_thread, (void*)ctx.java_lock_path);
         pthread_attr_destroy(&attr);
     }
-    
+
     log_zenith(LOG_INFO, "Reading initial applist status...");
     read_app_status(&current_system_cache);
     reload_gamelist_cache(&ctx);
@@ -56,7 +56,7 @@ int main_daemon(void) {
     __system_property_set("persist.sys.azenith.state", "running");
     notify("Initializing...", "Starting AZenith service...", false, 0);
     setspid();
-    
+
     FILE* fp_ai_init = fopen(DAEMON_MODES, "r");
     if (fp_ai_init) {
         if (fgets(ctx.prev_ai_state, sizeof(ctx.prev_ai_state), fp_ai_init))
@@ -65,19 +65,19 @@ int main_daemon(void) {
     }
     int inotify_fd = setup_inotify_watchers();
     load_initial_config_files(&ctx);
-    
+
     checkstate();
     is_kanged();
     check_module_version();
     validateprop();
     log_zenith(LOG_INFO, "Module Integrity Passed");
-    
+
     log_zenith(LOG_INFO, "Daemon is Ready!");
     ctx.need_profile_checkup = true;
     bool need_loop = true;
     runthermalcore();
     run_profiler(PERFCOMMON);
-    
+
     /* Main Daemon Loop */
     while (1) {
         int poll_timeout = -1;
@@ -128,6 +128,11 @@ int main_daemon(void) {
                     free(current_focused_game);
                     ctx.need_profile_checkup = false;
                 } else {
+
+                    if (gamestart && ctx.resolution_applied) {
+                        restore_resolution_target(&ctx, gamestart);
+                    }
+
                     if (gamestart)
                         free(gamestart);
                     if (active_app_name)
@@ -183,25 +188,26 @@ int main_daemon(void) {
             if (!ctx.need_profile_checkup && ctx.cur_mode == PERFORMANCE_PROFILE && ctx.has_applied_renderer && game_pid_count > 0)
                 continue;
 
-            bool is_renderer_changing = false;
             if (!ctx.has_applied_renderer) {
-                is_restarting_renderer = true;
+                bool renderer_changed = false;
                 if (!IS_DEFAULT(opts.renderer)) {
-                    is_renderer_changing = apply_smart_renderer(opts.renderer, gamestart, ctx.saved_renderer);
+                    renderer_changed = apply_smart_renderer(opts.renderer, ctx.saved_renderer);
                 }
 
-                if (is_renderer_changing) {
-                    log_zenith(LOG_INFO, "Changing renderer. Waiting for app to respawn...");
-                    usleep(500000);
+                bool reso_changed = false;
+                if (!IS_DEFAULT(opts.resolution_downscale) || !IS_DEFAULT(opts.resolution_fps)) {
+                    reso_changed = apply_resolution_target(&ctx, gamestart,
+                                                            opts.resolution_downscale,
+                                                            opts.resolution_fps);
+                }
+
+                if (renderer_changed || reso_changed) {
+                    restart_target_app(gamestart);
                     game_pid_count = 0;
                     ctx.pid_retries = 0;
                 }
-                is_restarting_renderer = false;
+
                 ctx.has_applied_renderer = true;
-            }
-            
-            if (!IS_DEFAULT(opts.resolution_target)) {
-                apply_resolution_target(&ctx, atoi(opts.resolution_target));
             }
 
             if (game_pid_count == 0) [[clang::unlikely]] {
