@@ -366,6 +366,8 @@
     <string name="str_version_code">Version Code</string>
     <string name="str_package_name">Package Name</string>
     <string name="str_device_uptime">Device Uptime</string>
-    <string name="resolution_target">Downscale Resolution</string>
-    <string name="resolution_target_desc">Set the target Resolution for this app</string>
+    <string name="resolution_downscale_title">Downscale Resolution</string>
+    <string name="resolution_downscale_desc">Set the target Resolution for this game</string>
+    <string name="resolution_fps_target_title">Target FPS</string>
+    <string name="resolution_fps_target_desc">Set Downscale Resolution target FPS for this game</string>
     </resources>

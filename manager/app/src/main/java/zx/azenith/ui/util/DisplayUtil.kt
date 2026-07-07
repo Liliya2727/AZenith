@@ -17,38 +17,41 @@
 package zx.azenith.ui.util
 
 import android.content.Context
-import android.util.DisplayMetrics
 import android.view.WindowManager
+import java.util.Locale
 
 /**
- * Returns the device's native (smallest-dimension) width in pixels,
- * regardless of any active window size override.
+ * Generates downscale factor steps from 0.30 to 0.95 in 0.05 increments,
+ * with "default" (native, no downscale) placed last. 1.00 is omitted
+ * since it's functionally identical to "default".
  */
-@Suppress("DEPRECATION")
-fun getDeviceNativeWidth(context: Context): Int {
-    val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-    val metrics = DisplayMetrics()
-    wm.defaultDisplay.getRealMetrics(metrics)
-    return minOf(metrics.widthPixels, metrics.heightPixels)
+fun getSupportedDownscaleFactors(): List<String> {
+    val factors = mutableListOf<String>()
+    var current = 0.30
+    while (current <= 0.951) {
+        factors.add(String.format(Locale.US, "%.2f", current))
+        current += 0.05
+    }
+    factors.add("default")
+    return factors
 }
 
 /**
- * Generates a descending list of resolution width options,
- * stepping down from the device's native width to 240p.
- * "default" is always first, representing native/unscaled resolution.
+ * Generates FPS target steps in multiples of 30, up to the device's
+ * max supported refresh rate. No "default" entry — 60fps is the baseline.
  */
-fun getSupportedResolutions(context: Context): List<String> {
-    val maxWidth = getDeviceNativeWidth(context)
-    val step = 120
-    val floor = 240
+@Suppress("DEPRECATION")
+fun getSupportedFpsTargets(context: Context): List<String> {
+    val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+    val maxRefreshRate = wm.defaultDisplay.supportedModes
+        .maxOf { it.refreshRate }
+        .toInt()
 
-    val widths = mutableListOf<Int>()
-    var current = maxWidth - step
-    while (current > floor) {
-        widths.add(current)
-        current -= step
+    val steps = mutableListOf<String>()
+    var fps = 30
+    while (fps <= maxRefreshRate) {
+        steps.add(fps.toString())
+        fps += 30
     }
-    widths.add(floor)
-
-    return listOf("default") + widths.map { it.toString() }
+    return steps
 }

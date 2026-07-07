@@ -106,10 +106,13 @@ class AppSettingsViewModel : ViewModel() {
             "game_preload" -> currentAppConfig.copy(game_preload = value)
             "refresh_rate" -> currentAppConfig.copy(refresh_rate = value)
             "renderer" -> currentAppConfig.copy(renderer = value)
-            "resolution_target" -> currentAppConfig.copy(resolution_target = value)
+            "resolution_downscale" -> currentAppConfig.copy(
+                resolution_downscale = value,
+                resolution_fps = if (value == "default") "60" else currentAppConfig.resolution_fps
+            )
+            "resolution_fps" -> currentAppConfig.copy(resolution_fps = value)
             else -> currentAppConfig
         }
-        
         val newMap = fullConfig.toMutableMap()
         newMap[packageName] = updated
         saveAndRefresh(newMap)
