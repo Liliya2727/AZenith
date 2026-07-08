@@ -33,13 +33,13 @@ pub fn performance_profile() {
     }
 
     // Mali GPU Governor Tweaks
-    let custom_perf_mali = getprop("persist.sys.azenith.custom_performance_gpu_gov");
+    let custom_perf_mali = getprop("persist.sys.azenith.custom_performance_maligpu_gov");
     if !custom_perf_mali.is_empty() {
         sets_mali_gov(&custom_perf_mali);
     } else {
-        let mut default_mali = getprop("persist.sys.azenith.custom_default_gpu_gov");
+        let mut default_mali = getprop("persist.sys.azenith.custom_default_maligpu_gov");
         if default_mali.is_empty() {
-            default_mali = getprop("persist.sys.azenith.default_gpu_gov");
+            default_mali = getprop("persist.sys.azenith.default_maligpu_gov");
         }
         if !default_mali.is_empty() {
             sets_mali_gov(&default_mali);
@@ -158,9 +158,9 @@ pub fn balanced_profile() {
     log_info(&format!("Applying I/O scheduler to : {}", default_io));
 
     // Mali GPU Governor Tweaks
-    let mut default_mali = getprop("persist.sys.azenith.custom_default_gpu_gov");
+    let mut default_mali = getprop("persist.sys.azenith.custom_default_maligpu_gov");
     if default_mali.is_empty() {
-        default_mali = getprop("persist.sys.azenith.default_gpu_gov");
+        default_mali = getprop("persist.sys.azenith.default_maligpu_gov");
     }
     if !default_mali.is_empty() {
         sets_mali_gov(&default_mali);
@@ -265,13 +265,13 @@ pub fn eco_mode() {
     log_info(&format!("Applying I/O scheduler to : {}", powersave_io));
 
     // Mali GPU Governor Tweaks
-    let custom_eco_mali = getprop("persist.sys.azenith.custom_powersave_gpu_gov");
+    let custom_eco_mali = getprop("persist.sys.azenith.custom_powersave_maligpu_gov");
     if !custom_eco_mali.is_empty() {
         sets_mali_gov(&custom_eco_mali);
     } else {
-        let mut default_mali = getprop("persist.sys.azenith.custom_default_gpu_gov");
+        let mut default_mali = getprop("persist.sys.azenith.custom_default_maligpu_gov");
         if default_mali.is_empty() {
-            default_mali = getprop("persist.sys.azenith.default_gpu_gov");
+            default_mali = getprop("persist.sys.azenith.default_maligpu_gov");
         }
         if !default_mali.is_empty() {
             sets_mali_gov(&default_mali);
