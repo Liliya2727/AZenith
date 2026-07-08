@@ -123,7 +123,10 @@ class TweakViewModel : ViewModel() {
         "persist.sys.azenith.custom_performance_cpu_gov",
         "persist.sys.azenith.custom_default_balanced_IO",
         "persist.sys.azenith.custom_performance_IO",
-        "persist.sys.azenith.custom_powersave_IO"
+        "persist.sys.azenith.custom_powersave_IO",
+        "persist.sys.azenith.custom_default_maligpu_gov",
+        "persist.sys.azenith.custom_performance_maligpu_gov",
+        "persist.sys.azenith.custom_powersave_maligpu_gov" 
     )
     
     
@@ -345,11 +348,11 @@ class TweakViewModel : ViewModel() {
                 val govs = govResult.out.firstOrNull()?.trim()?.split("\\s+".toRegex())
                     ?.filterNot { it.startsWith("apu", ignoreCase = true) } ?: emptyList()
                 
-                val currentBal = PropertyUtils.get("persist.sys.azenith.custom_default_gpu_gov").ifEmpty {
-                    PropertyUtils.get("persist.sys.azenith.default_gpu_gov")
+                val currentBal = PropertyUtils.get("persist.sys.azenith.custom_default_maligpu_gov").ifEmpty {
+                    PropertyUtils.get("persist.sys.azenith.default_maligpu_gov")
                 }
-                val currentPerf = PropertyUtils.get("persist.sys.azenith.custom_performance_gpu_gov")
-                val currentEco = PropertyUtils.get("persist.sys.azenith.custom_powersave_gpu_gov")
+                val currentPerf = PropertyUtils.get("persist.sys.azenith.custom_performance_maligpu_gov")
+                val currentEco = PropertyUtils.get("persist.sys.azenith.custom_powersave_maligpu_gov")
 
                 availableMaliGovernors = govs
                 balancedMaliGovIndex = govs.indexOf(currentBal).coerceAtLeast(0)
@@ -458,7 +461,7 @@ class TweakViewModel : ViewModel() {
         balancedMaliGovIndex = index
         val selectedGov = availableMaliGovernors?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenith.custom_default_gpu_gov", selectedGov)
+            PropertyUtils.set("persist.sys.azenith.custom_default_maligpu_gov", selectedGov)
 
             val currentProfile = Shell.cmd("cat /data/adb/.config/AZenith/API/current_profile").exec().out.firstOrNull()?.trim()
             if (currentProfile == "2") {
@@ -471,7 +474,7 @@ class TweakViewModel : ViewModel() {
         performanceMaliGovIndex = index
         val selectedGov = availableMaliGovernors?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenith.custom_performance_gpu_gov", selectedGov)
+            PropertyUtils.set("persist.sys.azenith.custom_performance_maligpu_gov", selectedGov)
             val currentProfile = Shell.cmd("cat /data/adb/.config/AZenith/API/current_profile").exec().out.firstOrNull()?.trim()
             if (currentProfile == "1") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsMaliGov $selectedGov").exec()
@@ -483,7 +486,7 @@ class TweakViewModel : ViewModel() {
         powersaveMaliGovIndex = index
         val selectedGov = availableMaliGovernors?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            PropertyUtils.set("persist.sys.azenith.custom_powersave_gpu_gov", selectedGov)
+            PropertyUtils.set("persist.sys.azenith.custom_powersave_maligpu_gov", selectedGov)
             val currentProfile = Shell.cmd("cat /data/adb/.config/AZenith/API/current_profile").exec().out.firstOrNull()?.trim()
             if (currentProfile == "3") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsMaliGov $selectedGov").exec()
