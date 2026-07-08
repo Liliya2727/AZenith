@@ -17,7 +17,6 @@
 #
 
 readonly MODDIR="${0%/*}"
-PERSISTENT_DIR="/data/adb/.config/AZenith"
 LOCK_FILE="/dev/.azenithSingleInstance"
 
 # Single Instance Lock
