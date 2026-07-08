@@ -266,13 +266,10 @@ fun AppSettingsScreen(
                     },
                     exit = shrinkVertically(animationSpec = tween(400)) + fadeOut()
                 ) {
-                    val displayConfig = config ?: zx.azenith.ui.util.AppConfig() 
-                    
-                    Column {
-                        
+                    val displayConfig = config ?: zx.azenith.ui.util.AppConfig()
 
-                
-                        SectionHeader(stringResource(R.string.preferred_settings))
+                    Column {
+                        SectionHeader(stringResource(R.string.section_performance))
                         ExpressiveList(
                             modifier = Modifier.padding(horizontal = 16.dp),
                             content = buildList {
@@ -289,6 +286,13 @@ fun AppSettingsScreen(
                                         }
                                     )
                                 }
+                            }
+                        )
+                    
+                        SectionHeader(stringResource(R.string.section_additionalsettings))
+                        ExpressiveList(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            content = buildList {
                                 add {
                                     ExpressiveDropdownItem(
                                         icon = Icons.Rounded.RocketLaunch,
@@ -328,6 +332,13 @@ fun AppSettingsScreen(
                                         }
                                     )
                                 }
+                            }
+                        )
+                    
+                        SectionHeader(stringResource(R.string.section_display_render_settings))
+                        ExpressiveList(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            content = buildList {
                                 add {
                                     ExpressiveDropdownItem(
                                         icon = Icons.Rounded.WebStories,
@@ -356,15 +367,21 @@ fun AppSettingsScreen(
                                         }
                                     )
                                 }
-                        
-                                if (isGameApp) {
+                            }
+                        )
+                    
+                        if (isGameApp) {
+                            SectionHeader(stringResource(R.string.section_resolution_settings))
+                            ExpressiveList(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                content = buildList {
                                     add {
                                         val currentDownscaleIndex = rawDownscaleSteps.indexOf(displayConfig.resolution_downscale)
                                             .coerceAtLeast(0)
                                         var downscaleSliderPos by remember(displayConfig.resolution_downscale) {
                                             mutableStateOf(currentDownscaleIndex.toFloat())
                                         }
-                                
+                    
                                         ExpressiveSliderItem(
                                             icon = Icons.Rounded.AspectRatio,
                                             title = stringResource(R.string.resolution_downscale_title),
@@ -387,7 +404,7 @@ fun AppSettingsScreen(
                                             mutableStateOf(currentFpsIndex.toFloat())
                                         }
                                         val downscaleIsOff = displayConfig.resolution_downscale == "default"
-                                
+                    
                                         ExpressiveSliderItem(
                                             icon = Icons.Rounded.Speed,
                                             title = stringResource(R.string.resolution_fps_target_title),
@@ -405,8 +422,8 @@ fun AppSettingsScreen(
                                         )
                                     }
                                 }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
