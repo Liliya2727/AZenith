@@ -164,7 +164,6 @@ int main_daemon(void) {
                     ctx.grace_period_active = false;
                 }
                 ctx.screen_off_timer = 0;
-                ctx.need_profile_checkup = true;
             }
             ctx.prev_screen_state = real_screen_state;
         }
