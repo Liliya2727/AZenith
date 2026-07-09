@@ -217,14 +217,16 @@ fun SettingsScreen(navController: NavController) {
                         var stateToast by remember { mutableStateOf<Boolean?>(null) }
                         var autoMode by remember { mutableStateOf<Boolean?>(null) }
                         var debugMode by remember { mutableStateOf<Boolean?>(null) }
+                        var profileTimeout by remember { mutableStateOf<Boolean?>(null) }
         
                         LaunchedEffect(Unit) {
                             stateToast = Shell.cmd("getprop persist.sys.azenithconf.showtoast").exec().out.firstOrNull()?.trim() == "1"
                             autoMode = Shell.cmd("getprop persist.sys.azenithconf.AIenabled").exec().out.firstOrNull()?.trim() == "0"
                             debugMode = Shell.cmd("getprop persist.sys.azenith.debugmode").exec().out.firstOrNull()?.trim() == "true"
+                            profileTimeout = Shell.cmd("getprop persist.sys.azenith.dropforeground").exec().out.firstOrNull()?.trim() == "1"
                         }
         
-                        if (stateToast != null && autoMode != null && debugMode != null) {
+                        if (stateToast != null && autoMode != null && debugMode != null && profileTimeout != null) {
                             ExpressiveList(
                                 content = listOf(
                                     {
@@ -262,6 +264,18 @@ fun SettingsScreen(navController: NavController) {
                                             onCheckedChange = { isChecked ->
                                                 debugMode = isChecked
                                                 Shell.cmd("setprop persist.sys.azenith.debugmode ${if (isChecked) "true" else "false"}").submit()
+                                            }
+                                        )
+                                    },
+                                    {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Filled.Timer,
+                                            title = stringResource(R.string.profile_timeout),
+                                            summary = stringResource(R.string.profile_timeout_desc),
+                                            checked = profileTimeout!!,
+                                            onCheckedChange = { isChecked ->
+                                                profileTimeout = isChecked
+                                                Shell.cmd("setprop persist.sys.azenith.dropforeground ${if (isChecked) "1" else "0"}").submit()
                                             }
                                         )
                                     }

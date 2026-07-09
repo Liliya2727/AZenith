@@ -355,6 +355,10 @@ if [ -z "$(getprop persist.sys.azenithconf.showtoast)" ]; then
 	setprop persist.sys.azenithconf.showtoast 1
 fi
 
+if [ -z "$(getprop persist.sys.azenith.dropforeground)" ]; then
+	setprop persist.sys.azenith.dropforeground 0
+fi
+
 if [ -z "$(getprop persist.sys.azenithconf.preloadbudget)" ]; then
     setprop persist.sys.azenithconf.preloadbudget 500M
 fi

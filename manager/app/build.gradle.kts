@@ -25,7 +25,7 @@ android {
         vectorDrawables.useSupportLibrary = true
         buildConfigField("long", "BUILD_TIME", "${System.currentTimeMillis()}L")
         ndk {
-            abiFilters 'arm64-v8a', 'armeabi-v7a'
+            abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a"))
         }
     }
 

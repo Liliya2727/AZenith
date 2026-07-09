@@ -372,4 +372,6 @@
     <string name="resolution_fps_target_desc">Set Downscale Resolution target FPS for this game</string>
     <string name="section_display_render_settings">Display &amp; Rendering</string>
     <string name="section_resolution_settings">Resolution</string>
+    <string name="profile_timeout">Performance Profile Timeout</string>
+    <string name="profile_timeout_desc">Drop the Performance Profile 30s after the game loses focus. Useful if you sometimes forget to clear the active game from recent apps.</string>
     </resources>
