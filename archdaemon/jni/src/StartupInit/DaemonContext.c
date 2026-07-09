@@ -55,4 +55,6 @@ void init_daemon_context(DaemonContext* ctx) {
     ctx->java_lock_path = "/data/adb/.config/AZenith/java.lock";
     ctx->resolution_applied = false;
     ctx->used_legacy_fallback = false;
+    ctx->fg_away_active = false;
+    ctx->fg_away_timer = 0;
 }

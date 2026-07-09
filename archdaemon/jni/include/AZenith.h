@@ -177,6 +177,8 @@ typedef struct {
     int config_bypasschgthreshold;
     bool resolution_applied;
     bool used_legacy_fallback;
+    bool fg_away_active;
+    time_t fg_away_timer;
 } DaemonContext;
 
 extern const char* VALID_AZENITH_PROPS[];

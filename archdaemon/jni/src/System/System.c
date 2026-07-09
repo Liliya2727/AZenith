@@ -89,6 +89,12 @@ int main_daemon(void) {
                 poll_timeout = (int)((10.0 - elapsed) * 1000);
             else
                 poll_timeout = 0;
+        } else if (ctx.fg_away_active) {
+            double elapsed = difftime(time(NULL), ctx.fg_away_timer);
+            if (elapsed < 30.0)
+                poll_timeout = (int)((30.0 - elapsed) * 1000);
+            else
+                poll_timeout = 0;
         }
 
         bool should_exit = process_inotify_events(inotify_fd, &ctx, poll_timeout);
@@ -177,6 +183,42 @@ int main_daemon(void) {
                 ctx.screen_off_timer = 0;
                 effective_screen_state = 0;
                 ctx.need_profile_checkup = true;
+            }
+        }
+        
+        if (gamestart && ctx.cur_mode == PERFORMANCE_PROFILE) {
+            char dropfg_val[PROP_VALUE_MAX] = {0};
+            bool dropforeground_enabled = (__system_property_get("persist.sys.azenith.dropforeground", dropfg_val) > 0 &&
+                                            dropfg_val[0] == '1');
+        
+            if (dropforeground_enabled) {
+                bool is_focused = (strcmp(current_system_cache.focused_app, gamestart) == 0);
+                if (!is_focused) {
+                    if (!ctx.fg_away_active) {
+                        ctx.fg_away_timer = time(NULL);
+                        ctx.fg_away_active = true;
+                        
+                    } else if (difftime(time(NULL), ctx.fg_away_timer) >= 30.0) {
+                        log_zenith(LOG_INFO, "Apps %s lost in foreground too long. Dropping to Balanced.",
+                                   active_app_name ? active_app_name : gamestart);
+                        ctx.fg_away_active = false;
+                        ctx.fg_away_timer = 0;
+                        restore_resolution_target(&ctx, gamestart);
+                        free(gamestart);
+                        gamestart = NULL;
+                        if (active_app_name) {
+                            free(active_app_name);
+                            active_app_name = NULL;
+                        }
+                        ctx.need_profile_checkup = true;
+                    }
+                } else if (ctx.fg_away_active) {
+                    ctx.fg_away_active = false;
+                    ctx.fg_away_timer = 0;
+                }
+            } else if (ctx.fg_away_active) {
+                ctx.fg_away_active = false;
+                ctx.fg_away_timer = 0;
             }
         }
 
