@@ -24,6 +24,9 @@ android {
         versionName = "1.0"
         vectorDrawables.useSupportLibrary = true
         buildConfigField("long", "BUILD_TIME", "${System.currentTimeMillis()}L")
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a'
+        }
     }
 
     signingConfigs {
