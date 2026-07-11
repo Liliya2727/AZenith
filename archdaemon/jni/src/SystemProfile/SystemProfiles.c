@@ -163,6 +163,8 @@ void apply_eco_profile(DaemonContext* ctx) {
         memset(ctx->saved_renderer, 0, sizeof(ctx->saved_renderer));
     }
     
+    EXECUTE("ECO Mode", run_profiler(ECO_MODE));
+    
     systemv("rm -rf /data/adb/.config/AZenith/daemon_state");
 
 }

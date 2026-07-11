@@ -222,8 +222,20 @@ int main_daemon(void) {
             }
         }
 
-        if (ctx.is_initialize_complete && ctx.cur_mode != PERFORMANCE_PROFILE && gamestart == NULL && !ctx.need_profile_checkup)
+        if (ctx.is_initialize_complete && ctx.cur_mode != PERFORMANCE_PROFILE && gamestart == NULL && !ctx.need_profile_checkup) {
+            
+            bool is_low_power = get_low_power_state(&current_system_cache);
+            
+            if (is_low_power && ctx.cur_mode != ECO_MODE) {
+                goto apply_mode_eco;
+            }
+            
+            if (!is_low_power && ctx.cur_mode == ECO_MODE) {
+                goto apply_mode_balanced;
+            }
+
             continue;
+        }
 
         if (ctx.is_initialize_complete && gamestart && effective_screen_state) {
             if (!ctx.need_profile_checkup && ctx.cur_mode == PERFORMANCE_PROFILE && ctx.has_applied_renderer && game_pid_count > 0)
@@ -290,9 +302,11 @@ int main_daemon(void) {
             }
             apply_performance_profile(&ctx);
         } else if (ctx.is_initialize_complete && get_low_power_state(&current_system_cache)) {
-            apply_eco_profile(&ctx);
+            apply_mode_eco:
+                apply_eco_profile(&ctx);
         } else {
-            apply_balanced_profile(&ctx);
+            apply_mode_balanced:
+                apply_balanced_profile(&ctx);
         }
     }
 
