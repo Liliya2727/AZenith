@@ -30,6 +30,7 @@ const char* VALID_AZENITH_PROPS[] = {
     "persist.sys.azenith.default_balanced_IO",
     "persist.sys.azenith.default_cpu_gov",
     "persist.sys.azenith.default_maligpu_gov",
+    "persist.sys.azenith.disabletweak",
     "persist.sys.azenith.service",
     "persist.sys.azenith.soctype",
     "persist.sys.azenith.state",

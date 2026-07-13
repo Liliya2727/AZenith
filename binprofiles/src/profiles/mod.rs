@@ -1,4 +1,7 @@
-use crate::utils::*; use std::fs; use std::path::Path; use std::process::Command;
+use crate::utils::*;
+use std::fs;
+use std::path::Path;
+use std::process::Command;
 use crate::chipsets::mediatek::*;
 use crate::chipsets::snapdragon::*;
 use crate::chipsets::exynos::*;
@@ -10,17 +13,12 @@ pub fn performance_profile() {
     if performance_gov.is_empty() {
         performance_gov = "powersave".to_string();
     }
-    setgov(&performance_gov);
-    log_info(&format!("Applying governor to : {}", performance_gov));
     
     let lite_mode = get_litemode();
 
     // I/O Scheduler Tweaks
-    let custom_perf_io = getprop("persist.sys.azenith.custom_performance_IO");
-    if !custom_perf_io.is_empty() {
-        sets_io(&custom_perf_io);
-        log_info(&format!("Applying I/O scheduler to : {}", custom_perf_io));
-    } else {
+    let mut custom_perf_io = getprop("persist.sys.azenith.custom_performance_IO");
+    if custom_perf_io.is_empty() {
         let mut default_io = getprop("persist.sys.azenith.custom_default_balanced_IO");
         if default_io.is_empty() {
             default_io = getprop("persist.sys.azenith.default_balanced_IO");
@@ -28,22 +26,26 @@ pub fn performance_profile() {
         if default_io.is_empty() {
             default_io = "none".to_string();
         }
-        sets_io(&default_io);
-        log_info(&format!("Applying I/O scheduler to : {}", default_io));
+        custom_perf_io = default_io;
     }
 
     // Mali GPU Governor Tweaks
-    let custom_perf_mali = getprop("persist.sys.azenith.custom_performance_maligpu_gov");
-    if !custom_perf_mali.is_empty() {
-        sets_mali_gov(&custom_perf_mali);
-    } else {
+    let mut custom_perf_mali = getprop("persist.sys.azenith.custom_performance_maligpu_gov");
+    if custom_perf_mali.is_empty() {
         let mut default_mali = getprop("persist.sys.azenith.custom_default_maligpu_gov");
         if default_mali.is_empty() {
             default_mali = getprop("persist.sys.azenith.default_maligpu_gov");
         }
-        if !default_mali.is_empty() {
-            sets_mali_gov(&default_mali);
-        }
+        custom_perf_mali = default_mali;
+    }
+
+    // Always apply custom governor and I/O settings
+    apply_custom_governor_io(&performance_gov, &custom_perf_io, &custom_perf_mali);
+
+    // Check if tweaks are disabled - skip everything else if they are
+    if is_tweak_disabled() {
+        log_info("Performance tweaks disabled by persist.sys.azenith.disabletweak");
+        return;
     }
 
     if Path::new("/proc/ppm").exists() {
@@ -143,8 +145,6 @@ pub fn balanced_profile() {
     if default_gov.is_empty() {
         default_gov = "schedutil".to_string();
     }
-    setgov(&default_gov);
-    log_info(&format!("Applying governor to : {}", default_gov));
 
     // I/O Scheduler Tweaks
     let mut default_io = getprop("persist.sys.azenith.custom_default_balanced_IO");
@@ -154,16 +154,20 @@ pub fn balanced_profile() {
     if default_io.is_empty() {
         default_io = "none".to_string();
     }
-    sets_io(&default_io);
-    log_info(&format!("Applying I/O scheduler to : {}", default_io));
 
     // Mali GPU Governor Tweaks
     let mut default_mali = getprop("persist.sys.azenith.custom_default_maligpu_gov");
     if default_mali.is_empty() {
         default_mali = getprop("persist.sys.azenith.default_maligpu_gov");
     }
-    if !default_mali.is_empty() {
-        sets_mali_gov(&default_mali);
+
+    // Always apply custom governor and I/O settings
+    apply_custom_governor_io(&default_gov, &default_io, &default_mali);
+
+    // Check if tweaks are disabled - skip everything else if they are
+    if is_tweak_disabled() {
+        log_info("Balanced tweaks disabled by persist.sys.azenith.disabletweak");
+        return;
     }
 
     if Path::new("/proc/ppm").exists() {
@@ -253,29 +257,30 @@ pub fn eco_mode() {
     if powersave_gov.is_empty() {
         powersave_gov = "powersave".to_string();
     }
-    setgov(&powersave_gov);
-    log_info(&format!("Applying governor to : {}", powersave_gov));
 
     // I/O Scheduler Tweaks
     let mut powersave_io = getprop("persist.sys.azenith.custom_powersave_IO");
     if powersave_io.is_empty() {
         powersave_io = "none".to_string();
     }
-    sets_io(&powersave_io);
-    log_info(&format!("Applying I/O scheduler to : {}", powersave_io));
 
     // Mali GPU Governor Tweaks
-    let custom_eco_mali = getprop("persist.sys.azenith.custom_powersave_maligpu_gov");
-    if !custom_eco_mali.is_empty() {
-        sets_mali_gov(&custom_eco_mali);
-    } else {
+    let mut custom_eco_mali = getprop("persist.sys.azenith.custom_powersave_maligpu_gov");
+    if custom_eco_mali.is_empty() {
         let mut default_mali = getprop("persist.sys.azenith.custom_default_maligpu_gov");
         if default_mali.is_empty() {
             default_mali = getprop("persist.sys.azenith.default_maligpu_gov");
         }
-        if !default_mali.is_empty() {
-            sets_mali_gov(&default_mali);
-        }
+        custom_eco_mali = default_mali;
+    }
+
+    // Always apply custom governor and I/O settings
+    apply_custom_governor_io(&powersave_gov, &powersave_io, &custom_eco_mali);
+
+    // Check if tweaks are disabled - skip everything else if they are
+    if is_tweak_disabled() {
+        log_info("ECO tweaks disabled by persist.sys.azenith.disabletweak");
+        return;
     }
 
     if Path::new("/proc/ppm").exists() {
@@ -312,7 +317,7 @@ pub fn eco_mode() {
     let bs_path = "/sys/module/battery_saver/parameters/enabled";
     if Path::new(bs_path).exists() {
         let content = fs::read_to_string(bs_path).unwrap_or_default();
-        if content.chars().any(|c: char| c.is_ascii_digit()) {
+        if content.chars().any(|c| c.is_ascii_digit()) {
             write_lock("1", bs_path);
         } else {
             write_lock("Y", bs_path);
@@ -325,17 +330,6 @@ pub fn eco_mode() {
     if Path::new(sched_feat).exists() {
         write_lock("NO_NEXT_BUDDY", sched_feat);
         write_lock("NO_TTWU_QUEUE", sched_feat);
-    }
-    
-    // Enable battery saver module
-    let bs_path = "/sys/module/battery_saver/parameters/enabled";
-    if Path::new(bs_path).exists() {
-        let content = fs::read_to_string(bs_path).unwrap_or_default();
-        if content.chars().any(|c| c.is_ascii_digit()) {
-            write_lock("1", bs_path);
-        } else {
-            write_lock("Y", bs_path);
-        }
     }
 
     match getprop("persist.sys.azenith.soctype").as_str() {

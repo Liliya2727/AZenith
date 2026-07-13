@@ -811,3 +811,22 @@ pub fn sets_mali_gov(gov: &str) {
         }
     }
 }
+
+pub fn is_tweak_disabled() -> bool {
+    let disable_tweak = getprop("persist.sys.azenith.disabletweak");
+    disable_tweak == "1"
+}
+
+pub fn apply_custom_governor_io(perf_gov: &str, perf_io: &str, mali_gov: &str) {
+    setgov(perf_gov);
+    log_info(&format!("Applying governor to : {}", perf_gov));
+    
+    if !perf_io.is_empty() {
+        sets_io(perf_io);
+        log_info(&format!("Applying I/O scheduler to : {}", perf_io));
+    }
+    
+    if !mali_gov.is_empty() {
+        sets_mali_gov(mali_gov);
+    }
+}
