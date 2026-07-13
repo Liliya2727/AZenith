@@ -169,7 +169,7 @@
     <string name="profile_timeout">Waktu habis profil performa</string>
     <string name="profile_timeout_desc">Keluar dari profil performa secara otomatis setelah game beralih ke latar belakang selama 30 detik; jika Anda kadang lupa menghapus game dari tugas terbaru, fitur ini sangat berguna</string>
     <string name="Profile_Balanced">Mode seimbang</string>
-    <string name="Profile_ECO_mode">Mode hemat energi</string>
+    <string name="Profile_ECO_mode">Mode hemat daya</string>
     <string name="Profile_Performance">Mode performa</string>
     <string name="Profile_Select">Pilih profil</string>
     <string name="reboot">Mulai ulang</string>
