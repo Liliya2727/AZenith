@@ -16,8 +16,8 @@
 
 package zx.azenith
 
-
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Bundle
@@ -75,7 +75,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zx.azenith.R
-import zx.azenith.ui.component.* import android.content.Intent
+import zx.azenith.ui.component.*
 import zx.azenith.ui.mainscreens.*
 import zx.azenith.ui.subscreens.*
 import zx.azenith.ui.theme.AZenithTheme
@@ -130,11 +130,7 @@ data class NavItem(
 )
 
 /**
- * Smoothly scrolls a HorizontalPager from its current position to [targetPage] with a single
- * continuous animation, even when the target is more than one page away. Unlike
- * [PagerState.animateScrollToPage], this does not snap-jump close to the target before animating
- * the remainder - it animates the raw scroll offset across the whole distance, so pages that are
- * skipped over are still visibly scrolled past instead of causing a jarring cut.
+ * Extension function for smooth scrolling pager
  */
 suspend fun PagerState.smoothScrollToPage(
     targetPage: Int,
@@ -165,27 +161,38 @@ suspend fun PagerState.smoothScrollToPage(
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(fromTileType: String? = null) {
     val navController = rememberNavController()
+    val context = LocalContext.current
+    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    
+    // STATE: Apakah scroll animation nyala atau nggak? (Default false)
+    var useScrollAnimation by remember { mutableStateOf(settingsPrefs.getBoolean("use_scroll_animation", false)) }
 
     val pagerRoutes = remember { listOf("home", "applist", "tweaks", "settings") }
     val pagerState = rememberPagerState(initialPage = 0) { pagerRoutes.size }
+    
+    // Bottom bar routes dinamis tergantung setting
+    val bottomBarRoutes = remember(useScrollAnimation) {
+        if (useScrollAnimation) setOf("main") 
+        else setOf("home", "applist", "tweaks", "settings")
+    }
 
-    LaunchedEffect(fromTileType) {
+    LaunchedEffect(fromTileType, useScrollAnimation) {
+        val rootNav = if (useScrollAnimation) "main" else "home"
         when (fromTileType) {
             "bypass" -> {
                 navController.navigate("bypasschg") {
-                    popUpTo("main") { saveState = true }
+                    popUpTo(rootNav) { saveState = true }
                     launchSingleTop = true
                     restoreState = true
                 }
             }
             "profile" -> {
-                navController.navigate("main") {
-                    popUpTo("main") { saveState = true }
+                navController.navigate(rootNav) {
+                    popUpTo(rootNav) { saveState = true }
                     launchSingleTop = true
                     restoreState = true
                 }
@@ -198,16 +205,18 @@ fun MainScreen(fromTileType: String? = null) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val rawRoute = navBackStackEntry?.destination?.route
     val isOnMainPager = rawRoute == "main"
-    val currentRoute = if (isOnMainPager) pagerRoutes[pagerState.currentPage] else rawRoute
-
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
     
+    // Evaluasi current route untuk highlight di BottomNavBar
+    val currentRoute = if (useScrollAnimation && isOnMainPager) {
+        pagerRoutes[pagerState.currentPage]
+    } else {
+        rawRoute
+    }
+
+    val coroutineScope = rememberCoroutineScope()
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-
     val appPrefs = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
-    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
 
     val hasCompletedGetStarted = remember {
         appPrefs.getBoolean("has_completed_get_started", false)
@@ -219,7 +228,6 @@ fun MainScreen(fromTileType: String? = null) {
     
     var isBlurEnabled by remember { mutableStateOf(settingsPrefs.getBoolean("expressive_blur_ui", false)) }
     val hazeState = remember { HazeState() }
-
     var rootStatus by remember { mutableStateOf(false) }
     var moduleInstalled by remember { mutableStateOf(false) }
 
@@ -227,6 +235,7 @@ fun MainScreen(fromTileType: String? = null) {
         rootStatus = RootUtils.requestRootAccess()
         moduleInstalled = RootUtils.isModuleInstalled()
         isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
+        useScrollAnimation = settingsPrefs.getBoolean("use_scroll_animation", false) // Update status animasi
         pendingReboot = Shell.cmd("test -f /data/adb/modules/AZenith/reboot").exec().isSuccess
     }
 
@@ -243,25 +252,21 @@ fun MainScreen(fromTileType: String? = null) {
         )
     }
     
-    val bottomBarRoutes = remember { setOf("home", "applist", "tweaks", "settings") }
     val installingDialog = rememberInstallingDialog()
     val updateDialog = rememberConfirmDialog(
         onConfirm = {
             coroutineScope.launch {
                 installingDialog.withInstalling {
                     val result = kotlinx.coroutines.withContext(Dispatchers.IO) {
-
                         Shell.cmd(
                             "cp /data/adb/modules/AZenith/AZenith.apk /data/local/tmp/AZenith_tmp.apk",
                             "sleep 5 && pm install -r /data/local/tmp/AZenith_tmp.apk",
                             "rm -f /data/local/tmp/AZenith_tmp.apk"
                         ).exec()
                     }
-                    
                     if (result.isSuccess) {
                         Toast.makeText(context, context.getString(R.string.toast_update_success), Toast.LENGTH_SHORT).show()
                     } else {
-
                         val errorLog = result.out.joinToString("\n").ifEmpty { context.getString(R.string.status_unknown) }
                         Toast.makeText(context, context.getString(R.string.toast_install_fail, errorLog), Toast.LENGTH_LONG).show()
                     }
@@ -276,11 +281,9 @@ fun MainScreen(fromTileType: String? = null) {
         }
     )
     
-    
     LaunchedEffect(rootStatus) {
         if (rootStatus) {
             val moduleVC = RootUtils.getModuleVersionCode()
-
             val appVC = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                 context.packageManager.getPackageInfo(context.packageName, 0).longVersionCode.toInt()
             } else {
@@ -312,30 +315,25 @@ fun MainScreen(fromTileType: String? = null) {
     val nestedScrollConnection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-
-                if (available.y < -10f) {
-                    isFabVisible.value = false
-                } 
-
-                else if (available.y > 10f) {
-                    isFabVisible.value = true
-                }
+                if (available.y < -10f) isFabVisible.value = false
+                else if (available.y > 10f) isFabVisible.value = true
                 return Offset.Zero
             }
         }
     }
    
-    
     CompositionLocalProvider(LocalAppHazeState provides hazeState) {
         RootDialogsProvider {
             Box(
                 modifier = Modifier.fillMaxSize()
             ) {
-            
-                
                 NavHost(
                     navController = navController,
-                    startDestination = if (hasCompletedGetStarted) "main" else "get_started",
+                    // Penentuan start destination dinamis
+                    startDestination = if (hasCompletedGetStarted) {
+                        if (useScrollAnimation) "main" else "home"
+                    } else "get_started",
+                    
                     modifier = Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.surface)
@@ -344,9 +342,9 @@ fun MainScreen(fromTileType: String? = null) {
                             if (isBlurEnabled) Modifier.hazeSource(state = hazeState) else Modifier
                         ),
                     enterTransition = {
-                        if (initialState.destination.route == "get_started" && targetState.destination.route == "main") {
+                        if (initialState.destination.route == "get_started" && targetState.destination.route in bottomBarRoutes) {
                             fadeIn(animationSpec = tween(700)) 
-                        } else if (targetState.destination.route != "main") {
+                        } else if (targetState.destination.route !in bottomBarRoutes) {
                             slideInHorizontally(
                                 initialOffsetX = { fullWidth -> fullWidth },
                                 animationSpec = tween(300, easing = FastOutSlowInEasing)
@@ -360,9 +358,9 @@ fun MainScreen(fromTileType: String? = null) {
                         }
                     },
                     exitTransition = {
-                        if (initialState.destination.route == "get_started" && targetState.destination.route == "main") {
+                        if (initialState.destination.route == "get_started" && targetState.destination.route in bottomBarRoutes) {
                             fadeOut(animationSpec = tween(700))
-                        } else if (initialState.destination.route == "main" && targetState.destination.route != "main") {
+                        } else if (initialState.destination.route in bottomBarRoutes && targetState.destination.route !in bottomBarRoutes) {
                             slideOutHorizontally(
                                 targetOffsetX = { fullWidth -> -(fullWidth / 4) },
                                 animationSpec = tween(300, easing = FastOutSlowInEasing)
@@ -372,7 +370,7 @@ fun MainScreen(fromTileType: String? = null) {
                         }
                     },
                     popEnterTransition = {
-                        if (initialState.destination.route != "main" && targetState.destination.route == "main") {
+                        if (initialState.destination.route !in bottomBarRoutes && targetState.destination.route in bottomBarRoutes) {
                             slideInHorizontally(
                                 initialOffsetX = { fullWidth -> -(fullWidth / 4) },
                                 animationSpec = tween(300, easing = FastOutSlowInEasing)
@@ -386,7 +384,7 @@ fun MainScreen(fromTileType: String? = null) {
                         }
                     },
                     popExitTransition = {
-                        if (initialState.destination.route != "main") {
+                        if (initialState.destination.route !in bottomBarRoutes) {
                             slideOutHorizontally(
                                 targetOffsetX = { fullWidth -> fullWidth },
                                 animationSpec = tween(300, easing = FastOutSlowInEasing)
@@ -396,7 +394,7 @@ fun MainScreen(fromTileType: String? = null) {
                         }
                     },
                     predictivePopEnterTransition = {
-                        if (initialState.destination.route != "main" && targetState.destination.route == "main") {
+                        if (initialState.destination.route !in bottomBarRoutes && targetState.destination.route in bottomBarRoutes) {
                             slideInHorizontally(
                                 initialOffsetX = { fullWidth -> -(fullWidth / 4) },
                                 animationSpec = tween(300, easing = FastOutSlowInEasing)
@@ -410,7 +408,7 @@ fun MainScreen(fromTileType: String? = null) {
                         }
                     },
                     predictivePopExitTransition = {
-                        if (initialState.destination.route != "main") {
+                        if (initialState.destination.route !in bottomBarRoutes) {
                             slideOutHorizontally(
                                 targetOffsetX = { fullWidth -> fullWidth },
                                 animationSpec = tween(300, easing = FastOutSlowInEasing)
@@ -421,6 +419,8 @@ fun MainScreen(fromTileType: String? = null) {
                     }
                 ) {
                     composable("get_started") { GetStartedScreen(navController) }
+                    
+                    // Route Pager (Kode 2)
                     composable("main") {
                         HorizontalPager(
                             state = pagerState,
@@ -434,6 +434,14 @@ fun MainScreen(fromTileType: String? = null) {
                             }
                         }
                     }
+                    
+                    // Route Normal (Kode 1)
+                    composable("home") { HomeScreen() }
+                    composable("applist") { ApplistScreen(navController) }
+                    composable("tweaks") { TweakScreen(navController) }
+                    composable("settings") { SettingsScreen(navController) }
+
+                    // Subscreens
                     composable("color_palette") { ColorPaletteScreen(navController) }
                     composable("colorscheme") { ColorSchemeSettings(navController) }
                     composable("FasScreen") { FasScreen(navController) }
@@ -452,7 +460,7 @@ fun MainScreen(fromTileType: String? = null) {
                 }
                 
                 AnimatedVisibility(
-                    visible = rootStatus && moduleInstalled && isOnMainPager,
+                    visible = rootStatus && moduleInstalled && rawRoute in bottomBarRoutes,
                     enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
                     exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
                     modifier = Modifier.align(Alignment.BottomCenter)
@@ -464,21 +472,33 @@ fun MainScreen(fromTileType: String? = null) {
                         hazeState = hazeState,
                         modifier = Modifier.align(Alignment.BottomCenter),
                         onItemSelected = { route ->
-                            val targetIndex = pagerRoutes.indexOf(route)
-                            if (isOnMainPager) {
-                                if (pagerState.currentPage != targetIndex) {
+                            if (useScrollAnimation) {
+                                // Logic klik untuk Pager (Kode 2)
+                                val targetIndex = pagerRoutes.indexOf(route)
+                                if (isOnMainPager) {
+                                    if (pagerState.currentPage != targetIndex) {
+                                        coroutineScope.launch {
+                                            pagerState.smoothScrollToPage(targetIndex)
+                                        }
+                                    }
+                                } else {
+                                    navController.navigate("main") {
+                                        popUpTo(navController.graph.startDestinationId) { saveState = false }
+                                        launchSingleTop = true
+                                        restoreState = false
+                                    }
                                     coroutineScope.launch {
-                                        pagerState.smoothScrollToPage(targetIndex)
+                                        pagerState.scrollToPage(targetIndex)
                                     }
                                 }
                             } else {
-                                navController.navigate("main") {
-                                    popUpTo(navController.graph.startDestinationId) { saveState = false }
-                                    launchSingleTop = true
-                                    restoreState = false
-                                }
-                                coroutineScope.launch {
-                                    pagerState.scrollToPage(targetIndex)
+                                // Logic klik untuk Normal NavHost (Kode 1)
+                                if (rawRoute != route) {
+                                    navController.navigate(route) {
+                                        popUpTo(navController.graph.startDestinationId) { saveState = false }
+                                        launchSingleTop = true
+                                        restoreState = false
+                                    }
                                 }
                             }
                         }
@@ -511,7 +531,7 @@ fun MainScreen(fromTileType: String? = null) {
                 }
 
                 AnimatedVisibility(
-                    visible = rootStatus && moduleInstalled && pendingReboot && isOnMainPager && isFabVisible.value,
+                    visible = rootStatus && moduleInstalled && pendingReboot && rawRoute in bottomBarRoutes && isFabVisible.value,
                     enter = scaleIn(animationSpec = tween(300, easing = FastOutSlowInEasing)) + fadeIn(),
                     exit = scaleOut(animationSpec = tween(200, easing = FastOutLinearInEasing)) + fadeOut(),
                     modifier = Modifier
@@ -541,7 +561,6 @@ fun MainScreen(fromTileType: String? = null) {
         }
     }
 }
-
 
 @Composable
 fun BottomNavBar(

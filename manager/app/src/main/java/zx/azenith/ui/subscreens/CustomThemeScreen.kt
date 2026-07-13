@@ -142,6 +142,11 @@ fun ColorPaletteScreen(navController: NavController) {
         mutableStateOf(prefs.getBoolean("expressive_blur_ui", false))
     }
     
+    
+    var useScrollAnimation by rememberSaveable {
+        mutableStateOf(prefs.getBoolean("use_scroll_animation", false))
+    }
+    
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     
     val cropLauncher = rememberLauncherForActivityResult(
@@ -349,6 +354,11 @@ fun ColorPaletteScreen(navController: NavController) {
                             isBlurEnabled = it
                             prefs.edit { putBoolean("expressive_blur_ui", it) }
                         },
+                        useScrollAnimation = useScrollAnimation,
+                        onUseScrollAnimationChange = {
+                            useScrollAnimation = it
+                            prefs.edit { putBoolean("use_scroll_animation", it) }
+                        },
                         imagePicker = imagePicker,
                         context = context,
                         snackbarHostState = snackbarHostState,
@@ -400,6 +410,11 @@ fun ColorPaletteScreen(navController: NavController) {
                         isBlurEnabled = it
                         prefs.edit { putBoolean("expressive_blur_ui", it) }
                     },
+                    useScrollAnimation = useScrollAnimation,
+                    onUseScrollAnimationChange = {
+                        useScrollAnimation = it
+                        prefs.edit { putBoolean("use_scroll_animation", it) }
+                    },
                     onBannerUpdated = { customBannerUri = it },
                     imagePicker = imagePicker,
                     context = context,
@@ -420,6 +435,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     isBannerEnabled: Boolean,
     bannerGradientAlpha: Float,
     customBannerUri: String?,
+    useScrollAnimation: Boolean,
+    onUseScrollAnimationChange: (Boolean) -> Unit,
     isBlurEnabled: Boolean,
     prefs: android.content.SharedPreferences,
     onColorModeChange: (ColorMode) -> Unit,
@@ -742,6 +759,15 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                         summary = stringResource(R.string.str_expressive_blur_summary),
                         checked = isBlurEnabled,
                         onCheckedChange = onBlurEnabledChange
+                    )
+                }
+                add {
+                    ExpressiveSwitchItem(
+                        icon = Icons.Filled.SwipeRight,
+                        title = stringResource(R.string.str_use_scroll_animation),
+                        summary = stringResource(R.string.str_use_scroll_animation_summary),
+                        checked = useScrollAnimation,
+                        onCheckedChange = onUseScrollAnimationChange
                     )
                 }
             }

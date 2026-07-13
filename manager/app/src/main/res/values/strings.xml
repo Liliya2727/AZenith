@@ -370,4 +370,6 @@
     <string name="walt_tunes_desc">Optimize WALT governor parameters to improve CPU scheduling responsiveness</string>
     <string name="welcome_azenith">Welcome to AZenith</string>
     <string name="yes">Yes</string>
+    <string name="str_use_scroll_animation">Use Scroll Animation</string>
+    <string name="str_use_scroll_animation_summary">Enable swipe animation between Page</string>
 </resources>
