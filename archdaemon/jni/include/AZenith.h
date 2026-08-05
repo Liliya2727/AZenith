@@ -106,7 +106,8 @@ typedef struct {
     char refresh_rate[16];
     char renderer[64];
     char resolution_downscale[8];
-    char resolution_fps[8];  
+    char resolution_fps[8];
+    char bypass_charging[16];  
 } GameConfig;
 
 extern GameConfig* g_game_cache;

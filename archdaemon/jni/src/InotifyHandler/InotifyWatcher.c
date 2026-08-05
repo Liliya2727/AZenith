@@ -275,7 +275,16 @@ void handle_dynamic_bypass(DaemonContext* ctx) {
             int current_battery = current_system_cache.battery_level;
             int is_device_charging = current_system_cache.is_charging;
 
-            if (current_battery >= 0 && ctx->config_bypasschg == 1 && is_device_charging) {
+            bool bypass_charging_allowed = true;
+            if (strcmp(opts.bypass_charging, "false") == 0) {
+                bypass_charging_allowed = false;
+            } else if (strcmp(opts.bypass_charging, "true") == 0) {
+                bypass_charging_allowed = true;
+            } else {
+                bypass_charging_allowed = (ctx->config_bypasschg == 1);
+            }
+
+            if (current_battery >= 0 && bypass_charging_allowed && is_device_charging) {
                 if (current_battery >= threshold) {
                     if (read_current_ma() > 50) {
                         enable_bypass();

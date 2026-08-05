@@ -153,7 +153,14 @@ void reload_gamelist_cache(DaemonContext* ctx) {
                                      sizeof(g_game_cache[g_game_cache_count].resolution_fps));
             else
                 strcpy(g_game_cache[g_game_cache_count].resolution_fps, "default");
-                
+            
+            p = strstr(ptr, "\"bypass_charging\":");
+            if (p && (!next_block || p < next_block))
+                extract_string_value(g_game_cache[g_game_cache_count].bypass_charging, p,
+                                     sizeof(g_game_cache[g_game_cache_count].bypass_charging));
+            else
+                strcpy(g_game_cache[g_game_cache_count].bypass_charging, "default");
+                            
             g_game_cache_count++;
         }
         ptr += 4;

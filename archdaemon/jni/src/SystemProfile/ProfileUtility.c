@@ -107,6 +107,7 @@ char* get_gamestart(GameConfig* options, SystemStateCache* cache) {
                 strcpy(options->renderer, g_game_cache[i].renderer);
                 strcpy(options->resolution_downscale, g_game_cache[i].resolution_downscale);
                 strcpy(options->resolution_fps, g_game_cache[i].resolution_fps);
+                strcpy(options->bypass_charging, g_game_cache[i].bypass_charging);
             }
             break;
         }
