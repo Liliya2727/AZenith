@@ -111,6 +111,7 @@ class AppSettingsViewModel : ViewModel() {
                 resolution_fps = if (value == "default") "60" else currentAppConfig.resolution_fps
             )
             "resolution_fps" -> currentAppConfig.copy(resolution_fps = value)
+            "bypass_charging" -> currentAppConfig.copy(bypass_charging = value)
             else -> currentAppConfig
         }
         val newMap = fullConfig.toMutableMap()

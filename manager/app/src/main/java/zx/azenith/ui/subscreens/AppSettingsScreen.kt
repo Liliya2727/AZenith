@@ -86,6 +86,7 @@ import zx.azenith.ui.component.ExpressiveSwitchItem
 import zx.azenith.ui.util.getSupportedRefreshRates
 import zx.azenith.ui.util.getSupportedDownscaleFactors
 import zx.azenith.ui.util.getSupportedFpsTargets
+import zx.azenith.ui.util.DebugUtils
 import zx.azenith.ui.component.ExpressiveSliderItem
 import zx.azenith.ui.viewmodel.AppSettingsViewModel
 import zx.azenith.ui.viewmodel.ApplistViewmodel
@@ -107,6 +108,10 @@ fun AppSettingsScreen(
     }
 
     val config = viewModel.fullConfig[packageName]
+    var isFullModeEnabled by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        isFullModeEnabled = DebugUtils.isFullModeEnabled()
+    }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
     var localMasterOn by remember(config != null) { mutableStateOf(config != null) }
@@ -172,7 +177,7 @@ fun AppSettingsScreen(
         onDispose {
             appListViewModel.loadApps(context, forceRefresh = true)
         }
-    }
+    }  
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -295,6 +300,19 @@ fun AppSettingsScreen(
                             content = buildList {
                                 add {
                                     ExpressiveDropdownItem(
+                                        icon = Icons.Rounded.Cable,
+                                        title = stringResource(R.string.bcharging),
+                                        summary = stringResource(R.string.enable_bypass_charge_desc),
+                                        items = booleanModes,
+                                        selectedIndex = getBoolIndex(displayConfig.bypass_charging),
+                                        onItemSelected = { index ->
+                                            val value = listOf("default", "true", "false")[index]
+                                            packageName?.let { viewModel.updateSetting(it, "bypass_charging", value) }
+                                        }
+                                    )
+                                }
+                                add {
+                                    ExpressiveDropdownItem(
                                         icon = Icons.Rounded.RocketLaunch,
                                         title = stringResource(R.string.game_preload),
                                         summary = stringResource(R.string.game_preload_desc),
@@ -306,18 +324,20 @@ fun AppSettingsScreen(
                                         }
                                     )
                                 }
-                                add {
-                                    ExpressiveDropdownItem(
-                                        icon = Icons.Rounded.SwapVerticalCircle,
-                                        title = stringResource(R.string.app_priority),
-                                        summary = stringResource(R.string.app_priority_desc),
-                                        items = booleanModes,
-                                        selectedIndex = getBoolIndex(displayConfig.app_priority),
-                                        onItemSelected = { index ->
-                                            val value = listOf("default", "true", "false")[index]
-                                            packageName?.let { viewModel.updateSetting(it, "app_priority", value) }
-                                        }
-                                    )
+                                if (isFullModeEnabled) {
+                                    add {
+                                        ExpressiveDropdownItem(
+                                            icon = Icons.Rounded.SwapVerticalCircle,
+                                            title = stringResource(R.string.app_priority),
+                                            summary = stringResource(R.string.app_priority_desc),
+                                            items = booleanModes,
+                                            selectedIndex = getBoolIndex(displayConfig.app_priority),
+                                            onItemSelected = { index ->
+                                                val value = listOf("default", "true", "false")[index]
+                                                packageName?.let { viewModel.updateSetting(it, "app_priority", value) }
+                                            }
+                                        )
+                                    }
                                 }
                                 add {
                                     ExpressiveDropdownItem(
@@ -339,20 +359,22 @@ fun AppSettingsScreen(
                         ExpressiveList(
                             modifier = Modifier.padding(horizontal = 16.dp),
                             content = buildList {
-                                add {
-                                    ExpressiveDropdownItem(
-                                        icon = Icons.Rounded.WebStories,
-                                        title = stringResource(R.string.refreshrates),
-                                        summary = stringResource(R.string.refreshrates_desc),
-                                        items = dynamicRefreshDisplayModes,
-                                        selectedIndex = rawRefreshModes.indexOfFirst {
-                                            it.equals(displayConfig.refresh_rate, ignoreCase = true)
-                                        }.coerceAtLeast(0),
-                                        onItemSelected = { index ->
-                                            val value = rawRefreshModes[index]
-                                            packageName?.let { viewModel.updateSetting(it, "refresh_rate", value) }
-                                        }
-                                    )
+                                if (isFullModeEnabled) {
+                                    add {
+                                        ExpressiveDropdownItem(
+                                            icon = Icons.Rounded.WebStories,
+                                            title = stringResource(R.string.refreshrates),
+                                            summary = stringResource(R.string.refreshrates_desc),
+                                            items = dynamicRefreshDisplayModes,
+                                            selectedIndex = rawRefreshModes.indexOfFirst {
+                                                it.equals(displayConfig.refresh_rate, ignoreCase = true)
+                                            }.coerceAtLeast(0),
+                                            onItemSelected = { index ->
+                                                val value = rawRefreshModes[index]
+                                                packageName?.let { viewModel.updateSetting(it, "refresh_rate", value) }
+                                            }
+                                        )
+                                    }
                                 }
                                 add {
                                     ExpressiveDropdownItem(
