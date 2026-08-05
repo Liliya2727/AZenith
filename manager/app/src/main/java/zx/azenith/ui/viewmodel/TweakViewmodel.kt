@@ -253,10 +253,25 @@ class TweakViewModel : ViewModel() {
                 thermalState = PropertyUtils.get("persist.sys.azenithconf.thermalcore") == "1"
 
                 val rawRenderer = PropertyUtils.get("debug.hwui.renderer")
-                currentRenderer = if (rawRenderer.isEmpty() || rawRenderer.equals("default", ignoreCase = true)) {
-                    "Default"
-                } else {
-                    rawRenderer
+                val azenithRenderer = PropertyUtils.get("persist.sys.azenithconf.renderer")
+                
+                currentRenderer = when {
+                    rawRenderer.isEmpty() && (azenithRenderer.isEmpty() || azenithRenderer.equals("default", ignoreCase = true)) -> "Default"
+                    
+                    azenithRenderer.isEmpty() -> if (rawRenderer.equals("default", ignoreCase = true)) "Default" else rawRenderer
+                    
+                    rawRenderer.isEmpty() -> if (azenithRenderer.equals("default", ignoreCase = true)) "Default" else azenithRenderer
+                    
+                    else -> {
+                        val isSameValue = rawRenderer.equals(azenithRenderer, ignoreCase = true)
+                        val isAzenithDefault = azenithRenderer.equals("default", ignoreCase = true)
+                        
+                        when {
+                            isSameValue -> if (rawRenderer.equals("default", ignoreCase = true)) "Default" else rawRenderer
+                            isAzenithDefault -> "Default ($rawRenderer)"
+                            else -> "$azenithRenderer ($rawRenderer)"
+                        }
+                    }
                 }
 
                 val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -539,7 +554,7 @@ class TweakViewModel : ViewModel() {
 
     fun executeSetRenderer(reason: String, context: Context) {
         isRendererLoading = true
-        Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setrender $reason").submit {
+        Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setrender $reason && setprop persist.sys.azenithconf.renderer $reason").submit {
             viewModelScope.launch {
                 delay(1000)
                 loadAllConfiguration(context)

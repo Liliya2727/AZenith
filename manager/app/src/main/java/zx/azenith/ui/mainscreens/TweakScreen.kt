@@ -161,6 +161,10 @@ fun TweakScreen(
         }
     }
 
+    var isFullModeEnabled by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        isFullModeEnabled = DebugUtils.isFullModeEnabled()
+    }
 
     LaunchedEffect(Unit) {
         viewModel.loadAllConfiguration(context)
@@ -358,11 +362,11 @@ fun TweakScreen(
                                 icon = Icons.Rounded.WebStories,
                                 label = stringResource(R.string.refreshrates),
                                 value = stringResource(R.string.refresh_rate_format, viewModel.currentRefreshRate.toString()),
-                                showArrow = true,
-                                highlight = true,
+                                showArrow = isFullModeEnabled,
+                                highlight = isFullModeEnabled,
                                 isLoading = viewModel.isRefreshRateLoading
                             ) {
-                                showRefreshRateDialog = true
+                                showRefreshRateDialog = isFullModeEnabled
                             }
                 
                             ExpressiveTile(
@@ -370,11 +374,11 @@ fun TweakScreen(
                                 icon = Icons.Rounded.SettingsSuggest,
                                 label = stringResource(R.string.renderengine),
                                 value = viewModel.currentRenderer!!.uppercase(),
-                                showArrow = false,
-                                highlight = false,
+                                showArrow = true,
+                                highlight = true,
                                 isLoading = viewModel.isRendererLoading
                             ) {
-                                // showRendererDialog = true
+                                showRendererDialog = true
                             }
                         }
                     } else {

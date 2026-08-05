@@ -29,5 +29,6 @@ data class AppConfig(
     val refresh_rate: String = "default",
     val renderer: String = "default",
     val resolution_downscale: String = "default",
-    val resolution_fps: String = "60"
+    val resolution_fps: String = "60",
+    val bypass_charging: String = "default"
 )

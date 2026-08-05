@@ -355,7 +355,8 @@ pub fn initialize() {
     init_cpu_governor();
     init_io_scheduler();
     init_maligpu_governor();
-
+    init_renderer();
+    
     // 3. Display / SurfaceFlinger config
     let scheme = getprop("persist.sys.azenithconf.schemeconfig");
     if scheme != "1000 1000 1000 1000" && !scheme.is_empty() {

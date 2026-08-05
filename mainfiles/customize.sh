@@ -319,11 +319,6 @@ if [ -z "$(getprop persist.sys.azenithconf.freqoffset)" ]; then
 	echo "Disabled" > "$MODULE_CONFIG/freqoffset"
 fi
 
-# Set default renderer
-if [ -z "$(getprop persist.sys.azenithconf.renderer)" ]; then
-	setprop persist.sys.azenithconf.renderer "Default"
-fi
-
 # Set default color scheme if not set
 if [ -z "$(getprop persist.sys.azenithconf.schemeconfig)" ]; then
 	setprop persist.sys.azenithconf.schemeconfig "1000 1000 1000 1000"
@@ -363,6 +358,14 @@ if [ -z "$(getprop persist.sys.azenith.disabletweak)" ]; then
 	setprop persist.sys.azenith.disabletweak 0
 fi
 
+if [ -z "$(getprop persist.sys.azenithconf.iosched)" ]; then
+	setprop persist.sys.azenithconf.iosched 1
+fi
+
+if [ -z "$(getprop persist.sys.azenithconf.renderer)" ]; then
+	setprop persist.sys.azenithconf.renderer default
+fi
+
 if [ -z "$(getprop persist.sys.azenithconf.preloadbudget)" ]; then
     setprop persist.sys.azenithconf.preloadbudget 500M
 fi
@@ -387,7 +390,6 @@ persist.sys.azenithconf.fpsged
 persist.sys.azenithconf.schedtunes
 persist.sys.azenithconf.clearbg
 persist.sys.azenithconf.APreload
-persist.sys.azenithconf.iosched
 persist.sys.azenithconf.cpulimit
 persist.sys.azenithconf.dnd
 persist.sys.azenithconf.justintime

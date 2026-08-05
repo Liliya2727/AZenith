@@ -56,10 +56,16 @@ private data class RendererOption(
 )
 
 @Composable
-private fun getRendererOptions(): List<RendererOption> {
+private fun getRendererOptions(context: Context): List<RendererOption> {
     return listOf(
+        RendererOption(context.getString(R.string.Renderer_Default), "default", Icons.Rounded.Layers),
         RendererOption("SkiaVK", "skiavk", Icons.Rounded.Layers),
+        RendererOption("SkiaVK (Threaded)", "skiavkthreaded", Icons.Rounded.Layers),
         RendererOption("SkiaGL", "skiagl", Icons.Rounded.Layers),
+        RendererOption("SkiaGL (Threaded)", "skiaglthreaded", Icons.Rounded.Layers),
+        RendererOption("OpenGL ES", "opengl", Icons.Rounded.Layers),
+        RendererOption("OpenGL ES (Threaded)", "openglthreaded", Icons.Rounded.Layers),
+        RendererOption("Vulkan", "vulkan", Icons.Rounded.Layers),
     )
 }
 
@@ -74,7 +80,7 @@ fun RendererDialog(
     val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
     val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
     val hazeState = LocalAppHazeState.current
-    val options = getRendererOptions()
+    val options = getRendererOptions(context)
 
     AnimatedVisibility(
         visible = show,
