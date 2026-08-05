@@ -41,6 +41,7 @@ const char* VALID_AZENITH_PROPS[] = {
     "persist.sys.azenithconf.SFL",
     "persist.sys.azenithconf.bypasschg",
     "persist.sys.azenithconf.bypasschgthreshold",
+    "persist.sys.azenithconf.renderer",
     "persist.sys.azenithconf.bypasspath",
     "persist.sys.azenithconf.clearbg",
     "persist.sys.azenithconf.cpulimit",
