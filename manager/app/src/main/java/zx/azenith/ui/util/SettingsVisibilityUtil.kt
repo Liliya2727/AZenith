@@ -16,17 +16,17 @@
 
 package zx.azenith.ui.util
 
-import com.topjohnwu.superuser.io.SuFile
+import com.topjohnwu.superuser.Shell
 
 object DebugUtils {
     private const val FULLMODE_DEBUG_PATH = "/data/adb/.config/AZenith/debug/FullMode"
 
     fun isFullModeEnabled(): Boolean {
         return try {
-            val file = SuFile(FULLMODE_DEBUG_PATH)
-            if (!file.exists()) return false
+            val result = Shell.cmd("cat $FULLMODE_DEBUG_PATH").exec()
+            if (!result.isSuccess) return false
 
-            val content = file.readText().trim()
+            val content = result.out.joinToString("").trim()
             content != "0" && content.isNotEmpty()
         } catch (e: Exception) {
             false
