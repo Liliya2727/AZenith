@@ -450,6 +450,7 @@ fun MainScreen(fromTileType: String? = null) {
                     composable("preferenced") { PreferenceTweakScreen(navController) }
                     composable("aboutscreen") { AboutScreen(navController) }
                     composable("fpsgoscreen") { FpsGoSettings(navController) }
+                    composable("govsetttings") { GovSettings(navController) }
                     composable(
                         route = "app_settings/{pkg}",
                         arguments = listOf(navArgument("pkg") { type = NavType.StringType })

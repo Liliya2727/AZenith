@@ -376,161 +376,6 @@ fun TweakScreen(
                         SectionLoadingIndicator()
                     }
                 }
-
-
-                item { TweaksSectionTitle(stringResource(R.string.section_CPUSettings)) }
-                item {
-                    if (viewModel.defaultGovIndex != null && 
-                        viewModel.powersaveGovIndex != null && 
-                        viewModel.performanceGovIndex != null && 
-                        viewModel.freqOffsetIndex != null) {
-                        ExpressiveList(
-                            content = listOf(
-                                {
-                                    ExpressiveDropdownItem(
-                                        icon = Icons.Outlined.Water,
-                                        title = stringResource(R.string.default_cpu_gov),
-                                        summary = stringResource(R.string.default_cpu_gov_desc),
-                                        items = viewModel.availableGovernors ?: emptyList(),
-                                        selectedIndex = viewModel.defaultGovIndex!!,
-                                        onItemSelected = { viewModel.updateDefaultGovernor(it) }
-                                    )
-                                },
-                                {
-                                    ExpressiveDropdownItem(
-                                        icon = Icons.Outlined.OfflineBolt,
-                                        title = stringResource(R.string.performance_cpu_gov),
-                                        summary = stringResource(R.string.performance_cpu_gov_desc),
-                                        items = viewModel.availableGovernors ?: emptyList(),
-                                        selectedIndex = viewModel.performanceGovIndex!!,
-                                        onItemSelected = { viewModel.updatePerformanceGovernor(it) }
-                                    )
-                                },
-                                {
-                                    ExpressiveDropdownItem(
-                                        icon = Icons.Outlined.EnergySavingsLeaf,
-                                        title = stringResource(R.string.powersave_cpu_gov),
-                                        summary = stringResource(R.string.powersave_cpu_gov_desc),
-                                        items = viewModel.availableGovernors ?: emptyList(),
-                                        selectedIndex = viewModel.powersaveGovIndex!!,
-                                        onItemSelected = { viewModel.updatePowersaveGovernor(it) }
-                                    )
-                                },
-                                {
-                                    FreqLimitSliderItem(
-                                        icon = Icons.Outlined.Tune,
-                                        initialValue = viewModel.freqOffsetIndex!!,
-                                        labels = viewModel.offsetLabels,
-                                        onSaved = { viewModel.saveFreqOffset(it) }
-                                    )
-                                }
-                            )
-                        )
-                    } else {
-                        SectionLoadingIndicator()
-                    }
-                }
-
-                item { TweaksSectionTitle(stringResource(R.string.io_settings)) }
-                item {
-                    if (viewModel.availableIOSchedulers == null) {
-                        SectionLoadingIndicator()
-                    } else if (viewModel.availableIOSchedulers!!.isNotEmpty()) {
-                        if (viewModel.balancedIOIndex != null && 
-                            viewModel.performanceIOIndex != null && 
-                            viewModel.powersaveIOIndex != null) {
-                            ExpressiveList(
-                                content = listOf(
-                                    {
-                                        ExpressiveDropdownItem(
-                                            icon = Icons.Outlined.Water,
-                                            title = stringResource(R.string.balanced_io_scheduler),
-                                            summary = stringResource(R.string.balanced_io_scheduler_desc),
-                                            items = viewModel.availableIOSchedulers ?: emptyList(),
-                                            selectedIndex = viewModel.balancedIOIndex!!,
-                                            onItemSelected = { viewModel.updateBalancedIO(it) }
-                                        )
-                                    },
-                                    {
-                                        ExpressiveDropdownItem(
-                                            icon = Icons.Outlined.OfflineBolt,
-                                            title = stringResource(R.string.performance_io_scheduler),
-                                            summary = stringResource(R.string.performance_io_scheduler_desc),
-                                            items = viewModel.availableIOSchedulers ?: emptyList(),
-                                            selectedIndex = viewModel.performanceIOIndex!!,
-                                            onItemSelected = { viewModel.updatePerformanceIO(it) }
-                                        )
-                                    },
-                                    {
-                                        ExpressiveDropdownItem(
-                                            icon = Icons.Outlined.EnergySavingsLeaf,
-                                            title = stringResource(R.string.powersave_io_scheduler),
-                                            summary = stringResource(R.string.powersave_io_scheduler_desc),
-                                            items = viewModel.availableIOSchedulers ?: emptyList(),
-                                            selectedIndex = viewModel.powersaveIOIndex!!,
-                                            onItemSelected = { viewModel.updatePowersaveIO(it) }
-                                        )
-                                    }
-                                )
-                            )
-                        } else {
-                            SectionLoadingIndicator()
-                        }
-                    } else {
-
-                    }
-                }
-                
-
-                if (viewModel.isMaliGpuAvailable == true) {
-                    item { TweaksSectionTitle(text = stringResource(R.string.section_mali_gpu)) }
-                    item {
-                        if (viewModel.availableMaliGovernors == null) {
-                            SectionLoadingIndicator()
-                        } else if (viewModel.availableMaliGovernors!!.isNotEmpty()) {
-                            if (viewModel.balancedMaliGovIndex != null && 
-                                viewModel.performanceMaliGovIndex != null && 
-                                viewModel.powersaveMaliGovIndex != null) {
-                                ExpressiveList(
-                                    content = listOf(
-                                        {
-                                            ExpressiveDropdownItem(
-                                                icon = Icons.Outlined.Water,
-                                                title = stringResource(R.string.balanced_mali_gov),
-                                                summary = stringResource(R.string.balanced_mali_gov_desc),
-                                                items = viewModel.availableMaliGovernors ?: emptyList(),
-                                                selectedIndex = viewModel.balancedMaliGovIndex!!,
-                                                onItemSelected = { viewModel.updateBalancedMaliGov(it) }
-                                            )
-                                        },
-                                        {
-                                            ExpressiveDropdownItem(
-                                                icon = Icons.Outlined.OfflineBolt,
-                                                title = stringResource(R.string.performance_mali_gov),
-                                                summary = stringResource(R.string.performance_mali_gov_desc),
-                                                items = viewModel.availableMaliGovernors ?: emptyList(),
-                                                selectedIndex = viewModel.performanceMaliGovIndex!!,
-                                                onItemSelected = { viewModel.updatePerformanceMaliGov(it) }
-                                            )
-                                        },
-                                        {
-                                            ExpressiveDropdownItem(
-                                                icon = Icons.Outlined.EnergySavingsLeaf,
-                                                title = stringResource(R.string.powersave_mali_gov),
-                                                summary = stringResource(R.string.powersave_mali_gov_desc),
-                                                items = viewModel.availableMaliGovernors ?: emptyList(),
-                                                selectedIndex = viewModel.powersaveMaliGovIndex!!,
-                                                onItemSelected = { viewModel.updatePowersaveMaliGov(it) }
-                                            )
-                                        }
-                                    )
-                                )
-                            } else {
-                                SectionLoadingIndicator()
-                            }
-                        }
-                    }
-                }
                 
                 item { TweaksSectionTitle(text = stringResource(R.string.section_power_thermal)) }
                 item {
@@ -604,7 +449,6 @@ fun TweakScreen(
             )
         }
 
-
         RootAppDialog {
             CustomContentDialog(
                 visible = showBackupOptionsDialog,
@@ -638,7 +482,6 @@ fun TweakScreen(
                 }
             }
         }
-
 
         RootAppDialog {
             CustomContentDialog(
