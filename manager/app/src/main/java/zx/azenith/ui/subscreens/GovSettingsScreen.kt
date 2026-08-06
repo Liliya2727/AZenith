@@ -93,6 +93,10 @@ fun GovSettings(
     val colorScheme = MaterialTheme.colorScheme
     val snackbarHostState = remember { SnackbarHostState() }
     
+    LaunchedEffect(Unit) {
+        viewModel.loadAllConfiguration(context)
+    }
+    
     MaterialExpressiveTheme {        
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -112,7 +116,7 @@ fun GovSettings(
                     end = 16.dp,
                     bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                 ),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                
             ) {
                 item {
                     Spacer(modifier = Modifier.height(16.dp))
@@ -120,7 +124,7 @@ fun GovSettings(
                         content = listOf( 
                             {
                                 ExpressiveInfoCard(
-                                    supportingContent = { Text(text = stringResource(R.string.gov_settingsdesc)) },
+                                    supportingContent = { Text(text = stringResource(R.string.gov_settingsdesc2)) },
                                     leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
                                     containerColor = colorScheme.surfaceContainerLow,
                                     onClick = {}
