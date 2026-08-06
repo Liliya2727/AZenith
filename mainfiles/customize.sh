@@ -396,6 +396,7 @@ persist.sys.azenithconf.justintime
 persist.sys.azenithconf.disabletrace
 persist.sys.azenithconf.thermalcore
 persist.sys.azenithconf.walttunes
+persist.sys.azenithconf.fstrim
 persist.sys.azenithconf.usefpsgo
 "
 for prop in $props; do
