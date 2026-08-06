@@ -293,8 +293,8 @@ fun TweakScreen(
                                         onCheckedChange = { viewModel.updateMemoryKiller(it) }
                                     )
                                 },
-                                {
-                                    if (isFullModeEnabled) {
+                                if (isFullModeEnabled) {
+                                    {
                                         ExpressiveSwitchItem(
                                             icon = Icons.Rounded.SwapVerticalCircle,
                                             title = stringResource(R.string.app_priority_control),
@@ -302,8 +302,8 @@ fun TweakScreen(
                                             checked = viewModel.appPriorState!!,
                                             onCheckedChange = { viewModel.updateAppPriority(it) }
                                         )
-                                    }
-                                },
+                                    },
+                                }
                                 {
                                     ExpressiveSwitchItem(
                                         icon = Icons.Rounded.DoNotDisturbOn,
@@ -313,8 +313,8 @@ fun TweakScreen(
                                         onCheckedChange = { viewModel.updateDndMode(it) }
                                     )
                                 },
-                                {
-                                    if (isFullModeEnabled) {
+                                if (isFullModeEnabled) {
+                                    {
                                         ExpressiveSwitchItem(
                                             icon = Icons.Outlined.ContentCut,
                                             title = stringResource(R.string.trim_filesystem),
