@@ -225,7 +225,7 @@ fun TweakScreen(
                     }
                     if (socType != null && viewModel.liteState != null) {
                         val isMediaTek   = socType == "mediatek"
-                        val available = false
+                        
                         ExpressiveList(
                             content = listOf(
                                 {
@@ -236,28 +236,6 @@ fun TweakScreen(
                                         checked = viewModel.liteState!!,
                                         onCheckedChange = { viewModel.updateLiteMode(it) }
                                     )
-                                },
-                                {
-                                    Box(modifier = Modifier.alpha(if (available) 1f else 0.4f)) {
-                                        ExpressiveListItem(
-                                            leadingContent = { LeadingIcon(icon = Icons.Filled.ArtTrack) },
-                                            onClick = { 
-                                                if (available) {
-                                                    navController.navigate("FasScreen") 
-                                                }
-                                            },
-                                            headlineContent = { Text(text = stringResource(R.string.str_frame_aware_scheduling_fas) ) },
-                                            supportingContent = { 
-                                                Text(
-                                                    text = if (available)
-                                                        stringResource(R.string.str_frame_aware_scheduling_desc) 
-                                                    else
-                                                        stringResource(R.string.str_unavailable)
-                                                ) 
-                                            },
-                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                        )
-                                    }
                                 },
                                 {
                                     Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
@@ -316,13 +294,15 @@ fun TweakScreen(
                                     )
                                 },
                                 {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Rounded.SwapVerticalCircle,
-                                        title = stringResource(R.string.app_priority_control),
-                                        summary = stringResource(R.string.app_priority_control_desc),
-                                        checked = viewModel.appPriorState!!,
-                                        onCheckedChange = { viewModel.updateAppPriority(it) }
-                                    )
+                                    if (isFullModeEnabled) {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Rounded.SwapVerticalCircle,
+                                            title = stringResource(R.string.app_priority_control),
+                                            summary = stringResource(R.string.app_priority_control_desc),
+                                            checked = viewModel.appPriorState!!,
+                                            onCheckedChange = { viewModel.updateAppPriority(it) }
+                                        )
+                                    }
                                 },
                                 {
                                     ExpressiveSwitchItem(
@@ -334,13 +314,15 @@ fun TweakScreen(
                                     )
                                 },
                                 {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Outlined.ContentCut,
-                                        title = stringResource(R.string.trim_filesystem),
-                                        summary = stringResource(R.string.trim_filesystem_desc),
-                                        checked = viewModel.fstrimState!!,
-                                        onCheckedChange = { viewModel.updateFstrim(it) }
-                                    )
+                                    if (isFullModeEnabled) {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Outlined.ContentCut,
+                                            title = stringResource(R.string.trim_filesystem),
+                                            summary = stringResource(R.string.trim_filesystem_desc),
+                                            checked = viewModel.fstrimState!!,
+                                            onCheckedChange = { viewModel.updateFstrim(it) }
+                                        )
+                                    }
                                 }
                             )
                         )
