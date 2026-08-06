@@ -274,8 +274,8 @@ fun TweakScreen(
                         viewModel.dndState != null && 
                         viewModel.fstrimState != null) {
                         ExpressiveList(
-                            content = listOf(
-                                {
+                            content = buildList {
+                                add {
                                     ExpressiveSwitchItem(
                                         icon = Icons.Rounded.RocketLaunch,
                                         title = stringResource(R.string.game_preload),
@@ -283,8 +283,8 @@ fun TweakScreen(
                                         checked = viewModel.preloadState!!,
                                         onCheckedChange = { viewModel.updatePreloadMode(it) }
                                     )
-                                },
-                                {
+                                }
+                                add {
                                     ExpressiveSwitchItem(
                                         icon = Icons.Rounded.CleaningServices,
                                         title = stringResource(R.string.memory_killer),
@@ -292,9 +292,9 @@ fun TweakScreen(
                                         checked = viewModel.memKillerState!!,
                                         onCheckedChange = { viewModel.updateMemoryKiller(it) }
                                     )
-                                },
+                                }
                                 if (isFullModeEnabled) {
-                                    {
+                                    add {
                                         ExpressiveSwitchItem(
                                             icon = Icons.Rounded.SwapVerticalCircle,
                                             title = stringResource(R.string.app_priority_control),
@@ -302,9 +302,9 @@ fun TweakScreen(
                                             checked = viewModel.appPriorState!!,
                                             onCheckedChange = { viewModel.updateAppPriority(it) }
                                         )
-                                    },
+                                    }
                                 }
-                                {
+                                add {
                                     ExpressiveSwitchItem(
                                         icon = Icons.Rounded.DoNotDisturbOn,
                                         title = stringResource(R.string.dnd_mode_gaming),
@@ -312,9 +312,9 @@ fun TweakScreen(
                                         checked = viewModel.dndState!!,
                                         onCheckedChange = { viewModel.updateDndMode(it) }
                                     )
-                                },
+                                }
                                 if (isFullModeEnabled) {
-                                    {
+                                    add {
                                         ExpressiveSwitchItem(
                                             icon = Icons.Outlined.ContentCut,
                                             title = stringResource(R.string.trim_filesystem),
@@ -324,7 +324,16 @@ fun TweakScreen(
                                         )
                                     }
                                 }
-                            )
+                                add {
+                                    ExpressiveListItem(
+                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Ballot) },
+                                        onClick = { navController.navigate("governorsettings") },
+                                        headlineContent = { Text(stringResource(R.string.gov_settings)) },
+                                        supportingContent = { Text(stringResource(R.string.gov_settingsdesc)) },
+                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                    )
+                                }
+                            }
                         )
                     } else {
                         SectionLoadingIndicator()

@@ -374,4 +374,6 @@
     <string name="str_use_scroll_animation_summary">Enable swipe animation between Page</string>
     <string name="disable_tweak">Disable Tweaks</string>
     <string name="disable_tweak_desc">Stop AZenith from Applying tweak to all Profiles (Custom Governor and Scheduler are still Applied)</string>
+    <string name="gov_settings">Governor Settings</string>
+    <string name="gov_settingsdesc">Configure Governor and Schedulers</string>
 </resources>
