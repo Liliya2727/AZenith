@@ -53,6 +53,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.topjohnwu.superuser.Shell
 import dev.jeziellago.compose.markdowntext.MarkdownText
@@ -67,6 +69,7 @@ import zx.azenith.BuildConfig
 import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.util.*
+import zx.azenith.ui.viewmodel.*
 
 
 fun isLauncherIconEnabled(context: Context): Boolean {
@@ -77,7 +80,10 @@ fun isLauncherIconEnabled(context: Context): Boolean {
 }
 
 @Composable
-fun SettingsScreen(navController: NavController) {
+fun SettingsScreen(
+    navController: NavController,
+    settingsViewModel: SettingsViewModel = viewModel()
+) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val listState = rememberLazyListState()
@@ -86,6 +92,7 @@ fun SettingsScreen(navController: NavController) {
     
     val restartToastText = stringResource(R.string.toast_restarting_service)
     
+    val uiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
     
     var isLauncherVisible by rememberSaveable { 
         mutableStateOf(isLauncherIconEnabled(context)) 
@@ -214,59 +221,31 @@ fun SettingsScreen(navController: NavController) {
                     item { SettingsSectionTitle(stringResource(R.string.section_features)) }
                     
                     item {
-                        var disableTweak by remember { mutableStateOf<Boolean?>(null) }
-                        var stateToast by remember { mutableStateOf<Boolean?>(null) }
-                        var autoMode by remember { mutableStateOf<Boolean?>(null) }
-                        var debugMode by remember { mutableStateOf<Boolean?>(null) }
-                        var profileTimeout by remember { mutableStateOf<Boolean?>(null) }
-        
-                        LaunchedEffect(Unit) {
-                            disableTweak = Shell.cmd("getprop persist.sys.azenith.disabletweak").exec().out.firstOrNull()?.trim() == "1"
-                            stateToast = Shell.cmd("getprop persist.sys.azenithconf.showtoast").exec().out.firstOrNull()?.trim() == "1"
-                            autoMode = Shell.cmd("getprop persist.sys.azenithconf.AIenabled").exec().out.firstOrNull()?.trim() == "0"
-                            debugMode = Shell.cmd("getprop persist.sys.azenith.debugmode").exec().out.firstOrNull()?.trim() == "true"
-                            profileTimeout = Shell.cmd("getprop persist.sys.azenith.dropforeground").exec().out.firstOrNull()?.trim() == "1"
-                        }
-        
-                        if (disableTweak != null && stateToast != null && autoMode != null && debugMode != null && profileTimeout != null) {
+                        if (uiState.isLoaded) {
                             ExpressiveList(
                                 content = listOf(
                                     {
                                         ExpressiveSwitchItem(
                                             icon = Icons.Filled.Notifications,
                                             title = stringResource(R.string.show_toast),
-                                            checked = stateToast!!,
-                                            onCheckedChange = { isChecked ->
-                                                stateToast = isChecked
-                                                Shell.cmd("setprop persist.sys.azenithconf.showtoast ${if (isChecked) "1" else "0"}").submit()
-                                            }
+                                            checked = uiState.stateToast,
+                                            onCheckedChange = settingsViewModel::setShowToast
                                         )
                                     },
                                     {
                                         ExpressiveSwitchItem(
                                             icon = Icons.Filled.Assistant,
                                             title = stringResource(R.string.disable_auto_mode),
-                                            checked = autoMode!!,
-                                            onCheckedChange = { isChecked ->
-                                                autoMode = isChecked
-                                                val state = if (isChecked) "0" else "1"
-                                                
-                                                Shell.cmd(
-                                                    "setprop persist.sys.azenithconf.AIenabled $state",
-                                                    "echo $state > /data/adb/.config/AZenith/API/current_modes"
-                                                ).submit()
-                                            }
+                                            checked = uiState.autoMode,
+                                            onCheckedChange = settingsViewModel::setAutoMode
                                         )
                                     },
                                     {
                                         ExpressiveSwitchItem(
                                             icon = Icons.Filled.BugReport,
                                             title = stringResource(R.string.allow_verbose_log),
-                                            checked = debugMode!!,
-                                            onCheckedChange = { isChecked ->
-                                                debugMode = isChecked
-                                                Shell.cmd("setprop persist.sys.azenith.debugmode ${if (isChecked) "true" else "false"}").submit()
-                                            }
+                                            checked = uiState.debugMode,
+                                            onCheckedChange = settingsViewModel::setDebugMode
                                         )
                                     },
                                     {
@@ -274,11 +253,8 @@ fun SettingsScreen(navController: NavController) {
                                             icon = Icons.Filled.DeveloperBoardOff,
                                             title = stringResource(R.string.disable_tweak),
                                             summary = stringResource(R.string.disable_tweak_desc),
-                                            checked = disableTweak!!,
-                                            onCheckedChange = { isChecked ->
-                                                disableTweak = isChecked
-                                                Shell.cmd("setprop persist.sys.azenith.disabletweak ${if (isChecked) "1" else "0"}").submit()
-                                            }
+                                            checked = uiState.disableTweak,
+                                            onCheckedChange = settingsViewModel::setDisableTweak
                                         )
                                     },
                                     {
@@ -286,11 +262,8 @@ fun SettingsScreen(navController: NavController) {
                                             icon = Icons.Filled.Timer,
                                             title = stringResource(R.string.profile_timeout),
                                             summary = stringResource(R.string.profile_timeout_desc),
-                                            checked = profileTimeout!!,
-                                            onCheckedChange = { isChecked ->
-                                                profileTimeout = isChecked
-                                                Shell.cmd("setprop persist.sys.azenith.dropforeground ${if (isChecked) "1" else "0"}").submit()
-                                            }
+                                            checked = uiState.profileTimeout,
+                                            onCheckedChange = settingsViewModel::setProfileTimeout
                                         )
                                     }
                                 )
