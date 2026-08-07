@@ -18,7 +18,6 @@
 
 package zx.azenith.ui.subscreens
 
-
 import android.app.Activity
 import android.content.Context
 import android.os.Build
@@ -35,8 +34,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,13 +48,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
-import androidx.compose.material3.LargeFlexibleTopAppBar
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TopAppBarScrollBehavior
-import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.*
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -83,6 +77,19 @@ import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.util.PropertyUtils
 
+enum class ColorPreset(
+    val label: String,
+    val r: Float,
+    val g: Float,
+    val b: Float,
+    val s: Float
+) {
+    DEFAULT("Default", 1000f, 1000f, 1000f, 1000f),
+    VIVID("Vivid", 1000f, 1000f, 1000f, 1250f),
+    WARM("Warm", 1050f, 1000f, 950f, 1100f),
+    COOL("Cool", 950f, 950f, 1050f, 1000f),
+    AMOLED("AMOLED", 1020f, 1020f, 1020f, 1150f)
+}
 
 @Composable
 fun ColorSchemeSettings(navController: NavController) {
@@ -90,14 +97,15 @@ fun ColorSchemeSettings(navController: NavController) {
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
     val snackbarHostState = remember { SnackbarHostState() }
+    
     var redVal by remember { mutableFloatStateOf(1000f) }
     var greenVal by remember { mutableFloatStateOf(1000f) }
     var blueVal by remember { mutableFloatStateOf(1000f) }
     var satVal by remember { mutableFloatStateOf(1000f) }
     var isLoading by remember { mutableStateOf(true) }
+    
     val coroutineScope = rememberCoroutineScope()
     val resetToastMsg = stringResource(R.string.toast_settings_reset)
-    
 
     val applyRGB = { r: Float, g: Float, b: Float ->
         Shell.cmd("service call SurfaceFlinger 1015 i32 1 f ${r / 1000f} f 0 f 0 f 0 f 0 f ${g / 1000f} f 0 f 0 f 0 f 0 f ${b / 1000f} f 0 f 0 f 0 f 0 f 1").submit()
@@ -167,7 +175,6 @@ fun ColorSchemeSettings(navController: NavController) {
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                     
-                    
                     item {
                         Surface(
                             modifier = Modifier
@@ -212,6 +219,24 @@ fun ColorSchemeSettings(navController: NavController) {
                                         },
                                         containerColor = colorScheme.secondaryContainer,
                                         onClick = {}
+                                    )
+                                },
+                                // 2. Insert Preset Selector di atas deretan Slider
+                                {
+                                    PresetSelectorItem(
+                                        redVal = redVal,
+                                        greenVal = greenVal,
+                                        blueVal = blueVal,
+                                        satVal = satVal,
+                                        onPresetSelected = { preset ->
+                                            redVal = preset.r
+                                            greenVal = preset.g
+                                            blueVal = preset.b
+                                            satVal = preset.s
+                                            applyRGB(redVal, greenVal, blueVal)
+                                            applySat(satVal)
+                                            saveToProp()
+                                        }
                                     )
                                 },
                                 { 
@@ -270,6 +295,53 @@ fun ColorSchemeSettings(navController: NavController) {
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun PresetSelectorItem(
+    redVal: Float,
+    greenVal: Float,
+    blueVal: Float,
+    satVal: Float,
+    onPresetSelected: (ColorPreset) -> Unit
+) {
+    val currentPreset = remember(redVal, greenVal, blueVal, satVal) {
+        ColorPreset.values().firstOrNull {
+            it.r == redVal && it.g == greenVal && it.b == blueVal && it.s == satVal
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp)
+    ) {
+        Text(
+            text = "Presets", // Bisa lu ganti jadi stringResource(R.string.presets)
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(ColorPreset.values()) { preset ->
+                val isSelected = currentPreset == preset
+                
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { onPresetSelected(preset) },
+                    label = { Text(preset.label) },
+                    leadingIcon = if (isSelected) {
+                        { Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    } else null
+                )
             }
         }
     }
