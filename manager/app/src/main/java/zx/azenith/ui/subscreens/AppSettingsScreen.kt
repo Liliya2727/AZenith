@@ -449,34 +449,36 @@ fun AppSettingsScreen(
                     }
                 }
             }
-            item {
-                AnimatedVisibility(
-                    visible = localMasterOn,
-
-                    enter = if (userToggled) {
-                        expandVertically(animationSpec = tween(400)) + fadeIn()
-                    } else {
-                        EnterTransition.None
-                    },
-                    exit = shrinkVertically(animationSpec = tween(400)) + fadeOut()
-                ) {
-                    val displayConfig = config ?: zx.azenith.ui.util.AppConfig() 
-                    
-                    Column {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        ExpressiveList(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            content = listOf( 
-                               {
-                                   ExpressiveInfoCard(
-                                       supportingContent = { Text(text = stringResource(R.string.str_by_using_per_app_refresh_rate)) },
-                                       leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
-                                       containerColor = colorScheme.surfaceContainerLow,
-                                       onClick = {}
-                                   )
-                               }
+            if (isFullModeEnabled) {
+                item {
+                    AnimatedVisibility(
+                        visible = localMasterOn,
+    
+                        enter = if (userToggled) {
+                            expandVertically(animationSpec = tween(400)) + fadeIn()
+                        } else {
+                            EnterTransition.None
+                        },
+                        exit = shrinkVertically(animationSpec = tween(400)) + fadeOut()
+                    ) {
+                        val displayConfig = config ?: zx.azenith.ui.util.AppConfig() 
+                        
+                        Column {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            ExpressiveList(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                content = listOf( 
+                                   {
+                                       ExpressiveInfoCard(
+                                           supportingContent = { Text(text = stringResource(R.string.str_by_using_per_app_refresh_rate)) },
+                                           leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
+                                           containerColor = colorScheme.surfaceContainerLow,
+                                           onClick = {}
+                                       )
+                                   }
+                                )
                             )
-                        )
+                        }
                     }
                 }
             }
