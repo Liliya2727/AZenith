@@ -77,6 +77,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.component.*
+import zx.azenith.ui.util.DebugUtils
 import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.getChipsetVendor
 
@@ -87,6 +88,11 @@ fun PreferenceTweakScreen(navController: NavController) {
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val colorScheme = MaterialTheme.colorScheme
+    
+    var isFullModeEnabled by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        isFullModeEnabled = DebugUtils.isFullModeEnabled()
+    }
     
     MaterialExpressiveTheme {        
         Scaffold(
@@ -155,8 +161,8 @@ fun PreferenceTweakScreen(navController: NavController) {
                         val isSnapdragon = socType == "qualcomm"
 
                         ExpressiveList(
-                            content = listOf(
-                                {
+                            content = buildList {
+                                add {
                                     ExpressiveSwitchItem(
                                         icon = Icons.Rounded.Tune,
                                         title = stringResource(R.string.sched_tunes),
@@ -172,8 +178,8 @@ fun PreferenceTweakScreen(navController: NavController) {
                                             }
                                         }
                                     )
-                                },
-                                {
+                                }
+                                add {
                                     Box(modifier = Modifier.alpha(if (isSnapdragon) 1f else 0.4f)) {
                                         ExpressiveSwitchItem(
                                             icon = Icons.Rounded.Timeline,
@@ -192,8 +198,8 @@ fun PreferenceTweakScreen(navController: NavController) {
                                             }
                                         )
                                     }
-                                },
-                                {
+                                }
+                                add {
                                     ExpressiveSwitchItem(
                                         icon = Icons.Rounded.Layers,
                                         title = stringResource(R.string.sfl_latency),
@@ -204,8 +210,8 @@ fun PreferenceTweakScreen(navController: NavController) {
                                             PropertyUtils.set("persist.sys.azenithconf.SFL", if (isChecked) "1" else "0")
                                         }
                                     )
-                                },
-                                {
+                                }
+                                add {
                                     ExpressiveSwitchItem(
                                         icon = Icons.Rounded.Bolt,
                                         title = stringResource(R.string.jit_compilation),
@@ -216,32 +222,34 @@ fun PreferenceTweakScreen(navController: NavController) {
                                             PropertyUtils.set("persist.sys.azenithconf.justintime", if (isChecked) "1" else "0")
                                         }
                                     )
-                                },
-                                {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Rounded.TrackChanges,
-                                        title = stringResource(R.string.disable_trace),
-                                        summary = stringResource(R.string.disable_trace_desc),
-                                        checked = DTraces!!,
-                                        onCheckedChange = { isChecked ->
-                                            DTraces = isChecked
-                                            PropertyUtils.set("persist.sys.azenithconf.disabletrace", if (isChecked) "1" else "0")
-                                        }
-                                    )
-                                },
-                                {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.AutoMirrored.Rounded.Notes,
-                                        title = stringResource(R.string.disable_logging),
-                                        summary = stringResource(R.string.disable_logging_desc),
-                                        checked = dlogcat!!,
-                                        onCheckedChange = { isChecked ->
-                                            dlogcat = isChecked
-                                            PropertyUtils.set("persist.sys.azenithconf.logd", if (isChecked) "1" else "0")
-                                        }
-                                    )
-                                },
-                                {
+                                }
+                                if (isFullModeEnabled) {
+                                    add {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Rounded.TrackChanges,
+                                            title = stringResource(R.string.disable_trace),
+                                            summary = stringResource(R.string.disable_trace_desc),
+                                            checked = DTraces!!,
+                                            onCheckedChange = { isChecked ->
+                                                DTraces = isChecked
+                                                PropertyUtils.set("persist.sys.azenithconf.disabletrace", if (isChecked) "1" else "0")
+                                            }
+                                        )
+                                    }
+                                    add {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.AutoMirrored.Rounded.Notes,
+                                            title = stringResource(R.string.disable_logging),
+                                            summary = stringResource(R.string.disable_logging_desc),
+                                            checked = dlogcat!!,
+                                            onCheckedChange = { isChecked ->
+                                                dlogcat = isChecked
+                                                PropertyUtils.set("persist.sys.azenithconf.logd", if (isChecked) "1" else "0")
+                                            }
+                                        )
+                                    }
+                                }
+                                add {
                                     Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
                                         ExpressiveSwitchItem(
                                             icon = Icons.Rounded.Speed,
@@ -255,8 +263,8 @@ fun PreferenceTweakScreen(navController: NavController) {
                                             }
                                         )
                                     }
-                                },
-                                {
+                                }
+                                add {
                                     Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
                                         ExpressiveSwitchItem(
                                             icon = Icons.Rounded.DeveloperBoard,
@@ -270,23 +278,25 @@ fun PreferenceTweakScreen(navController: NavController) {
                                             }
                                         )
                                     }
-                                },
-                                {
-                                    Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
-                                        ExpressiveSwitchItem(
-                                            icon = Icons.Rounded.Thermostat,
-                                            title = stringResource(R.string.disable_thermals),
-                                            summary = if (isMediaTek) stringResource(R.string.disable_thermals_desc) else "This option is only available for MediaTek devices.",
-                                            checked = distherm!!,
-                                            enabled = isMediaTek,
-                                            onCheckedChange = { isChecked ->
-                                                distherm = isChecked
-                                                PropertyUtils.set("persist.sys.azenithconf.DThermal", if (isChecked) "1" else "0")
-                                            }
-                                        )
+                                }
+                                if (isFullModeEnabled) {
+                                    add {
+                                        Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
+                                            ExpressiveSwitchItem(
+                                                icon = Icons.Rounded.Thermostat,
+                                                title = stringResource(R.string.disable_thermals),
+                                                summary = if (isMediaTek) stringResource(R.string.disable_thermals_desc) else "This option is only available for MediaTek devices.",
+                                                checked = distherm!!,
+                                                enabled = isMediaTek,
+                                                onCheckedChange = { isChecked ->
+                                                    distherm = isChecked
+                                                    PropertyUtils.set("persist.sys.azenithconf.DThermal", if (isChecked) "1" else "0")
+                                                }
+                                            )
+                                        }
                                     }
                                 }
-                            )
+                            }
                         )
                     } else {
                         Box(
