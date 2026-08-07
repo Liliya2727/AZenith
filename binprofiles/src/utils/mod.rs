@@ -676,6 +676,9 @@ pub fn init_cpu_governor() {
         .unwrap_or_default()
         .trim()
         .to_string();
+        
+    let performance_gov = "performance";
+    let powersave_gov = "powersave";
 
     setprop_cmd("persist.sys.azenith.default_cpu_gov", &default_gov);
     log_info(&format!("Default CPU governor detected: {}", default_gov));
@@ -711,10 +714,10 @@ pub fn init_cpu_governor() {
 
     // Set fallback props
     if getprop("persist.sys.azenith.custom_powersave_cpu_gov").is_empty() {
-        setprop_cmd("persist.sys.azenith.custom_powersave_cpu_gov", &default_gov);
+        setprop_cmd("persist.sys.azenith.custom_powersave_cpu_gov", &powersave_gov);
     }
     if getprop("persist.sys.azenith.custom_performance_cpu_gov").is_empty() {
-        setprop_cmd("persist.sys.azenith.custom_performance_cpu_gov", &default_gov);
+        setprop_cmd("persist.sys.azenith.custom_performance_cpu_gov", &performance_gov);
     }
     
     log_info("Parsing CPU Governor complete");
