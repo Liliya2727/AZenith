@@ -242,14 +242,6 @@ fun SettingsScreen(
                                     },
                                     {
                                         ExpressiveSwitchItem(
-                                            icon = Icons.Filled.BugReport,
-                                            title = stringResource(R.string.allow_verbose_log),
-                                            checked = uiState.debugMode,
-                                            onCheckedChange = settingsViewModel::setDebugMode
-                                        )
-                                    },
-                                    {
-                                        ExpressiveSwitchItem(
                                             icon = Icons.Filled.DeveloperBoardOff,
                                             title = stringResource(R.string.disable_tweak),
                                             summary = stringResource(R.string.disable_tweak_desc),
@@ -285,71 +277,93 @@ fun SettingsScreen(
         
                     item { SettingsSectionTitle(stringResource(R.string.section_others)) }
                     item {
-                        ExpressiveList(
-                            content = listOf(
-                                {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Rounded.AddHome,
-                                        title = stringResource(R.string.show_icon),
-                                        checked = isLauncherVisible,
-                                        onCheckedChange = { isChecked ->
-                                            isLauncherVisible = isChecked
-                                            val pkg = context.packageManager
-                                            val componentName = ComponentName(context.packageName, "${context.packageName}.Launcher")
-                                            
-                                            val newState = if (isChecked) {
-                                                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                                            } else {
-                                                PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                        if (uiState.isLoaded) {
+                            ExpressiveList(
+                                content = listOf(
+                                    {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Rounded.AddHome,
+                                            title = stringResource(R.string.show_icon),
+                                            checked = isLauncherVisible,
+                                            onCheckedChange = { isChecked ->
+                                                isLauncherVisible = isChecked
+                                                val pkg = context.packageManager
+                                                val componentName = ComponentName(context.packageName, "${context.packageName}.Launcher")
+                                                
+                                                val newState = if (isChecked) {
+                                                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                                                } else {
+                                                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                                                }
+                                                
+                                                pkg.setComponentEnabledSetting(componentName, newState, PackageManager.DONT_KILL_APP)
                                             }
-                                            
-                                            pkg.setComponentEnabledSetting(componentName, newState, PackageManager.DONT_KILL_APP)
-                                        }
-                                    )
-                                },
-                                {
-                                    ExpressiveListItem(
-                                        onClick = {
-                                            Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service --rerun").submit { result ->
-                                                if (result.isSuccess) {
-                                                    coroutineScope.launch {
-                                                        snackbarHostState.showSnackbar(restartToastText)
+                                        )
+                                    },
+                                    {
+                                        ExpressiveListItem(
+                                            onClick = {
+                                                Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service --rerun").submit { result ->
+                                                    if (result.isSuccess) {
+                                                        coroutineScope.launch {
+                                                            snackbarHostState.showSnackbar(restartToastText)
+                                                        }
                                                     }
                                                 }
-                                            }
-                                        },
-                                        headlineContent = { Text(stringResource(R.string.restart_service)) },
-                                        supportingContent = { Text(stringResource(R.string.restart_service_desc)) },
-                                        leadingContent = { LeadingIcon(icon = Icons.Filled.RestartAlt) },
-                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                    )
-                                },
-                                {
-                                    ExpressiveListItem(
-                                        onClick = { showLogBottomSheet = true },
-                                        headlineContent = { Text(stringResource(R.string.save_log)) },
-                                        supportingContent = { Text(stringResource(R.string.save_log_desc)) },
-                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Save) },
-                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                    )
-                                },
-                                {
-                                    ExpressiveListItem(
-                                        onClick = {
-                                            uninstallDialog.showConfirm(
-                                                title = context.getString(R.string.uninstall),
-                                                content = context.getString(R.string.uninstall_confirm_content),
-                                                confirm = context.getString(R.string.yes),
-                                                dismiss = context.getString(R.string.no)
-                                            )
-                                        },
-                                        headlineContent = { Text(stringResource(R.string.uninstall)) },
-                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Delete) },
-                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                    )
-                                }
+                                            },
+                                            headlineContent = { Text(stringResource(R.string.restart_service)) },
+                                            supportingContent = { Text(stringResource(R.string.restart_service_desc)) },
+                                            leadingContent = { LeadingIcon(icon = Icons.Filled.RestartAlt) },
+                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                        )
+                                    },
+                                    {
+                                        ExpressiveListItem(
+                                            onClick = { showLogBottomSheet = true },
+                                            headlineContent = { Text(stringResource(R.string.save_log)) },
+                                            supportingContent = { Text(stringResource(R.string.save_log_desc)) },
+                                            leadingContent = { LeadingIcon(icon = Icons.Filled.Save) },
+                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                        )
+                                    },
+                                    {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Filled.BugReport,
+                                            title = stringResource(R.string.allow_verbose_log),
+                                            checked = uiState.debugMode,
+                                            onCheckedChange = settingsViewModel::setDebugMode
+                                        )
+                                    },
+                                    {
+                                        ExpressiveListItem(
+                                            onClick = {
+                                                uninstallDialog.showConfirm(
+                                                    title = context.getString(R.string.uninstall),
+                                                    content = context.getString(R.string.uninstall_confirm_content),
+                                                    confirm = context.getString(R.string.yes),
+                                                    dismiss = context.getString(R.string.no)
+                                                )
+                                            },
+                                            headlineContent = { Text(stringResource(R.string.uninstall)) },
+                                            leadingContent = { LeadingIcon(icon = Icons.Filled.Delete) },
+                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                        )
+                                    }
+                                )
                             )
-                        )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(180.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(32.dp),
+                                    strokeWidth = 3.dp
+                                )
+                            }
+                        }
                     }
         
                     item { SettingsSectionTitle(stringResource(R.string.section_about)) }
