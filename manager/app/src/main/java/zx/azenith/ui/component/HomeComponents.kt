@@ -555,7 +555,7 @@ fun InfoTile(
                 ) { targetValue ->
                     Text(
                         text = targetValue, 
-                        style = MaterialTheme.typography.bodyMedium, 
+                        style = MaterialTheme.typography.bodySmall, 
                         color = colorScheme.onSurfaceVariant, 
                         maxLines = 1, 
                         overflow = TextOverflow.Ellipsis,
@@ -754,14 +754,13 @@ fun DeviceInfoGridItem(modifier: Modifier = Modifier, title: String, value: Stri
             ) {
                 Text(
                     text = value, 
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold, 
                     color = colorScheme.onSurface,
-                    maxLines = 2, 
-
-
-
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                     lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified
+
                 )
             }
         }
