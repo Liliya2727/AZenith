@@ -87,26 +87,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        
-        <activity 
-            android:name=".SettingsEntryActivity"
-            android:exported="true"
-            android:label="AZenith">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="com.android.settings.action.EXTRA_SETTINGS"/>
-            </intent-filter>
-            <meta-data android:name="com.android.settings.category" android:value="com.android.settings.category.ia.system"/>
-            <meta-data android:name="com.android.settings.summary" android:value="Configure tweak settings on AZenith"/>
-            <meta-data android:name="com.android.settings.icon" android:resource="@drawable/avatar_transparent"/>
-        </activity>
-        
-        <receiver android:name=".receiver.ZenithReceiver" android:exported="true">
-            <intent-filter>
-                <action android:name="zx.azenith.ACTION_MANAGE" />
-            </intent-filter>
-        </receiver>
-        
+
         <receiver
             android:name=".RefreshRateReceiver"
             android:exported="true">
