@@ -121,7 +121,7 @@ class ZenithReceiver : BroadcastReceiver() {
 
         val builder = NotificationCompat.Builder(context, channelId).apply {
 
-            setSmallIcon(context.applicationInfo.icon) 
+            setSmallIcon(R.drawable.avatar_transparent)
             setContentTitle(title)
             setContentText(message)
             setUsesChronometer(chrono)
