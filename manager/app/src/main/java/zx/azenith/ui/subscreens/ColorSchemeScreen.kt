@@ -51,6 +51,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -88,7 +89,8 @@ enum class ColorPreset(
     VIVID("Vivid", 1000f, 1000f, 1000f, 1250f),
     WARM("Warm", 1050f, 1000f, 950f, 1100f),
     COOL("Cool", 950f, 950f, 1050f, 1000f),
-    AMOLED("AMOLED", 1020f, 1020f, 1020f, 1150f)
+    AMOLED("AMOLED", 1020f, 1020f, 1020f, 1150f),
+    CUSTOM("Custom", -1f, -1f, -1f, -1f)
 }
 
 @Composable
@@ -103,9 +105,18 @@ fun ColorSchemeSettings(navController: NavController) {
     var blueVal by remember { mutableFloatStateOf(1000f) }
     var satVal by remember { mutableFloatStateOf(1000f) }
     var isLoading by remember { mutableStateOf(true) }
+    var selectedPreset by remember { mutableStateOf<ColorPreset?>(null) }
     
     val coroutineScope = rememberCoroutineScope()
     val resetToastMsg = stringResource(R.string.toast_settings_reset)
+    
+    // Check if current values match a preset
+    val matchingPreset = remember(redVal, greenVal, blueVal, satVal) {
+        ColorPreset.values().firstOrNull { preset ->
+            preset != ColorPreset.CUSTOM &&
+            preset.r == redVal && preset.g == greenVal && preset.b == blueVal && preset.s == satVal
+        }
+    }
 
     val applyRGB = { r: Float, g: Float, b: Float ->
         Shell.cmd("service call SurfaceFlinger 1015 i32 1 f ${r / 1000f} f 0 f 0 f 0 f 0 f ${g / 1000f} f 0 f 0 f 0 f 0 f ${b / 1000f} f 0 f 0 f 0 f 0 f 1").submit()
@@ -132,6 +143,19 @@ fun ColorSchemeSettings(navController: NavController) {
             }
         }
         isLoading = false
+        
+        // Auto-detect preset on load
+        selectedPreset = ColorPreset.values().firstOrNull { preset ->
+            preset != ColorPreset.CUSTOM &&
+            preset.r == redVal && preset.g == greenVal && preset.b == blueVal && preset.s == satVal
+        }
+    }
+    
+    // Auto-switch to CUSTOM if values don't match selected preset
+    LaunchedEffect(matchingPreset) {
+        if (matchingPreset == null && selectedPreset != ColorPreset.CUSTOM) {
+            selectedPreset = ColorPreset.CUSTOM
+        }
     }
 
     MaterialExpressiveTheme {
@@ -191,60 +215,45 @@ fun ColorSchemeSettings(navController: NavController) {
                                 contentScale = ContentScale.Crop
                             )
                         }
-                        Spacer(modifier = Modifier.height(16.dp))
                     }
-
+                    
+                    item { PrefSectionTitle(stringResource(R.string.presets)) }
+                    
                     item {
+                        PresetSelectorItem(
+                            currentPreset = selectedPreset ?: matchingPreset,
+                            onPresetSelected = { preset ->
+                                if (preset == ColorPreset.CUSTOM) {
+                                    // CUSTOM mode: cukup enable sliders, retain current values
+                                    selectedPreset = ColorPreset.CUSTOM
+                                } else {
+                                    // Apply preset values
+                                    redVal = preset.r
+                                    greenVal = preset.g
+                                    blueVal = preset.b
+                                    satVal = preset.s
+                                    applyRGB(redVal, greenVal, blueVal)
+                                    applySat(satVal)
+                                    saveToProp()
+                                    selectedPreset = preset
+                                }
+                            }
+                        )
+                    }
+                    
+                    item { PrefSectionTitle(stringResource(R.string.color_scheme)) }
+                    
+                    item {
+                        val isCustomMode = selectedPreset == ColorPreset.CUSTOM || matchingPreset == null
                         ExpressiveList(
                             content = listOf(
-                                {
-                                    ExpressiveListItemHighlight(
-                                        headlineContent = { Text(stringResource(R.string.color_scheme)) },
-                                        leadingContent = { Icon(Icons.Rounded.Palette, null) },
-                                        trailingContent = {
-                                            IconButton(onClick = {
-                                                redVal = 1000f
-                                                greenVal = 1000f
-                                                blueVal = 1000f
-                                                satVal = 1000f
-                                                applyRGB(1000f, 1000f, 1000f)
-                                                applySat(1000f)
-                                                saveToProp()
-                                                coroutineScope.launch {
-                                                    snackbarHostState.showSnackbar(resetToastMsg)
-                                                }
-                                            }) {
-                                                Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.reset))
-                                            }
-                                        },
-                                        containerColor = colorScheme.secondaryContainer,
-                                        onClick = {}
-                                    )
-                                },
-                                // 2. Insert Preset Selector di atas deretan Slider
-                                {
-                                    PresetSelectorItem(
-                                        redVal = redVal,
-                                        greenVal = greenVal,
-                                        blueVal = blueVal,
-                                        satVal = satVal,
-                                        onPresetSelected = { preset ->
-                                            redVal = preset.r
-                                            greenVal = preset.g
-                                            blueVal = preset.b
-                                            satVal = preset.s
-                                            applyRGB(redVal, greenVal, blueVal)
-                                            applySat(satVal)
-                                            saveToProp()
-                                        }
-                                    )
-                                },
                                 { 
                                     ColorSliderItem(
                                         label = stringResource(R.string.color_red),
                                         summary = stringResource(R.string.color_red_desc),
                                         value = redVal,
                                         accentColor = Color(0xFFEF5350),
+                                        enabled = isCustomMode,
                                         onValueChange = { 
                                             redVal = it
                                             applyRGB(redVal, greenVal, blueVal)
@@ -258,6 +267,7 @@ fun ColorSchemeSettings(navController: NavController) {
                                         summary = stringResource(R.string.color_green_desc),
                                         value = greenVal,
                                         accentColor = Color(0xFF66BB6A),
+                                        enabled = isCustomMode,
                                         onValueChange = { 
                                             greenVal = it
                                             applyRGB(redVal, greenVal, blueVal)
@@ -271,19 +281,30 @@ fun ColorSchemeSettings(navController: NavController) {
                                         summary = stringResource(R.string.color_blue_desc),
                                         value = blueVal,
                                         accentColor = Color(0xFF42A5F5),
+                                        enabled = isCustomMode,
                                         onValueChange = { 
                                             blueVal = it
                                             applyRGB(redVal, greenVal, blueVal)
                                         },
                                         onFinish = { saveToProp() }
                                     )
-                                },
+                                }
+                            )
+                        )
+                    }
+                    
+                    item {
+                        val isCustomMode = selectedPreset == ColorPreset.CUSTOM || matchingPreset == null
+                        Spacer(modifier = Modifier.height(16.dp))
+                        ExpressiveList(
+                            content = listOf(
                                 { 
                                     ColorSliderItem(
                                         label = stringResource(R.string.color_saturation),
                                         summary = stringResource(R.string.color_saturation_desc),
                                         value = satVal,
                                         accentColor = colorScheme.primary,
+                                        enabled = isCustomMode,
                                         onValueChange = { 
                                             satVal = it
                                             applySat(satVal)
@@ -302,49 +323,20 @@ fun ColorSchemeSettings(navController: NavController) {
 
 @Composable
 fun PresetSelectorItem(
-    redVal: Float,
-    greenVal: Float,
-    blueVal: Float,
-    satVal: Float,
+    currentPreset: ColorPreset?,
     onPresetSelected: (ColorPreset) -> Unit
 ) {
-    val currentPreset = remember(redVal, greenVal, blueVal, satVal) {
-        ColorPreset.values().firstOrNull {
-            it.r == redVal && it.g == greenVal && it.b == blueVal && it.s == satVal
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp)
-    ) {
-        Text(
-            text = "Presets", // Bisa lu ganti jadi stringResource(R.string.presets)
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(ColorPreset.values()) { preset ->
-                val isSelected = currentPreset == preset
-                
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { onPresetSelected(preset) },
-                    label = { Text(preset.label) },
-                    leadingIcon = if (isSelected) {
-                        { Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                    } else null
+    ExpressiveList(
+        content = ColorPreset.values().map { preset ->
+            {
+                ExpressiveRadioItem(
+                    title = preset.label,
+                    selected = currentPreset == preset,
+                    onClick = { onPresetSelected(preset) }
                 )
             }
         }
-    }
+    )
 }
 
 @Composable
@@ -353,6 +345,7 @@ fun ColorSliderItem(
     summary: String,
     value: Float,
     accentColor: Color,
+    enabled: Boolean = true,
     onValueChange: (Float) -> Unit,
     onFinish: () -> Unit
 ) {
@@ -362,11 +355,19 @@ fun ColorSliderItem(
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "progress"
     )
+    
+    val alpha = if (enabled) 1f else 0.5f
+    val animatedAlpha by animateFloatAsState(
+        targetValue = alpha,
+        animationSpec = tween(durationMillis = 300),
+        label = "sliderAlpha"
+    )
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
+            .alpha(animatedAlpha)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -435,21 +436,26 @@ fun ColorSliderItem(
         Slider(
             value = value,
             onValueChange = { newValue ->
-
-                val stickyValue = when {
-                    newValue < 60f -> 0f
-                    newValue in 960f..1040f -> 1000f
-                    newValue > 1940f -> 2000f
-                    else -> newValue
+                if (enabled) {
+                    val stickyValue = when {
+                        newValue < 60f -> 0f
+                        newValue in 960f..1040f -> 1000f
+                        newValue > 1940f -> 2000f
+                        else -> newValue
+                    }
+                    onValueChange(stickyValue)
                 }
-                onValueChange(stickyValue)
             },
             onValueChangeFinished = onFinish,
             valueRange = 0f..2000f,
+            enabled = enabled,
             colors = SliderDefaults.colors(
                 thumbColor = accentColor,
                 activeTrackColor = Color.Transparent,
-                inactiveTrackColor = Color.Transparent
+                inactiveTrackColor = Color.Transparent,
+                disabledThumbColor = accentColor.copy(alpha = 0.5f),
+                disabledActiveTrackColor = Color.Transparent,
+                disabledInactiveTrackColor = Color.Transparent
             ),
             modifier = Modifier
                 .fillMaxWidth()
@@ -467,6 +473,20 @@ fun ColorSliderItem(
     }
 }
 
+@Composable
+fun SchemeSectionTitle(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(
+            start = 12.dp,
+            end = 12.dp,
+            top = 16.dp,
+            bottom = 8.dp
+        )
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable

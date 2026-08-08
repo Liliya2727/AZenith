@@ -377,4 +377,5 @@
     <string name="gov_settings">Governor Settings</string>
     <string name="gov_settingsdesc">Configure Governor and Schedulers</string>
     <string name="gov_settingsdesc2">Configure your device CPU, GPU Governor and IO Schedulers value, each value applied to each AZenith profile</string>
+    <string name="presets">Presets</string>
 </resources>
