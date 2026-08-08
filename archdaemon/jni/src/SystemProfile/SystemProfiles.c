@@ -159,10 +159,11 @@ void apply_eco_profile(DaemonContext* ctx) {
                 __system_property_set("persist.sys.azenithconf.renderer", "default");
             } else {
                 systemv("sys.azenith-utilityconf setrender %s", ctx->saved_renderer);
-                __system_property_set("persist.sys.azenithconf.renderer", ctx->saved_renderer);
+                __system_property_set("persist.sys.azenithconf.renderer", ctx->saved_sys_renderer);
             }
         }
         memset(ctx->saved_renderer, 0, sizeof(ctx->saved_renderer));
+        memset(ctx->saved_sys_renderer, 0, sizeof(ctx->saved_sys_renderer));
     }
     
     EXECUTE("ECO Mode", run_profiler(ECO_MODE));
@@ -214,10 +215,11 @@ void apply_balanced_profile(DaemonContext* ctx) {
                 __system_property_set("persist.sys.azenithconf.renderer", "default");
             } else {
                 systemv("sys.azenith-utilityconf setrender %s", ctx->saved_renderer);
-                __system_property_set("persist.sys.azenithconf.renderer", ctx->saved_renderer);
+                __system_property_set("persist.sys.azenithconf.renderer", ctx->saved_sys_renderer);
             }
         }
         memset(ctx->saved_renderer, 0, sizeof(ctx->saved_renderer));
+        memset(ctx->saved_sys_renderer, 0, sizeof(ctx->saved_sys_renderer));
     }
 
     EXECUTE("Balanced Profile", run_profiler(BALANCED_PROFILE));

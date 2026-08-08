@@ -29,6 +29,7 @@ void save_daemon_state(DaemonContext* ctx) {
     }
 
     fprintf(fp, "saved_renderer=%s\n", strlen(ctx->saved_renderer) > 0 ? ctx->saved_renderer : "");
+    fprintf(fp, "saved_sys_renderer=%s\n", strlen(ctx->saved_sys_renderer) > 0 ? ctx->saved_sys_renderer : "");
     fprintf(fp, "saved_refresh_rate=%d\n", ctx->saved_refresh_rate);
     fprintf(fp, "saved_zen_mode=%d\n", ctx->saved_zen_mode);
     fprintf(fp, "dnd_enabled=%d\n", ctx->dnd_enabled ? 1 : 0);
@@ -60,6 +61,8 @@ void restore_daemon_state(DaemonContext* ctx) {
 
         if (strcmp(key, "saved_renderer") == 0) {
             strncpy(ctx->saved_renderer, val, sizeof(ctx->saved_renderer) - 1);
+        } else if (strcmp(key, "saved_sys_renderer") == 0) {
+            strncpy(ctx->saved_sys_renderer, val, sizeof(ctx->saved_sys_renderer) - 1);
         } else if (strcmp(key, "saved_refresh_rate") == 0) {
             ctx->saved_refresh_rate = atoi(val);
         } else if (strcmp(key, "saved_zen_mode") == 0) {

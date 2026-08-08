@@ -244,7 +244,7 @@ int main_daemon(void) {
             if (!ctx.has_applied_renderer) {
                 bool renderer_changed = false;
                 if (!IS_DEFAULT(opts.renderer)) {
-                    renderer_changed = apply_smart_renderer(opts.renderer, ctx.saved_renderer);
+                    renderer_changed = apply_smart_renderer(opts.renderer, ctx.saved_renderer, ctx.saved_sys_renderer);
                 }
 
                 bool reso_changed = false;

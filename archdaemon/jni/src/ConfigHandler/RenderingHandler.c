@@ -26,18 +26,27 @@
  * @param saved_ref Buffer to store the original/previous renderer state.
  * @return true if the renderer was changed and the app was restarted, false otherwise.
  */
-bool apply_smart_renderer(const char* target_type, char* saved_ref) {
+bool apply_smart_renderer(const char* target_type, char* saved_ref, char* saved_sys) {
     if (target_type == NULL || strcmp(target_type, "default") == 0 || strlen(target_type) == 0)
         return false;
 
     char current_renderer[PROP_VALUE_MAX] = {0};
     __system_property_get("debug.hwui.renderer", current_renderer);
 
+    char current_sys_renderer[PROP_VALUE_MAX] = {0};
+    __system_property_get("persist.sys.azenithconf.renderer", current_sys_renderer);
+    
     if (strlen(current_renderer) == 0)
         strcpy(current_renderer, "default");
+        
+    if (strlen(current_sys_renderer) == 0)
+        strcpy(current_sys_renderer, "default");
 
     if (strlen(saved_ref) == 0)
         strncpy(saved_ref, current_renderer, PROP_VALUE_MAX - 1);
+       
+    if (strlen(saved_sys) == 0)
+        strncpy(saved_sys, current_sys_renderer, PROP_VALUE_MAX - 1);
 
     if (strcmp(current_renderer, target_type) != 0) {
         log_zenith(LOG_INFO, "RenderHandler: Renderer mismatch! Current: %s | Target: %s. Switching...",

@@ -169,6 +169,7 @@ typedef struct {
     time_t screen_off_timer;
     ProfileMode cur_mode;
     char saved_renderer[PROP_VALUE_MAX];
+    char saved_sys_renderer[PROP_VALUE_MAX];
     char last_freqoffset[PROP_VALUE_MAX];
     char prev_ai_state[16];
     const char* java_lock_path;
@@ -253,7 +254,7 @@ void runthermalcore(void);
 void check_module_version(void);
 void apply_dynamic_refresh_rate(int target_rr);
 int get_max_refresh_rate(void);
-bool apply_smart_renderer(const char* target_type, char* saved_ref);
+bool apply_smart_renderer(const char* target_type, char* saved_ref, char* saved_sys);
 bool apply_resolution_target(DaemonContext* ctx, const char* pkg,
                                const char* downscale, const char* fps);
 void restore_resolution_target(DaemonContext* ctx, const char* pkg);
