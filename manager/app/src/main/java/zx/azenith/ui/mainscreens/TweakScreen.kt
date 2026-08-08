@@ -804,9 +804,9 @@ fun ExpressiveTile(
                     ) { targetValue ->
                         Text(
                             text = targetValue, 
-                            style = MaterialTheme.typography.bodyMedium, 
+                            style = MaterialTheme.typography.bodySmall, 
                             color = colorScheme.onSurfaceVariant, 
-                            maxLines = 2, 
+                            maxLines = 1, 
                             overflow = TextOverflow.Ellipsis,
                             lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified
                         )

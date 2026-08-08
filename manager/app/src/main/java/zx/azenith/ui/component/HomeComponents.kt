@@ -557,7 +557,7 @@ fun InfoTile(
                         text = targetValue, 
                         style = MaterialTheme.typography.bodyMedium, 
                         color = colorScheme.onSurfaceVariant, 
-                        maxLines = 2, 
+                        maxLines = 1, 
                         overflow = TextOverflow.Ellipsis,
                         lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified
                     )
