@@ -135,7 +135,7 @@ fun PreferenceTweakScreen(navController: NavController) {
                     var schedTunes by remember { mutableStateOf<Boolean?>(null) }
                     var sflstate by remember { mutableStateOf<Boolean?>(null) }
                     var jitstate by remember { mutableStateOf<Boolean?>(null) }
-                    var fpsgogedstate by remember { mutableStateOf<Boolean?>(null) }
+                    
                     var malischedstate by remember { mutableStateOf<Boolean?>(null) }
                     var waltTunes by remember { mutableStateOf<Boolean?>(null) }
                     var DTraces by remember { mutableStateOf<Boolean?>(null) }
@@ -146,8 +146,7 @@ fun PreferenceTweakScreen(navController: NavController) {
                         socType = withContext(Dispatchers.IO) { getChipsetVendor(context) }
                         schedTunes = PropertyUtils.get("persist.sys.azenithconf.schedtunes") == "1"
                         sflstate = PropertyUtils.get("persist.sys.azenithconf.SFL") == "1"
-                        jitstate = PropertyUtils.get("persist.sys.azenithconf.justintime") == "1"
-                        fpsgogedstate = PropertyUtils.get("persist.sys.azenithconf.fpsged") == "1"
+                        jitstate = PropertyUtils.get("persist.sys.azenithconf.justintime") == "1"                        
                         malischedstate = PropertyUtils.get("persist.sys.azenithconf.malisched") == "1"
                         waltTunes = PropertyUtils.get("persist.sys.azenithconf.walttunes") == "1"
                         DTraces = PropertyUtils.get("persist.sys.azenithconf.disabletrace") == "1"
@@ -155,7 +154,7 @@ fun PreferenceTweakScreen(navController: NavController) {
                         distherm = PropertyUtils.get("persist.sys.azenithconf.DThermal") == "1"
                     }
     
-                    if (socType != null && schedTunes != null && distherm != null && dlogcat != null && DTraces != null && waltTunes != null && sflstate != null && jitstate != null && fpsgogedstate != null && malischedstate != null) { 
+                    if (socType != null && schedTunes != null && distherm != null && dlogcat != null && DTraces != null && waltTunes != null && sflstate != null && jitstate != null && malischedstate != null) { 
                         
                         val isMediaTek   = socType == "mediatek"
                         val isSnapdragon = socType == "qualcomm"
@@ -211,17 +210,19 @@ fun PreferenceTweakScreen(navController: NavController) {
                                         }
                                     )
                                 }
-                                add {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Rounded.Bolt,
-                                        title = stringResource(R.string.jit_compilation),
-                                        summary = stringResource(R.string.jit_compilation_desc),
-                                        checked = jitstate!!,
-                                        onCheckedChange = { isChecked ->
-                                            jitstate = isChecked
-                                            PropertyUtils.set("persist.sys.azenithconf.justintime", if (isChecked) "1" else "0")
-                                        }
-                                    )
+                                if (isFullModeEnabled) {
+                                    add {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Rounded.Bolt,
+                                            title = stringResource(R.string.jit_compilation),
+                                            summary = stringResource(R.string.jit_compilation_desc),
+                                            checked = jitstate!!,
+                                            onCheckedChange = { isChecked ->
+                                                jitstate = isChecked
+                                                PropertyUtils.set("persist.sys.azenithconf.justintime", if (isChecked) "1" else "0")
+                                            }
+                                        )
+                                    }
                                 }
                                 if (isFullModeEnabled) {
                                     add {
@@ -249,21 +250,7 @@ fun PreferenceTweakScreen(navController: NavController) {
                                         )
                                     }
                                 }
-                                add {
-                                    Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
-                                        ExpressiveSwitchItem(
-                                            icon = Icons.Rounded.Speed,
-                                            title = stringResource(R.string.fpsgo_ged),
-                                            summary = if (isMediaTek) stringResource(R.string.fpsgo_ged_desc) else "This option is only available for MediaTek devices.",
-                                            checked = fpsgogedstate!!,
-                                            enabled = isMediaTek,
-                                            onCheckedChange = { isChecked ->
-                                                fpsgogedstate = isChecked
-                                                PropertyUtils.set("persist.sys.azenithconf.fpsged", if (isChecked) "1" else "0")
-                                            }
-                                        )
-                                    }
-                                }
+                                
                                 add {
                                     Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
                                         ExpressiveSwitchItem(
