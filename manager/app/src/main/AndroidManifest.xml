@@ -73,8 +73,13 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
             </intent-filter>
         </activity>
-
-    
+        
+        <receiver android:name=".receiver.ZenithReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="zx.azenith.ACTION_MANAGE" />
+            </intent-filter>
+        </receiver>
+   
         <activity-alias
             android:name=".Launcher"
             android:enabled="false" 
