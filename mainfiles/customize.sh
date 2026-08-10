@@ -326,9 +326,9 @@ fi
 
 # Initiate bypasspath default value
 if [ -z "$(getprop persist.sys.azenithconf.bypasspath)" ]; then
-	setprop persist.sys.azenithconf.bypasspath "UNSUPPORTED"
+	setprop persist.sys.azenithconf.bypasspath "NEED_SETUP"
 	touch "$MODULE_CONFIG/bypasschgconfig/bypasspath"
-	echo "UNSUPPORTED" > "$MODULE_CONFIG/bypasschgconfig/bypasspath"
+	echo "NEED_SETUP" > "$MODULE_CONFIG/bypasschgconfig/bypasspath"
 fi
 
 # Initiate bypasspath default value

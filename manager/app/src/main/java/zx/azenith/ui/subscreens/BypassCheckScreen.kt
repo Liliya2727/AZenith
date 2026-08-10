@@ -111,13 +111,15 @@ fun BypassChargeCheckScreen(navController: NavController) {
         
         scope.launch(Dispatchers.IO) {
             val output = Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service -bpl").exec().out
-            val parsedList = output.filter { it.contains("FOUND") && !it.contains("NOT FOUND") }.map { line ->
-                val cleanLine = line.replace("\u001B\\[[;\\d]*m".toRegex(), "")
-                val parts = cleanLine.split("|")
-                val name = parts.getOrNull(0)?.trim() ?: context.getString(R.string.status_unknown)
-                val path = parts.getOrNull(2)?.trim() ?: ""
-                Pair(name, path)
-            }
+            val parsedList = output
+                .map { it.replace("\u001B\\[[;\\d]*m".toRegex(), "") }
+                .filter { it.contains("FOUND") && !it.contains("NOT FOUND") }
+                .map { line ->
+                    val parts = line.split("|")
+                    val name = parts.getOrNull(0)?.trim() ?: context.getString(R.string.status_unknown)
+                    val path = parts.getOrNull(2)?.trim() ?: ""
+                    Pair(name, path)
+                }
             withContext(Dispatchers.Main) {
                 availablePaths = parsedList
                 onComplete?.invoke(parsedList)
@@ -146,7 +148,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
 
 
     LaunchedEffect(logs.size) {
-        if (logs.isNotEmpty() && !isRunning) {
+        if (logs.isNotEmpty()) {
             logScrollState.animateScrollTo(logScrollState.maxValue)
         }
     }
@@ -170,7 +172,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
         isRunning = true
         hasRunDiagnosis = false
         isConsoleClosed = false
-        
+    
         scope.launch(Dispatchers.IO) {
             val callbackList = object : CallbackList<String>() {
                 override fun onAddElement(line: String) {
@@ -179,32 +181,35 @@ fun BypassChargeCheckScreen(navController: NavController) {
                     }
                 }
             }
-
+    
             val binaryPath = "/data/adb/modules/AZenith/system/bin/sys.azenith-service"
-            Shell.cmd("$binaryPath -cbc 2>&1").to(callbackList).submit {
+            Shell.cmd("$binaryPath -cbc 2>&1").to(callbackList).submit { result ->
                 isRunning = false
                 hasRunDiagnosis = true
-                refreshBypassData { paths ->
-
-                    if (paths.isNotEmpty()) {
-                        scope.launch {
-                            val result = confirmDialogHandle.awaitConfirm(
-                                title = context.getString(R.string.dialog_diagnosis_complete_title),
-                                content = context.getString(R.string.dialog_diagnosis_complete_content, paths.first().first),
-                                confirm = context.getString(R.string.dialog_apply),
-                                dismiss = context.getString(R.string.dialog_dismiss)
-                            )
-                            if (result == ConfirmResult.Confirmed) {
-                                val targetNode = paths.first().first
-                                PropertyUtils.set("persist.sys.azenithconf.bypasspath", targetNode)
-                                withContext(Dispatchers.IO) {
-                                    val file = SuFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath")
-                                    SuFileOutputStream.open(file).writer().use { writer ->
-                                        writer.write(targetNode)
-                                    }
+    
+                val successRegex = "Found working node:\\s*(\\S+)".toRegex()
+                val cleanLogs = logs.map { it.text.replace("\u001B\\[[;\\d]*m".toRegex(), "") }
+                val successNode = cleanLogs.firstNotNullOfOrNull { successRegex.find(it)?.groupValues?.get(1) }
+    
+                refreshBypassData { }
+    
+                if (successNode != null) {
+                    scope.launch {
+                        val dialogResult = confirmDialogHandle.awaitConfirm(
+                            title = context.getString(R.string.dialog_diagnosis_complete_title),
+                            content = context.getString(R.string.dialog_diagnosis_complete_content, successNode),
+                            confirm = context.getString(R.string.dialog_apply),
+                            dismiss = context.getString(R.string.dialog_dismiss)
+                        )
+                        if (dialogResult == ConfirmResult.Confirmed) {
+                            PropertyUtils.set("persist.sys.azenithconf.bypasspath", successNode)
+                            withContext(Dispatchers.IO) {
+                                val file = SuFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath")
+                                SuFileOutputStream.open(file).writer().use { writer ->
+                                    writer.write(successNode)
                                 }
-                                activePath = targetNode
                             }
+                            activePath = successNode
                         }
                     }
                 }
@@ -355,7 +360,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                         }
 
                         AnimatedVisibility(
-                            visible = !isRunning && hasRunDiagnosis && logs.isNotEmpty() && !isConsoleClosed,
+                            visible = logs.isNotEmpty() && !isConsoleClosed,
                             enter = expandVertically() + fadeIn(),
                             exit = shrinkVertically() + fadeOut()
                         ) {
