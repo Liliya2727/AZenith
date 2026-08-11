@@ -378,4 +378,5 @@
     <string name="gov_settingsdesc">Configure Governor and Schedulers</string>
     <string name="gov_settingsdesc2">Configure your device CPU, GPU Governor and IO Schedulers value, each value applied to each AZenith profile</string>
     <string name="presets">Presets</string>
+    <string name="str_bypass_need_setup">Bypass charge path hasn\'t been set up yet. Please complete the setup via Compatibility Check first.</string>
 </resources>
