@@ -347,7 +347,7 @@ fi
 
 # Daemon Configurations
 if [ -z "$(getprop persist.sys.azenithconf.showtoast)" ]; then
-	setprop persist.sys.azenithconf.showtoast 1
+	setprop persist.sys.azenithconf.showtoast 0
 fi
 
 if [ -z "$(getprop persist.sys.azenith.dropforeground)" ]; then
