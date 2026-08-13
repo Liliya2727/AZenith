@@ -122,6 +122,12 @@ fun SettingsScreen(
         onDismiss = {}
     )
     
+    LaunchedEffect(uiState.isLoaded) {
+        if (uiState.isLoaded) {
+            RebootManager.captureBaselineOnce("disable_tweak", uiState.disableTweak)
+        }
+    }
+    
     val createLogLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/gzip")) { uri ->
         uri?.let { destinationUri ->
             coroutineScope.launch {
@@ -246,7 +252,10 @@ fun SettingsScreen(
                                             title = stringResource(R.string.disable_tweak),
                                             summary = stringResource(R.string.disable_tweak_desc),
                                             checked = uiState.disableTweak,
-                                            onCheckedChange = settingsViewModel::setDisableTweak
+                                            onCheckedChange = { isChecked ->
+                                                settingsViewModel.setDisableTweak(isChecked)
+                                                RebootManager.checkAgainstBaseline("disable_tweak", isChecked)
+                                            }
                                         )
                                     },
                                     {

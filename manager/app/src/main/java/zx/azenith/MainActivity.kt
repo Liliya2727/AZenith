@@ -199,9 +199,7 @@ fun MainScreen(fromTileType: String? = null) {
             }
         }
     }
-
-    var pendingReboot by remember { mutableStateOf(false) }
-        
+     
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val rawRoute = navBackStackEntry?.destination?.route
     val isOnMainPager = rawRoute == "main"
@@ -231,18 +229,6 @@ fun MainScreen(fromTileType: String? = null) {
     var rootStatus by remember { mutableStateOf(false) }
     var moduleInstalled by remember { mutableStateOf(false) }
 
-    val refreshStatus = {
-        rootStatus = RootUtils.requestRootAccess()
-        moduleInstalled = RootUtils.isModuleInstalled()
-        isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
-        useScrollAnimation = settingsPrefs.getBoolean("use_scroll_animation", false) // Update status animasi
-        pendingReboot = Shell.cmd("test -f /data/adb/modules/AZenith/reboot").exec().isSuccess
-    }
-
-    LaunchedEffect(rawRoute, pagerState.currentPage) {
-        refreshStatus()
-    }
-
     val navItems = remember {
         listOf(
             NavItem("home", R.string.nav_home, Icons.Rounded.Home),
@@ -250,6 +236,20 @@ fun MainScreen(fromTileType: String? = null) {
             NavItem("tweaks", R.string.nav_tweaks, Icons.Rounded.SettingsInputComponent),
             NavItem("settings", R.string.nav_settings, Icons.Rounded.Settings)
         )
+    }
+    
+    val pendingReboot by RebootManager.pendingReboot.collectAsState()
+
+    val refreshStatus = {
+        rootStatus = RootUtils.requestRootAccess()
+        moduleInstalled = RootUtils.isModuleInstalled()
+        isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
+        useScrollAnimation = settingsPrefs.getBoolean("use_scroll_animation", false)
+        coroutineScope.launch { RebootManager.refreshModuleFlag() }
+    }
+    
+    LaunchedEffect(rawRoute, pagerState.currentPage) {
+        refreshStatus()
     }
     
     val installingDialog = rememberInstallingDialog()
