@@ -315,8 +315,10 @@ fun MainScreen(fromTileType: String? = null) {
     val nestedScrollConnection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (available.y < -10f) isFabVisible.value = false
-                else if (available.y > 10f) isFabVisible.value = true
+                if (source == NestedScrollSource.Drag) {
+                    if (available.y < -10f) isFabVisible.value = false
+                    else if (available.y > 10f) isFabVisible.value = true
+                }
                 return Offset.Zero
             }
         }

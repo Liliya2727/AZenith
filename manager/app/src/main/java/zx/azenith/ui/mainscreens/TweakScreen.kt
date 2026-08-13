@@ -507,10 +507,7 @@ fun TweakScreen(
                             scope.launch {
                                 loadingDialog.withLoading {
                                     viewModel.applyRestoreData(context, dataToRestore, optRestoreTweaks && !isSocMismatch, optRestoreApplist)
-                                    navController.navigate("home") {
-                                        popUpTo(navController.graph.startDestinationId)
-                                        launchSingleTop = true
-                                    }
+                                    viewModel.loadAllConfiguration(context)
                                 }
                             }
                         }
