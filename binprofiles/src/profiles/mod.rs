@@ -60,14 +60,6 @@ pub fn performance_profile() {
         log_info("Set CPU freq to normal Frequencies");
     }
 
-    let pl_base = "/sys/devices/system/cpu/perf";
-    if Path::new(pl_base).exists() {
-        write_lock("1", &format!("{}/gpu_pmu_enable", pl_base));
-        write_lock("1", &format!("{}/fuel_gauge_enable", pl_base));
-        write_lock("1", &format!("{}/enable", pl_base));
-        write_lock("1", &format!("{}/charger_enable", pl_base));
-    }
-
     write_lock("80", "/proc/sys/vm/vfs_cache_pressure");
     write_lock("3", "/proc/sys/vm/drop_caches");
     write_lock("N", "/sys/module/workqueue/parameters/power_efficient");
@@ -182,14 +174,6 @@ pub fn balanced_profile() {
         log_info("Set CPU freq to normal selected Frequencies");
     }
 
-    let pl_base = "/sys/devices/system/cpu/perf";
-    if Path::new(pl_base).exists() {
-        write_lock("0", &format!("{}/gpu_pmu_enable", pl_base));
-        write_lock("0", &format!("{}/fuel_gauge_enable", pl_base));
-        write_lock("0", &format!("{}/enable", pl_base));
-        write_lock("1", &format!("{}/charger_enable", pl_base));
-    }
-
     write_lock("120", "/proc/sys/vm/vfs_cache_pressure");
     write_lock("Y", "/sys/module/workqueue/parameters/power_efficient");
     write_lock("1", "/sys/devices/system/cpu/eas/enable");
@@ -289,14 +273,6 @@ pub fn eco_mode() {
         setfreq();
     }
     log_info("Set CPU freq to low Frequencies");
-
-    let pl_base = "/sys/devices/system/cpu/perf";
-    if Path::new(pl_base).exists() {
-        write_lock("0", &format!("{}/gpu_pmu_enable", pl_base));
-        write_lock("0", &format!("{}/fuel_gauge_enable", pl_base));
-        write_lock("0", &format!("{}/enable", pl_base));
-        write_lock("1", &format!("{}/charger_enable", pl_base));
-    }
 
     write_lock("120", "/proc/sys/vm/vfs_cache_pressure");
     write_lock("Y", "/sys/module/workqueue/parameters/power_efficient");

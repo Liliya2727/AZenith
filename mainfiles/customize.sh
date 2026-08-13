@@ -49,7 +49,7 @@ _cleanup_apk() {
     [ -f "$TMP_APK" ] && rm -f "$TMP_APK"
 }
 
-# Install APK with spinner animation and timeout protection
+# Install APK
 install_manager() {
     local apk_path="$1"
     local app_name="$2"
