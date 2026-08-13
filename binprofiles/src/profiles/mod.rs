@@ -9,6 +9,12 @@ use crate::chipsets::unisoc::*;
 use crate::chipsets::tensor::*;
 
 pub fn performance_profile() {
+
+    // Check if tweaks are disabled
+    if is_tweak_disabled() {
+        return;
+    }
+    
     let mut performance_gov = getprop("persist.sys.azenith.custom_performance_cpu_gov");
     if performance_gov.is_empty() {
         performance_gov = "powersave".to_string();
@@ -39,14 +45,7 @@ pub fn performance_profile() {
         custom_perf_mali = default_mali;
     }
 
-    // Always apply custom governor and I/O settings
     apply_custom_governor_io(&performance_gov, &custom_perf_io, &custom_perf_mali);
-
-    // Check if tweaks are disabled - skip everything else if they are
-    if is_tweak_disabled() {
-        log_info("Performance tweaks disabled by persist.sys.azenith.disabletweak");
-        return;
-    }
 
     if Path::new("/proc/ppm").exists() {
         setgamefreqppm();
@@ -130,6 +129,12 @@ pub fn performance_profile() {
 }
 
 pub fn balanced_profile() {
+
+    // Check if tweaks are disabled
+    if is_tweak_disabled() {
+        return;
+    }
+    
     let mut default_gov = getprop("persist.sys.azenith.custom_default_cpu_gov");
     if default_gov.is_empty() {
         default_gov = getprop("persist.sys.azenith.default_cpu_gov");
@@ -153,14 +158,7 @@ pub fn balanced_profile() {
         default_mali = getprop("persist.sys.azenith.default_maligpu_gov");
     }
 
-    // Always apply custom governor and I/O settings
     apply_custom_governor_io(&default_gov, &default_io, &default_mali);
-
-    // Check if tweaks are disabled - skip everything else if they are
-    if is_tweak_disabled() {
-        log_info("Balanced tweaks disabled by persist.sys.azenith.disabletweak");
-        return;
-    }
 
     if Path::new("/proc/ppm").exists() {
         setfreqppm();
@@ -237,6 +235,12 @@ pub fn balanced_profile() {
 }
 
 pub fn eco_mode() {
+
+    // Check if tweaks are disabled
+    if is_tweak_disabled() {
+        return;
+    }
+    
     let mut powersave_gov = getprop("persist.sys.azenith.custom_powersave_cpu_gov");
     if powersave_gov.is_empty() {
         powersave_gov = "powersave".to_string();
@@ -258,14 +262,7 @@ pub fn eco_mode() {
         custom_eco_mali = default_mali;
     }
 
-    // Always apply custom governor and I/O settings
     apply_custom_governor_io(&powersave_gov, &powersave_io, &custom_eco_mali);
-
-    // Check if tweaks are disabled - skip everything else if they are
-    if is_tweak_disabled() {
-        log_info("ECO tweaks disabled by persist.sys.azenith.disabletweak");
-        return;
-    }
 
     if Path::new("/proc/ppm").exists() {
         setfreqppm();
@@ -321,19 +318,13 @@ pub fn eco_mode() {
 }
 
 pub fn initialize() {
-    // 1. Initial kernel panics & sync
+    // Initial kernel panics & sync
     for param in &["panic", "panic_on_warn", "panic_on_oops", "softlockup_panic"] {
         write_lock("0", &format!("/proc/sys/kernel/{}", param));
     }
     let _ = Command::new("sync").status();
-
-    // 2. Initialize CPU & I/O & Mali GPU
-    init_cpu_governor();
-    init_io_scheduler();
-    init_maligpu_governor();
-    init_renderer();
     
-    // 3. Display / SurfaceFlinger config
+    // Display / SurfaceFlinger config
     let scheme = getprop("persist.sys.azenithconf.schemeconfig");
     if scheme != "1000 1000 1000 1000" && !scheme.is_empty() {
         let parts: Vec<&str> = scheme.split_whitespace().collect();
@@ -357,7 +348,18 @@ pub fn initialize() {
         }
     }
     
-    // 4. Thermal governor
+    // Check if tweaks are disabled
+    if is_tweak_disabled() {
+        return;
+    }
+
+    // Initialize CPU & I/O & Mali GPU
+    init_cpu_governor();
+    init_io_scheduler();
+    init_maligpu_governor();
+    init_renderer();
+    
+    // Thermal governor
     if let Ok(paths) = glob::glob("/sys/class/thermal/thermal_zone*") {
         for path in paths.flatten() {
             if let Some(p_str) = path.to_str() {
@@ -366,7 +368,7 @@ pub fn initialize() {
         }
     }
     
-    // 5. I/O Tweaks
+    // I/O Tweaks
     if let Ok(paths) = glob::glob("/sys/block/*") {
         for path in paths.flatten() {
             if let Some(p_str) = path.to_str() {
@@ -376,7 +378,7 @@ pub fn initialize() {
         }
     }
 
-    // 6. Networking tweaks
+    // Networking tweaks
     let tcp_avail = fs::read_to_string("/proc/sys/net/ipv4/tcp_available_congestion_control").unwrap_or_default();
     let algos = ["bbr3", "bbr2", "bbrplus", "bbr", "westwood", "cubic"];
     for algo in algos.iter() {
@@ -392,7 +394,7 @@ pub fn initialize() {
     write_lock("1", "/proc/sys/net/ipv4/tcp_sack");
     write_lock("0", "/proc/sys/net/ipv4/tcp_timestamps");
 
-    // 7. General Kernel & Scheduler Tweaks
+    // General Kernel & Scheduler Tweaks
     write_lock("3", "/proc/sys/kernel/perf_cpu_time_max_percent");
     write_lock("0", "/proc/sys/kernel/sched_schedstats");
     write_lock("0", "/proc/sys/kernel/task_cpustats_enable");
@@ -403,19 +405,19 @@ pub fn initialize() {
     write_lock("1000000", "/proc/sys/kernel/sched_min_granularity_ns");
     write_lock("1500000", "/proc/sys/kernel/sched_wakeup_granularity_ns");
 
-    // 8. VM Tweaks
+    // VM Tweaks
     write_lock("0", "/proc/sys/vm/page-cluster");
     write_lock("15", "/proc/sys/vm/stat_interval");
     write_lock("0", "/proc/sys/vm/compaction_proactiveness");
 
-    // 9. Vendor Bloats & Module Tweaks
+    // Vendor Bloats & Module Tweaks
     write_lock("0", "/sys/module/mmc_core/parameters/use_spi_crc");
     write_lock("0", "/sys/module/opchain/parameters/chain_on");
     write_lock("0", "/sys/module/cpufreq_bouncing/parameters/enable");
     write_lock("0", "/proc/task_info/task_sched_info/task_sched_info_enable");
     write_lock("0", "/proc/oplus_scheduler/sched_assist/sched_assist_enabled");
 
-    // 10. Libraries Max Perf Reporting
+    // Libraries Max Perf Reporting
     let libs = "libunity.so, libil2cpp.so, libmain.so, libUE4.so, libgodot_android.so, libgdx.so, libgdx-box2d.so, libminecraftpe.so, libLive2DCubismCore.so, libyuzu-android.so, libryujinx.so, libcitra-android.so, libhdr_pro_engine.so, libandroidx.graphics.path.so, libeffect.so";
     write_lock(libs, "/proc/sys/kernel/sched_lib_name");
     write_lock("255", "/proc/sys/kernel/sched_lib_mask_force");
@@ -423,7 +425,7 @@ pub fn initialize() {
     systemv("sys.azenith-utilityconf FSTrim");
     systemv("sh /data/adb/modules/AZenith/preferenced-tweaks.sh");
     
-    // 11. Final Sync & Logs
+    // Final Sync & Logs
     let _ = Command::new("sync").status();
     log_verbose("Initializing Complete");
     log_info("Initializing Complete");
