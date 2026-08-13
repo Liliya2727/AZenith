@@ -123,21 +123,22 @@ class ZenithReceiver : BroadcastReceiver() {
 
             setSmallIcon(R.drawable.avatar_transparent)
             setContentTitle(title)
-            setContentText(message)
             setUsesChronometer(chrono)
             setOngoing(isProfile)
             setAutoCancel(!isProfile)
             setContentIntent(clickPI)
-            
-
+        
+            if (isProfile) {
+                setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            } else {
+                setContentText(message)
+            }
+        
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-
                 setColor(ContextCompat.getColor(context, android.R.color.holo_blue_dark))
             }
-
+        
             if (isProfile) {
-
-
                 val reshowIntent = Intent(context, ZenithReceiver::class.java).apply {
                     this.action = ACTION_RESHOW
                     putExtra("notifytitle", title)
@@ -147,10 +148,9 @@ class ZenithReceiver : BroadcastReceiver() {
                 val deletePI = PendingIntent.getBroadcast(context, title.hashCode(), reshowIntent, pendingIntentFlags)
                 setDeleteIntent(deletePI)
             } else {
-
                 setGroup(GROUP_SYSTEM_LOGS)
             }
-
+        
             if (timeout > 0L) {
                 setTimeoutAfter(timeout)
             }
