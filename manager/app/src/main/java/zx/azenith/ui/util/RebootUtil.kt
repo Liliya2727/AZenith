@@ -52,4 +52,8 @@ object RebootManager {
         baselineValues.clear()
         recomputeLocked()
     }
+    fun wouldRequireReboot(key: String, value: Boolean): Boolean = synchronized(lock) {
+        val base = baselineValues[key] ?: return@synchronized false
+        value != base
+    }
 }

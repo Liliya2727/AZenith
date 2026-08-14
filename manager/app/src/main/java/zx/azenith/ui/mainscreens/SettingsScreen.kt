@@ -121,6 +121,31 @@ fun SettingsScreen(
         },
         onDismiss = {}
     )
+
+    // --- Reboot confirm dialog plumbing ---
+    var pendingToggle by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val rebootDialog = rememberConfirmDialog(
+        onConfirm = {
+            pendingToggle?.invoke()
+            pendingToggle = null
+        },
+        onDismiss = { pendingToggle = null }
+    )
+
+    fun toggleWithRebootCheck(key: String, isChecked: Boolean, apply: () -> Unit) {
+        if (RebootManager.wouldRequireReboot(key, isChecked)) {
+            pendingToggle = apply
+            rebootDialog.showConfirm(
+                title = context.getString(R.string.dialog_reboot_required_title),
+                content = context.getString(R.string.reboot_required_content),
+                confirm = context.getString(R.string.yes),
+                dismiss = context.getString(R.string.no)
+            )
+        } else {
+            apply()
+        }
+    }
+    // ---------------------------------------
     
     LaunchedEffect(uiState.isLoaded) {
         if (uiState.isLoaded) {
@@ -253,8 +278,10 @@ fun SettingsScreen(
                                             summary = stringResource(R.string.disable_tweak_desc),
                                             checked = uiState.disableTweak,
                                             onCheckedChange = { isChecked ->
-                                                settingsViewModel.setDisableTweak(isChecked)
-                                                RebootManager.checkAgainstBaseline("disable_tweak", isChecked)
+                                                toggleWithRebootCheck("disable_tweak", isChecked) {
+                                                    settingsViewModel.setDisableTweak(isChecked)
+                                                    RebootManager.checkAgainstBaseline("disable_tweak", isChecked)
+                                                }
                                             }
                                         )
                                     },
@@ -397,6 +424,7 @@ fun SettingsScreen(
 
             LoadingDialogHost(handle = loadingDialog)
             ConfirmDialogHost(handle = uninstallDialog)
+            ConfirmDialogHost(handle = rebootDialog)
             
             RootAppDialog {
                 CustomBottomSheet(

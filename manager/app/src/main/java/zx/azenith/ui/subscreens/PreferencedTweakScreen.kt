@@ -95,6 +95,31 @@ fun PreferenceTweakScreen(navController: NavController) {
         isFullModeEnabled = DebugUtils.isFullModeEnabled()
     }
 
+    // --- Reboot confirm dialog plumbing ---
+    var pendingToggle by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val rebootDialog = rememberConfirmDialog(
+        onConfirm = {
+            pendingToggle?.invoke()
+            pendingToggle = null
+        },
+        onDismiss = { pendingToggle = null }
+    )
+
+    fun toggleWithRebootCheck(key: String, isChecked: Boolean, apply: () -> Unit) {
+        if (RebootManager.wouldRequireReboot(key, isChecked)) {
+            pendingToggle = apply
+            rebootDialog.showConfirm(
+                title = context.getString(R.string.dialog_reboot_required_title),
+                content = context.getString(R.string.reboot_required_content),
+                confirm = context.getString(R.string.yes),
+                dismiss = context.getString(R.string.no)
+            )
+        } else {
+            apply()
+        }
+    }
+    // ---------------------------------------
+
     MaterialExpressiveTheme {        
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -178,14 +203,16 @@ fun PreferenceTweakScreen(navController: NavController) {
                                         summary = stringResource(R.string.sched_tunes_desc),
                                         checked = schedTunes!!,
                                         onCheckedChange = { isChecked ->
-                                            schedTunes = isChecked
-                                            PropertyUtils.set("persist.sys.azenithconf.schedtunes", if (isChecked) "1" else "0")
-                                            RebootManager.checkAgainstBaseline("pref_schedtunes", isChecked)
-                                            
-                                            if (isChecked && waltTunes == true) {
-                                                waltTunes = false
-                                                PropertyUtils.set("persist.sys.azenithconf.walttunes", "0")
-                                                RebootManager.checkAgainstBaseline("pref_walttunes", false)
+                                            toggleWithRebootCheck("pref_schedtunes", isChecked) {
+                                                schedTunes = isChecked
+                                                PropertyUtils.set("persist.sys.azenithconf.schedtunes", if (isChecked) "1" else "0")
+                                                RebootManager.checkAgainstBaseline("pref_schedtunes", isChecked)
+
+                                                if (isChecked && waltTunes == true) {
+                                                    waltTunes = false
+                                                    PropertyUtils.set("persist.sys.azenithconf.walttunes", "0")
+                                                    RebootManager.checkAgainstBaseline("pref_walttunes", false)
+                                                }
                                             }
                                         }
                                     )
@@ -199,14 +226,16 @@ fun PreferenceTweakScreen(navController: NavController) {
                                             checked = waltTunes!!,
                                             enabled = isSnapdragon,
                                             onCheckedChange = { isChecked ->
-                                                waltTunes = isChecked
-                                                PropertyUtils.set("persist.sys.azenithconf.walttunes", if (isChecked) "1" else "0")
-                                                RebootManager.checkAgainstBaseline("pref_walttunes", isChecked)
-                                                
-                                                if (isChecked && schedTunes == true) {
-                                                    schedTunes = false
-                                                    PropertyUtils.set("persist.sys.azenithconf.schedtunes", "0")
-                                                    RebootManager.checkAgainstBaseline("pref_schedtunes", false)
+                                                toggleWithRebootCheck("pref_walttunes", isChecked) {
+                                                    waltTunes = isChecked
+                                                    PropertyUtils.set("persist.sys.azenithconf.walttunes", if (isChecked) "1" else "0")
+                                                    RebootManager.checkAgainstBaseline("pref_walttunes", isChecked)
+
+                                                    if (isChecked && schedTunes == true) {
+                                                        schedTunes = false
+                                                        PropertyUtils.set("persist.sys.azenithconf.schedtunes", "0")
+                                                        RebootManager.checkAgainstBaseline("pref_schedtunes", false)
+                                                    }
                                                 }
                                             }
                                         )
@@ -219,9 +248,11 @@ fun PreferenceTweakScreen(navController: NavController) {
                                         summary = stringResource(R.string.sfl_latency_desc),
                                         checked = sflstate!!,
                                         onCheckedChange = { isChecked ->
-                                            sflstate = isChecked
-                                            PropertyUtils.set("persist.sys.azenithconf.SFL", if (isChecked) "1" else "0")
-                                            RebootManager.checkAgainstBaseline("pref_SFL", isChecked)
+                                            toggleWithRebootCheck("pref_SFL", isChecked) {
+                                                sflstate = isChecked
+                                                PropertyUtils.set("persist.sys.azenithconf.SFL", if (isChecked) "1" else "0")
+                                                RebootManager.checkAgainstBaseline("pref_SFL", isChecked)
+                                            }
                                         }
                                     )
                                 }
@@ -233,9 +264,11 @@ fun PreferenceTweakScreen(navController: NavController) {
                                             summary = stringResource(R.string.jit_compilation_desc),
                                             checked = jitstate!!,
                                             onCheckedChange = { isChecked ->
-                                                jitstate = isChecked
-                                                PropertyUtils.set("persist.sys.azenithconf.justintime", if (isChecked) "1" else "0")
-                                                RebootManager.checkAgainstBaseline("pref_justintime", isChecked)
+                                                toggleWithRebootCheck("pref_justintime", isChecked) {
+                                                    jitstate = isChecked
+                                                    PropertyUtils.set("persist.sys.azenithconf.justintime", if (isChecked) "1" else "0")
+                                                    RebootManager.checkAgainstBaseline("pref_justintime", isChecked)
+                                                }
                                             }
                                         )
                                     }
@@ -248,9 +281,11 @@ fun PreferenceTweakScreen(navController: NavController) {
                                             summary = stringResource(R.string.disable_trace_desc),
                                             checked = DTraces!!,
                                             onCheckedChange = { isChecked ->
-                                                DTraces = isChecked
-                                                PropertyUtils.set("persist.sys.azenithconf.disabletrace", if (isChecked) "1" else "0")
-                                                RebootManager.checkAgainstBaseline("pref_disabletrace", isChecked)
+                                                toggleWithRebootCheck("pref_disabletrace", isChecked) {
+                                                    DTraces = isChecked
+                                                    PropertyUtils.set("persist.sys.azenithconf.disabletrace", if (isChecked) "1" else "0")
+                                                    RebootManager.checkAgainstBaseline("pref_disabletrace", isChecked)
+                                                }
                                             }
                                         )
                                     }
@@ -261,9 +296,11 @@ fun PreferenceTweakScreen(navController: NavController) {
                                             summary = stringResource(R.string.disable_logging_desc),
                                             checked = dlogcat!!,
                                             onCheckedChange = { isChecked ->
-                                                dlogcat = isChecked
-                                                PropertyUtils.set("persist.sys.azenithconf.logd", if (isChecked) "1" else "0")
-                                                RebootManager.checkAgainstBaseline("pref_logd", isChecked)
+                                                toggleWithRebootCheck("pref_logd", isChecked) {
+                                                    dlogcat = isChecked
+                                                    PropertyUtils.set("persist.sys.azenithconf.logd", if (isChecked) "1" else "0")
+                                                    RebootManager.checkAgainstBaseline("pref_logd", isChecked)
+                                                }
                                             }
                                         )
                                     }
@@ -278,9 +315,11 @@ fun PreferenceTweakScreen(navController: NavController) {
                                             checked = malischedstate!!,
                                             enabled = isMediaTek,
                                             onCheckedChange = { isChecked ->
-                                                malischedstate = isChecked
-                                                PropertyUtils.set("persist.sys.azenithconf.malisched", if (isChecked) "1" else "0")
-                                                RebootManager.checkAgainstBaseline("pref_malisched", isChecked)
+                                                toggleWithRebootCheck("pref_malisched", isChecked) {
+                                                    malischedstate = isChecked
+                                                    PropertyUtils.set("persist.sys.azenithconf.malisched", if (isChecked) "1" else "0")
+                                                    RebootManager.checkAgainstBaseline("pref_malisched", isChecked)
+                                                }
                                             }
                                         )
                                     }
@@ -295,9 +334,11 @@ fun PreferenceTweakScreen(navController: NavController) {
                                                 checked = distherm!!,
                                                 enabled = isMediaTek,
                                                 onCheckedChange = { isChecked ->
-                                                    distherm = isChecked
-                                                    PropertyUtils.set("persist.sys.azenithconf.DThermal", if (isChecked) "1" else "0")
-                                                    RebootManager.checkAgainstBaseline("pref_DThermal", isChecked)
+                                                    toggleWithRebootCheck("pref_DThermal", isChecked) {
+                                                        distherm = isChecked
+                                                        PropertyUtils.set("persist.sys.azenithconf.DThermal", if (isChecked) "1" else "0")
+                                                        RebootManager.checkAgainstBaseline("pref_DThermal", isChecked)
+                                                    }
                                                 }
                                             )
                                         }
@@ -316,6 +357,8 @@ fun PreferenceTweakScreen(navController: NavController) {
                 }
             }
         }
+
+        ConfirmDialogHost(handle = rebootDialog)
     }
 }
 
