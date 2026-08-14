@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 
 object RebootManager {
+    private val lock = Any()
     private val dirtyKeys = mutableSetOf<String>()
     private val baselineValues = mutableMapOf<String, Boolean>()
     private val _pendingReboot = MutableStateFlow(false)
@@ -15,42 +16,40 @@ object RebootManager {
 
     private var moduleFlag = false
 
-    @Synchronized
-    fun captureBaselineOnce(key: String, value: Boolean) {
+    fun captureBaselineOnce(key: String, value: Boolean) = synchronized(lock) {
         baselineValues.putIfAbsent(key, value)
     }
 
-    @Synchronized
-    fun checkAgainstBaseline(key: String, value: Boolean) {
-        val base = baselineValues[key] ?: return
-        if (value != base) markDirty(key) else clearDirty(key)
+    fun checkAgainstBaseline(key: String, value: Boolean) = synchronized(lock) {
+        val base = baselineValues[key] ?: return@synchronized
+        if (value != base) markDirtyLocked(key) else clearDirtyLocked(key)
     }
 
-    @Synchronized
-    private fun markDirty(key: String) {
+    private fun markDirtyLocked(key: String) {
         dirtyKeys.add(key)
-        recompute()
+        recomputeLocked()
     }
 
-    @Synchronized
-    private fun clearDirty(key: String) {
+    private fun clearDirtyLocked(key: String) {
         dirtyKeys.remove(key)
-        recompute()
+        recomputeLocked()
     }
 
-    private fun recompute() {
+    private fun recomputeLocked() {
         _pendingReboot.value = dirtyKeys.isNotEmpty() || moduleFlag
     }
 
     suspend fun refreshModuleFlag() = withContext(Dispatchers.IO) {
-        moduleFlag = Shell.cmd("test -f /data/adb/modules/AZenith/reboot").exec().isSuccess
-        recompute()
+        val result = Shell.cmd("test -f /data/adb/modules/AZenith/reboot").exec().isSuccess
+        synchronized(lock) {
+            moduleFlag = result
+            recomputeLocked()
+        }
     }
 
-    @Synchronized
-    fun resetAll() {
+    fun resetAll() = synchronized(lock) {
         dirtyKeys.clear()
         baselineValues.clear()
-        recompute()
+        recomputeLocked()
     }
 }
