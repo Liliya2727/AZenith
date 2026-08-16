@@ -124,6 +124,7 @@ class ZenithReceiver : BroadcastReceiver() {
             setSmallIcon(R.drawable.avatar_transparent)
             setContentTitle(title)
             setUsesChronometer(chrono)
+            setShowWhen(false)
             setOngoing(isProfile)
             setAutoCancel(!isProfile)
             setContentIntent(clickPI)
