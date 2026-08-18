@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Thuthukisa amapharamitha e-WALT governor, thuthukisa ijubane lokuphendula kokuhlela kwe-CPU</string>
     <string name="welcome_azenith">Uyemukelwa ku-AZenith</string>
     <string name="yes">Yebo</string>
+    <string name="str_use_scroll_animation">Sebenzisa ukugqwayiza kokuskrola</string>
+    <string name="str_use_scroll_animation_summary">Nika amandla ukugqwayiza kokuswayipha phakathi kwamakhasi</string>
+    <string name="disable_tweak">Khubaza ukulungisa okwenziwe</string>
+    <string name="disable_tweak_desc">Misa i-AZenith ekusebenziseni ukulungisa kuwo wonke amaphrofayili kuhlanganise nezilungiselelo zomlawuli nesihleli se-I/O</string>
+    <string name="gov_settings">Izilungiselelo zomlawuli</string>
+    <string name="gov_settingsdesc">Lungiselela umlawuli nezihleli</string>
+    <string name="gov_settingsdesc2">Lungiselela inani lomlawuli we-CPU, GPU nesihleli se-I/O sedivayisi yakho, inani ngalinye lisetshenziswa kuphrofayili ngayinye ye-AZenith</string>
+    <string name="presets">Ukusetha kabusha</string>
+    <string name="str_bypass_need_setup">Indlela yokushaja yokweqa ayikamiswa okwamanje. Sicela uqedele ukumisa usebenzisa Ukuhlola Ukuhambisana kuqala.</string>
+    <string name="reboot_required_content">Le nketho idinga ukuqalisa kabusha ukuze isebenze. Qhubeka?</string>
 </resources>

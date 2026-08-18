@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optimizēt WALT pārvaldnieka parametrus, lai uzlabotu CPU plānošanas atsaucību</string>
     <string name="welcome_azenith">Laipni lūdzam AZenith</string>
     <string name="yes">Jā</string>
+    <string name="str_use_scroll_animation">Izmantot ritināšanas animāciju</string>
+    <string name="str_use_scroll_animation_summary">Iespējot pārvilkšanas animāciju starp lapām</string>
+    <string name="disable_tweak">Atspējot pielāgojumus</string>
+    <string name="disable_tweak_desc">Apturēt AZenith pielāgojumu piemērošanu visiem profiliem, tostarp regulatora un I/O plānotāja iestatījumiem</string>
+    <string name="gov_settings">Regulatora iestatījumi</string>
+    <string name="gov_settingsdesc">Konfigurēt regulatoru un plānotājus</string>
+    <string name="gov_settingsdesc2">Konfigurējiet ierīces CPU, GPU regulatora un I/O plānotāju vērtības; katra vērtība tiek piemērota katram AZenith profilam</string>
+    <string name="presets">Sākotnējie iestatījumi</string>
+    <string name="str_bypass_need_setup">Apvada uzlādes ceļš vēl nav iestatīts. Lūdzu, vispirms pabeidziet iestatīšanu, izmantojot saderības pārbaudi.</string>
+    <string name="reboot_required_content">Lai lietotu šo opciju, ir nepieciešams restartēt ierīci. Vai turpināt?</string>
 </resources>

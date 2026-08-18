@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Tối ưu tham số bộ điều tốc WALT, cải thiện tốc độ phản hồi lập lịch CPU</string>
     <string name="welcome_azenith">Chào mừng đến với AZenith</string>
     <string name="yes">Có</string>
+    <string name="str_use_scroll_animation">Sử dụng hiệu ứng cuộn</string>
+    <string name="str_use_scroll_animation_summary">Bật hiệu ứng vuốt chuyển giữa các Trang</string>
+    <string name="disable_tweak">Tắt tinh chỉnh</string>
+    <string name="disable_tweak_desc">Dừng AZenith áp dụng tinh chỉnh cho tất cả cấu hình bao gồm cài đặt bộ điều chỉnh và bộ lập lịch I/O</string>
+    <string name="gov_settings">Cài đặt bộ điều chỉnh</string>
+    <string name="gov_settingsdesc">Cấu hình bộ điều chỉnh và bộ lập lịch</string>
+    <string name="gov_settingsdesc2">Cấu hình giá trị CPU, GPU Governor và bộ lập lịch IO của thiết bị, mỗi giá trị được áp dụng cho từng cấu hình AZenith</string>
+    <string name="presets">Cài đặt sẵn</string>
+    <string name="str_bypass_need_setup">Đường dẫn sạc nhánh chưa được thiết lập. Vui lòng hoàn tất thiết lập qua Kiểm tra tính tương thích trước.</string>
+    <string name="reboot_required_content">Tùy chọn này yêu cầu khởi động lại để áp dụng. Tiếp tục?</string>
 </resources>

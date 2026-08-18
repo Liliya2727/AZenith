@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Оптимизиране на параметрите на WALT губернатора за подобряване на отзивчивостта на CPU планиране</string>
     <string name="welcome_azenith">Добре дошли в AZenith</string>
     <string name="yes">Да</string>
+    <string name="str_use_scroll_animation">Използване на анимация за превъртане</string>
+    <string name="str_use_scroll_animation_summary">Активиране на анимация за плъзгане между страниците</string>
+    <string name="disable_tweak">Деактивиране на тунинга</string>
+    <string name="disable_tweak_desc">Спиране на AZenith от прилагане на тунинг към всички профили, включително настройките на гуверньора и I/O диспечера</string>
+    <string name="gov_settings">Настройки на гуверньора</string>
+    <string name="gov_settingsdesc">Конфигуриране на гуверньор и диспечери</string>
+    <string name="gov_settingsdesc2">Конфигурирайте стойностите на процесора, GPU гуверньора и I/O диспечера на устройството, всяка стойност се прилага към съответния профил на AZenith</string>
+    <string name="presets">Предварителни настройки</string>
+    <string name="str_bypass_need_setup">Пътят за байпас зареждане все още не е конфигуриран. Моля, първо завършете настройката чрез Проверка за съвместимост.</string>
+    <string name="reboot_required_content">Тази опция изисква рестартиране, за да бъде приложена. Продължаване?</string>
 </resources>

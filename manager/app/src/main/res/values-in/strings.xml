@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optimalkan parameter governor WALT, tingkatkan respons penjadwalan CPU</string>
     <string name="welcome_azenith">Selamat datang di AZenith</string>
     <string name="yes">Ya</string>
+    <string name="str_use_scroll_animation">Gunakan Animasi Gulir</string>
+    <string name="str_use_scroll_animation_summary">Aktifkan animasi geser antar halaman</string>
+    <string name="disable_tweak">Nonaktifkan Tweak</string>
+    <string name="disable_tweak_desc">Hentikan AZenith menerapkan tweak ke semua profil termasuk pengaturan governor dan penjadwal I/O</string>
+    <string name="gov_settings">Pengaturan Governor</string>
+    <string name="gov_settingsdesc">Konfigurasi Governor dan Penjadwal</string>
+    <string name="gov_settingsdesc2">Konfigurasi nilai Governor CPU, GPU, dan Penjadwal I/O perangkat Anda, setiap nilai diterapkan ke setiap profil AZenith</string>
+    <string name="presets">Preset</string>
+    <string name="str_bypass_need_setup">Jalur bypass pengisian daya belum diatur. Harap selesaikan pengaturan melalui Pemeriksaan Kompatibilitas terlebih dahulu.</string>
+    <string name="reboot_required_content">Opsi ini memerlukan mulai ulang perangkat untuk diterapkan. Lanjutkan?</string>
 </resources>

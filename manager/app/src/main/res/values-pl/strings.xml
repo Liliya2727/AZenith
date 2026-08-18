@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optymalizuj parametry regulatora WALT, aby poprawić responsywność planowania CPU</string>
     <string name="welcome_azenith">Witamy w AZenith</string>
     <string name="yes">Tak</string>
+    <string name="str_use_scroll_animation">Użyj animacji przewijania</string>
+    <string name="str_use_scroll_animation_summary">Włącz animację przesuwania między stronami</string>
+    <string name="disable_tweak">Wyłącz modyfikacje</string>
+    <string name="disable_tweak_desc">Zatrzymaj stosowanie modyfikacji przez AZenith do wszystkich profilów, w tym ustawień zarządcy i harmonogramu we/wy</string>
+    <string name="gov_settings">Ustawienia zarządcy</string>
+    <string name="gov_settingsdesc">Konfiguruj zarządcę i harmonogramy</string>
+    <string name="gov_settingsdesc2">Skonfiguruj wartości zarządcy CPU, GPU i harmonogramów we/wy; każda wartość jest stosowana do każdego profilu AZenith</string>
+    <string name="presets">Profile wstępne</string>
+    <string name="str_bypass_need_setup">Ścieżka ładowania obejściowego nie została jeszcze skonfigurowana. Ukończ najpierw konfigurację za pomocą Testu zgodności.</string>
+    <string name="reboot_required_content">Ta opcja wymaga ponownego uruchomienia, aby została zastosowana. Kontynuować?</string>
 </resources>

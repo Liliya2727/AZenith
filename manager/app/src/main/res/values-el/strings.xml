@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Βελτιστοποίηση παραμέτρων ρυθμιστή WALT για βελτίωση απόκρισης χρονοπρογραμματισμού CPU</string>
     <string name="welcome_azenith">Καλώς ορίσατε στο AZenith</string>
     <string name="yes">Ναι</string>
+    <string name="str_use_scroll_animation">Χρήση κινούμενης εικόνας κύλισης</string>
+    <string name="str_use_scroll_animation_summary">Ενεργοποίηση κίνησης σάρωσης μεταξύ σελίδων</string>
+    <string name="disable_tweak">Απενεργοποίηση βελτιστοποιήσεων</string>
+    <string name="disable_tweak_desc">Διακοπή εφαρμογής βελτιστοποιήσεων από το AZenith σε όλα τα προφίλ, συμπεριλαμβανομένων των ρυθμίσεων ρυθμιστή και προγραμματιστή I/O</string>
+    <string name="gov_settings">Ρυθμίσεις ρυθμιστή</string>
+    <string name="gov_settingsdesc">Διαμόρφωση ρυθμιστή και προγραμματιστών</string>
+    <string name="gov_settingsdesc2">Διαμορφώστε τις τιμές ρυθμιστή CPU, GPU και προγραμματιστών I/O της συσκευής σας, κάθε τιμή εφαρμόζεται σε κάθε προφίλ AZenith</string>
+    <string name="presets">Προεπιλογές</string>
+    <string name="str_bypass_need_setup">Η διαδρομή παράκαμψης φόρτισης δεν έχει ρυθμιστεί ακόμα. Ολοκληρώστε πρώτα τη ρύθμιση μέσω του Ελέγχου συμβατότητας.</string>
+    <string name="reboot_required_content">Αυτή η επιλογή απαιτεί επανεκκίνηση για να εφαρμοστεί. Συνέχεια;</string>
 </resources>

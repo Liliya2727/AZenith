@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optimalizovať parametre WALT governora pre rýchlejšiu odozvu plánovača CPU.</string>
     <string name="welcome_azenith">Vitajte v AZenith</string>
     <string name="yes">Áno</string>
+    <string name="str_use_scroll_animation">Použiť animáciu posúvania</string>
+    <string name="str_use_scroll_animation_summary">Povoliť animáciu potiahnutia medzi stránkami</string>
+    <string name="disable_tweak">Zakázať úpravy</string>
+    <string name="disable_tweak_desc">Zabrániť aplikácii AZenith v používaní úprav pre všetky profily vrátane nastavení regulátora a plánovača I/O</string>
+    <string name="gov_settings">Nastavenia regulátora</string>
+    <string name="gov_settingsdesc">Konfigurovať regulátor a plánovače</string>
+    <string name="gov_settingsdesc2">Nakonfigurujte hodnoty regulátora CPU, GPU a plánovačov I/O vášho zariadenia; každá hodnota sa použije pre príslušný profil AZenith</string>
+    <string name="presets">Predvoľby</string>
+    <string name="str_bypass_need_setup">Cesta premostenia nabíjania ešte nebola nastavená. Najprv dokončite nastavenie pomocou kontroly kompatibility.</string>
+    <string name="reboot_required_content">Použitie tejto možnosti vyžaduje reštartovanie zariadenia. Pokračovať?</string>
 </resources>

@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">ปรับพารามิเตอร์ตัวควบคุม WALT เพื่อเพิ่มความเร็วในการตอบสนองของการจัดลำดับ CPU</string>
     <string name="welcome_azenith">ยินดีต้อนรับสู่ AZenith</string>
     <string name="yes">ใช่</string>
+    <string name="str_use_scroll_animation">ใช้ภาพเคลื่อนไหวการเลื่อน</string>
+    <string name="str_use_scroll_animation_summary">เปิดใช้ภาพเคลื่อนไหวการปัดระหว่างหน้า</string>
+    <string name="disable_tweak">ปิดใช้งานการปรับแต่ง</string>
+    <string name="disable_tweak_desc">หยุด AZenith จากการใช้การปรับแต่งกับทุกโปรไฟล์ รวมถึงการตั้งค่า Governor และตัวกำหนดเวลา I/O</string>
+    <string name="gov_settings">การตั้งค่า Governor</string>
+    <string name="gov_settingsdesc">กำหนดค่า Governor และตัวกำหนดเวลา</string>
+    <string name="gov_settingsdesc2">กำหนดค่า CPU, GPU Governor และตัวกำหนดเวลา I/O ของอุปกรณ์ โดยแต่ละค่าจะถูกนำไปใช้กับแต่ละโปรไฟล์ AZenith</string>
+    <string name="presets">พรีเซ็ต</string>
+    <string name="str_bypass_need_setup">ยังไม่ได้ตั้งค่าเส้นทางการชาร์จแบบบายพาส โปรดทำการตั้งค่าผ่านการตรวจสอบความเข้ากันได้ก่อน</string>
+    <string name="reboot_required_content">ตัวเลือกนี้ต้องรีบูตเครื่องเพื่อนำไปใช้ ดำเนินการต่อหรือไม่?</string>
 </resources>

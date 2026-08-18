@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optimitza els paràmetres del governador WALT per millorar la velocitat de resposta de la planificació de la CPU</string>
     <string name="welcome_azenith">Benvingut a AZenith</string>
     <string name="yes">Sí</string>
+    <string name="str_use_scroll_animation">Utilitza l'animació de desplaçament</string>
+    <string name="str_use_scroll_animation_summary">Habilita l'animació de lliscament entre pàgines</string>
+    <string name="disable_tweak">Inhabilita els retocs</string>
+    <string name="disable_tweak_desc">Atura l'aplicació de retocs d'AZenith a tots els perfils, inclosos els paràmetres del governador i del planificador d'E/S</string>
+    <string name="gov_settings">Configuració del governador</string>
+    <string name="gov_settingsdesc">Configura el governador i els planificadors</string>
+    <string name="gov_settingsdesc2">Configura els valors del governador de CPU, GPU i planificadors d'E/S del dispositiu; cada valor s'aplica a cada perfil d'AZenith</string>
+    <string name="presets">Valors predefinits</string>
+    <string name="str_bypass_need_setup">El camí de càrrega directa encara no s'ha configurat. Completa primer la configuració mitjançant la Comprovació de compatibilitat.</string>
+    <string name="reboot_required_content">Aquesta opció requereix reiniciar per aplicar-se. Vols continuar?</string>
 </resources>

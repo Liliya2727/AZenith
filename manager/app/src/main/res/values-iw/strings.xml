@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">אופטימיזציה של פרמטרי מווסת WALT לשיפור מהירות תגובת תזמון CPU</string>
     <string name="welcome_azenith">ברוכים הבאים ל-AZenith</string>
     <string name="yes">כן</string>
+    <string name="str_use_scroll_animation">השתמש בהנפשת גלילה</string>
+    <string name="str_use_scroll_animation_summary">הפעל הנפשת החלקה בין דפים</string>
+    <string name="disable_tweak">השבת התאמות</string>
+    <string name="disable_tweak_desc">עצור את AZenith מהחלת התאמות על כל הפרופילים, כולל הגדרות מושל והגדרות מתזמן קלט/פלט</string>
+    <string name="gov_settings">הגדרות מושל</string>
+    <string name="gov_settingsdesc">הגדר מושל ומתזמנים</string>
+    <string name="gov_settingsdesc2">הגדר את ערכי מושל CPU, GPU ומתזמני I/O של המכשיר שלך, כל ערך יוחל על כל פרופיל AZenith</string>
+    <string name="presets">הגדרות מראש</string>
+    <string name="str_bypass_need_setup">נתיב טעינת מעקף עדיין לא הוגדר. אנא השלם תחילה את ההגדרה דרך בדיקת תאימות.</string>
+    <string name="reboot_required_content">אפשרות זו דורשת הפעלה מחדש כדי לחול. להמשיך?</string>
 </resources>

@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optimaliseer WALT reguleerder parameters om CPU skedulering reaksiespoed te verbeter</string>
     <string name="welcome_azenith">Welkom by AZenith</string>
     <string name="yes">Ja</string>
+    <string name="str_use_scroll_animation">Gebruik blaai-animasie</string>
+    <string name="str_use_scroll_animation_summary">Aktiveer vee-animasie tussen bladsye</string>
+    <string name="disable_tweak">Deaktiveer konfigurasies</string>
+    <string name="disable_tweak_desc">Verhoed dat AZenith konfigurasies op alle profiele toepas, insluitend reguleerder- en I/O-skeduleerderinstellings</string>
+    <string name="gov_settings">Reguleerderinstellings</string>
+    <string name="gov_settingsdesc">Stel reguleerder en skeduleerders op</string>
+    <string name="gov_settingsdesc2">Stel u toestel se CPU-, GPU-reguleerder en I/O-skeduleerderwaardes op; elke waarde word op elke AZenith-profiel toegepas</string>
+    <string name="presets">Voorafinstellings</string>
+    <string name="str_bypass_need_setup">Omleiding kragtoevoerroete is nog nie opgestel nie. Voltooi asseblief eers die opstelling via Verenigbaarheidskontrole.</string>
+    <string name="reboot_required_content">Hierdie opsie vereis 'n herbegin om toegepas te word. Gaan voort?</string>
 </resources>

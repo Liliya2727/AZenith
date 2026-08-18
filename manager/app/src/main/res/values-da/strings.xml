@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optimer WALT-regulator parametre for at forbedre CPU-planlægningsrespons</string>
     <string name="welcome_azenith">Velkommen til AZenith</string>
     <string name="yes">Ja</string>
+    <string name="str_use_scroll_animation">Brug rulleanimation</string>
+    <string name="str_use_scroll_animation_summary">Aktivér strygeanimation mellem sider</string>
+    <string name="disable_tweak">Deaktiver justeringer</string>
+    <string name="disable_tweak_desc">Stop AZenith fra at anvende justeringer på alle profiler, inklusive governor- og I/O-planlæggerindstillinger</string>
+    <string name="gov_settings">Governor-indstillinger</string>
+    <string name="gov_settingsdesc">Konfigurer governor og planlæggere</string>
+    <string name="gov_settingsdesc2">Konfigurer enhedens CPU-, GPU-governor og I/O-planlæggerværdier; hver værdi anvendes på hver AZenith-profil</string>
+    <string name="presets">Forudindstillinger</string>
+    <string name="str_bypass_need_setup">Bypass-opladningssti er ikke konfigureret endnu. Gennemfør venligst opsætningen via kompatibilitetstjek først.</string>
+    <string name="reboot_required_content">Denne indstilling kræver en genstart for at blive anvendt. Vil du fortsætte?</string>
 </resources>

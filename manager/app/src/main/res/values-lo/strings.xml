@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">ປັບປຸງຕົວກຳນົດ WALT governor ເພື່ອເພີ່ມຄວາມໄວການຕອບສະໜອງຂອງ CPU scheduling</string>
     <string name="welcome_azenith">ຍິນດີຕ້ອນຮັບສູ່ AZenith</string>
     <string name="yes">ແມ່ນ</string>
+    <string name="str_use_scroll_animation">ໃຊ້ແອນິເມຊັນເລື່ອນ</string>
+    <string name="str_use_scroll_animation_summary">ເປີດໃຊ້ງານແອນິເມຊັນປັດລະຫວ່າງໜ້າ</string>
+    <string name="disable_tweak">ປິດການປັບແຕ່ງ</string>
+    <string name="disable_tweak_desc">ຢຸດ AZenith ຈາກການນຳໃຊ້ການປັບແຕ່ງກັບທຸກໂປຣໄຟລ໌ ລວມທັງການຕັ້ງຄ່າ governor ແລະ ຕົວກຳນົດເວລາ I/O</string>
+    <string name="gov_settings">ການຕັ້ງຄ່າ Governor</string>
+    <string name="gov_settingsdesc">ກຳນົດຄ່າ Governor ແລະ ຕົວກຳນົດເວລາ</string>
+    <string name="gov_settingsdesc2">ກຳນົດຄ່າ CPU, GPU Governor ແລະ ຕົວກຳນົດເວລາ I/O ຂອງອຸປະກອນຂອງທ່ານ, ແຕ່ລະຄ່າຈະຖືກນຳໃຊ້ກັບແຕ່ລະໂປຣໄຟລ໌ AZenith</string>
+    <string name="presets">ຄ່າທີ່ຕັ້ງໄວ້ລ່ວງໜ້າ</string>
+    <string name="str_bypass_need_setup">ຍັງບໍ່ໄດ້ຕັ້ງຄ່າເສັ້ນທາງການສາກແບບບາຍພາດເທື່ອ. ກະລຸນາສຳເລັດການຕັ້ງຄ່າຜ່ານການກວດສອບຄວາມເຂົ້າກັນໄດ້ກ່ອນ.</string>
+    <string name="reboot_required_content">ຕົວເລືອກນີ້ຕ້ອງການການຣີສະຕາດເພື່ອໃຫ້ມີຜົນ. ສືບຕໍ່ບໍ?</string>
 </resources>

@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Otimizar parâmetros do governador WALT para melhorar a velocidade de resposta do agendamento da CPU</string>
     <string name="welcome_azenith">Bem-vindo ao AZenith</string>
     <string name="yes">Sim</string>
+    <string name="str_use_scroll_animation">Usar animação de rolagem</string>
+    <string name="str_use_scroll_animation_summary">Ativar animação de deslizamento entre páginas</string>
+    <string name="disable_tweak">Desativar ajustes</string>
+    <string name="disable_tweak_desc">Impedir que o AZenith aplique ajustes a todos os perfis, incluindo configurações de governor e agendador de E/S</string>
+    <string name="gov_settings">Configurações de governor</string>
+    <string name="gov_settingsdesc">Configurar governor e agendadores</string>
+    <string name="gov_settingsdesc2">Configure os valores de governor de CPU, GPU e agendadores de E/S do dispositivo, cada valor aplicado a cada perfil do AZenith</string>
+    <string name="presets">Predefinições</string>
+    <string name="str_bypass_need_setup">O caminho de carregamento bypass ainda não foi configurado. Conclua a configuração através da Verificação de Compatibilidade primeiro.</string>
+    <string name="reboot_required_content">Esta opção requer uma reinicialização para ser aplicada. Continuar?</string>
 </resources>

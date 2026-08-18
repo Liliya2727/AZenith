@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optimumkan parameter gov WALT untuk meningkatkan respons penjadualan CPU</string>
     <string name="welcome_azenith">Selamat datang ke AZenith</string>
     <string name="yes">Ya</string>
+    <string name="str_use_scroll_animation">Gunakan Animasi Tatal</string>
+    <string name="str_use_scroll_animation_summary">Dayakan animasi leret antara halaman</string>
+    <string name="disable_tweak">Lumpuhkan Pengoptimuman</string>
+    <string name="disable_tweak_desc">Hentikan AZenith daripada menggunakan pengoptimuman pada semua profil termasuk tetapan gabenor dan penjadual I/O</string>
+    <string name="gov_settings">Tetapan Gabenor</string>
+    <string name="gov_settingsdesc">Konfigurasikan Gabenor dan Penjadual</string>
+    <string name="gov_settingsdesc2">Konfigurasikan nilai Gabenor CPU, GPU dan Penjadual I/O peranti anda, setiap nilai digunakan pada setiap profil AZenith</string>
+    <string name="presets">Praset</string>
+    <string name="str_bypass_need_setup">Laluan pengecasan pintasan belum disediakan lagi. Sila lengkapkan persediaan melalui Pemeriksaan Keserasian terlebih dahulu.</string>
+    <string name="reboot_required_content">Pilihan ini memerlukan but semula untuk digunakan. Teruskan?</string>
 </resources>

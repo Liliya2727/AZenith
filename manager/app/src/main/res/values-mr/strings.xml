@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">WALT गव्हर्नर पॅरामीटर्स ऑप्टिमायझ करा, CPU शेड्युलिंग प्रतिसाद गती वाढवा</string>
     <string name="welcome_azenith">AZenith मध्ये स्वागत आहे</string>
     <string name="yes">होय</string>
+    <string name="str_use_scroll_animation">स्क्रोल ॲनिमेशन वापरा</string>
+    <string name="str_use_scroll_animation_summary">पृष्ठांमध्ये स्वाइप ॲनिमेशन सक्षम करा</string>
+    <string name="disable_tweak">ट्विक्स अक्षम करा</string>
+    <string name="disable_tweak_desc">गव्हर्नर आणि I/O शेड्युलर सेटिंग्जसह सर्व प्रोफाईलवर AZenith द्वारे ट्विक्स लागू करणे थांबवा</string>
+    <string name="gov_settings">गव्हर्नर सेटिंग्ज</string>
+    <string name="gov_settingsdesc">गव्हर्नर आणि शेड्युलर्स कॉन्फिगर करा</string>
+    <string name="gov_settingsdesc2">तुमच्या डिव्हाइसचे CPU, GPU गव्हर्नर आणि I/O शेड्युलर मूल्ये कॉन्फिगर करा, प्रत्येक मूल्य प्रत्येक AZenith प्रोफाइलवर लागू केले जाईल</string>
+    <string name="presets">प्रीसेट्स</string>
+    <string name="str_bypass_need_setup">बायपास चार्जिंग मार्ग अद्याप सेट केलेला नाही. कृपया प्रथम सुसंगतता तपासणीद्वारे सेटअप पूर्ण करा.</string>
+    <string name="reboot_required_content">हा पर्याय लागू करण्यासाठी रीबूट करणे आवश्यक आहे. सुरू ठेवायचे?</string>
 </resources>

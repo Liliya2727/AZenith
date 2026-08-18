@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">WALT အုပ်ချုပ်သူပါရာမီတာများကို အကောင်းဆုံးဖြစ်အောင်ပြုလုပ်ကာ CPU အချိန်ဇယားတုံ့ပြန်မှုအမြန်နှုန်းကို မြှင့်တင်ပါ</string>
     <string name="welcome_azenith">AZenith သို့ ကြိုဆိုပါသည်</string>
     <string name="yes">ဟုတ်ပါသည်</string>
+    <string name="str_use_scroll_animation">လှိမ့်ကြည့်ခြင်း အန်နီမေးရှင်းကို သုံးပါ</string>
+    <string name="str_use_scroll_animation_summary">စာမျက်နှာများကြား ပွတ်ဆွဲခြင်း အန်နီမေးရှင်းကို ဖွင့်ပါ</string>
+    <string name="disable_tweak">ချိန်ညှိမှုများကို ပိတ်ပါ</string>
+    <string name="disable_tweak_desc">governor ဆက်တင်များနှင့် I/O scheduler ဆက်တင်များ အပါအဝင် ပရိုဖိုင်အားလုံးသို့ AZenith ၏ ချိန်ညှိမှုများ အသုံးပြုခြင်းကို ရပ်တန့်ပါ</string>
+    <string name="gov_settings">Governor ဆက်တင်များ</string>
+    <string name="gov_settingsdesc">Governor နှင့် Scheduler များကို စီစဉ်သတ်မှတ်ပါ</string>
+    <string name="gov_settingsdesc2">သင့်စက်ပစ္စည်း၏ CPU, GPU Governor နှင့် I/O Scheduler တန်ဖိုးများကို စီစဉ်သတ်မှတ်ပါ၊ တန်ဖိုးတစ်ခုစီကို AZenith ပရိုဖိုင်တစ်ခုစီတွင် အသုံးပြုပါသည်</string>
+    <string name="presets">ကြိုတင်သတ်မှတ်ချက်များ</string>
+    <string name="str_bypass_need_setup">Bypass အားသွင်းလမ်းကြောင်းကို မသတ်မှတ်ရသေးပါ။ ကိုက်ညီမှုစစ်ဆေးခြင်း မှတစ်ဆင့် ဦးစွာ စနစ်ထည့်သွင်းမှု ပြီးမြောက်အောင် လုပ်ဆောင်ပါ။</string>
+    <string name="reboot_required_content">ဤရွေးချယ်မှုကို အသုံးပြုရန် စက်ကို ပြန်လည်စတင်ရန် လိုအပ်သည်။ ဆက်လုပ်မလား။</string>
 </resources>

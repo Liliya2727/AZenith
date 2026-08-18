@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">WALT கவர்னர் அளவுருக்களை மேம்படுத்தி, CPU திட்டமிடல் பதில் வேகத்தை அதிகரிக்கவும்</string>
     <string name="welcome_azenith">AZenith க்கு வரவேற்கிறோம்</string>
     <string name="yes">ஆம்</string>
+    <string name="str_use_scroll_animation">ஸ்க்ரோல் அனிமேஷனைப் பயன்படுத்துக</string>
+    <string name="str_use_scroll_animation_summary">பக்கங்களுக்கு இடையே ஸ்வைப் அனிமேஷனை இயக்கு</string>
+    <string name="disable_tweak">ட்வீக்குகளை முடக்கு</string>
+    <string name="disable_tweak_desc">கவர்னர் மற்றும் I/O திட்டமிடல் அமைப்புகள் உட்பட அனைத்து சுயவிவரங்களுக்கும் AZenith ட்வீக்குகளைப் பயன்படுத்துவதை நிறுத்துக</string>
+    <string name="gov_settings">கவர்னர் அமைப்புகள்</string>
+    <string name="gov_settingsdesc">கவர்னர் மற்றும் திட்டமிடுபவர்களை உள்ளமைக்கவும்</string>
+    <string name="gov_settingsdesc2">உங்கள் சாதனத்தின் CPU, GPU கவர்னர் மற்றும் I/O திட்டமிடுபவர்களின் மதிப்பை உள்ளமைக்கவும், ஒவ்வொரு மதிப்பும் ஒவ்வொரு AZenith சுயவிவரத்திற்கும் பயன்படுத்தப்படும்</string>
+    <string name="presets">முன்னமைவுகள்</string>
+    <string name="str_bypass_need_setup">பைபாஸ் சார்ஜிங் பாதை இன்னும் அமைக்கப்படவில்லை. முதலில் இணக்கத்தன்மை சரிபார்ப்பு மூலம் அமைவை முடிக்கவும்.</string>
+    <string name="reboot_required_content">இந்த விருப்பத்தைப் பயன்படுத்த மறுதொடக்கத்தைத் தேவைப்படுகிறது. தொடரவா?</string>
 </resources>

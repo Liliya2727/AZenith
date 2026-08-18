@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optimalizovat parametry regulátoru WALT pro zlepšení odezvy plánovače CPU.</string>
     <string name="welcome_azenith">Vítejte v AZenith</string>
     <string name="yes">Ano</string>
+    <string name="str_use_scroll_animation">Použít animaci posouvání</string>
+    <string name="str_use_scroll_animation_summary">Povolit animaci přejíždění mezi stránkami</string>
+    <string name="disable_tweak">Zakázat úpravy</string>
+    <string name="disable_tweak_desc">Zabránit aplikaci AZenith v používání úprav pro všechny profily včetně nastavení regulátoru a plánovače I/O</string>
+    <string name="gov_settings">Nastavení regulátoru</string>
+    <string name="gov_settingsdesc">Konfigurovat regulátor a plánovače</string>
+    <string name="gov_settingsdesc2">Nakonfigurujte hodnoty regulátoru CPU, GPU a plánovačů I/O vašeho zařízení; každá hodnota se použije pro příslušný profil AZenith</string>
+    <string name="presets">Předvolby</string>
+    <string name="str_bypass_need_setup">Cesta přemostění nabíjení ještě nebyla nastavena. Nejprve dokončete nastavení pomocí kontroly kompatibility.</string>
+    <string name="reboot_required_content">Použití této možnosti vyžaduje restartování zařízení. Pokračovat?</string>
 </resources>

@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">WALT boshqaruvchisi parametrlarini optimallashtirish, CPU rejalashtirish tezligini oshirish</string>
     <string name="welcome_azenith">AZenith ga xush kelibsiz</string>
     <string name="yes">Ha</string>
+    <string name="str_use_scroll_animation">Aylantirish animatsiyasidan foydalanish</string>
+    <string name="str_use_scroll_animation_summary">Sahifalar orasida surish animatsiyasini yoqish</string>
+    <string name="disable_tweak">Moslamalarni oʻchirish</string>
+    <string name="disable_tweak_desc">AZenith sozlamalarini barcha profillarga, jumladan boshqaruvchi va I/O rejalashtiruvchisi sozlamalariga qoʻllashni toʻxtatish</string>
+    <string name="gov_settings">Boshqaruvchi sozlamalari</string>
+    <string name="gov_settingsdesc">Boshqaruvchi va rejalashtiruvchilarni sozlash</string>
+    <string name="gov_settingsdesc2">Qurilmangizning CPU, GPU boshqaruvchisi va I/O rejalashtiruvchilari qiymatini sozlang, har bir qiymat har bir AZenith profiliga qoʻllaniladi</string>
+    <string name="presets">Oldindan sozlamalar</string>
+    <string name="str_bypass_need_setup">Aylanma quvvatlash yoʻli hali sozlanmagan. Iltimos, avval Muvofiqlikni tekshirish orqali sozlashni yakunlang.</string>
+    <string name="reboot_required_content">Ushbu parametrni qoʻllash uchun qayta yuklash talab qilinadi. Davom etilsinmi?</string>
 </resources>

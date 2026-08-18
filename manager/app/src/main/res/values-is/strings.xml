@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Fínstilla WALT stjórnandafæribreytur til að bæta CPU forgangsröðun viðbragðshraða</string>
     <string name="welcome_azenith">Velkomin/nn til AZenith</string>
     <string name="yes">Já</string>
+    <string name="str_use_scroll_animation">Nota skrununarmyndhreyfingu</string>
+    <string name="str_use_scroll_animation_summary">Virkja strjúkmyndhreyfingu á milli síðna</string>
+    <string name="disable_tweak">Gera fínstillingar óvirkar</string>
+    <string name="disable_tweak_desc">Stöðva AZenith í að beita fínstillingum á öll snið, þar með talið stillingar stýris og I/O forgangsraðara</string>
+    <string name="gov_settings">Stillingar stýris</string>
+    <string name="gov_settingsdesc">Stilla stýri og forgangsraðara</string>
+    <string name="gov_settingsdesc2">Stilltu gildi CPU, GPU stýris og I/O forgangsraðara tækisins, hverju gildi er beitt á hvert AZenith snið</string>
+    <string name="presets">Forstillingar</string>
+    <string name="str_bypass_need_setup">Hjáveituhleðsluslóð hefur ekki verið sett upp ennþá. Vinsamlegast ljúktu uppsetningu fyrst með samhæfnisprófun.</string>
+    <string name="reboot_required_content">Þessi valkostur krefst endurræsingar til að taka gildi. Halda áfram?</string>
 </resources>

@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">优化 WALT 调速器参数，提升 CPU 调度响应速度</string>
     <string name="welcome_azenith">欢迎来到 AZenith</string>
     <string name="yes">是</string>
+    <string name="str_use_scroll_animation">使用滑动动画</string>
+    <string name="str_use_scroll_animation_summary">启用页面间的滑动切换动画</string>
+    <string name="disable_tweak">禁用调优</string>
+    <string name="disable_tweak_desc">阻止 AZenith 将调优应用到所有模式，包括调速器设置和 I/O 调度器设置</string>
+    <string name="gov_settings">调速器设置</string>
+    <string name="gov_settingsdesc">配置调速器和调度器</string>
+    <string name="gov_settingsdesc2">配置设备的 CPU、GPU 调速器和 I/O 调度器参数，各数值将应用于各个 AZenith 模式</string>
+    <string name="presets">预设</string>
+    <string name="str_bypass_need_setup">旁路充电路径尚未设置。请先通过兼容性检查完成配置。</string>
+    <string name="reboot_required_content">此选项需要重启设备才能生效。是否继续？</string>
 </resources>

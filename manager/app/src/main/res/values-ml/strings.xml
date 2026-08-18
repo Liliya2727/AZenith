@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">WALT ഗവർണർ പാരാമീറ്ററുകൾ ഒപ്റ്റിമൈസ് ചെയ്യുക, CPU ഷെഡ്യൂളിംഗ് പ്രതികരണശേഷി മെച്ചപ്പെടുത്തുക</string>
     <string name="welcome_azenith">AZenith-ലേക്ക് സ്വാഗതം</string>
     <string name="yes">അതെ</string>
+    <string name="str_use_scroll_animation">സ്ക്രോൾ ആനിമേഷൻ ഉപയോഗിക്കുക</string>
+    <string name="str_use_scroll_animation_summary">പേജുകൾക്കിടയിൽ സ്വൈപ്പ് ആനിമേഷൻ പ്രവർത്തനക്ഷമമാക്കുക</string>
+    <string name="disable_tweak">ട്വീക്കുകൾ പ്രവർത്തനരഹിതമാക്കുക</string>
+    <string name="disable_tweak_desc">ഗവർണറും I/O ഷെഡ്യൂളർ ക്രമീകരണങ്ങളും ഉൾപ്പെടെ എല്ലാ പ്രൊഫൈലുകളിലും AZenith ട്വീക്കുകൾ പ്രയോഗിക്കുന്നത് നിർത്തുക</string>
+    <string name="gov_settings">ഗവർണർ ക്രമീകരണങ്ങൾ</string>
+    <string name="gov_settingsdesc">ഗവർണറും ഷെഡ്യൂളറുകളും ക്രമീകരിക്കുക</string>
+    <string name="gov_settingsdesc2">നിങ്ങളുടെ ഉപകരണത്തിന്റെ CPU, GPU ഗവർണർ, I/O ഷെഡ്യൂളർ മൂല്യങ്ങൾ കോൺഫിഗർ ചെയ്യുക, ഓരോ മൂല്യവും ഓരോ AZenith പ്രൊഫൈലിലും പ്രയോഗിക്കുന്നു</string>
+    <string name="presets">പ്രീസെറ്റുകൾ</string>
+    <string name="str_bypass_need_setup">ബൈപാസ് ചാർജിംഗ് പാത്ത് ഇതുവരെ സജ്ജീകരിച്ചിട്ടില്ല. അനുയോജ്യത പരിശോധന വഴി ആദ്യം സജ്ജീകരണം പൂർത്തിയാക്കുക.</string>
+    <string name="reboot_required_content">ഈ ഓപ്ഷൻ പ്രയോഗിക്കാൻ ഉപകരണം പുനരാരംഭിക്കേണ്ടതുണ്ട്. തുടരണോ?</string>
 </resources>

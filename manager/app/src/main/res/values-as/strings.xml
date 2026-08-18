@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">WALT গৰ্ণৰ পেৰামিটাৰ অপ্টিমাইজ কৰক, CPU শিডিউলিং প্ৰতিক্ৰিয়া গতি বৃদ্ধি কৰক</string>
     <string name="welcome_azenith">AZenith লৈ স্বাগতম</string>
     <string name="yes">হয়</string>
+    <string name="str_use_scroll_animation">স্ক্ৰল এনিমেশ্যন ব্যৱহাৰ কৰক</string>
+    <string name="str_use_scroll_animation_summary">পৃষ্ঠাসমূহৰ মাজত ছুইপ এনিমেশ্যন সক্ষম কৰক</string>
+    <string name="disable_tweak">টুইক অক্ষম কৰক</string>
+    <string name="disable_tweak_desc">AZenith-এ গৱৰ্ণৰ আৰু I/O শিডিউলাৰ ছেটিংছকে ধৰি সকলো প্ৰ&apos;ফাইলত টুইক প্ৰয়োগ কৰা বন্ধ কৰক</string>
+    <string name="gov_settings">গৱৰ্ণৰ ছেটিংছ</string>
+    <string name="gov_settingsdesc">গৱৰ্ণৰ আৰু শিডিউলাৰ কনফিগাৰ কৰক</string>
+    <string name="gov_settingsdesc2">আপোনাৰ ডিভাইচৰ CPU, GPU গৱৰ্ণৰ আৰু IO শিডিউলাৰ মান কনফিগাৰ কৰক, প্ৰতিটো মান প্ৰতিটো AZenith প্ৰ&apos;ফাইলত প্ৰয়োগ কৰা হ&apos;ব</string>
+    <string name="presets">প্ৰিছেটসমূহ</string>
+    <string name="str_bypass_need_setup">বাইপাছ চাৰ্জিং পাথ এতিয়াও সংস্থাপন কৰা হোৱা নাই। অনুগ্ৰহ কৰি প্ৰথমে সংগতি পৰীক্ষাৰ জৰিয়তে সংস্থাপন সম্পূৰ্ণ কৰক।</string>
+    <string name="reboot_required_content">এই বিকল্পটো প্ৰୟੋগ হ&apos;বলৈ ৰিবুট কৰাৰ প্ৰয়োজন। আগবাঢ়িবনে?</string>
 </resources>

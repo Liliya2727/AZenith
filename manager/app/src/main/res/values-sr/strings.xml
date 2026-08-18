@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optimizuje WALT guverner parametre, poboljšava brzinu odziva CPU planiranja.</string>
     <string name="welcome_azenith">Dobrodošli u AZenith</string>
     <string name="yes">Da</string>
+    <string name="str_use_scroll_animation">Користи анимацију померања</string>
+    <string name="str_use_scroll_animation_summary">Омогући анимацију превлачења између страница</string>
+    <string name="disable_tweak">Онемогући прилагођавања</string>
+    <string name="disable_tweak_desc">Заустави AZenith у примени прилагођавања на све профиле, укључујући поставке регулатора и I/O распоређивача</string>
+    <string name="gov_settings">Поставке регулатора</string>
+    <string name="gov_settingsdesc">Конфигуришите регулатор и распоређиваче</string>
+    <string name="gov_settingsdesc2">Конфигуришите вредности CPU, GPU регулатора и I/O распоређивача уређаја, свака вредност се примењује на сваки AZenith профил</string>
+    <string name="presets">Унапред подешене поставке</string>
+    <string name="str_bypass_need_setup">Путања за бајпас напајање још увек није постављена. Прво довршите постављање путем Провере компатибилности.</string>
+    <string name="reboot_required_content">Ова опција захтева поновно покретање да би ступила на снагу. Наставити?</string>
 </resources>

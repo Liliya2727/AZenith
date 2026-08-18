@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">WALT szabályzó paramétereinek optimalizálása a CPU ütemezési válaszidő javítása érdekében</string>
     <string name="welcome_azenith">Üdvözli az AZenith</string>
     <string name="yes">Igen</string>
+    <string name="str_use_scroll_animation">Görgetési animáció használata</string>
+    <string name="str_use_scroll_animation_summary">Oldalak közötti legyintési animáció engedélyezése</string>
+    <string name="disable_tweak">Módosítások letiltása</string>
+    <string name="disable_tweak_desc">Megakadályozza, hogy az AZenith módosításokat alkalmazzon az összes profilra, beleértve a szabályozó és az I/O ütemező beállításait</string>
+    <string name="gov_settings">Szabályozó beállításai</string>
+    <string name="gov_settingsdesc">Szabályozó és ütemezők konfigurálása</string>
+    <string name="gov_settingsdesc2">Konfigurálja az eszköz CPU, GPU szabályozó és I/O ütemező értékeit; az értékek az egyes AZenith profilokra lesznek alkalmazva</string>
+    <string name="presets">Előbeállítások</string>
+    <string name="str_bypass_need_setup">A közvetlen töltési útvonal még nincs beállítva. Kérjük, először fejezze be a beállítást a Kompatibilitási ellenőrzésen keresztül.</string>
+    <string name="reboot_required_content">Ennek a beállításnak az alkalmazásához újraindítás szükséges. Folytatja?</string>
 </resources>

@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">WALT ಗವರ್ನರ್ ಪ್ಯಾರಾಮೀಟರ್‌ಗಳನ್ನು ಆಪ್ಟಿಮೈಸ್ ಮಾಡಿ, CPU ಶೆಡ್ಯೂಲಿಂಗ್ ಪ್ರತಿಕ್ರಿಯೆ ವೇಗವನ್ನು ಹೆಚ್ಚಿಸಿ</string>
     <string name="welcome_azenith">AZenith ಗೆ ಸ್ವಾಗತ</string>
     <string name="yes">ಹೌದು</string>
+    <string name="str_use_scroll_animation">ಸ್ಕ್ರೋಲ್ ಅನಿಮೇಷನ್ ಬಳಸಿ</string>
+    <string name="str_use_scroll_animation_summary">ಪುಟಗಳ ನಡುವೆ ಸ್ವೈಪ್ ಅನಿಮೇಷನ್ ಸಕ್ರಿಯಗೊಳಿಸಿ</string>
+    <string name="disable_tweak">ಟ್ವೀಕ್‌ಗಳನ್ನು ನಿಷ್ಕ್ರಿಯಗೊಳಿಸಿ</string>
+    <string name="disable_tweak_desc">ಗವರ್ನರ್ ಮತ್ತು I/O ಶೆಡ್ಯೂಲರ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳು ಸೇರಿದಂತೆ ಎಲ್ಲಾ ಪ್ರೊಫೈಲ್‌ಗಳಿಗೆ AZenith ಟ್ವೀಕ್‌ಗಳನ್ನು ಅನ್ವಯಿಸುವುದನ್ನು ನಿಲ್ಲಿಸಿ</string>
+    <string name="gov_settings">ಗವರ್ನರ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳು</string>
+    <string name="gov_settingsdesc">ಗವರ್ನರ್ ಮತ್ತು ಶೆಡ್ಯೂಲರ್‌ಗಳನ್ನು ಕಾನ್ಫಿಗರ್ ಮಾಡಿ</string>
+    <string name="gov_settingsdesc2">ನಿಮ್ಮ ಸಾಧನದ CPU, GPU ಗವರ್ನರ್ ಮತ್ತು I/O ಶೆಡ್ಯೂಲರ್‌ಗಳ ಮೌಲ್ಯವನ್ನು ಕಾನ್ಫಿಗರ್ ಮಾಡಿ, ಪ್ರತಿಯೊಂದು ಮೌಲ್ಯವನ್ನು ಪ್ರತಿ AZenith ಪ್ರೊಫೈಲ್‌ಗೆ ಅನ್ವಯಿಸಲಾಗುತ್ತದೆ</string>
+    <string name="presets">ಪೂರ್ವನಿಗದಿಗಳು</string>
+    <string name="str_bypass_need_setup">ಬೈಪಾಸ್ ಚಾರ್ಜಿಂಗ್ ಮಾರ್ಗವನ್ನು ಇನ್ನೂ ಹೊಂದಿಸಲಾಗಿಲ್ಲ. ದಯವಿಟ್ಟು ಮೊದಲು ಹೊಂದಾಣಿಕೆ ಪರಿಶೀಲನೆ ಮೂಲಕ ಸೆಟಪ್ ಪೂರ್ಣಗೊಳಿಸಿ.</string>
+    <string name="reboot_required_content">ಈ ಆಯ್ಕೆಯನ್ನು ಅನ್ವಯಿಸಲು ಮರುಪ್ರಾರಂಭದ ಅಗತ್ಯವಿದೆ. ಮುಂದುವರಿಯುವುದೇ?</string>
 </resources>

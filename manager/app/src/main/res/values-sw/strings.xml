@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Boresha vigezo vya kidhibiti cha WALT, kuongeza kasi ya majibu ya ratiba ya CPU</string>
     <string name="welcome_azenith">Karibu kwenye AZenith</string>
     <string name="yes">Ndiyo</string>
+    <string name="str_use_scroll_animation">Tumia Uhuishaji wa Kusogeza</string>
+    <string name="str_use_scroll_animation_summary">Washa uhuishaji wa kutelezesha kati ya kurasa</string>
+    <string name="disable_tweak">Zima Marekebisho</string>
+    <string name="disable_tweak_desc">Sitisha AZenith kutumia marekebisho kwa wasifu wote ikijumuisha mipangilio ya gavana na kiratiba cha I/O</string>
+    <string name="gov_settings">Mipangilio ya Gavana</string>
+    <string name="gov_settingsdesc">Sanidi Gavana na Viriba</string>
+    <string name="gov_settingsdesc2">Sanidi thamani za Gavana wa CPU, GPU na Kiratiba cha I/O cha kifaa chako, kila thamani inatumika kwa kila wasifu wa AZenith</string>
+    <string name="presets">Mipangilio Awali</string>
+    <string name="str_bypass_need_setup">Njia ya kuchaji moja kwa moja haijawekwa bado. Tafadhali kamilisha usanidi kupitia Ukaguzi wa Utangamano kwanza.</string>
+    <string name="reboot_required_content">Chaguo hili linahitaji kuwasha upya kifaa ili kutumika. Endelea?</string>
 </resources>

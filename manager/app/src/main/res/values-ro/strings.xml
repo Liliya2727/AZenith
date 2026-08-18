@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optimizează parametrii governorului WALT pentru a îmbunătăți viteza de răspuns a programării CPU</string>
     <string name="welcome_azenith">Bun venit la AZenith</string>
     <string name="yes">Da</string>
+    <string name="str_use_scroll_animation">Utilizează animația de derulare</string>
+    <string name="str_use_scroll_animation_summary">Activează animația de glisare între pagini</string>
+    <string name="disable_tweak">Dezactivează ajustările</string>
+    <string name="disable_tweak_desc">Oprește AZenith să aplice ajustări tuturor profilurilor, inclusiv setărilor de regulator și planificator I/O</string>
+    <string name="gov_settings">Setări regulator</string>
+    <string name="gov_settingsdesc">Configurează regulatorul și planificatoarele</string>
+    <string name="gov_settingsdesc2">Configurați valorile regulatorului CPU, GPU și ale planificatoarelor I/O ale dispozitivului, fiecare valoare aplicată fiecărui profil AZenith</string>
+    <string name="presets">Presetări</string>
+    <string name="str_bypass_need_setup">Calea de încărcare bypass nu a fost încă configurată. Vă rugăm să finalizați mai întâi configurarea prin Verificarea compatibilității.</string>
+    <string name="reboot_required_content">Această opțiune necesită o repornire pentru a fi aplicată. Continuați?</string>
 </resources>

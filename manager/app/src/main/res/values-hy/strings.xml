@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Օպտիմալացնել WALT կարգավորիչի պարամետրերը՝ բարձրացնելով CPU-ի պլանավորման արձագանքման արագությունը</string>
     <string name="welcome_azenith">Բարի գալուստ AZenith</string>
     <string name="yes">Այո</string>
+    <string name="str_use_scroll_animation">Օգտագործել ոլորման անիմացիա</string>
+    <string name="str_use_scroll_animation_summary">Միացնել էջերի միջև սահեցման անիմացիան</string>
+    <string name="disable_tweak">Անջատել կարգավորումները</string>
+    <string name="disable_tweak_desc">Դադարեցնել AZenith-ի կարգավորումների կիրառումը բոլոր պրոֆիլների համար, ներառյալ կարգավորիչի և I/O պլանավորողի կարգավորումները</string>
+    <string name="gov_settings">Կարգավորիչի կարգավորումներ</string>
+    <string name="gov_settingsdesc">Կարգավորել կարգավորիչը և պլանավորողները</string>
+    <string name="gov_settingsdesc2">Կարգավորեք սարքի CPU, GPU կարգավորիչի և I/O պլանավորողների արժեքները, յուրաքանչյուր արժեք կիրառվում է AZenith-ի յուրաքանչյուր պրոֆիլի վրա</string>
+    <string name="presets">Նախադրյալներ</string>
+    <string name="str_bypass_need_setup">Շրջանցիկ լիցքավորման ուղին դեռ կարգավորված չէ: Խնդրում ենք նախ ավարտել կարգավորումը Համատեղելիության ստուգման միջոցով:</string>
+    <string name="reboot_required_content">Այս տարբերակը կիրառելու համար անհրաժեշտ է վերագործարկել սարքը: Շարունակե՞լ:</string>
 </resources>

@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">የWALT አስተዳዳሪ መመዘኛዎች ያሻሽሉ፣ የሲፒዩ መርሐግብር ምላሽ ፍጥነት ያሻሽሉ</string>
     <string name="welcome_azenith">እንኳን ወደ AZenith በደህና መጡ</string>
     <string name="yes">አዎ</string>
+    <string name="str_use_scroll_animation">የማሸብለል አኒሜሽን ተጠቀም</string>
+    <string name="str_use_scroll_animation_summary">በገጾች መካከል የማንሸራተት አኒሜሽን አንቃ</string>
+    <string name="disable_tweak">ማስተካከያዎችን አሰናክል</string>
+    <string name="disable_tweak_desc">AZenith የአስተዳዳሪ እና የI/O መርሐግብር ቅንብሮችን ጨምሮ ለሁሉም መገለጫዎች ማስተካከያዎችን እንዳይተገብር አቁም</string>
+    <string name="gov_settings">የአስተዳዳሪ ቅንብሮች</string>
+    <string name="gov_settingsdesc">አስተዳዳሪ እና መርሐግብሮችን ያዋቅሩ</string>
+    <string name="gov_settingsdesc2">የመሣሪያዎን የCPU፣ የGPU አስተዳዳሪ እና የI/O መርሐግብር እሴት ያዋቅሩ፣ እያንዳንዱ እሴት ለእያንዳንዱ የAZenith መገለጫ ይተገበራል</string>
+    <string name="presets">ቅድመ-ቅምጦች</string>
+    <string name="str_bypass_need_setup">የተለየ ሃይል አቅርቦት መንገድ እስካሁን አልተዘጋጀም። እባክዎ መጀመሪያ በተኳሃኝነት ማረጋገጫ በኩል ማዋቀሩን ያጠናቅቁ።</string>
+    <string name="reboot_required_content">ይህ አማራጭ ተግባራዊ እንዲሆን ዳግም ማስነሳት ያስፈልጋል። ይቀጥሉ?</string>
 </resources>

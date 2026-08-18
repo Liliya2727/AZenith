@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optimeeri WALT-juhtimise parameetreid CPU ajastuse reageerimisaja parandamiseks</string>
     <string name="welcome_azenith">Tere tulemast AZenithi</string>
     <string name="yes">Jah</string>
+    <string name="str_use_scroll_animation">Kasuta kerimisanimatsiooni</string>
+    <string name="str_use_scroll_animation_summary">Luba lehtede vahel libistamise animatsioon</string>
+    <string name="disable_tweak">Keela kohandused</string>
+    <string name="disable_tweak_desc">Peata AZenithi kohanduste rakendamine kõigile profiilidele, sealhulgas regulaatori ja I/O plaanuri seadetele</string>
+    <string name="gov_settings">Regulaatori seaded</string>
+    <string name="gov_settingsdesc">Seadista regulaator ja plaanurid</string>
+    <string name="gov_settingsdesc2">Seadistage seadme CPU, GPU regulaatori ja I/O plaanurite väärtused, iga väärtus rakendatakse igale AZenithi profiilile</string>
+    <string name="presets">Eelseadistused</string>
+    <string name="str_bypass_need_setup">Möödaviiklaadimise rada pole veel seadistatud. Palun viige esmalt seadistamine lõpule ühilduvuskontrolli kaudu.</string>
+    <string name="reboot_required_content">Selle valiku rakendamiseks on vaja taaskäivitust. Kas jätkata?</string>
 </resources>

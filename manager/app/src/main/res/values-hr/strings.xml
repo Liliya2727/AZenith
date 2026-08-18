@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optimiziraj parametre WALT upravljača, poboljšaj brzinu odziva CPU planiranja</string>
     <string name="welcome_azenith">Dobrodošli u AZenith</string>
     <string name="yes">Da</string>
+    <string name="str_use_scroll_animation">Koristi animaciju pomicanja</string>
+    <string name="str_use_scroll_animation_summary">Omogući animaciju prevlačenja između stranica</string>
+    <string name="disable_tweak">Onemogući prilagodbe</string>
+    <string name="disable_tweak_desc">Zaustavi AZenith u primjeni prilagodbi na sve profile, uključujući postavke regulatora i I/O raspoređivača</string>
+    <string name="gov_settings">Postavke regulatora</string>
+    <string name="gov_settingsdesc">Konfigurirajte regulator i raspoređivače</string>
+    <string name="gov_settingsdesc2">Konfigurirajte vrijednosti CPU, GPU regulatora i I/O raspoređivača uređaja, svaka vrijednost se primjenjuje na svaki AZenith profil</string>
+    <string name="presets">Unaprijed definirane postavke</string>
+    <string name="str_bypass_need_setup">Putanja za bypass punjenje još nije postavljena. Prvo dovršite postavljanje putem Provjere kompatibilnosti.</string>
+    <string name="reboot_required_content">Ova opcija zahtijeva ponovno pokretanje kako bi se primijenila. Nastaviti?</string>
 </resources>

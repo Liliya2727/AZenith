@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">WALT მართველის პარამეტრების ოპტიმიზაცია, CPU განრიგის რეაგირების სიჩქარის გაზრდა</string>
     <string name="welcome_azenith">მოგესალმებით AZenith-ში</string>
     <string name="yes">დიახ</string>
+    <string name="str_use_scroll_animation">გადახვევის ანიმაციის გამოყენება</string>
+    <string name="str_use_scroll_animation_summary">გვერდებს შორის გადაფურცვლის ანიმაციის ჩართვა</string>
+    <string name="disable_tweak">ოპტიმიზაციების გამორთვა</string>
+    <string name="disable_tweak_desc">შეაჩერეთ AZenith-ის მიერ ოპტიმიზაციების გამოყენება ყველა პროფილზე, მმართველისა და I/O დამგეგმავის პარამეტრების ჩათვლით</string>
+    <string name="gov_settings">მმართველის პარამეტრები</string>
+    <string name="gov_settingsdesc">მმართველისა და დამგეგმავების კონფიგურაცია</string>
+    <string name="gov_settingsdesc2">მოარგეთ მოწყობილობის CPU, GPU მმართველი და I/O დამგეგმავის მნიშვნელობები, თითოეული მნიშვნელობა გამოიყენება AZenith-ის თითოეულ პროფილზე</string>
+    <string name="presets">წინასწარ დაყენებული პარამეტრები</string>
+    <string name="str_bypass_need_setup">პირდაპირი კვების გზა ჯერ არ არის დაყენებული. გთხოვთ, ჯერ დაასრულოთ დაყენება თავსებადობის შემოწმების საშუალებით.</string>
+    <string name="reboot_required_content">ამ პარამეტრის გამოსაყენებლად საჭიროა გადატვირთვა. გსურთ გაგრძელება?</string>
 </resources>

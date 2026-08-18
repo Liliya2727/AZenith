@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">WALT ଗଭର୍ନର ପାରାମିଟର ଅପ୍ଟିମାଇଜ୍ କରନ୍ତୁ, CPU ଶେଡ୍ୟୁଲିଂ ପ୍ରତିକ୍ରିୟା ଗତି ବୃଦ୍ଧି କରନ୍ତୁ</string>
     <string name="welcome_azenith">AZenith କୁ ସ୍ୱାଗତ</string>
     <string name="yes">ହଁ</string>
+    <string name="str_use_scroll_animation">ସ୍କ୍ରୋଲ୍ ଆନିମେସନ୍ ବ୍ୟବହାର କରନ୍ତୁ</string>
+    <string name="str_use_scroll_animation_summary">ପୃଷ୍ଠାଗୁଡ଼ିକ ମଧ୍ୟରେ ସ୍ୱାଇପ୍ ଆନିମେସନ୍ ସକ୍ଷମ କରନ୍ତୁ</string>
+    <string name="disable_tweak">ଟ୍ୱିକ୍ ଅକ୍ଷମ କରନ୍ତୁ</string>
+    <string name="disable_tweak_desc">ଗଭର୍ଣ୍ଣର ଏବଂ I/O ସିଡ୍ୟୁଲର୍ ସେଟିଂସମୂହ ସହିତ ସମସ୍ତ ପ୍ରୋଫାଇଲରେ AZenith ଦ୍ୱାରା ଟ୍ୱିକ୍ ପ୍ରୟୋଗ ବନ୍ଦ କରନ୍ତୁ</string>
+    <string name="gov_settings">ଗଭର୍ଣ୍ଣର ସେଟିଂସମୂହ</string>
+    <string name="gov_settingsdesc">ଗଭର୍ଣ୍ଣର ଏବଂ ସିଡ୍ୟୁଲର୍ସ କନଫିଗର୍ କରନ୍ତୁ</string>
+    <string name="gov_settingsdesc2">ଆପଣଙ୍କ ଡିଭାଇସର CPU, GPU ଗଭର୍ଣ୍ଣର ଏବଂ I/O ସିଡ୍ୟୁଲର୍ ମୂଲ୍ୟ କନଫିଗର୍ କରନ୍ତୁ, ପ୍ରତ୍ୟେକ ମୂଲ୍ୟ ପ୍ରତ୍ୟେକ AZenith ପ୍ରୋଫାଇଲରେ ପ୍ରୟୋଗ ହେବ</string>
+    <string name="presets">ପ୍ରିସେଟ୍ସ</string>
+    <string name="str_bypass_need_setup">ବାଇପାସ୍ ଚାର୍ଜିଂ ପାଥ୍ ଏପର୍ଯ୍ୟନ୍ତ ସେଟ୍ ଅପ୍ ହୋଇନାହିଁ। ଦୟାକରି ପ୍ରଥମେ ସୁସଙ୍ଗତତା ଯାଞ୍ଚ ମାଧ୍ୟମରେ ସେଟଅପ୍ ସମ୍ପୂର୍ଣ୍ଣ କରନ୍ତୁ।</string>
+    <string name="reboot_required_content">ଏହି ବିକଳ୍ପ ପ୍ରୟୋଗ ହେବା ପାଇଁ ରିବୁଟ୍ ଆବଶ୍ୟକ। ଜାରି ରଖିବେ?</string>
 </resources>

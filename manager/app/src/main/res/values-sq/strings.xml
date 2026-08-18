@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optimizo parametrat e rregullatorit WALT për të përmirësuar përgjigjen e planifikimit CPU</string>
     <string name="welcome_azenith">Mirë se vini në AZenith</string>
     <string name="yes">Po</string>
+    <string name="str_use_scroll_animation">Përdor animacionin e lëvizjes</string>
+    <string name="str_use_scroll_animation_summary">Aktivizo animacionin e rrëshqitjes midis faqeve</string>
+    <string name="disable_tweak">Çaktivizo modifikimet</string>
+    <string name="disable_tweak_desc">Ndalo AZenith të zbatojë modifikime në të gjitha profilet, duke përfshirë cilësimet e guvernatorit dhe planifikuesit I/O</string>
+    <string name="gov_settings">Cilësimet e guvernatorit</string>
+    <string name="gov_settingsdesc">Konfiguro guvernatorin dhe planifikuesit</string>
+    <string name="gov_settingsdesc2">Konfiguroni vlerat e guvernatorit të CPU, GPU dhe planifikuesve I/O të pajisjes suaj, çdo vlerë zbatohet në secilin profil të AZenith</string>
+    <string name="presets">Paracaktimet</string>
+    <string name="str_bypass_need_setup">Rruga e karikimit anashkalues nuk është konfiguruar ende. Ju lutemi plotësoni fillimisht konfigurimin përmes Kontrollit të Përputhshmërisë.</string>
+    <string name="reboot_required_content">Ky opsion kërkon një rindezje për t'u zbatuar. Të vazhdohet?</string>
 </resources>

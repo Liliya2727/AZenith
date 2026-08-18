@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">最佳化 WALT 調速器參數，提升 CPU 排程回應速度</string>
     <string name="welcome_azenith">歡迎來到 AZenith</string>
     <string name="yes">是</string>
+    <string name="str_use_scroll_animation">使用滑動動畫</string>
+    <string name="str_use_scroll_animation_summary">啟用頁面間的滑動切換動畫</string>
+    <string name="disable_tweak">停用微調</string>
+    <string name="disable_tweak_desc">停止 AZenith 將微調套用到所有設定檔，包括調節器設定和 I/O 排程器設定</string>
+    <string name="gov_settings">調節器設定</string>
+    <string name="gov_settingsdesc">設定調節器與排程器</string>
+    <string name="gov_settingsdesc2">設定裝置的 CPU、GPU 調節器與 I/O 排程器數值，各數值將套用至每個 AZenith 設定檔</string>
+    <string name="presets">預設集</string>
+    <string name="str_bypass_need_setup">尚未設定旁路充電路徑。請先透過相容性檢查完成設定。</string>
+    <string name="reboot_required_content">此選項需要重新啟動才能生效。是否繼續？</string>
 </resources>

@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optimizuoti WALT valdiklio parametrus, pagerinti CPU planavimo reagavimo greitį</string>
     <string name="welcome_azenith">Sveiki atvykę į AZenith</string>
     <string name="yes">Taip</string>
+    <string name="str_use_scroll_animation">Naudoti slinkties animaciją</string>
+    <string name="str_use_scroll_animation_summary">Įjungti perbraukimo animaciją tarp puslapių</string>
+    <string name="disable_tweak">Išjungti patobulinimus</string>
+    <string name="disable_tweak_desc">Neleisti AZenith taikyti patobulinimų visiems profiliams, įskaitant valdiklio ir I/O planuoklio nustatymus</string>
+    <string name="gov_settings">Valdiklio nustatymai</string>
+    <string name="gov_settingsdesc">Konfigūruoti valdiklį ir planuoklius</string>
+    <string name="gov_settingsdesc2">Konfigūruokite įrenginio CPU, GPU valdiklio ir I/O planuoklių vertes; kiekviena vertė taikoma kiekvienam AZenith profiliui</string>
+    <string name="presets">Išankstiniai nustatymai</string>
+    <string name="str_bypass_need_setup">Apėjimo įkrovimo kelias dar nenustatytas. Pirmiausia atlikite sąranką naudodami suderinamumo patikrą.</string>
+    <string name="reboot_required_content">Norint pritaikyti šią parinktį, reikia paleisti iš naujo. Tęsti?</string>
 </resources>

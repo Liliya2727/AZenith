@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">WALT tənzimləyici parametrlərini optimallaşdıraraq CPU planlama cavab sürətini artırın</string>
     <string name="welcome_azenith">AZenith-ə xoş gəlmisiniz</string>
     <string name="yes">Bəli</string>
+    <string name="str_use_scroll_animation">Sürüşdürmə animasiyasından istifadə edin</string>
+    <string name="str_use_scroll_animation_summary">Səhifələr arasında sürüşdürmə animasiyasını aktivləşdirin</string>
+    <string name="disable_tweak">Təkmilləşdirmələri deaktiv edin</string>
+    <string name="disable_tweak_desc">AZenith-in tənzimləyici və I/O planlayıcısı parametrləri daxil olmaqla bütün profillərə təkmilləşdirmələri tətbiq etməsini dayandırın</string>
+    <string name="gov_settings">Tənzimləyici parametrləri</string>
+    <string name="gov_settingsdesc">Tənzimləyici və planlayıcıları konfiqurasiya edin</string>
+    <string name="gov_settingsdesc2">Cihazınızın CPU, GPU tənzimləyicisi və I/O planlayıcı dəyərini konfiqurasiya edin, hər dəyər hər AZenith profilinə tətbiq olunur</string>
+    <string name="presets">Ön təyinatlar</string>
+    <string name="str_bypass_need_setup">Yan keçid enerji təchizatı yolu hələ qurulmayıb. Zəhmət olmasa, əvvəlcə Uyğunluq yoxlaması vasitəsilə quraşdırmanı tamamlayın.</string>
+    <string name="reboot_required_content">Bu seçimin tətbiq edilməsi üçün yenidən başlatma tələb olunur. Davam edilsin?</string>
 </resources>

@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">WALT yönetici parametrelerini optimize ederek CPU zamanlama tepki hızını artır</string>
     <string name="welcome_azenith">AZenith&amp;apos;e hoş geldiniz</string>
     <string name="yes">Evet</string>
+    <string name="str_use_scroll_animation">Kaydırma Animasyonunu Kullan</string>
+    <string name="str_use_scroll_animation_summary">Sayfalar arasında kaydırma animasyonunu etkinleştir</string>
+    <string name="disable_tweak">İnce Ayarları Devre Dışı Bırak</string>
+    <string name="disable_tweak_desc">AZenith'in yönetici ve G/Ç zamanlayıcı ayarları dahil tüm profillere ince ayar uygulamasını durdurun</string>
+    <string name="gov_settings">Yönetici Ayarları</string>
+    <string name="gov_settingsdesc">Yöneticiyi ve Zamanlayıcıları Yapılandırın</string>
+    <string name="gov_settingsdesc2">Cihazınızın CPU, GPU yöneticisi ve G/Ç zamanlayıcı değerini yapılandırın, her değer her AZenith profiline uygulanır</string>
+    <string name="presets">Ön Ayarlar</string>
+    <string name="str_bypass_need_setup">Bypass şarj yolu henüz ayarlanmadı. Lütfen önce Uyumluluk Denetimi aracılığıyla kurulumu tamamlayın.</string>
+    <string name="reboot_required_content">Bu seçeneğin uygulanması için yeniden başlatma gerekir. Devam edilsin mi?</string>
 </resources>

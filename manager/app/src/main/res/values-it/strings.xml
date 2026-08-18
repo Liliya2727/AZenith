@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Ottimizza i parametri del governor WALT per migliorare la reattività dello scheduling CPU</string>
     <string name="welcome_azenith">Benvenuto su AZenith</string>
     <string name="yes">Sì</string>
+    <string name="str_use_scroll_animation">Usa animazione di scorrimento</string>
+    <string name="str_use_scroll_animation_summary">Abilita l'animazione di scorrimento tra le pagine</string>
+    <string name="disable_tweak">Disattiva modifiche</string>
+    <string name="disable_tweak_desc">Impedisci ad AZenith di applicare modifiche a tutti i profili, inclusi i parametri del governor e dello scheduler I/O</string>
+    <string name="gov_settings">Impostazioni governor</string>
+    <string name="gov_settingsdesc">Configura governor e scheduler</string>
+    <string name="gov_settingsdesc2">Configura i valori di governor CPU, GPU e scheduler I/O del dispositivo; ciascun valore viene applicato a ciascun profilo AZenith</string>
+    <string name="presets">Preimpostazioni</string>
+    <string name="str_bypass_need_setup">Il percorso di ricarica bypass non è ancora stato configurato. Completa prima la configurazione tramite il Controllo compatibilità.</string>
+    <string name="reboot_required_content">Questa opzione richiede il riavvio per essere applicata. Continuare?</string>
 </resources>

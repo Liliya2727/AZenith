@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">WALT реттегішінің параметрлерін оңтайландырып, CPU жоспарлау жауап беру жылдамдығын арттыру</string>
     <string name="welcome_azenith">AZenith-ке қош келдіңіз</string>
     <string name="yes">Иә</string>
+    <string name="str_use_scroll_animation">Айналдыру анимациясын пайдалану</string>
+    <string name="str_use_scroll_animation_summary">Беттер арасында сырғыту анимациясын қосу</string>
+    <string name="disable_tweak">Твикті өшіру</string>
+    <string name="disable_tweak_desc">AZenith-тің барлық профильдерге, соның ішінде реттеуіш пен енгізу-шығару жоспарлағышының параметрлеріне твиктерді қолдануын тоқтату</string>
+    <string name="gov_settings">Реттеуіш параметрлері</string>
+    <string name="gov_settingsdesc">Реттеуіш пен жоспарлағыштарды баптау</string>
+    <string name="gov_settingsdesc2">Құрылғыңыздың CPU, GPU реттеуішін және I/O жоспарлағышының мәндерін баптаңыз, әр мән әрбір AZenith профиліне қолданылады</string>
+    <string name="presets">Алдын ала орнатулар</string>
+    <string name="str_bypass_need_setup">Айналмалы зарядтау жолы әлі орнатылмаған. Алдымен Үйлесімділікті тексеру арқылы орнатуды аяқтаңыз.</string>
+    <string name="reboot_required_content">Бұл опцияны қолдану үшін қайта жүктеу қажет. Жалғастыру керек пе?</string>
 </resources>

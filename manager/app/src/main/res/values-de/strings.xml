@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optimiert WALT-Governor-Parameter, um die CPU-Scheduling-Reaktionsgeschwindigkeit zu verbessern</string>
     <string name="welcome_azenith">Willkommen bei AZenith</string>
     <string name="yes">Ja</string>
+    <string name="str_use_scroll_animation">Scroll-Animation verwenden</string>
+    <string name="str_use_scroll_animation_summary">Wisch-Animation zwischen Seiten aktivieren</string>
+    <string name="disable_tweak">Optimierungen deaktivieren</string>
+    <string name="disable_tweak_desc">Verhindert, dass AZenith Optimierungen auf alle Profile anwendet, einschließlich Governor- und I/O-Scheduler-Einstellungen</string>
+    <string name="gov_settings">Governor-Einstellungen</string>
+    <string name="gov_settingsdesc">Governor und Scheduler konfigurieren</string>
+    <string name="gov_settingsdesc2">Konfigurieren Sie CPU-, GPU-Governor und I/O-Scheduler-Werte für Ihr Gerät; jeder Wert wird auf das jeweilige AZenith-Profil angewendet</string>
+    <string name="presets">Voreinstellungen</string>
+    <string name="str_bypass_need_setup">Bypass-Ladepfad wurde noch nicht eingerichtet. Bitte schließen Sie die Einrichtung zuerst über die Kompatibilitätsprüfung ab.</string>
+    <string name="reboot_required_content">Diese Option erfordert einen Neustart, um angewendet zu werden. Fortfahren?</string>
 </resources>

@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">WALTガバナーのパラメータを最適化し、CPUスケジューリングの応答速度を向上</string>
     <string name="welcome_azenith">AZenithへようこそ</string>
     <string name="yes">はい</string>
+    <string name="str_use_scroll_animation">スクロールアニメーションを使用</string>
+    <string name="str_use_scroll_animation_summary">ページ間のスワイプアニメーションを有効にする</string>
+    <string name="disable_tweak">調整を無効化</string>
+    <string name="disable_tweak_desc">ガバナー設定やI/Oスケジューラ設定を含むすべてのプロファイルへのAZenithの調整の適用を停止します</string>
+    <string name="gov_settings">ガバナー設定</string>
+    <string name="gov_settingsdesc">ガバナーとスケジューラを設定</string>
+    <string name="gov_settingsdesc2">デバイスのCPU、GPUガバナーおよびI/Oスケジューラの値を設定します。各値は各AZenithプロファイルに適用されます</string>
+    <string name="presets">プリセット</string>
+    <string name="str_bypass_need_setup">バイパス給電パスがまだ設定されていません。まず互換性チェックからセットアップを完了してください。</string>
+    <string name="reboot_required_content">このオプションを適用するには再起動が必要です。続行しますか？</string>
 </resources>

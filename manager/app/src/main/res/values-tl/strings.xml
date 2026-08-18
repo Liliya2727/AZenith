@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">I-optimize ang WALT governor parameter, pataasin ang CPU scheduling response speed</string>
     <string name="welcome_azenith">Maligayang pagdating sa AZenith</string>
     <string name="yes">Oo</string>
+    <string name="str_use_scroll_animation">Gamitin ang Scroll Animation</string>
+    <string name="str_use_scroll_animation_summary">Paganahin ang swipe animation sa pagitan ng mga Pahina</string>
+    <string name="disable_tweak">I-disable ang mga Tweak</string>
+    <string name="disable_tweak_desc">Ihinto ang paglalapat ng AZenith ng mga tweak sa lahat ng Profile kabilang ang mga setting ng governor at io scheduler</string>
+    <string name="gov_settings">Mga Setting ng Governor</string>
+    <string name="gov_settingsdesc">I-configure ang Governor at mga Scheduler</string>
+    <string name="gov_settingsdesc2">I-configure ang halaga ng CPU, GPU Governor at IO Scheduler ng iyong device, bawat halaga ay inilalapat sa bawat profile ng AZenith</string>
+    <string name="presets">Mga Preset</string>
+    <string name="str_bypass_need_setup">Hindi pa nai-set up ang bypass charge path. Mangyaring kumpletuhin muna ang setup sa pamamagitan ng Compatibility Check.</string>
+    <string name="reboot_required_content">Ang opsyong ito ay nangangailangan ng pag-reboot upang mailapat. Magpatuloy?</string>
 </resources>

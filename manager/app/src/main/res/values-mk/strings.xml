@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Оптимизирајте ги параметрите на WALT управувачот за да ја зголемите брзината на одговор на CPU распоредувањето</string>
     <string name="welcome_azenith">Добредојдовте во AZenith</string>
     <string name="yes">Да</string>
+    <string name="str_use_scroll_animation">Користи анимација за лизгање</string>
+    <string name="str_use_scroll_animation_summary">Овозможи анимација со повлекување помеѓу страниците</string>
+    <string name="disable_tweak">Оневозможи прилагодувања</string>
+    <string name="disable_tweak_desc">Запрете го AZenith да применува прилагодувања на сите профили, вклучувајќи ги поставките за гувернерот и I/O распоредувачот</string>
+    <string name="gov_settings">Поставки за гувернер</string>
+    <string name="gov_settingsdesc">Конфигурирајте гувернер и распоредувачи</string>
+    <string name="gov_settingsdesc2">Конфигурирајте ги вредностите за CPU, GPU гувернерот и I/O распоредувачите на уредот, секоја вредност се применува на секој AZenith профил</string>
+    <string name="presets">Претходно поставени поставки</string>
+    <string name="str_bypass_need_setup">Патеката за бајпас полнење сè уште не е поставена. Ве молиме прво завршете го поставувањето преку Проверката за компатибилност.</string>
+    <string name="reboot_required_content">Оваа опција бара рестартирање за да се примени. Продолжи?</string>
 </resources>

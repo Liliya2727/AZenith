@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optimera WALT-regulatorparametrar för att förbättra CPU-schemaläggningsrespons</string>
     <string name="welcome_azenith">Välkommen till AZenith</string>
     <string name="yes">Ja</string>
+    <string name="str_use_scroll_animation">Använd rullningsanimering</string>
+    <string name="str_use_scroll_animation_summary">Aktivera svepanimering mellan sidor</string>
+    <string name="disable_tweak">Inaktivera optimeringar</string>
+    <string name="disable_tweak_desc">Stoppa AZenith från att tillämpa optimeringar på alla profiler, inklusive regulator- och I/O-schemaläggarinställningar</string>
+    <string name="gov_settings">Regulatorinställningar</string>
+    <string name="gov_settingsdesc">Konfigurera regulator och schemaläggare</string>
+    <string name="gov_settingsdesc2">Konfigurera enhetens CPU-, GPU-regulator och I/O-schemaläggarvärden; varje värde tillämpas på varje AZenith-profil</string>
+    <string name="presets">Förinställningar</string>
+    <string name="str_bypass_need_setup">Förbikopplingsladdningsväg har inte ställts in ännu. Slutför inställningen via kompatibilitetskontrollen först.</string>
+    <string name="reboot_required_content">Det här alternativet kräver en omstart för att tillämpas. Fortsätta?</string>
 </resources>

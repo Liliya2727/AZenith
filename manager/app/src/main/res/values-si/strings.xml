@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">WALT නියාමක පරාමිතීන් ප්‍රශස්ත කර CPU උපලේඛන ප්‍රතිචාර වේගය වැඩි කරන්න</string>
     <string name="welcome_azenith">AZenith වෙත සාදරයෙන් පිළිගනිමු</string>
     <string name="yes">ඔව්</string>
+    <string name="str_use_scroll_animation">අනුචලන සජීවිකරණය භාවිතා කරන්න</string>
+    <string name="str_use_scroll_animation_summary">පිටු අතර ස්වයිප් සජීවිකරණය සක්‍රීය කරන්න</string>
+    <string name="disable_tweak">සැකසුම් අක්‍රිය කරන්න</string>
+    <string name="disable_tweak_desc">ගවර්නර් සහ I/O උපලේඛන සැකසුම් ඇතුළුව සියලුම පැතිකඩ සඳහා AZenith මඟින් සැකසුම් යෙදීම නවත්වන්න</string>
+    <string name="gov_settings">ගවර්නර් සැකසුම්</string>
+    <string name="gov_settingsdesc">ගවර්නර් සහ උපලේඛන වින්‍යාස කරන්න</string>
+    <string name="gov_settingsdesc2">ඔබගේ උපාංගයේ CPU, GPU ගවර්නර් සහ I/O උපලේඛන අගය වින්‍යාස කරන්න, එක් එක් අගය සෑම AZenith පැතිකඩකටම යොදනු ලැබේ</string>
+    <string name="presets">පෙරසැකසුම්</string>
+    <string name="str_bypass_need_setup">බයිපාස් ආරෝපණ මාර්ගය තවමත් සකසා නැත. කරුණාකර පළමුව ගැළපුම් පරීක්ෂාව හරහා සැකසුම සම්පූර්ණ කරන්න.</string>
+    <string name="reboot_required_content">මෙම විකල්පය යෙදීමට නැවත ආරම්භ කිරීමක් අවශ්‍ය වේ. ඉදිරියට යන්නද?</string>
 </resources>

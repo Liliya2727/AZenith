@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Аптымізаваць параметры рэгулятара WALT для павышэння хуткасці рэакцыі планавання CPU</string>
     <string name="welcome_azenith">Сардэчна запрашаем у AZenith</string>
     <string name="yes">Так</string>
+    <string name="str_use_scroll_animation">Выкарыстоўваць анімацыю пракруткі</string>
+    <string name="str_use_scroll_animation_summary">Уключыць анімацыю правядзення паміж старонкамі</string>
+    <string name="disable_tweak">Адключыць твікі</string>
+    <string name="disable_tweak_desc">Спыніць прымяненне твікаў AZenith да ўсіх профіляў, уключаючы налады рэгулятара і планіроўшчыка ўводу-вываду</string>
+    <string name="gov_settings">Налады рэгулятара</string>
+    <string name="gov_settingsdesc">Наладзіць рэгулятар і планіроўшчыкі</string>
+    <string name="gov_settingsdesc2">Наладзьце значэнні рэгулятара CPU, GPU і планіроўшчыкаў уводу-вываду прылады; кожнае значэнне прымяняецца да кожнага профілю AZenith</string>
+    <string name="presets">Перадусталёўкі</string>
+    <string name="str_bypass_need_setup">Шлях абыходнай зарадкі яшчэ не наладжаны. Калі ласка, спачатку завяршыце наладжванне праз праверку сумяшчальнасці.</string>
+    <string name="reboot_required_content">Для прымянення гэтай опцыі патрабуецца перазагрузка. Працягнуць?</string>
 </resources>

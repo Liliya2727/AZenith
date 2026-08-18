@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">تحسين معلمات محافظ WALT لزيادة سرعة استجابة جدولة CPU</string>
     <string name="welcome_azenith">مرحبًا بك في AZenith</string>
     <string name="yes">نعم</string>
+    <string name="str_use_scroll_animation">استخدام تأثيرات التمرير</string>
+    <string name="str_use_scroll_animation_summary">تمكين تأثير التمرير السريع بين الصفحات</string>
+    <string name="disable_tweak">تعطيل التعديلات</string>
+    <string name="disable_tweak_desc">إيقاف AZenith عن تطبيق التعديلات على جميع ملفات التعريف بما في ذلك إعدادات المحافظ وإعدادات جدولة الإدخال/الإخراج</string>
+    <string name="gov_settings">إعدادات المحافظ</string>
+    <string name="gov_settingsdesc">تكوين المحافظ والمجدولات</string>
+    <string name="gov_settingsdesc2">تكوين قيم محافظ CPU وGPU ومجدول I/O لجهازك، حيث يتم تطبيق كل قيمة على كل ملف تعريف AZenith</string>
+    <string name="presets">الإعدادات المسبقة</string>
+    <string name="str_bypass_need_setup">لم يتم إعداد مسار الشحن الجانبي بعد. يرجى إكمال الإعداد عبر فحص التوافق أولاً.</string>
+    <string name="reboot_required_content">يتطلب هذا الخيار إعادة التشغيل ليتم تطبيقه. متابعة؟</string>
 </resources>

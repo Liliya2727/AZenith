@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Оптимизация параметров регулятора WALT для повышения скорости реагирования планировщика CPU</string>
     <string name="welcome_azenith">Добро пожаловать в AZenith</string>
     <string name="yes">Да</string>
+    <string name="str_use_scroll_animation">Использовать анимацию прокрутки</string>
+    <string name="str_use_scroll_animation_summary">Включить анимацию свайпа между страницами</string>
+    <string name="disable_tweak">Отключить твики</string>
+    <string name="disable_tweak_desc">Запретить AZenith применять твики ко всем профилям, включая настройки регулятора и планировщика ввода-вывода</string>
+    <string name="gov_settings">Настройки регулятора</string>
+    <string name="gov_settingsdesc">Настройка регулятора и планировщиков</string>
+    <string name="gov_settingsdesc2">Настройте значения регулятора CPU, GPU и планировщиков I/O вашего устройства; каждое значение применяется к соответствующему профилю AZenith</string>
+    <string name="presets">Предустановки</string>
+    <string name="str_bypass_need_setup">Путь обходной зарядки еще не настроен. Пожалуйста, сначала завершите настройку через проверку совместимости.</string>
+    <string name="reboot_required_content">Для применения этого параметра требуется перезагрузка. Продолжить?</string>
 </resources>

@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">WALT గవర్నర్ పారామితులను ఆప్టిమైజ్ చేయండి, CPU షెడ్యూల్ రెస్పాన్స్ స్పీడ్ మెరుగుపరచండి</string>
     <string name="welcome_azenith">AZenith కు స్వాగతం</string>
     <string name="yes">అవును</string>
+    <string name="str_use_scroll_animation">స్క్రోల్ యానిమేషన్‌ను ఉపయోగించండి</string>
+    <string name="str_use_scroll_animation_summary">పేజీల మధ్య స్వైప్ యానిమేషన్‌ను ప్రారంభించండి</string>
+    <string name="disable_tweak">ట్వీక్‌లను నిలిపివేయండి</string>
+    <string name="disable_tweak_desc">గవర్నర్ మరియు I/O షెడ్యూలర్ సెట్టింగ్‌లతో సహా అన్ని ప్రొఫైల్‌లకు AZenith ట్వీక్‌లను వర్తింపజేయడాన్ని ఆపివేయండి</string>
+    <string name="gov_settings">గవర్నర్ సెట్టింగ్‌లు</string>
+    <string name="gov_settingsdesc">గవర్నర్ మరియు షెడ్యూలర్‌లను కాన్ఫిగర్ చేయండి</string>
+    <string name="gov_settingsdesc2">మీ పరికర CPU, GPU గవర్నర్ మరియు I/O షెడ్యూలర్ల విలువను కాన్ఫిగర్ చేయండి, ప్రతి విలువ ప్రతి AZenith ప్రొఫైల్‌కు వర్తించబడుతుంది</string>
+    <string name="presets">ప్రీసెట్‌లు</string>
+    <string name="str_bypass_need_setup">బైపాస్ ఛార్జింగ్ మార్గం ఇంకా సెటప్ చేయబడలేదు. దయచేసి మొదట అనుకూలత తనిఖీ ద్వారా సెటప్‌ను పూర్తి చేయండి.</string>
+    <string name="reboot_required_content">ఈ ఎంపికను వర్తింపజేయడానికి రీబూట్ అవసరం. కొనసాగించాలా?</string>
 </resources>

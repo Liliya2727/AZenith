@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">WALT گورنر پیرامیٹرز کو بہتر بنائیں، CPU شیڈولنگ رسپانس اسپیڈ بڑھائیں</string>
     <string name="welcome_azenith">AZenith میں خوش آمدید</string>
     <string name="yes">ہاں</string>
+    <string name="str_use_scroll_animation">اسکرول اینیمیشن استعمال کریں</string>
+    <string name="str_use_scroll_animation_summary">صفحات کے درمیان سوائپ اینیمیشن فعال کریں</string>
+    <string name="disable_tweak">ٹویکس غیر فعال کریں</string>
+    <string name="disable_tweak_desc">AZenith کو تمام پروفائلز پر ٹویکس لاگو کرنے سے روکیں بشمول گورنر اور I/O شیڈیولر کی ترتیبات</string>
+    <string name="gov_settings">گورنر کی ترتیبات</string>
+    <string name="gov_settingsdesc">گورنر اور شیڈیولرز کو ترتیب دیں</string>
+    <string name="gov_settingsdesc2">اپنے آلے کے CPU، GPU گورنر اور I/O شیڈیولرز کی قدر ترتیب دیں، ہر قدر ہر AZenith پروفائل پر لاگو ہوتی ہے</string>
+    <string name="presets">پری سیٹس</string>
+    <string name="str_bypass_need_setup">بائی پاس چارجنگ کا راستہ ابھی تک ترتیب نہیں دیا گیا ہے۔ براہ کرم پہلے مطابقت کی جانچ کے ذریعے سیٹ اپ مکمل کریں۔</string>
+    <string name="reboot_required_content">اس آپشن کو لاگو کرنے کے لیے ریبوٹ درکار ہے۔ کیا جاری رکھیں؟</string>
 </resources>

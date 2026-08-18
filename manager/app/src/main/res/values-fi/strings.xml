@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optimoi WALT-säätimen parametrit parantaaksesi CPU-aikataulun vasteaikaa</string>
     <string name="welcome_azenith">Tervetuloa AZenithiin</string>
     <string name="yes">Kyllä</string>
+    <string name="str_use_scroll_animation">Käytä vieritysanimaatiota</string>
+    <string name="str_use_scroll_animation_summary">Ota käyttöön sivujen välinen pyyhkäisyanimaatio</string>
+    <string name="disable_tweak">Poista säädöt käytöstä</string>
+    <string name="disable_tweak_desc">Estä AZenithia soveltamasta säätöjä kaikkiin profiileihin, mukaan lukien säädin- ja I/O-ajoitusasetukset</string>
+    <string name="gov_settings">Säätimen asetukset</string>
+    <string name="gov_settingsdesc">Määritä säädin ja ajoittimet</string>
+    <string name="gov_settingsdesc2">Määritä laitteesi CPU-, GPU-säätimen ja I/O-ajoittimien arvot, jokainen arvo sovelletaan kuhunkin AZenith-profiiliin</string>
+    <string name="presets">Esiasetukset</string>
+    <string name="str_bypass_need_setup">Ohituslatauspolkua ei ole vielä määritetty. Suorita määritys ensin yhteensopivuustarkistuksen kautta.</string>
+    <string name="reboot_required_content">Tämä vaihtoehto vaatii laitteen uudelleenkäynnistyksen tullakseen voimaan. Jatketaanko?</string>
 </resources>

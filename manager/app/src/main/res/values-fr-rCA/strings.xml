@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optimiser les paramètres du gouverneur WALT pour améliorer la réactivité de l&amp;apos;ordonnancement CPU</string>
     <string name="welcome_azenith">Bienvenue sur AZenith</string>
     <string name="yes">Oui</string>
+    <string name="str_use_scroll_animation">Utiliser l'animation de défilement</string>
+    <string name="str_use_scroll_animation_summary">Activer l'animation de glissement entre les pages</string>
+    <string name="disable_tweak">Désactiver les ajustements</string>
+    <string name="disable_tweak_desc">Empêcher AZenith d'appliquer des ajustements à tous les profils, y compris les paramètres de gouverneur et d'ordonnanceur E/S</string>
+    <string name="gov_settings">Paramètres du gouverneur</string>
+    <string name="gov_settingsdesc">Configurer le gouverneur et les ordonnanceurs</string>
+    <string name="gov_settingsdesc2">Configurez les valeurs du gouverneur CPU, GPU et des ordonnanceurs d'E/S de votre appareil, chaque valeur étant appliquée à chaque profil AZenith</string>
+    <string name="presets">Préréglages</string>
+    <string name="str_bypass_need_setup">Le chemin de charge directe n'a pas encore été configuré. Veuillez d'abord terminer la configuration via la vérification de compatibilité.</string>
+    <string name="reboot_required_content">Cette option nécessite un redémarrage pour être appliquée. Continuer ?</string>
 </resources>

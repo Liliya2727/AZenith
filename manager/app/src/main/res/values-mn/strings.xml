@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">WALT зохицуулагчийн параметрүүдийг оновчтой болгож, CPU хуваарийн хариу үйлдлийн хурдыг сайжруулах</string>
     <string name="welcome_azenith">AZenith-д тавтай морилно уу</string>
     <string name="yes">Тийм</string>
+    <string name="str_use_scroll_animation">Гүйлгэх хөдөлгөөнт дүрсийг ашиглах</string>
+    <string name="str_use_scroll_animation_summary">Хуудас хооронд шудрах хөдөлгөөнт дүрсийг идэвхжүүлэх</string>
+    <string name="disable_tweak">Тохируулгыг идэвхгүй болгох</string>
+    <string name="disable_tweak_desc">AZenith-ийг зохицуулагч болон I/O төлөвлөгчийн тохиргоо зэрэг бүх профайлд тохируулга хийхийг зогсоох</string>
+    <string name="gov_settings">Зохицуулагчийн тохиргоо</string>
+    <string name="gov_settingsdesc">Зохицуулагч болон төлөвлөгчдийг тохируулах</string>
+    <string name="gov_settingsdesc2">Төхөөрөмжийнхөө CPU, GPU зохицуулагч болон I/O төлөвлөгчийн утгыг тохируулна уу, утга бүр AZenith профайл бүрт хэрэгжинэ</string>
+    <string name="presets">Урьдчилан тохируулгууд</string>
+    <string name="str_bypass_need_setup">Шууд цэнэглэх зам хараахан тохируулагдаагүй байна. Эхлээд Нийцтэй байдлын шалгалтаар тохиргоог хийнэ үү.</string>
+    <string name="reboot_required_content">Энэ сонголтыг хэрэгжүүлэхийн тулд дахин ачаалах шаардлагатай. Үргэлжлүүлэх үү?</string>
 </resources>

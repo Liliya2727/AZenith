@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">Optimizatu WALT erregulatzailearen parametroak, CPU plangintzaren erantzuna hobetzeko</string>
     <string name="welcome_azenith">Ongi etorri AZenith-era</string>
     <string name="yes">Bai</string>
+    <string name="str_use_scroll_animation">Erabili korritze-animazioa</string>
+    <string name="str_use_scroll_animation_summary">Gaitu orrien arteko irristatze-animazioa</string>
+    <string name="disable_tweak">Desgaitu doikuntzak</string>
+    <string name="disable_tweak_desc">Galarazi AZenith-i doikuntzak profil guztiei aplikatzea, gobernadorearen eta I/O programatzailearen ezarpenak barne</string>
+    <string name="gov_settings">Gobernadorearen ezarpenak</string>
+    <string name="gov_settingsdesc">Konfiguratu gobernadorea eta programatzaileak</string>
+    <string name="gov_settingsdesc2">Konfiguratu gailuaren CPU, GPU gobernadorearen eta I/O programatzaileen balioak, balio bakoitza AZenith profil bakoitzari aplikatuko zaio</string>
+    <string name="presets">Aurrezarpenak</string>
+    <string name="str_bypass_need_setup">Bypass kargatze-bidea ez da oraindik konfiguratu. Mesedez, osatu lehenik konfigurazioa Bateragarritasun Egiaztapenaren bidez.</string>
+    <string name="reboot_required_content">Aukera hau aplikatzeko berrabiarazi behar da. Jarraitu?</string>
 </resources>

@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">بهینه‌سازی پارامترهای Governor WALT برای بهبود سرعت پاسخگویی زمان‌بندی CPU</string>
     <string name="welcome_azenith">به AZenith خوش آمدید</string>
     <string name="yes">بله</string>
+    <string name="str_use_scroll_animation">استفاده از پویانمایی پیمایش</string>
+    <string name="str_use_scroll_animation_summary">فعال‌سازی پویانمایی کشیدن بین صفحات</string>
+    <string name="disable_tweak">غیرفعال کردن بهینه‌سازی‌ها</string>
+    <string name="disable_tweak_desc">توقف اعمال بهینه‌سازی‌های AZenith روی همه نمایه‌ها از جمله تنظیمات گاورنر و زمان‌بند I/O</string>
+    <string name="gov_settings">تنظیمات گاورنر</string>
+    <string name="gov_settingsdesc">پیکربندی گاورنر و زمان‌بندها</string>
+    <string name="gov_settingsdesc2">مقادیر گاورنر CPU، GPU و زمان‌بندهای I/O دستگاه خود را پیکربندی کنید، هر مقدار روی هر نمایه AZenith اعمال می‌شود</string>
+    <string name="presets">پیش‌تنظیم‌ها</string>
+    <string name="str_bypass_need_setup">مسیر شارژ مستقیم هنوز تنظیم نشده است. لطفاً ابتدا راه‌اندازی را از طریق بررسی سازگاری تکمیل کنید.</string>
+    <string name="reboot_required_content">برای اعمال این گزینه به راه‌اندازی مجدد نیاز است. ادامه می‌دهید؟</string>
 </resources>

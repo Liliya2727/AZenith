@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">បង្កើនប្រសិទ្ធិភាពប៉ារ៉ាម៉ែត្រអ្នកត្រួតពិនិត្យ WALT បង្កើនល្បឿនឆ្លើយតប CPU Scheduling</string>
     <string name="welcome_azenith">សូមស្វាគមន៍មកកាន់ AZenith</string>
     <string name="yes">បាទ</string>
+    <string name="str_use_scroll_animation">ប្រើចលនារំកិល</string>
+    <string name="str_use_scroll_animation_summary">បើកដំណើរការចលនាអូសរវាងទំព័រ</string>
+    <string name="disable_tweak">បិទការកែតម្រូវ</string>
+    <string name="disable_tweak_desc">បញ្ឈប់ AZenith ពីការអនុវត្តការកែតម្រូវលើប្រវត្តិរូបទាំងអស់ រួមទាំងការកំណត់ governor និងកម្មវិធីកំណត់ពេល I/O</string>
+    <string name="gov_settings">ការកំណត់ Governor</string>
+    <string name="gov_settingsdesc">កំណត់រចនាសម្ព័ន្ធ Governor និងកម្មវិធីកំណត់ពេល</string>
+    <string name="gov_settingsdesc2">កំណត់រចនាសម្ព័ន្ធតម្លៃ CPU, GPU Governor និងកម្មវិធីកំណត់ពេល I/O របស់ឧបករណ៍របស់អ្នក តម្លៃនីមួយៗត្រូវបានអនុវត្តចំពោះប្រវត្តិរូប AZenith នីមួយៗ</string>
+    <string name="presets">ការកំណត់ជាមុន</string>
+    <string name="str_bypass_need_setup">ផ្លូវសាកថ្មវាងមិនទាន់ត្រូវបានរៀបចំនៅឡើយទេ។ សូមបញ្ចប់ការដំឡើងតាមរយៈការត្រួតពិនិត្យភាពឆបគ្នាជាមុនសិន។</string>
+    <string name="reboot_required_content">ជម្រើសនេះទាមទារឱ្យចាប់ផ្ដើមឡើងវិញដើម្បីអនុវត្ត។ បន្តទេ?</string>
 </resources>

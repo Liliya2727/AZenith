@@ -370,4 +370,14 @@
     <string name="walt_tunes_desc">WALT গভর্নর প্যারামিটার অপ্টিমাইজ করে CPU শিডিউলিং রেসপন্স গতি বাড়ায়</string>
     <string name="welcome_azenith">AZenith এ স্বাগতম</string>
     <string name="yes">হ্যাঁ</string>
+    <string name="str_use_scroll_animation">স্ক্রোল অ্যানিমেশন ব্যবহার করুন</string>
+    <string name="str_use_scroll_animation_summary">পৃষ্ঠাগুলির মধ্যে সোয়াইপ অ্যানিমেশন সক্ষম করুন</string>
+    <string name="disable_tweak">টুইক অক্ষম করুন</string>
+    <string name="disable_tweak_desc">গভর্নর সেটিংস এবং I/O শিডিউলার সেটিংস সহ সমস্ত প্রোফাইলে AZenith-এর টুইক প্রয়োগ বন্ধ করুন</string>
+    <string name="gov_settings">গভর্নর সেটিংস</string>
+    <string name="gov_settingsdesc">গভর্নর এবং শিডিউলার কনফিগার করুন</string>
+    <string name="gov_settingsdesc2">আপনার ডিভাইসের CPU, GPU গভর্নর এবং I/O শিডিউলার মান কনফিগার করুন, প্রতিটি মান প্রতিটি AZenith প্রোফাইলে প্রয়োগ করা হবে</string>
+    <string name="presets">প্রিসেট</string>
+    <string name="str_bypass_need_setup">বাইপাস চার্জিং পাথ এখনও সেট আপ করা হয়নি। অনুগ্রহ করে প্রথমে সামঞ্জস্য পরীক্ষা এর মাধ্যমে সেটআপ সম্পূর্ণ করুন।</string>
+    <string name="reboot_required_content">এই বিকল্পটি প্রয়োগ করার জন্য ডিভাইসটি রিবুট করা আবশ্যক। চালিয়ে যাবেন?</string>
 </resources>
