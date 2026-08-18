@@ -73,7 +73,7 @@
     <string name="dialog_diagnosis_complete_title">Diagnostikimi i përfunduar</string>
     <string name="dialog_dismiss">Shpërfill</string>
     <string name="dialog_module_update_confirm">Rinisni menjëherë</string>
-    <string name="dialog_module_update_content">Përditësimi i modulit është gati për t&amp;apos;u aplikuar. A dëshironi të rinisni pajisjen tani?</string>
+    <string name="dialog_module_update_content">Përditësimi i modulit është gati për t\'u aplikuar. A dëshironi të rinisni pajisjen tani?</string>
     <string name="dialog_module_update_dismiss">Më vonë</string>
     <string name="dialog_module_update_title">Përditësimi i modulit i disponueshëm</string>
     <string name="dialog_reboot_required_content">Konfigurimi u rivendos. A dëshironi të rinisni pajisjen për të aplikuar ndryshimet?</string>
@@ -255,7 +255,7 @@
     <string name="str_available_nodes">Nyje të disponueshme (%1$d)</string>
     <string name="str_azenith_is_now_ready_to_go">AZenith është gati për përdorim!</string>
     <string name="str_backup_configuration">Kopjo konfigurimin</string>
-    <string name="str_backup_content_detected_select">U zbulua përmbajtje rezervë. Ju lutem zgjidhni artikujt për t&amp;apos;u rivendosur:</string>
+    <string name="str_backup_content_detected_select">U zbulua përmbajtje rezervë. Ju lutem zgjidhni artikujt për t\'u rivendosur:</string>
     <string name="str_backup_restore">Kopjo dhe rivendos</string>
     <string name="str_banner_updated">Imazhi u përditësua</string>
     <string name="str_bannergradientalpha_100_toint">%1$d%%</string>
@@ -379,5 +379,5 @@
     <string name="gov_settingsdesc2">Konfiguroni vlerat e guvernatorit të CPU, GPU dhe planifikuesve I/O të pajisjes suaj, çdo vlerë zbatohet në secilin profil të AZenith</string>
     <string name="presets">Paracaktimet</string>
     <string name="str_bypass_need_setup">Rruga e karikimit anashkalues nuk është konfiguruar ende. Ju lutemi plotësoni fillimisht konfigurimin përmes Kontrollit të Përputhshmërisë.</string>
-    <string name="reboot_required_content">Ky opsion kërkon një rindezje për t'u zbatuar. Të vazhdohet?</string>
+    <string name="reboot_required_content">Ky opsion kërkon një rindezje për t\'u zbatuar. Të vazhdohet?</string>
 </resources>

@@ -124,7 +124,7 @@
     <string name="label_system">System</string>
     <string name="learn_more">Learn More</string>
     <string name="learn_more_desc">Documentation, source code, changelog and AZenith internals. Learn how features work and how to customize safely.</string>
-    <string name="lets_go">Let&amp;apos;s Go</string>
+    <string name="lets_go">Let\'s Go</string>
     <string name="master_switch">Master Switch</string>
     <string name="master_switch_desc">Enabling this allows the performance profile to be triggered</string>
     <string name="max_val">Max (%1$d)</string>
@@ -293,7 +293,7 @@
     <string name="str_kanaochar">Kanaochar</string>
     <string name="str_launch_app">Launch App</string>
     <string name="str_launch_compatibility_check">Launch Compatibility Check</string>
-    <string name="str_let_s_adjust_a_few_basic_setti">Let&amp;apos;s adjust a few basic settings</string>
+    <string name="str_let_s_adjust_a_few_basic_setti">Let\'s adjust a few basic settings</string>
     <string name="str_let_s_grant_azenith_a_root_acc">Please grant AZenith root access</string>
     <string name="str_liliya">Liliya</string>
     <string name="str_load_a_previously_saved_backup">Load a previously saved backup file</string>
@@ -340,7 +340,7 @@
     <string name="str_view_the_source_code_on_github">View source code on GitHub</string>
     <string name="str_warning_backup_is_for_socname">Warning: This backup is for %1$s chipset devices. To avoid infinite boot loops, some configuration items will be restricted from restoration.</string>
     <string name="str_welcome_to">Welcome to</string>
-    <string name="str_you_re_all_set">You&amp;apos;re all set</string>
+    <string name="str_you_re_all_set">You\'re all set</string>
     <string name="support_us">Support Us</string>
     <string name="support_us_desc">Support development and let AZenith keep improving</string>
     <string name="theme">Theme</string>

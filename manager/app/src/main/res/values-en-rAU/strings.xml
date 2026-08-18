@@ -124,7 +124,7 @@
     <string name="label_system">System</string>
     <string name="learn_more">Learn more</string>
     <string name="learn_more_desc">Documentation, source code, changelog and AZenith internals. Understand how features work and how to customize safely.</string>
-    <string name="lets_go">Let&amp;apos;s go</string>
+    <string name="lets_go">Let\'s go</string>
     <string name="master_switch">Master switch</string>
     <string name="master_switch_desc">When enabled, the performance profile can be triggered by apps</string>
     <string name="max_val">Max (%1$d)</string>
@@ -293,7 +293,7 @@
     <string name="str_kanaochar">Kanaochar</string>
     <string name="str_launch_app">Launch app</string>
     <string name="str_launch_compatibility_check">Launch compatibility check</string>
-    <string name="str_let_s_adjust_a_few_basic_setti">Let&amp;apos;s adjust a few basic settings</string>
+    <string name="str_let_s_adjust_a_few_basic_setti">Let\'s adjust a few basic settings</string>
     <string name="str_let_s_grant_azenith_a_root_acc">Please grant AZenith root access</string>
     <string name="str_liliya">Liliya</string>
     <string name="str_load_a_previously_saved_backup">Load a previously saved backup file</string>
@@ -340,7 +340,7 @@
     <string name="str_view_the_source_code_on_github">View source code on GitHub</string>
     <string name="str_warning_backup_is_for_socname">Warning: This backup is for %1$s chipset devices. To avoid infinite reboots, some configurations will be restricted from restore.</string>
     <string name="str_welcome_to">Welcome to</string>
-    <string name="str_you_re_all_set">You&amp;apos;re all set</string>
+    <string name="str_you_re_all_set">You\'re all set</string>
     <string name="support_us">Support us</string>
     <string name="support_us_desc">Help development, keep AZenith improving</string>
     <string name="theme">Theme</string>
@@ -378,6 +378,6 @@
     <string name="gov_settingsdesc">Configure Governor and Schedulers</string>
     <string name="gov_settingsdesc2">Configure your device CPU, GPU Governor and IO Schedulers value, each value applied to each AZenith profile</string>
     <string name="presets">Presets</string>
-    <string name="str_bypass_need_setup">Bypass charge path hasn't been set up yet. Please complete the setup via Compatibility Check first.</string>
+    <string name="str_bypass_need_setup">Bypass charge path hasn\'t been set up yet. Please complete the setup via Compatibility Check first.</string>
     <string name="reboot_required_content">This option requires a reboot to be applied. Continue?</string>
 </resources>

@@ -52,7 +52,7 @@
     <string name="current_profile">Profilo corrente</string>
     <string name="custom">Personalizzato</string>
     <string name="CompatibilityCheck">Verifica compatibilità</string>
-    <string name="CompatibilityCheck_desc">Esegue test diagnostici per verificare se il dispositivo supporta l&amp;apos;alimentazione bypass</string>
+    <string name="CompatibilityCheck_desc">Esegue test diagnostici per verificare se il dispositivo supporta l\'alimentazione bypass</string>
     <string name="default_cpu_gov">Governor CPU predefinito</string>
     <string name="default_cpu_gov_desc">Governor utilizzato nel profilo bilanciato</string>
     <string name="default_label">Predefinito</string>
@@ -73,7 +73,7 @@
     <string name="dialog_diagnosis_complete_title">Diagnosi completata</string>
     <string name="dialog_dismiss">Ignora</string>
     <string name="dialog_module_update_confirm">Riavvia ora</string>
-    <string name="dialog_module_update_content">L&amp;apos;aggiornamento del modulo necessita di riavvio. Riavviare ora?</string>
+    <string name="dialog_module_update_content">L\'aggiornamento del modulo necessita di riavvio. Riavviare ora?</string>
     <string name="dialog_module_update_dismiss">Più tardi</string>
     <string name="dialog_module_update_title">Aggiornamento modulo disponibile</string>
     <string name="dialog_reboot_required_content">Configurazione ripristinata. Riavviare ora per applicare?</string>
@@ -85,12 +85,12 @@
     <string name="dialog_switch_node_content">Forzare il passaggio del target di bypass a [%1$s]?</string>
     <string name="dialog_switch_node_title">Cambiare nodo di controllo?</string>
     <string name="dialog_update_available_confirm">Aggiorna ora</string>
-    <string name="dialog_update_available_content">La versione dell&amp;apos;app manager (%1$d) è inferiore a quella del modulo (%2$d). Aggiornare ora per ottenere le ultime funzionalità?</string>
+    <string name="dialog_update_available_content">La versione dell\'app manager (%1$d) è inferiore a quella del modulo (%2$d). Aggiornare ora per ottenere le ultime funzionalità?</string>
     <string name="dialog_update_available_dismiss">Più tardi</string>
     <string name="dialog_update_available_title">Aggiornamento app disponibile</string>
     <string name="disable_auto_mode">Disabilita modalità automatica</string>
     <string name="disable_logging">Disabilita log di sistema</string>
-    <string name="disable_logging_desc">Disabilita il servizio di log di sistema per ridurre l&amp;apos;uso di risorse in background</string>
+    <string name="disable_logging_desc">Disabilita il servizio di log di sistema per ridurre l\'uso di risorse in background</string>
     <string name="disable_thermals">Disabilita controllo termico</string>
     <string name="disable_thermals_desc">Arresta il servizio di controllo termico</string>
     <string name="disable_trace">Disabilita tracciamento</string>
@@ -110,9 +110,9 @@
     <string name="fpsgo_ged_desc">Applica valori di ottimizzazione per FPSGO e GED</string>
     <string name="freq_offset">Offset frequenza</string>
     <string name="game_preload">Precaricamento gioco</string>
-    <string name="game_preload_desc">Precarica le librerie di runtime all&amp;apos;avvio del gioco</string>
+    <string name="game_preload_desc">Precarica le librerie di runtime all\'avvio del gioco</string>
     <string name="gpu_mali">Scheduling GPU Mali</string>
-    <string name="gpu_mali_desc">Forza l&amp;apos;elaborazione seriale della GPU per migliorare la stabilità dei fotogrammi</string>
+    <string name="gpu_mali_desc">Forza l\'elaborazione seriale della GPU per migliorare la stabilità dei fotogrammi</string>
     <string name="instruction_sets">ABI Android</string>
     <string name="io_settings">Impostazioni I/O</string>
     <string name="jit_compilation">Compilazione JIT</string>
@@ -129,7 +129,7 @@
     <string name="master_switch_desc">Solo quando abilitato, le app potranno attivare i profili prestazionali</string>
     <string name="max_val">Massimo (%1$d)</string>
     <string name="memory_killer">Pulizia memoria</string>
-    <string name="memory_killer_desc">Libera RAM all&amp;apos;avvio del gioco</string>
+    <string name="memory_killer_desc">Libera RAM all\'avvio del gioco</string>
     <string name="menu_refresh">Aggiorna</string>
     <string name="menu_show_system_apps">Mostra app di sistema</string>
     <string name="min_val">Minimo (%1$d)</string>
@@ -163,7 +163,7 @@
     <string name="powersave_mali_gov_desc">Governor GPU utilizzato nel profilo di risparmio energetico</string>
     <string name="preferred_settings">Impostazioni preferite</string>
     <string name="prefs">Preferenze</string>
-    <string name="prefsdesc">Configurazioni aggiuntive applicate automaticamente all&amp;apos;avvio</string>
+    <string name="prefsdesc">Configurazioni aggiuntive applicate automaticamente all\'avvio</string>
     <string name="prev">Precedente</string>
     <string name="profile_perflite">Prestazioni leggere</string>
     <string name="profile_timeout">Timeout profilo prestazionale</string>
@@ -231,7 +231,7 @@
     <string name="settings">Impostazioni</string>
     <string name="sfl_latency">Latenza SurfaceFlinger</string>
     <string name="sfl_latency_desc">Ottimizza i parametri SurfaceFlinger per ridurre la latenza di visualizzazione e migliorare la reattività tattile</string>
-    <string name="show_icon">Mostra icona dell&amp;apos;app nella schermata principale</string>
+    <string name="show_icon">Mostra icona dell\'app nella schermata principale</string>
     <string name="show_toast">Mostra notifiche Toast</string>
     <string name="status_active">Attivo</string>
     <string name="status_alive">In esecuzione</string>
@@ -247,7 +247,7 @@
     <string name="str_adjust_and_calibrate_your_scre">Regola colore e saturazione dello schermo tramite SurfaceFlinger, senza necessità di supporto a livello kernel</string>
     <string name="str_adjust_gradient">Regola gradiente</string>
     <string name="str_app_info">Informazioni app</string>
-    <string name="str_app_specific_settings_will_ove">Le impostazioni specifiche dell&amp;apos;app sovrascrivono quelle globali. Mantenendo il predefinito si ereditano le impostazioni globali.</string>
+    <string name="str_app_specific_settings_will_ove">Le impostazioni specifiche dell\'app sovrascrivono quelle globali. Mantenendo il predefinito si ereditano le impostazioni globali.</string>
     <string name="str_apply_add_on_configurations_ta">Applica ottimizzazioni aggiuntive specifiche per il dispositivo. Se si verificano cali di prestazioni nel gioco, prova a disattivare le singole ottimizzazioni.</string>
     <string name="str_archhaven_devs">Team di sviluppo ArchHaven</string>
     <string name="str_author">Autore</string>
@@ -278,8 +278,8 @@
     <string name="str_elapsed_time_elapsedtime">Tempo trascorso %1$s</string>
     <string name="str_enable_banner">Abilita banner</string>
     <string name="str_expressive_blur">Effetto sfocato</string>
-    <string name="str_expressive_blur_summary">Abilita l&amp;apos;effetto sfocato dell&amp;apos;interfaccia</string>
-    <string name="str_fas_is_a_user_space_implementa">FAS (Frame-Aware Scheduling) è un&amp;apos;implementazione in spazio utente, più versatile e adattabile rispetto alla versione a livello kernel MI FEAS. Monitora la dinamica di rendering dei fotogrammi per schedulare le prestazioni, riducendo al minimo il sovraccarico di sistema pur garantendo l&amp;apos;efficienza del rendering.</string>
+    <string name="str_expressive_blur_summary">Abilita l\'effetto sfocato dell\'interfaccia</string>
+    <string name="str_fas_is_a_user_space_implementa">FAS (Frame-Aware Scheduling) è un\'implementazione in spazio utente, più versatile e adattabile rispetto alla versione a livello kernel MI FEAS. Monitora la dinamica di rendering dei fotogrammi per schedulare le prestazioni, riducendo al minimo il sovraccarico di sistema pur garantendo l\'efficienza del rendering.</string>
     <string name="str_fpsgo_desc">Impostazioni relative a FPSGO di MediaTek</string>
     <string name="str_fpsgo_frame_per_second_go_is_a">FPSGO (Frame Per Second Go) è un modulo kernel MediaTek che regola dinamicamente la frequenza CPU/GPU in base al frame rate in tempo reale: abbassa la frequenza per risparmiare energia quando il frame rate è stabile, e la alza rapidamente quando necessario per garantire fluidità.</string>
     <string name="str_fpsgo_settings">Impostazioni FPSGO</string>
@@ -311,7 +311,7 @@
     <string name="str_pick_media">Seleziona file multimediale</string>
     <string name="str_pick_media_fail">Salvataggio file multimediale fallito</string>
     <string name="str_pick_media_success">File multimediale aggiornato</string>
-    <string name="str_please_do_not_close_the_app">Non chiudere l&amp;apos;app</string>
+    <string name="str_please_do_not_close_the_app">Non chiudere l\'app</string>
     <string name="str_plug_in_charger">Caricabatterie non rilevato. Collega il caricabatterie prima di eseguire la diagnosi.</string>
     <string name="str_preview">Anteprima</string>
     <string name="str_restore_configuration">Ripristina configurazione</string>
@@ -328,7 +328,7 @@
     <string name="str_share_compressed_logs_to_other">Condividi i log compressi con altre app</string>
     <string name="str_source_code">Codice sorgente</string>
     <string name="str_support_group">Gruppo di supporto</string>
-    <string name="str_these_settings_apply_to_all_en">Queste impostazioni si applicano a tutte le app abilitate per impostazione predefinita. Puoi configurare singole app nell&amp;apos;elenco app.</string>
+    <string name="str_these_settings_apply_to_all_en">Queste impostazioni si applicano a tutte le app abilitate per impostazione predefinita. Puoi configurare singole app nell\'elenco app.</string>
     <string name="str_tweak_configuration_settings">Impostazioni di configurazione</string>
     <string name="str_unavailable">Non disponibile</string>
     <string name="str_use_fpsgo_summary">Se abilitato, quando il frame rate è stabile la frequenza viene automaticamente ridotta per risparmiare energia. Gli utenti che cercano prestazioni estreme e accettano un calore maggiore possono disabilitarlo.</string>
@@ -346,8 +346,8 @@
     <string name="theme">Tema</string>
     <string name="theme_desc">Personalizza tema e colore accent</string>
     <string name="thermalcore_service">Servizio di controllo termico ThermalCore</string>
-    <string name="thermalcore_service_desc">Gestisce intelligentemente la politica termica di sistema, evitando surriscaldamenti durante l&amp;apos;uso quotidiano e garantendo stabilità del sistema.</string>
-    <string name="toast_app_launch_fail">Impossibile aprire l&amp;apos;app</string>
+    <string name="thermalcore_service_desc">Gestisce intelligentemente la politica termica di sistema, evitando surriscaldamenti durante l\'uso quotidiano e garantendo stabilità del sistema.</string>
+    <string name="toast_app_launch_fail">Impossibile aprire l\'app</string>
     <string name="toast_applied_refresh_rate">Frequenza di aggiornamento selezionata applicata</string>
     <string name="toast_applied_renderer">Applicato: %1$s</string>
     <string name="toast_applying_profile">Applicazione del profilo selezionato in corso</string>
@@ -371,7 +371,7 @@
     <string name="welcome_azenith">Benvenuto su AZenith</string>
     <string name="yes">Sì</string>
     <string name="str_use_scroll_animation">Usa animazione di scorrimento</string>
-    <string name="str_use_scroll_animation_summary">Abilita l'animazione di scorrimento tra le pagine</string>
+    <string name="str_use_scroll_animation_summary">Abilita l\'animazione di scorrimento tra le pagine</string>
     <string name="disable_tweak">Disattiva modifiche</string>
     <string name="disable_tweak_desc">Impedisci ad AZenith di applicare modifiche a tutti i profili, inclusi i parametri del governor e dello scheduler I/O</string>
     <string name="gov_settings">Impostazioni governor</string>

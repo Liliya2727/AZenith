@@ -293,10 +293,10 @@
     <string name="str_kanaochar">Kanaochar</string>
     <string name="str_launch_app">Begin program</string>
     <string name="str_launch_compatibility_check">Begin verenigbaarheids kontrole</string>
-    <string name="str_let_s_adjust_a_few_basic_setti">Ons pas &amp;apos;n paar basiese instellings aan</string>
+    <string name="str_let_s_adjust_a_few_basic_setti">Ons pas \'n paar basiese instellings aan</string>
     <string name="str_let_s_grant_azenith_a_root_acc">Verleen asseblief root toegang aan AZenith</string>
     <string name="str_liliya">Liliya</string>
-    <string name="str_load_a_previously_saved_backup">Laai &amp;apos;n voorheen gestoorde rugsteun lêer</string>
+    <string name="str_load_a_previously_saved_backup">Laai \'n voorheen gestoorde rugsteun lêer</string>
     <string name="str_logs_diagnostics">Logboeke en diagnostiek</string>
     <string name="str_maintainer">Onderhouer</string>
     <string name="str_max_video_size">Video grootte limiet is 50MB</string>
@@ -320,7 +320,7 @@
     <string name="str_root_access_granted">Root toegang verkry, alles gereed!</string>
     <string name="str_run_diagnostics_above_or_check">Voer bogenoemde diagnostiek uit, of kontroleer of kernel omleiding kragtoevoer nodusse bevat</string>
     <string name="str_safely_test">Veilig toets toestel verenigbaarheid</string>
-    <string name="str_save_compressed_logs_to_a_fold">Stoor saamgeperste logboeke in &amp;apos;n geselekteerde gids</string>
+    <string name="str_save_compressed_logs_to_a_fold">Stoor saamgeperste logboeke in \'n geselekteerde gids</string>
     <string name="str_save_your_current_tweak_settin">Stoor huidige konfigurasie instellings</string>
     <string name="str_scan_nodes">Skandeer beskikbare nodusse</string>
     <string name="str_select_the_configurations_you">Kies konfigurasie items om te rugsteun:</string>
@@ -379,5 +379,5 @@
     <string name="gov_settingsdesc2">Stel u toestel se CPU-, GPU-reguleerder en I/O-skeduleerderwaardes op; elke waarde word op elke AZenith-profiel toegepas</string>
     <string name="presets">Voorafinstellings</string>
     <string name="str_bypass_need_setup">Omleiding kragtoevoerroete is nog nie opgestel nie. Voltooi asseblief eers die opstelling via Verenigbaarheidskontrole.</string>
-    <string name="reboot_required_content">Hierdie opsie vereis 'n herbegin om toegepas te word. Gaan voort?</string>
+    <string name="reboot_required_content">Hierdie opsie vereis \'n herbegin om toegepas te word. Gaan voort?</string>
 </resources>

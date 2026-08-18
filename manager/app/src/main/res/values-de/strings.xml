@@ -124,7 +124,7 @@
     <string name="label_system">System</string>
     <string name="learn_more">Mehr erfahren</string>
     <string name="learn_more_desc">Dokumentation, Quellcode, Änderungsprotokoll und Erläuterungen zu AZeniths interner Funktionsweise; erfahre, wie Funktionen implementiert werden und wie du sie sicher anpassen kannst</string>
-    <string name="lets_go">Los geht&amp;apos;s</string>
+    <string name="lets_go">Los geht\'s</string>
     <string name="master_switch">Hauptschalter</string>
     <string name="master_switch_desc">Leistungsprofile werden nur ausgelöst, wenn dieser Schalter aktiviert ist</string>
     <string name="max_val">Maximal (%1$d)</string>

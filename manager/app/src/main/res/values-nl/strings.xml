@@ -371,7 +371,7 @@
     <string name="welcome_azenith">Welkom bij AZenith</string>
     <string name="yes">Ja</string>
     <string name="str_use_scroll_animation">Scrollanimatie gebruiken</string>
-    <string name="str_use_scroll_animation_summary">Veeganimatie tussen pagina's inschakelen</string>
+    <string name="str_use_scroll_animation_summary">Veeganimatie tussen pagina\'s inschakelen</string>
     <string name="disable_tweak">Aanpassingen uitschakelen</string>
     <string name="disable_tweak_desc">Voorkom dat AZenith aanpassingen toepast op alle profielen, inclusief governor- en I/O-scheduler-instellingen</string>
     <string name="gov_settings">Governor-instellingen</string>
