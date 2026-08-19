@@ -70,8 +70,8 @@ class SettingsViewModel : ViewModel() {
         _uiState.value = _uiState.value.copy(profileNotifications = enabled)
         viewModelScope.launch(Dispatchers.IO) {
             val flag = if (enabled) "-sn" else "-hn"
-            Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service $flag").submit()
             PropertyUtils.set("persist.sys.azenith.profilenotifications", if (enabled) "1" else "0")
+            Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service $flag").submit()            
         }
     }
     
