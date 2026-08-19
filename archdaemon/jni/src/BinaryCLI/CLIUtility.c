@@ -205,8 +205,51 @@ int restart_service(void) {
         log_zenith(LOG_FATAL, "Unable to daemonize service");
         return 1;
     }
-
     system("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf restartservice");
-
     return 0;
+}
+
+
+/**
+ * @brief Show notifications based on current profiles
+ * app broadcast intent.
+ */
+void shownotifications(void) {
+    FILE *fp = fopen("/data/adb/.config/AZenith/API/current_profile", "r");
+    if (!fp) {
+        return;
+    }
+
+    int profile = 0;
+    if (fscanf(fp, "%d", &profile) != 1) {
+        fclose(fp);
+        return;
+    }
+    fclose(fp);
+
+    switch (profile) {
+        case 1:
+            notify("Performance Profile", "System is now at Powerful state", false, 0);
+            break;
+        case 2:
+            notify("Balanced Profile", "System is now at Optimal state", false, 0);
+            break;
+        case 3:
+            notify("ECO Mode", "System is now at Endurance state", false, 0);
+            break;
+        default:
+            break;
+    }
+}
+
+/**
+ * @brief Show notifications based on current profiles
+ * app broadcast intent.
+ */
+void hidenotifications(void) {
+    
+    systemv("su -c \"am broadcast -a zx.azenith.ACTION_MANAGE -n "
+            "zx.azenith/.receiver.ZenithReceiver --ez clearall true >/dev/null "
+            "2>&1\"");
+    
 }

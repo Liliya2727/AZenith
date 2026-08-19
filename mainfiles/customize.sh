@@ -49,7 +49,7 @@ _cleanup_apk() {
     [ -f "$TMP_APK" ] && rm -f "$TMP_APK"
 }
 
-# Install APK with spinner animation and timeout protection
+# Install APK
 install_manager() {
     local apk_path="$1"
     local app_name="$2"
@@ -95,7 +95,7 @@ install_manager() {
     rm -f "$tmp_log"
 
     if echo "$result" | grep -iq "Success"; then
-        printf "[✓] $app_name installed successfully\n"
+        echo "[✓] $app_name installed successfully\n"
         return 0
     else
         echo "[!] Failed to install $app_name"
@@ -319,11 +319,6 @@ if [ -z "$(getprop persist.sys.azenithconf.freqoffset)" ]; then
 	echo "Disabled" > "$MODULE_CONFIG/freqoffset"
 fi
 
-# Set default renderer
-if [ -z "$(getprop persist.sys.azenithconf.renderer)" ]; then
-	setprop persist.sys.azenithconf.renderer "Default"
-fi
-
 # Set default color scheme if not set
 if [ -z "$(getprop persist.sys.azenithconf.schemeconfig)" ]; then
 	setprop persist.sys.azenithconf.schemeconfig "1000 1000 1000 1000"
@@ -331,9 +326,9 @@ fi
 
 # Initiate bypasspath default value
 if [ -z "$(getprop persist.sys.azenithconf.bypasspath)" ]; then
-	setprop persist.sys.azenithconf.bypasspath "UNSUPPORTED"
+	setprop persist.sys.azenithconf.bypasspath "NEED_SETUP"
 	touch "$MODULE_CONFIG/bypasschgconfig/bypasspath"
-	echo "UNSUPPORTED" > "$MODULE_CONFIG/bypasschgconfig/bypasspath"
+	echo "NEED_SETUP" > "$MODULE_CONFIG/bypasschgconfig/bypasspath"
 fi
 
 # Initiate bypasspath default value
@@ -352,7 +347,27 @@ fi
 
 # Daemon Configurations
 if [ -z "$(getprop persist.sys.azenithconf.showtoast)" ]; then
-	setprop persist.sys.azenithconf.showtoast 1
+	setprop persist.sys.azenithconf.showtoast 0
+fi
+
+if [ -z "$(getprop persist.sys.azenith.profilenotifications)" ]; then
+	setprop persist.sys.azenith.profilenotifications 1
+fi
+
+if [ -z "$(getprop persist.sys.azenith.dropforeground)" ]; then
+	setprop persist.sys.azenith.dropforeground 0
+fi
+
+if [ -z "$(getprop persist.sys.azenith.disabletweak)" ]; then
+	setprop persist.sys.azenith.disabletweak 0
+fi
+
+if [ -z "$(getprop persist.sys.azenithconf.iosched)" ]; then
+	setprop persist.sys.azenithconf.iosched 1
+fi
+
+if [ -z "$(getprop persist.sys.azenithconf.renderer)" ]; then
+	setprop persist.sys.azenithconf.renderer default
 fi
 
 if [ -z "$(getprop persist.sys.azenithconf.preloadbudget)" ]; then
@@ -379,13 +394,13 @@ persist.sys.azenithconf.fpsged
 persist.sys.azenithconf.schedtunes
 persist.sys.azenithconf.clearbg
 persist.sys.azenithconf.APreload
-persist.sys.azenithconf.iosched
 persist.sys.azenithconf.cpulimit
 persist.sys.azenithconf.dnd
 persist.sys.azenithconf.justintime
 persist.sys.azenithconf.disabletrace
 persist.sys.azenithconf.thermalcore
 persist.sys.azenithconf.walttunes
+persist.sys.azenithconf.fstrim
 persist.sys.azenithconf.usefpsgo
 "
 for prop in $props; do

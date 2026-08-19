@@ -1,4 +1,7 @@
-use crate::utils::*; use std::fs; use std::path::Path; use std::process::Command;
+use crate::utils::*;
+use std::fs;
+use std::path::Path;
+use std::process::Command;
 use crate::chipsets::mediatek::*;
 use crate::chipsets::snapdragon::*;
 use crate::chipsets::exynos::*;
@@ -6,21 +9,22 @@ use crate::chipsets::unisoc::*;
 use crate::chipsets::tensor::*;
 
 pub fn performance_profile() {
+
+    // Check if tweaks are disabled
+    if is_tweak_disabled() {
+        return;
+    }
+    
     let mut performance_gov = getprop("persist.sys.azenith.custom_performance_cpu_gov");
     if performance_gov.is_empty() {
         performance_gov = "powersave".to_string();
     }
-    setgov(&performance_gov);
-    log_info(&format!("Applying governor to : {}", performance_gov));
     
     let lite_mode = get_litemode();
 
     // I/O Scheduler Tweaks
-    let custom_perf_io = getprop("persist.sys.azenith.custom_performance_IO");
-    if !custom_perf_io.is_empty() {
-        sets_io(&custom_perf_io);
-        log_info(&format!("Applying I/O scheduler to : {}", custom_perf_io));
-    } else {
+    let mut custom_perf_io = getprop("persist.sys.azenith.custom_performance_IO");
+    if custom_perf_io.is_empty() {
         let mut default_io = getprop("persist.sys.azenith.custom_default_balanced_IO");
         if default_io.is_empty() {
             default_io = getprop("persist.sys.azenith.default_balanced_IO");
@@ -28,23 +32,20 @@ pub fn performance_profile() {
         if default_io.is_empty() {
             default_io = "none".to_string();
         }
-        sets_io(&default_io);
-        log_info(&format!("Applying I/O scheduler to : {}", default_io));
+        custom_perf_io = default_io;
     }
 
     // Mali GPU Governor Tweaks
-    let custom_perf_mali = getprop("persist.sys.azenith.custom_performance_gpu_gov");
-    if !custom_perf_mali.is_empty() {
-        sets_mali_gov(&custom_perf_mali);
-    } else {
-        let mut default_mali = getprop("persist.sys.azenith.custom_default_gpu_gov");
+    let mut custom_perf_mali = getprop("persist.sys.azenith.custom_performance_maligpu_gov");
+    if custom_perf_mali.is_empty() {
+        let mut default_mali = getprop("persist.sys.azenith.custom_default_maligpu_gov");
         if default_mali.is_empty() {
-            default_mali = getprop("persist.sys.azenith.default_gpu_gov");
+            default_mali = getprop("persist.sys.azenith.default_maligpu_gov");
         }
-        if !default_mali.is_empty() {
-            sets_mali_gov(&default_mali);
-        }
+        custom_perf_mali = default_mali;
     }
+
+    apply_custom_governor_io(&performance_gov, &custom_perf_io, &custom_perf_mali);
 
     if Path::new("/proc/ppm").exists() {
         setgamefreqppm();
@@ -56,14 +57,6 @@ pub fn performance_profile() {
         log_info("Set CPU freq to max available Frequencies");
     } else {
         log_info("Set CPU freq to normal Frequencies");
-    }
-
-    let pl_base = "/sys/devices/system/cpu/perf";
-    if Path::new(pl_base).exists() {
-        write_lock("1", &format!("{}/gpu_pmu_enable", pl_base));
-        write_lock("1", &format!("{}/fuel_gauge_enable", pl_base));
-        write_lock("1", &format!("{}/enable", pl_base));
-        write_lock("1", &format!("{}/charger_enable", pl_base));
     }
 
     write_lock("80", "/proc/sys/vm/vfs_cache_pressure");
@@ -136,6 +129,12 @@ pub fn performance_profile() {
 }
 
 pub fn balanced_profile() {
+
+    // Check if tweaks are disabled
+    if is_tweak_disabled() {
+        return;
+    }
+    
     let mut default_gov = getprop("persist.sys.azenith.custom_default_cpu_gov");
     if default_gov.is_empty() {
         default_gov = getprop("persist.sys.azenith.default_cpu_gov");
@@ -143,8 +142,6 @@ pub fn balanced_profile() {
     if default_gov.is_empty() {
         default_gov = "schedutil".to_string();
     }
-    setgov(&default_gov);
-    log_info(&format!("Applying governor to : {}", default_gov));
 
     // I/O Scheduler Tweaks
     let mut default_io = getprop("persist.sys.azenith.custom_default_balanced_IO");
@@ -154,17 +151,14 @@ pub fn balanced_profile() {
     if default_io.is_empty() {
         default_io = "none".to_string();
     }
-    sets_io(&default_io);
-    log_info(&format!("Applying I/O scheduler to : {}", default_io));
 
     // Mali GPU Governor Tweaks
-    let mut default_mali = getprop("persist.sys.azenith.custom_default_gpu_gov");
+    let mut default_mali = getprop("persist.sys.azenith.custom_default_maligpu_gov");
     if default_mali.is_empty() {
-        default_mali = getprop("persist.sys.azenith.default_gpu_gov");
+        default_mali = getprop("persist.sys.azenith.default_maligpu_gov");
     }
-    if !default_mali.is_empty() {
-        sets_mali_gov(&default_mali);
-    }
+
+    apply_custom_governor_io(&default_gov, &default_io, &default_mali);
 
     if Path::new("/proc/ppm").exists() {
         setfreqppm();
@@ -176,14 +170,6 @@ pub fn balanced_profile() {
         log_info("Set CPU freq to normal Frequencies");
     } else {
         log_info("Set CPU freq to normal selected Frequencies");
-    }
-
-    let pl_base = "/sys/devices/system/cpu/perf";
-    if Path::new(pl_base).exists() {
-        write_lock("0", &format!("{}/gpu_pmu_enable", pl_base));
-        write_lock("0", &format!("{}/fuel_gauge_enable", pl_base));
-        write_lock("0", &format!("{}/enable", pl_base));
-        write_lock("1", &format!("{}/charger_enable", pl_base));
     }
 
     write_lock("120", "/proc/sys/vm/vfs_cache_pressure");
@@ -249,34 +235,34 @@ pub fn balanced_profile() {
 }
 
 pub fn eco_mode() {
+
+    // Check if tweaks are disabled
+    if is_tweak_disabled() {
+        return;
+    }
+    
     let mut powersave_gov = getprop("persist.sys.azenith.custom_powersave_cpu_gov");
     if powersave_gov.is_empty() {
         powersave_gov = "powersave".to_string();
     }
-    setgov(&powersave_gov);
-    log_info(&format!("Applying governor to : {}", powersave_gov));
 
     // I/O Scheduler Tweaks
     let mut powersave_io = getprop("persist.sys.azenith.custom_powersave_IO");
     if powersave_io.is_empty() {
         powersave_io = "none".to_string();
     }
-    sets_io(&powersave_io);
-    log_info(&format!("Applying I/O scheduler to : {}", powersave_io));
 
     // Mali GPU Governor Tweaks
-    let custom_eco_mali = getprop("persist.sys.azenith.custom_powersave_gpu_gov");
-    if !custom_eco_mali.is_empty() {
-        sets_mali_gov(&custom_eco_mali);
-    } else {
-        let mut default_mali = getprop("persist.sys.azenith.custom_default_gpu_gov");
+    let mut custom_eco_mali = getprop("persist.sys.azenith.custom_powersave_maligpu_gov");
+    if custom_eco_mali.is_empty() {
+        let mut default_mali = getprop("persist.sys.azenith.custom_default_maligpu_gov");
         if default_mali.is_empty() {
-            default_mali = getprop("persist.sys.azenith.default_gpu_gov");
+            default_mali = getprop("persist.sys.azenith.default_maligpu_gov");
         }
-        if !default_mali.is_empty() {
-            sets_mali_gov(&default_mali);
-        }
+        custom_eco_mali = default_mali;
     }
+
+    apply_custom_governor_io(&powersave_gov, &powersave_io, &custom_eco_mali);
 
     if Path::new("/proc/ppm").exists() {
         setfreqppm();
@@ -284,14 +270,6 @@ pub fn eco_mode() {
         setfreq();
     }
     log_info("Set CPU freq to low Frequencies");
-
-    let pl_base = "/sys/devices/system/cpu/perf";
-    if Path::new(pl_base).exists() {
-        write_lock("0", &format!("{}/gpu_pmu_enable", pl_base));
-        write_lock("0", &format!("{}/fuel_gauge_enable", pl_base));
-        write_lock("0", &format!("{}/enable", pl_base));
-        write_lock("1", &format!("{}/charger_enable", pl_base));
-    }
 
     write_lock("120", "/proc/sys/vm/vfs_cache_pressure");
     write_lock("Y", "/sys/module/workqueue/parameters/power_efficient");
@@ -312,7 +290,7 @@ pub fn eco_mode() {
     let bs_path = "/sys/module/battery_saver/parameters/enabled";
     if Path::new(bs_path).exists() {
         let content = fs::read_to_string(bs_path).unwrap_or_default();
-        if content.chars().any(|c: char| c.is_ascii_digit()) {
+        if content.chars().any(|c| c.is_ascii_digit()) {
             write_lock("1", bs_path);
         } else {
             write_lock("Y", bs_path);
@@ -325,17 +303,6 @@ pub fn eco_mode() {
     if Path::new(sched_feat).exists() {
         write_lock("NO_NEXT_BUDDY", sched_feat);
         write_lock("NO_TTWU_QUEUE", sched_feat);
-    }
-    
-    // Enable battery saver module
-    let bs_path = "/sys/module/battery_saver/parameters/enabled";
-    if Path::new(bs_path).exists() {
-        let content = fs::read_to_string(bs_path).unwrap_or_default();
-        if content.chars().any(|c| c.is_ascii_digit()) {
-            write_lock("1", bs_path);
-        } else {
-            write_lock("Y", bs_path);
-        }
     }
 
     match getprop("persist.sys.azenith.soctype").as_str() {
@@ -351,18 +318,13 @@ pub fn eco_mode() {
 }
 
 pub fn initialize() {
-    // 1. Initial kernel panics & sync
+    // Initial kernel panics & sync
     for param in &["panic", "panic_on_warn", "panic_on_oops", "softlockup_panic"] {
         write_lock("0", &format!("/proc/sys/kernel/{}", param));
     }
     let _ = Command::new("sync").status();
-
-    // 2. Initialize CPU & I/O & Mali GPU
-    init_cpu_governor();
-    init_io_scheduler();
-    init_maligpu_governor();
-
-    // 3. Display / SurfaceFlinger config
+    
+    // Display / SurfaceFlinger config
     let scheme = getprop("persist.sys.azenithconf.schemeconfig");
     if scheme != "1000 1000 1000 1000" && !scheme.is_empty() {
         let parts: Vec<&str> = scheme.split_whitespace().collect();
@@ -386,7 +348,18 @@ pub fn initialize() {
         }
     }
     
-    // 4. Thermal governor
+    // Check if tweaks are disabled
+    if is_tweak_disabled() {
+        return;
+    }
+
+    // Initialize CPU & I/O & Mali GPU
+    init_cpu_governor();
+    init_io_scheduler();
+    init_maligpu_governor();
+    init_renderer();
+    
+    // Thermal governor
     if let Ok(paths) = glob::glob("/sys/class/thermal/thermal_zone*") {
         for path in paths.flatten() {
             if let Some(p_str) = path.to_str() {
@@ -395,7 +368,7 @@ pub fn initialize() {
         }
     }
     
-    // 5. I/O Tweaks
+    // I/O Tweaks
     if let Ok(paths) = glob::glob("/sys/block/*") {
         for path in paths.flatten() {
             if let Some(p_str) = path.to_str() {
@@ -405,7 +378,7 @@ pub fn initialize() {
         }
     }
 
-    // 6. Networking tweaks
+    // Networking tweaks
     let tcp_avail = fs::read_to_string("/proc/sys/net/ipv4/tcp_available_congestion_control").unwrap_or_default();
     let algos = ["bbr3", "bbr2", "bbrplus", "bbr", "westwood", "cubic"];
     for algo in algos.iter() {
@@ -421,7 +394,7 @@ pub fn initialize() {
     write_lock("1", "/proc/sys/net/ipv4/tcp_sack");
     write_lock("0", "/proc/sys/net/ipv4/tcp_timestamps");
 
-    // 7. General Kernel & Scheduler Tweaks
+    // General Kernel & Scheduler Tweaks
     write_lock("3", "/proc/sys/kernel/perf_cpu_time_max_percent");
     write_lock("0", "/proc/sys/kernel/sched_schedstats");
     write_lock("0", "/proc/sys/kernel/task_cpustats_enable");
@@ -432,19 +405,19 @@ pub fn initialize() {
     write_lock("1000000", "/proc/sys/kernel/sched_min_granularity_ns");
     write_lock("1500000", "/proc/sys/kernel/sched_wakeup_granularity_ns");
 
-    // 8. VM Tweaks
+    // VM Tweaks
     write_lock("0", "/proc/sys/vm/page-cluster");
     write_lock("15", "/proc/sys/vm/stat_interval");
     write_lock("0", "/proc/sys/vm/compaction_proactiveness");
 
-    // 9. Vendor Bloats & Module Tweaks
+    // Vendor Bloats & Module Tweaks
     write_lock("0", "/sys/module/mmc_core/parameters/use_spi_crc");
     write_lock("0", "/sys/module/opchain/parameters/chain_on");
     write_lock("0", "/sys/module/cpufreq_bouncing/parameters/enable");
     write_lock("0", "/proc/task_info/task_sched_info/task_sched_info_enable");
     write_lock("0", "/proc/oplus_scheduler/sched_assist/sched_assist_enabled");
 
-    // 10. Libraries Max Perf Reporting
+    // Libraries Max Perf Reporting
     let libs = "libunity.so, libil2cpp.so, libmain.so, libUE4.so, libgodot_android.so, libgdx.so, libgdx-box2d.so, libminecraftpe.so, libLive2DCubismCore.so, libyuzu-android.so, libryujinx.so, libcitra-android.so, libhdr_pro_engine.so, libandroidx.graphics.path.so, libeffect.so";
     write_lock(libs, "/proc/sys/kernel/sched_lib_name");
     write_lock("255", "/proc/sys/kernel/sched_lib_mask_force");
@@ -452,7 +425,7 @@ pub fn initialize() {
     systemv("sys.azenith-utilityconf FSTrim");
     systemv("sh /data/adb/modules/AZenith/preferenced-tweaks.sh");
     
-    // 11. Final Sync & Logs
+    // Final Sync & Logs
     let _ = Command::new("sync").status();
     log_verbose("Initializing Complete");
     log_info("Initializing Complete");

@@ -34,6 +34,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zx.azenith.MainActivity
 import zx.azenith.R
+import zx.azenith.ui.util.PropertyUtils
 
 
 class ZenithReceiver : BroadcastReceiver() {
@@ -92,11 +93,15 @@ class ZenithReceiver : BroadcastReceiver() {
             intent.getStringExtra("chrono") == "true")
         
         val timeout = intent.getStringExtra("timeout")?.toLongOrNull() ?: 0L
-
+    
         val isProfile = title.lowercase(Locale.ROOT).let {
             it.contains("profile") || it.contains("mode") || it.contains("initializing...")
         }
-
+    
+        if (isProfile && PropertyUtils.get("persist.sys.azenith.profilenotifications") == "0") {
+            return
+        }
+    
         val channelId = if (isProfile) CH_PROFILE else CH_SYSTEM
 
 
@@ -121,23 +126,25 @@ class ZenithReceiver : BroadcastReceiver() {
 
         val builder = NotificationCompat.Builder(context, channelId).apply {
 
-            setSmallIcon(context.applicationInfo.icon) 
+            setSmallIcon(R.drawable.avatar_transparent)
             setContentTitle(title)
-            setContentText(message)
             setUsesChronometer(chrono)
+            setShowWhen(false)
             setOngoing(isProfile)
             setAutoCancel(!isProfile)
             setContentIntent(clickPI)
-            
-
+        
+            if (isProfile) {
+                setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            } else {
+                setContentText(message)
+            }
+        
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-
                 setColor(ContextCompat.getColor(context, android.R.color.holo_blue_dark))
             }
-
+        
             if (isProfile) {
-
-
                 val reshowIntent = Intent(context, ZenithReceiver::class.java).apply {
                     this.action = ACTION_RESHOW
                     putExtra("notifytitle", title)
@@ -147,10 +154,9 @@ class ZenithReceiver : BroadcastReceiver() {
                 val deletePI = PendingIntent.getBroadcast(context, title.hashCode(), reshowIntent, pendingIntentFlags)
                 setDeleteIntent(deletePI)
             } else {
-
                 setGroup(GROUP_SYSTEM_LOGS)
             }
-
+        
             if (timeout > 0L) {
                 setTimeoutAfter(timeout)
             }

@@ -24,8 +24,12 @@
  * @return 0 if compatible node found, 1 if no node matches, -1 if charger is disconnected.
  */
 int check_bypass_compatibility() {
+    setvbuf(stdout, NULL, _IONBF, 0);
+    
     printf("\n\033[36m[Bypass Charge Compatibility Check]\033[0m Initializing...\n");
-
+    
+    sleep(5);
+    
     if (!is_charging()) {
         printf("\033[33m[!] WARNING:\033[0m Charger not detected. Plug in first!\n");
         log_zenith(LOG_WARN, "Connect charger to check compatibility");

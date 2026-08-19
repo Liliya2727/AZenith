@@ -70,6 +70,7 @@
 #define BYPASSCHG_CONFIG "/data/adb/.config/AZenith/bypasschgconfig"
 #define MODULE_VERSION ".placeholder"
 #define APP_MONITOR_FILE "/data/adb/.config/AZenith/app_status"
+#define DAEMON_STATE_FILE "/data/adb/.config/AZenith/daemon_state"
 
 #define IS_TRUE(v)    ((v) && strcmp((v), "true") == 0)
 #define IS_FALSE(v)   ((v) && strcmp((v), "false") == 0)
@@ -104,6 +105,9 @@ typedef struct {
     char game_preload[16];
     char refresh_rate[16];
     char renderer[64];
+    char resolution_downscale[8];
+    char resolution_fps[8];
+    char bypass_charging[16];  
 } GameConfig;
 
 extern GameConfig* g_game_cache;
@@ -165,6 +169,7 @@ typedef struct {
     time_t screen_off_timer;
     ProfileMode cur_mode;
     char saved_renderer[PROP_VALUE_MAX];
+    char saved_sys_renderer[PROP_VALUE_MAX];
     char last_freqoffset[PROP_VALUE_MAX];
     char prev_ai_state[16];
     const char* java_lock_path;
@@ -172,6 +177,10 @@ typedef struct {
     char config_bypasspath[PROP_VALUE_MAX];
     int config_bypasschg;
     int config_bypasschgthreshold;
+    bool resolution_applied;
+    bool used_legacy_fallback;
+    bool fg_away_active;
+    time_t fg_away_timer;
 } DaemonContext;
 
 extern const char* VALID_AZENITH_PROPS[];
@@ -227,6 +236,8 @@ int handle_profile(int argc, char** argv);
 int handle_log(int argc, char** argv);
 int handle_verboselog(int argc, char** argv);
 int restart_service(void);
+void shownotifications(void);
+void hidenotifications(void);
 
 // Misc Utilities
 extern void GamePreload(const char* package);
@@ -245,7 +256,10 @@ void runthermalcore(void);
 void check_module_version(void);
 void apply_dynamic_refresh_rate(int target_rr);
 int get_max_refresh_rate(void);
-bool apply_smart_renderer(const char* target_type, const char* pkg, char* saved_ref);
+bool apply_smart_renderer(const char* target_type, char* saved_ref, char* saved_sys);
+bool apply_resolution_target(DaemonContext* ctx, const char* pkg,
+                               const char* downscale, const char* fps);
+void restore_resolution_target(DaemonContext* ctx, const char* pkg);
 
 // Shell and Command execution
 char* execute_command(const char* format, ...);
@@ -270,6 +284,9 @@ void set_priority(const pid_t pid);
 int uidof(pid_t pid);
 void free_gamelist_cache(void);
 void reload_gamelist_cache(DaemonContext* ctx);
+void restore_daemon_state(DaemonContext* ctx);
+void save_daemon_state(DaemonContext* ctx);
+void restart_target_app(const char* pkg);
 
 // App Monitor
 char* get_visible_package(SystemStateCache* cache);

@@ -26,6 +26,9 @@ until [ "$(getprop sys.boot_completed)" = "1" ]; do
     sleep 1
 done
 
+# Remove Single Instance since we dont need it anymore
+rm -f /dev/.azenithSingleInstance
+
 # Reset anti bootloop
 echo "BOOTCOUNT=0" > "$MODDIR/count.sh"
 
@@ -50,6 +53,6 @@ nohup app_process -Djava.class.path="$APK_COMP" / \
     "$MODULE_CONFIG/app_status" \
     "$MODULE_CONFIG/background_apps" \
     "$MODULE_CONFIG/java.lock" >"$MODULE_CONFIG/sysmon.log" 2>&1 &
-    
+
 # Run AZenith service
 sleep 1 && exec "$BIN_SVC" --run

@@ -102,5 +102,11 @@ BypassNode bypass_list[] = {
     {"MAXFG_OFF_CHG", "/sys/class/power_supply/maxfg/offmode_charger", "1", "0"},
     {"COOL_MODE_MAIN", "/sys/class/power_supply/main/cool_mode", "1", "0"},
     {"RESTRICTED_CHG_BATT", "/sys/class/power_supply/battery/restricted_charging", "1", "0"},
-    {"RESTRICTED_CHG_WIRELESS", "/sys/class/power_supply/wireless/restricted_charging", "1", "0"}};
+    {"RESTRICTED_CHG_WIRELESS", "/sys/class/power_supply/wireless/restricted_charging", "1", "0"},
+    {"XIAOMI_MCA_INPUT_SUSPEND_V1", "/sys/devices/platform/soc/soc:mca_charge_interface/input_suspend", "1", "0"},
+    {"XIAOMI_MCA_CHARGE_ENABLE_V1", "/sys/devices/platform/soc/soc:mca_charge_interface/charge_enable", "0", "1"},
+    {"XIAOMI_MCA_STOP_HANDLE_V1", "/sys/devices/platform/soc/soc:mca_business_charger/stop_handle_charge", "1", "0"},
+    {"XIAOMI_XM_INPUT_SUSPEND", "/sys/class/xm_power/charger/charge_interface/input_suspend", "1", "0"},
+    {"XIAOMI_XM_STOP_HANDLE", "/sys/class/xm_power/charger/charger_common/stop_handle_charge", "1", "0"},
+    {"XIAOMI_XM_CHARGE_ENABLE", "/sys/class/xm_power/charger/charge_interface/charge_enable", "0", "1"}};
 const int bypass_list_size = sizeof(bypass_list) / sizeof(BypassNode);

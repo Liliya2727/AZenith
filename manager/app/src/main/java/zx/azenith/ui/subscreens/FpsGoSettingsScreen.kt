@@ -105,11 +105,10 @@ fun FpsGoSettings(navController: NavController) {
                     end = 16.dp,
                     bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                 ),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                
             ) {
                 item {
-                    
-                    
+                    Spacer(modifier = Modifier.height(16.dp))
                     ExpressiveList(
                         content = listOf(
                             {
@@ -133,6 +132,8 @@ fun FpsGoSettings(navController: NavController) {
                         fpsgostate = PropertyUtils.get("persist.sys.azenithconf.usefpsgo") == "1"
                     }
                     
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
                     if (fpsgostate != null) {
                         ExpressiveList(
                             content = listOf(
@@ -145,6 +146,42 @@ fun FpsGoSettings(navController: NavController) {
                                         onCheckedChange = { isChecked ->
                                             fpsgostate = isChecked
                                             PropertyUtils.set("persist.sys.azenithconf.usefpsgo", if (isChecked) "1" else "0")
+                                        }
+                                    )
+                                }
+                            )
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(180.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            LoadingIndicator(modifier = Modifier.size(32.dp))
+                        }
+                    }
+                }
+                
+                item { PrefSectionTitle(stringResource(R.string.section_prefstweaks)) }
+                
+                item {
+                    var fpsgogedstate by remember { mutableStateOf<Boolean?>(null) }
+                    
+                    LaunchedEffect(Unit) {
+                        fpsgogedstate = PropertyUtils.get("persist.sys.azenithconf.fpsged") == "1"
+                    }
+                    
+                    if (fpsgogedstate != null) {
+                        ExpressiveList(
+                            content = listOf(
+                                {
+                                    ExpressiveSwitchItem(
+                                        icon = Icons.Rounded.Speed,
+                                        title = stringResource(R.string.fpsgo_ged),
+                                        summary = stringResource(R.string.fpsgo_ged_desc),
+                                        checked = fpsgogedstate!!,
+                                        onCheckedChange = { isChecked ->
+                                            fpsgogedstate = isChecked
+                                            PropertyUtils.set("persist.sys.azenithconf.fpsged", if (isChecked) "1" else "0")
                                         }
                                     )
                                 }

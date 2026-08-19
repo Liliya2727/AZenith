@@ -31,6 +31,7 @@ int main_daemon(void) {
 
     DaemonContext ctx;
     init_daemon_context(&ctx);
+    restore_daemon_state(&ctx);
     wait_for_java_companion(&ctx);
 
     if (pipe(java_lock_pipe) != 0) {
@@ -43,7 +44,7 @@ int main_daemon(void) {
         pthread_create(&lock_thread, &attr, java_lock_watcher_thread, (void*)ctx.java_lock_path);
         pthread_attr_destroy(&attr);
     }
-    
+
     log_zenith(LOG_INFO, "Reading initial applist status...");
     read_app_status(&current_system_cache);
     reload_gamelist_cache(&ctx);
@@ -55,7 +56,7 @@ int main_daemon(void) {
     __system_property_set("persist.sys.azenith.state", "running");
     notify("Initializing...", "Starting AZenith service...", false, 0);
     setspid();
-    
+
     FILE* fp_ai_init = fopen(DAEMON_MODES, "r");
     if (fp_ai_init) {
         if (fgets(ctx.prev_ai_state, sizeof(ctx.prev_ai_state), fp_ai_init))
@@ -64,19 +65,19 @@ int main_daemon(void) {
     }
     int inotify_fd = setup_inotify_watchers();
     load_initial_config_files(&ctx);
-    
+
     checkstate();
     is_kanged();
     check_module_version();
     validateprop();
     log_zenith(LOG_INFO, "Module Integrity Passed");
-    
+
     log_zenith(LOG_INFO, "Daemon is Ready!");
     ctx.need_profile_checkup = true;
     bool need_loop = true;
     runthermalcore();
     run_profiler(PERFCOMMON);
-    
+
     /* Main Daemon Loop */
     while (1) {
         int poll_timeout = -1;
@@ -86,6 +87,12 @@ int main_daemon(void) {
             double elapsed = difftime(time(NULL), ctx.screen_off_timer);
             if (elapsed < 10.0)
                 poll_timeout = (int)((10.0 - elapsed) * 1000);
+            else
+                poll_timeout = 0;
+        } else if (ctx.fg_away_active) {
+            double elapsed = difftime(time(NULL), ctx.fg_away_timer);
+            if (elapsed < 30.0)
+                poll_timeout = (int)((30.0 - elapsed) * 1000);
             else
                 poll_timeout = 0;
         }
@@ -127,6 +134,11 @@ int main_daemon(void) {
                     free(current_focused_game);
                     ctx.need_profile_checkup = false;
                 } else {
+
+                    if (gamestart && ctx.resolution_applied) {
+                        restore_resolution_target(&ctx, gamestart);
+                    }
+
                     if (gamestart)
                         free(gamestart);
                     if (active_app_name)
@@ -158,7 +170,6 @@ int main_daemon(void) {
                     ctx.grace_period_active = false;
                 }
                 ctx.screen_off_timer = 0;
-                ctx.need_profile_checkup = true;
             }
             ctx.prev_screen_state = real_screen_state;
         }
@@ -174,28 +185,81 @@ int main_daemon(void) {
                 ctx.need_profile_checkup = true;
             }
         }
+        
+        if (gamestart && ctx.cur_mode == PERFORMANCE_PROFILE) {
+            char dropfg_val[PROP_VALUE_MAX] = {0};
+            bool dropforeground_enabled = (__system_property_get("persist.sys.azenith.dropforeground", dropfg_val) > 0 &&
+                                            dropfg_val[0] == '1');
+        
+            if (dropforeground_enabled) {
+                bool is_focused = (strcmp(current_system_cache.focused_app, gamestart) == 0);
+                if (!is_focused) {
+                    if (!ctx.fg_away_active) {
+                        ctx.fg_away_timer = time(NULL);
+                        ctx.fg_away_active = true;
+                        
+                    } else if (difftime(time(NULL), ctx.fg_away_timer) >= 30.0) {
+                        log_zenith(LOG_INFO, "Apps %s lost in foreground too long. Dropping to Balanced.",
+                                   active_app_name ? active_app_name : gamestart);
+                        ctx.fg_away_active = false;
+                        ctx.fg_away_timer = 0;
+                        restore_resolution_target(&ctx, gamestart);
+                        free(gamestart);
+                        gamestart = NULL;
+                        if (active_app_name) {
+                            free(active_app_name);
+                            active_app_name = NULL;
+                        }
+                        ctx.need_profile_checkup = true;
+                    }
+                } else if (ctx.fg_away_active) {
+                    ctx.fg_away_active = false;
+                    ctx.fg_away_timer = 0;
+                }
+            } else if (ctx.fg_away_active) {
+                ctx.fg_away_active = false;
+                ctx.fg_away_timer = 0;
+            }
+        }
 
-        if (ctx.is_initialize_complete && ctx.cur_mode != PERFORMANCE_PROFILE && gamestart == NULL && !ctx.need_profile_checkup)
+        if (ctx.is_initialize_complete && ctx.cur_mode != PERFORMANCE_PROFILE && gamestart == NULL && !ctx.need_profile_checkup) {
+            
+            bool is_low_power = get_low_power_state(&current_system_cache);
+            
+            if (is_low_power && ctx.cur_mode != ECO_MODE) {
+                goto apply_mode_eco;
+            }
+            
+            if (!is_low_power && ctx.cur_mode == ECO_MODE) {
+                goto apply_mode_balanced;
+            }
+
             continue;
+        }
 
         if (ctx.is_initialize_complete && gamestart && effective_screen_state) {
             if (!ctx.need_profile_checkup && ctx.cur_mode == PERFORMANCE_PROFILE && ctx.has_applied_renderer && game_pid_count > 0)
                 continue;
 
-            bool is_renderer_changing = false;
             if (!ctx.has_applied_renderer) {
-                is_restarting_renderer = true;
+                bool renderer_changed = false;
                 if (!IS_DEFAULT(opts.renderer)) {
-                    is_renderer_changing = apply_smart_renderer(opts.renderer, gamestart, ctx.saved_renderer);
+                    renderer_changed = apply_smart_renderer(opts.renderer, ctx.saved_renderer, ctx.saved_sys_renderer);
                 }
 
-                if (is_renderer_changing) {
-                    log_zenith(LOG_INFO, "Changing renderer. Waiting for app to respawn...");
-                    usleep(500000);
+                bool reso_changed = false;
+                if (!IS_DEFAULT(opts.resolution_downscale)) {
+                    reso_changed = apply_resolution_target(&ctx, gamestart,
+                                                            opts.resolution_downscale,
+                                                            opts.resolution_fps);
+                }
+
+                if (renderer_changed || reso_changed) {
+                    restart_target_app(gamestart);
                     game_pid_count = 0;
                     ctx.pid_retries = 0;
                 }
-                is_restarting_renderer = false;
+
                 ctx.has_applied_renderer = true;
             }
 
@@ -208,6 +272,7 @@ int main_daemon(void) {
                         ctx.pid_retries++;
                         log_zenith(LOG_WARN, "Waiting for %s to spawn (Retry %d/5)...", active_app_name ? active_app_name : gamestart,
                                    ctx.pid_retries);
+                        usleep(200000);
                         need_loop = true;
                         continue;
                     } else {
@@ -237,9 +302,11 @@ int main_daemon(void) {
             }
             apply_performance_profile(&ctx);
         } else if (ctx.is_initialize_complete && get_low_power_state(&current_system_cache)) {
-            apply_eco_profile(&ctx);
+            apply_mode_eco:
+                apply_eco_profile(&ctx);
         } else {
-            apply_balanced_profile(&ctx);
+            apply_mode_balanced:
+                apply_balanced_profile(&ctx);
         }
     }
 

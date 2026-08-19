@@ -555,9 +555,9 @@ fun InfoTile(
                 ) { targetValue ->
                     Text(
                         text = targetValue, 
-                        style = MaterialTheme.typography.bodyMedium, 
+                        style = MaterialTheme.typography.bodySmall, 
                         color = colorScheme.onSurfaceVariant, 
-                        maxLines = 2, 
+                        maxLines = 1, 
                         overflow = TextOverflow.Ellipsis,
                         lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified
                     )
@@ -754,14 +754,13 @@ fun DeviceInfoGridItem(modifier: Modifier = Modifier, title: String, value: Stri
             ) {
                 Text(
                     text = value, 
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold, 
                     color = colorScheme.onSurface,
-                    maxLines = 2, 
-
-
-
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                     lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified
+
                 )
             }
         }
@@ -843,7 +842,7 @@ fun RebootBottomSheet(
     val options = buildList<Triple<String, String, ImageVector>> {
         add(Triple(stringResource(R.string.reboot), "", Icons.Outlined.Refresh))
         if (isUserspaceSupported) add(Triple(stringResource(R.string.reboot_userspace), "userspace", Icons.Outlined.RestartAlt))
-        add(Triple(stringResource(R.string.reboot_soft), "soft_reboot", Icons.Outlined.Refresh))
+        // add(Triple(stringResource(R.string.reboot_soft), "soft_reboot", Icons.Outlined.Refresh))
         add(Triple(stringResource(R.string.reboot_recovery), "recovery", Icons.Outlined.SystemUpdate))
         add(Triple(stringResource(R.string.reboot_bootloader), "bootloader", Icons.Outlined.Memory))
         add(Triple(stringResource(R.string.reboot_download), "download", Icons.Outlined.Download))

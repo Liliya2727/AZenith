@@ -161,6 +161,10 @@ fun TweakScreen(
         }
     }
 
+    var isFullModeEnabled by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        isFullModeEnabled = DebugUtils.isFullModeEnabled()
+    }
 
     LaunchedEffect(Unit) {
         viewModel.loadAllConfiguration(context)
@@ -221,7 +225,7 @@ fun TweakScreen(
                     }
                     if (socType != null && viewModel.liteState != null) {
                         val isMediaTek   = socType == "mediatek"
-                        val available = false
+                        
                         ExpressiveList(
                             content = listOf(
                                 {
@@ -232,28 +236,6 @@ fun TweakScreen(
                                         checked = viewModel.liteState!!,
                                         onCheckedChange = { viewModel.updateLiteMode(it) }
                                     )
-                                },
-                                {
-                                    Box(modifier = Modifier.alpha(if (available) 1f else 0.4f)) {
-                                        ExpressiveListItem(
-                                            leadingContent = { LeadingIcon(icon = Icons.Filled.ArtTrack) },
-                                            onClick = { 
-                                                if (available) {
-                                                    navController.navigate("FasScreen") 
-                                                }
-                                            },
-                                            headlineContent = { Text(text = stringResource(R.string.str_frame_aware_scheduling_fas) ) },
-                                            supportingContent = { 
-                                                Text(
-                                                    text = if (available)
-                                                        stringResource(R.string.str_frame_aware_scheduling_desc) 
-                                                    else
-                                                        stringResource(R.string.str_unavailable)
-                                                ) 
-                                            },
-                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                        )
-                                    }
                                 },
                                 {
                                     Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
@@ -292,8 +274,8 @@ fun TweakScreen(
                         viewModel.dndState != null && 
                         viewModel.fstrimState != null) {
                         ExpressiveList(
-                            content = listOf(
-                                {
+                            content = buildList {
+                                add {
                                     ExpressiveSwitchItem(
                                         icon = Icons.Rounded.RocketLaunch,
                                         title = stringResource(R.string.game_preload),
@@ -301,26 +283,30 @@ fun TweakScreen(
                                         checked = viewModel.preloadState!!,
                                         onCheckedChange = { viewModel.updatePreloadMode(it) }
                                     )
-                                },
-                                {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Rounded.CleaningServices,
-                                        title = stringResource(R.string.memory_killer),
-                                        summary = stringResource(R.string.memory_killer_desc),
-                                        checked = viewModel.memKillerState!!,
-                                        onCheckedChange = { viewModel.updateMemoryKiller(it) }
-                                    )
-                                },
-                                {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Rounded.SwapVerticalCircle,
-                                        title = stringResource(R.string.app_priority_control),
-                                        summary = stringResource(R.string.app_priority_control_desc),
-                                        checked = viewModel.appPriorState!!,
-                                        onCheckedChange = { viewModel.updateAppPriority(it) }
-                                    )
-                                },
-                                {
+                                }
+                                if (isFullModeEnabled) {
+                                    add {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Rounded.CleaningServices,
+                                            title = stringResource(R.string.memory_killer),
+                                            summary = stringResource(R.string.memory_killer_desc),
+                                            checked = viewModel.memKillerState!!,
+                                            onCheckedChange = { viewModel.updateMemoryKiller(it) }
+                                        )
+                                    }
+                                }
+                                if (isFullModeEnabled) {
+                                    add {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Rounded.SwapVerticalCircle,
+                                            title = stringResource(R.string.app_priority_control),
+                                            summary = stringResource(R.string.app_priority_control_desc),
+                                            checked = viewModel.appPriorState!!,
+                                            onCheckedChange = { viewModel.updateAppPriority(it) }
+                                        )
+                                    }
+                                }
+                                add {
                                     ExpressiveSwitchItem(
                                         icon = Icons.Rounded.DoNotDisturbOn,
                                         title = stringResource(R.string.dnd_mode_gaming),
@@ -328,17 +314,28 @@ fun TweakScreen(
                                         checked = viewModel.dndState!!,
                                         onCheckedChange = { viewModel.updateDndMode(it) }
                                     )
-                                },
-                                {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Outlined.ContentCut,
-                                        title = stringResource(R.string.trim_filesystem),
-                                        summary = stringResource(R.string.trim_filesystem_desc),
-                                        checked = viewModel.fstrimState!!,
-                                        onCheckedChange = { viewModel.updateFstrim(it) }
+                                }
+                                if (isFullModeEnabled) {
+                                    add {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Outlined.ContentCut,
+                                            title = stringResource(R.string.trim_filesystem),
+                                            summary = stringResource(R.string.trim_filesystem_desc),
+                                            checked = viewModel.fstrimState!!,
+                                            onCheckedChange = { viewModel.updateFstrim(it) }
+                                        )
+                                    }
+                                }
+                                add {
+                                    ExpressiveListItem(
+                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Ballot) },
+                                        onClick = { navController.navigate("governorsettings") },
+                                        headlineContent = { Text(stringResource(R.string.gov_settings)) },
+                                        supportingContent = { Text(stringResource(R.string.gov_settingsdesc)) },
+                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
                                     )
                                 }
-                            )
+                            }
                         )
                     } else {
                         SectionLoadingIndicator()
@@ -358,11 +355,11 @@ fun TweakScreen(
                                 icon = Icons.Rounded.WebStories,
                                 label = stringResource(R.string.refreshrates),
                                 value = stringResource(R.string.refresh_rate_format, viewModel.currentRefreshRate.toString()),
-                                showArrow = true,
-                                highlight = true,
+                                showArrow = isFullModeEnabled,
+                                highlight = isFullModeEnabled,
                                 isLoading = viewModel.isRefreshRateLoading
                             ) {
-                                showRefreshRateDialog = true
+                                showRefreshRateDialog = isFullModeEnabled
                             }
                 
                             ExpressiveTile(
@@ -370,170 +367,15 @@ fun TweakScreen(
                                 icon = Icons.Rounded.SettingsSuggest,
                                 label = stringResource(R.string.renderengine),
                                 value = viewModel.currentRenderer!!.uppercase(),
-                                showArrow = false,
-                                highlight = false,
+                                showArrow = true,
+                                highlight = true,
                                 isLoading = viewModel.isRendererLoading
                             ) {
-                                // showRendererDialog = true
+                                showRendererDialog = true
                             }
                         }
                     } else {
                         SectionLoadingIndicator()
-                    }
-                }
-
-
-                item { TweaksSectionTitle(stringResource(R.string.section_CPUSettings)) }
-                item {
-                    if (viewModel.defaultGovIndex != null && 
-                        viewModel.powersaveGovIndex != null && 
-                        viewModel.performanceGovIndex != null && 
-                        viewModel.freqOffsetIndex != null) {
-                        ExpressiveList(
-                            content = listOf(
-                                {
-                                    ExpressiveDropdownItem(
-                                        icon = Icons.Outlined.Water,
-                                        title = stringResource(R.string.default_cpu_gov),
-                                        summary = stringResource(R.string.default_cpu_gov_desc),
-                                        items = viewModel.availableGovernors ?: emptyList(),
-                                        selectedIndex = viewModel.defaultGovIndex!!,
-                                        onItemSelected = { viewModel.updateDefaultGovernor(it) }
-                                    )
-                                },
-                                {
-                                    ExpressiveDropdownItem(
-                                        icon = Icons.Outlined.OfflineBolt,
-                                        title = stringResource(R.string.performance_cpu_gov),
-                                        summary = stringResource(R.string.performance_cpu_gov_desc),
-                                        items = viewModel.availableGovernors ?: emptyList(),
-                                        selectedIndex = viewModel.performanceGovIndex!!,
-                                        onItemSelected = { viewModel.updatePerformanceGovernor(it) }
-                                    )
-                                },
-                                {
-                                    ExpressiveDropdownItem(
-                                        icon = Icons.Outlined.EnergySavingsLeaf,
-                                        title = stringResource(R.string.powersave_cpu_gov),
-                                        summary = stringResource(R.string.powersave_cpu_gov_desc),
-                                        items = viewModel.availableGovernors ?: emptyList(),
-                                        selectedIndex = viewModel.powersaveGovIndex!!,
-                                        onItemSelected = { viewModel.updatePowersaveGovernor(it) }
-                                    )
-                                },
-                                {
-                                    FreqLimitSliderItem(
-                                        icon = Icons.Outlined.Tune,
-                                        initialValue = viewModel.freqOffsetIndex!!,
-                                        labels = viewModel.offsetLabels,
-                                        onSaved = { viewModel.saveFreqOffset(it) }
-                                    )
-                                }
-                            )
-                        )
-                    } else {
-                        SectionLoadingIndicator()
-                    }
-                }
-
-                item { TweaksSectionTitle(stringResource(R.string.io_settings)) }
-                item {
-                    if (viewModel.availableIOSchedulers == null) {
-                        SectionLoadingIndicator()
-                    } else if (viewModel.availableIOSchedulers!!.isNotEmpty()) {
-                        if (viewModel.balancedIOIndex != null && 
-                            viewModel.performanceIOIndex != null && 
-                            viewModel.powersaveIOIndex != null) {
-                            ExpressiveList(
-                                content = listOf(
-                                    {
-                                        ExpressiveDropdownItem(
-                                            icon = Icons.Outlined.Water,
-                                            title = stringResource(R.string.balanced_io_scheduler),
-                                            summary = stringResource(R.string.balanced_io_scheduler_desc),
-                                            items = viewModel.availableIOSchedulers ?: emptyList(),
-                                            selectedIndex = viewModel.balancedIOIndex!!,
-                                            onItemSelected = { viewModel.updateBalancedIO(it) }
-                                        )
-                                    },
-                                    {
-                                        ExpressiveDropdownItem(
-                                            icon = Icons.Outlined.OfflineBolt,
-                                            title = stringResource(R.string.performance_io_scheduler),
-                                            summary = stringResource(R.string.performance_io_scheduler_desc),
-                                            items = viewModel.availableIOSchedulers ?: emptyList(),
-                                            selectedIndex = viewModel.performanceIOIndex!!,
-                                            onItemSelected = { viewModel.updatePerformanceIO(it) }
-                                        )
-                                    },
-                                    {
-                                        ExpressiveDropdownItem(
-                                            icon = Icons.Outlined.EnergySavingsLeaf,
-                                            title = stringResource(R.string.powersave_io_scheduler),
-                                            summary = stringResource(R.string.powersave_io_scheduler_desc),
-                                            items = viewModel.availableIOSchedulers ?: emptyList(),
-                                            selectedIndex = viewModel.powersaveIOIndex!!,
-                                            onItemSelected = { viewModel.updatePowersaveIO(it) }
-                                        )
-                                    }
-                                )
-                            )
-                        } else {
-                            SectionLoadingIndicator()
-                        }
-                    } else {
-
-                    }
-                }
-                
-
-                if (viewModel.isMaliGpuAvailable == true) {
-                    item { TweaksSectionTitle(text = stringResource(R.string.section_mali_gpu)) }
-                    item {
-                        if (viewModel.availableMaliGovernors == null) {
-                            SectionLoadingIndicator()
-                        } else if (viewModel.availableMaliGovernors!!.isNotEmpty()) {
-                            if (viewModel.balancedMaliGovIndex != null && 
-                                viewModel.performanceMaliGovIndex != null && 
-                                viewModel.powersaveMaliGovIndex != null) {
-                                ExpressiveList(
-                                    content = listOf(
-                                        {
-                                            ExpressiveDropdownItem(
-                                                icon = Icons.Outlined.Water,
-                                                title = stringResource(R.string.balanced_mali_gov),
-                                                summary = stringResource(R.string.balanced_mali_gov_desc),
-                                                items = viewModel.availableMaliGovernors ?: emptyList(),
-                                                selectedIndex = viewModel.balancedMaliGovIndex!!,
-                                                onItemSelected = { viewModel.updateBalancedMaliGov(it) }
-                                            )
-                                        },
-                                        {
-                                            ExpressiveDropdownItem(
-                                                icon = Icons.Outlined.OfflineBolt,
-                                                title = stringResource(R.string.performance_mali_gov),
-                                                summary = stringResource(R.string.performance_mali_gov_desc),
-                                                items = viewModel.availableMaliGovernors ?: emptyList(),
-                                                selectedIndex = viewModel.performanceMaliGovIndex!!,
-                                                onItemSelected = { viewModel.updatePerformanceMaliGov(it) }
-                                            )
-                                        },
-                                        {
-                                            ExpressiveDropdownItem(
-                                                icon = Icons.Outlined.EnergySavingsLeaf,
-                                                title = stringResource(R.string.powersave_mali_gov),
-                                                summary = stringResource(R.string.powersave_mali_gov_desc),
-                                                items = viewModel.availableMaliGovernors ?: emptyList(),
-                                                selectedIndex = viewModel.powersaveMaliGovIndex!!,
-                                                onItemSelected = { viewModel.updatePowersaveMaliGov(it) }
-                                            )
-                                        }
-                                    )
-                                )
-                            } else {
-                                SectionLoadingIndicator()
-                            }
-                        }
                     }
                 }
                 
@@ -609,7 +451,6 @@ fun TweakScreen(
             )
         }
 
-
         RootAppDialog {
             CustomContentDialog(
                 visible = showBackupOptionsDialog,
@@ -644,7 +485,6 @@ fun TweakScreen(
             }
         }
 
-
         RootAppDialog {
             CustomContentDialog(
                 visible = showRestoreDialog,
@@ -669,10 +509,7 @@ fun TweakScreen(
                             scope.launch {
                                 loadingDialog.withLoading {
                                     viewModel.applyRestoreData(context, dataToRestore, optRestoreTweaks && !isSocMismatch, optRestoreApplist)
-                                    navController.navigate("home") {
-                                        popUpTo(navController.graph.startDestinationId)
-                                        launchSingleTop = true
-                                    }
+                                    viewModel.loadAllConfiguration(context)
                                 }
                             }
                         }
@@ -966,9 +803,9 @@ fun ExpressiveTile(
                     ) { targetValue ->
                         Text(
                             text = targetValue, 
-                            style = MaterialTheme.typography.bodyMedium, 
+                            style = MaterialTheme.typography.bodySmall, 
                             color = colorScheme.onSurfaceVariant, 
-                            maxLines = 2, 
+                            maxLines = 1, 
                             overflow = TextOverflow.Ellipsis,
                             lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified
                         )

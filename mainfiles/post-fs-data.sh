@@ -17,7 +17,6 @@
 #
 
 readonly MODDIR="${0%/*}"
-PERSISTENT_DIR="/data/adb/.config/AZenith"
 LOCK_FILE="/dev/.azenithSingleInstance"
 
 # Single Instance Lock
@@ -48,5 +47,19 @@ else
     fi
     
 fi
+
+# KSU Run Stop in Emulated Soft Reboot, but our daemon is running as detached process, making ksu failed to kill the daemon
+# So we have to kill it here...
+# Clear old process
+for p in $(/system/bin/toybox pidof sys.azenith-service); do
+    kill -TERM "$p" 2>/dev/null
+done
+for p in $(/system/bin/toybox pidof sys.azenith-appmonitoring); do
+    kill -TERM "$p" 2>/dev/null
+done
+
+# Make sure we removed the old .lock file
+rm -f "$MODULE_CONFIG/java.lock"
+rm -f "$MODULE_CONFIG/API/.lock"
 
 exit 0

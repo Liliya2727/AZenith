@@ -21,6 +21,7 @@ package zx.azenith.ui.subscreens
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -50,6 +51,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
@@ -82,6 +84,10 @@ import zx.azenith.ui.component.ExpressiveList
 import zx.azenith.ui.component.ExpressiveListItem
 import zx.azenith.ui.component.ExpressiveSwitchItem
 import zx.azenith.ui.util.getSupportedRefreshRates
+import zx.azenith.ui.util.getSupportedDownscaleFactors
+import zx.azenith.ui.util.getSupportedFpsTargets
+import zx.azenith.ui.util.DebugUtils
+import zx.azenith.ui.component.ExpressiveSliderItem
 import zx.azenith.ui.viewmodel.AppSettingsViewModel
 import zx.azenith.ui.viewmodel.ApplistViewmodel
 
@@ -95,12 +101,17 @@ fun AppSettingsScreen(
 ) {
     val context = LocalContext.current
     val appDetails = remember(packageName) { getAppDetails(context, packageName) }
+    val isGameApp = remember(packageName) { isGameCategory(context, packageName) }
     val colorScheme = MaterialTheme.colorScheme
     LaunchedEffect(packageName) { 
         viewModel.loadConfig() 
     }
 
     val config = viewModel.fullConfig[packageName]
+    var isFullModeEnabled by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        isFullModeEnabled = DebugUtils.isFullModeEnabled()
+    }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
     var localMasterOn by remember(config != null) { mutableStateOf(config != null) }
@@ -140,6 +151,16 @@ fun AppSettingsScreen(
     
     val rawRefreshModes = remember { getSupportedRefreshRates(context) }
     
+    val rawDownscaleSteps = remember { getSupportedDownscaleFactors() }
+    val rawFpsSteps = remember { getSupportedFpsTargets(context) }
+    
+    val downscaleDisplaySteps = remember(rawDownscaleSteps, defaultLabel) {
+        rawDownscaleSteps.map { if (it == "default") defaultLabel else it }
+    }
+    val fpsDisplaySteps = remember(rawFpsSteps, defaultLabel) {
+        rawFpsSteps.map { if (it == "default") defaultLabel else "${it}" }
+    }
+    
     val dynamicRefreshDisplayModes = remember(rawRefreshModes, defaultLabel) {
         rawRefreshModes.map { mode ->
             if (mode.equals("default", ignoreCase = true)) defaultLabel else mode
@@ -156,7 +177,7 @@ fun AppSettingsScreen(
         onDispose {
             appListViewModel.loadApps(context, forceRefresh = true)
         }
-    }
+    }  
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -250,17 +271,14 @@ fun AppSettingsScreen(
                     },
                     exit = shrinkVertically(animationSpec = tween(400)) + fadeOut()
                 ) {
-                    val displayConfig = config ?: zx.azenith.ui.util.AppConfig() 
-                    
-                    Column {
-                        
+                    val displayConfig = config ?: zx.azenith.ui.util.AppConfig()
 
-                
-                        SectionHeader(stringResource(R.string.preferred_settings))
+                    Column {
+                        SectionHeader(stringResource(R.string.section_performance))
                         ExpressiveList(
                             modifier = Modifier.padding(horizontal = 16.dp),
-                            content = listOf(
-                                {
+                            content = buildList {
+                                add {
                                     ExpressiveDropdownItem(
                                         icon = Icons.Rounded.Speed,
                                         title = stringResource(R.string.perf_lite_mode),
@@ -272,8 +290,28 @@ fun AppSettingsScreen(
                                             packageName?.let { viewModel.updateSetting(it, "perf_lite_mode", value) }
                                         }
                                     )
-                                },
-                                {
+                                }
+                            }
+                        )
+                    
+                        SectionHeader(stringResource(R.string.section_additionalsettings))
+                        ExpressiveList(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            content = buildList {
+                                add {
+                                    ExpressiveDropdownItem(
+                                        icon = Icons.Rounded.Cable,
+                                        title = stringResource(R.string.bcharging),
+                                        summary = stringResource(R.string.enable_bypass_charge_desc),
+                                        items = booleanModes,
+                                        selectedIndex = getBoolIndex(displayConfig.bypass_charging),
+                                        onItemSelected = { index ->
+                                            val value = listOf("default", "true", "false")[index]
+                                            packageName?.let { viewModel.updateSetting(it, "bypass_charging", value) }
+                                        }
+                                    )
+                                }
+                                add {
                                     ExpressiveDropdownItem(
                                         icon = Icons.Rounded.RocketLaunch,
                                         title = stringResource(R.string.game_preload),
@@ -285,21 +323,23 @@ fun AppSettingsScreen(
                                             packageName?.let { viewModel.updateSetting(it, "game_preload", value) }
                                         }
                                     )
-                                },
-                                {
-                                    ExpressiveDropdownItem(
-                                        icon = Icons.Rounded.SwapVerticalCircle,
-                                        title = stringResource(R.string.app_priority),
-                                        summary = stringResource(R.string.app_priority_desc),
-                                        items = booleanModes,
-                                        selectedIndex = getBoolIndex(displayConfig.app_priority),
-                                        onItemSelected = { index ->
-                                            val value = listOf("default", "true", "false")[index]
-                                            packageName?.let { viewModel.updateSetting(it, "app_priority", value) }
-                                        }
-                                    )
-                                },
-                                {
+                                }
+                                if (isFullModeEnabled) {
+                                    add {
+                                        ExpressiveDropdownItem(
+                                            icon = Icons.Rounded.SwapVerticalCircle,
+                                            title = stringResource(R.string.app_priority),
+                                            summary = stringResource(R.string.app_priority_desc),
+                                            items = booleanModes,
+                                            selectedIndex = getBoolIndex(displayConfig.app_priority),
+                                            onItemSelected = { index ->
+                                                val value = listOf("default", "true", "false")[index]
+                                                packageName?.let { viewModel.updateSetting(it, "app_priority", value) }
+                                            }
+                                        )
+                                    }
+                                }
+                                add {
                                     ExpressiveDropdownItem(
                                         icon = Icons.Rounded.DoNotDisturbOn,
                                         title = stringResource(R.string.dnd_mode),
@@ -311,23 +351,32 @@ fun AppSettingsScreen(
                                             packageName?.let { viewModel.updateSetting(it, "dnd_on_gaming", value) }
                                         }
                                     )
-                                },
-                                {
-                                    ExpressiveDropdownItem(
-                                        icon = Icons.Rounded.WebStories,
-                                        title = stringResource(R.string.refreshrates),
-                                        summary = stringResource(R.string.refreshrates_desc),
-                                        items = dynamicRefreshDisplayModes,
-                                        selectedIndex = rawRefreshModes.indexOfFirst { 
-                                            it.equals(displayConfig.refresh_rate, ignoreCase = true) 
-                                        }.coerceAtLeast(0),
-                                        onItemSelected = { index ->
-                                            val value = rawRefreshModes[index] 
-                                            packageName?.let { viewModel.updateSetting(it, "refresh_rate", value) }
-                                        }
-                                    )
-                                },
-                                {
+                                }
+                            }
+                        )
+                    
+                        SectionHeader(stringResource(R.string.section_display_render_settings))
+                        ExpressiveList(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            content = buildList {
+                                if (isFullModeEnabled) {
+                                    add {
+                                        ExpressiveDropdownItem(
+                                            icon = Icons.Rounded.WebStories,
+                                            title = stringResource(R.string.refreshrates),
+                                            summary = stringResource(R.string.refreshrates_desc),
+                                            items = dynamicRefreshDisplayModes,
+                                            selectedIndex = rawRefreshModes.indexOfFirst {
+                                                it.equals(displayConfig.refresh_rate, ignoreCase = true)
+                                            }.coerceAtLeast(0),
+                                            onItemSelected = { index ->
+                                                val value = rawRefreshModes[index]
+                                                packageName?.let { viewModel.updateSetting(it, "refresh_rate", value) }
+                                            }
+                                        )
+                                    }
+                                }
+                                add {
                                     ExpressiveDropdownItem(
                                         icon = Icons.Rounded.Layers,
                                         title = stringResource(R.string.renderengine),
@@ -340,39 +389,96 @@ fun AppSettingsScreen(
                                         }
                                     )
                                 }
-                            )
+                            }
                         )
+                    
+                        if (isGameApp) {
+                            SectionHeader(stringResource(R.string.section_resolution_settings))
+                            ExpressiveList(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                content = buildList {
+                                    add {
+                                        val currentDownscaleIndex = rawDownscaleSteps.indexOf(displayConfig.resolution_downscale)
+                                            .coerceAtLeast(0)
+                                        var downscaleSliderPos by remember(displayConfig.resolution_downscale) {
+                                            mutableStateOf(currentDownscaleIndex.toFloat())
+                                        }
+                    
+                                        ExpressiveSliderItem(
+                                            icon = Icons.Rounded.AspectRatio,
+                                            title = stringResource(R.string.resolution_downscale_title),
+                                            subtitle = stringResource(R.string.resolution_downscale_desc),
+                                            badgeText = downscaleDisplaySteps.getOrElse(downscaleSliderPos.toInt()) { defaultLabel },
+                                            sliderPosition = downscaleSliderPos,
+                                            valueRange = 0f..(rawDownscaleSteps.size - 1).toFloat(),
+                                            steps = rawDownscaleSteps.size - 2,
+                                            onValueChange = { downscaleSliderPos = it },
+                                            onValueChangeFinished = {
+                                                val value = rawDownscaleSteps[downscaleSliderPos.toInt()]
+                                                packageName?.let { viewModel.updateSetting(it, "resolution_downscale", value) }
+                                            }
+                                        )
+                                    }
+                                    add {
+                                        val currentFpsIndex = rawFpsSteps.indexOf(displayConfig.resolution_fps)
+                                            .coerceAtLeast(0)
+                                        var fpsSliderPos by remember(displayConfig.resolution_fps) {
+                                            mutableStateOf(currentFpsIndex.toFloat())
+                                        }
+                                        val downscaleIsOff = displayConfig.resolution_downscale == "default"
+                    
+                                        ExpressiveSliderItem(
+                                            icon = Icons.Rounded.Speed,
+                                            title = stringResource(R.string.resolution_fps_target_title),
+                                            subtitle = stringResource(R.string.resolution_fps_target_desc),
+                                            badgeText = "${fpsDisplaySteps.getOrElse(fpsSliderPos.toInt()) { "60" }}fps",
+                                            sliderPosition = fpsSliderPos,
+                                            valueRange = 0f..(rawFpsSteps.size - 1).toFloat(),
+                                            steps = rawFpsSteps.size - 2,
+                                            enabled = !downscaleIsOff,
+                                            onValueChange = { fpsSliderPos = it },
+                                            onValueChangeFinished = {
+                                                val value = rawFpsSteps[fpsSliderPos.toInt()]
+                                                packageName?.let { viewModel.updateSetting(it, "resolution_fps", value) }
+                                            }
+                                        )
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             }
-            item {
-                AnimatedVisibility(
-                    visible = localMasterOn,
-
-                    enter = if (userToggled) {
-                        expandVertically(animationSpec = tween(400)) + fadeIn()
-                    } else {
-                        EnterTransition.None
-                    },
-                    exit = shrinkVertically(animationSpec = tween(400)) + fadeOut()
-                ) {
-                    val displayConfig = config ?: zx.azenith.ui.util.AppConfig() 
-                    
-                    Column {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        ExpressiveList(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            content = listOf( 
-                               {
-                                   ExpressiveInfoCard(
-                                       supportingContent = { Text(text = stringResource(R.string.str_by_using_per_app_refresh_rate)) },
-                                       leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
-                                       containerColor = colorScheme.surfaceContainerLow,
-                                       onClick = {}
-                                   )
-                               }
+            if (isFullModeEnabled) {
+                item {
+                    AnimatedVisibility(
+                        visible = localMasterOn,
+    
+                        enter = if (userToggled) {
+                            expandVertically(animationSpec = tween(400)) + fadeIn()
+                        } else {
+                            EnterTransition.None
+                        },
+                        exit = shrinkVertically(animationSpec = tween(400)) + fadeOut()
+                    ) {
+                        val displayConfig = config ?: zx.azenith.ui.util.AppConfig() 
+                        
+                        Column {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            ExpressiveList(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                content = listOf( 
+                                   {
+                                       ExpressiveInfoCard(
+                                           supportingContent = { Text(text = stringResource(R.string.str_by_using_per_app_refresh_rate)) },
+                                           leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
+                                           containerColor = colorScheme.surfaceContainerLow,
+                                           onClick = {}
+                                       )
+                                   }
+                                )
                             )
-                        )
+                        }
                     }
                 }
             }
@@ -497,6 +603,18 @@ fun AppHeader(appDetails: Triple<String, android.content.pm.ApplicationInfo?, St
     }
 }
 
+@Suppress("DEPRECATION")
+fun isGameCategory(context: android.content.Context, packageName: String?): Boolean {
+    if (packageName.isNullOrEmpty()) return false
+    return try {
+        val pm = context.packageManager
+        val appInfo = pm.getApplicationInfo(packageName, 0)
+        appInfo.category == ApplicationInfo.CATEGORY_GAME ||
+            (appInfo.flags and ApplicationInfo.FLAG_IS_GAME) != 0
+    } catch (e: Exception) {
+        false
+    }
+}
 
 fun getAppDetails(context: android.content.Context, packageName: String?): Triple<String, android.content.pm.ApplicationInfo?, String> {
     return try {

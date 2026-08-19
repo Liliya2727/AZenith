@@ -140,6 +140,27 @@ void reload_gamelist_cache(DaemonContext* ctx) {
             else
                 strcpy(g_game_cache[g_game_cache_count].renderer, "default");
 
+            p = strstr(ptr, "\"resolution_downscale\":");
+            if (p && (!next_block || p < next_block))
+                extract_string_value(g_game_cache[g_game_cache_count].resolution_downscale, p,
+                                     sizeof(g_game_cache[g_game_cache_count].resolution_downscale));
+            else
+                strcpy(g_game_cache[g_game_cache_count].resolution_downscale, "default");
+            
+            p = strstr(ptr, "\"resolution_fps\":");
+            if (p && (!next_block || p < next_block))
+                extract_string_value(g_game_cache[g_game_cache_count].resolution_fps, p,
+                                     sizeof(g_game_cache[g_game_cache_count].resolution_fps));
+            else
+                strcpy(g_game_cache[g_game_cache_count].resolution_fps, "default");
+            
+            p = strstr(ptr, "\"bypass_charging\":");
+            if (p && (!next_block || p < next_block))
+                extract_string_value(g_game_cache[g_game_cache_count].bypass_charging, p,
+                                     sizeof(g_game_cache[g_game_cache_count].bypass_charging));
+            else
+                strcpy(g_game_cache[g_game_cache_count].bypass_charging, "default");
+                            
             g_game_cache_count++;
         }
         ptr += 4;

@@ -19,7 +19,7 @@
 /**
  * @brief Processes PID adjustments when background_apps event is triggered.
  */
-static void handle_background_apps_event(void) {
+static void handle_background_apps_event(DaemonContext* ctx) {
     if (!gamestart)
         return;
     pid_t new_pids[MAX_GAME_PIDS];
@@ -83,6 +83,7 @@ static void handle_background_apps_event(void) {
             } else {
                 log_zenith(LOG_INFO, "InotifyHandler: Game %s completely closed. Exiting performance mode...",
                            active_app_name ? active_app_name : gamestart);
+                restore_resolution_target(ctx, gamestart);
                 free(gamestart);
                 gamestart = NULL;
                 if (active_app_name) {
@@ -159,7 +160,7 @@ bool process_inotify_events(int inotify_fd, DaemonContext* ctx, int timeout_ms) 
                             read_app_status(&current_system_cache);
                             ctx->need_profile_checkup = true;
                         } else if (strcmp(event->name, "background_apps") == 0) {
-                            handle_background_apps_event();
+                            handle_background_apps_event(ctx);
                             if (gamestart == NULL)
                                 ctx->need_profile_checkup = true;
                         } else if (strcmp(event->name, "current_profile") == 0) {
@@ -274,7 +275,16 @@ void handle_dynamic_bypass(DaemonContext* ctx) {
             int current_battery = current_system_cache.battery_level;
             int is_device_charging = current_system_cache.is_charging;
 
-            if (current_battery >= 0 && ctx->config_bypasschg == 1 && is_device_charging) {
+            bool bypass_charging_allowed = true;
+            if (strcmp(opts.bypass_charging, "false") == 0) {
+                bypass_charging_allowed = false;
+            } else if (strcmp(opts.bypass_charging, "true") == 0) {
+                bypass_charging_allowed = true;
+            } else {
+                bypass_charging_allowed = (ctx->config_bypasschg == 1);
+            }
+
+            if (current_battery >= 0 && bypass_charging_allowed && is_device_charging) {
                 if (current_battery >= threshold) {
                     if (read_current_ma() > 50) {
                         enable_bypass();

@@ -111,6 +111,9 @@ void apply_performance_profile(DaemonContext* ctx) {
             log_zenith(LOG_ERROR, "Failed to allocate memory for preload arguments");
         }
     }
+    
+    save_daemon_state(ctx);
+    
 }
 
 /**
@@ -153,14 +156,20 @@ void apply_eco_profile(DaemonContext* ctx) {
             log_zenith(LOG_INFO, "Restoring original system renderer: %s", ctx->saved_renderer);
             if (strcmp(ctx->saved_renderer, "default") == 0) {
                 systemv("sys.azenith-utilityconf setrender default");
+                __system_property_set("persist.sys.azenithconf.renderer", "default");
             } else {
                 systemv("sys.azenith-utilityconf setrender %s", ctx->saved_renderer);
+                __system_property_set("persist.sys.azenithconf.renderer", ctx->saved_sys_renderer);
             }
         }
         memset(ctx->saved_renderer, 0, sizeof(ctx->saved_renderer));
+        memset(ctx->saved_sys_renderer, 0, sizeof(ctx->saved_sys_renderer));
     }
-
+    
     EXECUTE("ECO Mode", run_profiler(ECO_MODE));
+    
+    systemv("rm -rf /data/adb/.config/AZenith/daemon_state");
+
 }
 
 /**
@@ -203,11 +212,14 @@ void apply_balanced_profile(DaemonContext* ctx) {
             log_zenith(LOG_INFO, "Restoring original system renderer: %s", ctx->saved_renderer);
             if (strcmp(ctx->saved_renderer, "default") == 0) {
                 systemv("sys.azenith-utilityconf setrender default");
+                __system_property_set("persist.sys.azenithconf.renderer", "default");
             } else {
                 systemv("sys.azenith-utilityconf setrender %s", ctx->saved_renderer);
+                __system_property_set("persist.sys.azenithconf.renderer", ctx->saved_sys_renderer);
             }
         }
         memset(ctx->saved_renderer, 0, sizeof(ctx->saved_renderer));
+        memset(ctx->saved_sys_renderer, 0, sizeof(ctx->saved_sys_renderer));
     }
 
     EXECUTE("Balanced Profile", run_profiler(BALANCED_PROFILE));
@@ -216,4 +228,7 @@ void apply_balanced_profile(DaemonContext* ctx) {
         notify("Daemon Info", "AZenith is running successfully", false, 60000);
         ctx->is_initialize_complete = true;
     }
+    
+    systemv("rm -rf /data/adb/.config/AZenith/daemon_state");
+    
 }

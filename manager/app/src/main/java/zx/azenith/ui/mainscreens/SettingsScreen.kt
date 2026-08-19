@@ -53,6 +53,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.topjohnwu.superuser.Shell
 import dev.jeziellago.compose.markdowntext.MarkdownText
@@ -67,6 +69,7 @@ import zx.azenith.BuildConfig
 import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.util.*
+import zx.azenith.ui.viewmodel.*
 
 
 fun isLauncherIconEnabled(context: Context): Boolean {
@@ -77,7 +80,10 @@ fun isLauncherIconEnabled(context: Context): Boolean {
 }
 
 @Composable
-fun SettingsScreen(navController: NavController) {
+fun SettingsScreen(
+    navController: NavController,
+    settingsViewModel: SettingsViewModel = viewModel()
+) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val listState = rememberLazyListState()
@@ -86,6 +92,7 @@ fun SettingsScreen(navController: NavController) {
     
     val restartToastText = stringResource(R.string.toast_restarting_service)
     
+    val uiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
     
     var isLauncherVisible by rememberSaveable { 
         mutableStateOf(isLauncherIconEnabled(context)) 
@@ -114,6 +121,37 @@ fun SettingsScreen(navController: NavController) {
         },
         onDismiss = {}
     )
+
+    // --- Reboot confirm dialog plumbing ---
+    var pendingToggle by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val rebootDialog = rememberConfirmDialog(
+        onConfirm = {
+            pendingToggle?.invoke()
+            pendingToggle = null
+        },
+        onDismiss = { pendingToggle = null }
+    )
+
+    fun toggleWithRebootCheck(key: String, isChecked: Boolean, apply: () -> Unit) {
+        if (RebootManager.wouldRequireReboot(key, isChecked)) {
+            pendingToggle = apply
+            rebootDialog.showConfirm(
+                title = context.getString(R.string.dialog_reboot_required_title),
+                content = context.getString(R.string.reboot_required_content),
+                confirm = context.getString(R.string.yes),
+                dismiss = context.getString(R.string.no)
+            )
+        } else {
+            apply()
+        }
+    }
+    // ---------------------------------------
+    
+    LaunchedEffect(uiState.isLoaded) {
+        if (uiState.isLoaded) {
+            RebootManager.captureBaselineOnce("disable_tweak", uiState.disableTweak)
+        }
+    }
     
     val createLogLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/gzip")) { uri ->
         uri?.let { destinationUri ->
@@ -214,55 +252,54 @@ fun SettingsScreen(navController: NavController) {
                     item { SettingsSectionTitle(stringResource(R.string.section_features)) }
                     
                     item {
-                        var stateToast by remember { mutableStateOf<Boolean?>(null) }
-                        var autoMode by remember { mutableStateOf<Boolean?>(null) }
-                        var debugMode by remember { mutableStateOf<Boolean?>(null) }
-        
-                        LaunchedEffect(Unit) {
-                            stateToast = Shell.cmd("getprop persist.sys.azenithconf.showtoast").exec().out.firstOrNull()?.trim() == "1"
-                            autoMode = Shell.cmd("getprop persist.sys.azenithconf.AIenabled").exec().out.firstOrNull()?.trim() == "0"
-                            debugMode = Shell.cmd("getprop persist.sys.azenith.debugmode").exec().out.firstOrNull()?.trim() == "true"
-                        }
-        
-                        if (stateToast != null && autoMode != null && debugMode != null) {
+                        if (uiState.isLoaded) {
                             ExpressiveList(
                                 content = listOf(
                                     {
                                         ExpressiveSwitchItem(
                                             icon = Icons.Filled.Notifications,
                                             title = stringResource(R.string.show_toast),
-                                            checked = stateToast!!,
-                                            onCheckedChange = { isChecked ->
-                                                stateToast = isChecked
-                                                Shell.cmd("setprop persist.sys.azenithconf.showtoast ${if (isChecked) "1" else "0"}").submit()
-                                            }
+                                            checked = uiState.stateToast,
+                                            onCheckedChange = settingsViewModel::setShowToast
+                                        )
+                                    },
+                                    {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Filled.NotificationsActive,
+                                            title = stringResource(R.string.show_notifications),
+                                            checked = uiState.profileNotifications,
+                                            onCheckedChange = settingsViewModel::setProfileNotifications
                                         )
                                     },
                                     {
                                         ExpressiveSwitchItem(
                                             icon = Icons.Filled.Assistant,
                                             title = stringResource(R.string.disable_auto_mode),
-                                            checked = autoMode!!,
+                                            checked = uiState.autoMode,
+                                            onCheckedChange = settingsViewModel::setAutoMode
+                                        )
+                                    },
+                                    {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Filled.DeveloperBoardOff,
+                                            title = stringResource(R.string.disable_tweak),
+                                            summary = stringResource(R.string.disable_tweak_desc),
+                                            checked = uiState.disableTweak,
                                             onCheckedChange = { isChecked ->
-                                                autoMode = isChecked
-                                                val state = if (isChecked) "0" else "1"
-                                                
-                                                Shell.cmd(
-                                                    "setprop persist.sys.azenithconf.AIenabled $state",
-                                                    "echo $state > /data/adb/.config/AZenith/API/current_modes"
-                                                ).submit()
+                                                toggleWithRebootCheck("disable_tweak", isChecked) {
+                                                    settingsViewModel.setDisableTweak(isChecked)
+                                                    RebootManager.checkAgainstBaseline("disable_tweak", isChecked)
+                                                }
                                             }
                                         )
                                     },
                                     {
                                         ExpressiveSwitchItem(
-                                            icon = Icons.Filled.BugReport,
-                                            title = stringResource(R.string.allow_verbose_log),
-                                            checked = debugMode!!,
-                                            onCheckedChange = { isChecked ->
-                                                debugMode = isChecked
-                                                Shell.cmd("setprop persist.sys.azenith.debugmode ${if (isChecked) "true" else "false"}").submit()
-                                            }
+                                            icon = Icons.Filled.Timer,
+                                            title = stringResource(R.string.profile_timeout),
+                                            summary = stringResource(R.string.profile_timeout_desc),
+                                            checked = uiState.profileTimeout,
+                                            onCheckedChange = settingsViewModel::setProfileTimeout
                                         )
                                     }
                                 )
@@ -284,71 +321,93 @@ fun SettingsScreen(navController: NavController) {
         
                     item { SettingsSectionTitle(stringResource(R.string.section_others)) }
                     item {
-                        ExpressiveList(
-                            content = listOf(
-                                {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Rounded.AddHome,
-                                        title = stringResource(R.string.show_icon),
-                                        checked = isLauncherVisible,
-                                        onCheckedChange = { isChecked ->
-                                            isLauncherVisible = isChecked
-                                            val pkg = context.packageManager
-                                            val componentName = ComponentName(context.packageName, "${context.packageName}.Launcher")
-                                            
-                                            val newState = if (isChecked) {
-                                                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                                            } else {
-                                                PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                        if (uiState.isLoaded) {
+                            ExpressiveList(
+                                content = listOf(
+                                    {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Rounded.AddHome,
+                                            title = stringResource(R.string.show_icon),
+                                            checked = isLauncherVisible,
+                                            onCheckedChange = { isChecked ->
+                                                isLauncherVisible = isChecked
+                                                val pkg = context.packageManager
+                                                val componentName = ComponentName(context.packageName, "${context.packageName}.Launcher")
+                                                
+                                                val newState = if (isChecked) {
+                                                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                                                } else {
+                                                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                                                }
+                                                
+                                                pkg.setComponentEnabledSetting(componentName, newState, PackageManager.DONT_KILL_APP)
                                             }
-                                            
-                                            pkg.setComponentEnabledSetting(componentName, newState, PackageManager.DONT_KILL_APP)
-                                        }
-                                    )
-                                },
-                                {
-                                    ExpressiveListItem(
-                                        onClick = {
-                                            Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service --rerun").submit { result ->
-                                                if (result.isSuccess) {
-                                                    coroutineScope.launch {
-                                                        snackbarHostState.showSnackbar(restartToastText)
+                                        )
+                                    },
+                                    {
+                                        ExpressiveListItem(
+                                            onClick = {
+                                                Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service --rerun").submit { result ->
+                                                    if (result.isSuccess) {
+                                                        coroutineScope.launch {
+                                                            snackbarHostState.showSnackbar(restartToastText)
+                                                        }
                                                     }
                                                 }
-                                            }
-                                        },
-                                        headlineContent = { Text(stringResource(R.string.restart_service)) },
-                                        supportingContent = { Text(stringResource(R.string.restart_service_desc)) },
-                                        leadingContent = { LeadingIcon(icon = Icons.Filled.RestartAlt) },
-                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                    )
-                                },
-                                {
-                                    ExpressiveListItem(
-                                        onClick = { showLogBottomSheet = true },
-                                        headlineContent = { Text(stringResource(R.string.save_log)) },
-                                        supportingContent = { Text(stringResource(R.string.save_log_desc)) },
-                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Save) },
-                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                    )
-                                },
-                                {
-                                    ExpressiveListItem(
-                                        onClick = {
-                                            uninstallDialog.showConfirm(
-                                                title = context.getString(R.string.uninstall),
-                                                content = context.getString(R.string.uninstall_confirm_content),
-                                                confirm = context.getString(R.string.yes),
-                                                dismiss = context.getString(R.string.no)
-                                            )
-                                        },
-                                        headlineContent = { Text(stringResource(R.string.uninstall)) },
-                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Delete) },
-                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                    )
-                                }
+                                            },
+                                            headlineContent = { Text(stringResource(R.string.restart_service)) },
+                                            supportingContent = { Text(stringResource(R.string.restart_service_desc)) },
+                                            leadingContent = { LeadingIcon(icon = Icons.Filled.RestartAlt) },
+                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                        )
+                                    },
+                                    {
+                                        ExpressiveListItem(
+                                            onClick = { showLogBottomSheet = true },
+                                            headlineContent = { Text(stringResource(R.string.save_log)) },
+                                            supportingContent = { Text(stringResource(R.string.save_log_desc)) },
+                                            leadingContent = { LeadingIcon(icon = Icons.Filled.Save) },
+                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                        )
+                                    },
+                                    {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Filled.BugReport,
+                                            title = stringResource(R.string.allow_verbose_log),
+                                            checked = uiState.debugMode,
+                                            onCheckedChange = settingsViewModel::setDebugMode
+                                        )
+                                    },
+                                    {
+                                        ExpressiveListItem(
+                                            onClick = {
+                                                uninstallDialog.showConfirm(
+                                                    title = context.getString(R.string.uninstall),
+                                                    content = context.getString(R.string.uninstall_confirm_content),
+                                                    confirm = context.getString(R.string.yes),
+                                                    dismiss = context.getString(R.string.no)
+                                                )
+                                            },
+                                            headlineContent = { Text(stringResource(R.string.uninstall)) },
+                                            leadingContent = { LeadingIcon(icon = Icons.Filled.Delete) },
+                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                        )
+                                    }
+                                )
                             )
-                        )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(180.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(32.dp),
+                                    strokeWidth = 3.dp
+                                )
+                            }
+                        }
                     }
         
                     item { SettingsSectionTitle(stringResource(R.string.section_about)) }
@@ -373,6 +432,7 @@ fun SettingsScreen(navController: NavController) {
 
             LoadingDialogHost(handle = loadingDialog)
             ConfirmDialogHost(handle = uninstallDialog)
+            ConfirmDialogHost(handle = rebootDialog)
             
             RootAppDialog {
                 CustomBottomSheet(

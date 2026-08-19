@@ -105,6 +105,9 @@ char* get_gamestart(GameConfig* options, SystemStateCache* cache) {
                 strcpy(options->game_preload, g_game_cache[i].game_preload);
                 strcpy(options->refresh_rate, g_game_cache[i].refresh_rate);
                 strcpy(options->renderer, g_game_cache[i].renderer);
+                strcpy(options->resolution_downscale, g_game_cache[i].resolution_downscale);
+                strcpy(options->resolution_fps, g_game_cache[i].resolution_fps);
+                strcpy(options->bypass_charging, g_game_cache[i].bypass_charging);
             }
             break;
         }

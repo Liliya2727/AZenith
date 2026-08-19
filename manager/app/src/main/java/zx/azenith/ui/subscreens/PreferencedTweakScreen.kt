@@ -77,7 +77,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.component.*
+import zx.azenith.ui.util.DebugUtils
 import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.RebootManager
 import zx.azenith.ui.util.getChipsetVendor
 
 
@@ -88,6 +90,36 @@ fun PreferenceTweakScreen(navController: NavController) {
     val listState = rememberLazyListState()
     val colorScheme = MaterialTheme.colorScheme
     
+    var isFullModeEnabled by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        isFullModeEnabled = DebugUtils.isFullModeEnabled()
+    }
+
+    // --- Reboot confirm dialog plumbing ---
+    var pendingToggle by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val rebootDialog = rememberConfirmDialog(
+        onConfirm = {
+            pendingToggle?.invoke()
+            pendingToggle = null
+        },
+        onDismiss = { pendingToggle = null }
+    )
+
+    fun toggleWithRebootCheck(key: String, isChecked: Boolean, apply: () -> Unit) {
+        if (RebootManager.wouldRequireReboot(key, isChecked)) {
+            pendingToggle = apply
+            rebootDialog.showConfirm(
+                title = context.getString(R.string.dialog_reboot_required_title),
+                content = context.getString(R.string.reboot_required_content),
+                confirm = context.getString(R.string.yes),
+                dismiss = context.getString(R.string.no)
+            )
+        } else {
+            apply()
+        }
+    }
+    // ---------------------------------------
+
     MaterialExpressiveTheme {        
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -129,7 +161,7 @@ fun PreferenceTweakScreen(navController: NavController) {
                     var schedTunes by remember { mutableStateOf<Boolean?>(null) }
                     var sflstate by remember { mutableStateOf<Boolean?>(null) }
                     var jitstate by remember { mutableStateOf<Boolean?>(null) }
-                    var fpsgogedstate by remember { mutableStateOf<Boolean?>(null) }
+                    
                     var malischedstate by remember { mutableStateOf<Boolean?>(null) }
                     var waltTunes by remember { mutableStateOf<Boolean?>(null) }
                     var DTraces by remember { mutableStateOf<Boolean?>(null) }
@@ -140,40 +172,52 @@ fun PreferenceTweakScreen(navController: NavController) {
                         socType = withContext(Dispatchers.IO) { getChipsetVendor(context) }
                         schedTunes = PropertyUtils.get("persist.sys.azenithconf.schedtunes") == "1"
                         sflstate = PropertyUtils.get("persist.sys.azenithconf.SFL") == "1"
-                        jitstate = PropertyUtils.get("persist.sys.azenithconf.justintime") == "1"
-                        fpsgogedstate = PropertyUtils.get("persist.sys.azenithconf.fpsged") == "1"
+                        jitstate = PropertyUtils.get("persist.sys.azenithconf.justintime") == "1"                        
                         malischedstate = PropertyUtils.get("persist.sys.azenithconf.malisched") == "1"
                         waltTunes = PropertyUtils.get("persist.sys.azenithconf.walttunes") == "1"
                         DTraces = PropertyUtils.get("persist.sys.azenithconf.disabletrace") == "1"
                         dlogcat = PropertyUtils.get("persist.sys.azenithconf.logd") == "1"
                         distherm = PropertyUtils.get("persist.sys.azenithconf.DThermal") == "1"
+
+                        RebootManager.captureBaselineOnce("pref_schedtunes", schedTunes!!)
+                        RebootManager.captureBaselineOnce("pref_SFL", sflstate!!)
+                        RebootManager.captureBaselineOnce("pref_justintime", jitstate!!)
+                        RebootManager.captureBaselineOnce("pref_malisched", malischedstate!!)
+                        RebootManager.captureBaselineOnce("pref_walttunes", waltTunes!!)
+                        RebootManager.captureBaselineOnce("pref_disabletrace", DTraces!!)
+                        RebootManager.captureBaselineOnce("pref_logd", dlogcat!!)
+                        RebootManager.captureBaselineOnce("pref_DThermal", distherm!!)
                     }
     
-                    if (socType != null && schedTunes != null && distherm != null && dlogcat != null && DTraces != null && waltTunes != null && sflstate != null && jitstate != null && fpsgogedstate != null && malischedstate != null) { 
+                    if (socType != null && schedTunes != null && distherm != null && dlogcat != null && DTraces != null && waltTunes != null && sflstate != null && jitstate != null && malischedstate != null) { 
                         
                         val isMediaTek   = socType == "mediatek"
                         val isSnapdragon = socType == "qualcomm"
 
                         ExpressiveList(
-                            content = listOf(
-                                {
+                            content = buildList {
+                                add {
                                     ExpressiveSwitchItem(
                                         icon = Icons.Rounded.Tune,
                                         title = stringResource(R.string.sched_tunes),
                                         summary = stringResource(R.string.sched_tunes_desc),
                                         checked = schedTunes!!,
                                         onCheckedChange = { isChecked ->
-                                            schedTunes = isChecked
-                                            PropertyUtils.set("persist.sys.azenithconf.schedtunes", if (isChecked) "1" else "0")
-                                            
-                                            if (isChecked && waltTunes == true) {
-                                                waltTunes = false
-                                                PropertyUtils.set("persist.sys.azenithconf.walttunes", "0")
+                                            toggleWithRebootCheck("pref_schedtunes", isChecked) {
+                                                schedTunes = isChecked
+                                                PropertyUtils.set("persist.sys.azenithconf.schedtunes", if (isChecked) "1" else "0")
+                                                RebootManager.checkAgainstBaseline("pref_schedtunes", isChecked)
+
+                                                if (isChecked && waltTunes == true) {
+                                                    waltTunes = false
+                                                    PropertyUtils.set("persist.sys.azenithconf.walttunes", "0")
+                                                    RebootManager.checkAgainstBaseline("pref_walttunes", false)
+                                                }
                                             }
                                         }
                                     )
-                                },
-                                {
+                                }
+                                add {
                                     Box(modifier = Modifier.alpha(if (isSnapdragon) 1f else 0.4f)) {
                                         ExpressiveSwitchItem(
                                             icon = Icons.Rounded.Timeline,
@@ -182,81 +226,87 @@ fun PreferenceTweakScreen(navController: NavController) {
                                             checked = waltTunes!!,
                                             enabled = isSnapdragon,
                                             onCheckedChange = { isChecked ->
-                                                waltTunes = isChecked
-                                                PropertyUtils.set("persist.sys.azenithconf.walttunes", if (isChecked) "1" else "0")
-                                                
-                                                if (isChecked && schedTunes == true) {
-                                                    schedTunes = false
-                                                    PropertyUtils.set("persist.sys.azenithconf.schedtunes", "0")
+                                                toggleWithRebootCheck("pref_walttunes", isChecked) {
+                                                    waltTunes = isChecked
+                                                    PropertyUtils.set("persist.sys.azenithconf.walttunes", if (isChecked) "1" else "0")
+                                                    RebootManager.checkAgainstBaseline("pref_walttunes", isChecked)
+
+                                                    if (isChecked && schedTunes == true) {
+                                                        schedTunes = false
+                                                        PropertyUtils.set("persist.sys.azenithconf.schedtunes", "0")
+                                                        RebootManager.checkAgainstBaseline("pref_schedtunes", false)
+                                                    }
                                                 }
                                             }
                                         )
                                     }
-                                },
-                                {
+                                }
+                                add {
                                     ExpressiveSwitchItem(
                                         icon = Icons.Rounded.Layers,
                                         title = stringResource(R.string.sfl_latency),
                                         summary = stringResource(R.string.sfl_latency_desc),
                                         checked = sflstate!!,
                                         onCheckedChange = { isChecked ->
-                                            sflstate = isChecked
-                                            PropertyUtils.set("persist.sys.azenithconf.SFL", if (isChecked) "1" else "0")
+                                            toggleWithRebootCheck("pref_SFL", isChecked) {
+                                                sflstate = isChecked
+                                                PropertyUtils.set("persist.sys.azenithconf.SFL", if (isChecked) "1" else "0")
+                                                RebootManager.checkAgainstBaseline("pref_SFL", isChecked)
+                                            }
                                         }
                                     )
-                                },
-                                {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Rounded.Bolt,
-                                        title = stringResource(R.string.jit_compilation),
-                                        summary = stringResource(R.string.jit_compilation_desc),
-                                        checked = jitstate!!,
-                                        onCheckedChange = { isChecked ->
-                                            jitstate = isChecked
-                                            PropertyUtils.set("persist.sys.azenithconf.justintime", if (isChecked) "1" else "0")
-                                        }
-                                    )
-                                },
-                                {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Rounded.TrackChanges,
-                                        title = stringResource(R.string.disable_trace),
-                                        summary = stringResource(R.string.disable_trace_desc),
-                                        checked = DTraces!!,
-                                        onCheckedChange = { isChecked ->
-                                            DTraces = isChecked
-                                            PropertyUtils.set("persist.sys.azenithconf.disabletrace", if (isChecked) "1" else "0")
-                                        }
-                                    )
-                                },
-                                {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.AutoMirrored.Rounded.Notes,
-                                        title = stringResource(R.string.disable_logging),
-                                        summary = stringResource(R.string.disable_logging_desc),
-                                        checked = dlogcat!!,
-                                        onCheckedChange = { isChecked ->
-                                            dlogcat = isChecked
-                                            PropertyUtils.set("persist.sys.azenithconf.logd", if (isChecked) "1" else "0")
-                                        }
-                                    )
-                                },
-                                {
-                                    Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
+                                }
+                                if (isFullModeEnabled) {
+                                    add {
                                         ExpressiveSwitchItem(
-                                            icon = Icons.Rounded.Speed,
-                                            title = stringResource(R.string.fpsgo_ged),
-                                            summary = if (isMediaTek) stringResource(R.string.fpsgo_ged_desc) else "This option is only available for MediaTek devices.",
-                                            checked = fpsgogedstate!!,
-                                            enabled = isMediaTek,
+                                            icon = Icons.Rounded.Bolt,
+                                            title = stringResource(R.string.jit_compilation),
+                                            summary = stringResource(R.string.jit_compilation_desc),
+                                            checked = jitstate!!,
                                             onCheckedChange = { isChecked ->
-                                                fpsgogedstate = isChecked
-                                                PropertyUtils.set("persist.sys.azenithconf.fpsged", if (isChecked) "1" else "0")
+                                                toggleWithRebootCheck("pref_justintime", isChecked) {
+                                                    jitstate = isChecked
+                                                    PropertyUtils.set("persist.sys.azenithconf.justintime", if (isChecked) "1" else "0")
+                                                    RebootManager.checkAgainstBaseline("pref_justintime", isChecked)
+                                                }
                                             }
                                         )
                                     }
-                                },
-                                {
+                                }
+                                if (isFullModeEnabled) {
+                                    add {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Rounded.TrackChanges,
+                                            title = stringResource(R.string.disable_trace),
+                                            summary = stringResource(R.string.disable_trace_desc),
+                                            checked = DTraces!!,
+                                            onCheckedChange = { isChecked ->
+                                                toggleWithRebootCheck("pref_disabletrace", isChecked) {
+                                                    DTraces = isChecked
+                                                    PropertyUtils.set("persist.sys.azenithconf.disabletrace", if (isChecked) "1" else "0")
+                                                    RebootManager.checkAgainstBaseline("pref_disabletrace", isChecked)
+                                                }
+                                            }
+                                        )
+                                    }
+                                    add {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.AutoMirrored.Rounded.Notes,
+                                            title = stringResource(R.string.disable_logging),
+                                            summary = stringResource(R.string.disable_logging_desc),
+                                            checked = dlogcat!!,
+                                            onCheckedChange = { isChecked ->
+                                                toggleWithRebootCheck("pref_logd", isChecked) {
+                                                    dlogcat = isChecked
+                                                    PropertyUtils.set("persist.sys.azenithconf.logd", if (isChecked) "1" else "0")
+                                                    RebootManager.checkAgainstBaseline("pref_logd", isChecked)
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                                
+                                add {
                                     Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
                                         ExpressiveSwitchItem(
                                             icon = Icons.Rounded.DeveloperBoard,
@@ -265,28 +315,36 @@ fun PreferenceTweakScreen(navController: NavController) {
                                             checked = malischedstate!!,
                                             enabled = isMediaTek,
                                             onCheckedChange = { isChecked ->
-                                                malischedstate = isChecked
-                                                PropertyUtils.set("persist.sys.azenithconf.malisched", if (isChecked) "1" else "0")
-                                            }
-                                        )
-                                    }
-                                },
-                                {
-                                    Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
-                                        ExpressiveSwitchItem(
-                                            icon = Icons.Rounded.Thermostat,
-                                            title = stringResource(R.string.disable_thermals),
-                                            summary = if (isMediaTek) stringResource(R.string.disable_thermals_desc) else "This option is only available for MediaTek devices.",
-                                            checked = distherm!!,
-                                            enabled = isMediaTek,
-                                            onCheckedChange = { isChecked ->
-                                                distherm = isChecked
-                                                PropertyUtils.set("persist.sys.azenithconf.DThermal", if (isChecked) "1" else "0")
+                                                toggleWithRebootCheck("pref_malisched", isChecked) {
+                                                    malischedstate = isChecked
+                                                    PropertyUtils.set("persist.sys.azenithconf.malisched", if (isChecked) "1" else "0")
+                                                    RebootManager.checkAgainstBaseline("pref_malisched", isChecked)
+                                                }
                                             }
                                         )
                                     }
                                 }
-                            )
+                                if (isFullModeEnabled) {
+                                    add {
+                                        Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
+                                            ExpressiveSwitchItem(
+                                                icon = Icons.Rounded.Thermostat,
+                                                title = stringResource(R.string.disable_thermals),
+                                                summary = if (isMediaTek) stringResource(R.string.disable_thermals_desc) else "This option is only available for MediaTek devices.",
+                                                checked = distherm!!,
+                                                enabled = isMediaTek,
+                                                onCheckedChange = { isChecked ->
+                                                    toggleWithRebootCheck("pref_DThermal", isChecked) {
+                                                        distherm = isChecked
+                                                        PropertyUtils.set("persist.sys.azenithconf.DThermal", if (isChecked) "1" else "0")
+                                                        RebootManager.checkAgainstBaseline("pref_DThermal", isChecked)
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         )
                     } else {
                         Box(
@@ -299,6 +357,8 @@ fun PreferenceTweakScreen(navController: NavController) {
                 }
             }
         }
+
+        ConfirmDialogHost(handle = rebootDialog)
     }
 }
 

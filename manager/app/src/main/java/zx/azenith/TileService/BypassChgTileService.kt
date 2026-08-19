@@ -16,17 +16,17 @@
 
 package zx.azenith.TileService
 
-
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
+import com.topjohnwu.superuser.Shell
 import zx.azenith.R
 import zx.azenith.ui.util.PropertyUtils
-
 
 class BypassChgTileService : TileService() {
 
     private val BYPASS_PROP = "persist.sys.azenithconf.bypasschg"
     private val PATH_PROP = "persist.sys.azenithconf.bypasspath"
+    private val BYPASSCHG_FILE = "/data/adb/.config/AZenith/bypasschgconfig/bypasschg"
 
     override fun onStartListening() {
         super.onStartListening()
@@ -36,25 +36,31 @@ class BypassChgTileService : TileService() {
     override fun onClick() {
         super.onClick()
         val tile = qsTile ?: return
-        
+
         if (tile.state == Tile.STATE_UNAVAILABLE) return
+
         if (tile.state == Tile.STATE_ACTIVE) {
-            PropertyUtils.set(BYPASS_PROP, "0")
+            setBypassChg("0")
             tile.state = Tile.STATE_INACTIVE
             updateSubtitle(tile, getString(R.string.status_inactive))
         } else {
-            PropertyUtils.set(BYPASS_PROP, "1")
+            setBypassChg("1")
             tile.state = Tile.STATE_ACTIVE
             updateSubtitle(tile, getString(R.string.status_active))
         }
-        
+
         tile.updateTile()
+    }
+
+    private fun setBypassChg(value: String) {
+        PropertyUtils.set(BYPASS_PROP, value)
+        Shell.cmd("echo $value > $BYPASSCHG_FILE").exec()
     }
 
     private fun updateTileState() {
         val tile = qsTile ?: return
         val bypassPath = PropertyUtils.get(PATH_PROP, "")
-        
+
         if (bypassPath == "UNSUPPORTED") {
             tile.state = Tile.STATE_UNAVAILABLE
             updateSubtitle(tile, getString(R.string.status_not_supported))
@@ -63,7 +69,7 @@ class BypassChgTileService : TileService() {
             tile.state = if (isEnabled) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
             updateSubtitle(tile, getString(if (isEnabled) R.string.status_active else R.string.status_inactive))
         }
-        
+
         tile.updateTile()
     }
 

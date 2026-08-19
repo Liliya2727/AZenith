@@ -16,6 +16,23 @@ pub fn getprop(key: &str) -> String {
     }
 }
 
+pub fn resetprop(key: &str, val: &str) {
+    let status = if val.is_empty() {
+        Command::new("resetprop").arg("--delete").arg(key).status()
+    } else {
+        Command::new("resetprop").arg(key).arg(val).status()
+    };
+
+    if let Err(e) = status {
+        log_info(&format!("Failed to resetprop '{}': {}", key, e));
+    }
+}
+
+pub fn setprop(key: &str, val: &str) {
+    if let Err(e) = Command::new("setprop").arg(key).arg(val).status() {
+        log_info(&format!("Failed to setprop '{}' to '{}': {}", key, val, e));
+    }
+}
 
 pub fn log_verbose(message: &str) {
     if get_debugmode() {
@@ -659,6 +676,9 @@ pub fn init_cpu_governor() {
         .unwrap_or_default()
         .trim()
         .to_string();
+        
+    let performance_gov = "performance";
+    let powersave_gov = "powersave";
 
     setprop_cmd("persist.sys.azenith.default_cpu_gov", &default_gov);
     log_info(&format!("Default CPU governor detected: {}", default_gov));
@@ -694,10 +714,10 @@ pub fn init_cpu_governor() {
 
     // Set fallback props
     if getprop("persist.sys.azenith.custom_powersave_cpu_gov").is_empty() {
-        setprop_cmd("persist.sys.azenith.custom_powersave_cpu_gov", &default_gov);
+        setprop_cmd("persist.sys.azenith.custom_powersave_cpu_gov", &powersave_gov);
     }
     if getprop("persist.sys.azenith.custom_performance_cpu_gov").is_empty() {
-        setprop_cmd("persist.sys.azenith.custom_performance_cpu_gov", &default_gov);
+        setprop_cmd("persist.sys.azenith.custom_performance_cpu_gov", &performance_gov);
     }
     
     log_info("Parsing CPU Governor complete");
@@ -810,4 +830,89 @@ pub fn sets_mali_gov(gov: &str) {
             }
         }
     }
+}
+
+pub fn is_tweak_disabled() -> bool {
+    let disable_tweak = getprop("persist.sys.azenith.disabletweak");
+    disable_tweak == "1"
+}
+
+pub fn apply_custom_governor_io(perf_gov: &str, perf_io: &str, mali_gov: &str) {
+    setgov(perf_gov);
+    log_info(&format!("Applying governor to : {}", perf_gov));
+    
+    if !perf_io.is_empty() {
+        sets_io(perf_io);
+        log_info(&format!("Applying I/O scheduler to : {}", perf_io));
+    }
+    
+    if !mali_gov.is_empty() {
+        sets_mali_gov(mali_gov);
+    }
+}
+
+pub fn setrender(renderer: &str) {
+    if renderer == "default" || renderer.is_empty() {
+        setprop("debug.hwui.renderer", "");
+        setprop("debug.renderengine.backend", "");
+        setprop("debug.hwui.render_thread", "");
+        setprop("debug.skia.threaded_mode", "");
+        resetprop("ro.hwui.use_vulkan", ""); 
+        
+        log_info("Resetting all renderers to system default");
+        return;
+    }
+
+    setprop("debug.hwui.renderer", renderer);
+
+    if renderer.contains("threaded") {
+        setprop("debug.hwui.render_thread", "true");
+        if renderer.contains("skia") {
+            setprop("debug.skia.threaded_mode", "true");
+        } else {
+            setprop("debug.skia.threaded_mode", "false");
+        }
+    } else {
+        setprop("debug.hwui.render_thread", "false");
+        setprop("debug.skia.threaded_mode", "false");
+    }
+
+    match renderer {
+        "skiavk" | "skiavkthreaded" | "vulkan" => {
+            setprop("debug.renderengine.backend", "vulkan");
+            resetprop("ro.hwui.use_vulkan", "true"); 
+        }
+        "skiagl" | "skiaglthreaded" | "gles" | "opengl" | "openglthreaded" => {
+            setprop("debug.renderengine.backend", "gles");
+            resetprop("ro.hwui.use_vulkan", "false");
+        }
+        "software" => {
+            setprop("debug.renderengine.backend", "");
+            resetprop("ro.hwui.use_vulkan", "false");
+        }
+        _ => {
+            if renderer.contains("vk") || renderer.contains("vulkan") {
+                setprop("debug.renderengine.backend", "vulkan");
+                resetprop("ro.hwui.use_vulkan", "true");
+            } else if renderer.contains("gl") || renderer.contains("gles") {
+                setprop("debug.renderengine.backend", "gles");
+                resetprop("ro.hwui.use_vulkan", "false");
+            } else {
+                setprop("debug.renderengine.backend", "");
+            }
+        }
+    }
+    log_info(&format!("Successfully applied renderer: {}", renderer));
+}
+
+pub fn init_renderer() {
+    let renderer = getprop("persist.sys.azenithconf.renderer");
+    
+    if renderer.is_empty() || renderer.eq_ignore_ascii_case("default") {
+        log_info("Renderer setting is default, skipping renderer setup");
+        return;
+    }
+    
+    log_info(&format!("Applying renderer: {}", renderer));
+    setrender(&renderer);
 }
