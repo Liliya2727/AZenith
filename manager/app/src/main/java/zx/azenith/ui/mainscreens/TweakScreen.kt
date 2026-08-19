@@ -284,14 +284,16 @@ fun TweakScreen(
                                         onCheckedChange = { viewModel.updatePreloadMode(it) }
                                     )
                                 }
-                                add {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Rounded.CleaningServices,
-                                        title = stringResource(R.string.memory_killer),
-                                        summary = stringResource(R.string.memory_killer_desc),
-                                        checked = viewModel.memKillerState!!,
-                                        onCheckedChange = { viewModel.updateMemoryKiller(it) }
-                                    )
+                                if (isFullModeEnabled) {
+                                    add {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Rounded.CleaningServices,
+                                            title = stringResource(R.string.memory_killer),
+                                            summary = stringResource(R.string.memory_killer_desc),
+                                            checked = viewModel.memKillerState!!,
+                                            onCheckedChange = { viewModel.updateMemoryKiller(it) }
+                                        )
+                                    }
                                 }
                                 if (isFullModeEnabled) {
                                     add {
