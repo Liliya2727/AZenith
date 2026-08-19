@@ -842,7 +842,7 @@ fun RebootBottomSheet(
     val options = buildList<Triple<String, String, ImageVector>> {
         add(Triple(stringResource(R.string.reboot), "", Icons.Outlined.Refresh))
         if (isUserspaceSupported) add(Triple(stringResource(R.string.reboot_userspace), "userspace", Icons.Outlined.RestartAlt))
-        add(Triple(stringResource(R.string.reboot_soft), "soft_reboot", Icons.Outlined.Refresh))
+        // add(Triple(stringResource(R.string.reboot_soft), "soft_reboot", Icons.Outlined.Refresh))
         add(Triple(stringResource(R.string.reboot_recovery), "recovery", Icons.Outlined.SystemUpdate))
         add(Triple(stringResource(R.string.reboot_bootloader), "bootloader", Icons.Outlined.Memory))
         add(Triple(stringResource(R.string.reboot_download), "download", Icons.Outlined.Download))
