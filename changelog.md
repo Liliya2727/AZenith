@@ -1,4 +1,4 @@
-## AZenith 5.1
+## AZenith 5.2
 ### • Changelog
 - Minor UI Improvement: Implemented a scrollable page and simplified design
 - Fixed a blank icons on notifications
