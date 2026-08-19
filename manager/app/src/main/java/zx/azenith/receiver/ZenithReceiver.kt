@@ -34,6 +34,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zx.azenith.MainActivity
 import zx.azenith.R
+import zx.azenith.ui.util.PropertyUtils
 
 
 class ZenithReceiver : BroadcastReceiver() {
@@ -92,11 +93,15 @@ class ZenithReceiver : BroadcastReceiver() {
             intent.getStringExtra("chrono") == "true")
         
         val timeout = intent.getStringExtra("timeout")?.toLongOrNull() ?: 0L
-
+    
         val isProfile = title.lowercase(Locale.ROOT).let {
             it.contains("profile") || it.contains("mode") || it.contains("initializing...")
         }
-
+    
+        if (isProfile && PropertyUtils.get("persist.sys.azenith.profilenotifications") == "0") {
+            return
+        }
+    
         val channelId = if (isProfile) CH_PROFILE else CH_SYSTEM
 
 

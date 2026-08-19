@@ -49,6 +49,14 @@ int main(int argc, char* argv[]) {
         clearlogs();
         return 0;
     }
+    if (IS_CMD(cmd, "--hidenotifications", "-hn")) {
+        hidenotifications();
+        return 0;
+    }
+    if (IS_CMD(cmd, "--shownotifications", "-sn")) {
+        shownotifications();
+        return 0;
+    }
     if (IS_CMD(cmd, "--bypasspathlist", "-bpl")) {
         print_bypass_path_list();
         return 0;

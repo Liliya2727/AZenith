@@ -34,6 +34,7 @@ const char* VALID_AZENITH_PROPS[] = {
     "persist.sys.azenith.service",
     "persist.sys.azenith.soctype",
     "persist.sys.azenith.state",
+    "persist.sys.azenith.profilenotifications",
     "persist.sys.azenith.dropforeground",
     "persist.sys.azenithconf.AIenabled",
     "persist.sys.azenithconf.APreload",

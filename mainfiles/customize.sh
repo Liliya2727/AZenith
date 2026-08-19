@@ -350,6 +350,10 @@ if [ -z "$(getprop persist.sys.azenithconf.showtoast)" ]; then
 	setprop persist.sys.azenithconf.showtoast 0
 fi
 
+if [ -z "$(getprop persist.sys.azenith.profilenotifications)" ]; then
+	setprop persist.sys.azenith.profilenotifications 1
+fi
+
 if [ -z "$(getprop persist.sys.azenith.dropforeground)" ]; then
 	setprop persist.sys.azenith.dropforeground 0
 fi

@@ -236,6 +236,8 @@ int handle_profile(int argc, char** argv);
 int handle_log(int argc, char** argv);
 int handle_verboselog(int argc, char** argv);
 int restart_service(void);
+void shownotifications(void);
+void hidenotifications(void);
 
 // Misc Utilities
 extern void GamePreload(const char* package);
