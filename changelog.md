@@ -1,5 +1,24 @@
 ## AZenith 5.1
 ### • Changelog
+- Minor UI Improvement: Implemented a scrollable page and simplified design
+- Fixed a blank icons on notifications
+- Fixed an issue where profiler failed to apply in some devices
+- Fixed a false positive issue in bypass charge diagnostic
+- Added Presets on Color Scheme settings
+- Added options to disable the persistence profile notifications
+- Added options to disable all tweaks
+- Added options to enable profile timeout
+- Added Per-App resolution Downscale for game apps
+- Added global renderer options
+- Added support for KSU Emulated soft reboot
+- Removed many outdated and unused tweak settings
+- Removed Refreshrate settings in both per-app and global settings
+- Tweaks Optimization: Removed some related pbm tweaks and cpu/perf tweak with some adjustments
+- Optimized Daemon Flow...
+
+
+## AZenith 5.1
+### • Changelog
 - Fixed an issue where app Force Closed issue in Miui and HyperOS Roms
 - Fixed an issue where MediaTek Settings / Snapdragon Settings Labeled as unavailable in some Roms
 - Fixed an issue where profile got stuck between powersave and balanced profiles
