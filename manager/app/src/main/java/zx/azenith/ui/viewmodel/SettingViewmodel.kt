@@ -32,6 +32,7 @@ data class SettingsUiState(
     val autoMode: Boolean = false,
     val debugMode: Boolean = false,
     val profileTimeout: Boolean = false,
+    val profileNotifications: Boolean = false,
     val isLoaded: Boolean = false
 )
 
@@ -46,24 +47,34 @@ class SettingsViewModel : ViewModel() {
 
     private fun loadProps() {
         viewModelScope.launch(Dispatchers.IO) {
-            // Semua ini reflection call (PropertyUtils), bukan shell fork
             val disableTweak = PropertyUtils.get("persist.sys.azenith.disabletweak") == "1"
             val stateToast = PropertyUtils.get("persist.sys.azenithconf.showtoast") == "1"
             val autoMode = PropertyUtils.get("persist.sys.azenithconf.AIenabled") == "0"
             val debugMode = PropertyUtils.get("persist.sys.azenith.debugmode") == "true"
             val profileTimeout = PropertyUtils.get("persist.sys.azenith.dropforeground") == "1"
-
+            val profileNotifications = PropertyUtils.get("persist.sys.azenith.profilenotifications") == "1"
+    
             _uiState.value = SettingsUiState(
                 disableTweak = disableTweak,
                 stateToast = stateToast,
                 autoMode = autoMode,
                 debugMode = debugMode,
                 profileTimeout = profileTimeout,
+                profileNotifications = profileNotifications,
                 isLoaded = true
             )
         }
     }
-
+    
+    fun setProfileNotifications(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(profileNotifications = enabled)
+        viewModelScope.launch(Dispatchers.IO) {
+            val flag = if (enabled) "-sn" else "-hn"
+            Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service $flag").submit()
+            PropertyUtils.set("persist.sys.azenith.profilenotifications", if (enabled) "1" else "0")
+        }
+    }
+    
     fun setShowToast(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(stateToast = enabled)
         viewModelScope.launch(Dispatchers.IO) {

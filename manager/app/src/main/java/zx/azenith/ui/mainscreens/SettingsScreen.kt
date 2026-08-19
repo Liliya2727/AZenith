@@ -265,6 +265,14 @@ fun SettingsScreen(
                                     },
                                     {
                                         ExpressiveSwitchItem(
+                                            icon = Icons.Filled.NotificationsActive,
+                                            title = stringResource(R.string.show_notifications),
+                                            checked = uiState.profileNotifications,
+                                            onCheckedChange = settingsViewModel::setProfileNotifications
+                                        )
+                                    },
+                                    {
+                                        ExpressiveSwitchItem(
                                             icon = Icons.Filled.Assistant,
                                             title = stringResource(R.string.disable_auto_mode),
                                             checked = uiState.autoMode,

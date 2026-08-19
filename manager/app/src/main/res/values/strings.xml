@@ -380,4 +380,5 @@
     <string name="presets">Presets</string>
     <string name="str_bypass_need_setup">Bypass charge path hasn\'t been set up yet. Please complete the setup via Compatibility Check first.</string>
     <string name="reboot_required_content">This option requires a reboot to be applied. Continue?</string>
+    <string name="show_notifications">Show Current Profile Notifications</string>
 </resources>
