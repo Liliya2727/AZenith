@@ -95,7 +95,8 @@ install_manager() {
     rm -f "$tmp_log"
 
     if echo "$result" | grep -iq "Success"; then
-        echo "[✓] $app_name installed successfully\n"
+        echo "[✓] $app_name installed successfully"
+		echo ""
         return 0
     else
         echo "[!] Failed to install $app_name"
