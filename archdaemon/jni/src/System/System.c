@@ -101,8 +101,6 @@ int main_daemon(void) {
             ctx.fg_away_timer = 0;
         }
         
-        log_zenith(LOG_DEBUG, "poll_timeout=%d fg_away=%d grace=%d need_loop=%d", poll_timeout, ctx.fg_away_active, ctx.grace_period_active, need_loop);
-
         bool should_exit = process_inotify_events(inotify_fd, &ctx, poll_timeout);
         need_loop = false;
 
