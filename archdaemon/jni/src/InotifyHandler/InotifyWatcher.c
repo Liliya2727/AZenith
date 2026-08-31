@@ -90,6 +90,8 @@ static void handle_background_apps_event(DaemonContext* ctx) {
                     free(active_app_name);
                     active_app_name = NULL;
                 }
+                ctx->fg_away_active = false;
+                ctx->fg_away_timer = 0;
             }
         }
     }
