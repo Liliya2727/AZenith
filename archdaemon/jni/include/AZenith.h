@@ -287,6 +287,7 @@ void reload_gamelist_cache(DaemonContext* ctx);
 void restore_daemon_state(DaemonContext* ctx);
 void save_daemon_state(DaemonContext* ctx);
 void restart_target_app(const char* pkg);
+void update_module_description(pid_t pid);
 
 // App Monitor
 char* get_visible_package(SystemStateCache* cache);

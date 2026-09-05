@@ -77,6 +77,7 @@ int main_daemon(void) {
     bool need_loop = true;
     runthermalcore();
     run_profiler(PERFCOMMON);
+    update_module_description(getpid());
 
     /* Main Daemon Loop */
     while (1) {

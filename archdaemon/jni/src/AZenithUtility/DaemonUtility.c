@@ -285,3 +285,48 @@ void restart_target_app(const char* pkg) {
     usleep(500000);
     is_restarting_renderer = false;
 }
+
+/**
+ * @brief Rewrites the `description=` field in module.prop to show a live
+ *        status banner with the daemon's PID. Called once the daemon has
+ *        finished initialization so the module manager UI reflects that
+ *        AZenith is actually running.
+ * @param pid PID of the running daemon process, shown in the banner.
+ */
+void update_module_description(pid_t pid) {
+    FILE *fp = fopen(MODULE_PROP, "r");
+    if (!fp) {
+        log_zenith(LOG_ERROR, "Failed to open module.prop for description update");
+        return;
+    }
+
+    char lines[128][512];
+    int line_count = 0;
+    while (line_count < 128 && fgets(lines[line_count], sizeof(lines[line_count]), fp)) {
+        line_count++;
+    }
+    fclose(fp);
+
+    char new_desc[256];
+    snprintf(new_desc, sizeof(new_desc),
+             "description=[✅AZenith is Alive with PID : %d)] One, Two, Three! AZenith has arrived!\n",
+             pid);
+
+    fp = fopen(MODULE_PROP, "w");
+    if (!fp) {
+        log_zenith(LOG_ERROR, "Failed to write module.prop for description");
+        return;
+    }
+
+    bool replaced = false;
+    for (int i = 0; i < line_count; i++) {
+        if (strncmp(lines[i], "description=", 12) == 0) {
+            fputs(new_desc, fp);
+            replaced = true;
+        } else {
+            fputs(lines[i], fp);
+        }
+    }
+    if (!replaced) fputs(new_desc, fp);
+    fclose(fp);
+}
