@@ -21,9 +21,10 @@ need_integrity=(
 	"mainfiles/preferenced-tweaks.sh"
 	"mainfiles/post-fs-data.sh"
 	"mainfiles/action.sh"
+	"mainfiles/cleanup.sh"
 	"mainfiles/uninstall.sh"
 	"mainfiles/module.prop"
-    "mainfiles/module.banner.avif"
+    "mainfiles/module.banner.jpg"
 	"mainfiles/azenithApplist.json"
     "mainfiles/AZenith.apk"
 )
