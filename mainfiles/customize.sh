@@ -213,7 +213,7 @@ if [ ! -f "$MODULE_CONFIG/gamelist/azenithApplist.json" ]; then
     extract "$ZIPFILE" azenithApplist.json "$MODULE_CONFIG/gamelist"
 fi
 echo "- Extracting module banner..."
-extract "$ZIPFILE" module.banner.avif "$MODPATH"
+extract "$ZIPFILE" module.banner.jpg "$MODPATH"
 
 # Skip mountify
 touch "$MODPATH/skip_mountify"
