@@ -423,7 +423,7 @@ pub fn initialize() {
     write_lock("255", "/proc/sys/kernel/sched_lib_mask_force");
 
     systemv("sys.azenith-utilityconf FSTrim");
-    systemv("sh /data/adb/modules/AZenith/preferenced-tweaks.sh");
+    let _ = Command::new("sys.azenith-preferencedtweaks").status();
     
     // Final Sync & Logs
     let _ = Command::new("sync").status();

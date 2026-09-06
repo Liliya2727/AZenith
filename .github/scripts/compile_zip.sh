@@ -18,7 +18,6 @@ need_integrity=(
 	"mainfiles/libs"
 	"mainfiles/META-INF"
 	"mainfiles/service.sh"
-	"mainfiles/preferenced-tweaks.sh"
 	"mainfiles/post-fs-data.sh"
 	"mainfiles/action.sh"
 	"mainfiles/cleanup.sh"
@@ -56,10 +55,12 @@ mkdir -p mainfiles/system/bin
 cp thermalcore/target/aarch64-linux-android/$RUST_PROFILE/rianixia-thermalcore mainfiles/libs/arm64-v8a/sys.azenith-rianixiathermalcore 2>/dev/null || true
 cp binprofiles/target/aarch64-linux-android/$RUST_PROFILE/azenith-profilesettings mainfiles/libs/arm64-v8a/sys.azenith-profilesettings 2>/dev/null || true
 cp binutils/target/aarch64-linux-android/$RUST_PROFILE/azenith-utilityconf mainfiles/libs/arm64-v8a/sys.azenith-utilityconf 2>/dev/null || true
+cp binpreferenced/target/aarch64-linux-android/$RUST_PROFILE/azenith-preferencedtweaks mainfiles/libs/arm64-v8a/sys.azenith-preferencedtweaks 2>/dev/null || true
 
 cp thermalcore/target/armv7-linux-androideabi/$RUST_PROFILE/rianixia-thermalcore mainfiles/libs/armeabi-v7a/sys.azenith-rianixiathermalcore 2>/dev/null || true
 cp binprofiles/target/armv7-linux-androideabi/$RUST_PROFILE/azenith-profilesettings mainfiles/libs/armeabi-v7a/sys.azenith-profilesettings 2>/dev/null || true
 cp binutils/target/armv7-linux-androideabi/$RUST_PROFILE/azenith-utilityconf mainfiles/libs/armeabi-v7a/sys.azenith-utilityconf 2>/dev/null || true
+cp binpreferenced/target/armv7-linux-androideabi/$RUST_PROFILE/azenith-preferencedtweaks mainfiles/libs/armeabi-v7a/sys.azenith-preferencedtweaks 2>/dev/null || true
 
 # Other Files
 cp azenithApplist.json mainfiles/
