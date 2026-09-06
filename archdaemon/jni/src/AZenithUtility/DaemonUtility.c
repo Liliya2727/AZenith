@@ -309,7 +309,7 @@ void update_module_description(pid_t pid) {
 
     char new_desc[256];
     snprintf(new_desc, sizeof(new_desc),
-             "description=[✅AZenith is Alive with PID : %d)] One, Two, Three! AZenith has arrived!\n",
+             "description=[✅AZenith is Alive with PID : %d] One, Two, Three! AZenith has arrived!\n",
              pid);
 
     fp = fopen(MODULE_PROP, "w");
