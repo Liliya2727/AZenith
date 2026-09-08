@@ -67,8 +67,6 @@ int check_bypass_compatibility() {
 
             log_zenith(LOG_INFO, "Compatible path found: %s. Skipped: %d", bypass_list[i].name, skipped_count);
 
-            __system_property_set("persist.sys.azenithconf.bypasspath", bypass_list[i].name);
-            systemv("echo %s > %s/bypasspath", bypass_list[i].name, BYPASSCHG_CONFIG);
             return 0;
         } else {
             printf("\033[31m[FAILED]\033[0m Current drop test failed for %s (%d mA)\n", bypass_list[i].name, last_ma);
