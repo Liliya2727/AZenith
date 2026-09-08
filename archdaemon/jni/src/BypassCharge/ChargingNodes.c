@@ -50,10 +50,11 @@ BypassNode bypass_list[] = {
     {"I2C_CHG_ENABLE", "/sys/devices/platform/omap/omap_i2c.3/i2c-3/3-005f/charge_enable", "0", "1"},
     {"QPNP_SMB_BATT_EN", "/sys/devices/soc/qpnp-smbcharger-18/power_supply/battery/battery_charging_enabled", "0", "1"},
 
-    {"QCOM_SUSPEND", "/sys/class/qcom-battery/input_suspend", "0", "1"},
+    {"QCOM_SUSPEND", "/sys/class/qcom-battery/input_suspend", "1", "0"},
     {"QCOM_EN_CHG", "/sys/class/qcom-battery/charging_enabled", "0", "1"},
     {"QCOM_COOL_MODE", "/sys/class/qcom-battery/cool_mode", "1", "0"},
     {"QCOM_PROTECT_EN", "/sys/class/qcom-battery/batt_protect_en", "1", "0"},
+    {"QCOM_BATT_PROTECTED", "/sys/class/qcom-battery/battery_protected", "1", "0"},
     {"QCOM_PMIC_GLINK_SUSPEND",
      "/sys/devices/platform/soc/soc:qcom,pmic_glink/soc:qcom,pmic_glink:qcom,battery_charger/"
      "force_charger_suspend",
