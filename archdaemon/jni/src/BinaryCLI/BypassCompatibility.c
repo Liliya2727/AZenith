@@ -66,6 +66,7 @@ int check_bypass_compatibility() {
             printf("\033[32m[INFO]\033[0m Process finished. %d nodes skipped.\n", skipped_count);
 
             log_zenith(LOG_INFO, "Compatible path found: %s. Skipped: %d", bypass_list[i].name, skipped_count);
+
             return 0;
         } else {
             printf("\033[31m[FAILED]\033[0m Current drop test failed for %s (%d mA)\n", bypass_list[i].name, last_ma);
