@@ -129,6 +129,12 @@ jobs:
         id: compileZip
         run: bash .github/scripts/compile_zip.sh
 
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.compileZip.outputs.artifactName }}
+          path: ${{ steps.compileZip.outputs.zipName }}
+
       - name: Upload To Telegram
         env:
           CHAT_ID: ${{ secrets.CHAT_ID }}

@@ -451,14 +451,18 @@ object AppMonitor {
 
     private fun findPackageLikeString(obj: Any?): String? {
         if (obj == null) return null
-        extractPackageName(obj.toString())?.let { return it }
+        extractPackageName(obj.toString())?.let { candidate ->
+            if (isInstalledPackage(candidate)) return candidate
+        }
 
         getInstanceFields(obj.javaClass).forEach { field ->
             if (field.type == String::class.java) {
                 try {
                     field.isAccessible = true
                     (field.get(obj) as? String)?.let { str ->
-                        extractPackageName(str)?.let { return it }
+                        extractPackageName(str)?.let { candidate ->
+                            if (isInstalledPackage(candidate)) return candidate
+                        }
                     }
                 } catch (_: Exception) {
                 }
@@ -467,11 +471,35 @@ object AppMonitor {
         return null
     }
 
+    /**
+     * FIX: sebelumnya regex [a-z0-9]+(\\.[a-z0-9]+)+ menerima segmen yang
+     * isinya angka doang (contoh: "1.0"), padahal Android package name
+     * WAJIB tiap segmennya diawali huruf, nggak boleh full angka. Ini
+     * yang bikin AppMonitor salah nangkep string version number ("1.0")
+     * sebagai package name yang valid di beberapa ROM (contoh: HyperOS)
+     * yang struktur ActivityTaskManager-nya beda dari AOSP standar,
+     * sehingga extractComponentName() gagal dan jatuh ke fallback ini.
+     */
     private fun extractPackageName(input: String?): String? {
         if (input == null || input.indexOf('.') <= 0) return null
         val normalized = input.lowercase().replace(Regex("[^a-z0-9._-]"), " ")
         return normalized.split(Regex("\\s+")).find {
-            it.contains(".") && it.matches(Regex("[a-z0-9]+(\\.[a-z0-9]+)+"))
+            it.contains(".") && it.matches(Regex("[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+"))
+        }
+    }
+
+    /**
+     * FIX (lapis kedua): validasi candidate package name terhadap
+     * PackageManager beneran sebelum diterima. Ini jaring pengaman kalau
+     * suatu saat ada garbage string lain (di ROM/versi Android lain)
+     * yang somehow lolos regex di atas - tetap ditolak kalau bukan
+     * package yang benar-benar ter-install di device.
+     */
+    private fun isInstalledPackage(pkg: String): Boolean {
+        return try {
+            systemContext?.packageManager?.getApplicationInfo(pkg, 0) != null
+        } catch (_: Exception) {
+            false
         }
     }
 
