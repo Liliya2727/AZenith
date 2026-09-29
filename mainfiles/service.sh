@@ -26,9 +26,6 @@ until [ "$(getprop sys.boot_completed)" = "1" ]; do
     sleep 1
 done
 
-# Remove Single Instance since we dont need it anymore
-rm -f /dev/.azenithSingleInstance
-
 # Reset anti bootloop
 echo "BOOTCOUNT=0" > "$MODDIR/count.sh"
 
@@ -38,6 +35,13 @@ echo "BOOTCOUNT=0" > "$MODDIR/count.sh"
 # Remove reboot flag
 if [ -f "$MODDIR/reboot" ]; then
     rm -f "$MODDIR/reboot"
+fi
+
+# Create Cleanup Files
+if [ ! -f /data/adb/service.d/.azenith_cleanup.sh ]; then
+  mkdir -p /data/adb/service.d
+  cat "$MODDIR/cleanup.sh" > /data/adb/service.d/.azenith_cleanup.sh
+  chmod +x /data/adb/service.d/.azenith_cleanup.sh
 fi
 
 # Refresh AZenith daemon state

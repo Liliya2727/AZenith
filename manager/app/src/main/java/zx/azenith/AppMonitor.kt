@@ -471,15 +471,6 @@ object AppMonitor {
         return null
     }
 
-    /**
-     * FIX: sebelumnya regex [a-z0-9]+(\\.[a-z0-9]+)+ menerima segmen yang
-     * isinya angka doang (contoh: "1.0"), padahal Android package name
-     * WAJIB tiap segmennya diawali huruf, nggak boleh full angka. Ini
-     * yang bikin AppMonitor salah nangkep string version number ("1.0")
-     * sebagai package name yang valid di beberapa ROM (contoh: HyperOS)
-     * yang struktur ActivityTaskManager-nya beda dari AOSP standar,
-     * sehingga extractComponentName() gagal dan jatuh ke fallback ini.
-     */
     private fun extractPackageName(input: String?): String? {
         if (input == null || input.indexOf('.') <= 0) return null
         val normalized = input.lowercase().replace(Regex("[^a-z0-9._-]"), " ")
@@ -488,13 +479,6 @@ object AppMonitor {
         }
     }
 
-    /**
-     * FIX (lapis kedua): validasi candidate package name terhadap
-     * PackageManager beneran sebelum diterima. Ini jaring pengaman kalau
-     * suatu saat ada garbage string lain (di ROM/versi Android lain)
-     * yang somehow lolos regex di atas - tetap ditolak kalau bukan
-     * package yang benar-benar ter-install di device.
-     */
     private fun isInstalledPackage(pkg: String): Boolean {
         return try {
             systemContext?.packageManager?.getApplicationInfo(pkg, 0) != null

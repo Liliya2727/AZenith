@@ -189,6 +189,7 @@ extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-service" "$TMPDIR"
 extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-profilesettings" "$TMPDIR"
 extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-rianixiathermalcore" "$TMPDIR"
 extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-utilityconf" "$TMPDIR"
+extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-preferencedtweaks" "$TMPDIR"
 extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-preloadbin" "$TMPDIR"
 cp "$TMPDIR/libs/$ARCH_TMP/"* "$MODPATH/system/bin/"
 rm -rf "$TMPDIR/libs"
@@ -201,8 +202,8 @@ echo "- Extracting post-fs-data.sh..."
 extract "$ZIPFILE" post-fs-data.sh "$MODPATH"
 echo "- Extracting action.sh..."
 extract "$ZIPFILE" action.sh "$MODPATH"
-echo "- Extracting preferenced-tweaks.sh..."
-extract "$ZIPFILE" preferenced-tweaks.sh "$MODPATH"
+echo "- Extracting cleanup.sh..."
+extract "$ZIPFILE" cleanup.sh "$MODPATH"
 echo "- Extracting module.prop..."
 extract "$ZIPFILE" module.prop "$MODPATH"
 cp "$MODPATH/module.prop" "$MODPATH/module.prop.orig"
@@ -213,7 +214,7 @@ if [ ! -f "$MODULE_CONFIG/gamelist/azenithApplist.json" ]; then
     extract "$ZIPFILE" azenithApplist.json "$MODULE_CONFIG/gamelist"
 fi
 echo "- Extracting module banner..."
-extract "$ZIPFILE" module.banner.avif "$MODPATH"
+extract "$ZIPFILE" module.banner.jpg "$MODPATH"
 
 # Skip mountify
 touch "$MODPATH/skip_mountify"
@@ -262,6 +263,7 @@ if [ "$KSU" = "true" ] || [ "$APATCH" = "true" ]; then
 			ln -sf "$BIN_PATH/sys.azenith-service" "$dir/zx" # Binary calls for CLI
 			ln -sf "$BIN_PATH/sys.azenith-profilesettings" "$dir/sys.azenith-profilesettings"
 			ln -sf "$BIN_PATH/sys.azenith-utilityconf" "$dir/sys.azenith-utilityconf"
+			ln -sf "$BIN_PATH/sys.azenith-preferencedtweaks" "$dir/sys.azenith-preferencedtweaks"
 			ln -sf "$BIN_PATH/sys.azenith-preloadbin" "$dir/sys.azenith-preloadbin"
             ln -sf "$BIN_PATH/sys.azenith-rianixiathermalcore" "$dir/sys.azenith-rianixiathermalcore"
 		}

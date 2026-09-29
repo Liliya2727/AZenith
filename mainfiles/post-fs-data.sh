@@ -22,7 +22,7 @@ LOCK_FILE="/dev/.azenithSingleInstance"
 # Single Instance Lock
 # Ksu in Metamodule mode, post-fs-data runs twice
 if [ -f "$LOCK_FILE" ]; then
-    exit 0
+    exit 1
 fi
 touch "$LOCK_FILE"
 
@@ -32,10 +32,10 @@ BOOTCOUNT=0
 
 BOOTCOUNT=$(( BOOTCOUNT + 1))
 
-if [ $BOOTCOUNT -gt 1 ]; then
+if [ ! -f "/data/adb/modules/AZenith/explicit_I_want_a_bootloop" ] && [ $BOOTCOUNT -gt 1 ]; then
     touch "$MODDIR/disable"
     rm "$MODDIR/count.sh"
-    
+    rm /data/adb/service.d/.azenith_cleanup.sh
     string="description=anti-bootloop triggered. module disabled. enable to activate."
     sed -i "s/^description=.*/$string/g" "$MODDIR/module.prop"
     exit 1

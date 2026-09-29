@@ -647,26 +647,6 @@ pub fn read_freqs(path: &str) -> Vec<u64> {
     freqs
 }
 
-pub fn ppm_fix_freq(target_index: &str) {
-    let ppm_path = "/proc/ppm/policy/ut_fix_freq_idx";
-
-    if !Path::new(ppm_path).exists() {
-        return;
-    }
-
-    let mut cluster_count = 0;
-    if let Ok(paths) = glob::glob("/sys/devices/system/cpu/cpufreq/policy*") {
-        cluster_count = paths.filter_map(Result::ok).count();
-    }
-
-    if cluster_count > 0 {
-        let payload = vec![target_index; cluster_count].join(" ");
-
-        write_lock(&payload, ppm_path);
-        
-    }
-}
-
 pub fn init_cpu_governor() {
     let cpu_path = "/sys/devices/system/cpu/cpu0/cpufreq";
     let gov_file = format!("{}/scaling_governor", cpu_path);

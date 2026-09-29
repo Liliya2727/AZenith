@@ -77,9 +77,11 @@ int main_daemon(void) {
     bool need_loop = true;
     runthermalcore();
     run_profiler(PERFCOMMON);
+    update_module_description(getpid());
 
     /* Main Daemon Loop */
     while (1) {
+        
         int poll_timeout = -1;
         if (need_loop) {
             poll_timeout = 0;
@@ -89,14 +91,17 @@ int main_daemon(void) {
                 poll_timeout = (int)((10.0 - elapsed) * 1000);
             else
                 poll_timeout = 0;
-        } else if (ctx.fg_away_active) {
+        } else if (ctx.fg_away_active && gamestart) {
             double elapsed = difftime(time(NULL), ctx.fg_away_timer);
             if (elapsed < 30.0)
                 poll_timeout = (int)((30.0 - elapsed) * 1000);
             else
                 poll_timeout = 0;
+        } else if (ctx.fg_away_active && !gamestart) {
+            ctx.fg_away_active = false;
+            ctx.fg_away_timer = 0;
         }
-
+        
         bool should_exit = process_inotify_events(inotify_fd, &ctx, poll_timeout);
         need_loop = false;
 

@@ -19,7 +19,7 @@ pub fn mediatek_balance() {
         }
     }
     
-    ppm_fix_freq("-1"); 
+    // ppm_fix_freq("-1"); 
     
     write_lock("2", "/sys/kernel/fpsgo/common/force_onoff");
     write_lock("1", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
@@ -103,7 +103,7 @@ pub fn mediatek_performance() {
     }
 
     
-    ppm_fix_freq("0"); 
+    // ppm_fix_freq("0"); 
 
     let use_fpsgo = getprop("persist.sys.azenithconf.usefpsgo");
     if use_fpsgo == "0" {
@@ -187,7 +187,7 @@ pub fn mediatek_powersave() {
         }
     }
     
-    ppm_fix_freq("-1"); 
+    // ppm_fix_freq("-1"); 
     write_lock("0", "/sys/devices/platform/boot_dramboost/dramboost/dramboost");
     write_lock("2", "/sys/kernel/fpsgo/common/force_onoff");
     write_lock("1", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
