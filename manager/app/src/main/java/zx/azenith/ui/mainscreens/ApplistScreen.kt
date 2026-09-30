@@ -358,16 +358,20 @@ fun ApplistTopAppBar(
                         DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.menu_refresh)) },
-                                onClick = { 
+                                onClick = {
                                     AppIconCache.clear()
                                     onRefresh()
-                                    menuExpanded = false 
+                                    menuExpanded = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.Refresh, null) }
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.menu_show_system_apps)) },
-                                trailingIcon = { Checkbox(showSystemApps, null) },
+                                trailingIcon = {
+                                    if (showSystemApps) {
+                                        Icon(Icons.Default.Check, null)
+                                    }
+                                },
                                 onClick = { onToggleSystem(!showSystemApps); menuExpanded = false }
                             )
                         }
