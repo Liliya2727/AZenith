@@ -19,6 +19,7 @@ package zx.azenith.ui.component
 
 import android.annotation.SuppressLint
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -30,6 +31,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.*
@@ -48,8 +50,12 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -82,11 +88,14 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.shape.CircleShape
+import zx.azenith.ExpressiveShapes
 
 
 private val largeCorner = 26.dp
@@ -485,8 +494,6 @@ fun ExpressiveDropdownItem(
     }
     val selectedLabel = if (hasItems && safeIndex >= 0) items[safeIndex] else ""
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
     ExpressiveListItem(
         modifier = Modifier
             .animateContentSize()
@@ -529,42 +536,167 @@ fun ExpressiveDropdownItem(
     )
 
     if (presentation == DropdownPresentation.Sheet && expanded && hasItems) {
-        ModalBottomSheet(
-            onDismissRequest = { expanded = false },
-            sheetState = sheetState
-        ) {
-            Column(
+        OptionPickerSheet(
+            title = title,
+            subtitle = summary,
+            items = items,
+            selectedIndex = safeIndex,
+            accent = MaterialTheme.colorScheme.primary,
+            onSelect = { index ->
+                if (index in items.indices) {
+                    onItemSelected(index)
+                }
+            },
+            onDismiss = { expanded = false },
+        )
+    }
+}
+
+/**
+ * One option row in [OptionPickerSheet].
+ *
+ * The press state is local to the row and the animated scale is read inside
+ * [Modifier.graphicsLayer], so a press animates the draw phase only and the
+ * sheet's other rows are not invalidated with it. Scaling the layer rather
+ * than the modifier keeps the touch target at full size, which is what
+ * stops a fast tap from cancelling the gesture mid-animation.
+ */
+@Composable
+private fun OptionRow(
+    text: String,
+    selected: Boolean,
+    accent: Color,
+    onClick: () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.97f else 1f,
+        animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
+        label = "OptionRowScale",
+    )
+    val color by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            Color.Transparent
+        },
+        label = "OptionRowColor",
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clip(MaterialTheme.shapes.large)
+            .background(color)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+            )
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) {
+                MaterialTheme.colorScheme.onSecondaryContainer
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            },
+            modifier = Modifier.padding(end = 32.dp),
+        )
+        if (selected) {
+            Icon(
+                imageVector = Icons.Rounded.Check,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.align(Alignment.CenterEnd),
+            )
+        }
+    }
+}
+
+/**
+ * The option list for a [DropdownPresentation.Sheet] selection.
+ *
+ * Plain radio rows read as a settings dump, so the selected option is
+ * surfaced as a filled container instead — the same emphasis Material gives
+ * a chosen list item — and the check mark sits on the trailing edge, which
+ * keeps the text column aligned with the rest of the settings list.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun OptionPickerSheet(
+    title: String,
+    subtitle: String?,
+    items: List<String>,
+    selectedIndex: Int,
+    accent: Color,
+    onSelect: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val interactionSource = remember { MutableInteractionSource() }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = ExpressiveShapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.4f),
+        dragHandle = {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
+                    .padding(vertical = 12.dp)
+                    .width(36.dp)
+                    .height(4.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+            )
+        },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 4.dp),
+            )
+            if (subtitle != null) {
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 8.dp)
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 4.dp),
                 )
-                items.forEachIndexed { index, text ->
-                    val selected = index == safeIndex
-                    ExpressiveListItem(
-                        modifier = Modifier.clickable {
-                            onItemSelected(index)
-                            expanded = false
+            }
+
+            // A long governor or scheduler list is taller than the sheet, so
+            // the rows live in their own lazy column rather than a Column that
+            // measures every child up front.
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                itemsIndexed(items) { index, text ->
+                    OptionRow(
+                        text = text,
+                        selected = index == selectedIndex,
+                        accent = accent,
+                        onClick = {
+                            onSelect(index)
+                            onDismiss()
                         },
-                        leadingContent = {
-                            RadioButton(selected = selected, onClick = null)
-                        },
-                        headlineContent = {
-                            Text(
-                                text = text,
-                                color = if (selected) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                }
-                            )
-                        }
                     )
                 }
             }
