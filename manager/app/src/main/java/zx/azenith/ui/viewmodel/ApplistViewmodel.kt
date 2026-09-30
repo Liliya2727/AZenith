@@ -67,6 +67,12 @@ class ApplistViewmodel : ViewModel() {
         val packageName: String get() = packageInfo.packageName
         val isSystem: Boolean get() = (packageInfo.applicationInfo?.flags?.and(ApplicationInfo.FLAG_SYSTEM) != 0)
         val uid: Int get() = packageInfo.applicationInfo?.uid ?: 0
+
+        // Filtering lowercases every label and package on every keystroke, and
+        // the labels are already resolved, so keep the folded forms alongside
+        // the original rather than reallocating them per search.
+        internal val searchLabel: String = label.lowercase(Locale.getDefault())
+        internal val searchPackage: String = packageName.lowercase(Locale.getDefault())
     }
 
     var isRefreshing by mutableStateOf(false)
@@ -90,19 +96,26 @@ class ApplistViewmodel : ViewModel() {
     private val configPath = "/data/adb/.config/AZenith/gamelist/azenithApplist.json"
 
     val filteredApps by derivedStateOf {
-        val query = searchQueryString.lowercase()
+        val query = searchQueryString.lowercase(Locale.getDefault())
         synchronized(appsLock) {
             apps.filter { app ->
-                val matchesSearch = app.label.lowercase().contains(query) || 
-                                  app.packageName.lowercase().contains(query)
+                val matchesSearch = app.searchLabel.contains(query) ||
+                                  app.searchPackage.contains(query)
                 val matchesSystem = showSystemApps || !app.isSystem
                 matchesSearch && matchesSystem
-            }.sortedWith(
-                compareByDescending<AppInfo> { it.isEnabledInConfig }
-                    .thenByDescending { it.isRecommended }
-                    .thenBy(Collator.getInstance(Locale.getDefault())) { it.label }
-            )
+            }.sortedWith(appComparator)
         }
+    }
+
+    // Built once: Collator.getInstance() is locale data lookup plus allocation,
+    // and it was being constructed inside the comparator, so a sort of a few
+    // hundred apps built one per comparison. The same instance is also reused
+    // for a stable locale ordering across searches.
+    private val appComparator: Comparator<AppInfo> = run {
+        val collator = Collator.getInstance(Locale.getDefault())
+        compareByDescending<AppInfo> { it.isEnabledInConfig }
+            .thenByDescending { it.isRecommended }
+            .then(compareBy(collator) { it.label })
     }
 
     fun loadApps(context: Context, forceRefresh: Boolean = false) {
