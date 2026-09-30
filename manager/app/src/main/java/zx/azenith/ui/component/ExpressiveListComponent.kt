@@ -901,13 +901,6 @@ fun ExpressiveSliderItem(
     onValueChangeFinished: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val progressFraction = ((sliderPosition - valueRange.start) /
-        (valueRange.endInclusive - valueRange.start)).coerceIn(0f, 1f)
-    val animatedProgress = animateFloatAsState(
-        targetValue = progressFraction,
-        animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
-        label = "LabeledSliderProgress"
-    )
 
     val animatedAlpha by animateFloatAsState(
         targetValue = if (enabled) 1f else 0.4f,
@@ -963,28 +956,14 @@ fun ExpressiveSliderItem(
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
-        SliderTrack(
-            progress = { animatedProgress.value },
-            trackColor = colorScheme.surfaceContainerHighest,
-            brush = Brush.horizontalGradient(
-                listOf(colorScheme.primary.copy(alpha = 0.6f), colorScheme.primary)
-            )
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Slider(
+        ZenithSlider(
             value = sliderPosition,
             onValueChange = onValueChange,
             onValueChangeFinished = onValueChangeFinished,
             valueRange = valueRange,
             steps = steps,
             enabled = enabled,
-            colors = SliderDefaults.colors(
-                thumbColor = colorScheme.primary,
-                activeTrackColor = Color.Transparent,
-                inactiveTrackColor = Color.Transparent
-            ),
-            modifier = Modifier.fillMaxWidth().height(32.dp)
+            modifier = Modifier.fillMaxWidth().height(40.dp)
         )
     }
 }

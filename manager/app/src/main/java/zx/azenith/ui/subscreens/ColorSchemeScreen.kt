@@ -77,6 +77,7 @@ import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.component.ZenithSlider
 
 enum class ColorPreset(
     val label: String,
@@ -433,7 +434,7 @@ fun ColorSliderItem(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        Slider(
+        ZenithSlider(
             value = value,
             onValueChange = { newValue ->
                 if (enabled) {
@@ -449,17 +450,8 @@ fun ColorSliderItem(
             onValueChangeFinished = onFinish,
             valueRange = 0f..2000f,
             enabled = enabled,
-            colors = SliderDefaults.colors(
-                thumbColor = accentColor,
-                activeTrackColor = Color.Transparent,
-                inactiveTrackColor = Color.Transparent,
-                disabledThumbColor = accentColor.copy(alpha = 0.5f),
-                disabledActiveTrackColor = Color.Transparent,
-                disabledInactiveTrackColor = Color.Transparent
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(32.dp)
+            accent = accentColor,
+            modifier = Modifier.fillMaxWidth().height(40.dp)
         )
 
         Row(

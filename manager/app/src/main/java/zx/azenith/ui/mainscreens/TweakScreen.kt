@@ -94,6 +94,7 @@ import zx.azenith.ui.component.*
 import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.*
 import zx.azenith.ui.viewmodel.TweakViewModel
+import zx.azenith.ui.component.ZenithSlider
 
 
 @Composable
@@ -622,11 +623,6 @@ fun FreqLimitSliderItem(
 ) {
     var sliderValue by remember { mutableStateOf(initialValue) }
     val colorScheme = MaterialTheme.colorScheme
-    val animatedProgress = animateFloatAsState(
-        targetValue = sliderValue / 6f,
-        animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
-        label = "OffsetProgress"
-    )
 
     Column(
         modifier = Modifier
@@ -667,27 +663,14 @@ fun FreqLimitSliderItem(
             }
         }
         
-        Spacer(modifier = Modifier.height(24.dp))
-        SliderTrack(
-            progress = { animatedProgress.value },
-            trackColor = colorScheme.surfaceContainerHighest,
-            brush = Brush.horizontalGradient(
-                listOf(colorScheme.primary.copy(alpha = 0.6f), colorScheme.primary)
-            )
-        )
         Spacer(modifier = Modifier.height(4.dp))
-        Slider(
+        ZenithSlider(
             value = sliderValue,
             onValueChange = { sliderValue = it },
             onValueChangeFinished = { onSaved(sliderValue) },
             valueRange = 0f..6f,
             steps = 5,
-            colors = SliderDefaults.colors(
-                thumbColor = colorScheme.primary,
-                activeTrackColor = Color.Transparent,
-                inactiveTrackColor = Color.Transparent
-            ),
-            modifier = Modifier.fillMaxWidth().height(32.dp)
+            modifier = Modifier.fillMaxWidth().height(40.dp)
         )
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),

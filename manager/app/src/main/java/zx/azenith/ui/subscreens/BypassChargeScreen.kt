@@ -299,28 +299,32 @@ fun BypassChargeScreen(navController: NavController) {
                                     }
         
                                     Spacer(modifier = Modifier.height(4.dp))
-        
-                                    Slider(
+
+                                    ZenithSlider(
                                         value = animatedSliderValue,
                                         enabled = !isUnsupported,
-                                        onValueChange = { newValue -> 
+                                        // Only the local state moves during the drag.
+                                        // The property write and the su round-trip run
+                                        // on finish, so dragging does not fork a shell
+                                        // on every value change.
+                                        onValueChange = { newValue ->
                                             val step = 5f
                                             val snapped = (newValue / step).roundToInt() * step
                                             val finalValue = snapped.coerceIn(20f, 50f)
-                    
                                             thresholdValue = finalValue
+                                        },
+                                        onValueChangeFinished = {
+                                            // Inside thresholdValue?.let { currentVal -> }, so
+                                            // currentVal is the non-null threshold. Use it
+                                            // rather than re-reading the nullable state.
+                                            val finalValue = thresholdValue ?: currentVal
                                             PropertyUtils.set("persist.sys.azenithconf.bypasschgthreshold", finalValue.toInt().toString())
                                             Shell.cmd("echo ${finalValue.toInt()} > /data/adb/.config/AZenith/bypasschgconfig/bypasschgthreshold").exec()
                                         },
                                         valueRange = 20f..50f,
-                                        steps = 5, 
-                                        colors = SliderDefaults.colors(
-                                            thumbColor = if (isUnsupported) colorScheme.outline else colorScheme.primary,
-                                            disabledThumbColor = colorScheme.outline.copy(alpha = 0.5f),
-                                            activeTrackColor = Color.Transparent,
-                                            inactiveTrackColor = Color.Transparent
-                                        ),
-                                        modifier = Modifier.fillMaxWidth().height(32.dp)
+                                        steps = 5,
+                                        accent = if (isUnsupported) colorScheme.outline else colorScheme.primary,
+                                        modifier = Modifier.fillMaxWidth().height(40.dp)
                                     )
         
                                     Row(

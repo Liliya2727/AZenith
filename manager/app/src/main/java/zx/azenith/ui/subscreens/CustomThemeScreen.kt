@@ -89,6 +89,7 @@ import zx.azenith.ui.util.saveHeaderImage
 import zx.azenith.ui.util.saveMediaDirectly
 import zx.azenith.ui.util.setBannerGradientAlpha
 import zx.azenith.ui.util.setBannerImageEnabled
+import zx.azenith.ui.component.ZenithSlider
 
 
 private val keyColorOptions = listOf(
@@ -719,14 +720,15 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                         }
                                     }
                                 }
-                                Slider(
+                                ZenithSlider(
                                     value = bannerGradientAlpha,
                                     onValueChange = { newValue ->
                                         val snappedValue = if (newValue in 0.47f..0.53f) 0.5f else newValue
                                         onBannerGradientAlphaChange(snappedValue)
                                     },
+                                    onValueChangeFinished = {},
                                     valueRange = 0f..1f,
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier.fillMaxWidth().height(40.dp)
                                 )
                             }
                         }
