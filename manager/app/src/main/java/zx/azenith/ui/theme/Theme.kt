@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowInsetsControllerCompat
 import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.rememberDynamicColorScheme
+import zx.azenith.ExpressiveShapes
 
 
 /**
@@ -230,6 +231,7 @@ fun AZenithTheme(
     MaterialExpressiveTheme(
         colorScheme = animatedColorScheme,
         typography = Typography,
+        shapes = ExpressiveShapes,
         motionScheme = MotionScheme.expressive(),
         content = content
     )
