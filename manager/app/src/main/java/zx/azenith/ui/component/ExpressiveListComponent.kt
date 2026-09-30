@@ -53,9 +53,11 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -64,6 +66,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -75,6 +78,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
@@ -448,6 +454,16 @@ fun ExpressiveSwitchItem(
     )
 }
 
+/**
+ * How [ExpressiveDropdownItem] presents its options.
+ *
+ * [Sheet] suits the longer option lists (governors, schedulers, refresh rates)
+ * where an anchored popup either scrolls off-screen or gets clipped by the row.
+ * [Menu] keeps the anchored popup for short lists that fit comfortably.
+ */
+enum class DropdownPresentation { Sheet, Menu }
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpressiveDropdownItem(
     icon: ImageVector? = null,
@@ -456,6 +472,7 @@ fun ExpressiveDropdownItem(
     items: List<String>,
     enabled: Boolean = true,
     selectedIndex: Int,
+    presentation: DropdownPresentation = DropdownPresentation.Sheet,
     onItemSelected: (Int) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -466,6 +483,9 @@ fun ExpressiveDropdownItem(
     } else {
         -1
     }
+    val selectedLabel = if (hasItems && safeIndex >= 0) items[safeIndex] else ""
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ExpressiveListItem(
         modifier = Modifier
@@ -483,28 +503,73 @@ fun ExpressiveDropdownItem(
         trailingContent = {
             Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
                 Text(
-                    text = if (hasItems && safeIndex >= 0) items[safeIndex] else "",
+                    text = selectedLabel,
                     color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    items.forEachIndexed { index, text ->
-                        DropdownMenuItem(
-                            text = { Text(text) },
-                            onClick = {
-                                if (index in items.indices) {
-                                    onItemSelected(index)
+                if (presentation == DropdownPresentation.Menu) {
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        items.forEachIndexed { index, text ->
+                            DropdownMenuItem(
+                                text = { Text(text) },
+                                onClick = {
+                                    if (index in items.indices) {
+                                        onItemSelected(index)
+                                    }
+                                    expanded = false
                                 }
-                                expanded = false
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
         }
     )
+
+    if (presentation == DropdownPresentation.Sheet && expanded && hasItems) {
+        ModalBottomSheet(
+            onDismissRequest = { expanded = false },
+            sheetState = sheetState
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 8.dp)
+                )
+                items.forEachIndexed { index, text ->
+                    val selected = index == safeIndex
+                    ExpressiveListItem(
+                        modifier = Modifier.clickable {
+                            onItemSelected(index)
+                            expanded = false
+                        },
+                        leadingContent = {
+                            RadioButton(selected = selected, onClick = null)
+                        },
+                        headlineContent = {
+                            Text(
+                                text = text,
+                                color = if (selected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                }
+                            )
+                        }
+                    )
+                }
+            }
+        }
+    }
 }
 
 
@@ -654,6 +719,42 @@ fun SmallLeadingIcon(icon: ImageVector) {
     }
 }
 
+/**
+ * Renders the gradient progress track behind a [Slider].
+ *
+ * The animated progress is read inside [drawBehind] rather than in the
+ * composable body: the track is the only thing that changes while dragging, so
+ * reading the animation in the draw phase keeps the row's title, subtitle and
+ * badge out of the per-frame recomposition.
+ */
+@Composable
+fun SliderTrack(
+    progress: () -> Float,
+    modifier: Modifier = Modifier,
+    trackColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
+    brush: Brush,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(trackHeight)
+            .drawBehind {
+                val corner = CornerRadius(size.height / 2f, size.height / 2f)
+                drawRoundRect(color = trackColor, cornerRadius = corner)
+                val fraction = progress().coerceIn(0f, 1f)
+                if (fraction > 0f) {
+                    drawRoundRect(
+                        brush = brush,
+                        size = Size(size.width * fraction, size.height),
+                        cornerRadius = corner
+                    )
+                }
+            }
+    )
+}
+
+private val trackHeight = 8.dp
+
 @Composable
 fun ExpressiveSliderItem(
     icon: ImageVector? = null,
@@ -670,7 +771,7 @@ fun ExpressiveSliderItem(
     val colorScheme = MaterialTheme.colorScheme
     val progressFraction = ((sliderPosition - valueRange.start) /
         (valueRange.endInclusive - valueRange.start)).coerceIn(0f, 1f)
-    val animatedProgress by animateFloatAsState(
+    val animatedProgress = animateFloatAsState(
         targetValue = progressFraction,
         animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
         label = "LabeledSliderProgress"
@@ -731,23 +832,13 @@ fun ExpressiveSliderItem(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(colorScheme.surfaceContainerHighest)
+        SliderTrack(
+            progress = { animatedProgress.value },
+            trackColor = colorScheme.surfaceContainerHighest,
+            brush = Brush.horizontalGradient(
+                listOf(colorScheme.primary.copy(alpha = 0.6f), colorScheme.primary)
             )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(animatedProgress)
-                    .height(8.dp)
-                    .align(Alignment.CenterStart)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Brush.horizontalGradient(listOf(colorScheme.primary.copy(alpha = 0.6f), colorScheme.primary)))
-            )
-        }
+        )
         Spacer(modifier = Modifier.height(4.dp))
         Slider(
             value = sliderPosition,

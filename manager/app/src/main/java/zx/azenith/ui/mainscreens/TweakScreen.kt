@@ -617,7 +617,7 @@ fun FreqLimitSliderItem(
 ) {
     var sliderValue by remember { mutableStateOf(initialValue) }
     val colorScheme = MaterialTheme.colorScheme
-    val animatedProgress by animateFloatAsState(
+    val animatedProgress = animateFloatAsState(
         targetValue = sliderValue / 6f,
         animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
         label = "OffsetProgress"
@@ -663,23 +663,13 @@ fun FreqLimitSliderItem(
         }
         
         Spacer(modifier = Modifier.height(24.dp))
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(colorScheme.surfaceContainerHighest)
+        SliderTrack(
+            progress = { animatedProgress.value },
+            trackColor = colorScheme.surfaceContainerHighest,
+            brush = Brush.horizontalGradient(
+                listOf(colorScheme.primary.copy(alpha = 0.6f), colorScheme.primary)
             )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(animatedProgress)
-                    .height(8.dp)
-                    .align(Alignment.CenterStart)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Brush.horizontalGradient(listOf(colorScheme.primary.copy(alpha = 0.6f), colorScheme.primary)))
-            )
-        }
+        )
         Spacer(modifier = Modifier.height(4.dp))
         Slider(
             value = sliderValue,
