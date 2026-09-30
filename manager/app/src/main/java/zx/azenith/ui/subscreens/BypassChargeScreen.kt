@@ -114,245 +114,243 @@ fun BypassChargeScreen(navController: NavController) {
         bypassChgState = PropertyUtils.get("persist.sys.azenithconf.bypasschg", "0") == "1"
     }
 
-    MaterialExpressiveTheme {
-        Scaffold(
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            topBar = { BypassChgTopAppBar(scrollBehavior, onBack = { navController.popBackStack() }) },
-            containerColor = colorScheme.surface 
-        ) { innerPadding ->
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                ),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-            
-                item {
-                    
-                    
-                    ExpressiveList(
-                        content = listOf( 
-                            {
-                                ExpressiveInfoCard(
-                                    supportingContent = { Text(text = stringResource(R.string.str_pause_battery_charging_when_pl)) },
-                                    leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
-                                    containerColor = colorScheme.surfaceContainerLow,
-                                    onClick = {}
-                                )
-                            }
-                        )
-                    )
-                }
-                            
-                item {
-                    Image(
-                        painter = painterResource(id = R.drawable.bypasschgillust),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp)
-                            .clip(RoundedCornerShape(28.dp))
-                            .graphicsLayer(alpha = if (isUnsupported) 0.5f else 1f),
-                        contentScale = ContentScale.Fit,
-                        colorFilter = ColorFilter.tint(colorScheme.primary)
-                    )
-                }
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = { BypassChgTopAppBar(scrollBehavior, onBack = { navController.popBackStack() }) },
+        containerColor = colorScheme.surface 
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding(),
+                start = 16.dp,
+                end = 16.dp,
+                bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            ),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
 
-                item {
-                    if (isNeedSetup) {
-                        ExpressiveList(
-                            content = listOf {
-                                ExpressiveInfoCard(
-                                    supportingContent = { Text(text = stringResource(R.string.str_bypass_need_setup)) },
-                                    leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
-                                    containerColor = colorScheme.surfaceContainerLow,
-                                    onClick = {}
-                                )
-                            }
-                        )
-                    } else if (bypassChgState != null) {
-                        ExpressiveList(
-                            content = listOf {
-                                ExpressiveSwitchItem(
-                                    icon = Icons.Filled.BatteryChargingFull,
-                                    title = stringResource(R.string.enable_bypass_charge),
-                                    summary = if (isUnsupported) stringResource(R.string.bypass_not_supported)
-                                              else stringResource(R.string.enable_bypass_charge_desc),
-                                    checked = bypassChgState!!,
-                                    enabled = !isUnsupported,
-                                    onCheckedChange = { isChecked ->
-                                        bypassChgState = isChecked
-                                        val value = if (isChecked) "1" else "0"
-                                        PropertyUtils.set("persist.sys.azenithconf.bypasschg", value)
-                                        Shell.cmd("echo $value > /data/adb/.config/AZenith/bypasschgconfig/bypasschg").exec()
-                                    }
-                                )
-                            }
-                        )
-                    }
+            item {
+
+
+                ExpressiveList(
+                    content = listOf( 
+                        {
+                            ExpressiveInfoCard(
+                                supportingContent = { Text(text = stringResource(R.string.str_pause_battery_charging_when_pl)) },
+                                leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
+                                containerColor = colorScheme.surfaceContainerLow,
+                                onClick = {}
+                            )
+                        }
+                    )
+                )
+            }
+
+            item {
+                Image(
+                    painter = painterResource(id = R.drawable.bypasschgillust),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(28.dp))
+                        .graphicsLayer(alpha = if (isUnsupported) 0.5f else 1f),
+                    contentScale = ContentScale.Fit,
+                    colorFilter = ColorFilter.tint(colorScheme.primary)
+                )
+            }
+
+            item {
+                if (isNeedSetup) {
+                    ExpressiveList(
+                        content = listOf {
+                            ExpressiveInfoCard(
+                                supportingContent = { Text(text = stringResource(R.string.str_bypass_need_setup)) },
+                                leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
+                                containerColor = colorScheme.surfaceContainerLow,
+                                onClick = {}
+                            )
+                        }
+                    )
+                } else if (bypassChgState != null) {
+                    ExpressiveList(
+                        content = listOf {
+                            ExpressiveSwitchItem(
+                                icon = Icons.Filled.BatteryChargingFull,
+                                title = stringResource(R.string.enable_bypass_charge),
+                                summary = if (isUnsupported) stringResource(R.string.bypass_not_supported)
+                                          else stringResource(R.string.enable_bypass_charge_desc),
+                                checked = bypassChgState!!,
+                                enabled = !isUnsupported,
+                                onCheckedChange = { isChecked ->
+                                    bypassChgState = isChecked
+                                    val value = if (isChecked) "1" else "0"
+                                    PropertyUtils.set("persist.sys.azenithconf.bypasschg", value)
+                                    Shell.cmd("echo $value > /data/adb/.config/AZenith/bypasschgconfig/bypasschg").exec()
+                                }
+                            )
+                        }
+                    )
                 }
-                
-                if (!isNeedSetup) {
-                    thresholdValue?.let { currentVal -> 
-                        item {
-                            val animatedSliderValue by animateFloatAsState(
-                                targetValue = currentVal,
-                                animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow),
-                                label = "SliderAnimation"
-                            )
-                    
-                            val progress = (currentVal - 20f) / 30f 
-                            val animatedBarProgress by animateFloatAsState(
-                                targetValue = progress,
-                                animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
-                                label = "BarProgress"
-                            )
-                            
-                            val cardAlpha = if (isUnsupported) 0.5f else 1f
-    
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .graphicsLayer(alpha = cardAlpha),
-                                shape = RoundedCornerShape(26.dp),
-                                color = colorScheme.surfaceColorAtElevation(1.dp),
-                                border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.5f))
+            }
+
+            if (!isNeedSetup) {
+                thresholdValue?.let { currentVal -> 
+                    item {
+                        val animatedSliderValue by animateFloatAsState(
+                            targetValue = currentVal,
+                            animationSpec = spring(dampingRatio = 0.6f, stiffness = Spring.StiffnessLow),
+                            label = "SliderAnimation"
+                        )
+
+                        val progress = (currentVal - 20f) / 30f 
+                        val animatedBarProgress by animateFloatAsState(
+                            targetValue = progress,
+                            animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
+                            label = "BarProgress"
+                        )
+
+                        val cardAlpha = if (isUnsupported) 0.5f else 1f
+
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .graphicsLayer(alpha = cardAlpha),
+                            shape = RoundedCornerShape(26.dp),
+                            color = colorScheme.surfaceColorAtElevation(1.dp),
+                            border = BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalAlignment = Alignment.Start
                             ) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    horizontalAlignment = Alignment.Start
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
                                     ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            LeadingIcon(
-                                                icon = Icons.Rounded.DataThresholding,
-                                                
-                                                contentDescription = null
-                                            )
-                                            Spacer(modifier = Modifier.width(16.dp))
-                                            Text(
-                                                text = stringResource(R.string.charging_threshold),
-                                                style = MaterialTheme.typography.titleMedium,
-                                                color = colorScheme.onSurface
-                                            )
-                                        }
-                                        
-    
-                                        Text(
-                                            text = stringResource(R.string.str_currentval_toint, currentVal.toInt()),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isUnsupported) colorScheme.outline else colorScheme.primary
-                                        )
-                                    }
-                                    
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    
-                                    Text(
-                                        text = stringResource(R.string.charging_threshold_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = colorScheme.outline
-                                    )
-        
-                                    Spacer(modifier = Modifier.height(24.dp))
-        
-                                    Box(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        contentAlignment = Alignment.BottomCenter
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(8.dp)
-                                                .clip(RoundedCornerShape(4.dp))
-                                                .background(colorScheme.surfaceContainerHighest)
-                                        )
-                                        
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth(animatedBarProgress)
-                                                .height(8.dp)
-                                                .align(Alignment.CenterStart)
-                                                .clip(RoundedCornerShape(4.dp))
-                                                .background(
-                                                    if (isUnsupported) {
-                                                        SolidColor(colorScheme.outline) 
-                                                    } else {
-                                                        Brush.horizontalGradient(
-                                                            listOf(colorScheme.primary.copy(alpha = 0.6f), colorScheme.primary)
-                                                        )
-                                                    }
-                                                )
-                                        )
-                                    }
-        
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                        LeadingIcon(
+                                            icon = Icons.Rounded.DataThresholding,
 
-                                    ZenithSlider(
-                                        value = animatedSliderValue,
-                                        enabled = !isUnsupported,
-                                        // Only the local state moves during the drag.
-                                        // The property write and the su round-trip run
-                                        // on finish, so dragging does not fork a shell
-                                        // on every value change.
-                                        onValueChange = { newValue ->
-                                            val step = 5f
-                                            val snapped = (newValue / step).roundToInt() * step
-                                            val finalValue = snapped.coerceIn(20f, 50f)
-                                            thresholdValue = finalValue
-                                        },
-                                        onValueChangeFinished = {
-                                            // Inside thresholdValue?.let { currentVal -> }, so
-                                            // currentVal is the non-null threshold. Use it
-                                            // rather than re-reading the nullable state.
-                                            val finalValue = thresholdValue ?: currentVal
-                                            PropertyUtils.set("persist.sys.azenithconf.bypasschgthreshold", finalValue.toInt().toString())
-                                            Shell.cmd("echo ${finalValue.toInt()} > /data/adb/.config/AZenith/bypasschgconfig/bypasschgthreshold").exec()
-                                        },
-                                        valueRange = 20f..50f,
-                                        steps = 5,
-                                        accent = if (isUnsupported) colorScheme.outline else colorScheme.primary,
-                                        modifier = Modifier.fillMaxWidth().height(40.dp)
-                                    )
-        
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(stringResource(R.string.str_20), style = MaterialTheme.typography.labelSmall, color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
-                                        Text(stringResource(R.string.str_50), style = MaterialTheme.typography.labelSmall, color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                            contentDescription = null
+                                        )
+                                        Spacer(modifier = Modifier.width(16.dp))
+                                        Text(
+                                            text = stringResource(R.string.charging_threshold),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = colorScheme.onSurface
+                                        )
                                     }
+
+
+                                    Text(
+                                        text = stringResource(R.string.str_currentval_toint, currentVal.toInt()),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isUnsupported) colorScheme.outline else colorScheme.primary
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Text(
+                                    text = stringResource(R.string.charging_threshold_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = colorScheme.outline
+                                )
+
+                                Spacer(modifier = Modifier.height(24.dp))
+
+                                Box(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    contentAlignment = Alignment.BottomCenter
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(8.dp)
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(colorScheme.surfaceContainerHighest)
+                                    )
+
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth(animatedBarProgress)
+                                            .height(8.dp)
+                                            .align(Alignment.CenterStart)
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(
+                                                if (isUnsupported) {
+                                                    SolidColor(colorScheme.outline) 
+                                                } else {
+                                                    Brush.horizontalGradient(
+                                                        listOf(colorScheme.primary.copy(alpha = 0.6f), colorScheme.primary)
+                                                    )
+                                                }
+                                            )
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                ZenithSlider(
+                                    value = animatedSliderValue,
+                                    enabled = !isUnsupported,
+                                    // Only the local state moves during the drag.
+                                    // The property write and the su round-trip run
+                                    // on finish, so dragging does not fork a shell
+                                    // on every value change.
+                                    onValueChange = { newValue ->
+                                        val step = 5f
+                                        val snapped = (newValue / step).roundToInt() * step
+                                        val finalValue = snapped.coerceIn(20f, 50f)
+                                        thresholdValue = finalValue
+                                    },
+                                    onValueChangeFinished = {
+                                        // Inside thresholdValue?.let { currentVal -> }, so
+                                        // currentVal is the non-null threshold. Use it
+                                        // rather than re-reading the nullable state.
+                                        val finalValue = thresholdValue ?: currentVal
+                                        PropertyUtils.set("persist.sys.azenithconf.bypasschgthreshold", finalValue.toInt().toString())
+                                        Shell.cmd("echo ${finalValue.toInt()} > /data/adb/.config/AZenith/bypasschgconfig/bypasschgthreshold").exec()
+                                    },
+                                    valueRange = 20f..50f,
+                                    steps = 5,
+                                    accent = if (isUnsupported) colorScheme.outline else colorScheme.primary,
+                                    modifier = Modifier.fillMaxWidth().height(40.dp)
+                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(stringResource(R.string.str_20), style = MaterialTheme.typography.labelSmall, color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                                    Text(stringResource(R.string.str_50), style = MaterialTheme.typography.labelSmall, color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                                 }
                             }
                         }
                     }
                 }
-                
-                item {
-                    ExpressiveList(
-                        content = listOf {
-                            ExpressiveListItem(
-                                onClick = { navController.navigate("bypasschg_check") },
-                                headlineContent = { Text(stringResource(R.string.CompatibilityCheck)) },
-                                supportingContent = { Text(stringResource(R.string.CompatibilityCheck_desc)) },
-                                leadingContent = { LeadingIcon(icon = Icons.Filled.CheckCircle) },
-                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                            )
-                        }
-                    )
-                }
+            }
+
+            item {
+                ExpressiveList(
+                    content = listOf {
+                        ExpressiveListItem(
+                            onClick = { navController.navigate("bypasschg_check") },
+                            headlineContent = { Text(stringResource(R.string.CompatibilityCheck)) },
+                            supportingContent = { Text(stringResource(R.string.CompatibilityCheck_desc)) },
+                            leadingContent = { LeadingIcon(icon = Icons.Filled.CheckCircle) },
+                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                        )
+                    }
+                )
             }
         }
     }

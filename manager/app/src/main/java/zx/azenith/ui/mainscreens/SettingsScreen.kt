@@ -200,356 +200,354 @@ fun SettingsScreen(
         }
     }
 
-    MaterialExpressiveTheme {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Scaffold(
-                modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-                topBar = { 
-                    SettingsScreenTopAppBar(
-                        scrollBehavior = scrollBehavior,
-                        onChangelogClick = { showChangelogSheet = true }
-                    ) 
-                },
-                snackbarHost = { 
-                    SnackbarHost(
-                        hostState = snackbarHostState,
-                        modifier = Modifier.padding(
-                            bottom = 100.dp
-                        )
-                    ) 
-                },
-                containerColor = MaterialTheme.colorScheme.surface
-            ) { innerPadding ->
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        top = innerPadding.calculateTopPadding(),
-                        start = 16.dp,
-                        end = 16.dp,
-                        bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            topBar = { 
+                SettingsScreenTopAppBar(
+                    scrollBehavior = scrollBehavior,
+                    onChangelogClick = { showChangelogSheet = true }
+                ) 
+            },
+            snackbarHost = { 
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier.padding(
+                        bottom = 100.dp
                     )
-                ) {
-                    item {
-                        Spacer(modifier = Modifier.height(16.dp)) 
-                        
-                        ExpressiveList(
-                            content = listOf(
-                                { AppInfoHeaderContent() },
-                                {
-                                    ExpressiveListItem(
-                                        onClick = { navController.navigate("color_palette") },
-                                        headlineContent = { Text(stringResource(R.string.theme)) },
-                                        supportingContent = { Text(stringResource(R.string.theme_desc)) },
-                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Palette) },
-                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                    )
-                                }
-                            )
-                        )
-                    }
-        
-                    item { SettingsSectionTitle(stringResource(R.string.section_features)) }
-                    
-                    item {
-                        if (uiState.isLoaded) {
-                            ExpressiveList(
-                                content = listOf(
-                                    {
-                                        ExpressiveSwitchItem(
-                                            icon = Icons.Filled.Notifications,
-                                            title = stringResource(R.string.show_toast),
-                                            checked = uiState.stateToast,
-                                            onCheckedChange = settingsViewModel::setShowToast
-                                        )
-                                    },
-                                    {
-                                        ExpressiveSwitchItem(
-                                            icon = Icons.Filled.NotificationsActive,
-                                            title = stringResource(R.string.show_notifications),
-                                            checked = uiState.profileNotifications,
-                                            onCheckedChange = settingsViewModel::setProfileNotifications
-                                        )
-                                    },
-                                    {
-                                        ExpressiveSwitchItem(
-                                            icon = Icons.Filled.Assistant,
-                                            title = stringResource(R.string.disable_auto_mode),
-                                            checked = uiState.autoMode,
-                                            onCheckedChange = settingsViewModel::setAutoMode
-                                        )
-                                    },
-                                    {
-                                        ExpressiveSwitchItem(
-                                            icon = Icons.Filled.DeveloperBoardOff,
-                                            title = stringResource(R.string.disable_tweak),
-                                            summary = stringResource(R.string.disable_tweak_desc),
-                                            checked = uiState.disableTweak,
-                                            onCheckedChange = { isChecked ->
-                                                toggleWithRebootCheck("disable_tweak", isChecked) {
-                                                    settingsViewModel.setDisableTweak(isChecked)
-                                                    RebootManager.checkAgainstBaseline("disable_tweak", isChecked)
-                                                }
-                                            }
-                                        )
-                                    },
-                                    {
-                                        ExpressiveSwitchItem(
-                                            icon = Icons.Filled.Timer,
-                                            title = stringResource(R.string.profile_timeout),
-                                            summary = stringResource(R.string.profile_timeout_desc),
-                                            checked = uiState.profileTimeout,
-                                            onCheckedChange = settingsViewModel::setProfileTimeout
-                                        )
-                                    }
-                                )
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(180.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(32.dp),
-                                    strokeWidth = 3.dp
-                                )
-                            }
-                        }
-                    }
-        
-                    item { SettingsSectionTitle(stringResource(R.string.section_others)) }
-                    item {
-                        if (uiState.isLoaded) {
-                            ExpressiveList(
-                                content = listOf(
-                                    {
-                                        ExpressiveSwitchItem(
-                                            icon = Icons.Rounded.AddHome,
-                                            title = stringResource(R.string.show_icon),
-                                            checked = isLauncherVisible,
-                                            onCheckedChange = { isChecked ->
-                                                isLauncherVisible = isChecked
-                                                val pkg = context.packageManager
-                                                val componentName = ComponentName(context.packageName, "${context.packageName}.Launcher")
-                                                
-                                                val newState = if (isChecked) {
-                                                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                                                } else {
-                                                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-                                                }
-                                                
-                                                pkg.setComponentEnabledSetting(componentName, newState, PackageManager.DONT_KILL_APP)
-                                            }
-                                        )
-                                    },
-                                    {
-                                        ExpressiveListItem(
-                                            onClick = {
-                                                Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service --rerun").submit { result ->
-                                                    if (result.isSuccess) {
-                                                        coroutineScope.launch {
-                                                            snackbarHostState.showSnackbar(restartToastText)
-                                                        }
-                                                    }
-                                                }
-                                            },
-                                            headlineContent = { Text(stringResource(R.string.restart_service)) },
-                                            supportingContent = { Text(stringResource(R.string.restart_service_desc)) },
-                                            leadingContent = { LeadingIcon(icon = Icons.Filled.RestartAlt) },
-                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                        )
-                                    },
-                                    {
-                                        ExpressiveListItem(
-                                            onClick = { showLogBottomSheet = true },
-                                            headlineContent = { Text(stringResource(R.string.save_log)) },
-                                            supportingContent = { Text(stringResource(R.string.save_log_desc)) },
-                                            leadingContent = { LeadingIcon(icon = Icons.Filled.Save) },
-                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                        )
-                                    },
-                                    {
-                                        ExpressiveSwitchItem(
-                                            icon = Icons.Filled.BugReport,
-                                            title = stringResource(R.string.allow_verbose_log),
-                                            checked = uiState.debugMode,
-                                            onCheckedChange = settingsViewModel::setDebugMode
-                                        )
-                                    },
-                                    {
-                                        ExpressiveListItem(
-                                            onClick = {
-                                                uninstallDialog.showConfirm(
-                                                    title = context.getString(R.string.uninstall),
-                                                    content = context.getString(R.string.uninstall_confirm_content),
-                                                    confirm = context.getString(R.string.yes),
-                                                    dismiss = context.getString(R.string.no)
-                                                )
-                                            },
-                                            headlineContent = { Text(stringResource(R.string.uninstall)) },
-                                            leadingContent = { LeadingIcon(icon = Icons.Filled.Delete) },
-                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                        )
-                                    }
-                                )
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(180.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(32.dp),
-                                    strokeWidth = 3.dp
-                                )
-                            }
-                        }
-                    }
-        
-                    item { SettingsSectionTitle(stringResource(R.string.section_about)) }
-                    item {
-                        ExpressiveList(
-                            content = listOf {
+                ) 
+            },
+            containerColor = MaterialTheme.colorScheme.surface
+        ) { innerPadding ->
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = innerPadding.calculateTopPadding(),
+                    start = 16.dp,
+                    end = 16.dp,
+                    bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                )
+            ) {
+                item {
+                    Spacer(modifier = Modifier.height(16.dp)) 
+
+                    ExpressiveList(
+                        content = listOf(
+                            { AppInfoHeaderContent() },
+                            {
                                 ExpressiveListItem(
-                                    onClick = { navController.navigate("aboutscreen") }, 
-                                    headlineContent = { Text(stringResource(R.string.about_azenith)) },
-                                    supportingContent = {
-                                        Text(stringResource(R.string.version_format, BuildConfig.VERSION_NAME))
-                                    },
-                                    leadingContent = { LeadingIcon(icon = Icons.Filled.ContactPage) },
+                                    onClick = { navController.navigate("color_palette") },
+                                    headlineContent = { Text(stringResource(R.string.theme)) },
+                                    supportingContent = { Text(stringResource(R.string.theme_desc)) },
+                                    leadingContent = { LeadingIcon(icon = Icons.Filled.Palette) },
                                     trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
                                 )
                             }
                         )
-                    }
+                    )
                 }
-            }
-            
 
-            LoadingDialogHost(handle = loadingDialog)
-            ConfirmDialogHost(handle = uninstallDialog)
-            ConfirmDialogHost(handle = rebootDialog)
-            
-            RootAppDialog {
-                CustomBottomSheet(
-                    visible = showLogBottomSheet,
-                    onDismiss = { showLogBottomSheet = false }
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
-                            .padding(
-                                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp
-                            )
-                    ) {
-                        Text(
-                            text = stringResource(R.string.str_logs_diagnostics),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
-                        )
-                        
+                item { SettingsSectionTitle(stringResource(R.string.section_features)) }
+
+                item {
+                    if (uiState.isLoaded) {
                         ExpressiveList(
-                            modifier = Modifier.padding(horizontal = 16.dp),
                             content = listOf(
                                 {
-                                    ExpressiveListItem(
-                                        headlineContent = { Text(stringResource(R.string.save_log), color = MaterialTheme.colorScheme.onSurface) },
-                                        supportingContent = { Text(stringResource(R.string.str_save_compressed_logs_to_a_fold), color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                        leadingContent = { LeadingIcon(Icons.Rounded.FolderSpecial) },
-                                        onClick = {
-                                            showLogBottomSheet = false 
-                                            
+                                    ExpressiveSwitchItem(
+                                        icon = Icons.Filled.Notifications,
+                                        title = stringResource(R.string.show_toast),
+                                        checked = uiState.stateToast,
+                                        onCheckedChange = settingsViewModel::setShowToast
+                                    )
+                                },
+                                {
+                                    ExpressiveSwitchItem(
+                                        icon = Icons.Filled.NotificationsActive,
+                                        title = stringResource(R.string.show_notifications),
+                                        checked = uiState.profileNotifications,
+                                        onCheckedChange = settingsViewModel::setProfileNotifications
+                                    )
+                                },
+                                {
+                                    ExpressiveSwitchItem(
+                                        icon = Icons.Filled.Assistant,
+                                        title = stringResource(R.string.disable_auto_mode),
+                                        checked = uiState.autoMode,
+                                        onCheckedChange = settingsViewModel::setAutoMode
+                                    )
+                                },
+                                {
+                                    ExpressiveSwitchItem(
+                                        icon = Icons.Filled.DeveloperBoardOff,
+                                        title = stringResource(R.string.disable_tweak),
+                                        summary = stringResource(R.string.disable_tweak_desc),
+                                        checked = uiState.disableTweak,
+                                        onCheckedChange = { isChecked ->
+                                            toggleWithRebootCheck("disable_tweak", isChecked) {
+                                                settingsViewModel.setDisableTweak(isChecked)
+                                                RebootManager.checkAgainstBaseline("disable_tweak", isChecked)
+                                            }
+                                        }
+                                    )
+                                },
+                                {
+                                    ExpressiveSwitchItem(
+                                        icon = Icons.Filled.Timer,
+                                        title = stringResource(R.string.profile_timeout),
+                                        summary = stringResource(R.string.profile_timeout_desc),
+                                        checked = uiState.profileTimeout,
+                                        onCheckedChange = settingsViewModel::setProfileTimeout
+                                    )
+                                }
+                            )
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(32.dp),
+                                strokeWidth = 3.dp
+                            )
+                        }
+                    }
+                }
 
-                                            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-                                            val fileName = "AZenith_Logs_$timeStamp.tar.gz"
-                                            createLogLauncher.launch(fileName)
+                item { SettingsSectionTitle(stringResource(R.string.section_others)) }
+                item {
+                    if (uiState.isLoaded) {
+                        ExpressiveList(
+                            content = listOf(
+                                {
+                                    ExpressiveSwitchItem(
+                                        icon = Icons.Rounded.AddHome,
+                                        title = stringResource(R.string.show_icon),
+                                        checked = isLauncherVisible,
+                                        onCheckedChange = { isChecked ->
+                                            isLauncherVisible = isChecked
+                                            val pkg = context.packageManager
+                                            val componentName = ComponentName(context.packageName, "${context.packageName}.Launcher")
+
+                                            val newState = if (isChecked) {
+                                                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                                            } else {
+                                                PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                                            }
+
+                                            pkg.setComponentEnabledSetting(componentName, newState, PackageManager.DONT_KILL_APP)
                                         }
                                     )
                                 },
                                 {
                                     ExpressiveListItem(
-                                        headlineContent = { Text(stringResource(R.string.str_send_logs), color = MaterialTheme.colorScheme.onSurface) },
-                                        supportingContent = { Text(stringResource(R.string.str_share_compressed_logs_to_other), color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                        leadingContent = { LeadingIcon(Icons.Rounded.Share) },
                                         onClick = {
-                                            showLogBottomSheet = false
-                                            coroutineScope.launch {
-                                                val logFile = loadingDialog.withLoading {
-                                                    dumpDiagnosticLogs(context, saveToDownloads = false)
-                                                }
-                                                
-                                                if (logFile != null) {
-                                                    logFileToDelete = logFile
-                                                    val intent = getShareLogIntent(context, logFile)
-                                                    shareLogLauncher.launch(intent)
-                                                } else {
-                                                    snackbarHostState.showSnackbar(context.getString(R.string.toast_log_gather_fail))
+                                            Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service --rerun").submit { result ->
+                                                if (result.isSuccess) {
+                                                    coroutineScope.launch {
+                                                        snackbarHostState.showSnackbar(restartToastText)
+                                                    }
                                                 }
                                             }
-                                        }
+                                        },
+                                        headlineContent = { Text(stringResource(R.string.restart_service)) },
+                                        supportingContent = { Text(stringResource(R.string.restart_service_desc)) },
+                                        leadingContent = { LeadingIcon(icon = Icons.Filled.RestartAlt) },
+                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                    )
+                                },
+                                {
+                                    ExpressiveListItem(
+                                        onClick = { showLogBottomSheet = true },
+                                        headlineContent = { Text(stringResource(R.string.save_log)) },
+                                        supportingContent = { Text(stringResource(R.string.save_log_desc)) },
+                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Save) },
+                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                    )
+                                },
+                                {
+                                    ExpressiveSwitchItem(
+                                        icon = Icons.Filled.BugReport,
+                                        title = stringResource(R.string.allow_verbose_log),
+                                        checked = uiState.debugMode,
+                                        onCheckedChange = settingsViewModel::setDebugMode
+                                    )
+                                },
+                                {
+                                    ExpressiveListItem(
+                                        onClick = {
+                                            uninstallDialog.showConfirm(
+                                                title = context.getString(R.string.uninstall),
+                                                content = context.getString(R.string.uninstall_confirm_content),
+                                                confirm = context.getString(R.string.yes),
+                                                dismiss = context.getString(R.string.no)
+                                            )
+                                        },
+                                        headlineContent = { Text(stringResource(R.string.uninstall)) },
+                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Delete) },
+                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
                                     )
                                 }
                             )
                         )
-                    }
-                }
-            }
-            RootAppDialog {
-                CustomBottomSheet(
-                    visible = showChangelogSheet,
-                    onDismiss = { showChangelogSheet = false }
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(0.85f) 
-                    ) {
-                        Text(
-                            text = stringResource(R.string.str_changelog),
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 16.dp)
-                        )
-            
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 24.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-            
-                        Column(
+                    } else {
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .weight(1f)
-                                .verticalScroll(rememberScrollState())
-                                .padding(horizontal = 24.dp)
+                                .height(180.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Spacer(modifier = Modifier.height(16.dp))                            
-                            MarkdownText(
-                                markdown = changelogText,
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                ),
-                                modifier = Modifier.fillMaxWidth() 
-                            )
-                            Spacer(
-                                modifier = Modifier.height(
-                                    WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 64.dp
-                                )
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(32.dp),
+                                strokeWidth = 3.dp
                             )
                         }
                     }
                 }
-            }
 
+                item { SettingsSectionTitle(stringResource(R.string.section_about)) }
+                item {
+                    ExpressiveList(
+                        content = listOf {
+                            ExpressiveListItem(
+                                onClick = { navController.navigate("aboutscreen") }, 
+                                headlineContent = { Text(stringResource(R.string.about_azenith)) },
+                                supportingContent = {
+                                    Text(stringResource(R.string.version_format, BuildConfig.VERSION_NAME))
+                                },
+                                leadingContent = { LeadingIcon(icon = Icons.Filled.ContactPage) },
+                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                            )
+                        }
+                    )
+                }
+            }
         }
+
+
+        LoadingDialogHost(handle = loadingDialog)
+        ConfirmDialogHost(handle = uninstallDialog)
+        ConfirmDialogHost(handle = rebootDialog)
+
+        RootAppDialog {
+            CustomBottomSheet(
+                visible = showLogBottomSheet,
+                onDismiss = { showLogBottomSheet = false }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(
+                            bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp
+                        )
+                ) {
+                    Text(
+                        text = stringResource(R.string.str_logs_diagnostics),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                    )
+
+                    ExpressiveList(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        content = listOf(
+                            {
+                                ExpressiveListItem(
+                                    headlineContent = { Text(stringResource(R.string.save_log), color = MaterialTheme.colorScheme.onSurface) },
+                                    supportingContent = { Text(stringResource(R.string.str_save_compressed_logs_to_a_fold), color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                    leadingContent = { LeadingIcon(Icons.Rounded.FolderSpecial) },
+                                    onClick = {
+                                        showLogBottomSheet = false 
+
+
+                                        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+                                        val fileName = "AZenith_Logs_$timeStamp.tar.gz"
+                                        createLogLauncher.launch(fileName)
+                                    }
+                                )
+                            },
+                            {
+                                ExpressiveListItem(
+                                    headlineContent = { Text(stringResource(R.string.str_send_logs), color = MaterialTheme.colorScheme.onSurface) },
+                                    supportingContent = { Text(stringResource(R.string.str_share_compressed_logs_to_other), color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                    leadingContent = { LeadingIcon(Icons.Rounded.Share) },
+                                    onClick = {
+                                        showLogBottomSheet = false
+                                        coroutineScope.launch {
+                                            val logFile = loadingDialog.withLoading {
+                                                dumpDiagnosticLogs(context, saveToDownloads = false)
+                                            }
+
+                                            if (logFile != null) {
+                                                logFileToDelete = logFile
+                                                val intent = getShareLogIntent(context, logFile)
+                                                shareLogLauncher.launch(intent)
+                                            } else {
+                                                snackbarHostState.showSnackbar(context.getString(R.string.toast_log_gather_fail))
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+                        )
+                    )
+                }
+            }
+        }
+        RootAppDialog {
+            CustomBottomSheet(
+                visible = showChangelogSheet,
+                onDismiss = { showChangelogSheet = false }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.85f) 
+                ) {
+                    Text(
+                        text = stringResource(R.string.str_changelog),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 16.dp)
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 24.dp)
+                    ) {
+                        Spacer(modifier = Modifier.height(16.dp))                            
+                        MarkdownText(
+                            markdown = changelogText,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            modifier = Modifier.fillMaxWidth() 
+                        )
+                        Spacer(
+                            modifier = Modifier.height(
+                                WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 64.dp
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
     }
 }
 

@@ -217,299 +217,297 @@ fun BypassChargeCheckScreen(navController: NavController) {
         }
     }
 
-    MaterialExpressiveTheme {
-        ConfirmDialogHost(handle = confirmDialogHandle)
+    ConfirmDialogHost(handle = confirmDialogHandle)
 
-        Scaffold(
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            topBar = { 
-                BypassChgCheckTopAppBar(
-                    scrollBehavior = scrollBehavior, 
-                    onBack = { navController.popBackStack() }
-                ) 
-            }
-        ) { innerPadding ->
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                ),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                
-                item {
-                    BypassCheckTitle(text = stringResource(R.string.section_current_status))
-                        
-                    ExpressiveList(
-                        content = listOf {
-                            val isUnsupported = activePath == "UNSUPPORTED" || activePath.isEmpty()
-                            ExpressiveListItem(
-                                headlineContent = { 
-                                    AnimatedContent(targetState = activePath, label = "activePathAnim") { path ->
-                                        Text(
-                                            text = if (path == "UNSUPPORTED" || path.isEmpty()) stringResource(R.string.str_no_active_nodes) else path,
-                                            fontWeight = FontWeight.Bold
-                                        ) 
-                                    }
-                                },
-                                supportingContent = { 
-                                    Text(if (isUnsupported) stringResource(R.string.str_no_active_nodes_desc) else stringResource(R.string.str_active_bypass_node)) 
-                                },
-                                leadingContent = { 
-                                    LeadingIcon(
-                                        icon = if (isUnsupported) Icons.Rounded.Block else Icons.Rounded.ElectricBolt,
-                                        containerColor = if (isUnsupported) colorScheme.error.copy(alpha = 0.12f) else colorScheme.primary.copy(alpha = 0.12f),
-                                        contentColor = if (isUnsupported) colorScheme.error else colorScheme.primary
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = { 
+            BypassChgCheckTopAppBar(
+                scrollBehavior = scrollBehavior, 
+                onBack = { navController.popBackStack() }
+            ) 
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding(),
+                start = 16.dp,
+                end = 16.dp,
+                bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            ),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+
+            item {
+                BypassCheckTitle(text = stringResource(R.string.section_current_status))
+
+                ExpressiveList(
+                    content = listOf {
+                        val isUnsupported = activePath == "UNSUPPORTED" || activePath.isEmpty()
+                        ExpressiveListItem(
+                            headlineContent = { 
+                                AnimatedContent(targetState = activePath, label = "activePathAnim") { path ->
+                                    Text(
+                                        text = if (path == "UNSUPPORTED" || path.isEmpty()) stringResource(R.string.str_no_active_nodes) else path,
+                                        fontWeight = FontWeight.Bold
                                     ) 
                                 }
-                            )
-                        }
-                    )
-                }
-                item {
-                    Column {
-                        BypassCheckTitle(text = stringResource(R.string.section_diagnostics))
-                        
-                        Surface(
-                            shape = RoundedCornerShape(26.dp),
-                            color = colorScheme.surfaceColorAtElevation(1.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            AnimatedContent(
-                                                targetState = isRunning,
-                                                label = "scanIconAnim"
-                                            ) { running ->
-                                                LeadingIcon(
-                                                    icon = if (running) Icons.Rounded.Memory else Icons.AutoMirrored.Rounded.ManageSearch,
-                                                    contentDescription = stringResource(R.string.cd_scan_icon)
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.width(16.dp))
-                                            Text(
-                                                text = if (isRunning) stringResource(R.string.str_diagnostic_in_progress_title) else stringResource(R.string.str_scan_nodes),
-                                                style = MaterialTheme.typography.titleMedium,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
+                            },
+                            supportingContent = { 
+                                Text(if (isUnsupported) stringResource(R.string.str_no_active_nodes_desc) else stringResource(R.string.str_active_bypass_node)) 
+                            },
+                            leadingContent = { 
+                                LeadingIcon(
+                                    icon = if (isUnsupported) Icons.Rounded.Block else Icons.Rounded.ElectricBolt,
+                                    containerColor = if (isUnsupported) colorScheme.error.copy(alpha = 0.12f) else colorScheme.primary.copy(alpha = 0.12f),
+                                    contentColor = if (isUnsupported) colorScheme.error else colorScheme.primary
+                                ) 
+                            }
+                        )
+                    }
+                )
+            }
+            item {
+                Column {
+                    BypassCheckTitle(text = stringResource(R.string.section_diagnostics))
 
-
-                                        Spacer(modifier = Modifier.height(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(26.dp),
+                        color = colorScheme.surfaceColorAtElevation(1.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
                                         AnimatedContent(
-                                            targetState = Triple(isChargerConnected, isRunning, hasRunDiagnosis),
-                                            label = "chargerStatusAnim"
-                                        ) { (connected, running, _) ->
-                                            Text(
-                                                text = if (!connected) stringResource(R.string.str_plug_in_charger)
-                                                       else if (running) stringResource(R.string.str_checking_current)
-                                                       else stringResource(R.string.str_safely_test),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = if (!connected) colorScheme.error else colorScheme.onSurfaceVariant
+                                            targetState = isRunning,
+                                            label = "scanIconAnim"
+                                        ) { running ->
+                                            LeadingIcon(
+                                                icon = if (running) Icons.Rounded.Memory else Icons.AutoMirrored.Rounded.ManageSearch,
+                                                contentDescription = stringResource(R.string.cd_scan_icon)
                                             )
                                         }
+                                        Spacer(modifier = Modifier.width(16.dp))
+                                        Text(
+                                            text = if (isRunning) stringResource(R.string.str_diagnostic_in_progress_title) else stringResource(R.string.str_scan_nodes),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
                                     }
-                                    
-                                    AnimatedVisibility(
-                                        visible = isRunning,
-                                        enter = fadeIn() + scaleIn(),
-                                        exit = fadeOut() + scaleOut()
-                                    ) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(28.dp),
-                                            strokeWidth = 3.dp,
-                                            color = colorScheme.primary
+
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    AnimatedContent(
+                                        targetState = Triple(isChargerConnected, isRunning, hasRunDiagnosis),
+                                        label = "chargerStatusAnim"
+                                    ) { (connected, running, _) ->
+                                        Text(
+                                            text = if (!connected) stringResource(R.string.str_plug_in_charger)
+                                                   else if (running) stringResource(R.string.str_checking_current)
+                                                   else stringResource(R.string.str_safely_test),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (!connected) colorScheme.error else colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                Button(
-                                    onClick = {
-                                        scope.launch {
-                                            val result = confirmDialogHandle.awaitConfirm(
-                                                title = context.getString(R.string.dialog_start_hw_test_title),
-                                                content = context.getString(R.string.dialog_start_hw_test_content),
-                                                confirm = context.getString(R.string.dialog_begin_check),
-                                                dismiss = context.getString(R.string.dialog_cancel)
-                                            )
-                                            if (result == ConfirmResult.Confirmed) {
-                                                runCompatibilityCheck()
-                                            }
-                                        }
-                                    },
-                                    enabled = isChargerConnected && !isRunning,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(16.dp)
+                                AnimatedVisibility(
+                                    visible = isRunning,
+                                    enter = fadeIn() + scaleIn(),
+                                    exit = fadeOut() + scaleOut()
                                 ) {
-                                    Icon(Icons.Rounded.PlayArrow, null)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(stringResource(R.string.str_launch_compatibility_check))
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(28.dp),
+                                        strokeWidth = 3.dp,
+                                        color = colorScheme.primary
+                                    )
                                 }
                             }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        val result = confirmDialogHandle.awaitConfirm(
+                                            title = context.getString(R.string.dialog_start_hw_test_title),
+                                            content = context.getString(R.string.dialog_start_hw_test_content),
+                                            confirm = context.getString(R.string.dialog_begin_check),
+                                            dismiss = context.getString(R.string.dialog_cancel)
+                                        )
+                                        if (result == ConfirmResult.Confirmed) {
+                                            runCompatibilityCheck()
+                                        }
+                                    }
+                                },
+                                enabled = isChargerConnected && !isRunning,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Icon(Icons.Rounded.PlayArrow, null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(R.string.str_launch_compatibility_check))
+                            }
                         }
+                    }
 
-                        AnimatedVisibility(
-                            visible = logs.isNotEmpty() && !isConsoleClosed,
-                            enter = expandVertically() + fadeIn(),
-                            exit = shrinkVertically() + fadeOut()
-                        ) {
+                    AnimatedVisibility(
+                        visible = logs.isNotEmpty() && !isConsoleClosed,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
 
-                            Column {
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(max = 280.dp)
-                                        .nestedScroll(blockParentScroll), 
-                                    shape = RoundedCornerShape(26.dp),
-                                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F141C))
-                                ) {
-                                    Box(modifier = Modifier.fillMaxSize()) {
-                                        SelectionContainer {
-                                            Column(
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .padding(12.dp)
-                                                    .padding(top = 28.dp)
-                                                    .verticalScroll(logScrollState)
-                                                    .horizontalScroll(rememberScrollState())
-                                            ) {
-                                                logs.forEach { line ->
-                                                    Text(
-                                                        text = line.text.parseAsAnsiAnnotatedString(),
-                                                        style = MaterialTheme.typography.labelSmall.copy(
-                                                            fontFamily = FontFamily.Monospace,
-                                                            lineHeight = 16.sp
-                                                        ),
-                                                        color = Color.White,
-                                                        softWrap = false
-                                                    )
-                                                }
+                        Column {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 280.dp)
+                                    .nestedScroll(blockParentScroll), 
+                                shape = RoundedCornerShape(26.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F141C))
+                            ) {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    SelectionContainer {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(12.dp)
+                                                .padding(top = 28.dp)
+                                                .verticalScroll(logScrollState)
+                                                .horizontalScroll(rememberScrollState())
+                                        ) {
+                                            logs.forEach { line ->
+                                                Text(
+                                                    text = line.text.parseAsAnsiAnnotatedString(),
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        fontFamily = FontFamily.Monospace,
+                                                        lineHeight = 16.sp
+                                                    ),
+                                                    color = Color.White,
+                                                    softWrap = false
+                                                )
                                             }
                                         }
-                                        
-                                        IconButton(
-                                            onClick = { isConsoleClosed = true },
-                                            modifier = Modifier
-                                                .align(Alignment.TopEnd)
-                                                .padding(4.dp)
-                                                .size(28.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.Close,
-                                                contentDescription = stringResource(R.string.str_close_logs),
-                                                tint = Color.White.copy(alpha = 0.6f),
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
+                                    }
+
+                                    IconButton(
+                                        onClick = { isConsoleClosed = true },
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(4.dp)
+                                            .size(28.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Close,
+                                            contentDescription = stringResource(R.string.str_close_logs),
+                                            tint = Color.White.copy(alpha = 0.6f),
+                                            modifier = Modifier.size(20.dp)
+                                        )
                                     }
                                 }
                             }
                         }
                     }
                 }
+            }
 
-                item { 
-                    BypassCheckTitle(text = stringResource(R.string.str_available_nodes, availablePaths.size))
-                
-                    if (availablePaths.isEmpty()) {
-                        ExpressiveList(
-                            content = listOf {
-                                ExpressiveListItem(
-                                    headlineContent = { Text(stringResource(R.string.str_no_compatible_nodes)) },
-                                    supportingContent = { Text(stringResource(R.string.str_run_diagnostics_above_or_check)) },
-                                    leadingContent = { LeadingIcon(icon = Icons.Rounded.SearchOff) }
+            item { 
+                BypassCheckTitle(text = stringResource(R.string.str_available_nodes, availablePaths.size))
+
+                if (availablePaths.isEmpty()) {
+                    ExpressiveList(
+                        content = listOf {
+                            ExpressiveListItem(
+                                headlineContent = { Text(stringResource(R.string.str_no_compatible_nodes)) },
+                                supportingContent = { Text(stringResource(R.string.str_run_diagnostics_above_or_check)) },
+                                leadingContent = { LeadingIcon(icon = Icons.Rounded.SearchOff) }
+                            )
+                        }
+                    )
+                } else {
+                    ExpressiveList(
+                        content = availablePaths.map { pathNode ->
+                            {
+                                val isSelected = activePath == pathNode.first
+
+
+
+                                val textScale by animateFloatAsState(
+                                    targetValue = if (isSelected) 1.08f else 1.0f,
+                                    animationSpec = tween(durationMillis = 200, easing = LinearOutSlowInEasing),
+                                    label = "textScaleAnim"
                                 )
-                            }
-                        )
-                    } else {
-                        ExpressiveList(
-                            content = availablePaths.map { pathNode ->
-                                {
-                                    val isSelected = activePath == pathNode.first
-                                    
 
-
-                                    val textScale by animateFloatAsState(
-                                        targetValue = if (isSelected) 1.08f else 1.0f,
-                                        animationSpec = tween(durationMillis = 200, easing = LinearOutSlowInEasing),
-                                        label = "textScaleAnim"
-                                    )
-
-                                    ExpressiveListItemHighlight(
-                                        containerColor = if (isSelected) colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent,
-                                        onClick = {
-                                            if (!isRunning) {
-                                                scope.launch {
-                                                    val result = confirmDialogHandle.awaitConfirm(
-                                                        title = context.getString(R.string.dialog_switch_node_title),
-                                                        content = context.getString(R.string.dialog_switch_node_content, pathNode.first),
-                                                        confirm = context.getString(R.string.dialog_apply_path),
-                                                        dismiss = context.getString(R.string.dialog_dismiss)
-                                                    )
-                                                    if (result == ConfirmResult.Confirmed) {
-                                                        PropertyUtils.set("persist.sys.azenithconf.bypasspath", pathNode.first)
-                                                        withContext(Dispatchers.IO) {
-                                                            val file = SuFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath")
-                                                            SuFileOutputStream.open(file).writer().use { writer ->
-                                                                writer.write(pathNode.first)
-                                                            }
-                                                        }
-                                                        activePath = pathNode.first
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        headlineContent = { 
-                                            Text(
-                                                text = pathNode.first,
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (isSelected) colorScheme.primary else colorScheme.onSurface,
-                                                modifier = Modifier.graphicsLayer {
-                                                    scaleX = textScale
-                                                    scaleY = textScale
-                                                    transformOrigin = TransformOrigin(0f, 0.5f)
-                                                }
-                                            ) 
-                                        },
-                                        supportingContent = { Text(pathNode.second) },
-                                        leadingContent = {
-                                            LeadingIcon(
-                                                icon = Icons.Rounded.FolderOpen,
-                                                containerColor = if (isSelected) colorScheme.primary.copy(alpha = 0.15f) else colorScheme.surfaceVariant,
-                                                contentColor = if (isSelected) colorScheme.primary else colorScheme.onSurfaceVariant
-                                            )
-                                        },
-                                        trailingContent = {
-
-                                            AnimatedVisibility(
-                                                visible = isSelected,
-                                                enter = scaleIn(tween(durationMillis = 200, easing = LinearOutSlowInEasing)) + fadeIn(tween(200)),
-                                                exit = scaleOut(tween(durationMillis = 150)) + fadeOut(tween(150))
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Rounded.CheckCircle,
-                                                contentDescription = null,
-                                                    tint = colorScheme.primary
+                                ExpressiveListItemHighlight(
+                                    containerColor = if (isSelected) colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent,
+                                    onClick = {
+                                        if (!isRunning) {
+                                            scope.launch {
+                                                val result = confirmDialogHandle.awaitConfirm(
+                                                    title = context.getString(R.string.dialog_switch_node_title),
+                                                    content = context.getString(R.string.dialog_switch_node_content, pathNode.first),
+                                                    confirm = context.getString(R.string.dialog_apply_path),
+                                                    dismiss = context.getString(R.string.dialog_dismiss)
                                                 )
+                                                if (result == ConfirmResult.Confirmed) {
+                                                    PropertyUtils.set("persist.sys.azenithconf.bypasspath", pathNode.first)
+                                                    withContext(Dispatchers.IO) {
+                                                        val file = SuFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath")
+                                                        SuFileOutputStream.open(file).writer().use { writer ->
+                                                            writer.write(pathNode.first)
+                                                        }
+                                                    }
+                                                    activePath = pathNode.first
+                                                }
                                             }
                                         }
-                                    )
-                                }
+                                    },
+                                    headlineContent = { 
+                                        Text(
+                                            text = pathNode.first,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isSelected) colorScheme.primary else colorScheme.onSurface,
+                                            modifier = Modifier.graphicsLayer {
+                                                scaleX = textScale
+                                                scaleY = textScale
+                                                transformOrigin = TransformOrigin(0f, 0.5f)
+                                            }
+                                        ) 
+                                    },
+                                    supportingContent = { Text(pathNode.second) },
+                                    leadingContent = {
+                                        LeadingIcon(
+                                            icon = Icons.Rounded.FolderOpen,
+                                            containerColor = if (isSelected) colorScheme.primary.copy(alpha = 0.15f) else colorScheme.surfaceVariant,
+                                            contentColor = if (isSelected) colorScheme.primary else colorScheme.onSurfaceVariant
+                                        )
+                                    },
+                                    trailingContent = {
+
+                                        AnimatedVisibility(
+                                            visible = isSelected,
+                                            enter = scaleIn(tween(durationMillis = 200, easing = LinearOutSlowInEasing)) + fadeIn(tween(200)),
+                                            exit = scaleOut(tween(durationMillis = 150)) + fadeOut(tween(150))
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.CheckCircle,
+                                            contentDescription = null,
+                                                tint = colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                )
                             }
-                        )
-                    }
+                        }
+                    )
                 }
             }
         }

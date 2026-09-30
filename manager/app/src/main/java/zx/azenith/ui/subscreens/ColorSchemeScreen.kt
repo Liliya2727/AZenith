@@ -159,163 +159,161 @@ fun ColorSchemeSettings(navController: NavController) {
         }
     }
 
-    MaterialExpressiveTheme {
-        Scaffold(
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            topBar = {
-                ColorSchemeTopAppBar(scrollBehavior, onBack = { navController.popBackStack() })
-            },
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            containerColor = colorScheme.surface
-        ) { innerPadding ->
-            if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    LoadingIndicator(modifier = Modifier.size(32.dp))
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        top = innerPadding.calculateTopPadding(),
-                        start = 16.dp,
-                        end = 16.dp,
-                        bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                    )
-                ) {
-                    item {
-                        ExpressiveList(
-                            content = listOf(
-                                {
-                                    ExpressiveInfoCard(
-                                        supportingContent = { 
-                                            Text(text = stringResource(R.string.str_adjust_and_calibrate_your_scre)) 
-                                        },
-                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
-                                        containerColor = colorScheme.surfaceContainerLow,
-                                        onClick = {}
-                                    )
-                                }
-                            )
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-                    
-                    item {
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
-                            shape = RoundedCornerShape(26.dp),
-                            color = colorScheme.surfaceContainerLow
-                        ) {
-                            AsyncImage(
-                                model = R.drawable.schemeillust,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        }
-                    }
-                    
-                    item { PrefSectionTitle(stringResource(R.string.presets)) }
-                    
-                    item {
-                        PresetSelectorItem(
-                            currentPreset = selectedPreset ?: matchingPreset,
-                            onPresetSelected = { preset ->
-                                if (preset == ColorPreset.CUSTOM) {
-                                    // CUSTOM mode: cukup enable sliders, retain current values
-                                    selectedPreset = ColorPreset.CUSTOM
-                                } else {
-                                    // Apply preset values
-                                    redVal = preset.r
-                                    greenVal = preset.g
-                                    blueVal = preset.b
-                                    satVal = preset.s
-                                    applyRGB(redVal, greenVal, blueVal)
-                                    applySat(satVal)
-                                    saveToProp()
-                                    selectedPreset = preset
-                                }
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            ColorSchemeTopAppBar(scrollBehavior, onBack = { navController.popBackStack() })
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = colorScheme.surface
+    ) { innerPadding ->
+        if (isLoading) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                LoadingIndicator(modifier = Modifier.size(32.dp))
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = innerPadding.calculateTopPadding(),
+                    start = 16.dp,
+                    end = 16.dp,
+                    bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                )
+            ) {
+                item {
+                    ExpressiveList(
+                        content = listOf(
+                            {
+                                ExpressiveInfoCard(
+                                    supportingContent = { 
+                                        Text(text = stringResource(R.string.str_adjust_and_calibrate_your_scre)) 
+                                    },
+                                    leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
+                                    containerColor = colorScheme.surfaceContainerLow,
+                                    onClick = {}
+                                )
                             }
                         )
-                    }
-                    
-                    item { PrefSectionTitle(stringResource(R.string.color_scheme)) }
-                    
-                    item {
-                        val isCustomMode = selectedPreset == ColorPreset.CUSTOM || matchingPreset == null
-                        ExpressiveList(
-                            content = listOf(
-                                { 
-                                    ColorSliderItem(
-                                        label = stringResource(R.string.color_red),
-                                        summary = stringResource(R.string.color_red_desc),
-                                        value = redVal,
-                                        accentColor = Color(0xFFEF5350),
-                                        enabled = isCustomMode,
-                                        onValueChange = { 
-                                            redVal = it
-                                            applyRGB(redVal, greenVal, blueVal)
-                                        },
-                                        onFinish = { saveToProp() }
-                                    )
-                                },
-                                { 
-                                    ColorSliderItem(
-                                        label = stringResource(R.string.color_green),
-                                        summary = stringResource(R.string.color_green_desc),
-                                        value = greenVal,
-                                        accentColor = Color(0xFF66BB6A),
-                                        enabled = isCustomMode,
-                                        onValueChange = { 
-                                            greenVal = it
-                                            applyRGB(redVal, greenVal, blueVal)
-                                        },
-                                        onFinish = { saveToProp() }
-                                    )
-                                },
-                                { 
-                                    ColorSliderItem(
-                                        label = stringResource(R.string.color_blue),
-                                        summary = stringResource(R.string.color_blue_desc),
-                                        value = blueVal,
-                                        accentColor = Color(0xFF42A5F5),
-                                        enabled = isCustomMode,
-                                        onValueChange = { 
-                                            blueVal = it
-                                            applyRGB(redVal, greenVal, blueVal)
-                                        },
-                                        onFinish = { saveToProp() }
-                                    )
-                                }
-                            )
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                item {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        shape = RoundedCornerShape(26.dp),
+                        color = colorScheme.surfaceContainerLow
+                    ) {
+                        AsyncImage(
+                            model = R.drawable.schemeillust,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxSize(),
+                            contentScale = ContentScale.Crop
                         )
                     }
-                    
-                    item {
-                        val isCustomMode = selectedPreset == ColorPreset.CUSTOM || matchingPreset == null
-                        Spacer(modifier = Modifier.height(16.dp))
-                        ExpressiveList(
-                            content = listOf(
-                                { 
-                                    ColorSliderItem(
-                                        label = stringResource(R.string.color_saturation),
-                                        summary = stringResource(R.string.color_saturation_desc),
-                                        value = satVal,
-                                        accentColor = colorScheme.primary,
-                                        enabled = isCustomMode,
-                                        onValueChange = { 
-                                            satVal = it
-                                            applySat(satVal)
-                                        },
-                                        onFinish = { saveToProp() }
-                                    )
-                                }
-                            )
+                }
+
+                item { PrefSectionTitle(stringResource(R.string.presets)) }
+
+                item {
+                    PresetSelectorItem(
+                        currentPreset = selectedPreset ?: matchingPreset,
+                        onPresetSelected = { preset ->
+                            if (preset == ColorPreset.CUSTOM) {
+                                // CUSTOM mode: cukup enable sliders, retain current values
+                                selectedPreset = ColorPreset.CUSTOM
+                            } else {
+                                // Apply preset values
+                                redVal = preset.r
+                                greenVal = preset.g
+                                blueVal = preset.b
+                                satVal = preset.s
+                                applyRGB(redVal, greenVal, blueVal)
+                                applySat(satVal)
+                                saveToProp()
+                                selectedPreset = preset
+                            }
+                        }
+                    )
+                }
+
+                item { PrefSectionTitle(stringResource(R.string.color_scheme)) }
+
+                item {
+                    val isCustomMode = selectedPreset == ColorPreset.CUSTOM || matchingPreset == null
+                    ExpressiveList(
+                        content = listOf(
+                            { 
+                                ColorSliderItem(
+                                    label = stringResource(R.string.color_red),
+                                    summary = stringResource(R.string.color_red_desc),
+                                    value = redVal,
+                                    accentColor = Color(0xFFEF5350),
+                                    enabled = isCustomMode,
+                                    onValueChange = { 
+                                        redVal = it
+                                        applyRGB(redVal, greenVal, blueVal)
+                                    },
+                                    onFinish = { saveToProp() }
+                                )
+                            },
+                            { 
+                                ColorSliderItem(
+                                    label = stringResource(R.string.color_green),
+                                    summary = stringResource(R.string.color_green_desc),
+                                    value = greenVal,
+                                    accentColor = Color(0xFF66BB6A),
+                                    enabled = isCustomMode,
+                                    onValueChange = { 
+                                        greenVal = it
+                                        applyRGB(redVal, greenVal, blueVal)
+                                    },
+                                    onFinish = { saveToProp() }
+                                )
+                            },
+                            { 
+                                ColorSliderItem(
+                                    label = stringResource(R.string.color_blue),
+                                    summary = stringResource(R.string.color_blue_desc),
+                                    value = blueVal,
+                                    accentColor = Color(0xFF42A5F5),
+                                    enabled = isCustomMode,
+                                    onValueChange = { 
+                                        blueVal = it
+                                        applyRGB(redVal, greenVal, blueVal)
+                                    },
+                                    onFinish = { saveToProp() }
+                                )
+                            }
                         )
-                    }
+                    )
+                }
+
+                item {
+                    val isCustomMode = selectedPreset == ColorPreset.CUSTOM || matchingPreset == null
+                    Spacer(modifier = Modifier.height(16.dp))
+                    ExpressiveList(
+                        content = listOf(
+                            { 
+                                ColorSliderItem(
+                                    label = stringResource(R.string.color_saturation),
+                                    summary = stringResource(R.string.color_saturation_desc),
+                                    value = satVal,
+                                    accentColor = colorScheme.primary,
+                                    enabled = isCustomMode,
+                                    onValueChange = { 
+                                        satVal = it
+                                        applySat(satVal)
+                                    },
+                                    onFinish = { saveToProp() }
+                                )
+                            }
+                        )
+                    )
                 }
             }
         }

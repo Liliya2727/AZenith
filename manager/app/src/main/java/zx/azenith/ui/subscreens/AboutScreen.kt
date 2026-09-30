@@ -95,241 +95,239 @@ fun AboutScreen(navController: NavController) {
         context.startActivity(intent)
     }
 
-    MaterialExpressiveTheme {        
-        Scaffold(
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            topBar = { 
-                AboutTopAppBar(
-                    scrollBehavior = scrollBehavior,
-                    onBack = { navController.popBackStack() }
-                ) 
-            },
-            containerColor = MaterialTheme.colorScheme.surface
-        ) { innerPadding ->
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                )
-            ) {
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = { 
+            AboutTopAppBar(
+                scrollBehavior = scrollBehavior,
+                onBack = { navController.popBackStack() }
+            ) 
+        },
+        containerColor = MaterialTheme.colorScheme.surface
+    ) { innerPadding ->
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding(),
+                start = 16.dp,
+                end = 16.dp,
+                bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            )
+        ) {
 
-                item {
-                    Column(
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.avatar),
+                        contentDescription = stringResource(R.string.app_name),
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.avatar),
-                            contentDescription = stringResource(R.string.app_name),
-                            modifier = Modifier
-                                .size(96.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                        )
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        Text(
-                            text = stringResource(id = R.string.app_name),
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        
-                        Text(
-                            text = stringResource(R.string.str_version_buildconfig_version_na, BuildConfig.VERSION_NAME),
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        
-                        Spacer(modifier = Modifier.height(24.dp))
+                            .size(96.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                    )
 
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = stringResource(id = R.string.app_name),
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+
+                    Text(
+                        text = stringResource(R.string.str_version_buildconfig_version_na, BuildConfig.VERSION_NAME),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        FilledTonalButton(
+                            onClick = { openLink("https://t.me/ArchHavenDisc") }
                         ) {
-                            FilledTonalButton(
-                                onClick = { openLink("https://t.me/ArchHavenDisc") }
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_telegram), 
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.str_support_group))
-                            }
-                            
-                            OutlinedButton(
-                                onClick = { openLink("https://t.me/ZeshArch") }
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_telegram), 
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(stringResource(R.string.str_channel))
-                            }
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_telegram), 
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.str_support_group))
+                        }
+
+                        OutlinedButton(
+                            onClick = { openLink("https://t.me/ZeshArch") }
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_telegram), 
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.str_channel))
                         }
                     }
                 }
+            }
 
 
-                item { 
-                    AboutSectionTitle(stringResource(R.string.str_maintainer)) 
-                }
-                item {
-                    ExpressiveList(
-                        content = listOf(
-                            {
-                                ExpressiveListItem(
-                                    headlineContent = { Text(text = stringResource(R.string.str_liliya), fontWeight = FontWeight.SemiBold) },
-                                    supportingContent = { Text(stringResource(R.string.str_creator_maintainer)) },
-                                    leadingContent = {
-                                        Image(
-                                            painter = painterResource(R.drawable.avatar_liliya),
-                                            contentDescription = stringResource(R.string.str_liliya),
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.size(48.dp).clip(CircleShape)
-                                        )
-                                    },
-                                    trailingContent = {
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            IconButton(onClick = { openLink("https://github.com/Liliya2727") }) {
-                                                Icon(
-                                                    painter = painterResource(id = R.drawable.ic_github),
-                                                    contentDescription = stringResource(R.string.cd_github),
-                                                    modifier = Modifier.size(29.dp),
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                            IconButton(onClick = { openLink("https://t.me/Zexshia") }) {
-                                                Icon(
-                                                    painter = painterResource(id = R.drawable.ic_telegram),
-                                                    contentDescription = stringResource(R.string.cd_telegram),
-                                                    modifier = Modifier.size(26.dp),
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                        }
-                                    }
-                                )
-                            }
-                        )
-                    )
-                }
-
-
-                item { 
-                    AboutSectionTitle(stringResource(R.string.str_collaborators)) 
-                }
-                item {
-                    ExpressiveList(
-                        content = listOf(
-                            {
-                                ExpressiveListItem(
-                                    headlineContent = { Text(text = stringResource(R.string.str_rianixia), fontWeight = FontWeight.SemiBold) },
-                                    supportingContent = { Text(stringResource(R.string.str_co_maintainer)) },
-                                    leadingContent = {
-                                        Image(
-                                            painter = painterResource(R.drawable.avatar_xia),
-                                            contentDescription = stringResource(R.string.str_rianixia),
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.size(48.dp).clip(CircleShape)
-                                        )
-                                    },
-                                    trailingContent = {
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            IconButton(onClick = { openLink("https://github.com/ryanistr") }) {
-                                                Icon(
-                                                    painter = painterResource(id = R.drawable.ic_github),
-                                                    contentDescription = stringResource(R.string.cd_github),
-                                                    modifier = Modifier.size(29.dp),
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                            IconButton(onClick = { openLink("https://t.me/rianixia") }) {
-                                                Icon(
-                                                    painter = painterResource(id = R.drawable.ic_telegram),
-                                                    contentDescription = stringResource(R.string.cd_telegram),
-                                                    modifier = Modifier.size(26.dp),
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                        }
-                                    }
-                                )
-                            },
-                            {
-                                ExpressiveListItem(
-                                    headlineContent = { Text(text = stringResource(R.string.str_kanaochar), fontWeight = FontWeight.SemiBold) },
-                                    supportingContent = { Text(stringResource(R.string.str_co_maintainer)) },
-                                    leadingContent = {
-                                        Image(
-                                            painter = painterResource(R.drawable.avatar_kanao),
-                                            contentDescription = stringResource(R.string.str_kanaochar),
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.size(48.dp).clip(CircleShape)
-                                        )
-                                    },
-                                    trailingContent = {
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            IconButton(onClick = { openLink("https://github.com/kanaodnd") }) {
-                                                Icon(
-                                                    painter = painterResource(id = R.drawable.ic_github),
-                                                    contentDescription = stringResource(R.string.cd_github),
-                                                    modifier = Modifier.size(29.dp),
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                            IconButton(onClick = { openLink("https://t.me/kanaochar") }) {
-                                                Icon(
-                                                    painter = painterResource(id = R.drawable.ic_telegram),
-                                                    contentDescription = stringResource(R.string.cd_telegram),
-                                                    modifier = Modifier.size(26.dp),
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                        }
-                                    }
-                                )
-                            }
-                        )
-                    )
-                }
-                
-                item { 
-                    AboutSectionTitle(stringResource(R.string.str_open_source)) 
-                }
-                item {
-                    ExpressiveList(
-                        content = listOf {
+            item { 
+                AboutSectionTitle(stringResource(R.string.str_maintainer)) 
+            }
+            item {
+                ExpressiveList(
+                    content = listOf(
+                        {
                             ExpressiveListItem(
-                                onClick = { openLink("https://github.com/Liliya2727/AZenith") },
-                                headlineContent = { Text(stringResource(R.string.str_source_code)) },
-                                supportingContent = { Text(stringResource(R.string.str_view_the_source_code_on_github)) },
-                                leadingContent = { LeadingIcon(icon = Icons.Rounded.Code) },
-                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                headlineContent = { Text(text = stringResource(R.string.str_liliya), fontWeight = FontWeight.SemiBold) },
+                                supportingContent = { Text(stringResource(R.string.str_creator_maintainer)) },
+                                leadingContent = {
+                                    Image(
+                                        painter = painterResource(R.drawable.avatar_liliya),
+                                        contentDescription = stringResource(R.string.str_liliya),
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.size(48.dp).clip(CircleShape)
+                                    )
+                                },
+                                trailingContent = {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        IconButton(onClick = { openLink("https://github.com/Liliya2727") }) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_github),
+                                                contentDescription = stringResource(R.string.cd_github),
+                                                modifier = Modifier.size(29.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                        IconButton(onClick = { openLink("https://t.me/Zexshia") }) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_telegram),
+                                                contentDescription = stringResource(R.string.cd_telegram),
+                                                modifier = Modifier.size(26.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
                             )
                         }
                     )
-                }
+                )
+            }
+
+
+            item { 
+                AboutSectionTitle(stringResource(R.string.str_collaborators)) 
+            }
+            item {
+                ExpressiveList(
+                    content = listOf(
+                        {
+                            ExpressiveListItem(
+                                headlineContent = { Text(text = stringResource(R.string.str_rianixia), fontWeight = FontWeight.SemiBold) },
+                                supportingContent = { Text(stringResource(R.string.str_co_maintainer)) },
+                                leadingContent = {
+                                    Image(
+                                        painter = painterResource(R.drawable.avatar_xia),
+                                        contentDescription = stringResource(R.string.str_rianixia),
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.size(48.dp).clip(CircleShape)
+                                    )
+                                },
+                                trailingContent = {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        IconButton(onClick = { openLink("https://github.com/ryanistr") }) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_github),
+                                                contentDescription = stringResource(R.string.cd_github),
+                                                modifier = Modifier.size(29.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                        IconButton(onClick = { openLink("https://t.me/rianixia") }) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_telegram),
+                                                contentDescription = stringResource(R.string.cd_telegram),
+                                                modifier = Modifier.size(26.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
+                            )
+                        },
+                        {
+                            ExpressiveListItem(
+                                headlineContent = { Text(text = stringResource(R.string.str_kanaochar), fontWeight = FontWeight.SemiBold) },
+                                supportingContent = { Text(stringResource(R.string.str_co_maintainer)) },
+                                leadingContent = {
+                                    Image(
+                                        painter = painterResource(R.drawable.avatar_kanao),
+                                        contentDescription = stringResource(R.string.str_kanaochar),
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.size(48.dp).clip(CircleShape)
+                                    )
+                                },
+                                trailingContent = {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        IconButton(onClick = { openLink("https://github.com/kanaodnd") }) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_github),
+                                                contentDescription = stringResource(R.string.cd_github),
+                                                modifier = Modifier.size(29.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                        IconButton(onClick = { openLink("https://t.me/kanaochar") }) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_telegram),
+                                                contentDescription = stringResource(R.string.cd_telegram),
+                                                modifier = Modifier.size(26.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    )
+                )
+            }
+
+            item { 
+                AboutSectionTitle(stringResource(R.string.str_open_source)) 
+            }
+            item {
+                ExpressiveList(
+                    content = listOf {
+                        ExpressiveListItem(
+                            onClick = { openLink("https://github.com/Liliya2727/AZenith") },
+                            headlineContent = { Text(stringResource(R.string.str_source_code)) },
+                            supportingContent = { Text(stringResource(R.string.str_view_the_source_code_on_github)) },
+                            leadingContent = { LeadingIcon(icon = Icons.Rounded.Code) },
+                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                        )
+                    }
+                )
             }
         }
     }

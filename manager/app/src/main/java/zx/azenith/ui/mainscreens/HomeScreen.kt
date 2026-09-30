@@ -78,147 +78,73 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
     }
 
-    MaterialExpressiveTheme {
-        Scaffold(
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            topBar = {
-                HomeTopAppBar(
-                    scrollBehavior = scrollBehavior,
-                    onRebootClick = { showRebootSheet = true }
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            HomeTopAppBar(
+                scrollBehavior = scrollBehavior,
+                onRebootClick = { showRebootSheet = true }
+            )
+        },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.padding(
+                    bottom = 100.dp
                 )
-            },
-            snackbarHost = {
-                SnackbarHost(
-                    hostState = snackbarHostState,
-                    modifier = Modifier.padding(
-                        bottom = 100.dp
-                    )
-                )
-            },
-            containerColor = MaterialTheme.colorScheme.surface
-        ) { innerPadding ->
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    start = 16.dp, end = 16.dp,
-                    bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                ),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                item {
-                    val bannerStatus = if (!uiState.moduleInstalled) stringResource(R.string.module_not_installed) else stringResource(uiState.serviceStatusRes)
-                    
-               
-                    val isPerformanceMode = uiState.currentProfileRes == R.string.Profile_Performance || uiState.currentProfileRes == R.string.profile_perflite
-                    val showGameCard = isPerformanceMode && !uiState.runningGamePkg.isNullOrEmpty()
-                    
-                    var retainedPkg by remember { mutableStateOf("") }
-                    var retainedStartTime by remember { mutableStateOf("00:00:00") }
-                    
-                    LaunchedEffect(uiState.runningGamePkg, uiState.runningGameStartTime) {
-                        if (!uiState.runningGamePkg.isNullOrEmpty()) {
-                            retainedPkg = uiState.runningGamePkg!!
-                            retainedStartTime = uiState.runningGameStartTime ?: "00:00:00"
-                        }
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.surface
+    ) { innerPadding ->
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding(),
+                start = 16.dp, end = 16.dp,
+                bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            ),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                val bannerStatus = if (!uiState.moduleInstalled) stringResource(R.string.module_not_installed) else stringResource(uiState.serviceStatusRes)
+
+
+                val isPerformanceMode = uiState.currentProfileRes == R.string.Profile_Performance || uiState.currentProfileRes == R.string.profile_perflite
+                val showGameCard = isPerformanceMode && !uiState.runningGamePkg.isNullOrEmpty()
+
+                var retainedPkg by remember { mutableStateOf("") }
+                var retainedStartTime by remember { mutableStateOf("00:00:00") }
+
+                LaunchedEffect(uiState.runningGamePkg, uiState.runningGameStartTime) {
+                    if (!uiState.runningGamePkg.isNullOrEmpty()) {
+                        retainedPkg = uiState.runningGamePkg!!
+                        retainedStartTime = uiState.runningGameStartTime ?: "00:00:00"
                     }
-                
-                    if (isLandscape) {
+                }
+
+                if (isLandscape) {
 
 
-                        Column() {
+                    Column() {
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(IntrinsicSize.Max),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                                BannerCard(
+                                    status = bannerStatus, pid = uiState.servicePid,
+                                    isBannerEnabled = uiState.isBannerEnabled, 
+                                    isBlurEnabled = isBlurEnabled,
+                                    modifier = Modifier.fillMaxSize()
+                                ) { }
+                            }
 
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(IntrinsicSize.Max),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                                    BannerCard(
-                                        status = bannerStatus, pid = uiState.servicePid,
-                                        isBannerEnabled = uiState.isBannerEnabled, 
-                                        isBlurEnabled = isBlurEnabled,
-                                        modifier = Modifier.fillMaxSize()
-                                    ) { }
-                                }
-                                
-                                Row(
-                                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    InfoTile(
-                                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                                        icon = Icons.Rounded.Token, 
-                                        label = stringResource(R.string.current_profile), 
-                                        value = stringResource(uiState.currentProfileRes), 
-                                        highlight = (uiState.currentProfileRes != R.string.status_initializing), 
-                                        showArrow = uiState.autoMode == "0"
-                                    ) { if (uiState.autoMode == "0") showProfileDialog = true }
-                                    
-                                    InfoTile(
-                                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                                        icon = Icons.Rounded.Security, 
-                                        label = stringResource(R.string.root_access), 
-                                        value = if (uiState.rootStatus) stringResource(R.string.root_granted) else stringResource(R.string.root_not_granted), 
-                                        highlight = false
-                                    ) {}
-                                }
-                            }
-                
-                            AnimatedVisibility(
-                                visible = showGameCard,
-                                enter = expandVertically(animationSpec = spring()) + fadeIn(),
-                                exit = shrinkVertically(animationSpec = spring()) + fadeOut()
-                            ) {
-
-                                Column {
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    if (retainedPkg.isNotEmpty()) {
-                                        RunningGameCard(
-                                            pkgName = retainedPkg,
-                                            startTimeStr = retainedStartTime
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-
-
-                        Column() {
-                            BannerCard(
-                                status = bannerStatus, pid = uiState.servicePid,
-                                isBannerEnabled = uiState.isBannerEnabled,
-                                isBlurEnabled = isBlurEnabled,
-                                modifier = if (uiState.isBannerEnabled) Modifier.fillMaxWidth().aspectRatio(20 / 9f) else Modifier.fillMaxWidth().height(100.dp)
-                            ) { }
-                
-                            AnimatedVisibility(
-                                visible = showGameCard,
-                                enter = expandVertically(animationSpec = spring()) + fadeIn(),
-                                exit = shrinkVertically(animationSpec = spring()) + fadeOut()
-                            ) {
-
-                                Column {
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    if (retainedPkg.isNotEmpty()) { 
-                                        RunningGameCard(
-                                            pkgName = retainedPkg,
-                                            startTimeStr = retainedStartTime
-                                        )
-                                    }
-                                }
-                            }
-                
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(IntrinsicSize.Max),
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 InfoTile(
@@ -229,7 +155,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                     highlight = (uiState.currentProfileRes != R.string.status_initializing), 
                                     showArrow = uiState.autoMode == "0"
                                 ) { if (uiState.autoMode == "0") showProfileDialog = true }
-                                
+
                                 InfoTile(
                                     modifier = Modifier.weight(1f).fillMaxHeight(),
                                     icon = Icons.Rounded.Security, 
@@ -239,37 +165,109 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 ) {}
                             }
                         }
+
+                        AnimatedVisibility(
+                            visible = showGameCard,
+                            enter = expandVertically(animationSpec = spring()) + fadeIn(),
+                            exit = shrinkVertically(animationSpec = spring()) + fadeOut()
+                        ) {
+
+                            Column {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                if (retainedPkg.isNotEmpty()) {
+                                    RunningGameCard(
+                                        pkgName = retainedPkg,
+                                        startTimeStr = retainedStartTime
+                                    )
+                                }
+                            }
+                        }
                     }
-
-                }
-                
-                item { DeviceInfoCard() }
-                item { LinkCard(Icons.Rounded.Favorite, R.string.support_us, R.string.support_us_desc) { uriHandler.openUri("https://t.me/ZeshArch") } }
-                item { LinkCard(Icons.Rounded.Info, R.string.learn_more, R.string.learn_more_desc) { uriHandler.openUri("https://github.com/Liliya2727/AZenith") } }
-            }
-        }
-
-        RootAppDialog {
-            RebootBottomSheet(
-                show = showRebootSheet,
-                onDismiss = { showRebootSheet = false },
-                onReboot = { reason -> viewModel.rebootDevice(reason) }
-            )
-        }
+                } else {
 
 
-        RootAppDialog {
-            ProfileDialog(
-                show = showProfileDialog,
-                onDismiss = { showProfileDialog = false },
-                onProfile = { profileReason ->
-                    viewModel.applyProfile(profileReason) {
-                        coroutineScope.launch {
-                            snackbarHostState.showSnackbar(context.getString(R.string.toast_applying_profile))
+                    Column() {
+                        BannerCard(
+                            status = bannerStatus, pid = uiState.servicePid,
+                            isBannerEnabled = uiState.isBannerEnabled,
+                            isBlurEnabled = isBlurEnabled,
+                            modifier = if (uiState.isBannerEnabled) Modifier.fillMaxWidth().aspectRatio(20 / 9f) else Modifier.fillMaxWidth().height(100.dp)
+                        ) { }
+
+                        AnimatedVisibility(
+                            visible = showGameCard,
+                            enter = expandVertically(animationSpec = spring()) + fadeIn(),
+                            exit = shrinkVertically(animationSpec = spring()) + fadeOut()
+                        ) {
+
+                            Column {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                if (retainedPkg.isNotEmpty()) { 
+                                    RunningGameCard(
+                                        pkgName = retainedPkg,
+                                        startTimeStr = retainedStartTime
+                                    )
+                                }
+                            }
+                        }
+
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(IntrinsicSize.Max),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            InfoTile(
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                icon = Icons.Rounded.Token, 
+                                label = stringResource(R.string.current_profile), 
+                                value = stringResource(uiState.currentProfileRes), 
+                                highlight = (uiState.currentProfileRes != R.string.status_initializing), 
+                                showArrow = uiState.autoMode == "0"
+                            ) { if (uiState.autoMode == "0") showProfileDialog = true }
+
+                            InfoTile(
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                icon = Icons.Rounded.Security, 
+                                label = stringResource(R.string.root_access), 
+                                value = if (uiState.rootStatus) stringResource(R.string.root_granted) else stringResource(R.string.root_not_granted), 
+                                highlight = false
+                            ) {}
                         }
                     }
                 }
-            )
+
+            }
+
+            item { DeviceInfoCard() }
+            item { LinkCard(Icons.Rounded.Favorite, R.string.support_us, R.string.support_us_desc) { uriHandler.openUri("https://t.me/ZeshArch") } }
+            item { LinkCard(Icons.Rounded.Info, R.string.learn_more, R.string.learn_more_desc) { uriHandler.openUri("https://github.com/Liliya2727/AZenith") } }
         }
+    }
+
+    RootAppDialog {
+        RebootBottomSheet(
+            show = showRebootSheet,
+            onDismiss = { showRebootSheet = false },
+            onReboot = { reason -> viewModel.rebootDevice(reason) }
+        )
+    }
+
+
+    RootAppDialog {
+        ProfileDialog(
+            show = showProfileDialog,
+            onDismiss = { showProfileDialog = false },
+            onProfile = { profileReason ->
+                viewModel.applyProfile(profileReason) {
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(context.getString(R.string.toast_applying_profile))
+                    }
+                }
+            }
+        )
     }
 }

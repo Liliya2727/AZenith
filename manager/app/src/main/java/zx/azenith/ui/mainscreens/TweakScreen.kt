@@ -176,411 +176,409 @@ fun TweakScreen(
         viewModel.loadAllConfiguration(context)
     }
 
-    MaterialExpressiveTheme {
-        Scaffold(
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            topBar = {
-                TweakScreenTopAppBar(
-                    scrollBehavior = scrollBehavior,
-                    onMoreClick = { showBackupRestoreSheet = true }
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            TweakScreenTopAppBar(
+                scrollBehavior = scrollBehavior,
+                onMoreClick = { showBackupRestoreSheet = true }
+            )
+        },
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.padding(
+                    bottom = 100.dp
                 )
-            },
-            snackbarHost = {
-                SnackbarHost(
-                    hostState = snackbarHostState,
-                    modifier = Modifier.padding(
-                        bottom = 100.dp
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.surface
+    ) { innerPadding ->
+
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding(),
+                start = 16.dp,
+                end = 16.dp,
+                bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            )
+        ) {
+
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+                ExpressiveList(
+                    content = listOf( 
+                        {
+                            ExpressiveInfoCard(
+                                supportingContent = { Text(text = stringResource(R.string.str_these_settings_apply_to_all_en)) },
+                                leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
+                                containerColor = colorScheme.surfaceContainerLow,
+                                onClick = {}
+                            )
+                        }
                     )
                 )
-            },
-            containerColor = MaterialTheme.colorScheme.surface
-        ) { innerPadding ->
-            
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                )
-            ) {
-            
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            item { TweaksSectionTitle(text = stringResource(R.string.section_performance)) }
+            item {
+                var socType by remember { mutableStateOf<String?>(null) }
+                LaunchedEffect(Unit) {
+                    socType = withContext(Dispatchers.IO) { getChipsetVendor(context) }
+                }
+                if (socType != null && viewModel.liteState != null) {
+                    val isMediaTek   = socType == "mediatek"
+
                     ExpressiveList(
-                        content = listOf( 
+                        content = listOf(
                             {
-                                ExpressiveInfoCard(
-                                    supportingContent = { Text(text = stringResource(R.string.str_these_settings_apply_to_all_en)) },
-                                    leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
-                                    containerColor = colorScheme.surfaceContainerLow,
-                                    onClick = {}
+                                ExpressiveSwitchItem(
+                                    icon = Icons.Rounded.Speed,
+                                    title = stringResource(R.string.perf_lite_mode),
+                                    summary = stringResource(R.string.perf_lite_mode_desc),
+                                    checked = viewModel.liteState!!,
+                                    onCheckedChange = { viewModel.updateLiteMode(it) }
+                                )
+                            },
+                            {
+                                Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
+                                    ExpressiveListItem(
+                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Speed) },
+                                        onClick = { 
+                                            if (isMediaTek) {
+                                                navController.navigate("fpsgoscreen") 
+                                            }
+                                        },
+                                        headlineContent = { Text(text = stringResource(R.string.str_fpsgo_settings)) },
+                                        supportingContent = { 
+                                            Text(
+                                                text = if (isMediaTek) 
+                                                    stringResource(R.string.str_fpsgo_desc) 
+                                                else 
+                                                    stringResource(R.string.str_fpsgo_unavailable)
+                                            ) 
+                                        },
+                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                    )
+                                }
+                            }
+                        )
+                    )
+                } else {
+                    SectionLoadingIndicator()
+                }
+            }
+
+            item { TweaksSectionTitle(stringResource(R.string.section_additionalsettings)) }
+            item {
+                if (viewModel.preloadState != null && 
+                    viewModel.memKillerState != null && 
+                    viewModel.appPriorState != null && 
+                    viewModel.dndState != null && 
+                    viewModel.fstrimState != null) {
+                    ExpressiveList(
+                        content = buildList {
+                            add {
+                                ExpressiveSwitchItem(
+                                    icon = Icons.Rounded.RocketLaunch,
+                                    title = stringResource(R.string.game_preload),
+                                    summary = stringResource(R.string.game_preload_desc),
+                                    checked = viewModel.preloadState!!,
+                                    onCheckedChange = { viewModel.updatePreloadMode(it) }
                                 )
                             }
-                        )
-                    )
-                }
-
-                item { TweaksSectionTitle(text = stringResource(R.string.section_performance)) }
-                item {
-                    var socType by remember { mutableStateOf<String?>(null) }
-                    LaunchedEffect(Unit) {
-                        socType = withContext(Dispatchers.IO) { getChipsetVendor(context) }
-                    }
-                    if (socType != null && viewModel.liteState != null) {
-                        val isMediaTek   = socType == "mediatek"
-                        
-                        ExpressiveList(
-                            content = listOf(
-                                {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Rounded.Speed,
-                                        title = stringResource(R.string.perf_lite_mode),
-                                        summary = stringResource(R.string.perf_lite_mode_desc),
-                                        checked = viewModel.liteState!!,
-                                        onCheckedChange = { viewModel.updateLiteMode(it) }
-                                    )
-                                },
-                                {
-                                    Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
-                                        ExpressiveListItem(
-                                            leadingContent = { LeadingIcon(icon = Icons.Filled.Speed) },
-                                            onClick = { 
-                                                if (isMediaTek) {
-                                                    navController.navigate("fpsgoscreen") 
-                                                }
-                                            },
-                                            headlineContent = { Text(text = stringResource(R.string.str_fpsgo_settings)) },
-                                            supportingContent = { 
-                                                Text(
-                                                    text = if (isMediaTek) 
-                                                        stringResource(R.string.str_fpsgo_desc) 
-                                                    else 
-                                                        stringResource(R.string.str_fpsgo_unavailable)
-                                                ) 
-                                            },
-                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                        )
-                                    }
-                                }
-                            )
-                        )
-                    } else {
-                        SectionLoadingIndicator()
-                    }
-                }
-                
-                item { TweaksSectionTitle(stringResource(R.string.section_additionalsettings)) }
-                item {
-                    if (viewModel.preloadState != null && 
-                        viewModel.memKillerState != null && 
-                        viewModel.appPriorState != null && 
-                        viewModel.dndState != null && 
-                        viewModel.fstrimState != null) {
-                        ExpressiveList(
-                            content = buildList {
+                            if (isFullModeEnabled) {
                                 add {
                                     ExpressiveSwitchItem(
-                                        icon = Icons.Rounded.RocketLaunch,
-                                        title = stringResource(R.string.game_preload),
-                                        summary = stringResource(R.string.game_preload_desc),
-                                        checked = viewModel.preloadState!!,
-                                        onCheckedChange = { viewModel.updatePreloadMode(it) }
-                                    )
-                                }
-                                if (isFullModeEnabled) {
-                                    add {
-                                        ExpressiveSwitchItem(
-                                            icon = Icons.Rounded.CleaningServices,
-                                            title = stringResource(R.string.memory_killer),
-                                            summary = stringResource(R.string.memory_killer_desc),
-                                            checked = viewModel.memKillerState!!,
-                                            onCheckedChange = { viewModel.updateMemoryKiller(it) }
-                                        )
-                                    }
-                                }
-                                if (isFullModeEnabled) {
-                                    add {
-                                        ExpressiveSwitchItem(
-                                            icon = Icons.Rounded.SwapVerticalCircle,
-                                            title = stringResource(R.string.app_priority_control),
-                                            summary = stringResource(R.string.app_priority_control_desc),
-                                            checked = viewModel.appPriorState!!,
-                                            onCheckedChange = { viewModel.updateAppPriority(it) }
-                                        )
-                                    }
-                                }
-                                add {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Rounded.DoNotDisturbOn,
-                                        title = stringResource(R.string.dnd_mode_gaming),
-                                        summary = stringResource(R.string.dnd_mode_gaming_desc),
-                                        checked = viewModel.dndState!!,
-                                        onCheckedChange = { viewModel.updateDndMode(it) }
-                                    )
-                                }
-                                if (isFullModeEnabled) {
-                                    add {
-                                        ExpressiveSwitchItem(
-                                            icon = Icons.Outlined.ContentCut,
-                                            title = stringResource(R.string.trim_filesystem),
-                                            summary = stringResource(R.string.trim_filesystem_desc),
-                                            checked = viewModel.fstrimState!!,
-                                            onCheckedChange = { viewModel.updateFstrim(it) }
-                                        )
-                                    }
-                                }
-                                add {
-                                    ExpressiveListItem(
-                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Ballot) },
-                                        onClick = { navController.navigate("governorsettings") },
-                                        headlineContent = { Text(stringResource(R.string.gov_settings)) },
-                                        supportingContent = { Text(stringResource(R.string.gov_settingsdesc)) },
-                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                        icon = Icons.Rounded.CleaningServices,
+                                        title = stringResource(R.string.memory_killer),
+                                        summary = stringResource(R.string.memory_killer_desc),
+                                        checked = viewModel.memKillerState!!,
+                                        onCheckedChange = { viewModel.updateMemoryKiller(it) }
                                     )
                                 }
                             }
-                        )
-                    } else {
-                        SectionLoadingIndicator()
-                    }
-                }
-
-                item {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    if (viewModel.currentRefreshRate != null && viewModel.currentRenderer != null) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            ExpressiveTile(
-                                modifier = Modifier.weight(1f),
-                                icon = Icons.Rounded.WebStories,
-                                label = stringResource(R.string.refreshrates),
-                                value = stringResource(R.string.refresh_rate_format, viewModel.currentRefreshRate.toString()),
-                                showArrow = isFullModeEnabled,
-                                highlight = isFullModeEnabled,
-                                isLoading = viewModel.isRefreshRateLoading
-                            ) {
-                                showRefreshRateDialog = isFullModeEnabled
+                            if (isFullModeEnabled) {
+                                add {
+                                    ExpressiveSwitchItem(
+                                        icon = Icons.Rounded.SwapVerticalCircle,
+                                        title = stringResource(R.string.app_priority_control),
+                                        summary = stringResource(R.string.app_priority_control_desc),
+                                        checked = viewModel.appPriorState!!,
+                                        onCheckedChange = { viewModel.updateAppPriority(it) }
+                                    )
+                                }
                             }
-                
-                            ExpressiveTile(
-                                modifier = Modifier.weight(1f),
-                                icon = Icons.Rounded.SettingsSuggest,
-                                label = stringResource(R.string.renderengine),
-                                value = viewModel.currentRenderer!!.uppercase(),
-                                showArrow = true,
-                                highlight = true,
-                                isLoading = viewModel.isRendererLoading
-                            ) {
-                                showRendererDialog = true
+                            add {
+                                ExpressiveSwitchItem(
+                                    icon = Icons.Rounded.DoNotDisturbOn,
+                                    title = stringResource(R.string.dnd_mode_gaming),
+                                    summary = stringResource(R.string.dnd_mode_gaming_desc),
+                                    checked = viewModel.dndState!!,
+                                    onCheckedChange = { viewModel.updateDndMode(it) }
+                                )
+                            }
+                            if (isFullModeEnabled) {
+                                add {
+                                    ExpressiveSwitchItem(
+                                        icon = Icons.Outlined.ContentCut,
+                                        title = stringResource(R.string.trim_filesystem),
+                                        summary = stringResource(R.string.trim_filesystem_desc),
+                                        checked = viewModel.fstrimState!!,
+                                        onCheckedChange = { viewModel.updateFstrim(it) }
+                                    )
+                                }
+                            }
+                            add {
+                                ExpressiveListItem(
+                                    leadingContent = { LeadingIcon(icon = Icons.Filled.Ballot) },
+                                    onClick = { navController.navigate("governorsettings") },
+                                    headlineContent = { Text(stringResource(R.string.gov_settings)) },
+                                    supportingContent = { Text(stringResource(R.string.gov_settingsdesc)) },
+                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                )
                             }
                         }
-                    } else {
-                        SectionLoadingIndicator()
-                    }
+                    )
+                } else {
+                    SectionLoadingIndicator()
                 }
-                
-                item { TweaksSectionTitle(text = stringResource(R.string.section_power_thermal)) }
-                item {
-                    if (viewModel.thermalState != null) {
-                        ExpressiveList(
-                            content = listOf(
-                                {
-                                    ExpressiveListItem(
-                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Cable) },
-                                        onClick = { navController.navigate("bypasschg") },
-                                        headlineContent = { Text(stringResource(R.string.bcharging)) },
-                                        supportingContent = { Text(stringResource(R.string.bcharging_desc)) },
-                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                    )
-                                },
-                                {
-                                    ExpressiveSwitchItem(                                        
-                                        icon = Icons.Filled.ThermostatAuto,
-                                        title = stringResource(R.string.thermalcore_service),
-                                        summary = stringResource(R.string.thermalcore_service_desc),
-                                        checked = viewModel.thermalState!!,
-                                        onCheckedChange = { viewModel.updateThermalCore(it) }
-                                    )
-                                }
-                            )
-                        )
-                    } else {
-                        SectionLoadingIndicator()
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(10.dp))
+                if (viewModel.currentRefreshRate != null && viewModel.currentRenderer != null) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        ExpressiveTile(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Rounded.WebStories,
+                            label = stringResource(R.string.refreshrates),
+                            value = stringResource(R.string.refresh_rate_format, viewModel.currentRefreshRate.toString()),
+                            showArrow = isFullModeEnabled,
+                            highlight = isFullModeEnabled,
+                            isLoading = viewModel.isRefreshRateLoading
+                        ) {
+                            showRefreshRateDialog = isFullModeEnabled
+                        }
+
+                        ExpressiveTile(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Rounded.SettingsSuggest,
+                            label = stringResource(R.string.renderengine),
+                            value = viewModel.currentRenderer!!.uppercase(),
+                            showArrow = true,
+                            highlight = true,
+                            isLoading = viewModel.isRendererLoading
+                        ) {
+                            showRendererDialog = true
+                        }
                     }
+                } else {
+                    SectionLoadingIndicator()
                 }
-                
-                item { TweaksSectionTitle(stringResource(R.string.section_addons)) }
-                item {
+            }
+
+            item { TweaksSectionTitle(text = stringResource(R.string.section_power_thermal)) }
+            item {
+                if (viewModel.thermalState != null) {
                     ExpressiveList(
                         content = listOf(
                             {
                                 ExpressiveListItem(
-                                    leadingContent = { LeadingIcon(icon = Icons.Filled.FilterBAndW) },
-                                    onClick = { navController.navigate("colorscheme") },
-                                    headlineContent = { Text(stringResource(R.string.color_scheme)) },
-                                    supportingContent = { Text(stringResource(R.string.schemecolordesc)) },
+                                    leadingContent = { LeadingIcon(icon = Icons.Filled.Cable) },
+                                    onClick = { navController.navigate("bypasschg") },
+                                    headlineContent = { Text(stringResource(R.string.bcharging)) },
+                                    supportingContent = { Text(stringResource(R.string.bcharging_desc)) },
                                     trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
                                 )
                             },
                             {
-                                ExpressiveListItem(
-                                    leadingContent = { LeadingIcon(icon = Icons.Filled.AddToPhotos) },
-                                    onClick = { navController.navigate("preferenced") },
-                                    headlineContent = { Text(stringResource(R.string.prefs)) },
-                                    supportingContent = { Text(stringResource(R.string.prefsdesc)) },
-                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                ExpressiveSwitchItem(                                        
+                                    icon = Icons.Filled.ThermostatAuto,
+                                    title = stringResource(R.string.thermalcore_service),
+                                    summary = stringResource(R.string.thermalcore_service_desc),
+                                    checked = viewModel.thermalState!!,
+                                    onCheckedChange = { viewModel.updateThermalCore(it) }
                                 )
                             }
                         )
                     )
+                } else {
+                    SectionLoadingIndicator()
+                }
+            }
+
+            item { TweaksSectionTitle(stringResource(R.string.section_addons)) }
+            item {
+                ExpressiveList(
+                    content = listOf(
+                        {
+                            ExpressiveListItem(
+                                leadingContent = { LeadingIcon(icon = Icons.Filled.FilterBAndW) },
+                                onClick = { navController.navigate("colorscheme") },
+                                headlineContent = { Text(stringResource(R.string.color_scheme)) },
+                                supportingContent = { Text(stringResource(R.string.schemecolordesc)) },
+                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                            )
+                        },
+                        {
+                            ExpressiveListItem(
+                                leadingContent = { LeadingIcon(icon = Icons.Filled.AddToPhotos) },
+                                onClick = { navController.navigate("preferenced") },
+                                headlineContent = { Text(stringResource(R.string.prefs)) },
+                                supportingContent = { Text(stringResource(R.string.prefsdesc)) },
+                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                            )
+                        }
+                    )
+                )
+            }
+        }
+    }
+
+    RootAppDialog {
+        BackupRestoreBottomSheet(
+            show = showBackupRestoreSheet,
+            onDismiss = { showBackupRestoreSheet = false },
+            onBackup = { 
+                showBackupRestoreSheet = false
+                showBackupOptionsDialog = true
+            },
+            onRestore = { 
+                openDocLauncher.launch(arrayOf("application/octet-stream", "*/*")) 
+            }
+        )
+    }
+
+    RootAppDialog {
+        CustomContentDialog(
+            visible = showBackupOptionsDialog,
+            title = context.getString(R.string.dialog_backup_options_title),
+            confirmText = context.getString(R.string.dialog_backup_options_confirm),
+            confirmEnabled = optBackupTweaks || optBackupApplist,
+            onDismiss = { showBackupOptionsDialog = false },
+            onConfirm = {
+                showBackupOptionsDialog = false
+                val sdf = java.text.SimpleDateFormat("ddMMyyyy_HHmmss", java.util.Locale.getDefault())
+                val timestamp = sdf.format(java.util.Date())
+                val dynamicFileName = "AZenithConfig_Backup_$timestamp.zx"
+                createDocLauncher.launch(dynamicFileName) 
+            }
+        ) {
+            Column {
+                Text(
+                    text = stringResource(R.string.str_select_the_configurations_you),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { optBackupTweaks = !optBackupTweaks }) {
+                    Checkbox(checked = optBackupTweaks, onCheckedChange = { optBackupTweaks = it })
+                    Text(stringResource(R.string.str_tweak_configuration_settings), color = MaterialTheme.colorScheme.onSurface)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { optBackupApplist = !optBackupApplist }) {
+                    Checkbox(checked = optBackupApplist, onCheckedChange = { optBackupApplist = it })
+                    Text(stringResource(R.string.str_per_app_applist_settings), color = MaterialTheme.colorScheme.onSurface)
                 }
             }
         }
-        
-        RootAppDialog {
-            BackupRestoreBottomSheet(
-                show = showBackupRestoreSheet,
-                onDismiss = { showBackupRestoreSheet = false },
-                onBackup = { 
-                    showBackupRestoreSheet = false
-                    showBackupOptionsDialog = true
-                },
-                onRestore = { 
-                    openDocLauncher.launch(arrayOf("application/octet-stream", "*/*")) 
-                }
-            )
-        }
+    }
 
-        RootAppDialog {
-            CustomContentDialog(
-                visible = showBackupOptionsDialog,
-                title = context.getString(R.string.dialog_backup_options_title),
-                confirmText = context.getString(R.string.dialog_backup_options_confirm),
-                confirmEnabled = optBackupTweaks || optBackupApplist,
-                onDismiss = { showBackupOptionsDialog = false },
-                onConfirm = {
-                    showBackupOptionsDialog = false
-                    val sdf = java.text.SimpleDateFormat("ddMMyyyy_HHmmss", java.util.Locale.getDefault())
-                    val timestamp = sdf.format(java.util.Date())
-                    val dynamicFileName = "AZenithConfig_Backup_$timestamp.zx"
-                    createDocLauncher.launch(dynamicFileName) 
+    RootAppDialog {
+        CustomContentDialog(
+            visible = showRestoreDialog,
+            title = context.getString(R.string.str_restore_configuration),
+            confirmText = context.getString(R.string.dialog_restore_confirm),
+            confirmEnabled = pendingRestoreResult?.let { result ->
+                val currentSocType = PropertyUtils.get("persist.sys.azenith.soctype")
+                val isSocMismatch = result.socType != currentSocType
+                (optRestoreTweaks && !isSocMismatch) || optRestoreApplist
+            } ?: false,
+            onDismiss = { showRestoreDialog = false },
+            onConfirm = {
+                showRestoreDialog = false
+
+
+                pendingRestoreResult?.let { result ->
+                    val dataToRestore = result.data
+                    val currentSocType = PropertyUtils.get("persist.sys.azenith.soctype")
+                    val isSocMismatch = result.socType != currentSocType
+
+                    if (dataToRestore != null) {
+                        scope.launch {
+                            loadingDialog.withLoading {
+                                viewModel.applyRestoreData(context, dataToRestore, optRestoreTweaks && !isSocMismatch, optRestoreApplist)
+                                viewModel.loadAllConfiguration(context)
+                            }
+                        }
+                    }
                 }
-            ) {
+            }
+        ) {
+
+            pendingRestoreResult?.let { result ->
+                val socName = zx.azenith.ui.util.BackupManager.getSocName(result.socType)
+                val currentSocType = PropertyUtils.get("persist.sys.azenith.soctype")
+                val isSocMismatch = result.socType != currentSocType
+
                 Column {
                     Text(
-                        text = stringResource(R.string.str_select_the_configurations_you),
+                        text = stringResource(R.string.str_backup_content_detected_select),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { optBackupTweaks = !optBackupTweaks }) {
-                        Checkbox(checked = optBackupTweaks, onCheckedChange = { optBackupTweaks = it })
-                        Text(stringResource(R.string.str_tweak_configuration_settings), color = MaterialTheme.colorScheme.onSurface)
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { optBackupApplist = !optBackupApplist }) {
-                        Checkbox(checked = optBackupApplist, onCheckedChange = { optBackupApplist = it })
-                        Text(stringResource(R.string.str_per_app_applist_settings), color = MaterialTheme.colorScheme.onSurface)
-                    }
-                }
-            }
-        }
 
-        RootAppDialog {
-            CustomContentDialog(
-                visible = showRestoreDialog,
-                title = context.getString(R.string.str_restore_configuration),
-                confirmText = context.getString(R.string.dialog_restore_confirm),
-                confirmEnabled = pendingRestoreResult?.let { result ->
-                    val currentSocType = PropertyUtils.get("persist.sys.azenith.soctype")
-                    val isSocMismatch = result.socType != currentSocType
-                    (optRestoreTweaks && !isSocMismatch) || optRestoreApplist
-                } ?: false,
-                onDismiss = { showRestoreDialog = false },
-                onConfirm = {
-                    showRestoreDialog = false
-                    
-
-                    pendingRestoreResult?.let { result ->
-                        val dataToRestore = result.data
-                        val currentSocType = PropertyUtils.get("persist.sys.azenith.soctype")
-                        val isSocMismatch = result.socType != currentSocType
-                        
-                        if (dataToRestore != null) {
-                            scope.launch {
-                                loadingDialog.withLoading {
-                                    viewModel.applyRestoreData(context, dataToRestore, optRestoreTweaks && !isSocMismatch, optRestoreApplist)
-                                    viewModel.loadAllConfiguration(context)
-                                }
-                            }
-                        }
-                    }
-                }
-            ) {
-
-                pendingRestoreResult?.let { result ->
-                    val socName = zx.azenith.ui.util.BackupManager.getSocName(result.socType)
-                    val currentSocType = PropertyUtils.get("persist.sys.azenith.soctype")
-                    val isSocMismatch = result.socType != currentSocType
-        
-                    Column {
+                    if (isSocMismatch && result.hasTweaks) {
                         Text(
-                            text = stringResource(R.string.str_backup_content_detected_select),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            stringResource(R.string.str_warning_backup_is_for_socname, socName),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
                         )
                         Spacer(Modifier.height(8.dp))
-                        
-                        if (isSocMismatch && result.hasTweaks) {
-                            Text(
-                                stringResource(R.string.str_warning_backup_is_for_socname, socName),
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall
+                    }
+
+                    if (result.hasTweaks) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { if (!isSocMismatch) optRestoreTweaks = !optRestoreTweaks }) {
+                            Checkbox(
+                                checked = optRestoreTweaks && !isSocMismatch, 
+                                onCheckedChange = { if (!isSocMismatch) optRestoreTweaks = it },
+                                enabled = !isSocMismatch
                             )
-                            Spacer(Modifier.height(8.dp))
+                            Text(stringResource(R.string.str_tweak_configuration_settings), color = if (isSocMismatch) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface)
                         }
-        
-                        if (result.hasTweaks) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { if (!isSocMismatch) optRestoreTweaks = !optRestoreTweaks }) {
-                                Checkbox(
-                                    checked = optRestoreTweaks && !isSocMismatch, 
-                                    onCheckedChange = { if (!isSocMismatch) optRestoreTweaks = it },
-                                    enabled = !isSocMismatch
-                                )
-                                Text(stringResource(R.string.str_tweak_configuration_settings), color = if (isSocMismatch) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface)
-                            }
-                        }
-                        if (result.hasApplist) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { optRestoreApplist = !optRestoreApplist }) {
-                                Checkbox(checked = optRestoreApplist, onCheckedChange = { optRestoreApplist = it })
-                                Text(stringResource(R.string.str_per_app_applist_settings), color = MaterialTheme.colorScheme.onSurface)
-                            }
+                    }
+                    if (result.hasApplist) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { optRestoreApplist = !optRestoreApplist }) {
+                            Checkbox(checked = optRestoreApplist, onCheckedChange = { optRestoreApplist = it })
+                            Text(stringResource(R.string.str_per_app_applist_settings), color = MaterialTheme.colorScheme.onSurface)
                         }
                     }
                 }
             }
         }
-        
-        RootAppDialog {
-            RendererDialog(
-                show = showRendererDialog,
-                onDismiss = { showRendererDialog = false },
-                onRenderer = { reason -> viewModel.executeSetRenderer(reason, context) }
-            )
-        }
+    }
 
-        RootAppDialog {
-            RefreshRatePickerDialog(
-                show = showRefreshRateDialog,
-                onDismiss = { showRefreshRateDialog = false },
-                onRefreshRatePicker = { reason -> viewModel.executeSetRefreshRates(reason, context) }
-            )
-        }
+    RootAppDialog {
+        RendererDialog(
+            show = showRendererDialog,
+            onDismiss = { showRendererDialog = false },
+            onRenderer = { reason -> viewModel.executeSetRenderer(reason, context) }
+        )
+    }
+
+    RootAppDialog {
+        RefreshRatePickerDialog(
+            show = showRefreshRateDialog,
+            onDismiss = { showRefreshRateDialog = false },
+            onRefreshRatePicker = { reason -> viewModel.executeSetRefreshRates(reason, context) }
+        )
     }
 }
 

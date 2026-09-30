@@ -128,110 +128,108 @@ fun ApplistScreen(navController: NavController) {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     
-    MaterialExpressiveTheme {
-        Scaffold(
-            topBar = {
-                ApplistTopAppBar(
-                    scrollBehavior,
-                    isSearchMode = isSearchMode,
-                    onSearchModeChange = { 
-                        isSearchMode = it 
-                        if (!it) viewModel.clearSearch() 
-                    },
-                    searchQuery = viewModel.searchTextFieldValue,
-                    onSearchChange = { viewModel.updateSearch(it) },
-                    showSystemApps = viewModel.showSystemApps,
-                    onToggleSystem = { newValue ->
-                        viewModel.showSystemApps = newValue
-                        prefs.edit().putBoolean("show_system_apps", newValue).apply()
-                    },
-                    onRefresh = { viewModel.loadApps(context, forceRefresh = true) },
-                    focusRequester = focusRequester
+    Scaffold(
+        topBar = {
+            ApplistTopAppBar(
+                scrollBehavior,
+                isSearchMode = isSearchMode,
+                onSearchModeChange = { 
+                    isSearchMode = it 
+                    if (!it) viewModel.clearSearch() 
+                },
+                searchQuery = viewModel.searchTextFieldValue,
+                onSearchChange = { viewModel.updateSearch(it) },
+                showSystemApps = viewModel.showSystemApps,
+                onToggleSystem = { newValue ->
+                    viewModel.showSystemApps = newValue
+                    prefs.edit().putBoolean("show_system_apps", newValue).apply()
+                },
+                onRefresh = { viewModel.loadApps(context, forceRefresh = true) },
+                focusRequester = focusRequester
+            )
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pullToRefresh(
+                    state = pullToRefreshState,
+                    isRefreshing = viewModel.isRefreshing,
+                    onRefresh = { 
+                        AppIconCache.clear()
+                        viewModel.loadApps(context, forceRefresh = true) 
+                    }
                 )
-            }
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pullToRefresh(
-                        state = pullToRefreshState,
-                        isRefreshing = viewModel.isRefreshing,
-                        onRefresh = { 
-                            AppIconCache.clear()
-                            viewModel.loadApps(context, forceRefresh = true) 
-                        }
-                    )
-                    .nestedScroll(scrollBehavior.nestedScrollConnection)
-            ) {
-                val appsToDisplay = viewModel.filteredApps
-                
-                ExpressiveLazyList(
-                    state = listState,
-                    items = appsToDisplay,
-                    key = { it.packageName },
-                    contentPadding = PaddingValues(
-                        top = innerPadding.calculateTopPadding(),
-                        start = 16.dp,
-                        end = 16.dp,
-                        bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                    )
-                ) { app ->
-                    ExpressiveListItem(
-                        onClick = { navController.navigate("app_settings/${app.packageName}") },
-                        headlineContent = {
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
+        ) {
+            val appsToDisplay = viewModel.filteredApps
+
+            ExpressiveLazyList(
+                state = listState,
+                items = appsToDisplay,
+                key = { it.packageName },
+                contentPadding = PaddingValues(
+                    top = innerPadding.calculateTopPadding(),
+                    start = 16.dp,
+                    end = 16.dp,
+                    bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                )
+            ) { app ->
+                ExpressiveListItem(
+                    onClick = { navController.navigate("app_settings/${app.packageName}") },
+                    headlineContent = {
+                        Text(
+                            text = app.label,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    supportingContent = {
+                        Column {
                             Text(
-                                text = app.label,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
+                                text = app.packageName,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.outline,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                        },
-                        supportingContent = {
-                            Column {
-                                Text(
-                                    text = app.packageName,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.outline,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                
-                                Row(modifier = Modifier.padding(top = 4.dp)) {
-                                    if (app.isEnabledInConfig) {
-                                        LabelText(
-                                            text = stringResource(R.string.label_enabled),
-                                            color = Color(0xFF4CAF50)
-                                        )
-                                    } else {
-                                        LabelText(stringResource(R.string.label_disabled), MaterialTheme.colorScheme.error)
-                                    }
-                                    if (app.isRecommended) {
-                                        LabelText(stringResource(R.string.label_recommended), MaterialTheme.colorScheme.primary)
-                                    }
-                                    if (app.isSystem) {
-                                        LabelText(stringResource(R.string.label_system), MaterialTheme.colorScheme.secondary)
-                                    }
+
+                            Row(modifier = Modifier.padding(top = 4.dp)) {
+                                if (app.isEnabledInConfig) {
+                                    LabelText(
+                                        text = stringResource(R.string.label_enabled),
+                                        color = Color(0xFF4CAF50)
+                                    )
+                                } else {
+                                    LabelText(stringResource(R.string.label_disabled), MaterialTheme.colorScheme.error)
+                                }
+                                if (app.isRecommended) {
+                                    LabelText(stringResource(R.string.label_recommended), MaterialTheme.colorScheme.primary)
+                                }
+                                if (app.isSystem) {
+                                    LabelText(stringResource(R.string.label_system), MaterialTheme.colorScheme.secondary)
                                 }
                             }
-                        },
-                        leadingContent = {
-                            AppIconImage(
-                                app = app,
-                                size = 60.dp
-                            )
                         }
-                    )
-                }
-
-                PullToRefreshDefaults.LoadingIndicator(
-                    state = pullToRefreshState,
-                    isRefreshing = viewModel.isRefreshing,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = innerPadding.calculateTopPadding())
+                    },
+                    leadingContent = {
+                        AppIconImage(
+                            app = app,
+                            size = 60.dp
+                        )
+                    }
                 )
             }
+
+            PullToRefreshDefaults.LoadingIndicator(
+                state = pullToRefreshState,
+                isRefreshing = viewModel.isRefreshing,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = innerPadding.calculateTopPadding())
+            )
         }
     }
 }

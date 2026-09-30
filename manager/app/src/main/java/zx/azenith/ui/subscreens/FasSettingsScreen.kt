@@ -86,43 +86,41 @@ fun FasScreen(navController: NavController) {
     val colorScheme = MaterialTheme.colorScheme
     val snackbarHostState = remember { SnackbarHostState() }
     
-    MaterialExpressiveTheme {        
-        Scaffold(
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            topBar = { FasTopAppBar(
-                scrollBehavior,
-                onBack = { navController.popBackStack() }
-                ) 
-            },
-            containerColor = MaterialTheme.colorScheme.surface
-        ) { innerPadding ->
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                )
-            ) {
-                item {
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    ExpressiveList(
-                        content = listOf( 
-                            {
-                                ExpressiveInfoCard(
-                                    supportingContent = { Text(text = stringResource(R.string.str_fas_is_a_user_space_implementa)) },
-                                    leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
-                                    containerColor = colorScheme.surfaceContainerLow,
-                                    onClick = {}
-                                )
-                            }
-                        )
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = { FasTopAppBar(
+            scrollBehavior,
+            onBack = { navController.popBackStack() }
+            ) 
+        },
+        containerColor = MaterialTheme.colorScheme.surface
+    ) { innerPadding ->
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding(),
+                start = 16.dp,
+                end = 16.dp,
+                bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            )
+        ) {
+            item {
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                ExpressiveList(
+                    content = listOf( 
+                        {
+                            ExpressiveInfoCard(
+                                supportingContent = { Text(text = stringResource(R.string.str_fas_is_a_user_space_implementa)) },
+                                leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
+                                containerColor = colorScheme.surfaceContainerLow,
+                                onClick = {}
+                            )
+                        }
                     )
-                }
+                )
             }
         }
     }
