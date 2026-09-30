@@ -8,3 +8,13 @@ sys.azenith-service
 # Gradle build cache
 .gradle/
 build/
+
+# Packaging artifacts produced by .github/scripts/compile_zip.sh
+*.apk
+*.sha256
+mainfiles/LICENSE
+mainfiles/NOTICE.md
+mainfiles/azenithApplist.json
+
+# Copied from the root changelog.md by .github/scripts/changelog.sh
+manager/app/src/main/assets/changelog.md
