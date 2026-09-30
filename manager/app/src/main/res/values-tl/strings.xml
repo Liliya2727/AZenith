@@ -125,7 +125,7 @@
     <string name="learn_more">Matuto pa</string>
     <string name="learn_more_desc">Dokumentasyon, source code, changelog at paliwanag ng AZenith fundamentals, alamin ang implementation at safe customization methods</string>
     <string name="lets_go">Magsimula na</string>
-    <string name="master_switch">Master switch</string>
+    <string name="master_switch">AZenith Service</string>
     <string name="master_switch_desc">Pagkatapos i-on, maaaring ma-trigger ng app ang performance profile</string>
     <string name="max_val">Maximum (%1$d)</string>
     <string name="memory_killer">Memory cleaner</string>

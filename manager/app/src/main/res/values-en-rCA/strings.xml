@@ -125,7 +125,7 @@
     <string name="learn_more">Learn More</string>
     <string name="learn_more_desc">Documentation, source code, changelog, and AZenith underlying principles. Understand how features work and how to customize safely.</string>
     <string name="lets_go">Let\'s Go</string>
-    <string name="master_switch">Master Switch</string>
+    <string name="master_switch">AZenith Service</string>
     <string name="master_switch_desc">Enable to allow the app to trigger performance profiles</string>
     <string name="max_val">Max (%1$d)</string>
     <string name="memory_killer">Memory Cleanup</string>

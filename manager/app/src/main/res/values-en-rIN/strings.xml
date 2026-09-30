@@ -125,7 +125,7 @@
     <string name="learn_more">Learn more</string>
     <string name="learn_more_desc">Documentation, source code, changelog and AZenith internals. Understand how features work and how to customize safely.</string>
     <string name="lets_go">Let\'s go</string>
-    <string name="master_switch">Master switch</string>
+    <string name="master_switch">AZenith Service</string>
     <string name="master_switch_desc">Performance profile can only be triggered when this is enabled</string>
     <string name="max_val">Max (%1$d)</string>
     <string name="memory_killer">Memory cleaner</string>
