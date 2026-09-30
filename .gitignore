@@ -1,2 +1,10 @@
+*.zip
+*.o
+*.vscode
+libs/
 target/
 sys.azenith-service
+
+# Gradle build cache
+.gradle/
+build/
