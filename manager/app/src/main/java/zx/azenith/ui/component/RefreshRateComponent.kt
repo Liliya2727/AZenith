@@ -55,7 +55,6 @@ private data class RefreshRatePickerOption(
     val icon: ImageVector
 )
 
-@Composable
 private fun getRefreshRatePickerOptions(context: Context): List<RefreshRatePickerOption> {
     val supported = getSupportedRefreshRatesPicker(context)
     return supported.map { rate ->
@@ -79,7 +78,7 @@ fun RefreshRatePickerDialog(
     val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
     val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
     val hazeState = LocalAppHazeState.current
-    val options = getRefreshRatePickerOptions(context)
+    val options = remember(context) { getRefreshRatePickerOptions(context) }
 
     AnimatedVisibility(
         visible = show,
