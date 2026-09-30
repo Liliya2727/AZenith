@@ -64,6 +64,13 @@ android {
         buildConfig = true
     }
 
+    if (providers.gradleProperty("composeReports").orNull == "true") {
+        composeCompiler {
+            reportsDestination = layout.buildDirectory.dir("compose_compiler")
+            metricsDestination = layout.buildDirectory.dir("compose_compiler")
+        }
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"

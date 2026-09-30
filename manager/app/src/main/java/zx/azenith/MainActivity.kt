@@ -72,6 +72,7 @@ import dev.chrisbanes.haze.hazeSource
 import java.io.File
 import kotlin.math.abs
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zx.azenith.R
@@ -240,16 +241,26 @@ fun MainScreen(fromTileType: String? = null) {
     
     val pendingReboot by RebootManager.pendingReboot.collectAsState()
 
-    val refreshStatus = {
-        rootStatus = RootUtils.requestRootAccess()
-        moduleInstalled = RootUtils.isModuleInstalled()
+    // Requesting root spawns a shell, and isModuleInstalled() stats a path
+    // through su, so probing either one blocks for as long as a su prompt
+    // takes. Running that on every route change put the cost in front of each
+    // tab switch, so the root and module probes are polled on an IO dispatcher
+    // instead of fired per click, and only the preference reads — which are
+    // plain SharedPreferences — stay synchronous.
+    val refreshPrefs = {
         isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
         useScrollAnimation = settingsPrefs.getBoolean("use_scroll_animation", false)
-        coroutineScope.launch { RebootManager.refreshModuleFlag() }
     }
-    
-    LaunchedEffect(rawRoute, pagerState.currentPage) {
-        refreshStatus()
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            withContext(Dispatchers.IO) {
+                rootStatus = RootUtils.requestRootAccess()
+                moduleInstalled = RootUtils.isModuleInstalled()
+            }
+            refreshPrefs()
+            delay(2000)
+        }
     }
     
     val installingDialog = rememberInstallingDialog()
@@ -487,9 +498,9 @@ fun MainScreen(fromTileType: String? = null) {
                                     }
                                 } else {
                                     navController.navigate("main") {
-                                        popUpTo(navController.graph.startDestinationId) { saveState = false }
+                                        popUpTo(navController.graph.startDestinationId) { saveState = true }
                                         launchSingleTop = true
-                                        restoreState = false
+                                        restoreState = true
                                     }
                                     coroutineScope.launch {
                                         pagerState.scrollToPage(targetIndex)
@@ -499,9 +510,9 @@ fun MainScreen(fromTileType: String? = null) {
                                 // Logic klik untuk Normal NavHost (Kode 1)
                                 if (rawRoute != route) {
                                     navController.navigate(route) {
-                                        popUpTo(navController.graph.startDestinationId) { saveState = false }
+                                        popUpTo(navController.graph.startDestinationId) { saveState = true }
                                         launchSingleTop = true
-                                        restoreState = false
+                                        restoreState = true
                                     }
                                 }
                             }
