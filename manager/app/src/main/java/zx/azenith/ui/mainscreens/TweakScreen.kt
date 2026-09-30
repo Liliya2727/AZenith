@@ -161,9 +161,14 @@ fun TweakScreen(
         }
     }
 
+    // .exec() is a blocking su round-trip. Left on the main thread it stalls the
+    // first frame of the Tweaks tab, which is exactly when this screen is
+    // entered, so move it off and let the row render immediately.
     var isFullModeEnabled by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        isFullModeEnabled = DebugUtils.isFullModeEnabled()
+        isFullModeEnabled = withContext(Dispatchers.IO) {
+            DebugUtils.isFullModeEnabled()
+        }
     }
 
     LaunchedEffect(Unit) {

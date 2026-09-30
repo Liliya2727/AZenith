@@ -130,6 +130,24 @@ data class NavItem(
     val gradientColors: List<Color> = listOf(Color.Transparent, Color.Transparent)
 )
 
+/** Tab order, used to work out which way a tab switch should slide. */
+private val bottomBarOrder = listOf("home", "applist", "tweaks", "settings")
+
+/**
+ * -1 when moving toward the start of [bottomBarOrder], 1 toward the end, 0 when
+ * the move is not a tab switch. Drives the direction of the shared-axis
+ * transition so switching left feels different from switching right.
+ */
+private fun tabDirection(from: String?, to: String?): Int {
+    val a = bottomBarOrder.indexOf(from ?: "")
+    val b = bottomBarOrder.indexOf(to ?: "")
+    return when {
+        a < 0 || b < 0 || a == b -> 0
+        b > a -> 1
+        else -> -1
+    }
+}
+
 /**
  * Extension function for smooth scrolling pager
  */
@@ -364,11 +382,21 @@ fun MainScreen(fromTileType: String? = null) {
                                 animationSpec = tween(300, easing = FastOutSlowInEasing)
                             ) + fadeIn(animationSpec = tween(300))
                         } else {
-                            fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
-                            scaleIn(
-                                initialScale = 0.96f,
-                                animationSpec = tween(220, easing = FastOutSlowInEasing)
+                            // A 4% scale is invisible at 220 ms, so a tab switch read
+                            // as an instant cut. Slide along the shared axis instead,
+                            // in the direction the tab sits relative to the current
+                            // one, and keep it under ~180 ms so it stays responsive.
+                            val dir = tabDirection(
+                                initialState.destination.route,
+                                targetState.destination.route
                             )
+                            val offset = { fullWidth: Int ->
+                                if (dir >= 0) fullWidth / 12 else -fullWidth / 12
+                            }
+                            slideInHorizontally(
+                                initialOffsetX = offset,
+                                animationSpec = tween(180, easing = FastOutSlowInEasing)
+                            ) + fadeIn(animationSpec = tween(120))
                         }
                     },
                     exitTransition = {
@@ -376,11 +404,21 @@ fun MainScreen(fromTileType: String? = null) {
                             fadeOut(animationSpec = tween(700))
                         } else if (initialState.destination.route in bottomBarRoutes && targetState.destination.route !in bottomBarRoutes) {
                             slideOutHorizontally(
-                                targetOffsetX = { fullWidth -> -(fullWidth / 4) },
+                                targetOffsetX = { fullWidth: Int -> -(fullWidth / 4) },
                                 animationSpec = tween(300, easing = FastOutSlowInEasing)
                             ) + fadeOut(animationSpec = tween(300))
                         } else {
-                            fadeOut(animationSpec = tween(150))
+                            val dir = tabDirection(
+                                initialState.destination.route,
+                                targetState.destination.route
+                            )
+                            val offset = { fullWidth: Int ->
+                                if (dir >= 0) -fullWidth / 12 else fullWidth / 12
+                            }
+                            slideOutHorizontally(
+                                targetOffsetX = offset,
+                                animationSpec = tween(180, easing = FastOutSlowInEasing)
+                            ) + fadeOut(animationSpec = tween(120))
                         }
                     },
                     popEnterTransition = {
