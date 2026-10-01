@@ -21,16 +21,6 @@ import android.os.Build
 import org.json.JSONObject
 import kotlin.math.abs
 
-fun getSystemProperty(key: String, defaultValue: String = ""): String {
-    return try {
-        val clazz = Class.forName("android.os.SystemProperties")
-        val method = clazz.getDeclaredMethod("get", String::class.java, String::class.java)
-        method.invoke(null, key, defaultValue) as String
-    } catch (e: Exception) {
-        defaultValue
-    }
-}
-
 private fun readSysFile(path: String): String {
     return try {
         java.io.File(path).readText().trim()
@@ -60,11 +50,11 @@ private const val MIN_FUZZY_LEN = 5
 
 fun getChipsetName(context: Context): String {
 
-    val boardPlatform = getSystemProperty("ro.board.platform").trim()
+    val boardPlatform = PropertyUtils.get("ro.board.platform").trim()
     val hardware      = Build.HARDWARE.trim()
     val board         = Build.BOARD.trim()
-    val chipname      = getSystemProperty("ro.hardware.chipname").trim()
-    val mtPlatform    = getSystemProperty("ro.mediatek.platform").trim()
+    val chipname      = PropertyUtils.get("ro.hardware.chipname").trim()
+    val mtPlatform    = PropertyUtils.get("ro.mediatek.platform").trim()
 
     val socMachine = readSysFile("/sys/devices/soc0/machine")
     val socFamily  = readSysFile("/sys/devices/soc0/family")
@@ -148,9 +138,9 @@ fun getChipsetVendor(context: Context): String {
     }
 
     val socModel      = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Build.SOC_MODEL.lowercase() else ""
-    val boardPlatform = getSystemProperty("ro.board.platform").lowercase()
-    val chipname      = getSystemProperty("ro.hardware.chipname").lowercase()
-    val mtPlatform    = getSystemProperty("ro.mediatek.platform").lowercase()
+    val boardPlatform = PropertyUtils.get("ro.board.platform").lowercase()
+    val chipname      = PropertyUtils.get("ro.hardware.chipname").lowercase()
+    val mtPlatform    = PropertyUtils.get("ro.mediatek.platform").lowercase()
 
     return when {
         socModel.startsWith("mt")      ||
