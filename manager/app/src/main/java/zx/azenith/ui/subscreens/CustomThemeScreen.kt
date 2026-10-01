@@ -142,13 +142,6 @@ fun ColorPaletteScreen(navController: NavController) {
     var isBlurEnabled by rememberSaveable {
         mutableStateOf(prefs.getBoolean("expressive_blur_ui", false))
     }
-
-    var isUiLoaded by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(300)
-        isUiLoaded = true
-    }
-    
     
     var useScrollAnimation by rememberSaveable {
         mutableStateOf(prefs.getBoolean("use_scroll_animation", false))
@@ -302,11 +295,7 @@ fun ColorPaletteScreen(navController: NavController) {
         },
         containerColor = MaterialTheme.colorScheme.surface
     ) { innerPadding -> 
-        if (!isUiLoaded) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                LoadingIndicator(modifier = Modifier.size(32.dp))
-            }
-        } else if (isLandscape) {
+        if (isLandscape) {
             Row(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1026,52 +1015,26 @@ private fun ThemePreviewCard(keyColor: Int, colorSpec: ColorSpec.SpecVersion, is
 
 @Composable
 private fun ColorButton(color: Color, isSelected: Boolean, isDark: Boolean, colorSpec: ColorSpec.SpecVersion, onClick: () -> Unit) {
-    val context = LocalContext.current
-    
-    val targetColorScheme = if (color == Color.Unspecified) {
-        val baseScheme = when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
-                if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            else ->
-                if (isDark) darkColorScheme() else expressiveLightColorScheme()
-        }
-        rememberDynamicColorScheme(
-            seedColor = baseScheme.primary,
-            isDark = isDark,
-            specVersion = colorSpec,
-            primary = baseScheme.primary,
-            secondary = baseScheme.secondary,
-            tertiary = baseScheme.tertiary,
-            neutral = baseScheme.surface,
-            neutralVariant = baseScheme.surfaceVariant,
-            error = baseScheme.error
-        )
-    } else {
-        rememberDynamicColorScheme(
-            seedColor = color, 
-            isDark = isDark, 
-            specVersion = colorSpec
-        )
-    }
-
-    val colorScheme = targetColorScheme
+    val pContainer = if (color == Color.Unspecified) MaterialTheme.colorScheme.primaryContainer else color
+    val tContainer = if (color == Color.Unspecified) MaterialTheme.colorScheme.tertiaryContainer else color.copy(alpha = 0.5f)
+    val sContainer = MaterialTheme.colorScheme.surfaceContainer
 
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
-        color = colorScheme.surfaceContainer, 
+        color = sContainer, 
         modifier = Modifier.size(72.dp) 
     ) {
         Box(contentAlignment = Alignment.Center) {
             Canvas(modifier = Modifier.size(48.dp)) {
                 drawArc(
-                    color = colorScheme.primaryContainer,
+                    color = pContainer,
                     startAngle = 180f,
                     sweepAngle = 180f,
                     useCenter = true
                 )
                 drawArc(
-                    color = colorScheme.tertiaryContainer,
+                    color = tContainer,
                     startAngle = 0f,
                     sweepAngle = 180f,
                     useCenter = true

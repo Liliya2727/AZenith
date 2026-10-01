@@ -138,7 +138,9 @@ fun ColorSchemeSettings(navController: NavController) {
     }
 
     LaunchedEffect(Unit) {
-        val rawProp = PropertyUtils.get("persist.sys.azenithconf.schemeconfig")
+        val rawProp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            PropertyUtils.get("persist.sys.azenithconf.schemeconfig")
+        }
         if (rawProp.isNotEmpty()) {
             val parts = rawProp.split(" ").mapNotNull { it.toFloatOrNull() }
             if (parts.size >= 4) {
@@ -149,7 +151,6 @@ fun ColorSchemeSettings(navController: NavController) {
             }
         }
         
-        kotlinx.coroutines.delay(300)
         isLoading = false
         
         // Auto-detect preset on load
