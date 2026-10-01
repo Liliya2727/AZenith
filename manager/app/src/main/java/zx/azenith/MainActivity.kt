@@ -427,7 +427,8 @@ fun MainScreen(fromTileType: String? = null) {
                     composable("main") {
                         HorizontalPager(
                             state = pagerState,
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
+                            beyondViewportPageCount = 3
                         ) { page ->
                             when (pagerRoutes[page]) {
                                 "home" -> HomeScreen()
