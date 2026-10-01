@@ -47,7 +47,12 @@ import zx.azenith.ExpressiveShapes
  * lands. That loses the per-role independent timing, which was not visible,
  * and keeps the cross-fade itself.
  */
-@Composable
+
+enum class ColorMode(val value: Int) {
+    SYSTEM(3), LIGHT(4), DARK(5), DARKAMOLED(6);
+
+    companion object {
+        fun fromValue(value: Int) = entries.find { it.value == value } ?: SYSTEM
     }
 
     fun getDarkThemeValue(systemDarkTheme: Boolean) = when (this) {
@@ -131,6 +136,8 @@ fun AZenithTheme(
             isAmoled = amoledMode,
             specVersion = colorSpec
         )
+    }
+
     val view = androidx.compose.ui.platform.LocalView.current
     
     LaunchedEffect(darkTheme) {

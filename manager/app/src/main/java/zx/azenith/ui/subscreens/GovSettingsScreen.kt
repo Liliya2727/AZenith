@@ -92,8 +92,11 @@ fun GovSettings(
     val listState = rememberLazyListState()
     val colorScheme = MaterialTheme.colorScheme
     val snackbarHostState = remember { SnackbarHostState() }
+    var isReady by remember { mutableStateOf(false) }
     
     LaunchedEffect(Unit) {
+        delay(200) // Allow navigation slide animation to finish smoothly
+        isReady = true
         if (!viewModel.isUiLoaded) {
             viewModel.loadAllConfiguration(context)
         }
@@ -137,7 +140,7 @@ fun GovSettings(
 
             item { TweaksSectionTitle(stringResource(R.string.section_CPUSettings)) }
             item {
-                if (viewModel.defaultGovIndex != null && 
+                if (isReady && viewModel.defaultGovIndex != null && 
                     viewModel.powersaveGovIndex != null && 
                     viewModel.performanceGovIndex != null && 
                     viewModel.freqOffsetIndex != null) {
@@ -190,7 +193,7 @@ fun GovSettings(
 
             item { TweaksSectionTitle(stringResource(R.string.io_settings)) }
             item {
-                if (viewModel.availableIOSchedulers == null) {
+                if (!isReady || viewModel.availableIOSchedulers == null) {
                     SectionLoadingIndicator()
                 } else if (viewModel.availableIOSchedulers!!.isNotEmpty()) {
                     if (viewModel.balancedIOIndex != null && 
@@ -242,7 +245,7 @@ fun GovSettings(
             if (viewModel.isMaliGpuAvailable == true) {
                 item { TweaksSectionTitle(text = stringResource(R.string.section_mali_gpu)) }
                 item {
-                    if (viewModel.availableMaliGovernors == null) {
+                    if (!isReady || viewModel.availableMaliGovernors == null) {
                         SectionLoadingIndicator()
                     } else if (viewModel.availableMaliGovernors!!.isNotEmpty()) {
                         if (viewModel.balancedMaliGovIndex != null && 

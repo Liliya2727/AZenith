@@ -535,8 +535,9 @@ fun ExpressiveDropdownItem(
         }
     )
 
-    if (presentation == DropdownPresentation.Sheet && expanded && hasItems) {
+    if (presentation == DropdownPresentation.Sheet && hasItems) {
         OptionPickerSheet(
+            show = expanded,
             title = title,
             subtitle = summary,
             items = items,
@@ -619,9 +620,9 @@ private fun OptionRow(
  * a chosen list item — and the check mark sits on the trailing edge, which
  * keeps the text column aligned with the rest of the settings list.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun OptionPickerSheet(
+    show: Boolean,
     title: String,
     subtitle: String?,
     items: List<String>,
@@ -630,25 +631,9 @@ private fun OptionPickerSheet(
     onSelect: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val interactionSource = remember { MutableInteractionSource() }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        shape = ExpressiveShapes.extraLarge,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.4f),
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .padding(vertical = 12.dp)
-                    .width(36.dp)
-                    .height(4.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
-            )
-        },
+    CustomBottomSheet(
+        visible = show,
+        onDismiss = onDismiss
     ) {
         Column(
             modifier = Modifier

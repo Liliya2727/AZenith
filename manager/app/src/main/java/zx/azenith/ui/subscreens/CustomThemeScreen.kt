@@ -80,7 +80,6 @@ import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.theme.ColorMode
 import zx.azenith.ui.theme.ThemeController
-import zx.azenith.ui.theme.animateColorSchemeAsState
 import zx.azenith.ui.util.clearHeaderImage
 import zx.azenith.ui.util.getBannerGradientAlpha
 import zx.azenith.ui.util.getHeaderImage
@@ -1058,20 +1057,20 @@ private fun ColorButton(color: Color, isSelected: Boolean, isDark: Boolean, colo
                     Box(
                         modifier = Modifier
                             .size(56.dp)
-                            .border(2.dp, colorScheme.primary, CircleShape),
+                            .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
                                 .size(24.dp)
                                 .clip(CircleShape)
-                                .background(colorScheme.primary, CircleShape),
+                                .background(MaterialTheme.colorScheme.primary, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Check,
                                 contentDescription = null,
-                                tint = colorScheme.onPrimary,
+                                tint = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -1086,7 +1085,7 @@ private fun ColorButton(color: Color, isSelected: Boolean, isDark: Boolean, colo
                     Box(
                         modifier = Modifier
                             .size(20.dp)
-                            .background(colorScheme.primary, CircleShape)
+                            .background(MaterialTheme.colorScheme.primary, CircleShape)
                     )
                 }
             }
