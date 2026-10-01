@@ -130,31 +130,15 @@ data class NavItem(
     val gradientColors: List<Color> = listOf(Color.Transparent, Color.Transparent)
 )
 
-/** Tab order, used to work out which way a tab switch should slide. */
-private val bottomBarOrder = listOf("home", "applist", "tweaks", "settings")
 
-/**
- * -1 when moving toward the start of [bottomBarOrder], 1 toward the end, 0 when
- * the move is not a tab switch. Drives the direction of the shared-axis
- * transition so switching left feels different from switching right.
- */
-private fun tabDirection(from: String?, to: String?): Int {
-    val a = bottomBarOrder.indexOf(from ?: "")
-    val b = bottomBarOrder.indexOf(to ?: "")
-    return when {
-        a < 0 || b < 0 || a == b -> 0
-        b > a -> 1
-        else -> -1
-    }
-}
 
 /**
  * Extension function for smooth scrolling pager
  */
 suspend fun PagerState.smoothScrollToPage(
     targetPage: Int,
-    perPageDurationMs: Int = 220,
-    maxDurationMs: Int = 650
+    perPageDurationMs: Int = 160,
+    maxDurationMs: Int = 380
 ) {
     val distance = targetPage - currentPage
     if (distance == 0 && currentPageOffsetFraction == 0f) return
@@ -187,20 +171,13 @@ fun MainScreen(fromTileType: String? = null) {
     val context = LocalContext.current
     val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
     
-    // STATE: Apakah scroll animation nyala atau nggak? (Default false)
-    var useScrollAnimation by remember { mutableStateOf(settingsPrefs.getBoolean("use_scroll_animation", false)) }
-
     val pagerRoutes = remember { listOf("home", "applist", "tweaks", "settings") }
     val pagerState = rememberPagerState(initialPage = 0) { pagerRoutes.size }
     
-    // Bottom bar routes dinamis tergantung setting
-    val bottomBarRoutes = remember(useScrollAnimation) {
-        if (useScrollAnimation) setOf("main") 
-        else setOf("home", "applist", "tweaks", "settings")
-    }
+    val bottomBarRoutes = remember { setOf("main") }
 
-    LaunchedEffect(fromTileType, useScrollAnimation) {
-        val rootNav = if (useScrollAnimation) "main" else "home"
+    LaunchedEffect(fromTileType) {
+        val rootNav = "main"
         when (fromTileType) {
             "bypass" -> {
                 navController.navigate("bypasschg") {
@@ -224,7 +201,7 @@ fun MainScreen(fromTileType: String? = null) {
     val isOnMainPager = rawRoute == "main"
     
     // Evaluasi current route untuk highlight di BottomNavBar
-    val currentRoute = if (useScrollAnimation && isOnMainPager) {
+    val currentRoute = if (isOnMainPager) {
         pagerRoutes[pagerState.currentPage]
     } else {
         rawRoute
@@ -266,8 +243,8 @@ fun MainScreen(fromTileType: String? = null) {
     // instead of fired per click, and only the preference reads — which are
     // plain SharedPreferences — stay synchronous.
     val refreshPrefs = {
-        isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
-        useScrollAnimation = settingsPrefs.getBoolean("use_scroll_animation", false)
+        val newBlur = settingsPrefs.getBoolean("expressive_blur_ui", false)
+        if (isBlurEnabled != newBlur) isBlurEnabled = newBlur
     }
 
     LaunchedEffect(Unit) {
@@ -362,9 +339,7 @@ fun MainScreen(fromTileType: String? = null) {
                 NavHost(
                     navController = navController,
                     // Penentuan start destination dinamis
-                    startDestination = if (hasCompletedGetStarted) {
-                        if (useScrollAnimation) "main" else "home"
-                    } else "get_started",
+                    startDestination = if (hasCompletedGetStarted) "main" else "get_started",
                     
                     modifier = Modifier
                         .fillMaxSize()
@@ -382,21 +357,7 @@ fun MainScreen(fromTileType: String? = null) {
                                 animationSpec = tween(300, easing = FastOutSlowInEasing)
                             ) + fadeIn(animationSpec = tween(300))
                         } else {
-                            // A 4% scale is invisible at 220 ms, so a tab switch read
-                            // as an instant cut. Slide along the shared axis instead,
-                            // in the direction the tab sits relative to the current
-                            // one, and keep it under ~180 ms so it stays responsive.
-                            val dir = tabDirection(
-                                initialState.destination.route,
-                                targetState.destination.route
-                            )
-                            val offset = { fullWidth: Int ->
-                                if (dir >= 0) fullWidth / 12 else -fullWidth / 12
-                            }
-                            slideInHorizontally(
-                                initialOffsetX = offset,
-                                animationSpec = tween(180, easing = FastOutSlowInEasing)
-                            ) + fadeIn(animationSpec = tween(120))
+                            fadeIn(animationSpec = tween(300))
                         }
                     },
                     exitTransition = {
@@ -408,17 +369,7 @@ fun MainScreen(fromTileType: String? = null) {
                                 animationSpec = tween(300, easing = FastOutSlowInEasing)
                             ) + fadeOut(animationSpec = tween(300))
                         } else {
-                            val dir = tabDirection(
-                                initialState.destination.route,
-                                targetState.destination.route
-                            )
-                            val offset = { fullWidth: Int ->
-                                if (dir >= 0) -fullWidth / 12 else fullWidth / 12
-                            }
-                            slideOutHorizontally(
-                                targetOffsetX = offset,
-                                animationSpec = tween(180, easing = FastOutSlowInEasing)
-                            ) + fadeOut(animationSpec = tween(120))
+                            fadeOut(animationSpec = tween(300))
                         }
                     },
                     popEnterTransition = {
@@ -486,12 +437,7 @@ fun MainScreen(fromTileType: String? = null) {
                             }
                         }
                     }
-                    
-                    // Route Normal (Kode 1)
-                    composable("home") { HomeScreen() }
-                    composable("applist") { ApplistScreen(navController) }
-                    composable("tweaks") { TweakScreen(navController) }
-                    composable("settings") { SettingsScreen(navController) }
+
 
                     // Subscreens
                     composable("color_palette") { ColorPaletteScreen(navController) }
@@ -525,33 +471,21 @@ fun MainScreen(fromTileType: String? = null) {
                         hazeState = hazeState,
                         modifier = Modifier.align(Alignment.BottomCenter),
                         onItemSelected = { route ->
-                            if (useScrollAnimation) {
-                                // Logic klik untuk Pager (Kode 2)
-                                val targetIndex = pagerRoutes.indexOf(route)
-                                if (isOnMainPager) {
-                                    if (pagerState.currentPage != targetIndex) {
-                                        coroutineScope.launch {
-                                            pagerState.smoothScrollToPage(targetIndex)
-                                        }
-                                    }
-                                } else {
-                                    navController.navigate("main") {
-                                        popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
+                            val targetIndex = pagerRoutes.indexOf(route)
+                            if (isOnMainPager) {
+                                if (pagerState.currentPage != targetIndex) {
                                     coroutineScope.launch {
-                                        pagerState.scrollToPage(targetIndex)
+                                        pagerState.smoothScrollToPage(targetIndex)
                                     }
                                 }
                             } else {
-                                // Logic klik untuk Normal NavHost (Kode 1)
-                                if (rawRoute != route) {
-                                    navController.navigate(route) {
-                                        popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
+                                navController.navigate("main") {
+                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                                coroutineScope.launch {
+                                    pagerState.scrollToPage(targetIndex)
                                 }
                             }
                         }
