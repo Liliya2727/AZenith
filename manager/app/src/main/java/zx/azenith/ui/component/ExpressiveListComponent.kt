@@ -78,6 +78,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
@@ -620,7 +621,20 @@ private fun OptionPickerSheet(
     if (!show) return
 
     val sheetState = rememberModalBottomSheetState()
+    val listState = rememberLazyListState()
     val shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+
+    // A picker whose current value is far down the list opens showing the top
+    // of the options instead, so the row the user is about to change looks
+    // unselected. Scroll the selection into view on first layout, anchored a
+    // little above centre so it is not flush against the top edge. Guarded on
+    // the index being in range: items can be empty while a governor list is
+    // still being read from sysfs.
+    LaunchedEffect(selectedIndex) {
+        if (selectedIndex in items.indices) {
+            listState.scrollToItem(selectedIndex, scrollOffset = -80)
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -680,6 +694,7 @@ private fun OptionPickerSheet(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(max = 420.dp)
