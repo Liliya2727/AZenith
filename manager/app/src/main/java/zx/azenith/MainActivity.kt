@@ -132,38 +132,6 @@ data class NavItem(
 
 
 
-/**
- * Extension function for smooth scrolling pager
- */
-suspend fun PagerState.smoothScrollToPage(
-    targetPage: Int,
-    perPageDurationMs: Int = 160,
-    maxDurationMs: Int = 380
-) {
-    val distance = targetPage - currentPage
-    if (distance == 0 && currentPageOffsetFraction == 0f) return
-
-    val pageSizePx = (layoutInfo.pageSize + layoutInfo.pageSpacing).toFloat()
-    if (pageSizePx <= 0f) {
-        animateScrollToPage(targetPage)
-        return
-    }
-
-    val totalOffsetPx = (distance - currentPageOffsetFraction) * pageSizePx
-    val duration = (perPageDurationMs * abs(distance)).coerceIn(perPageDurationMs, maxDurationMs)
-
-    var previous = 0f
-    scroll(scrollPriority = MutatePriority.Default) {
-        Animatable(0f).animateTo(
-            targetValue = totalOffsetPx,
-            animationSpec = tween(durationMillis = duration, easing = FastOutSlowInEasing)
-        ) {
-            scrollBy(value - previous)
-            previous = value
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(fromTileType: String? = null) {
@@ -476,7 +444,7 @@ fun MainScreen(fromTileType: String? = null) {
                             if (isOnMainPager) {
                                 if (pagerState.currentPage != targetIndex) {
                                     coroutineScope.launch {
-                                        pagerState.smoothScrollToPage(targetIndex)
+                                        pagerState.animateScrollToPage(targetIndex)
                                     }
                                 }
                             } else {
