@@ -23,6 +23,7 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.os.Parcelable
+import android.os.SystemClock
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +36,7 @@ import com.topjohnwu.superuser.io.SuFileInputStream
 import java.text.Collator
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.parcelize.Parcelize
@@ -46,6 +48,12 @@ class ApplistViewmodel : ViewModel() {
 
     companion object {
         private const val TAG = "ApplistViewmodel"
+
+        // A pull-to-refresh that finishes faster than this is held open until
+        // it reaches the floor. Package enumeration is usually quicker than the
+        // spinner takes to appear, so without a floor the indicator appears and
+        // clears in the same frame and the gesture looks like it did nothing.
+        private const val MIN_REFRESH_VISIBLE_MS = 1000L
         private val appsLock = Any()
         var apps by mutableStateOf<List<AppInfo>>(emptyList())
 
@@ -123,6 +131,7 @@ class ApplistViewmodel : ViewModel() {
 
         viewModelScope.launch(Dispatchers.IO) {
             isRefreshing = true
+            val refreshStarted = SystemClock.elapsedRealtime()
             val pm = context.packageManager
 
             val enabledList = getEnabledPackages()
@@ -150,6 +159,13 @@ class ApplistViewmodel : ViewModel() {
                 synchronized(appsLock) {
                     apps = loadedApps
                 }
+                // Hold the spinner for a beat even when the rebuild was faster
+                // than that. A pull-to-refresh that dismisses in the same frame
+                // it appears reads as a dropped gesture rather than a refresh,
+                // so the result is given a minimum on-screen time.
+                val elapsed = SystemClock.elapsedRealtime() - refreshStarted
+                val remaining = MIN_REFRESH_VISIBLE_MS - elapsed
+                if (remaining > 0) delay(remaining)
                 isRefreshing = false
             }
         }
