@@ -620,6 +620,7 @@ private fun OptionRow(
  * a chosen list item — and the check mark sits on the trailing edge, which
  * keeps the text column aligned with the rest of the settings list.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun OptionPickerSheet(
     show: Boolean,
@@ -631,17 +632,48 @@ private fun OptionPickerSheet(
     onSelect: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    CustomBottomSheet(
-        visible = show,
-        onDismiss = onDismiss
+    // ModalBottomSheet is a real Dialog window, so the window manager lays it out
+    // against the display instead of the caller's slot. A sheet hand-assembled
+    // from AnimatedVisibility + fillMaxSize() -- or from a Popup -- inherits the
+    // caller's constraints, and for a list row that is the row itself: the scrim
+    // and the options get measured into the row and the sheet reads as inline with
+    // the toggle rather than overlaying the app. The Popup variant was tried and
+    // does not fix it either -- a Popup is still positioned by its anchor.
+    if (!show) return
+
+    val sheetState = rememberModalBottomSheetState()
+    val shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = Color.Transparent,
+        scrimColor = Color.Black.copy(alpha = 0.42f),
+        shape = shape,
+        dragHandle = null,
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) }
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .clip(shape)
+                .background(MaterialTheme.colorScheme.surfaceContainer)
                 .padding(horizontal = 16.dp)
                 .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
+            // Drawn rather than Material's own dragHandle: the stock handle is a
+            // pill sized for the stock sheet shape and does not sit right against
+            // this sheet's wider corner radius.
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(top = 12.dp, bottom = 4.dp)
+                    .width(32.dp)
+                    .height(4.dp)
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f), CircleShape)
+            )
+
             // Title and subtitle stay outside the scrolling list so they do not
             // scroll away with the options.
             Text(
@@ -659,11 +691,11 @@ private fun OptionPickerSheet(
                 )
             }
 
-            // A long governor or scheduler list is taller than the sheet, so
-            // the rows live in their own lazy column rather than a Column that
-            // measures every child up front. The weight lets the list take
-            // whatever height is left under the title, and the sheet's own
-            // height cap is what keeps that from being unbounded.
+            // A long governor or scheduler list is taller than the sheet, so the
+            // rows live in their own lazy column rather than a Column that measures
+            // every child up front. heightIn caps the list at the point where the
+            // whole set is still scannable, and -- unlike the weight(1f, fill=false)
+            // this replaced -- needs no unbounded parent constraint to resolve.
             Surface(
                 shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -672,7 +704,7 @@ private fun OptionPickerSheet(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f, fill = false)
+                        .heightIn(max = 420.dp)
                         .padding(vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
