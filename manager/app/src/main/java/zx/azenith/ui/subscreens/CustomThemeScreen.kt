@@ -354,21 +354,21 @@ fun ColorPaletteScreen(navController: NavController) {
                         onColorSpecChange = { currentColorSpec = it },
                         onBannerEnabledChange = { 
                             isBannerEnabled = it 
-                            context.setBannerImageEnabled(it)
+                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { context.setBannerImageEnabled(it) }
                         },
                         onBannerGradientAlphaChange = {
                             bannerGradientAlpha = it
-                            context.setBannerGradientAlpha(it)
+                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { context.setBannerGradientAlpha(it) }
                         },
                         onBannerUpdated = { customBannerUri = it },
                         onBlurEnabledChange = {
                             isBlurEnabled = it
-                            prefs.edit { putBoolean("expressive_blur_ui", it) }
+                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putBoolean("expressive_blur_ui", it).commit() }
                         },
                         useScrollAnimation = useScrollAnimation,
                         onUseScrollAnimationChange = {
                             useScrollAnimation = it
-                            prefs.edit { putBoolean("use_scroll_animation", it) }
+                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putBoolean("use_scroll_animation", it).commit() }
                         },
                         imagePicker = imagePicker,
                         context = context,
@@ -411,20 +411,20 @@ fun ColorPaletteScreen(navController: NavController) {
                     onColorSpecChange = { currentColorSpec = it },
                     onBannerEnabledChange = { 
                         isBannerEnabled = it 
-                        context.setBannerImageEnabled(it)
+                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { context.setBannerImageEnabled(it) }
                     },
                     onBannerGradientAlphaChange = {
                         bannerGradientAlpha = it
-                        context.setBannerGradientAlpha(it)
+                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { context.setBannerGradientAlpha(it) }
                     },
                     onBlurEnabledChange = {
                         isBlurEnabled = it
-                        prefs.edit { putBoolean("expressive_blur_ui", it) }
+                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putBoolean("expressive_blur_ui", it).commit() }
                     },
                     useScrollAnimation = useScrollAnimation,
                     onUseScrollAnimationChange = {
                         useScrollAnimation = it
-                        prefs.edit { putBoolean("use_scroll_animation", it) }
+                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putBoolean("use_scroll_animation", it).commit() }
                     },
                     onBannerUpdated = { customBannerUri = it },
                     imagePicker = imagePicker,
@@ -498,7 +498,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                         colorSpec = currentColorSpec,
                         onClick = {
                             onKeyColorChange(0)
-                            prefs.edit { putInt("key_color", 0) }
+                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putInt("key_color", 0).commit() }
                         }
                     )
                 }
@@ -511,7 +511,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                         colorSpec = currentColorSpec,
                         onClick = {
                             onKeyColorChange(colorInt)
-                            prefs.edit { putInt("key_color", colorInt) }
+                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putInt("key_color", colorInt).commit() }
                         }
                     )
                 }
@@ -545,7 +545,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                         onCheckedChange = { checked ->
                             if (checked) {
                                 onColorModeChange(mode)
-                                prefs.edit { putInt("color_mode", mode.value) }
+                                coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putInt("color_mode", mode.value).commit() }
                             }
                         },
                         modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
@@ -810,7 +810,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                         onCheckedChange = { checked ->
                             if (checked) {
                                 onColorSpecChange(spec)
-                                prefs.edit { putString("color_spec", spec.name) }
+                                coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putString("color_spec", spec.name).commit() }
                             }
                         },
                         modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },

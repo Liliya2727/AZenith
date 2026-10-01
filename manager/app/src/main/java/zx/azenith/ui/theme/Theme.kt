@@ -50,7 +50,7 @@ import zx.azenith.ExpressiveShapes
 @Composable
 fun animateColorSchemeAsState(
     targetColorScheme: ColorScheme,
-    animationSpec: androidx.compose.animation.core.AnimationSpec<Float> = tween(400)
+    animationSpec: androidx.compose.animation.core.AnimationSpec<Float> = tween(200)
 ): ColorScheme {
     // Hold the scheme currently on screen alongside the one being switched to,
     // plus a single interpolation fraction. One Animatable drives the whole
@@ -213,11 +213,12 @@ fun AZenithTheme(
             seedColor = Color(themeState.keyColor),
             isDark = darkTheme,
             isAmoled = amoledMode,
-            specVersion = colorSpec,
+            specVersion = colorSpec
         )
     }
 
     val view = androidx.compose.ui.platform.LocalView.current
+    val animatedColorScheme = animateColorSchemeAsState(targetColorScheme = colorScheme)
     
     LaunchedEffect(darkTheme) {
         val window = (context as? Activity)?.window ?: return@LaunchedEffect
@@ -228,7 +229,7 @@ fun AZenithTheme(
     }
 
     MaterialExpressiveTheme(
-        colorScheme = colorScheme,
+        colorScheme = animatedColorScheme,
         typography = Typography,
         shapes = ExpressiveShapes,
         motionScheme = MotionScheme.expressive(),
