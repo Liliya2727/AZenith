@@ -94,6 +94,10 @@ fun BypassChargeCheckScreen(navController: NavController) {
 
     var activePath by remember { mutableStateOf("") }
     var availablePaths by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+    // availablePaths is empty both while the node scan is still running and when
+    // it genuinely finds nothing, and the two states show different content, so
+    // the scan needs its own flag rather than inferring from an empty list.
+    var isLoadingPaths by remember { mutableStateOf(true) }
     var isChargerConnected by remember { mutableStateOf(false) }
     
 
@@ -122,6 +126,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                 }
             withContext(Dispatchers.Main) {
                 availablePaths = parsedList
+                isLoadingPaths = false
                 onComplete?.invoke(parsedList)
             }
         }
@@ -422,7 +427,9 @@ fun BypassChargeCheckScreen(navController: NavController) {
             item { 
                 BypassCheckTitle(text = stringResource(R.string.str_available_nodes, availablePaths.size))
 
-                if (availablePaths.isEmpty()) {
+                if (isLoadingPaths) {
+                    SkeletonSettingsList(rowCount = 2)
+                } else if (availablePaths.isEmpty()) {
                     ExpressiveList(
                         content = listOf {
                             ExpressiveListItem(

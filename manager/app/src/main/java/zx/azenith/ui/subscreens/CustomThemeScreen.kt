@@ -46,6 +46,7 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -91,6 +92,12 @@ import zx.azenith.ui.util.setBannerGradientAlpha
 import zx.azenith.ui.util.setBannerImageEnabled
 import zx.azenith.ui.component.ZenithSlider
 
+
+/**
+ * Cache key for the wallpaper-derived swatch, which has no seed colour of its
+ * own. Real seeds are ARGB ints, so this cannot collide with one.
+ */
+private const val DYNAMIC_KEY = 0
 
 private val keyColorOptions = listOf(
     Color(0xFFF44336).toArgb(),
@@ -148,7 +155,7 @@ fun ColorPaletteScreen(navController: NavController) {
     }
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
-    
+
     val cropLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -283,6 +290,13 @@ fun ColorPaletteScreen(navController: NavController) {
     var savedKeyColor by remember { mutableIntStateOf(savedSettings.keyColor) }
     var savedColorSpec by remember { mutableStateOf(savedSettings.colorSpec) }
 
+    // One scheme cache for every swatch on the screen, so the accent row derives
+    // each scheme once for the whole screen rather than once per swatch. It is
+    // keyed on the spec, so changing the spec drops every entry.
+    val swatchSchemeCache = remember(currentColorSpec) {
+        mutableStateMapOf<Int, ColorScheme>()
+    }
+
     val hasPendingChanges = currentColorMode != savedColorMode ||
         currentKeyColor != savedKeyColor ||
         currentColorSpec != savedColorSpec
@@ -390,6 +404,7 @@ fun ColorPaletteScreen(navController: NavController) {
                         currentColorMode = currentColorMode,
                         currentKeyColor = currentKeyColor,
                         currentColorSpec = currentColorSpec,
+                        swatchSchemeCache = swatchSchemeCache,
                         isDark = isDark,
                         isBannerEnabled = isBannerEnabled,
                         bannerGradientAlpha = bannerGradientAlpha,
@@ -447,6 +462,7 @@ fun ColorPaletteScreen(navController: NavController) {
                     currentColorMode = currentColorMode,
                     currentKeyColor = currentKeyColor,
                     currentColorSpec = currentColorSpec,
+                    swatchSchemeCache = swatchSchemeCache,
                     isDark = isDark,
                     isBannerEnabled = isBannerEnabled,
                     isBlurEnabled = isBlurEnabled,
@@ -494,6 +510,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     currentColorMode: ColorMode,
     currentKeyColor: Int,
     currentColorSpec: ColorSpec.SpecVersion,
+    swatchSchemeCache: SnapshotStateMap<Int, ColorScheme>,
     isDark: Boolean,
     isBannerEnabled: Boolean,
     bannerGradientAlpha: Float,
@@ -548,6 +565,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                         isSelected = currentKeyColor == 0,
                         isDark = isDark,
                         colorSpec = currentColorSpec,
+                        schemeCache = swatchSchemeCache,
                         onClick = { onKeyColorChange(0) }
                     )
                 }
@@ -558,6 +576,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                         isSelected = currentKeyColor == colorInt,
                         isDark = isDark,
                         colorSpec = currentColorSpec,
+                        schemeCache = swatchSchemeCache,
                         onClick = { onKeyColorChange(colorInt) }
                     )
                 }
@@ -1065,36 +1084,53 @@ private fun ThemePreviewCard(keyColor: Int, colorSpec: ColorSpec.SpecVersion, is
 }
 
 @Composable
-private fun ColorButton(color: Color, isSelected: Boolean, isDark: Boolean, colorSpec: ColorSpec.SpecVersion, onClick: () -> Unit) {
+private fun ColorButton(
+    color: Color,
+    isSelected: Boolean,
+    isDark: Boolean,
+    colorSpec: ColorSpec.SpecVersion,
+    schemeCache: SnapshotStateMap<Int, ColorScheme>,
+    onClick: () -> Unit
+) {
     val context = LocalContext.current
 
     // Each swatch previews the scheme that choosing it would produce, so the
     // arc colours come from that preview scheme and not from the app theme,
     // which still holds the previously committed accent until Save.
+    //
+    // Deriving a scheme is a synchronous HCT quantisation. Doing it inline meant
+    // every visible swatch recomputed one on each recomposition, which is what
+    // made opening this screen and scrolling the swatch row stutter. The cache
+    // is keyed on the seed and the spec, so a scheme is derived once and every
+    // later composition of the same swatch is a map lookup.
     val targetColorScheme = if (color == Color.Unspecified) {
-        val baseScheme = when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
-                if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            else ->
-                if (isDark) darkColorScheme() else expressiveLightColorScheme()
+        schemeCache.getOrPut(DYNAMIC_KEY) {
+            val baseScheme = when {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+                    if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+                else ->
+                    if (isDark) darkColorScheme() else expressiveLightColorScheme()
+            }
+            rememberDynamicColorScheme(
+                seedColor = baseScheme.primary,
+                isDark = isDark,
+                specVersion = colorSpec,
+                primary = baseScheme.primary,
+                secondary = baseScheme.secondary,
+                tertiary = baseScheme.tertiary,
+                neutral = baseScheme.surface,
+                neutralVariant = baseScheme.surfaceVariant,
+                error = baseScheme.error
+            )
         }
-        rememberDynamicColorScheme(
-            seedColor = baseScheme.primary,
-            isDark = isDark,
-            specVersion = colorSpec,
-            primary = baseScheme.primary,
-            secondary = baseScheme.secondary,
-            tertiary = baseScheme.tertiary,
-            neutral = baseScheme.surface,
-            neutralVariant = baseScheme.surfaceVariant,
-            error = baseScheme.error
-        )
     } else {
-        rememberDynamicColorScheme(
-            seedColor = color,
-            isDark = isDark,
-            specVersion = colorSpec
-        )
+        schemeCache.getOrPut(color.toArgb()) {
+            rememberDynamicColorScheme(
+                seedColor = color,
+                isDark = isDark,
+                specVersion = colorSpec
+            )
+        }
     }
 
     val colorScheme = animateColorSchemeAsState(targetColorScheme)
@@ -1102,8 +1138,8 @@ private fun ColorButton(color: Color, isSelected: Boolean, isDark: Boolean, colo
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
-        color = colorScheme.surfaceContainer, 
-        modifier = Modifier.size(72.dp) 
+        color = colorScheme.surfaceContainer,
+        modifier = Modifier.size(72.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Canvas(modifier = Modifier.size(48.dp)) {

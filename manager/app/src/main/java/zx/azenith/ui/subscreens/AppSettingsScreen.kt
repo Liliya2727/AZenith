@@ -240,8 +240,28 @@ fun AppSettingsScreen(
             }
         
         
-            item { AppHeader(appDetails, packageName) }
-            
+            item {
+                // appDetails and the master switch are both derived from the
+                // per-app config, so the header is held back until it has loaded
+                // rather than rendering an empty screen first.
+                if (config == null) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(18.dp)
+                    ) {
+                        SkeletonBlock(
+                            modifier = Modifier
+                                .fillMaxWidth(0.45f)
+                                .height(20.dp)
+                                .padding(horizontal = 16.dp)
+                        )
+                        SkeletonSettingsList(rowCount = 3)
+                    }
+                } else {
+                    AppHeader(appDetails, packageName)
+                }
+            }
+
 
             item {
                 ExpressiveList(

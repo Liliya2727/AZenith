@@ -174,7 +174,9 @@ fun BypassChargeScreen(navController: NavController) {
                             )
                         }
                     )
-                } else if (bypassChgState != null) {
+                } else if (bypassChgState == null) {
+                    SkeletonSettingsList(rowCount = 1)
+                } else {
                     ExpressiveList(
                         content = listOf {
                             ExpressiveSwitchItem(
