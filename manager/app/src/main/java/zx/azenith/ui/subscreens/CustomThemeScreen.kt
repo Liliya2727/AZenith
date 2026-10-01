@@ -293,7 +293,7 @@ fun ColorPaletteScreen(navController: NavController) {
     var barPhase by remember { mutableStateOf(ThemeBarPhase.Idle) }
     LaunchedEffect(barPhase) {
         if (barPhase == ThemeBarPhase.Applied) {
-            kotlinx.coroutines.delay(900)
+            kotlinx.coroutines.delay(1400)
             barPhase = ThemeBarPhase.Idle
         }
     }
@@ -320,10 +320,12 @@ fun ColorPaletteScreen(navController: NavController) {
     }
 
     // The save is a preferences write plus a theme rebuild; the checkmark only
-    // appears once the new scheme is actually on screen.
+    // appears once the new scheme is actually on screen. The holds are sized so
+    // the morphing indicator is legible before it is replaced, and the tick has
+    // time to be read rather than flash past.
     LaunchedEffect(barPhase) {
         if (barPhase == ThemeBarPhase.Applying) {
-            kotlinx.coroutines.delay(450)
+            kotlinx.coroutines.delay(700)
             barPhase = ThemeBarPhase.Applied
         }
     }
@@ -479,6 +481,11 @@ fun ColorPaletteScreen(navController: NavController) {
                 )
             }
         }
+
+        // Sits on top of the scaffold so the box is centred over the whole
+        // screen rather than over the list. Non-blocking: the theme is already
+        // committed, so this only reports progress.
+        ThemeAppliedOverlay(phase = barPhase)
     }
 }
 

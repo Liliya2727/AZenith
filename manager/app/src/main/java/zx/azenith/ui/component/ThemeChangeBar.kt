@@ -29,6 +29,8 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -56,6 +58,84 @@ import zx.azenith.R
 enum class ThemeBarPhase { Idle, Applying, Applied }
 
 /**
+ * Centered confirmation box shown while a saved theme is being applied.
+ *
+ * The bar itself only carries a 20dp action button, which is too small to read
+ * as progress. This puts the same morphing [LoadingIndicator] at a size you can
+ * actually see, then swaps it for a check that draws itself before the box
+ * leaves.
+ *
+ * It does not block touches: the theme is already committed by the time this
+ * appears, and there is nothing to cancel.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun ThemeAppliedOverlay(
+    phase: ThemeBarPhase,
+    modifier: Modifier = Modifier
+) {
+    if (phase == ThemeBarPhase.Idle) return
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(tween(140)) + scaleIn(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                ),
+                initialScale = 0.7f
+            ),
+            exit = fadeOut(tween(180)) + scaleOut(tween(180), targetScale = 0.85f)
+        ) {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                tonalElevation = 6.dp,
+                shadowElevation = 12.dp
+            ) {
+                Box(
+                    modifier = Modifier.size(132.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AnimatedContent(
+                        targetState = phase,
+                        transitionSpec = {
+                            (fadeIn(tween(200)) + scaleIn(tween(260), initialScale = 0.4f))
+                                .togetherWith(
+                                    fadeOut(tween(140)) + scaleOut(tween(180), targetScale = 0.5f)
+                                )
+                        },
+                        label = "ThemeAppliedPhase"
+                    ) { state ->
+                        when (state) {
+                            ThemeBarPhase.Applying -> LoadingIndicator(
+                                modifier = Modifier.size(56.dp),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            // A plain tick pops in rather than reading as a
+                            // state change the user has to interpret.
+                            ThemeBarPhase.Applied -> Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = stringResource(R.string.theme_applied),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(56.dp)
+                            )
+                            ThemeBarPhase.Idle -> Unit
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
  * Floating confirmation bar for theme edits.
  *
  * Theme choices are staged rather than written straight to
@@ -63,11 +143,10 @@ enum class ThemeBarPhase { Idle, Applying, Applied }
  * can back out of it. The bar is the only place that commits.
  *
  * Phase motion:
- *  - [ThemeBarPhase.Applying] shows the same morphing
- *    [LoadingIndicator] the rest of the app uses while the write and the
- *    resulting recomposition land.
- *  - [ThemeBarPhase.Applied] swaps the spinner for a check that scales in,
- *    holds, then the bar dismisses itself via [appliedAutoDismissMs].
+ *  - [ThemeBarPhase.Applying] and [ThemeBarPhase.Applied] disable Save. The
+ *    progress itself is reported by [ThemeAppliedOverlay], which has room for
+ *    an indicator that is actually readable; the bar stays a Save/Discard
+ *    control and does not resize while the phase changes.
  *
  * The bar is always composed; only its visibility is animated, so the enter
  * and exit transitions have real content to grow and shrink.
@@ -79,8 +158,7 @@ fun ThemeChangeBar(
     phase: ThemeBarPhase,
     onSave: () -> Unit,
     onDiscard: () -> Unit,
-    modifier: Modifier = Modifier,
-    appliedAutoDismissMs: Long = 900L
+    modifier: Modifier = Modifier
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -120,37 +198,24 @@ fun ThemeChangeBar(
 
                 Button(
                     onClick = onSave,
+                    // Disabled for the length of the apply animation so the
+                    // write cannot be fired twice; the centered box is what the
+                    // user watches during that time.
                     enabled = phase == ThemeBarPhase.Idle,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
-                    // One slot, three states. The content key is the phase, so
-                    // each state gets its own transition instead of one
-                    // animation trying to serve all three.
-                    AnimatedContent(
-                        targetState = phase,
-                        transitionSpec = {
-                            (fadeIn(tween(180)) + scaleIn(tween(220), initialScale = 0.7f))
-                                .togetherWith(
-                                    fadeOut(tween(120)) + scaleOut(tween(160), targetScale = 0.7f)
-                                )
-                        },
-                        label = "ThemeBarAction"
-                    ) { state ->
-                        when (state) {
-                            ThemeBarPhase.Idle -> Text(stringResource(R.string.theme_save))
-                            ThemeBarPhase.Applying -> LoadingIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                            ThemeBarPhase.Applied -> Icon(
-                                imageVector = Icons.Filled.Check,
-                                contentDescription = stringResource(R.string.theme_applied)
-                            )
-                        }
-                    }
+                    // The spinner and the tick both live in the centered box,
+                    // where they are large enough to read. The button keeps a
+                    // stable width so the bar does not resize mid-animation.
+                    Text(
+                        text = stringResource(
+                            if (phase == ThemeBarPhase.Idle) R.string.theme_save
+                            else R.string.theme_apply_action
+                        )
+                    )
                 }
             }
         }
