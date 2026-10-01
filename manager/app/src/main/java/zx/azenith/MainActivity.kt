@@ -125,6 +125,17 @@ val ExpressiveShapes = Shapes(
     extraLarge = RoundedCornerShape(32.dp)
 )
 
+/**
+ * MD3 emphasized motion curves.
+ *
+ * Compose only ships FastOutSlowIn, LinearOutSlowIn and FastOutLinearIn, so
+ * the emphasized pair the MD3 motion spec defines for screen transitions is
+ * written out here from its cubic-beziers. Screen transitions still use
+ * easing and duration; spring physics is for component state changes.
+ */
+private val EmphasizedDecelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
+private val EmphasizedAccelerate = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
+
 data class NavItem(
     val route: String,
     val labelRes: Int,
@@ -323,12 +334,18 @@ fun MainScreen(fromTileType: String? = null) {
                         ),
                     enterTransition = {
                         if (initialState.destination.route == "get_started" && targetState.destination.route in bottomBarRoutes) {
-                            fadeIn(animationSpec = tween(700)) 
+                            fadeIn(animationSpec = tween(700))
                         } else if (targetState.destination.route !in bottomBarRoutes) {
+                            // Forward axis. MD3 moves the incoming screen
+                            // emphasis-decelerate (400ms) and the outgoing one
+                            // emphasis-accelerate (200ms) so the pair reads as
+                            // one movement rather than two independent slides.
+                            // A spring on the incoming offset leaves the
+                            // outgoing screen with nothing to hand off to.
                             slideInHorizontally(
-                                initialOffsetX = { fullWidth -> fullWidth },
-                                animationSpec = tween(300, easing = FastOutSlowInEasing)
-                            ) + fadeIn(animationSpec = tween(300))
+                                initialOffsetX = { fullWidth -> fullWidth / 4 },
+                                animationSpec = tween(400, easing = EmphasizedDecelerate)
+                            ) + fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate))
                         } else {
                             fadeIn(animationSpec = tween(300))
                         }
@@ -338,9 +355,9 @@ fun MainScreen(fromTileType: String? = null) {
                             fadeOut(animationSpec = tween(700))
                         } else if (initialState.destination.route in bottomBarRoutes && targetState.destination.route !in bottomBarRoutes) {
                             slideOutHorizontally(
-                                targetOffsetX = { fullWidth: Int -> -(fullWidth / 4) },
-                                animationSpec = tween(300, easing = FastOutSlowInEasing)
-                            ) + fadeOut(animationSpec = tween(300))
+                                targetOffsetX = { fullWidth: Int -> -(fullWidth / 8) },
+                                animationSpec = tween(200, easing = EmphasizedAccelerate)
+                            ) + fadeOut(animationSpec = tween(200, easing = EmphasizedAccelerate))
                         } else {
                             fadeOut(animationSpec = tween(300))
                         }
@@ -348,23 +365,23 @@ fun MainScreen(fromTileType: String? = null) {
                     popEnterTransition = {
                         if (initialState.destination.route !in bottomBarRoutes && targetState.destination.route in bottomBarRoutes) {
                             slideInHorizontally(
-                                initialOffsetX = { fullWidth -> -(fullWidth / 4) },
-                                animationSpec = tween(300, easing = FastOutSlowInEasing)
-                            ) + fadeIn(animationSpec = tween(300))
+                                initialOffsetX = { fullWidth -> -(fullWidth / 8) },
+                                animationSpec = tween(400, easing = EmphasizedDecelerate)
+                            ) + fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate))
                         } else {
-                            fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
+                            fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate)) +
                             scaleIn(
                                 initialScale = 0.96f,
-                                animationSpec = tween(220, easing = FastOutSlowInEasing)
+                                animationSpec = tween(400, easing = EmphasizedDecelerate)
                             )
                         }
                     },
                     popExitTransition = {
                         if (initialState.destination.route !in bottomBarRoutes) {
                             slideOutHorizontally(
-                                targetOffsetX = { fullWidth -> fullWidth },
-                                animationSpec = tween(300, easing = FastOutSlowInEasing)
-                            ) + fadeOut(animationSpec = tween(300))
+                                targetOffsetX = { fullWidth -> fullWidth / 4 },
+                                animationSpec = tween(200, easing = EmphasizedAccelerate)
+                            ) + fadeOut(animationSpec = tween(200, easing = EmphasizedAccelerate))
                         } else {
                             fadeOut(animationSpec = tween(150))
                         }
@@ -372,23 +389,23 @@ fun MainScreen(fromTileType: String? = null) {
                     predictivePopEnterTransition = {
                         if (initialState.destination.route !in bottomBarRoutes && targetState.destination.route in bottomBarRoutes) {
                             slideInHorizontally(
-                                initialOffsetX = { fullWidth -> -(fullWidth / 4) },
-                                animationSpec = tween(300, easing = FastOutSlowInEasing)
-                            ) + fadeIn(animationSpec = tween(300))
+                                initialOffsetX = { fullWidth -> -(fullWidth / 8) },
+                                animationSpec = tween(400, easing = EmphasizedDecelerate)
+                            ) + fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate))
                         } else {
-                            fadeIn(animationSpec = tween(220, easing = LinearOutSlowInEasing)) +
+                            fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate)) +
                             scaleIn(
                                 initialScale = 0.96f,
-                                animationSpec = tween(220, easing = FastOutSlowInEasing)
+                                animationSpec = tween(400, easing = EmphasizedDecelerate)
                             )
                         }
                     },
                     predictivePopExitTransition = {
                         if (initialState.destination.route !in bottomBarRoutes) {
                             slideOutHorizontally(
-                                targetOffsetX = { fullWidth -> fullWidth },
-                                animationSpec = tween(300, easing = FastOutSlowInEasing)
-                            ) + fadeOut(animationSpec = tween(300))
+                                targetOffsetX = { fullWidth -> fullWidth / 4 },
+                                animationSpec = tween(200, easing = EmphasizedAccelerate)
+                            ) + fadeOut(animationSpec = tween(200, easing = EmphasizedAccelerate))
                         } else {
                             fadeOut(animationSpec = tween(150))
                         }

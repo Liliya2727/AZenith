@@ -176,9 +176,7 @@ fun ColorSchemeSettings(navController: NavController) {
         containerColor = colorScheme.surface
     ) { innerPadding ->
         if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                LoadingIndicator(modifier = Modifier.size(32.dp))
-            }
+            SkeletonPreviewTile(modifier = Modifier.padding(innerPadding))
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),

@@ -584,17 +584,7 @@ fun TweakScreen(
 
 @Composable
 fun SectionLoadingIndicator() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(100.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(32.dp),
-            strokeWidth = 3.dp
-        )
-    }
+    SkeletonSettingsList(rowCount = 3)
 }
 
 @Composable

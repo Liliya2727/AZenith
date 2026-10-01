@@ -153,12 +153,7 @@ fun FpsGoSettings(navController: NavController) {
                         )
                     )
                 } else {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().height(180.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        LoadingIndicator(modifier = Modifier.size(32.dp))
-                    }
+                    SkeletonSettingsList(rowCount = 2)
                 }
             }
 
@@ -191,12 +186,7 @@ fun FpsGoSettings(navController: NavController) {
                         )
                     )
                 } else {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().height(180.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        LoadingIndicator(modifier = Modifier.size(32.dp))
-                    }
+                    SkeletonSettingsList(rowCount = 2)
                 }
             }
         }
