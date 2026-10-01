@@ -584,40 +584,31 @@ private fun OptionRow(
         label = "OptionRowColor",
     )
 
-    Box(
+    ExpressiveListItemHighlight(
+        onClick = onClick,
+        containerColor = color,
         modifier = Modifier
-            .fillMaxWidth()
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(MaterialTheme.shapes.large)
-            .background(color)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
+            .clip(ExpressiveShapes.large),
+        headlineContent = {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface,
             )
-            .padding(horizontal = 18.dp, vertical = 16.dp),
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (selected) {
-                MaterialTheme.colorScheme.onSecondaryContainer
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            },
-            modifier = Modifier.padding(end = 32.dp),
-        )
-        if (selected) {
-            Icon(
-                imageVector = Icons.Rounded.Check,
-                contentDescription = null,
-                tint = accent,
-                modifier = Modifier.align(Alignment.CenterEnd),
+        },
+        trailingContent = {
+            RadioButton(
+                selected = selected,
+                onClick = null,
+                colors = androidx.compose.material3.RadioButtonDefaults.colors(
+                    selectedColor = accent,
+                    unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             )
         }
-    }
+    )
 }
 
 /**
