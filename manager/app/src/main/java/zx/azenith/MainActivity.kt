@@ -431,53 +431,54 @@ fun MainScreen(fromTileType: String? = null) {
                         }
                     },
                     popEnterTransition = {
-                        if (initialState.destination.route !in bottomBarRoutes && targetState.destination.route in bottomBarRoutes) {
-                            slideInHorizontally(
-                                initialOffsetX = { fullWidth -> -(fullWidth / 8) },
-                                animationSpec = tween(400, easing = EmphasizedDecelerate)
-                            ) + fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate))
-                        } else {
-                            // Back out of a subscreen into another subscreen. The
-                            // scale-in is the M3 fade-through used for a
-                            // destination swap that has no axis, but on its own it
-                            // reads as a pop; adding the incoming slide back from
-                            // the left gives the return the same directional motion
-                            // the forward push had.
-                            slideInHorizontally(
-                                initialOffsetX = { fullWidth -> -(fullWidth / 8) },
-                                animationSpec = tween(400, easing = EmphasizedDecelerate)
-                            ) + fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate))
-                        }
+                        // Reverse of the forward push. The screen underneath is the
+                        // ENTERING one here, so it slides in from the left; the
+                        // submenu leaving is popExit below. Same asymmetry as
+                        // forward -- the travelling surface fades, the one being
+                        // revealed does not -- so the pair reads as one movement
+                        // rather than a slide over a static background.
+                        slideInHorizontally(
+                            initialOffsetX = { fullWidth -> -(fullWidth / 3) },
+                            animationSpec = tween(500, easing = Emphasized)
+                        )
                     },
                     popExitTransition = {
                         if (initialState.destination.route !in bottomBarRoutes) {
                             slideOutHorizontally(
-                                targetOffsetX = { fullWidth -> fullWidth / 4 },
-                                animationSpec = tween(200, easing = EmphasizedAccelerate)
-                            ) + fadeOut(animationSpec = tween(200, easing = EmphasizedAccelerate))
+                                targetOffsetX = { fullWidth: Int -> fullWidth / 3 },
+                                animationSpec = tween(500, easing = Emphasized)
+                            ) + fadeOut(animationSpec = tween(500, easing = Emphasized))
                         } else {
                             fadeOut(animationSpec = tween(150))
                         }
                     },
                     predictivePopEnterTransition = {
-                        if (initialState.destination.route !in bottomBarRoutes && targetState.destination.route in bottomBarRoutes) {
-                            slideInHorizontally(
-                                initialOffsetX = { fullWidth -> -(fullWidth / 8) },
-                                animationSpec = tween(400, easing = EmphasizedDecelerate)
-                            ) + fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate))
-                        } else {
-                            slideInHorizontally(
-                                initialOffsetX = { fullWidth -> -(fullWidth / 8) },
-                                animationSpec = tween(400, easing = EmphasizedDecelerate)
-                            ) + fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate))
-                        }
+                        // Predictive back needs a SEEKABLE transition, not an
+                        // animated one. NavHost collects the gesture and calls
+                        // SeekableTransitionState.seekTo(progress) on every
+                        // frame of the drag, which re-evaluates these offsets
+                        // against the fraction travelled. slideInHorizontally
+                        // cannot be seeked -- it owns its own animation clock --
+                        // so with it the screens only move on release and the
+                        // gesture is indistinguishable from a plain back press.
+                        // slideIntoContainer/slideOutOfContainer derive their
+                        // offset from the transition's own fraction instead, so
+                        // they follow the finger and the destination is visible
+                        // before the user lets go. The travel is the same 1/3
+                        // the non-predictive pop uses so committing the gesture
+                        // and tapping back look identical.
+                        slideIntoContainer(
+                            towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                            animationSpec = tween(500, easing = Emphasized)
+                        ) { fullWidth -> -(fullWidth / 3) }
                     },
                     predictivePopExitTransition = {
                         if (initialState.destination.route !in bottomBarRoutes) {
-                            slideOutHorizontally(
-                                targetOffsetX = { fullWidth -> fullWidth / 4 },
-                                animationSpec = tween(200, easing = EmphasizedAccelerate)
-                            ) + fadeOut(animationSpec = tween(200, easing = EmphasizedAccelerate))
+                            slideOutOfContainer(
+                                towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                                animationSpec = tween(500, easing = Emphasized)
+                            ) { fullWidth: Int -> (fullWidth / 3) } +
+                                fadeOut(animationSpec = tween(500, easing = Emphasized))
                         } else {
                             fadeOut(animationSpec = tween(150))
                         }
