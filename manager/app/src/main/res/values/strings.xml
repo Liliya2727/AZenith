@@ -203,6 +203,11 @@
     <string name="Renderer_Vulkan">Vulkan</string>
     <string name="save_log">Save Log</string>
     <string name="save_log_desc">Export debug logs to /sdcard</string>
+    <string name="theme_save">Save</string>
+    <string name="theme_discard">Discard</string>
+    <string name="theme_unsaved">Unsaved theme changes</string>
+    <string name="theme_applied">Theme applied</string>
+    <string name="theme_apply_action">Apply</string>
     <string name="sched_tunes">Scheduler Tuning</string>
     <string name="sched_tunes_desc">Optimize frequency scaling policy for all CPU clusters (Schedutil/Schedhorizon)</string>
     <string name="schemecolor">Screen Color Scheme</string>

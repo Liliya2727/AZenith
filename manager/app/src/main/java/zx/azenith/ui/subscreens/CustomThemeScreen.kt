@@ -270,14 +270,61 @@ fun ColorPaletteScreen(navController: NavController) {
     }
     
     
-    var currentColorMode by remember { 
-        mutableStateOf(ThemeController.getAppSettings(context).colorMode) 
+    // Theme edits are staged here and only written to SharedPreferences when
+    // the user saves, so a choice can be previewed and then backed out of.
+    // `saved*` is the committed baseline the bar compares against to decide
+    // whether there is anything to save or discard.
+    val savedSettings = remember { ThemeController.getAppSettings(context) }
+    var currentColorMode by remember { mutableStateOf(savedSettings.colorMode) }
+    var currentKeyColor by remember { mutableIntStateOf(savedSettings.keyColor) }
+    var currentColorSpec by remember { mutableStateOf(savedSettings.colorSpec) }
+    var savedColorMode by remember { mutableStateOf(savedSettings.colorMode) }
+    var savedKeyColor by remember { mutableIntStateOf(savedSettings.keyColor) }
+    var savedColorSpec by remember { mutableStateOf(savedSettings.colorSpec) }
+
+    val hasPendingChanges = currentColorMode != savedColorMode ||
+        currentKeyColor != savedKeyColor ||
+        currentColorSpec != savedColorSpec
+
+    // Idle -> the bar is ready. Applying -> the write and the recomposition
+    // that follows it are landing. Applied -> a brief confirmation, then the
+    // bar leaves on its own.
+    var barPhase by remember { mutableStateOf(ThemeBarPhase.Idle) }
+    LaunchedEffect(barPhase) {
+        if (barPhase == ThemeBarPhase.Applied) {
+            kotlinx.coroutines.delay(900)
+            barPhase = ThemeBarPhase.Idle
+        }
     }
-    var currentKeyColor by remember { 
-        mutableIntStateOf(ThemeController.getAppSettings(context).keyColor) 
+
+    val savePendingTheme = {
+        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            prefs.edit()
+                .putInt("key_color", currentKeyColor)
+                .putInt("color_mode", currentColorMode.value)
+                .putString("color_spec", currentColorSpec.name)
+                .commit()
+        }
+        savedKeyColor = currentKeyColor
+        savedColorMode = currentColorMode
+        savedColorSpec = currentColorSpec
+        barPhase = ThemeBarPhase.Applying
     }
-    var currentColorSpec by remember { 
-        mutableStateOf(ThemeController.getAppSettings(context).colorSpec) 
+
+    val discardPendingTheme = {
+        currentColorMode = savedColorMode
+        currentKeyColor = savedKeyColor
+        currentColorSpec = savedColorSpec
+        barPhase = ThemeBarPhase.Idle
+    }
+
+    // The save is a preferences write plus a theme rebuild; the checkmark only
+    // appears once the new scheme is actually on screen.
+    LaunchedEffect(barPhase) {
+        if (barPhase == ThemeBarPhase.Applying) {
+            kotlinx.coroutines.delay(450)
+            barPhase = ThemeBarPhase.Applied
+        }
     }
 
     val isDark = currentColorMode.getDarkThemeValue(isSystemInDarkTheme())
@@ -286,6 +333,15 @@ fun ColorPaletteScreen(navController: NavController) {
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            ThemeChangeBar(
+                visible = hasPendingChanges || barPhase != ThemeBarPhase.Idle,
+                phase = barPhase,
+                onSave = savePendingTheme,
+                onDiscard = discardPendingTheme,
+                modifier = Modifier.navigationBarsPadding()
+            )
+        },
         topBar = {
             PaletteTopAppBar(
                 scrollBehavior,
@@ -484,10 +540,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                         isSelected = currentKeyColor == 0,
                         isDark = isDark,
                         colorSpec = currentColorSpec,
-                        onClick = {
-                            onKeyColorChange(0)
-                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putInt("key_color", 0).commit() }
-                        }
+                        onClick = { onKeyColorChange(0) }
                     )
                 }
 
@@ -497,10 +550,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                         isSelected = currentKeyColor == colorInt,
                         isDark = isDark,
                         colorSpec = currentColorSpec,
-                        onClick = {
-                            onKeyColorChange(colorInt)
-                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putInt("key_color", colorInt).commit() }
-                        }
+                        onClick = { onKeyColorChange(colorInt) }
                     )
                 }
             }
@@ -531,10 +581,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                     ToggleButton(
                         checked = currentColorMode == mode,
                         onCheckedChange = { checked ->
-                            if (checked) {
-                                onColorModeChange(mode)
-                                coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putInt("color_mode", mode.value).commit() }
-                            }
+                            if (checked) onColorModeChange(mode)
                         },
                         modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
                         shapes = when (index) {
@@ -796,10 +843,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                     ToggleButton(
                         checked = currentColorSpec == spec,
                         onCheckedChange = { checked ->
-                            if (checked) {
-                                onColorSpecChange(spec)
-                                coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putString("color_spec", spec.name).commit() }
-                            }
+                            if (checked) onColorSpecChange(spec)
                         },
                         modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
                         shapes = when (index) {
