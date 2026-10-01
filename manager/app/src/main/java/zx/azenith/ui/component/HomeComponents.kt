@@ -577,14 +577,16 @@ fun DeviceInfoCard() {
     
     val uname = remember { Os.uname() }
     val kernelVer = remember { uname.release }
-    val selinux = remember { getSELinuxStatus(context) }
+    var selinux by remember { mutableStateOf("") }
     val appVer = remember { getAppVersion(context) }
-    val chipsetName = remember { getChipsetName(context) }
+    var chipsetName by remember { mutableStateOf("") }
 
     var realDeviceName by remember { mutableStateOf("${Build.MANUFACTURER} ${Build.MODEL}") }
 
     LaunchedEffect(Unit) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            selinux = getSELinuxStatus(context)
+            chipsetName = getChipsetName(context)
             realDeviceName = getRealDeviceName(context)
         }
     }
@@ -933,36 +935,6 @@ fun RunningGameCard(
     }
 
 
-    var elapsedTime by remember { mutableStateOf("00:00:00") }
-    
-    LaunchedEffect(startTimeStr) {
-        val sdf = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
-        val startParsed = try { sdf.parse(startTimeStr) } catch(e: Exception) { null }
-        
-        if (startParsed != null) {
-            while (true) {
-                val now = java.util.Calendar.getInstance()
-                val start = java.util.Calendar.getInstance().apply {
-                    time = startParsed
-                    set(java.util.Calendar.YEAR, now.get(java.util.Calendar.YEAR))
-                    set(java.util.Calendar.MONTH, now.get(java.util.Calendar.MONTH))
-                    set(java.util.Calendar.DAY_OF_MONTH, now.get(java.util.Calendar.DAY_OF_MONTH))
-                }
-                
-                var diff = now.timeInMillis - start.timeInMillis
-                if (diff < 0) diff += 24 * 60 * 60 * 1000
-                
-                val h = diff / 3600000
-                val m = (diff / 60000) % 60
-                val s = (diff / 1000) % 60
-                
-                elapsedTime = String.format("%02d:%02d:%02d", h, m, s)
-                kotlinx.coroutines.delay(1000)
-            }
-        } else {
-            elapsedTime = "--:--:--"
-        }
-    }
 
     Surface(
         modifier = modifier
@@ -1050,12 +1022,7 @@ fun RunningGameCard(
                         tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
                     )
                     Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = stringResource(R.string.str_elapsed_time_elapsedtime, elapsedTime),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                    )
+                    ElapsedTimeText(startTimeStr = startTimeStr)
                 }
             }
             
@@ -1077,4 +1044,45 @@ fun RunningGameCard(
             }
         }
     }
+}
+
+@Composable
+fun ElapsedTimeText(startTimeStr: String) {
+    var elapsedTime by remember { mutableStateOf("00:00:00") }
+    
+    LaunchedEffect(startTimeStr) {
+        val sdf = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault())
+        val startParsed = try { sdf.parse(startTimeStr) } catch(e: Exception) { null }
+        
+        if (startParsed != null) {
+            while (true) {
+                val now = java.util.Calendar.getInstance()
+                val start = java.util.Calendar.getInstance().apply {
+                    time = startParsed
+                    set(java.util.Calendar.YEAR, now.get(java.util.Calendar.YEAR))
+                    set(java.util.Calendar.MONTH, now.get(java.util.Calendar.MONTH))
+                    set(java.util.Calendar.DAY_OF_MONTH, now.get(java.util.Calendar.DAY_OF_MONTH))
+                }
+                
+                var diff = now.timeInMillis - start.timeInMillis
+                if (diff < 0) diff += 24 * 60 * 60 * 1000
+                
+                val h = diff / 3600000
+                val m = (diff / 60000) % 60
+                val s = (diff / 1000) % 60
+                
+                elapsedTime = String.format("%02d:%02d:%02d", h, m, s)
+                kotlinx.coroutines.delay(1000)
+            }
+        } else {
+            elapsedTime = "--:--:--"
+        }
+    }
+
+    Text(
+        text = stringResource(R.string.str_elapsed_time_elapsedtime, elapsedTime),
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.Medium,
+        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+    )
 }
