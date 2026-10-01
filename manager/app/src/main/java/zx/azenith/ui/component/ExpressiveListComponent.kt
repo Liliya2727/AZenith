@@ -57,8 +57,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -468,9 +466,7 @@ fun ExpressiveSwitchItem(
  *
  * [Sheet] suits the longer option lists (governors, schedulers, refresh rates)
  * where an anchored popup either scrolls off-screen or gets clipped by the row.
- * [Menu] keeps the anchored popup for short lists that fit comfortably.
  */
-enum class DropdownPresentation { Sheet, Menu }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -481,7 +477,6 @@ fun ExpressiveDropdownItem(
     items: List<String>,
     enabled: Boolean = true,
     selectedIndex: Int,
-    presentation: DropdownPresentation = DropdownPresentation.Sheet,
     onItemSelected: (Int) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -513,29 +508,12 @@ fun ExpressiveDropdownItem(
                     text = selectedLabel,
                     color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (presentation == DropdownPresentation.Menu) {
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        items.forEachIndexed { index, text ->
-                            DropdownMenuItem(
-                                text = { Text(text) },
-                                onClick = {
-                                    if (index in items.indices) {
-                                        onItemSelected(index)
-                                    }
-                                    expanded = false
-                                }
-                            )
-                        }
-                    }
-                }
+
             }
         }
     )
 
-    if (presentation == DropdownPresentation.Sheet && hasItems) {
+    if (hasItems) {
         OptionPickerSheet(
             show = expanded,
             title = title,
@@ -613,7 +591,7 @@ private fun OptionRow(
 }
 
 /**
- * The option list for a [DropdownPresentation.Sheet] selection.
+ * The option list for an option-picker selection.
  *
  * Plain radio rows read as a settings dump, so the selected option is
  * surfaced as a filled container instead — the same emphasis Material gives
