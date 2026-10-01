@@ -241,25 +241,14 @@ fun AppSettingsScreen(
         
         
             item {
-                // appDetails and the master switch are both derived from the
-                // per-app config, so the header is held back until it has loaded
-                // rather than rendering an empty screen first.
-                if (config == null) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(18.dp)
-                    ) {
-                        SkeletonBlock(
-                            modifier = Modifier
-                                .fillMaxWidth(0.45f)
-                                .height(20.dp)
-                                .padding(horizontal = 16.dp)
-                        )
-                        SkeletonSettingsList(rowCount = 3)
-                    }
-                } else {
-                    AppHeader(appDetails, packageName)
-                }
+                // The header is the app's icon and name, which are known from the
+                // package manager regardless of how AZenith is configured for it.
+                // It used to be gated on `config != null`, but turning the master
+                // switch off REMOVES the app's entry from the config map, so the
+                // header collapsed into a skeleton for every app AZenith was not
+                // tuned for -- including one the user had just switched off. Only
+                // the rows below depend on the config; those keep their own gate.
+                AppHeader(appDetails, packageName)
             }
 
 
