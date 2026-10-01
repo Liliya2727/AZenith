@@ -642,6 +642,8 @@ private fun OptionPickerSheet(
                 .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
+            // Title and subtitle stay outside the scrolling list so they do not
+            // scroll away with the options.
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineSmall,
@@ -659,21 +661,32 @@ private fun OptionPickerSheet(
 
             // A long governor or scheduler list is taller than the sheet, so
             // the rows live in their own lazy column rather than a Column that
-            // measures every child up front.
-            LazyColumn(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+            // measures every child up front. The weight lets the list take
+            // whatever height is left under the title, and the sheet's own
+            // height cap is what keeps that from being unbounded.
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                itemsIndexed(items) { index, text ->
-                    OptionRow(
-                        text = text,
-                        selected = index == selectedIndex,
-                        accent = accent,
-                        onClick = {
-                            onSelect(index)
-                            onDismiss()
-                        },
-                    )
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .padding(vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    itemsIndexed(items) { index, text ->
+                        OptionRow(
+                            text = text,
+                            selected = index == selectedIndex,
+                            accent = accent,
+                            onClick = {
+                                onSelect(index)
+                                onDismiss()
+                            },
+                        )
+                    }
                 }
             }
         }

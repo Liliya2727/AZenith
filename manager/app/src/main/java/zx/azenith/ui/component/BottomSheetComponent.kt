@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -62,6 +63,14 @@ fun CustomBottomSheet(
     
     val density = LocalDensity.current
     val extraBottomPadding = 100.dp
+
+    // A vertically scrollable child is only measurable if the sheet bounds its
+    // own height first. Without this the sheet body is measured with an infinite
+    // maximum height and any scrolling content inside it -- a verticalScroll
+    // Column or a LazyColumn -- throws on measure. Capping here fixes every
+    // caller at once instead of making each one remember to bound itself.
+    val configuration = LocalConfiguration.current
+    val maxSheetHeight = (configuration.screenHeightDp * 0.9f).dp
 
     LaunchedEffect(visible) {
         if (visible) {
@@ -112,9 +121,9 @@ fun CustomBottomSheet(
         ) {
             Column(
                 modifier = Modifier
-
                     .widthIn(max = 640.dp)
                     .fillMaxWidth()
+                    .heightIn(max = maxSheetHeight)
                     .offset { 
                         IntOffset(
                             x = 0, 
