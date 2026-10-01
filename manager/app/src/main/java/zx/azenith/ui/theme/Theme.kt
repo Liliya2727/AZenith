@@ -20,41 +20,18 @@ package zx.azenith.ui.theme
 import android.app.Activity
 import android.content.Context
 import android.os.Build
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.*
 import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsControllerCompat
-import com.materialkolor.dynamicColorScheme
 import com.materialkolor.dynamiccolor.ColorSpec
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.materialkolor.rememberDynamicColorScheme
 import zx.azenith.ExpressiveShapes
-import zx.azenith.R
 
 
 /**
@@ -132,60 +109,34 @@ fun AZenithTheme(
     val amoledMode = themeState.colorMode == ColorMode.DARKAMOLED
     val isDynamic = themeState.keyColor == 0
     val colorSpec = themeState.colorSpec
-    val seedColor = if (isDynamic) null else Color(themeState.keyColor)
 
-    // The scheme is derived on a background dispatcher and the previous one is
-    // kept until the new one lands. MaterialKolor quantizes the seed into an
-    // HCT color space and derives every tonal role from it, which is
-    // CPU-bound; running that inside composition blocks the frame the user is
-    // still looking at, so the change appears as a stall and every press on
-    // the theme screen lands late.
-    val requestedScheme = remember { mutableStateOf<ColorScheme?>(null) }
-    var isSchemePending by remember { mutableStateOf(false) }
-
-    LaunchedEffect(darkTheme, amoledMode, isDynamic, seedColor, colorSpec) {
-        val base = if (isDynamic) {
-            when {
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
-                    if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-                else ->
-                    if (darkTheme) darkColorScheme() else expressiveLightColorScheme()
-            }
-        } else {
-            null
+    val colorScheme = if (isDynamic) {
+        val baseScheme = when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            else ->
+                if (darkTheme) darkColorScheme() else expressiveLightColorScheme()
         }
-
-        isSchemePending = requestedScheme.value != null
-        val built = withContext(Dispatchers.Default) {
-            if (base != null) {
-                dynamicColorScheme(
-                    seedColor = base.primary,
-                    isDark = darkTheme,
-                    isAmoled = amoledMode,
-                    specVersion = colorSpec,
-                    primary = base.primary,
-                    secondary = base.secondary,
-                    tertiary = base.tertiary,
-                    neutral = base.surface,
-                    neutralVariant = base.surfaceVariant,
-                    error = base.error
-                )
-            } else {
-                dynamicColorScheme(
-                    seedColor = seedColor!!,
-                    isDark = darkTheme,
-                    isAmoled = amoledMode,
-                    specVersion = colorSpec
-                )
-            }
-        }
-        requestedScheme.value = built
-        isSchemePending = false
+        rememberDynamicColorScheme(
+            seedColor = baseScheme.primary,
+            isDark = darkTheme,
+            isAmoled = amoledMode,
+            specVersion = colorSpec,
+            primary = baseScheme.primary,
+            secondary = baseScheme.secondary,
+            tertiary = baseScheme.tertiary,
+            neutral = baseScheme.surface,
+            neutralVariant = baseScheme.surfaceVariant,
+            error = baseScheme.error
+        )
+    } else {
+        rememberDynamicColorScheme(
+            seedColor = Color(themeState.keyColor),
+            isDark = darkTheme,
+            isAmoled = amoledMode,
+            specVersion = colorSpec
+        )
     }
-
-    // Nothing is shown until the first scheme is ready, so the very first
-    // frame is already the correct theme rather than a default one.
-    val colorScheme = requestedScheme.value ?: return
 
     val view = androidx.compose.ui.platform.LocalView.current
     
@@ -197,74 +148,18 @@ fun AZenithTheme(
         controller.isAppearanceLightNavigationBars = !darkTheme
     }
 
-    // The overlay blocks touches while a new scheme is being built, so a
-    // second press cannot land on a screen that is mid-change. It is an M3
-    // scrim + surface container, and it scales and fades in and out rather
-    // than popping.
-    Box(Modifier.fillMaxSize()) {
     androidx.compose.animation.Crossfade(
         targetState = colorScheme,
         animationSpec = androidx.compose.animation.core.tween(500),
         label = "ThemeCrossfade"
     ) { scheme ->
-    MaterialExpressiveTheme(
-        colorScheme = scheme,
-        typography = Typography,
-        shapes = ExpressiveShapes,
-        motionScheme = MotionScheme.expressive(),
-        content = content
-    )
-    }
-
-        AnimatedVisibility(
-            visible = isSchemePending,
-            enter = fadeIn(animationSpec = tween(140)) + scaleIn(
-                initialScale = 0.92f,
-                animationSpec = tween(220)
-            ),
-            exit = fadeOut(animationSpec = tween(200)) + scaleOut(
-                targetScale = 0.96f,
-                animationSpec = tween(200)
-            )
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(colorScheme.scrim.copy(alpha = 0.45f))
-                    // Consume taps so the content underneath cannot be pressed
-                    // while the scheme is still being applied.
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Surface(
-                    shape = MaterialTheme.shapes.extraLarge,
-                    color = colorScheme.surfaceContainerHigh,
-                    tonalElevation = 6.dp
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 28.dp, vertical = 24.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(18.dp)
-                    ) {
-                        // The same Material 3 Expressive morphing loader the
-                        // rest of the app uses, not a plain circular spinner.
-                        LoadingIndicator(
-                            modifier = Modifier.size(32.dp),
-                            color = colorScheme.primary
-                        )
-                        Text(
-                            text = stringResource(R.string.theme_applying),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = colorScheme.onSurface
-                        )
-                    }
-                }
-            }
-        }
+        MaterialExpressiveTheme(
+            colorScheme = scheme,
+            typography = Typography,
+            shapes = ExpressiveShapes,
+            motionScheme = MotionScheme.expressive(),
+            content = content
+        )
     }
 }
 
