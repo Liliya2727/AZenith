@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.RootUtils
 
 data class SettingsUiState(
     val disableTweak: Boolean = false,
@@ -87,8 +88,7 @@ class SettingsViewModel : ViewModel() {
         val state = if (enabled) "0" else "1"
         viewModelScope.launch(Dispatchers.IO) {
             PropertyUtils.set("persist.sys.azenithconf.AIenabled", state)
-            // ini tetap shell karena nulis ke file, bukan cuma prop
-            Shell.cmd("echo $state > /data/adb/.config/AZenith/API/current_modes").submit()
+            RootUtils.writeRootFile("/data/adb/.config/AZenith/API/current_modes", "$state\n")
         }
     }
 

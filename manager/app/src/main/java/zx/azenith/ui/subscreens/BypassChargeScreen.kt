@@ -91,7 +91,9 @@ import zx.azenith.ui.util.clearHeaderImage
 import zx.azenith.ui.util.getHeaderImage
 import zx.azenith.ui.util.saveHeaderImage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import zx.azenith.ui.util.RootUtils
 
 
 @Composable
@@ -105,7 +107,12 @@ fun BypassChargeScreen(navController: NavController) {
     var thresholdValue by remember { mutableStateOf<Float?>(null) }
     
     val isUnsupported = bypassPath == "UNSUPPORTED"
-    val isNeedSetup = bypassPath == "NEED_SETUP"    
+    val isNeedSetup = bypassPath == "NEED_SETUP"
+
+    // The switch and slider callbacks are plain lambdas, so they run on the main
+    // thread. Route the file writes through a scope on IO rather than making the
+    // tap handler block on a root round trip.
+    val writeScope = rememberCoroutineScope()    
 
     LaunchedEffect(Unit) {
         // Property reads go through a root shell on first use, so they must not
@@ -197,7 +204,9 @@ fun BypassChargeScreen(navController: NavController) {
                                     bypassChgState = isChecked
                                     val value = if (isChecked) "1" else "0"
                                     PropertyUtils.set("persist.sys.azenithconf.bypasschg", value)
-                                    Shell.cmd("echo $value > /data/adb/.config/AZenith/bypasschgconfig/bypasschg").exec()
+                                    writeScope.launch(Dispatchers.IO) {
+                                        RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasschg", "$value\n")
+                                    }
                                 }
                             )
                         }
@@ -327,7 +336,9 @@ fun BypassChargeScreen(navController: NavController) {
                                         // rather than re-reading the nullable state.
                                         val finalValue = thresholdValue ?: currentVal
                                         PropertyUtils.set("persist.sys.azenithconf.bypasschgthreshold", finalValue.toInt().toString())
-                                        Shell.cmd("echo ${finalValue.toInt()} > /data/adb/.config/AZenith/bypasschgconfig/bypasschgthreshold").exec()
+                                        writeScope.launch(Dispatchers.IO) {
+                                            RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasschgthreshold", "${finalValue.toInt()}\n")
+                                        }
                                     },
                                     valueRange = 20f..50f,
                                     steps = 5,

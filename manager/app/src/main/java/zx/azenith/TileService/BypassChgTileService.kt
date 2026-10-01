@@ -21,6 +21,7 @@ import android.service.quicksettings.TileService
 import com.topjohnwu.superuser.Shell
 import zx.azenith.R
 import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.RootUtils
 
 class BypassChgTileService : TileService() {
 
@@ -54,7 +55,7 @@ class BypassChgTileService : TileService() {
 
     private fun setBypassChg(value: String) {
         PropertyUtils.set(BYPASS_PROP, value)
-        Shell.cmd("echo $value > $BYPASSCHG_FILE").exec()
+        RootUtils.writeRootFile(BYPASSCHG_FILE, "$value\n")
     }
 
     private fun updateTileState() {
