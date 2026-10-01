@@ -128,7 +128,6 @@ fun FpsGoSettings(navController: NavController) {
                 var fpsgostate by remember { mutableStateOf<Boolean?>(null) }
 
                 LaunchedEffect(Unit) {
-                    kotlinx.coroutines.delay(200) // Allow slide-in animation to finish
                     fpsgostate = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                         PropertyUtils.get("persist.sys.azenithconf.usefpsgo") == "1"
                     }
@@ -169,7 +168,6 @@ fun FpsGoSettings(navController: NavController) {
                 var fpsgogedstate by remember { mutableStateOf<Boolean?>(null) }
 
                 LaunchedEffect(Unit) {
-                    kotlinx.coroutines.delay(200)
                     fpsgogedstate = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                         PropertyUtils.get("persist.sys.azenithconf.fpsged") == "1"
                     }

@@ -246,14 +246,15 @@ fun AZenithTheme(
                     tonalElevation = 6.dp
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
+                        modifier = Modifier.padding(horizontal = 28.dp, vertical = 24.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        horizontalArrangement = Arrangement.spacedBy(18.dp)
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(28.dp),
-                            color = colorScheme.primary,
-                            strokeWidth = 3.dp
+                        // The same Material 3 Expressive morphing loader the
+                        // rest of the app uses, not a plain circular spinner.
+                        LoadingIndicator(
+                            modifier = Modifier.size(32.dp),
+                            color = colorScheme.primary
                         )
                         Text(
                             text = stringResource(R.string.theme_applying),
