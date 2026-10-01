@@ -180,13 +180,6 @@ fun ApplistScreen(navController: NavController) {
                 )
             }
 
-            if (ApplistViewmodel.apps.isEmpty()) {
-                // Nothing loaded yet: a bare `items = emptyList()` renders an empty
-                // frame, which is the perceived stall on first open. Gate on the app
-                // list alone — `isRefreshing` flips true the instant the scan starts,
-                // so testing it here would fall through to the empty list mid-scan.
-                SkeletonSettingsList(rowCount = 6)
-            } else {
                 AnimatedVisibility(
                     visible = appsToDisplay.isEmpty() && !viewModel.isRefreshing,
                     enter = fadeIn(animationSpec = spring(stiffness = 300f)),
@@ -262,7 +255,6 @@ fun ApplistScreen(navController: NavController) {
                 )
                 }
                 }
-            }
 
             PullToRefreshDefaults.LoadingIndicator(
                 state = pullToRefreshState,

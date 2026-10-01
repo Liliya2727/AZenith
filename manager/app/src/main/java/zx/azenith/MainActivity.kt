@@ -41,6 +41,7 @@ import androidx.compose.material.icons.rounded.*
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -183,20 +184,26 @@ fun MainScreen(fromTileType: String? = null) {
     val rawRoute = navBackStackEntry?.destination?.route
     val isOnMainPager = rawRoute == "main"
     
-    // Evaluasi current route untuk highlight di BottomNavBar
-    //
-    // Reads settledPage, not currentPage. currentPage is a scroll-position state:
-    // it changes on every frame of the 500 ms animateScrollToPage, and it is
-    // passed into BottomNavBar as selectedRoute, so the whole bar (including its
-    // haze Surface) recomposed for every frame of a tab switch. settledPage only
-    // changes once the scroll finishes, which is also when the highlight should
-    // move. getSettledPage is @Composable-derived in Compose foundation
-    // 1.12.0-alpha03, so it is still tracked as state -- it just does not change
-    // per frame.
+    // Which route the navbar highlights. This is tracked from the tap rather
+    // than derived from the pager, because both pager states are wrong for
+    // this purpose: settledPage only changes once the 500 ms scroll finishes
+    // (so the highlight visibly lags a third of a second behind the page),
+    // and currentPage only flips at the scroll midpoint. Tapping a tab has to
+    // move the pill immediately, so the intent is recorded here and the
+    // animation is just the UI catching up to it.
+    val highlightRoute = rememberSaveable { mutableStateOf("home") }
+
     val currentRoute = if (isOnMainPager) {
-        pagerRoutes[pagerState.settledPage]
+        // Follow the pager on user swipes, which have no tap to record. An
+        // in-flight scroll settles on its target, so read the destination
+        // rather than the current position.
+        val route = pagerRoutes[pagerState.settledPage]
+        if (!pagerState.isScrollInProgress) {
+            highlightRoute.value = route
+        }
+        highlightRoute.value
     } else {
-        rawRoute
+        highlightRoute.value
     }
 
     val coroutineScope = rememberCoroutineScope()
@@ -526,6 +533,7 @@ fun MainScreen(fromTileType: String? = null) {
                                     pagerState.scrollToPage(targetIndex)
                                 }
                             }
+                            highlightRoute.value = route
                         }
                     )
                 }
