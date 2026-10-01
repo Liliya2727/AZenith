@@ -126,6 +126,7 @@ dependencies {
     implementation(libs.com.github.topjohnwu.libsu.io)
 
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.tracing)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.yalantis.ucrop)
     implementation(libs.androidx.appcompat)

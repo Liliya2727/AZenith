@@ -66,6 +66,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
+import androidx.tracing.Trace
 import com.topjohnwu.superuser.Shell
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.blur.blurEffect
@@ -183,8 +184,17 @@ fun MainScreen(fromTileType: String? = null) {
     val isOnMainPager = rawRoute == "main"
     
     // Evaluasi current route untuk highlight di BottomNavBar
+    //
+    // Reads settledPage, not currentPage. currentPage is a scroll-position state:
+    // it changes on every frame of the 500 ms animateScrollToPage, and it is
+    // passed into BottomNavBar as selectedRoute, so the whole bar (including its
+    // haze Surface) recomposed for every frame of a tab switch. settledPage only
+    // changes once the scroll finishes, which is also when the highlight should
+    // move. getSettledPage is @Composable-derived in Compose foundation
+    // 1.12.0-alpha03, so it is still tracked as state -- it just does not change
+    // per frame.
     val currentRoute = if (isOnMainPager) {
-        pagerRoutes[pagerState.currentPage]
+        pagerRoutes[pagerState.settledPage]
     } else {
         rawRoute
     }
@@ -487,13 +497,23 @@ fun MainScreen(fromTileType: String? = null) {
                             if (isOnMainPager) {
                                 if (pagerState.currentPage != targetIndex) {
                                     coroutineScope.launch {
-                                        pagerState.animateScrollToPage(
-                                            targetIndex,
-                                            animationSpec = androidx.compose.animation.core.tween(
-                                                durationMillis = 500,
-                                                easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+                                        // Instrumentation only -- these traces are
+                                        // read with `adb shell atrace` / Perfetto on a
+                                        // device, so no timing is asserted here.
+                                        // The section brackets the whole scroll so its
+                                        // duration is the tab-switch cost.
+                                        Trace.beginSection("AZenith:tabScrollTo")
+                                        try {
+                                            pagerState.animateScrollToPage(
+                                                targetIndex,
+                                                animationSpec = androidx.compose.animation.core.tween(
+                                                    durationMillis = 500,
+                                                    easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+                                                )
                                             )
-                                        )
+                                        } finally {
+                                            Trace.endSection()
+                                        }
                                     }
                                 }
                             } else {
