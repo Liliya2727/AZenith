@@ -28,6 +28,17 @@ media3 = "1.3.0"
 appiconloader-coil = "1.5.0"
 ucrop = "2.2.11-native"
 
+# Baseline profile
+#
+# Without profileinstaller the ART runtime has no ahead-of-time profile for this
+# app, so every class is cold-interpreted until it is JIT-compiled. The visible
+# symptom is a first tap that stalls for a second or more while Compose and the
+# navigation graph get compiled, with later taps progressively faster. The
+# profile installer alone does not fix that; it ships whatever profile is in
+# src/main, and generating one is a separate step (see the skill's
+# generating-baseline-profiles notes).
+profileinstaller = "1.3.1"
+
 # Tools & Core
 appcompat = "1.8.0-alpha01"
 androidx-transition = "1.7.0"
@@ -74,6 +85,9 @@ yalantis-ucrop = { group = "com.github.yalantis", name = "ucrop", version.ref = 
 
 # StringFog (Security)
 stringfog-xor = { group = "com.github.megatronking.stringfog", name = "xor", version.ref = "stringfogXor" }
+
+# Baseline profile
+androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
 
 # Haze (Glassmorphism)
 haze = { module = "dev.chrisbanes.haze:haze-android", version.ref = "haze" }

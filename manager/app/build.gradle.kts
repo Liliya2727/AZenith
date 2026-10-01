@@ -137,4 +137,8 @@ dependencies {
     implementation(libs.hiddenapibypass)
     implementation(libs.coil.gif)
     implementation(libs.compose.markdown)
+
+    // Ships src/main/baseline-prof.txt and installs it on first run. See the
+    // note in libs.versions.toml for why the app is slow without it.
+    implementation(libs.androidx.profileinstaller)
 }
