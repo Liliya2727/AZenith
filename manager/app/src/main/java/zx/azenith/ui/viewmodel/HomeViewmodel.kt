@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.util.isBannerImageEnabled
+import zx.azenith.ui.util.PropertyUtils
 
 
 data class HomeUiState(
@@ -95,7 +96,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             val isRooted = RootUtils.requestRootAccess()
             val isModuleInstalled = RootUtils.isModuleInstalled()
-            val mode = Shell.cmd("getprop persist.sys.azenithconf.AIenabled").exec().out.firstOrNull()?.trim()
+            val mode = PropertyUtils.get("persist.sys.azenithconf.AIenabled")
 
             _uiState.value = _uiState.value.copy(
                 rootStatus = isRooted,
@@ -133,7 +134,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun refreshAiMode() {
         viewModelScope.launch(Dispatchers.IO) {
-            val mode = Shell.cmd("getprop persist.sys.azenithconf.AIenabled").exec().out.firstOrNull()?.trim()
+            val mode = PropertyUtils.get("persist.sys.azenithconf.AIenabled")
             _uiState.value = _uiState.value.copy(autoMode = mode)
         }
     }

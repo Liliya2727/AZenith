@@ -67,12 +67,15 @@ import androidx.navigation.NavController
 import com.topjohnwu.superuser.Shell
 import kotlin.system.exitProcess
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import zx.azenith.R
 import zx.azenith.ui.component.ExpressiveList
 import zx.azenith.ui.component.ExpressiveSwitchItem
 import zx.azenith.ui.component.SkeletonSettingsList
 import zx.azenith.ui.util.RootUtils
+import zx.azenith.ui.util.PropertyUtils
 
 /**
  * Background dinamis yang posisinya pindah dengan mulus antar halaman.
@@ -234,10 +237,11 @@ fun GetStartedScreen(navController: NavController) {
     var prefsLoaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        val toastOut = Shell.cmd("getprop persist.sys.azenithconf.showtoast").exec().out.firstOrNull()?.trim()
+        val (toastOut, aiOut) = withContext(Dispatchers.IO) {
+            PropertyUtils.get("persist.sys.azenithconf.showtoast") to
+                PropertyUtils.get("persist.sys.azenithconf.AIenabled")
+        }
         if (toastOut == "0") stateToast = false
-
-        val aiOut = Shell.cmd("getprop persist.sys.azenithconf.AIenabled").exec().out.firstOrNull()?.trim()
         if (aiOut == "0") autoMode = true
         prefsLoaded = true
     }
