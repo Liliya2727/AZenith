@@ -164,35 +164,55 @@ fun ApplistScreen(navController: NavController) {
         ) {
             val appsToDisplay = viewModel.filteredApps
 
+            // Hoisted: reading WindowInsets here instead of inline in the
+            // contentPadding argument means the PaddingValues is only rebuilt
+            // when the insets actually change, not on every recomposition of
+            // the list.
+            // asPaddingValues() is a composable read, so it has to happen here rather
+            // than inside the remember block below.
+            val navBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            val listContentPadding = remember(innerPadding, navBottomPadding) {
+                PaddingValues(
+                    top = innerPadding.calculateTopPadding(),
+                    start = 16.dp,
+                    end = 16.dp,
+                    bottom = 110.dp + navBottomPadding
+                )
+            }
+
             if (ApplistViewmodel.apps.isEmpty()) {
                 // Nothing loaded yet: a bare `items = emptyList()` renders an empty
                 // frame, which is the perceived stall on first open. Gate on the app
                 // list alone — `isRefreshing` flips true the instant the scan starts,
                 // so testing it here would fall through to the empty list mid-scan.
                 SkeletonSettingsList(rowCount = 6)
-            } else if (appsToDisplay.isEmpty() && !viewModel.isRefreshing) {
-                // Scan finished and genuinely has no match for the current query.
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.no_apps_found),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             } else {
+                AnimatedVisibility(
+                    visible = appsToDisplay.isEmpty() && !viewModel.isRefreshing,
+                    enter = fadeIn(animationSpec = spring(stiffness = 300f)),
+                    exit = fadeOut(animationSpec = spring(stiffness = 500f))
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.no_apps_found),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                AnimatedVisibility(
+                    visible = appsToDisplay.isNotEmpty(),
+                    enter = fadeIn(animationSpec = spring(stiffness = 400f)),
+                    exit = fadeOut(animationSpec = spring(stiffness = 500f))
+                ) {
                 ExpressiveLazyList(
                 state = listState,
                 items = appsToDisplay,
                 key = { it.packageName },
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                )
+                contentPadding = listContentPadding
             ) { app ->
                 ExpressiveListItem(
                     onClick = { navController.navigate("app_settings/${app.packageName}") },
@@ -240,6 +260,7 @@ fun ApplistScreen(navController: NavController) {
                         )
                     }
                 )
+                }
                 }
             }
 
