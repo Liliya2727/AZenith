@@ -24,39 +24,53 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
 
 
 object WallpaperCache {
     val bitmapState: MutableState<ImageBitmap?> = mutableStateOf(null)
+
+    /**
+     * Guards the expensive decode, and is only set on success. It used to be set
+     * in a `finally`, which meant a load that threw was remembered as done: the
+     * wallpaper is fetched on first composition, before get-started has granted
+     * the storage permissions it needs, so the read failed, the cache locked
+     * itself empty, and the header stayed blank until the process restarted.
+     */
     private var isLoaded = false
+
+    /** Set while a load is in flight so concurrent callers await the same one. */
+    private var inFlight: Deferred<ImageBitmap?>? = null
 
     suspend fun init(context: Context) {
         if (isLoaded) return
+        inFlight?.let { runCatching { it.await() }; if (isLoaded) return }
 
-        withContext(Dispatchers.IO) {
-            try {
+        val job = scope.async {
+            withContext(Dispatchers.IO) {
                 val wallpaperManager = WallpaperManager.getInstance(context)
-                val drawable = wallpaperManager.drawable
-                
-                if (drawable != null) {
+                val drawable = wallpaperManager.drawable ?: return@withContext null
 
-                    val intrinsicWidth = drawable.intrinsicWidth
-                    val intrinsicHeight = drawable.intrinsicHeight
-                    
-                    val ratio = intrinsicWidth.toFloat() / intrinsicHeight.toFloat()
-                    val targetHeight = 800
-                    val targetWidth = (targetHeight * ratio).toInt()
-                    
-                    val bitmap = drawable.toBitmap(width = targetWidth, height = targetHeight).asImageBitmap()
-                    bitmapState.value = bitmap
-                }
-            } catch (e: Exception) {
+                val ratio = drawable.intrinsicWidth.toFloat() / drawable.intrinsicHeight.toFloat()
+                val targetHeight = 800
+                val targetWidth = (targetHeight * ratio).toInt()
 
-            } finally {
-                isLoaded = true
+                drawable.toBitmap(width = targetWidth, height = targetHeight).asImageBitmap()
             }
         }
+        inFlight = job
+
+        // A failed decode must not be cached, or the missing value sticks for
+        // the life of the process and only a restart clears it.
+        bitmapState.value = runCatching { job.await() }.getOrNull()
+        if (bitmapState.value != null) isLoaded = true
+        inFlight = null
     }
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 }

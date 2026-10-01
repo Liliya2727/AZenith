@@ -71,6 +71,21 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
     }
 
     val wallpaperBitmap by WallpaperCache.bitmapState
+
+    // The cache is shared and survives get-started granting the permissions the
+    // read needs, so a load that failed before setup completed stays empty until
+    // something retries it. Retry once when the page appears and again on the
+    // next frame, which covers both a cold start and a late permission grant
+    // without polling.
+    LaunchedEffect(Unit) {
+        if (wallpaperBitmap == null) {
+            WallpaperCache.init(context)
+            if (wallpaperBitmap == null) {
+                delay(600)
+                WallpaperCache.init(context)
+            }
+        }
+    }
     
 
     // Uptime is second-granular, so it does need a 1 Hz tick, but it must not
