@@ -20,9 +20,7 @@ package zx.azenith.ui.component
 import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -83,16 +81,8 @@ fun RendererDialog(
 
     AnimatedVisibility(
         visible = show,
-        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) +
-                scaleIn(
-                    initialScale = 0.92f,
-                    animationSpec = tween(250, easing = LinearOutSlowInEasing)
-                ),
-        exit = fadeOut(animationSpec = tween(150, easing = FastOutSlowInEasing)) +
-               scaleOut(
-                   targetScale = 0.92f,
-                   animationSpec = tween(150, easing = FastOutSlowInEasing)
-               )
+        enter = Motion.dialogEnter(),
+        exit = Motion.dialogExit()
     ) {
         BackHandler(onBack = onDismiss)
         
