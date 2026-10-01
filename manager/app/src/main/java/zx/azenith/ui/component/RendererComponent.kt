@@ -22,7 +22,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -84,8 +83,16 @@ fun RendererDialog(
 
     AnimatedVisibility(
         visible = show,
-        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)),
-        exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
+        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) +
+                scaleIn(
+                    initialScale = 0.92f,
+                    animationSpec = tween(250, easing = LinearOutSlowInEasing)
+                ),
+        exit = fadeOut(animationSpec = tween(150, easing = FastOutSlowInEasing)) +
+               scaleOut(
+                   targetScale = 0.92f,
+                   animationSpec = tween(150, easing = FastOutSlowInEasing)
+               )
     ) {
         BackHandler(onBack = onDismiss)
         
@@ -101,17 +108,10 @@ fun RendererDialog(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            val scale by animateFloatAsState(
-                targetValue = if (show) 1f else 0.9f,
-                animationSpec = tween(250, easing = LinearOutSlowInEasing),
-                label = "dialog_scale"
-            )
-
             Box(
                 modifier = Modifier
-                    .widthIn(min = 320.dp, max = 400.dp) 
-                    .padding(24.dp) 
-                    .scale(scale)
+                    .widthIn(min = 320.dp, max = 400.dp)
+                    .padding(24.dp)
                     .clip(RoundedCornerShape(28.dp))
                     .then(
                         if (isBlurEnabled && hazeState != null) {

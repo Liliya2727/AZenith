@@ -314,8 +314,16 @@ private fun LoadingDialog(visible: Boolean) {
 
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)),
-        exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
+        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) +
+                scaleIn(
+                    initialScale = 0.92f,
+                    animationSpec = tween(250, easing = LinearOutSlowInEasing)
+                ),
+        exit = fadeOut(animationSpec = tween(150, easing = FastOutSlowInEasing)) +
+               scaleOut(
+                   targetScale = 0.92f,
+                   animationSpec = tween(150, easing = FastOutSlowInEasing)
+               )
     ) {
         BackHandler(onBack = { })
         Box(
@@ -330,16 +338,9 @@ private fun LoadingDialog(visible: Boolean) {
                 ),
             contentAlignment = Alignment.Center
         ) {
-            val scale by animateFloatAsState(
-                targetValue = if (visible) 1f else 0.9f,
-                animationSpec = tween(250, easing = LinearOutSlowInEasing),
-                label = "dialog_scale"
-            )
-
             Box(
                 modifier = Modifier
                     .size(100.dp)
-                    .scale(scale)
                     .clip(RoundedCornerShape(24.dp))
                     .then(
                         if (isBlurEnabled && hazeState != null) {
@@ -372,8 +373,16 @@ private fun ConfirmDialog(
 
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)),
-        exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
+        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) +
+                scaleIn(
+                    initialScale = 0.92f,
+                    animationSpec = tween(250, easing = LinearOutSlowInEasing)
+                ),
+        exit = fadeOut(animationSpec = tween(150, easing = FastOutSlowInEasing)) +
+               scaleOut(
+                   targetScale = 0.92f,
+                   animationSpec = tween(150, easing = FastOutSlowInEasing)
+               )
     ) {
         BackHandler(onBack = dismiss)
         Box(
@@ -388,17 +397,10 @@ private fun ConfirmDialog(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            val scale by animateFloatAsState(
-                targetValue = if (visible) 1f else 0.9f,
-                animationSpec = tween(250, easing = LinearOutSlowInEasing),
-                label = "dialog_scale"
-            )
-
             Box(
                 modifier = Modifier
                     .widthIn(min = 350.dp, max = 500.dp) 
                     .padding(24.dp) 
-                    .scale(scale)
                     .clip(RoundedCornerShape(28.dp))
                     .then(
                         if (isBlurEnabled && hazeState != null) {
@@ -470,8 +472,16 @@ fun CustomContentDialog(
 
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)),
-        exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
+        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) +
+                scaleIn(
+                    initialScale = 0.92f,
+                    animationSpec = tween(250, easing = LinearOutSlowInEasing)
+                ),
+        exit = fadeOut(animationSpec = tween(150, easing = FastOutSlowInEasing)) +
+               scaleOut(
+                   targetScale = 0.92f,
+                   animationSpec = tween(150, easing = FastOutSlowInEasing)
+               )
     ) {
         BackHandler(onBack = onDismiss)
         Box(
@@ -486,17 +496,10 @@ fun CustomContentDialog(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            val scale by animateFloatAsState(
-                targetValue = if (visible) 1f else 0.9f,
-                animationSpec = tween(250, easing = LinearOutSlowInEasing),
-                label = "dialog_scale"
-            )
-
             Box(
                 modifier = Modifier
                     .widthIn(min = 350.dp, max = 500.dp) 
                     .padding(24.dp) 
-                    .scale(scale)
                     .clip(RoundedCornerShape(28.dp))
                     .then(
                         if (isBlurEnabled && hazeState != null) {
@@ -602,8 +605,16 @@ private fun InstallingDialog(visible: Boolean) {
 
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)),
-        exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
+        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) +
+                scaleIn(
+                    initialScale = 0.92f,
+                    animationSpec = tween(250, easing = LinearOutSlowInEasing)
+                ),
+        exit = fadeOut(animationSpec = tween(150, easing = FastOutSlowInEasing)) +
+               scaleOut(
+                   targetScale = 0.92f,
+                   animationSpec = tween(150, easing = FastOutSlowInEasing)
+               )
     ) {
         BackHandler(onBack = { })
         Box(
@@ -618,16 +629,9 @@ private fun InstallingDialog(visible: Boolean) {
                 ),
             contentAlignment = Alignment.Center
         ) {
-            val scale by animateFloatAsState(
-                targetValue = if (visible) 1f else 0.9f,
-                animationSpec = tween(250, easing = LinearOutSlowInEasing),
-                label = "dialog_scale"
-            )
-
             Box(
                 modifier = Modifier
                     .widthIn(min = 280.dp, max = 350.dp)
-                    .scale(scale)
                     .clip(RoundedCornerShape(28.dp))
                     .then(
                         if (isBlurEnabled && hazeState != null) {

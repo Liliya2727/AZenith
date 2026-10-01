@@ -82,8 +82,16 @@ fun RefreshRatePickerDialog(
 
     AnimatedVisibility(
         visible = show,
-        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)),
-        exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing))
+        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) +
+                scaleIn(
+                    initialScale = 0.92f,
+                    animationSpec = tween(250, easing = LinearOutSlowInEasing)
+                ),
+        exit = fadeOut(animationSpec = tween(150, easing = FastOutSlowInEasing)) +
+               scaleOut(
+                   targetScale = 0.92f,
+                   animationSpec = tween(150, easing = FastOutSlowInEasing)
+               )
     ) {
         BackHandler(onBack = onDismiss)
         
@@ -99,17 +107,10 @@ fun RefreshRatePickerDialog(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            val scale by animateFloatAsState(
-                targetValue = if (show) 1f else 0.9f,
-                animationSpec = tween(250, easing = LinearOutSlowInEasing),
-                label = "dialog_scale"
-            )
-
             Box(
                 modifier = Modifier
                     .widthIn(min = 320.dp, max = 400.dp) 
                     .padding(24.dp) 
-                    .scale(scale)
                     .clip(RoundedCornerShape(28.dp))
                     .then(
                         if (isBlurEnabled && hazeState != null) {
