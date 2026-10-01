@@ -38,7 +38,12 @@ object RootUtils {
     private const val PROFILE_PATH = "$API_DIR_PATH/$PROFILE_FILE_NAME"
     private const val DAEMON_PROFILE_PATH = "/data/adb/.config/AZenith/API/current_profile"
 
-    private fun readRootFile(path: String): String? {
+    /**
+     * Read a file through the root shell. Returns null when the file is missing
+     * or unreadable, which is the same branch every `Shell.cmd("cat …").exec()`
+     * call site used to take on failure.
+     */
+    internal fun readRootFile(path: String): String? {
         return try {
             val file = SuFile(path)
             if (!file.exists()) return null
@@ -48,11 +53,42 @@ object RootUtils {
         }
     }
 
-    private fun writeRootFile(path: String, content: String) {
+    /**
+     * Write a file through the root shell. Content is written verbatim -- a
+     * caller replacing `Shell.cmd("echo $v > f")` must include the trailing
+     * newline itself, because `echo` appended one.
+     */
+    internal fun writeRootFile(path: String, content: String) {
         try {
             SuFile(path).newOutputStream().use { it.write(content.toByteArray()) }
         } catch (e: Exception) {
             // no-op
+        }
+    }
+
+    /**
+     * Create an empty file through the root shell, replacing `touch <path>`.
+     */
+    internal fun touchRootFile(path: String) {
+        try {
+            val file = SuFile(path)
+            if (!file.exists()) {
+                SuFile(path.substringBeforeLast('/', "")).mkdirs()
+                file.createNewFile()
+            }
+        } catch (e: Exception) {
+            // no-op
+        }
+    }
+
+    /**
+     * Whether a path exists through the root shell, replacing `test -e <path>`.
+     */
+    internal fun rootFileExists(path: String): Boolean {
+        return try {
+            SuFile(path).exists()
+        } catch (e: Exception) {
+            false
         }
     }
 
@@ -70,8 +106,14 @@ object RootUtils {
     }
 
     fun getModuleVersionCode(): Int {
-        val result = Shell.cmd("grep '^versionCode=' /data/adb/modules/AZenith/module.prop | cut -d= -f2").exec().out
-        return result.firstOrNull()?.trim()?.toIntOrNull() ?: -1
+        // Was `grep '^versionCode=' … | cut -d= -f2` through a shell. Read the
+        // file and take the line directly rather than spawning grep and cut.
+        val content = readRootFile("$MODULE_DIR/module.prop")
+            ?: return -1
+        val line = content.lineSequence()
+            .firstOrNull { it.startsWith("versionCode=") }
+            ?: return -1
+        return line.substringAfter("versionCode=").trim().toIntOrNull() ?: -1
     }
 
     data class GameInfo(val pkg: String?, val startTime: String?)

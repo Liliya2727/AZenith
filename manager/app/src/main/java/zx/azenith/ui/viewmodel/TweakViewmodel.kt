@@ -29,6 +29,7 @@ import androidx.lifecycle.viewModelScope
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.io.SuFile
 import com.topjohnwu.superuser.io.SuFileOutputStream
+import zx.azenith.ui.util.RootUtils
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -155,7 +156,7 @@ class TweakViewModel : ViewModel() {
 
             if (backupApplist) {
 
-                val applistContent = Shell.cmd("cat $APPLIST_PATH").exec().out.joinToString("\n")
+                val applistContent = RootUtils.readRootFile(APPLIST_PATH).orEmpty()
                 if (applistContent.isNotBlank()) {
                     propsMap[APPLIST_BACKUP_KEY] = applistContent
                 }
@@ -208,7 +209,7 @@ class TweakViewModel : ViewModel() {
                         PropertyUtils.set(key, value)
                         
                         if (key == "persist.sys.azenithconf.freqoffset") {
-                            Shell.cmd("echo $value > /data/adb/.config/AZenith/freqoffset").exec()
+                            RootUtils.writeRootFile("/data/adb/.config/AZenith/freqoffset", "$value\n")
                         }
                     }
                 }
@@ -226,7 +227,7 @@ class TweakViewModel : ViewModel() {
                 }
             }
             
-            Shell.cmd("touch /data/adb/modules/AZenith/reboot").exec()
+            RootUtils.touchRootFile("/data/adb/modules/AZenith/reboot")
             if (restoreTweaks) {
                 loadAllConfiguration(context)
             }
@@ -298,9 +299,9 @@ class TweakViewModel : ViewModel() {
     }
 
     private fun loadGovernorsInternal() {
-        val result = Shell.cmd("cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors").exec()
-        if (result.isSuccess) {
-            val govs = result.out.firstOrNull()?.trim()?.split("\\s+".toRegex()) ?: emptyList()
+        val govs = RootUtils.readRootFile("/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors")
+            ?.split("\\s+".toRegex()) ?: emptyList()
+        if (govs.isNotEmpty()) {
             val currentDefault = PropertyUtils.get("persist.sys.azenith.custom_default_cpu_gov").ifEmpty {
                 PropertyUtils.get("persist.sys.azenith.default_cpu_gov")
             }
@@ -320,15 +321,14 @@ class TweakViewModel : ViewModel() {
         val candidates = listOf("mmcblk0", "mmcblk1", "sda", "sdb", "sdc")
         var validBlock = ""
         for (block in candidates) {
-            if (Shell.cmd("test -e /sys/block/$block/queue/scheduler").exec().isSuccess) {
+            if (RootUtils.rootFileExists("/sys/block/$block/queue/scheduler")) {
                 validBlock = block
                 break
             }
         }
         if (validBlock.isNotEmpty()) {
-            val result = Shell.cmd("cat /sys/block/$validBlock/queue/scheduler").exec()
-            if (result.isSuccess) {
-                val rawOut = result.out.firstOrNull() ?: ""
+            val rawOut = RootUtils.readRootFile("/sys/block/$validBlock/queue/scheduler").orEmpty()
+            if (rawOut.isNotEmpty()) {
                 val schedulers = rawOut.replace("[", "").replace("]", "").trim().split("\\s+".toRegex())
 
                 val currentBal = PropertyUtils.get("persist.sys.azenith.custom_default_balanced_IO").ifEmpty {
@@ -357,11 +357,23 @@ class TweakViewModel : ViewModel() {
         if (hasMali) {
             isMaliGpuAvailable = true
 
-            val govResult = Shell.cmd("cat /sys/class/devfreq/*.mali/available_governors").exec()
-            
-            if (govResult.isSuccess) {
-                val govs = govResult.out.firstOrNull()?.trim()?.split("\\s+".toRegex())
-                    ?.filterNot { it.startsWith("apu", ignoreCase = true) } ?: emptyList()
+            // The node is behind a glob (`*.mali`). Was `cat /sys/class/devfreq/
+            // *.mali/available_governors` through a shell for the expansion.
+            // `SuFile.listFiles()` goes through the root shell, so the matching
+            // no longer needs a process; the read goes through readRootFile
+            // rather than File.readText, which is inherited from java.io.File
+            // and would open an unprivileged FileInputStream.
+            val maliGovs = try {
+                SuFile("/sys/class/devfreq").listFiles()
+                    ?.firstOrNull { it.name.endsWith(".mali") }
+                    ?.let { RootUtils.readRootFile("${it.absolutePath}/available_governors") }
+            } catch (e: Exception) {
+                null
+            }
+
+            if (!maliGovs.isNullOrEmpty()) {
+                val govs = maliGovs.split("\\s+".toRegex())
+                    .filterNot { it.startsWith("apu", ignoreCase = true) }
                 
                 val currentBal = PropertyUtils.get("persist.sys.azenith.custom_default_maligpu_gov").ifEmpty {
                     PropertyUtils.get("persist.sys.azenith.default_maligpu_gov")
@@ -395,7 +407,7 @@ class TweakViewModel : ViewModel() {
         val selectedGov = availableGovernors?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             PropertyUtils.set("persist.sys.azenith.custom_default_cpu_gov", selectedGov)
-            val currentProfile = Shell.cmd("cat /data/adb/.config/AZenith/API/current_profile").exec().out.firstOrNull()?.trim()
+            val currentProfile = RootUtils.readRootFile("/data/adb/.config/AZenith/API/current_profile")
             if (currentProfile == "2") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsgov $selectedGov").exec()
             }
@@ -407,7 +419,7 @@ class TweakViewModel : ViewModel() {
         val selectedGov = availableGovernors?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             PropertyUtils.set("persist.sys.azenith.custom_powersave_cpu_gov", selectedGov)
-            val currentProfile = Shell.cmd("cat /data/adb/.config/AZenith/API/current_profile").exec().out.firstOrNull()?.trim()
+            val currentProfile = RootUtils.readRootFile("/data/adb/.config/AZenith/API/current_profile")
             if (currentProfile == "3") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsgov $selectedGov").exec()
             }
@@ -419,7 +431,7 @@ class TweakViewModel : ViewModel() {
         val selectedGov = availableGovernors?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             PropertyUtils.set("persist.sys.azenith.custom_performance_cpu_gov", selectedGov)
-            val currentProfile = Shell.cmd("cat /data/adb/.config/AZenith/API/current_profile").exec().out.firstOrNull()?.trim()
+            val currentProfile = RootUtils.readRootFile("/data/adb/.config/AZenith/API/current_profile")
             if (currentProfile == "3") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsgov $selectedGov").exec()
             }
@@ -432,7 +444,7 @@ class TweakViewModel : ViewModel() {
         val propValue = if (index == 0) "Disabled" else offsetLabels[index].replace("%", "")
         viewModelScope.launch(Dispatchers.IO) {
             PropertyUtils.set("persist.sys.azenithconf.freqoffset", propValue)
-            Shell.cmd("echo $propValue > /data/adb/.config/AZenith/freqoffset").exec()
+            RootUtils.writeRootFile("/data/adb/.config/AZenith/freqoffset", "$propValue\n")
         }
     }
 
@@ -441,7 +453,7 @@ class TweakViewModel : ViewModel() {
         val selectedIO = availableIOSchedulers?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             PropertyUtils.set("persist.sys.azenith.custom_default_balanced_IO", selectedIO)
-            val currentProfile = Shell.cmd("cat /data/adb/.config/AZenith/API/current_profile").exec().out.firstOrNull()?.trim()
+            val currentProfile = RootUtils.readRootFile("/data/adb/.config/AZenith/API/current_profile")
             if (currentProfile == "2") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO $selectedIO").exec()
             }
@@ -453,7 +465,7 @@ class TweakViewModel : ViewModel() {
         val selectedIO = availableIOSchedulers?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             PropertyUtils.set("persist.sys.azenith.custom_performance_IO", selectedIO)
-            val currentProfile = Shell.cmd("cat /data/adb/.config/AZenith/API/current_profile").exec().out.firstOrNull()?.trim()
+            val currentProfile = RootUtils.readRootFile("/data/adb/.config/AZenith/API/current_profile")
             if (currentProfile == "1") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO $selectedIO").exec()
             }
@@ -465,7 +477,7 @@ class TweakViewModel : ViewModel() {
         val selectedIO = availableIOSchedulers?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             PropertyUtils.set("persist.sys.azenith.custom_powersave_IO", selectedIO)
-            val currentProfile = Shell.cmd("cat /data/adb/.config/AZenith/API/current_profile").exec().out.firstOrNull()?.trim()
+            val currentProfile = RootUtils.readRootFile("/data/adb/.config/AZenith/API/current_profile")
             if (currentProfile == "3") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsIO $selectedIO").exec()
             }
@@ -478,7 +490,7 @@ class TweakViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             PropertyUtils.set("persist.sys.azenith.custom_default_maligpu_gov", selectedGov)
 
-            val currentProfile = Shell.cmd("cat /data/adb/.config/AZenith/API/current_profile").exec().out.firstOrNull()?.trim()
+            val currentProfile = RootUtils.readRootFile("/data/adb/.config/AZenith/API/current_profile")
             if (currentProfile == "2") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsMaliGov $selectedGov").exec()
             }
@@ -490,7 +502,7 @@ class TweakViewModel : ViewModel() {
         val selectedGov = availableMaliGovernors?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             PropertyUtils.set("persist.sys.azenith.custom_performance_maligpu_gov", selectedGov)
-            val currentProfile = Shell.cmd("cat /data/adb/.config/AZenith/API/current_profile").exec().out.firstOrNull()?.trim()
+            val currentProfile = RootUtils.readRootFile("/data/adb/.config/AZenith/API/current_profile")
             if (currentProfile == "1") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsMaliGov $selectedGov").exec()
             }
@@ -502,7 +514,7 @@ class TweakViewModel : ViewModel() {
         val selectedGov = availableMaliGovernors?.getOrNull(index) ?: return
         viewModelScope.launch(Dispatchers.IO) {
             PropertyUtils.set("persist.sys.azenith.custom_powersave_maligpu_gov", selectedGov)
-            val currentProfile = Shell.cmd("cat /data/adb/.config/AZenith/API/current_profile").exec().out.firstOrNull()?.trim()
+            val currentProfile = RootUtils.readRootFile("/data/adb/.config/AZenith/API/current_profile")
             if (currentProfile == "3") {
                 Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf setsMaliGov $selectedGov").exec()
             }
