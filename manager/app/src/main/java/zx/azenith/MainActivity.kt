@@ -43,6 +43,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
@@ -138,6 +139,7 @@ fun MainScreen(fromTileType: String? = null) {
     val navController = rememberNavController()
     val context = LocalContext.current
     val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    var useScrollAnimation by remember { mutableStateOf(settingsPrefs.getBoolean("use_scroll_animation", false)) }
     
     val pagerRoutes = remember { listOf("home", "applist", "tweaks", "settings") }
     val pagerState = rememberPagerState(initialPage = 0) { pagerRoutes.size }
@@ -213,6 +215,8 @@ fun MainScreen(fromTileType: String? = null) {
     val refreshPrefs = {
         val newBlur = settingsPrefs.getBoolean("expressive_blur_ui", false)
         if (isBlurEnabled != newBlur) isBlurEnabled = newBlur
+        val newScroll = settingsPrefs.getBoolean("use_scroll_animation", false)
+        if (useScrollAnimation != newScroll) useScrollAnimation = newScroll
     }
 
     LaunchedEffect(Unit) {
@@ -398,11 +402,28 @@ fun MainScreen(fromTileType: String? = null) {
                             modifier = Modifier.fillMaxSize(),
                             beyondViewportPageCount = 3
                         ) { page ->
-                            when (pagerRoutes[page]) {
-                                "home" -> HomeScreen()
-                                "applist" -> ApplistScreen(navController)
-                                "tweaks" -> TweakScreen(navController)
-                                "settings" -> SettingsScreen(navController)
+                            val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+                            val absOffset = kotlin.math.abs(pageOffset)
+                            
+                            val pageModifier = if (!useScrollAnimation) {
+                                Modifier.graphicsLayer {
+                                    translationX = pageOffset * size.width
+                                    alpha = 1f - absOffset.coerceIn(0f, 1f)
+                                    val scale = 1f - (absOffset.coerceIn(0f, 1f) * 0.05f)
+                                    scaleX = scale
+                                    scaleY = scale
+                                }
+                            } else {
+                                Modifier
+                            }
+                            
+                            Box(modifier = pageModifier.fillMaxSize()) {
+                                when (pagerRoutes[page]) {
+                                    "home" -> HomeScreen()
+                                    "applist" -> ApplistScreen(navController)
+                                    "tweaks" -> TweakScreen(navController)
+                                    "settings" -> SettingsScreen(navController)
+                                }
                             }
                         }
                     }
