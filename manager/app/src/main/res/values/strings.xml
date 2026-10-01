@@ -140,6 +140,7 @@
     <string name="nav_tweaks">Tweaks</string>
     <string name="next">Next</string>
     <string name="no">No</string>
+    <string name="no_apps_found">No apps match this search</string>
     <string name="notif_ch_profiles">AZenith Profiles</string>
     <string name="notif_ch_system">AZenith System</string>
     <string name="off_label">Off</string>

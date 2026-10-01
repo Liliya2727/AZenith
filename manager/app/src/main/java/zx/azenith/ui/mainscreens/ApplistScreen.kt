@@ -164,7 +164,26 @@ fun ApplistScreen(navController: NavController) {
         ) {
             val appsToDisplay = viewModel.filteredApps
 
-            ExpressiveLazyList(
+            if (ApplistViewmodel.apps.isEmpty()) {
+                // Nothing loaded yet: a bare `items = emptyList()` renders an empty
+                // frame, which is the perceived stall on first open. Gate on the app
+                // list alone — `isRefreshing` flips true the instant the scan starts,
+                // so testing it here would fall through to the empty list mid-scan.
+                SkeletonSettingsList(rowCount = 6)
+            } else if (appsToDisplay.isEmpty() && !viewModel.isRefreshing) {
+                // Scan finished and genuinely has no match for the current query.
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.no_apps_found),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                ExpressiveLazyList(
                 state = listState,
                 items = appsToDisplay,
                 key = { it.packageName },
@@ -221,6 +240,7 @@ fun ApplistScreen(navController: NavController) {
                         )
                     }
                 )
+                }
             }
 
             PullToRefreshDefaults.LoadingIndicator(

@@ -71,6 +71,7 @@ import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.component.ExpressiveList
 import zx.azenith.ui.component.ExpressiveSwitchItem
+import zx.azenith.ui.component.SkeletonSettingsList
 import zx.azenith.ui.util.RootUtils
 
 /**
@@ -230,6 +231,7 @@ fun GetStartedScreen(navController: NavController) {
     var isLauncherVisible by remember { mutableStateOf(isLauncherIconEnabled(context)) }
     var stateToast by remember { mutableStateOf(true) }
     var autoMode by remember { mutableStateOf(false) }
+    var prefsLoaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         val toastOut = Shell.cmd("getprop persist.sys.azenithconf.showtoast").exec().out.firstOrNull()?.trim()
@@ -237,6 +239,7 @@ fun GetStartedScreen(navController: NavController) {
 
         val aiOut = Shell.cmd("getprop persist.sys.azenithconf.AIenabled").exec().out.firstOrNull()?.trim()
         if (aiOut == "0") autoMode = true
+        prefsLoaded = true
     }
 
     var isFinalizing by remember { mutableStateOf(false) }
@@ -607,32 +610,40 @@ fun GetStartedScreen(navController: NavController) {
                                             )
                                         },
                                         {
-                                            ExpressiveSwitchItem(
-                                                icon = Icons.Filled.Notifications,
-                                                title = stringResource(R.string.show_toast),
-                                                checked = stateToast,
-                                                onCheckedChange = { isChecked ->
-                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                    stateToast = isChecked
-                                                    Shell.cmd("su -c setprop persist.sys.azenithconf.showtoast ${if (isChecked) "1" else "0"}").submit()
-                                                }
-                                            )
+                                            if (!prefsLoaded) {
+                                                SkeletonSettingsList(rowCount = 1)
+                                            } else {
+                                                ExpressiveSwitchItem(
+                                                    icon = Icons.Filled.Notifications,
+                                                    title = stringResource(R.string.show_toast),
+                                                    checked = stateToast,
+                                                    onCheckedChange = { isChecked ->
+                                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                        stateToast = isChecked
+                                                        Shell.cmd("su -c setprop persist.sys.azenithconf.showtoast ${if (isChecked) "1" else "0"}").submit()
+                                                    }
+                                                )
+                                            }
                                         },
                                         {
-                                            ExpressiveSwitchItem(
-                                                icon = Icons.Filled.Assistant,
-                                                title = stringResource(R.string.disable_auto_mode),
-                                                checked = autoMode,
-                                                onCheckedChange = { isChecked ->
-                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                    autoMode = isChecked
-                                                    val state = if (isChecked) "0" else "1"
-                                                    Shell.cmd(
-                                                        "su -c setprop persist.sys.azenithconf.AIenabled $state",
-                                                        "su -c \"echo $state > /data/adb/.config/AZenith/API/current_modes\""
-                                                    ).submit()
-                                                }
-                                            )
+                                            if (!prefsLoaded) {
+                                                SkeletonSettingsList(rowCount = 1)
+                                            } else {
+                                                ExpressiveSwitchItem(
+                                                    icon = Icons.Filled.Assistant,
+                                                    title = stringResource(R.string.disable_auto_mode),
+                                                    checked = autoMode,
+                                                    onCheckedChange = { isChecked ->
+                                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                        autoMode = isChecked
+                                                        val state = if (isChecked) "0" else "1"
+                                                        Shell.cmd(
+                                                            "su -c setprop persist.sys.azenithconf.AIenabled $state",
+                                                            "su -c \"echo $state > /data/adb/.config/AZenith/API/current_modes\""
+                                                        ).submit()
+                                                    }
+                                                )
+                                            }
                                         }
                                     )
                                 )
