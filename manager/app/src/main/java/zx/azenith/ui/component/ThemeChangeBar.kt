@@ -74,8 +74,10 @@ fun ThemeAppliedOverlay(
     phase: ThemeBarPhase,
     modifier: Modifier = Modifier
 ) {
-    if (phase == ThemeBarPhase.Idle) return
-
+    // `visible` has to be driven by the phase and the subtree has to stay
+    // composed through Idle. Returning early here would drop the box out of
+    // composition the moment the phase ended, which skips the exit transition
+    // entirely and the box just blinks out of existence.
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -83,7 +85,7 @@ fun ThemeAppliedOverlay(
         contentAlignment = Alignment.Center
     ) {
         AnimatedVisibility(
-            visible = true,
+            visible = phase != ThemeBarPhase.Idle,
             enter = fadeIn(tween(140)) + scaleIn(
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioMediumBouncy,
@@ -91,7 +93,10 @@ fun ThemeAppliedOverlay(
                 ),
                 initialScale = 0.7f
             ),
-            exit = fadeOut(tween(180)) + scaleOut(tween(180), targetScale = 0.85f)
+            exit = fadeOut(tween(220)) + scaleOut(
+                animationSpec = tween(260, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                targetScale = 0.7f
+            )
         ) {
             Surface(
                 shape = MaterialTheme.shapes.extraLarge,
