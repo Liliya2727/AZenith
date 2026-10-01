@@ -151,7 +151,7 @@ fun ColorPaletteScreen(navController: NavController) {
     }
     
     var useScrollAnimation by rememberSaveable {
-        mutableStateOf(prefs.getBoolean("use_scroll_animation", false))
+        mutableStateOf(prefs.getBoolean("use_scroll_animation", true))
     }
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
