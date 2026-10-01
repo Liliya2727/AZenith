@@ -49,16 +49,21 @@ import zx.azenith.ui.util.*
 fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     
+    // The clock only needs minute granularity, so the tick is aligned to the next
+    // minute boundary instead of firing every second. The 1 Hz tick that used to
+    // live here forced a full frame every second, on this screen and on every
+    // other screen the pager keeps composed alongside it.
     var time by remember { mutableStateOf(Calendar.getInstance()) }
     LaunchedEffect(Unit) {
         while (true) {
-            delay(1000)
-            time = Calendar.getInstance()
+            val now = Calendar.getInstance()
+            time = now
+            delay(60_000L - (now.timeInMillis % 60_000L))
         }
     }
     
-    val hourFormat = SimpleDateFormat("HH", Locale.getDefault())
-    val minuteFormat = SimpleDateFormat("mm", Locale.getDefault())
+    val hourFormat = remember { SimpleDateFormat("HH", Locale.getDefault()) }
+    val minuteFormat = remember { SimpleDateFormat("mm", Locale.getDefault()) }
     
     val buildDateString = remember {
         val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
@@ -68,18 +73,13 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
     val wallpaperBitmap by WallpaperCache.bitmapState
     
 
+    // Uptime is second-granular, so it does need a 1 Hz tick, but it must not
+    // invalidate this whole header. LiveUptime owns its own state and is the
+    // only thing that recomposes once a second; the wall clock, the wallpaper
+    // and the six build-info rows above stay untouched. Seeding the state from
+    // elapsedRealtime (rather than starting empty) keeps the value correct on
+    // the very first composition, so there is no second relayout to fill it in.
     val uptimeMillis = SystemClock.elapsedRealtime()
-    val totalSeconds = uptimeMillis / 1000
-    val days = totalSeconds / (24 * 3600)
-    val hours = (totalSeconds % (24 * 3600)) / 3600
-    val minutes = (totalSeconds % 3600) / 60
-    val seconds = totalSeconds % 60
-    
-    val uptimeString = if (days > 0) {
-        "${days}d ${hours}h ${minutes}m ${seconds}s"
-    } else {
-        "${hours}h ${minutes}m ${seconds}s"
-    }
     
     Row(
         modifier = modifier
@@ -145,8 +145,49 @@ fun AppInfoHeaderContent(modifier: Modifier = Modifier) {
             AppInfoTextItem(title = stringResource(R.string.str_version_code), value = BuildConfig.VERSION_CODE.toString())
             AppInfoTextItem(title = stringResource(R.string.str_package_name), value = context.packageName)
 
-            AppInfoTextItem(title = stringResource(R.string.str_device_uptime), value = uptimeString)
+            LiveUptime(uptimeMillis)
         }
+    }
+}
+
+/**
+ * Device uptime as a live "1h 23m 45s" value.
+ *
+ * Split out of [AppInfoHeaderContent] so the unavoidable once-a-second update
+ * invalidates only the row that displays it. The state is seeded from
+ * elapsedRealtime during the first composition rather than left empty, so the
+ * row renders its real value immediately and does not need a second pass.
+ */
+@Composable
+private fun LiveUptime(initialElapsedRealtime: Long, modifier: Modifier = Modifier) {
+    var elapsed by remember(initialElapsedRealtime) {
+        mutableStateOf(formatUptime(initialElapsedRealtime))
+    }
+    LaunchedEffect(Unit) {
+        while (true) {
+            // Wake on the second boundary so the value cannot drift up to a
+            // second behind the status-bar clock.
+            val now = SystemClock.elapsedRealtime()
+            elapsed = formatUptime(now)
+            delay(1_000L - (now % 1_000L))
+        }
+    }
+    AppInfoTextItem(
+        title = stringResource(R.string.str_device_uptime),
+        value = elapsed
+    )
+}
+
+private fun formatUptime(elapsedRealtime: Long): String {
+    val totalSeconds = elapsedRealtime / 1000
+    val days = totalSeconds / (24 * 3600)
+    val hours = (totalSeconds % (24 * 3600)) / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (days > 0) {
+        "${days}d ${hours}h ${minutes}m ${seconds}s"
+    } else {
+        "${hours}h ${minutes}m ${seconds}s"
     }
 }
 
