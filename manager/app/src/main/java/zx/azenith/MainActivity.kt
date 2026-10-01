@@ -142,6 +142,7 @@ val ExpressiveShapes = Shapes(
  */
 private val EmphasizedDecelerate = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
 private val EmphasizedAccelerate = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
+private val Emphasized = CubicBezierEasing(0.2f, 0f, 0f, 1f)
 
 data class NavItem(
     val route: String,
@@ -378,9 +379,16 @@ fun MainScreen(fromTileType: String? = null) {
                             // one movement rather than two independent slides.
                             // A spring on the incoming offset leaves the
                             // outgoing screen with nothing to hand off to.
+                            // The offset runs on the plain emphasized curve at
+                            // 500ms rather than emphasized-decelerate: that
+                            // curve rises almost vertically, so most of the
+                            // travel lands in the first ~100ms and the screen
+                            // reads as an instant cut that then settles. The
+                            // fade stays on decelerate, where the fast start is
+                            // what makes the incoming surface feel lit.
                             slideInHorizontally(
-                                initialOffsetX = { fullWidth -> fullWidth / 4 },
-                                animationSpec = tween(400, easing = EmphasizedDecelerate)
+                                initialOffsetX = { fullWidth -> fullWidth / 3 },
+                                animationSpec = tween(500, easing = Emphasized)
                             ) + fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate))
                         } else {
                             // Subscreen <-> subscreen: the same shared axis X as the
@@ -388,7 +396,7 @@ fun MainScreen(fromTileType: String? = null) {
                             // is what made opening a submenu feel instant -- there was
                             // no positional movement to read as travel.
                             slideInHorizontally(
-                                initialOffsetX = { fullWidth -> fullWidth / 4 },
+                                initialOffsetX = { fullWidth -> fullWidth / 3 },
                                 animationSpec = tween(400, easing = EmphasizedDecelerate)
                             ) + fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate))
                         }
@@ -397,10 +405,21 @@ fun MainScreen(fromTileType: String? = null) {
                         if (initialState.destination.route == "get_started" && targetState.destination.route in bottomBarRoutes) {
                             fadeOut(animationSpec = tween(700))
                         } else if (initialState.destination.route in bottomBarRoutes && targetState.destination.route !in bottomBarRoutes) {
+                            // The outgoing page has to travel with the incoming one
+                            // or the pair reads as a new screen sliding over a
+                            // static one. MD3 fade-through keeps the distance
+                            // small and the exit short; it uses -1/8 at 90ms
+                            // precisely because the incoming screen does the
+                            // travelling. The incoming screen here moves far
+                            // enough to need a real handoff, so the outgoing one
+                            // is pushed to -1/3 over the emphasized curve and is
+                            // NOT faded -- a fade would blank it out well before
+                            // the incoming one has covered it, leaving a bare
+                            // background visible for the rest of the transition.
                             slideOutHorizontally(
-                                targetOffsetX = { fullWidth: Int -> -(fullWidth / 8) },
-                                animationSpec = tween(200, easing = EmphasizedAccelerate)
-                            ) + fadeOut(animationSpec = tween(200, easing = EmphasizedAccelerate))
+                                targetOffsetX = { fullWidth: Int -> -(fullWidth / 3) },
+                                animationSpec = tween(500, easing = Emphasized)
+                            )
                         } else {
                             // Subscreen <-> subscreen or root <-> subscreen (backwards): use
                             // M3 shared axis X, but give the outgoing content a short
