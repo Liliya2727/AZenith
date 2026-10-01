@@ -90,6 +90,8 @@ import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.clearHeaderImage
 import zx.azenith.ui.util.getHeaderImage
 import zx.azenith.ui.util.saveHeaderImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 
 @Composable
@@ -106,12 +108,17 @@ fun BypassChargeScreen(navController: NavController) {
     val isNeedSetup = bypassPath == "NEED_SETUP"    
 
     LaunchedEffect(Unit) {
-        bypassPath = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "")
-        
-        val thresholdProp = PropertyUtils.get("persist.sys.azenithconf.bypasschgthreshold", "20")
-        thresholdValue = thresholdProp.toFloatOrNull()?.coerceIn(20f, 50f) ?: 20f
-        
-        bypassChgState = PropertyUtils.get("persist.sys.azenithconf.bypasschg", "0") == "1"
+        // Property reads go through a root shell on first use, so they must not
+        // run on the composition dispatcher -- this LaunchedEffect would block the
+        // first frame of the screen.
+        withContext(Dispatchers.IO) {
+            bypassPath = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "")
+
+            val thresholdProp = PropertyUtils.get("persist.sys.azenithconf.bypasschgthreshold", "20")
+            thresholdValue = thresholdProp.toFloatOrNull()?.coerceIn(20f, 50f) ?: 20f
+
+            bypassChgState = PropertyUtils.get("persist.sys.azenithconf.bypasschg", "0") == "1"
+        }
     }
 
     Scaffold(

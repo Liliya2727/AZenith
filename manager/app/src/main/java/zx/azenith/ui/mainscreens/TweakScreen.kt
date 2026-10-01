@@ -172,6 +172,18 @@ fun TweakScreen(
         }
     }
 
+    // Read once for the whole screen. The restore dialog compared the backup's
+    // SoC against this property in three separate places, two of them inside
+    // content lambdas, so every recomposition of that dialog paid a fresh
+    // property read. The value is fixed for as long as the screen is composed.
+    // produceState rather than a plain read because the read needs a dispatcher
+    // hop, and a bare `remember` block is not a suspend context.
+    val currentSocType by produceState("") {
+        value = withContext(Dispatchers.IO) {
+            PropertyUtils.get("persist.sys.azenith.soctype")
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.loadAllConfiguration(context)
     }
@@ -496,7 +508,6 @@ fun TweakScreen(
             title = context.getString(R.string.str_restore_configuration),
             confirmText = context.getString(R.string.dialog_restore_confirm),
             confirmEnabled = pendingRestoreResult?.let { result ->
-                val currentSocType = PropertyUtils.get("persist.sys.azenith.soctype")
                 val isSocMismatch = result.socType != currentSocType
                 (optRestoreTweaks && !isSocMismatch) || optRestoreApplist
             } ?: false,
@@ -507,7 +518,6 @@ fun TweakScreen(
 
                 pendingRestoreResult?.let { result ->
                     val dataToRestore = result.data
-                    val currentSocType = PropertyUtils.get("persist.sys.azenith.soctype")
                     val isSocMismatch = result.socType != currentSocType
 
                     if (dataToRestore != null) {
@@ -524,7 +534,6 @@ fun TweakScreen(
 
             pendingRestoreResult?.let { result ->
                 val socName = zx.azenith.ui.util.BackupManager.getSocName(result.socType)
-                val currentSocType = PropertyUtils.get("persist.sys.azenith.soctype")
                 val isSocMismatch = result.socType != currentSocType
 
                 Column {
