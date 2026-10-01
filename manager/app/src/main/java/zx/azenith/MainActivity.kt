@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -57,6 +58,10 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -145,6 +150,10 @@ data class NavItem(
     val gradientColors: List<Color> = listOf(Color.Transparent, Color.Transparent)
 )
 
+// Shared so the pill and its call site agree on one spec. Hoisted to file level
+// because a composable default argument cannot see a local of the other scope.
+private val NAV_PILL_SPEC: FiniteAnimationSpec<Color> = tween(300, easing = FastOutSlowInEasing)
+
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -153,7 +162,7 @@ fun MainScreen(fromTileType: String? = null) {
     val navController = rememberNavController()
     val context = LocalContext.current
     val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
-    var useScrollAnimation by remember { mutableStateOf(settingsPrefs.getBoolean("use_scroll_animation", false)) }
+    var useScrollAnimation by remember { mutableStateOf(settingsPrefs.getBoolean("use_scroll_animation", true)) }
     
     val pagerRoutes = remember { listOf("home", "applist", "tweaks", "settings") }
     val pagerState = rememberPagerState(initialPage = 0) { pagerRoutes.size }
@@ -194,12 +203,17 @@ fun MainScreen(fromTileType: String? = null) {
     val highlightRoute = rememberSaveable { mutableStateOf("home") }
 
     val currentRoute = if (isOnMainPager) {
-        // Follow the pager on user swipes, which have no tap to record. An
-        // in-flight scroll settles on its target, so read the destination
-        // rather than the current position.
-        val route = pagerRoutes[pagerState.settledPage]
+        // On swipes there is no tap to record, so take the destination from the
+        // pager itself. targetPage is the page the in-flight gesture is heading
+        // for, which is already committed from the first pixel of the drag --
+        // settledPage would not move until the scroll finished, which is the
+        // lag this replaces. The offset fraction is deliberately not read here:
+        // it is @FrequentlyChangingValue and would recompose the whole screen
+        // on every frame. The pill animates from it in a graphicsLayer below.
         if (!pagerState.isScrollInProgress) {
-            highlightRoute.value = route
+            highlightRoute.value = pagerRoutes[pagerState.settledPage]
+        } else {
+            highlightRoute.value = pagerRoutes[pagerState.targetPage]
         }
         highlightRoute.value
     } else {
@@ -244,11 +258,16 @@ fun MainScreen(fromTileType: String? = null) {
     val refreshPrefs = {
         val newBlur = settingsPrefs.getBoolean("expressive_blur_ui", false)
         if (isBlurEnabled != newBlur) isBlurEnabled = newBlur
-        val newScroll = settingsPrefs.getBoolean("use_scroll_animation", false)
+        val newScroll = settingsPrefs.getBoolean("use_scroll_animation", true)
         if (useScrollAnimation != newScroll) useScrollAnimation = newScroll
     }
 
+    // Probing root is a fork+exec through su, so the very first call blocks for
+    // as long as the su prompt takes. It is launched rather than awaited so it
+    // cannot sit in front of the first composition, and the loop is seeded with
+    // a cheap read of the already-known state instead of re-probing twice.
     LaunchedEffect(Unit) {
+        refreshPrefs()
         while (true) {
             withContext(Dispatchers.IO) {
                 rootStatus = RootUtils.requestRootAccess()
@@ -364,7 +383,14 @@ fun MainScreen(fromTileType: String? = null) {
                                 animationSpec = tween(400, easing = EmphasizedDecelerate)
                             ) + fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate))
                         } else {
-                            fadeIn(animationSpec = tween(300))
+                            // Subscreen <-> subscreen: the same shared axis X as the
+                            // root -> subscreen case. It used to be a bare fade, which
+                            // is what made opening a submenu feel instant -- there was
+                            // no positional movement to read as travel.
+                            slideInHorizontally(
+                                initialOffsetX = { fullWidth -> fullWidth / 4 },
+                                animationSpec = tween(400, easing = EmphasizedDecelerate)
+                            ) + fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate))
                         }
                     },
                     exitTransition = {
@@ -376,7 +402,13 @@ fun MainScreen(fromTileType: String? = null) {
                                 animationSpec = tween(200, easing = EmphasizedAccelerate)
                             ) + fadeOut(animationSpec = tween(200, easing = EmphasizedAccelerate))
                         } else {
-                            fadeOut(animationSpec = tween(300))
+                            // Subscreen <-> subscreen or root <-> subscreen (backwards): use
+                            // M3 shared axis X, but give the outgoing content a short
+                            // fade so the transition reads smooth rather than abrupt.
+                            slideOutHorizontally(
+                                targetOffsetX = { fullWidth: Int -> -(fullWidth / 6) },
+                                animationSpec = tween(200, easing = EmphasizedAccelerate)
+                            ) + fadeOut(animationSpec = tween(200, easing = EmphasizedAccelerate))
                         }
                     },
                     popEnterTransition = {
@@ -386,11 +418,16 @@ fun MainScreen(fromTileType: String? = null) {
                                 animationSpec = tween(400, easing = EmphasizedDecelerate)
                             ) + fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate))
                         } else {
-                            fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate)) +
-                            scaleIn(
-                                initialScale = 0.96f,
+                            // Back out of a subscreen into another subscreen. The
+                            // scale-in is the M3 fade-through used for a
+                            // destination swap that has no axis, but on its own it
+                            // reads as a pop; adding the incoming slide back from
+                            // the left gives the return the same directional motion
+                            // the forward push had.
+                            slideInHorizontally(
+                                initialOffsetX = { fullWidth -> -(fullWidth / 8) },
                                 animationSpec = tween(400, easing = EmphasizedDecelerate)
-                            )
+                            ) + fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate))
                         }
                     },
                     popExitTransition = {
@@ -410,11 +447,10 @@ fun MainScreen(fromTileType: String? = null) {
                                 animationSpec = tween(400, easing = EmphasizedDecelerate)
                             ) + fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate))
                         } else {
-                            fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate)) +
-                            scaleIn(
-                                initialScale = 0.96f,
+                            slideInHorizontally(
+                                initialOffsetX = { fullWidth -> -(fullWidth / 8) },
                                 animationSpec = tween(400, easing = EmphasizedDecelerate)
-                            )
+                            ) + fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate))
                         }
                     },
                     predictivePopExitTransition = {
@@ -428,14 +464,31 @@ fun MainScreen(fromTileType: String? = null) {
                         }
                     }
                 ) {
-                    composable("get_started") { GetStartedScreen(navController) }
+                    composable("get_started") {
+                        // get_started writes has_completed_get_started itself and
+                        // then calls back. It used to relaunch the activity through
+                        // "am start -S", which force-stops the process first, so
+                        // finishing setup restarted the app from cold instead of
+                        // moving on to "main".
+                        GetStartedScreen(navController) {
+                            navController.navigate("main") {
+                                popUpTo("get_started") { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
+                    }
                     
                     // Route Pager (Kode 2)
                     composable("main") {
                         HorizontalPager(
                             state = pagerState,
                             modifier = Modifier.fillMaxSize(),
-                            beyondViewportPageCount = 3
+                            // Keeps the immediate neighbour composed so a
+                            // drag has something to scroll into. A multi-page
+                            // jump composes the pages it passes through on the
+                            // way -- they enter the viewport as it scrolls -- so
+                            // this only has to cover a single drag's lead.
+                            beyondViewportPageCount = 1
                         ) { page ->
                             val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
                             val absOffset = kotlin.math.abs(pageOffset)
@@ -455,8 +508,10 @@ fun MainScreen(fromTileType: String? = null) {
                             } else {
                                 Modifier
                             }
-                            
-                            Box(modifier = pageModifier.fillMaxSize()) {
+
+                            Box(
+                                modifier = pageModifier.fillMaxSize()
+                            ) {
                                 when (pagerRoutes[page]) {
                                     "home" -> HomeScreen()
                                     "applist" -> ApplistScreen(navController)
@@ -488,7 +543,14 @@ fun MainScreen(fromTileType: String? = null) {
                 }
                 
                 AnimatedVisibility(
-                    visible = rootStatus && moduleInstalled && rawRoute in bottomBarRoutes,
+                    // The bar is chrome, not a root-dependent surface, so it is
+                    // shown from the first frame. It used to wait on
+                    // rootStatus && moduleInstalled, which are only set after
+                    // requestRootAccess() returns -- on a cold start that is
+                    // however long the su prompt takes, so the app opened to a
+                    // bare background with no bar and no top bar. Each item
+                    // disables itself instead of the whole bar disappearing.
+                    visible = rawRoute in bottomBarRoutes,
                     enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
                     exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
                     modifier = Modifier.align(Alignment.BottomCenter)
@@ -496,6 +558,7 @@ fun MainScreen(fromTileType: String? = null) {
                     BottomNavBar(
                         items = navItems,
                         selectedRoute = currentRoute ?: "home",
+                        pagerState = pagerState,
                         isBlurEnabled = isBlurEnabled,
                         hazeState = hazeState,
                         modifier = Modifier.align(Alignment.BottomCenter),
@@ -511,6 +574,11 @@ fun MainScreen(fromTileType: String? = null) {
                                         // duration is the tab-switch cost.
                                         Trace.beginSection("AZenith:tabScrollTo")
                                         try {
+                                            // One call for every distance. A jump of two
+                                            // or three scrolls straight through the
+                                            // pages in between at the same rate, which
+                                            // reads as one continuous slide instead of
+                                            // the hard cut scrollToPage produced.
                                             pagerState.animateScrollToPage(
                                                 targetIndex,
                                                 animationSpec = androidx.compose.animation.core.tween(
@@ -602,7 +670,8 @@ fun BottomNavBar(
     onItemSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
     isBlurEnabled: Boolean = false,
-    hazeState: HazeState? = null
+    hazeState: HazeState? = null,
+    pagerState: PagerState? = null
 ) {
     Box(
         modifier = modifier
@@ -629,6 +698,22 @@ fun BottomNavBar(
             color = if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceContainer,
             shadowElevation = if (isBlurEnabled) 0.dp else 8.dp
         ) {
+            // Measured label widths, so the selected pill can interpolate its
+            // width open and closed with the swipe instead of switching between
+            // "icon only" and "icon + label" layouts. Measuring once per
+            // composition keeps the per-frame path free of text layout.
+            val labelMeasurer = rememberTextMeasurer()
+            val density = LocalDensity.current
+            val labelStyle = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
+            val labelWidths = items.map { item ->
+                with(density) {
+                    labelMeasurer.measure(
+                        text = AnnotatedString(stringResource(item.labelRes)),
+                        style = labelStyle
+                    ).size.width.toDp()
+                }
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -636,14 +721,32 @@ fun BottomNavBar(
                 horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                items.forEach { item ->
-                    val isSelected = selectedRoute == item.route
+                items.forEachIndexed { index, item ->
+                    // A continuous 0..1 "how selected is this tab" value rather
+                    // than a boolean, so a drag interpolates instead of
+                    // snapping when the selection flips. The pager offset is a
+                    // frequently-changing value, so it is confined to this
+                    // derivedStateOf: only the four pills below re-read it.
+                    val progress by remember(index) {
+                        pagerState?.let { state ->
+                            derivedStateOf {
+                                val distance = (state.currentPage - index) + state.currentPageOffsetFraction
+                                1f - kotlin.math.abs(distance).coerceIn(0f, 1f)
+                            }
+                        } ?: derivedStateOf { if (selectedRoute == item.route) 1f else 0f }
+                    }
                     NavPill(
                         item = item,
-                        isSelected = isSelected,
-                        isBlurEnabled = isBlurEnabled, 
-                        onClick = { onItemSelected(item.route) },
-                        modifier = if (isSelected) Modifier.weight(1f) else Modifier
+                        selectionProgress = progress,
+                        labelWidth = labelWidths[index] + 5.dp,
+                        isBlurEnabled = isBlurEnabled,
+                        // While the pager is being dragged the target changes
+                        // every frame, so the tween would restart on each one
+                        // and never reach its end value. Snap to the drag instead
+                        // and let the pager's own curve provide the motion; taps
+                        // and other discrete changes still get the tween.
+                        animationSpec = if (pagerState?.isScrollInProgress == true) snap() else NAV_PILL_SPEC,
+                        onClick = { onItemSelected(item.route) }
                     )
                 }
             }
@@ -654,49 +757,63 @@ fun BottomNavBar(
 @Composable
 private fun NavPill(
     item: NavItem,
-    isSelected: Boolean,
+    selectionProgress: Float,
+    labelWidth: Dp,
     isBlurEnabled: Boolean = false,
+    animationSpec: FiniteAnimationSpec<Color> = NAV_PILL_SPEC,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    
+    val progress = selectionProgress.coerceIn(0f, 1f)
+    // Boolean only for the colour targets; the width below is continuous.
+    val isSelected = progress > 0.5f
+
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.95f else 1f,
         animationSpec = tween(150), label = "scale"
     )
 
-    val animationSpec = tween<Color>(durationMillis = 300, easing = FastOutSlowInEasing)
-    
+    // Colours and the label are driven by the continuous progress value rather
+    // than by the selected boolean, so during a drag they interpolate. The
+    // boolean form only had two states, which is what made the bar appear to
+    // freeze mid-swipe and then jump when the selection finally flipped.
+    val primary = MaterialTheme.colorScheme.primary
+    val onPrimary = MaterialTheme.colorScheme.onPrimary
+    val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
+    val unselectedBg = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+
     val bgColor by animateColorAsState(
-        targetValue = when {
-            isSelected && isBlurEnabled -> MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
-            isSelected && !isBlurEnabled -> MaterialTheme.colorScheme.primary
-            !isSelected && isBlurEnabled -> Color.Transparent
-            else -> MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+        targetValue = if (isBlurEnabled) {
+            if (isSelected) primary.copy(alpha = 0.25f) else unselectedBg
+        } else {
+            if (isSelected) primary else unselectedBg
         },
         animationSpec = animationSpec,
         label = "bgColor"
     )
-    
+
     val contentColor by animateColorAsState(
-        targetValue = when {
-            isSelected && isBlurEnabled -> MaterialTheme.colorScheme.primary
-            isSelected && !isBlurEnabled -> MaterialTheme.colorScheme.onPrimary
-            else -> MaterialTheme.colorScheme.onSurfaceVariant
+        targetValue = if (isSelected) {
+            if (isBlurEnabled) primary else onPrimary
+        } else {
+            onSurfaceVariant
         },
         animationSpec = animationSpec,
         label = "contentColor"
     )
 
-    val shape = if (isSelected) RoundedCornerShape(24.dp) else CircleShape
+    // A 48 dp tall pill with a 24 dp radius is already a circle, so the old
+    // CircleShape/RoundedCornerShape(24.dp) switch had no visual effect to
+    // interpolate. Kept as a plain rounded shape.
+    val shape = RoundedCornerShape(24.dp)
     
     Row(
         modifier = modifier
             .scale(scale)
             .height(48.dp)
-            .defaultMinSize(minWidth = 48.dp) 
+            .defaultMinSize(minWidth = 48.dp)
             .clip(shape)
             .background(bgColor)
             .clickable(
@@ -704,7 +821,7 @@ private fun NavPill(
                 indication = null,
                 onClick = onClick
             )
-            .padding(horizontal = 12.dp), 
+            .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
@@ -714,17 +831,15 @@ private fun NavPill(
             tint = contentColor,
             modifier = Modifier.size(24.dp)
         )
-        
-        AnimatedVisibility(
-            visible = isSelected,
-            enter = expandHorizontally(
-                animationSpec = tween(300, easing = FastOutSlowInEasing),
-                expandFrom = Alignment.Start
-            ) + fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)),
-            exit = shrinkHorizontally(
-                animationSpec = tween(300, easing = FastOutSlowInEasing),
-                shrinkTowards = Alignment.Start
-            ) + fadeOut(animationSpec = tween(300, easing = FastOutSlowInEasing))
+
+        // The label is always composed and its width is interpolated with the
+        // swipe, instead of AnimatedVisibility switching it on only once the
+        // selection flipped. Clipping to the scaled width (and zero width when
+        // unselected) prevents layout changes from stretching icons.
+        Box(
+            modifier = Modifier
+                .width(labelWidth * progress)
+                .clipToBounds()
         ) {
             Text(
                 text = stringResource(item.labelRes),
@@ -732,9 +847,11 @@ private fun NavPill(
                 fontWeight = FontWeight.SemiBold,
                 color = contentColor,
                 maxLines = 1,
-                softWrap = false, 
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 5.dp) 
+                softWrap = false,
+                overflow = TextOverflow.Clip,
+                modifier = Modifier
+                    .padding(start = 5.dp)
+                    .alpha(progress)
             )
         }
     }
