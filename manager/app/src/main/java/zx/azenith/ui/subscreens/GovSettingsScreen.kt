@@ -80,12 +80,12 @@ import zx.azenith.ui.mainscreens.*
 import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.*
 import zx.azenith.ui.viewmodel.TweakViewModel
-
+import zx.azenith.ui.navigation.rememberScopedStoreOwner
 
 @Composable
 fun GovSettings(
     navController: NavController,
-    viewModel: TweakViewModel = viewModel()
+    viewModel: TweakViewModel = viewModel(viewModelStoreOwner = rememberScopedStoreOwner(navController, "main"))
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
@@ -94,7 +94,9 @@ fun GovSettings(
     val snackbarHostState = remember { SnackbarHostState() }
     
     LaunchedEffect(Unit) {
-        viewModel.loadAllConfiguration(context)
+        if (!viewModel.isUiLoaded) {
+            viewModel.loadAllConfiguration(context)
+        }
     }
     
     Scaffold(

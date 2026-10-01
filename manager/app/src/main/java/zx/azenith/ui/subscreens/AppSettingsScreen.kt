@@ -92,12 +92,14 @@ import zx.azenith.ui.viewmodel.AppSettingsViewModel
 import zx.azenith.ui.viewmodel.ApplistViewmodel
 
 
+import zx.azenith.ui.navigation.rememberScopedStoreOwner
+
 @Composable
 fun AppSettingsScreen(
     navController: NavController, 
     packageName: String?,
     viewModel: AppSettingsViewModel = viewModel(),
-    appListViewModel: ApplistViewmodel = viewModel() 
+    appListViewModel: ApplistViewmodel = viewModel(viewModelStoreOwner = rememberScopedStoreOwner(navController, "main")) 
 ) {
     val context = LocalContext.current
     val appDetails = remember(packageName) { getAppDetails(context, packageName) }
