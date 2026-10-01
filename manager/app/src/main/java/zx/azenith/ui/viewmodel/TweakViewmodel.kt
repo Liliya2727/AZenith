@@ -73,6 +73,19 @@ class TweakViewModel : ViewModel() {
 
     var isMaliGpuAvailable by mutableStateOf<Boolean?>(null)
     var availableMaliGovernors by mutableStateOf<List<String>?>(null)
+
+    /**
+     * These three lists are interpolated into `Shell.cmd` argument strings for the
+     * module's own CLI, so an entry that is not a bare token would be able to
+     * break out of the argument. The kernel writes them, but they are still file
+     * contents: filter at the point of parsing rather than trusting the source.
+     * Only [A-Za-z0-9._+-] is allowed, which covers every governor, I/O
+     * scheduler and Mali governor name in use.
+     */
+    private val SAFE_NODE_TOKEN = Regex("[A-Za-z0-9._+-]+")
+
+    private fun parseNodeTokens(raw: String): List<String> =
+        raw.trim().split("\\s+".toRegex()).filter { it.isNotEmpty() && SAFE_NODE_TOKEN.matches(it) }
     var balancedMaliGovIndex by mutableStateOf<Int?>(null)
     var performanceMaliGovIndex by mutableStateOf<Int?>(null)
     var powersaveMaliGovIndex by mutableStateOf<Int?>(null)
@@ -300,7 +313,7 @@ class TweakViewModel : ViewModel() {
 
     private fun loadGovernorsInternal() {
         val govs = RootUtils.readRootFile("/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors")
-            ?.split("\\s+".toRegex()) ?: emptyList()
+            ?.let { parseNodeTokens(it) } ?: emptyList()
         if (govs.isNotEmpty()) {
             val currentDefault = PropertyUtils.get("persist.sys.azenith.custom_default_cpu_gov").ifEmpty {
                 PropertyUtils.get("persist.sys.azenith.default_cpu_gov")
@@ -329,7 +342,7 @@ class TweakViewModel : ViewModel() {
         if (validBlock.isNotEmpty()) {
             val rawOut = RootUtils.readRootFile("/sys/block/$validBlock/queue/scheduler").orEmpty()
             if (rawOut.isNotEmpty()) {
-                val schedulers = rawOut.replace("[", "").replace("]", "").trim().split("\\s+".toRegex())
+                val schedulers = parseNodeTokens(rawOut.replace("[", "").replace("]", ""))
 
                 val currentBal = PropertyUtils.get("persist.sys.azenith.custom_default_balanced_IO").ifEmpty {
                     PropertyUtils.get("persist.sys.azenith.default_balanced_IO")
@@ -372,7 +385,7 @@ class TweakViewModel : ViewModel() {
             }
 
             if (!maliGovs.isNullOrEmpty()) {
-                val govs = maliGovs.split("\\s+".toRegex())
+                val govs = parseNodeTokens(maliGovs)
                     .filterNot { it.startsWith("apu", ignoreCase = true) }
                 
                 val currentBal = PropertyUtils.get("persist.sys.azenith.custom_default_maligpu_gov").ifEmpty {

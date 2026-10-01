@@ -44,9 +44,11 @@ object RebootManager {
     }
 
     private fun persistFlagLocked() {
-        Shell.cmd(
-            if (dirtyKeys.isNotEmpty()) "touch $FLAG_PATH" else "rm -f $FLAG_PATH"
-        ).submit()
+        if (dirtyKeys.isNotEmpty()) {
+            RootUtils.touchRootFile(FLAG_PATH)
+        } else {
+            RootUtils.deleteRootFile(FLAG_PATH)
+        }
     }
 
     private fun recomputeLocked() {
@@ -54,7 +56,7 @@ object RebootManager {
     }
 
     suspend fun refreshModuleFlag() = withContext(Dispatchers.IO) {
-        val result = Shell.cmd("test -f $FLAG_PATH").exec().isSuccess
+        val result = RootUtils.rootFileExists(FLAG_PATH)
         synchronized(lock) {
             moduleFlag = result
             recomputeLocked()
@@ -64,7 +66,7 @@ object RebootManager {
     fun resetAll() = synchronized(lock) {
         dirtyKeys.clear()
         baselineValues.clear()
-        Shell.cmd("rm -f $FLAG_PATH").submit()
+        RootUtils.deleteRootFile(FLAG_PATH)
         recomputeLocked()
     }
 }

@@ -16,18 +16,16 @@
 
 package zx.azenith.ui.util
 
-import com.topjohnwu.superuser.Shell
 
 object DebugUtils {
     private const val FULLMODE_DEBUG_PATH = "/data/adb/.config/AZenith/debug/FullMode"
 
     fun isFullModeEnabled(): Boolean {
         return try {
-            val result = Shell.cmd("cat $FULLMODE_DEBUG_PATH").exec()
-            if (!result.isSuccess) return false
-
-            val content = result.out.joinToString("").trim()
-            content != "0" && content.isNotEmpty()
+            val content = RootUtils.readRootFile(FULLMODE_DEBUG_PATH)
+            // The marker is empty when full mode is off, so an empty or absent
+            // file both mean disabled -- an empty file must not read as enabled.
+            !content.isNullOrEmpty() && content != "0"
         } catch (e: Exception) {
             false
         }

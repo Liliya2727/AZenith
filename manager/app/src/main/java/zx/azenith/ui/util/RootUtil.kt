@@ -92,6 +92,18 @@ object RootUtils {
         }
     }
 
+    /**
+     * Delete a path through the root shell, replacing `rm -f <path>`. Missing is
+     * not an error, matching `rm -f`.
+     */
+    internal fun deleteRootFile(path: String) {
+        try {
+            SuFile(path).delete()
+        } catch (e: Exception) {
+            // no-op
+        }
+    }
+
     private fun syncProfileState() {
         val apiDir = SuFile(API_DIR_PATH)
         if (!apiDir.exists()) {
@@ -212,6 +224,11 @@ object RootUtils {
     }
 
     fun getServiceStatusRes(): Pair<Int, String> {
+        // Stays a shell call. The obvious alternative -- scanning /proc for the
+        // daemon -- is much worse: libsu implements a SuFile read by running
+        // `dd` (ShellBlockIO), so a scan would fork one process per /proc entry
+        // on a device that runs a few hundred, every two seconds. One `pidof`
+        // fork per poll is the cheaper shape.
         val result = Shell.cmd("pidof sys.azenith-service").exec()
         return if (result.isSuccess) {
             val pid = result.out.firstOrNull() ?: ""
