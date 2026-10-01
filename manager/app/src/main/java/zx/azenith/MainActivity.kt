@@ -44,6 +44,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
@@ -407,12 +408,16 @@ fun MainScreen(fromTileType: String? = null) {
                             
                             val pageModifier = if (!useScrollAnimation) {
                                 Modifier.graphicsLayer {
-                                    translationX = pageOffset * size.width
-                                    alpha = 1f - absOffset.coerceIn(0f, 1f)
-                                    val scale = 1f - (absOffset.coerceIn(0f, 1f) * 0.05f)
-                                    scaleX = scale
-                                    scaleY = scale
-                                }
+                                    if (absOffset < 1f) {
+                                        translationX = pageOffset * size.width
+                                        alpha = 1f - absOffset
+                                        val scale = 1f - (absOffset * 0.05f)
+                                        scaleX = scale
+                                        scaleY = scale
+                                    } else {
+                                        alpha = 0f
+                                    }
+                                }.zIndex(if (absOffset < 0.5f) 1f else 0f)
                             } else {
                                 Modifier
                             }
@@ -465,7 +470,13 @@ fun MainScreen(fromTileType: String? = null) {
                             if (isOnMainPager) {
                                 if (pagerState.currentPage != targetIndex) {
                                     coroutineScope.launch {
-                                        pagerState.animateScrollToPage(targetIndex)
+                                        pagerState.animateScrollToPage(
+                                            targetIndex,
+                                            animationSpec = androidx.compose.animation.core.tween(
+                                                durationMillis = 500,
+                                                easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+                                            )
+                                        )
                                     }
                                 }
                             } else {
