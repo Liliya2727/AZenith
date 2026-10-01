@@ -23,15 +23,35 @@ import android.os.Build
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.*
 import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.core.view.WindowInsetsControllerCompat
+import com.materialkolor.PaletteStyle
+import com.materialkolor.dynamicColorScheme
 import com.materialkolor.dynamiccolor.ColorSpec
 import com.materialkolor.rememberDynamicColorScheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import zx.azenith.ExpressiveShapes
+import zx.azenith.R
 
 
 /**
@@ -110,33 +130,58 @@ fun AZenithTheme(
     val isDynamic = themeState.keyColor == 0
     val colorSpec = themeState.colorSpec
 
-    val colorScheme = if (isDynamic) {
-        val baseScheme = when {
+    // rememberDynamicColorScheme quantises a seed colour into a full Material 3
+    // scheme. That is HCT colour-space work — tens of milliseconds of pure CPU —
+    // and it ran inside composition, so every preset tap froze the UI for exactly
+    // as long as the quantisation took. The Crossfade below could not hide that,
+    // because the scheme it was animating toward had not been computed yet.
+    //
+    // The computation is a plain function, so it can move off the main thread.
+    // While the new scheme is being built the last one keeps rendering, and
+    // isSchemePending lets the caller show a loading state instead of leaving
+    // the user tapping into a frozen screen.
+    val seedScheme = if (isDynamic) {
+        when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
                 if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             else ->
                 if (darkTheme) darkColorScheme() else expressiveLightColorScheme()
         }
-        rememberDynamicColorScheme(
-            seedColor = baseScheme.primary,
-            isDark = darkTheme,
-            isAmoled = amoledMode,
-            specVersion = colorSpec,
-            primary = baseScheme.primary,
-            secondary = baseScheme.secondary,
-            tertiary = baseScheme.tertiary,
-            neutral = baseScheme.surface,
-            neutralVariant = baseScheme.surfaceVariant,
-            error = baseScheme.error
-        )
     } else {
-        rememberDynamicColorScheme(
-            seedColor = Color(themeState.keyColor),
-            isDark = darkTheme,
-            isAmoled = amoledMode,
-            specVersion = colorSpec
-        )
+        null
     }
+
+    var resolvedScheme by remember { mutableStateOf<androidx.compose.material3.ColorScheme?>(null) }
+    var isSchemePending by remember { mutableStateOf(false) }
+    val schemeKey = remember(themeState, darkTheme, amoledMode) {
+        listOf(themeState.keyColor, themeState.colorMode, darkTheme, amoledMode, colorSpec)
+    }
+
+    LaunchedEffect(schemeKey) {
+        val seed = seedScheme?.primary ?: Color(themeState.keyColor)
+        isSchemePending = true
+        val computed = withContext(Dispatchers.Default) {
+            dynamicColorScheme(
+                seedColor = seed,
+                isDark = darkTheme,
+                isAmoled = amoledMode,
+                specVersion = colorSpec,
+                primary = seedScheme?.primary,
+                secondary = seedScheme?.secondary,
+                tertiary = seedScheme?.tertiary,
+                neutral = seedScheme?.surface,
+                neutralVariant = seedScheme?.surfaceVariant,
+                error = seedScheme?.error
+            )
+        }
+        resolvedScheme = computed
+        isSchemePending = false
+    }
+
+    // The very first composition has nothing to fall back on, so use the stock
+    // scheme for that single frame rather than flashing an unthemed window.
+    val fallbackScheme = if (darkTheme) darkColorScheme() else expressiveLightColorScheme()
+    val colorScheme = resolvedScheme ?: fallbackScheme
 
     val view = androidx.compose.ui.platform.LocalView.current
     
@@ -158,8 +203,55 @@ fun AZenithTheme(
             typography = Typography,
             shapes = ExpressiveShapes,
             motionScheme = MotionScheme.expressive(),
-            content = content
+            content = {
+                Box(Modifier.fillMaxSize()) {
+                    content()
+
+                    // Building a scheme takes real CPU. Rather than let the user
+                    // tap into a frozen screen, say that the preset is being
+                    // applied; it fades out the moment the scheme lands.
+                    AnimatedVisibility(
+                        visible = isSchemePending,
+                        enter = fadeIn(animationSpec = tween(120)),
+                        exit = fadeOut(animationSpec = tween(220)),
+                        modifier = Modifier.align(Alignment.Center)
+                    ) {
+                        ThemeApplyingIndicator()
+                    }
+                }
+            }
         )
+    }
+}
+
+/**
+ * Small centred indicator shown while a theme preset is being quantised.
+ *
+ * Deliberately not a blocking dialog: the content behind it stays visible and
+ * interactive-looking, and the indicator fades rather than snapping, so a fast
+ * preset change never produces a flash of a full-screen scrim.
+ */
+@Composable
+private fun ThemeApplyingIndicator() {
+    Surface(
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f),
+        tonalElevation = 6.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(22.dp),
+                strokeWidth = 2.dp
+            )
+            Text(
+                text = stringResource(R.string.theme_applying),
+                style = MaterialTheme.typography.labelLarge
+            )
+        }
     }
 }
 

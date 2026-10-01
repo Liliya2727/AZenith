@@ -344,6 +344,7 @@
     <string name="support_us">Support Us</string>
     <string name="support_us_desc">Support development and let AZenith keep improving</string>
     <string name="theme">Theme</string>
+    <string name="theme_applying">Applying theme…</string>
     <string name="theme_desc">Customize theme and accent color</string>
     <string name="thermalcore_service">ThermalCore Service</string>
     <string name="thermalcore_service_desc">Intelligently regulate the system thermal control strategy to prevent overheating during daily use while maintaining system stability.</string>
