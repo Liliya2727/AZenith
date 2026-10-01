@@ -80,6 +80,7 @@ import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.theme.ColorMode
 import zx.azenith.ui.theme.ThemeController
+import zx.azenith.ui.theme.animateColorSchemeAsState
 import zx.azenith.ui.util.clearHeaderImage
 import zx.azenith.ui.util.getBannerGradientAlpha
 import zx.azenith.ui.util.getHeaderImage
@@ -989,7 +990,7 @@ private fun ThemePreviewCard(keyColor: Int, colorSpec: ColorSpec.SpecVersion, is
         )
     }
 
-    val colorScheme = targetColorScheme
+    val colorScheme = animateColorSchemeAsState(targetColorScheme)
 
     Box(
         modifier = Modifier
@@ -1058,26 +1059,55 @@ private fun ThemePreviewCard(keyColor: Int, colorSpec: ColorSpec.SpecVersion, is
 
 @Composable
 private fun ColorButton(color: Color, isSelected: Boolean, isDark: Boolean, colorSpec: ColorSpec.SpecVersion, onClick: () -> Unit) {
-    val pContainer = if (color == Color.Unspecified) MaterialTheme.colorScheme.primaryContainer else color
-    val tContainer = if (color == Color.Unspecified) MaterialTheme.colorScheme.tertiaryContainer else color.copy(alpha = 0.5f)
-    val sContainer = MaterialTheme.colorScheme.surfaceContainer
+    val context = LocalContext.current
+
+    // Each swatch previews the scheme that choosing it would produce, so the
+    // arc colours come from that preview scheme and not from the app theme,
+    // which still holds the previously committed accent until Save.
+    val targetColorScheme = if (color == Color.Unspecified) {
+        val baseScheme = when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+                if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            else ->
+                if (isDark) darkColorScheme() else expressiveLightColorScheme()
+        }
+        rememberDynamicColorScheme(
+            seedColor = baseScheme.primary,
+            isDark = isDark,
+            specVersion = colorSpec,
+            primary = baseScheme.primary,
+            secondary = baseScheme.secondary,
+            tertiary = baseScheme.tertiary,
+            neutral = baseScheme.surface,
+            neutralVariant = baseScheme.surfaceVariant,
+            error = baseScheme.error
+        )
+    } else {
+        rememberDynamicColorScheme(
+            seedColor = color,
+            isDark = isDark,
+            specVersion = colorSpec
+        )
+    }
+
+    val colorScheme = animateColorSchemeAsState(targetColorScheme)
 
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
-        color = sContainer, 
+        color = colorScheme.surfaceContainer, 
         modifier = Modifier.size(72.dp) 
     ) {
         Box(contentAlignment = Alignment.Center) {
             Canvas(modifier = Modifier.size(48.dp)) {
                 drawArc(
-                    color = pContainer,
+                    color = colorScheme.primaryContainer,
                     startAngle = 180f,
                     sweepAngle = 180f,
                     useCenter = true
                 )
                 drawArc(
-                    color = tContainer,
+                    color = colorScheme.tertiaryContainer,
                     startAngle = 0f,
                     sweepAngle = 180f,
                     useCenter = true
@@ -1101,20 +1131,20 @@ private fun ColorButton(color: Color, isSelected: Boolean, isDark: Boolean, colo
                     Box(
                         modifier = Modifier
                             .size(56.dp)
-                            .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
+                            .border(2.dp, colorScheme.primary, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
                                 .size(24.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary, CircleShape),
+                                .background(colorScheme.primary, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Check,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimary,
+                                tint = colorScheme.onPrimary,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -1129,7 +1159,7 @@ private fun ColorButton(color: Color, isSelected: Boolean, isDark: Boolean, colo
                     Box(
                         modifier = Modifier
                             .size(20.dp)
-                            .background(MaterialTheme.colorScheme.primary, CircleShape)
+                            .background(colorScheme.primary, CircleShape)
                     )
                 }
             }
