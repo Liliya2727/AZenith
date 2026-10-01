@@ -23,6 +23,8 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.TransformOrigin
 
 /**
  * Material 3 motion tokens.
@@ -67,14 +69,35 @@ object Motion {
         animationSpec = tween(DurationMedium2, easing = EmphasizedDecelerate)
     )
 
-    /** Exit is always the faster of the pair and always the accelerate curve. */
-    fun dialogExit() = fadeOut(
+    /**
+     * Container-transform enter: the dialog grows out of the tap point rather than fading in at
+     * its own centre, so it reads as the triggering control expanding.
+     *
+     * [origin] is the tap position in the dialog's own coordinate space, already normalised so
+     * (0,0) is the dialog's top-left. Compose's `scaleIn` grows about a fixed centre, so the
+     * pivot is moved to the origin with `transformOrigin` and the container is offset by
+     * `offset` to compensate — without the compensation the surface would visibly jump as the
+     * pivot changes.
+     *
+     * The pivot is deliberately left biased toward the top of the surface: a dialog growing from
+     * dead centre reads as a popup, and growing from the exact tap point reads as a detached
+     * element chasing a cursor. Growing from just above the tap point is what M3's own
+     * container transform does.
+     */
+    fun dialogEnterFrom(origin: Offset) = fadeIn(
+        animationSpec = tween(DurationShort4, easing = EmphasizedDecelerate)
+    ) + scaleIn(
+        initialScale = 0.2f,
+        animationSpec = tween(DurationMedium2, easing = EmphasizedDecelerate),
+        transformOrigin = TransformOrigin(origin.x, origin.y)
+    )
+
+    /** Counterpart to [dialogEnterFrom] — collapses back toward the control that opened it. */
+    fun dialogExitTo(origin: Offset) = fadeOut(
         animationSpec = tween(DurationShort4, easing = EmphasizedAccelerate)
     ) + scaleOut(
-        targetScale = 0.86f,
-        animationSpec = tween(DurationShort4, easing = EmphasizedAccelerate)
-    ) + slideOutVertically(
-        targetOffsetY = { it / 12 },
-        animationSpec = tween(DurationShort4, easing = EmphasizedAccelerate)
+        targetScale = 0.2f,
+        animationSpec = tween(DurationShort4, easing = EmphasizedAccelerate),
+        transformOrigin = TransformOrigin(origin.x, origin.y)
     )
 }

@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -69,7 +70,8 @@ private fun getProfileOptions(): List<ProfileOption> {
 fun ProfileDialog(
     show: Boolean,
     onDismiss: () -> Unit,
-    onProfile: (String) -> Unit
+    onProfile: (String) -> Unit,
+    origin: Offset = Offset(0.5f, 0.28f)
 ) {
     val context = LocalContext.current
     val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
@@ -80,16 +82,8 @@ fun ProfileDialog(
 
     AnimatedVisibility(
         visible = show,
-        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) +
-                scaleIn(
-                    initialScale = 0.92f,
-                    animationSpec = tween(250, easing = LinearOutSlowInEasing)
-                ),
-        exit = fadeOut(animationSpec = tween(150, easing = FastOutSlowInEasing)) +
-               scaleOut(
-                   targetScale = 0.92f,
-                   animationSpec = tween(150, easing = FastOutSlowInEasing)
-               )
+        enter = Motion.dialogEnterFrom(origin),
+        exit = Motion.dialogExitTo(origin)
     ) {
 
         BackHandler(onBack = onDismiss)

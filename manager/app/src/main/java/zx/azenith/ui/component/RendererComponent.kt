@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -71,7 +72,8 @@ private fun getRendererOptions(context: Context): List<RendererOption> {
 fun RendererDialog(
     show: Boolean,
     onDismiss: () -> Unit,
-    onRenderer: (String) -> Unit
+    onRenderer: (String) -> Unit,
+    origin: Offset = Offset(0.5f, 0.28f)
 ) {
     val context = LocalContext.current
     val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
@@ -81,8 +83,8 @@ fun RendererDialog(
 
     AnimatedVisibility(
         visible = show,
-        enter = Motion.dialogEnter(),
-        exit = Motion.dialogExit()
+        enter = Motion.dialogEnterFrom(origin),
+        exit = Motion.dialogExitTo(origin)
     ) {
         BackHandler(onBack = onDismiss)
         
