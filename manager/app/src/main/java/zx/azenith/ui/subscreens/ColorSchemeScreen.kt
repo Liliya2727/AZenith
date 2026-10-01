@@ -119,13 +119,18 @@ fun ColorSchemeSettings(navController: NavController) {
         }
     }
 
-    val applyRGB = { r: Float, g: Float, b: Float ->
-        Shell.cmd("service call SurfaceFlinger 1015 i32 1 f ${r / 1000f} f 0 f 0 f 0 f 0 f ${g / 1000f} f 0 f 0 f 0 f 0 f ${b / 1000f} f 0 f 0 f 0 f 0 f 1").submit()
+    LaunchedEffect(redVal, greenVal, blueVal) {
+        kotlinx.coroutines.delay(50)
+        Shell.cmd("service call SurfaceFlinger 1015 i32 1 f ${redVal / 1000f} f 0 f 0 f 0 f 0 f ${greenVal / 1000f} f 0 f 0 f 0 f 0 f ${blueVal / 1000f} f 0 f 0 f 0 f 0 f 1").submit()
     }
 
-    val applySat = { s: Float ->
-        Shell.cmd("service call SurfaceFlinger 1022 f ${s / 1000f}").submit()
+    LaunchedEffect(satVal) {
+        kotlinx.coroutines.delay(50)
+        Shell.cmd("service call SurfaceFlinger 1022 f ${satVal / 1000f}").submit()
     }
+
+    val applyRGB = { _: Float, _: Float, _: Float -> }
+    val applySat = { _: Float -> }
 
     val saveToProp = {
         val config = "${redVal.toInt()} ${greenVal.toInt()} ${blueVal.toInt()} ${satVal.toInt()}"
@@ -143,6 +148,8 @@ fun ColorSchemeSettings(navController: NavController) {
                 satVal = parts[3]
             }
         }
+        
+        kotlinx.coroutines.delay(300)
         isLoading = false
         
         // Auto-detect preset on load

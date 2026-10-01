@@ -218,7 +218,6 @@ fun AZenithTheme(
     }
 
     val view = androidx.compose.ui.platform.LocalView.current
-    val animatedColorScheme = animateColorSchemeAsState(targetColorScheme = colorScheme)
     
     LaunchedEffect(darkTheme) {
         val window = (context as? Activity)?.window ?: return@LaunchedEffect
@@ -229,7 +228,7 @@ fun AZenithTheme(
     }
 
     MaterialExpressiveTheme(
-        colorScheme = animatedColorScheme,
+        colorScheme = colorScheme,
         typography = Typography,
         shapes = ExpressiveShapes,
         motionScheme = MotionScheme.expressive(),

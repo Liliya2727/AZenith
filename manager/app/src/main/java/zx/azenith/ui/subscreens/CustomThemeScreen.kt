@@ -142,6 +142,12 @@ fun ColorPaletteScreen(navController: NavController) {
     var isBlurEnabled by rememberSaveable {
         mutableStateOf(prefs.getBoolean("expressive_blur_ui", false))
     }
+
+    var isUiLoaded by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(300)
+        isUiLoaded = true
+    }
     
     
     var useScrollAnimation by rememberSaveable {
@@ -296,7 +302,11 @@ fun ColorPaletteScreen(navController: NavController) {
         },
         containerColor = MaterialTheme.colorScheme.surface
     ) { innerPadding -> 
-        if (isLandscape) {
+        if (!isUiLoaded) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                LoadingIndicator(modifier = Modifier.size(32.dp))
+            }
+        } else if (isLandscape) {
             Row(
                 modifier = Modifier
                     .fillMaxSize()
@@ -947,7 +957,7 @@ private fun ThemePreviewCard(keyColor: Int, colorSpec: ColorSpec.SpecVersion, is
         )
     }
 
-    val colorScheme = animateColorSchemeAsState(targetColorScheme)
+    val colorScheme = targetColorScheme
 
     Box(
         modifier = Modifier
@@ -1044,7 +1054,7 @@ private fun ColorButton(color: Color, isSelected: Boolean, isDark: Boolean, colo
         )
     }
 
-    val colorScheme = animateColorSchemeAsState(targetColorScheme)
+    val colorScheme = targetColorScheme
 
     Surface(
         onClick = onClick,
