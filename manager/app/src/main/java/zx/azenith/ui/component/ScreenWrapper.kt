@@ -25,6 +25,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import android.content.Context
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -100,7 +102,9 @@ fun ScreenWrapper(
     val previousEntryId = navController.previousBackStackEntry?.id.also { _ -> currentBackStackEntryState }
     val shouldDim = myEntry != null && previousEntryId == myEntry.id
 
-    val disableBlurAllOver = false
+    val context = LocalContext.current
+    val settingsPrefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+    val disableBlurAllOver = !settingsPrefs.getBoolean("expressive_blur_ui", false)
 
     // Declarative Animations
     val targetRadius = if (shouldRunDepthEffects && !isResumed) 32f else 0f
