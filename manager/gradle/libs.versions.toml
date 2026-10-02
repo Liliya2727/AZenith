@@ -15,7 +15,7 @@ composeMarkdown = "0.7.2"
 material3 = "1.5.0-alpha23"
 activity-compose = "1.13.0-alpha01"
 lifecycle = "2.11.0-beta02"
-navigation = "2.10.0-alpha06"
+navigation = "2.8.7"
 
 # Security & Glassmorphism
 stringfog = "5.1.0"
