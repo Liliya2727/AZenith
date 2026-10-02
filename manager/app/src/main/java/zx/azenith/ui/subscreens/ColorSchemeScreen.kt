@@ -167,10 +167,12 @@ fun ColorSchemeSettings(navController: NavController) {
         }
     }
 
+        val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = Modifier,
         topBar = {
-            ColorSchemeTopAppBar(scrollBehavior, onBack = { coroutineScope.launch { navController.popBackStack() } })
+            ColorSchemeTopAppBar(onBack = { backDispatcher?.onBackPressed() })
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = colorScheme.surface
@@ -486,7 +488,7 @@ fun SchemeSectionTitle(text: String) {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun ColorSchemeTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit) {
+fun ColorSchemeTopAppBar(onBack: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
 
     val smoothGradient = Brush.verticalGradient(
@@ -497,7 +499,7 @@ fun ColorSchemeTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> 
         0.7f to colorScheme.surface.copy(alpha = 0.5f),
         0.8f to colorScheme.surface.copy(alpha = 0.4f),
         0.9f to colorScheme.surface.copy(alpha = 0.3f),
-        1.0f to Color.Transparent 
+        1.0f to Color.Transparent
     )
 
     Box(
@@ -506,7 +508,7 @@ fun ColorSchemeTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> 
             .background(smoothGradient)
             .statusBarsPadding()
     ) {
-        LargeFlexibleTopAppBar(
+        TopAppBar(
             title = { 
                 Text(
                     text = stringResource(R.string.color_scheme),
@@ -517,12 +519,12 @@ fun ColorSchemeTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> 
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
-            },        
+            },       
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-            scrollBehavior = scrollBehavior,
+            
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }

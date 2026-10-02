@@ -224,12 +224,13 @@ fun BypassChargeCheckScreen(navController: NavController) {
 
     ConfirmDialogHost(handle = confirmDialogHandle)
 
+        val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = Modifier,
         topBar = { 
             BypassChgCheckTopAppBar(
-                scrollBehavior = scrollBehavior, 
-                onBack = { coroutineScope.launch { navController.popBackStack() } }
+                onBack = { backDispatcher?.onBackPressed() }
             ) 
         }
     ) { innerPadding ->
@@ -537,7 +538,7 @@ fun BypassCheckTitle(text: String) {
 }
 
 @Composable
-fun BypassChgCheckTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit) {
+fun BypassChgCheckTopAppBar(onBack: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
 
     val smoothGradient = Brush.verticalGradient(
@@ -548,7 +549,7 @@ fun BypassChgCheckTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () 
         0.7f to colorScheme.surface.copy(alpha = 0.5f),
         0.8f to colorScheme.surface.copy(alpha = 0.4f),
         0.9f to colorScheme.surface.copy(alpha = 0.3f),
-        1.0f to Color.Transparent 
+        1.0f to Color.Transparent
     )
 
     Box(
@@ -557,7 +558,7 @@ fun BypassChgCheckTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () 
             .background(smoothGradient)
             .statusBarsPadding()
     ) {
-        LargeFlexibleTopAppBar(
+        TopAppBar(
             title = { 
                 Text(
                     text = stringResource(R.string.CompatibilityCheck),
@@ -568,12 +569,12 @@ fun BypassChgCheckTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () 
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
-            },        
+            },       
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-            scrollBehavior = scrollBehavior,
+            
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }

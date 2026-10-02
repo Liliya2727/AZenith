@@ -45,7 +45,6 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -102,11 +101,12 @@ fun FpsGoSettings(navController: NavController) {
         }
     }
 
+        val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = Modifier,
         topBar = { FpsGoTopAppBar(
-            scrollBehavior,
-            onBack = { coroutineScope.launch { navController.popBackStack() } }
+            onBack = { backDispatcher?.onBackPressed() }
             ) 
         },
         containerColor = MaterialTheme.colorScheme.surface
@@ -192,7 +192,7 @@ fun FpsGoSettings(navController: NavController) {
 }
 
 @Composable
-fun FpsGoTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit) {
+fun FpsGoTopAppBar(onBack: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
 
     val smoothGradient = Brush.verticalGradient(
@@ -203,7 +203,7 @@ fun FpsGoTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit) 
         0.7f to colorScheme.surface.copy(alpha = 0.5f),
         0.8f to colorScheme.surface.copy(alpha = 0.4f),
         0.9f to colorScheme.surface.copy(alpha = 0.3f),
-        1.0f to Color.Transparent 
+        1.0f to Color.Transparent
     )
 
     Box(
@@ -212,7 +212,7 @@ fun FpsGoTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit) 
             .background(smoothGradient)
             .statusBarsPadding()
     ) {
-        LargeFlexibleTopAppBar(
+        TopAppBar(
             title = { 
                 Text(
                     text = stringResource(R.string.str_fpsgo_settings),
@@ -223,12 +223,12 @@ fun FpsGoTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit) 
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
-            },        
+            },       
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-            scrollBehavior = scrollBehavior,
+            
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }

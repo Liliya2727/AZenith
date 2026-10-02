@@ -422,7 +422,8 @@ fun MainScreen(fromTileType: String? = null) {
                     modifier = Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.surface)
-                        .nestedScroll(nestedScrollConnection),
+                        .nestedScroll(nestedScrollConnection)
+                        .graphicsLayer { alpha = 0.99f },
                     enterTransition = {
                         if (initialState.destination.route == "get_started" && targetState.destination.route in bottomBarRoutes) {
                             fadeIn(animationSpec = tween(700))

@@ -347,8 +347,10 @@ fun ColorPaletteScreen(navController: NavController) {
     val isDark = currentColorMode.getDarkThemeValue(isSystemInDarkTheme())
     val amoledMode = currentColorMode == ColorMode.DARKAMOLED
 
+        val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = Modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             ThemeChangeBar(
@@ -361,8 +363,7 @@ fun ColorPaletteScreen(navController: NavController) {
         },
         topBar = {
             PaletteTopAppBar(
-                scrollBehavior,
-                onBack = { coroutineScope.launch { navController.popBackStack() } }
+                onBack = { backDispatcher?.onBackPressed() }
             )
         },
         containerColor = MaterialTheme.colorScheme.surface
@@ -891,7 +892,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
 }
 
 @Composable
-fun PaletteTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit) {
+fun PaletteTopAppBar(onBack: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
 
     val smoothGradient = Brush.verticalGradient(
@@ -902,7 +903,7 @@ fun PaletteTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit
         0.7f to colorScheme.surface.copy(alpha = 0.5f),
         0.8f to colorScheme.surface.copy(alpha = 0.4f),
         0.9f to colorScheme.surface.copy(alpha = 0.3f),
-        1.0f to Color.Transparent 
+        1.0f to Color.Transparent
     )
 
     Box(
@@ -911,7 +912,7 @@ fun PaletteTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit
             .background(smoothGradient)
             .statusBarsPadding()
     ) {
-        LargeFlexibleTopAppBar(
+        TopAppBar(
             title = { 
                 Text(
                     text = stringResource(R.string.theme),
@@ -922,12 +923,12 @@ fun PaletteTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
-            },        
+            },       
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-            scrollBehavior = scrollBehavior,
+            
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }

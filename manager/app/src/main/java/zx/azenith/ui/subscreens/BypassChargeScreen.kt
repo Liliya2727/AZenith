@@ -47,7 +47,6 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.*
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -127,9 +126,11 @@ fun BypassChargeScreen(navController: NavController) {
         }
     }
 
+        val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = { BypassChgTopAppBar(scrollBehavior, onBack = { coroutineScope.launch { navController.popBackStack() } }) },
+        modifier = Modifier,
+        topBar = { BypassChgTopAppBar(onBack = { backDispatcher?.onBackPressed() }) },
         containerColor = colorScheme.surface 
     ) { innerPadding ->
         LazyColumn(
@@ -375,7 +376,7 @@ fun BypassChargeScreen(navController: NavController) {
 }
 
 @Composable
-fun BypassChgTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit) {
+fun BypassChgTopAppBar(onBack: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
 
     val smoothGradient = Brush.verticalGradient(
@@ -386,7 +387,7 @@ fun BypassChgTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Un
         0.7f to colorScheme.surface.copy(alpha = 0.5f),
         0.8f to colorScheme.surface.copy(alpha = 0.4f),
         0.9f to colorScheme.surface.copy(alpha = 0.3f),
-        1.0f to Color.Transparent 
+        1.0f to Color.Transparent
     )
 
     Box(
@@ -395,7 +396,7 @@ fun BypassChgTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Un
             .background(smoothGradient)
             .statusBarsPadding()
     ) {
-        LargeFlexibleTopAppBar(
+        TopAppBar(
             title = { 
                 Text(
                     text = stringResource(R.string.bcharging),
@@ -406,12 +407,12 @@ fun BypassChgTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Un
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
-            },        
+            },       
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-            scrollBehavior = scrollBehavior,
+            
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }

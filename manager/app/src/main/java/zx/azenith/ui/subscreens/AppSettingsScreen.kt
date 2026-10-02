@@ -179,40 +179,42 @@ fun AppSettingsScreen(
     
     // Removed DisposableEffect calling loadApps onDispose to prevent animation lag.
 
+            val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = { 
-            AppSettingsTopAppBar(
-                scrollBehavior = scrollBehavior,
-                onLaunchApp = {
-                    packageName?.let { pkg ->
-                        val intent = context.packageManager.getLaunchIntentForPackage(pkg)
-                        if (intent != null) {
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            modifier = Modifier,
+            topBar = { 
+                AppSettingsTopAppBar(
+                    onLaunchApp = {
+                        packageName?.let { pkg ->
+                            val intent = context.packageManager.getLaunchIntentForPackage(pkg)
+                            if (intent != null) {
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                context.startActivity(intent)
+                            } else {
+                                Toast.makeText(context, context.getString(R.string.toast_app_launch_fail), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    onOpenAppInfo = {
+                        packageName?.let { pkg ->
+                            val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.parse("package:$pkg")
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
                             context.startActivity(intent)
-                        } else {
-                            Toast.makeText(context, context.getString(R.string.toast_app_launch_fail), Toast.LENGTH_SHORT).show()
                         }
+                    },
+                    onBack = { 
+                        appListViewModel.loadApps(context, forceRefresh = true) 
+                        backDispatcher?.onBackPressed() 
                     }
-                },
-                onOpenAppInfo = {
-                    packageName?.let { pkg ->
-                        val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                            data = Uri.parse("package:$pkg")
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        context.startActivity(intent)
-                    }
-                },
-                onBack = { 
-                    appListViewModel.loadApps(context, forceRefresh = true) 
-                    coroutineScope.launch { navController.popBackStack() }
-                }
-            ) 
-        }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+                ) 
+            },
+            containerColor = colorScheme.surface
+        ) { innerPadding ->
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
                 bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -643,7 +645,6 @@ fun getAppDetails(context: android.content.Context, packageName: String?): Tripl
 
 @Composable
 fun AppSettingsTopAppBar(
-    scrollBehavior: TopAppBarScrollBehavior, 
     onLaunchApp: () -> Unit,
     onOpenAppInfo: () -> Unit,
     onBack: () -> Unit
@@ -658,7 +659,7 @@ fun AppSettingsTopAppBar(
         0.7f to colorScheme.surface.copy(alpha = 0.5f),
         0.8f to colorScheme.surface.copy(alpha = 0.4f),
         0.9f to colorScheme.surface.copy(alpha = 0.3f),
-        1.0f to Color.Transparent 
+        1.0f to Color.Transparent
     )
 
     Box(
@@ -667,7 +668,7 @@ fun AppSettingsTopAppBar(
             .background(smoothGradient)
             .statusBarsPadding()
     ) {
-        LargeFlexibleTopAppBar(
+        TopAppBar(
             title = { 
                 Text(
                     text = stringResource(R.string.app_settings_title),
@@ -695,7 +696,7 @@ fun AppSettingsTopAppBar(
                     )
                 }
             },
-            scrollBehavior = scrollBehavior,
+            
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent

@@ -44,14 +44,12 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -155,11 +153,12 @@ fun PreferenceTweakScreen(navController: NavController) {
     }
     // ---------------------------------------
 
+        val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = Modifier,
         topBar = { PreferenceTweakTopAppBar(
-            scrollBehavior,
-            onBack = { coroutineScope.launch { navController.popBackStack() } }
+            onBack = { backDispatcher?.onBackPressed() }
             ) 
         },
         containerColor = colorScheme.surface
@@ -375,7 +374,7 @@ fun PrefSectionTitle(text: String) {
 }
 
 @Composable
-fun PreferenceTweakTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: () -> Unit) {
+fun PreferenceTweakTopAppBar(onBack: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
 
     val smoothGradient = Brush.verticalGradient(
@@ -386,7 +385,7 @@ fun PreferenceTweakTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: ()
         0.7f to colorScheme.surface.copy(alpha = 0.5f),
         0.8f to colorScheme.surface.copy(alpha = 0.4f),
         0.9f to colorScheme.surface.copy(alpha = 0.3f),
-        1.0f to Color.Transparent 
+        1.0f to Color.Transparent
     )
 
     Box(
@@ -395,7 +394,7 @@ fun PreferenceTweakTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: ()
             .background(smoothGradient)
             .statusBarsPadding()
     ) {
-        LargeFlexibleTopAppBar(
+        TopAppBar(
             title = { 
                 Text(
                     text = stringResource(R.string.prefs),
@@ -406,12 +405,12 @@ fun PreferenceTweakTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onBack: ()
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
-            },        
+            },       
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-            scrollBehavior = scrollBehavior,
+            
             windowInsets = WindowInsets(0, 0, 0, 0)
         )
     }
