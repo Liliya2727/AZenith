@@ -18,6 +18,7 @@ package zx.azenith.ui.component
 
 
 import android.content.Context
+import androidx.compose.material.icons.rounded.Check
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -74,7 +75,8 @@ fun RefreshRatePickerDialog(
     show: Boolean,
     onDismiss: () -> Unit,
     onRefreshRatePicker: (String) -> Unit,
-    origin: Offset = Offset(0.5f, 0.28f)
+    origin: Offset = Offset(0.5f, 0.28f),
+    currentRefreshRate: String? = null
 ) {
     val context = LocalContext.current
     val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
@@ -157,17 +159,28 @@ fun RefreshRatePickerDialog(
 
                     val content = options.map { option ->
                         @Composable {
-                            ExpressiveListItem(
-                                modifier = Modifier.padding(vertical = 4.dp),
+                            val isSelected = option.reason.equals(currentRefreshRate, ignoreCase = true)
+                            ExpressiveListItemHighlight(
+                                modifier = Modifier.padding(vertical = 4.dp).clip(RoundedCornerShape(20.dp)),
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                                 headlineContent = { 
                                     Text(
                                         text = option.titleString,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                                     ) 
                                 },
                                 leadingContent = { 
                                     SmallLeadingIcon(icon = option.icon) 
                                 },
+                                trailingContent = if (isSelected) {
+                                    {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Check,
+                                            contentDescription = "Selected",
+                                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                } else null,
                                 onClick = {
                                     onDismiss()
                                     onRefreshRatePicker(option.reason)

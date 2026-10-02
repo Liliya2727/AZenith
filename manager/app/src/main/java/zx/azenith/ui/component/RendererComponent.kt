@@ -28,6 +28,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Layers
+import androidx.compose.material.icons.rounded.Check
+
 import androidx.compose.material.icons.rounded.SettingsBackupRestore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -72,7 +74,8 @@ fun RendererDialog(
     show: Boolean,
     onDismiss: () -> Unit,
     onRenderer: (String) -> Unit,
-    origin: Offset = Offset(0.5f, 0.28f)
+    origin: Offset = Offset(0.5f, 0.28f),
+    currentRenderer: String? = null
 ) {
     val context = LocalContext.current
     val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
@@ -157,17 +160,28 @@ fun RendererDialog(
 
                         val content = options.map { option ->
                             @Composable {
-                                ExpressiveListItem(
-                                    modifier = Modifier.padding(vertical = 4.dp),
+                                val isSelected = option.reason.equals(currentRenderer, ignoreCase = true)
+                                ExpressiveListItemHighlight(
+                                    modifier = Modifier.padding(vertical = 4.dp).clip(RoundedCornerShape(20.dp)),
+                                    containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                                     headlineContent = {
                                         Text(
                                             text = option.titleRes,
-                                            color = MaterialTheme.colorScheme.onSurface
+                                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                                         )
                                     },
                                     leadingContent = {
                                         SmallLeadingIcon(icon = option.icon)
                                     },
+                                    trailingContent = if (isSelected) {
+                                        {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Check,
+                                                contentDescription = "Selected",
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                        }
+                                    } else null,
                                     onClick = {
                                         onDismiss()
                                         onRenderer(option.reason)

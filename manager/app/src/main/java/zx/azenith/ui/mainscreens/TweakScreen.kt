@@ -600,7 +600,8 @@ fun TweakScreen(
             show = showRendererDialog,
             onDismiss = { showRendererDialog = false },
             onRenderer = { reason -> viewModel.executeSetRenderer(reason, context) },
-            origin = rendererDialogOrigin
+            origin = rendererDialogOrigin,
+            currentRenderer = viewModel.currentRenderer
         )
     }
 
@@ -609,7 +610,8 @@ fun TweakScreen(
             show = showRefreshRateDialog,
             onDismiss = { showRefreshRateDialog = false },
             onRefreshRatePicker = { reason -> viewModel.executeSetRefreshRates(reason, context) },
-            origin = refreshRateDialogOrigin
+            origin = refreshRateDialogOrigin,
+            currentRefreshRate = viewModel.currentRefreshRate?.toString()
         )
     }
 }
