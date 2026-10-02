@@ -20,6 +20,9 @@ package zx.azenith.ui.viewmodel
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.topjohnwu.superuser.Shell
@@ -42,12 +45,14 @@ data class HomeUiState(
     val serviceStatusRes: Int = R.string.status_suspended,
     val servicePid: String = "",
     val currentProfileRes: Int = R.string.status_initializing,
+    val currentProfileValue: String = "",
     val runningGamePkg: String? = null,
     val runningGameStartTime: String? = null
 )
 
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
+    var currentProfileValue by mutableStateOf("")
 
     private val context = application.applicationContext
     private val prefs: SharedPreferences = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -78,6 +83,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             RootUtils.observeProfileRes().collect { profileRes ->
                 _uiState.value = _uiState.value.copy(currentProfileRes = profileRes)
+            }
+            RootUtils.observeProfileValue().collect { value ->
+                currentProfileValue = value
+                _uiState.value = _uiState.value.copy(currentProfileValue = value)
             }
         }
 
@@ -140,3 +149,4 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
 }
+

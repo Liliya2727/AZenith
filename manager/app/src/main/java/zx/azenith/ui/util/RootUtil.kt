@@ -154,6 +154,32 @@ object RootUtils {
         }
     }.flowOn(Dispatchers.IO)
 
+    // Raw "0".."3" alongside the resolved label: "1" maps to two different strings depending on
+    // litemode, so the dialog cannot match on the label to highlight the active row.
+    fun observeProfileValue(): Flow<String> = callbackFlow {
+        syncProfileState()
+
+        trySend(getCurrentProfileValue())
+
+        val apiDir = File(API_DIR_PATH)
+        if (!apiDir.exists()) {
+            SuFile(API_DIR_PATH).mkdirs()
+        }
+
+        val observer = object : FileObserver(apiDir, MODIFY or CREATE or MOVED_TO) {
+            override fun onEvent(event: Int, path: String?) {
+                if (path == PROFILE_FILE_NAME) {
+                    trySend(getCurrentProfileValue())
+                }
+            }
+        }
+
+        observer.startWatching()
+        awaitClose { observer.stopWatching() }
+    }.flowOn(Dispatchers.IO)
+
+    fun getCurrentProfileValue(): String = readRootFile(PROFILE_PATH)?.trim().orEmpty()
+
     fun observeProfileRes(): Flow<Int> = callbackFlow {
         syncProfileState()
 

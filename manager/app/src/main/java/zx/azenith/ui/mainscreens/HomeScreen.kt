@@ -136,7 +136,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 .height(IntrinsicSize.Max),
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Box(modifier = Modifier.weight(1f).fillMaxHeight().then(profileTileModifier)) {
+                            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                                 BannerCard(
                                     status = bannerStatus, pid = uiState.servicePid,
                                     isBannerEnabled = uiState.isBannerEnabled, 
@@ -146,7 +146,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                             }
 
                             Row(
-                                modifier = Modifier.weight(1f).fillMaxHeight().then(profileTileModifier),
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 InfoTile(
@@ -159,7 +159,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 ) { if (uiState.autoMode == "0") showProfileDialog = true }
 
                                 InfoTile(
-                                    modifier = Modifier.weight(1f).fillMaxHeight().then(profileTileModifier),
+                                    modifier = Modifier.weight(1f).fillMaxHeight(),
                                     icon = Icons.Rounded.Security, 
                                     label = stringResource(R.string.root_access), 
                                     value = if (uiState.rootStatus) stringResource(R.string.root_granted) else stringResource(R.string.root_not_granted), 
@@ -232,7 +232,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                             ) { if (uiState.autoMode == "0") showProfileDialog = true }
 
                             InfoTile(
-                                modifier = Modifier.weight(1f).fillMaxHeight().then(profileTileModifier),
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
                                 icon = Icons.Rounded.Security, 
                                 label = stringResource(R.string.root_access), 
                                 value = if (uiState.rootStatus) stringResource(R.string.root_granted) else stringResource(R.string.root_not_granted), 
@@ -264,6 +264,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
             show = showProfileDialog,
             onDismiss = { showProfileDialog = false },
             origin = profileDialogOrigin.origin,
+            currentProfile = uiState.currentProfileValue,
             onProfile = { profileReason ->
                 viewModel.applyProfile(profileReason) {
                     coroutineScope.launch {

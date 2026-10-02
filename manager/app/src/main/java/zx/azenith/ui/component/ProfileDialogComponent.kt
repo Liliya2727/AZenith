@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -71,7 +72,8 @@ fun ProfileDialog(
     show: Boolean,
     onDismiss: () -> Unit,
     onProfile: (String) -> Unit,
-    origin: Offset = Offset(0.5f, 0.28f)
+    origin: Offset = Offset(0.5f, 0.28f),
+    currentProfile: String? = null
 ) {
     val options = getProfileOptions()
 
@@ -91,17 +93,28 @@ fun ProfileDialog(
 
         val content = options.map { option ->
             @Composable {
-                ExpressiveListItem(
-                    modifier = Modifier.padding(vertical = 4.dp),
+                val isSelected = option.reason == currentProfile
+                ExpressiveListItemHighlight(
+                    modifier = Modifier.padding(vertical = 4.dp).clip(RoundedCornerShape(20.dp)),
+                    containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                     headlineContent = {
                         Text(
                             text = stringResource(option.titleRes),
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                         )
                     },
                     leadingContent = {
                         SmallLeadingIcon(icon = option.icon)
                     },
+                    trailingContent = if (isSelected) {
+                        {
+                            Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = "Selected",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    } else null,
                     onClick = {
                         onDismiss()
                         onProfile(option.reason)
