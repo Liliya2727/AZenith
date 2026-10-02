@@ -42,8 +42,9 @@ import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.material3.rememberTopAppBarState
+
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -87,7 +88,14 @@ fun ApplistScreen(navController: NavController) {
     val listState = rememberLazyListState()
     val lifecycleOwner = LocalLifecycleOwner.current
     
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val topAppBarState = rememberSaveable(saver = TopAppBarState.Saver) {
+        TopAppBarState(
+            initialHeightOffsetLimit = -Float.MAX_VALUE,
+            initialHeightOffset = 0f,
+            initialContentOffset = 0f
+        )
+    }
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     
     val pullToRefreshState = rememberPullToRefreshState()
     
@@ -164,21 +172,13 @@ fun ApplistScreen(navController: NavController) {
         ) {
             val appsToDisplay = viewModel.filteredApps
 
-            // Hoisted: reading WindowInsets here instead of inline in the
-            // contentPadding argument means the PaddingValues is only rebuilt
-            // when the insets actually change, not on every recomposition of
-            // the list.
-            // asPaddingValues() is a composable read, so it has to happen here rather
-            // than inside the remember block below.
             val navBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-            val listContentPadding = remember(innerPadding, navBottomPadding) {
-                PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = 110.dp + navBottomPadding
-                )
-            }
+            val listContentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding(),
+                start = 16.dp,
+                end = 16.dp,
+                bottom = 110.dp + navBottomPadding
+            )
 
                 AnimatedVisibility(
                     visible = appsToDisplay.isEmpty() && !viewModel.isRefreshing,
