@@ -516,18 +516,22 @@ fun MainScreen(fromTileType: String? = null) {
                     }
                 }
                 
-                AnimatedVisibility(
-                    // The bar is chrome, not a root-dependent surface, so it is
-                    // shown from the first frame. It used to wait on
-                    // rootStatus && moduleInstalled, which are only set after
-                    // requestRootAccess() returns -- on a cold start that is
-                    // however long the su prompt takes, so the app opened to a
-                    // bare background with no bar and no top bar. Each item
-                    // disables itself instead of the whole bar disappearing.
-                    visible = rawRoute in bottomBarRoutes,
-                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-                    modifier = Modifier.align(Alignment.BottomCenter)
+                val shouldShowNavBar = rawRoute in bottomBarRoutes
+                val navBarVisibilityProgressState = androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = if (shouldShowNavBar) 1f else 0f,
+                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 220, easing = androidx.compose.animation.core.LinearOutSlowInEasing),
+                    label = "NavBarVisibilityProgress"
+                )
+                
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .graphicsLayer {
+                            val hideFraction = (1f - navBarVisibilityProgressState.value).coerceIn(0f, 1f)
+                            translationY = size.height * hideFraction
+                            alpha = navBarVisibilityProgressState.value.coerceIn(0f, 1f)
+                        }
                 ) {
                     BottomNavBar(
                         items = navItems,
