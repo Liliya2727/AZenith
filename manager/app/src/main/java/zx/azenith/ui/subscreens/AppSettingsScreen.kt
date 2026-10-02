@@ -179,7 +179,6 @@ fun AppSettingsScreen(
     
     // Removed DisposableEffect calling loadApps onDispose to prevent animation lag.
 
-            val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
 
     Scaffold(
             modifier = Modifier,
@@ -207,7 +206,7 @@ fun AppSettingsScreen(
                     },
                     onBack = { 
                         appListViewModel.loadApps(context, forceRefresh = true) 
-                        backDispatcher?.onBackPressed() 
+                        navController.popBackStack() 
                     }
                 ) 
             },

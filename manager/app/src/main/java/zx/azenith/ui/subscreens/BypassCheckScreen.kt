@@ -224,13 +224,12 @@ fun BypassChargeCheckScreen(navController: NavController) {
 
     ConfirmDialogHost(handle = confirmDialogHandle)
 
-        val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
 
     Scaffold(
         modifier = Modifier,
         topBar = { 
             BypassChgCheckTopAppBar(
-                onBack = { backDispatcher?.onBackPressed() }
+                onBack = { navController.popBackStack() }
             ) 
         }
     ) { innerPadding ->

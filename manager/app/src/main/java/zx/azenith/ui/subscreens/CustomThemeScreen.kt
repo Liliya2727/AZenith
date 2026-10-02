@@ -347,7 +347,6 @@ fun ColorPaletteScreen(navController: NavController) {
     val isDark = currentColorMode.getDarkThemeValue(isSystemInDarkTheme())
     val amoledMode = currentColorMode == ColorMode.DARKAMOLED
 
-        val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
 
     Scaffold(
         modifier = Modifier,
@@ -363,7 +362,7 @@ fun ColorPaletteScreen(navController: NavController) {
         },
         topBar = {
             PaletteTopAppBar(
-                onBack = { backDispatcher?.onBackPressed() }
+                onBack = { navController.popBackStack() }
             )
         },
         containerColor = MaterialTheme.colorScheme.surface

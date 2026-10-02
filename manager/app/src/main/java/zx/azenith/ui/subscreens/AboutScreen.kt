@@ -95,13 +95,12 @@ fun AboutScreen(navController: NavController) {
         context.startActivity(intent)
     }
 
-        val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
 
     Scaffold(
         modifier = Modifier,
         topBar = { 
             AboutTopAppBar(
-                onBack = { backDispatcher?.onBackPressed() }
+                onBack = { navController.popBackStack() }
             ) 
         },
         containerColor = MaterialTheme.colorScheme.surface

@@ -167,12 +167,11 @@ fun ColorSchemeSettings(navController: NavController) {
         }
     }
 
-        val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
 
     Scaffold(
         modifier = Modifier,
         topBar = {
-            ColorSchemeTopAppBar(onBack = { backDispatcher?.onBackPressed() })
+            ColorSchemeTopAppBar(onBack = { navController.popBackStack() })
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = colorScheme.surface

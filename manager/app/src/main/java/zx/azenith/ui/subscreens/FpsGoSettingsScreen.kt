@@ -101,12 +101,11 @@ fun FpsGoSettings(navController: NavController) {
         }
     }
 
-        val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
 
     Scaffold(
         modifier = Modifier,
         topBar = { FpsGoTopAppBar(
-            onBack = { backDispatcher?.onBackPressed() }
+            onBack = { navController.popBackStack() }
             ) 
         },
         containerColor = MaterialTheme.colorScheme.surface

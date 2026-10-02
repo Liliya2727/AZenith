@@ -86,12 +86,11 @@ fun FasScreen(navController: NavController) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     
-        val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
 
     Scaffold(
         modifier = Modifier,
         topBar = { FasTopAppBar(
-            onBack = { backDispatcher?.onBackPressed() }
+            onBack = { navController.popBackStack() }
             ) 
         },
         containerColor = MaterialTheme.colorScheme.surface

@@ -497,19 +497,6 @@ fun MainScreen(fromTileType: String? = null) {
                         } else {
                             fadeOut(animationSpec = tween(150))
                         }
-                    },
-                    predictivePopEnterTransition = {
-                        EnterTransition.None
-                    },
-                    predictivePopExitTransition = {
-                        if (initialState.destination.route !in bottomBarRoutes) {
-                            slideOutHorizontally(
-                                targetOffsetX = { fullWidth: Int -> fullWidth },
-                                animationSpec = tween(250, easing = EmphasizedAccelerate)
-                            ) + fadeOut(animationSpec = tween(250, easing = EmphasizedAccelerate))
-                        } else {
-                            fadeOut(animationSpec = tween(150))
-                        }
                     }
                 ) {
                     composable("get_started") {

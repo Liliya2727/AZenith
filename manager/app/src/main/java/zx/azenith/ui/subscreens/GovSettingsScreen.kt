@@ -104,12 +104,11 @@ fun GovSettings(
         }
     }
 
-        val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
 
     Scaffold(
         modifier = Modifier,
         topBar = { GovSettingsTopAppBar(
-            onBack = { backDispatcher?.onBackPressed() }
+            onBack = { navController.popBackStack() }
             ) 
         },
         containerColor = MaterialTheme.colorScheme.surface

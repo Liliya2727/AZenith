@@ -126,11 +126,10 @@ fun BypassChargeScreen(navController: NavController) {
         }
     }
 
-        val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
 
     Scaffold(
         modifier = Modifier,
-        topBar = { BypassChgTopAppBar(onBack = { backDispatcher?.onBackPressed() }) },
+        topBar = { BypassChgTopAppBar(onBack = { navController.popBackStack() }) },
         containerColor = colorScheme.surface 
     ) { innerPadding ->
         LazyColumn(

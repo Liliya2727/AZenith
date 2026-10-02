@@ -153,12 +153,11 @@ fun PreferenceTweakScreen(navController: NavController) {
     }
     // ---------------------------------------
 
-        val backDispatcher = androidx.activity.compose.LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
 
     Scaffold(
         modifier = Modifier,
         topBar = { PreferenceTweakTopAppBar(
-            onBack = { backDispatcher?.onBackPressed() }
+            onBack = { navController.popBackStack() }
             ) 
         },
         containerColor = colorScheme.surface
