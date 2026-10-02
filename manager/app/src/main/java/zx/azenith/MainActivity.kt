@@ -424,80 +424,10 @@ fun MainScreen(fromTileType: String? = null) {
                         .background(MaterialTheme.colorScheme.surface)
                         .nestedScroll(nestedScrollConnection)
                         .graphicsLayer { alpha = 0.99f },
-                    enterTransition = {
-                        if (initialState.destination.route == "get_started" && targetState.destination.route in bottomBarRoutes) {
-                            fadeIn(animationSpec = tween(700))
-                        } else if (targetState.destination.route !in bottomBarRoutes) {
-                            // Forward axis. MD3 moves the incoming screen
-                            // emphasis-decelerate (400ms) and the outgoing one
-                            // emphasis-accelerate (200ms) so the pair reads as
-                            // one movement rather than two independent slides.
-                            // A spring on the incoming offset leaves the
-                            // outgoing screen with nothing to hand off to.
-                            // The offset runs on the plain emphasized curve at
-                            // 500ms rather than emphasized-decelerate: that
-                            // curve rises almost vertically, so most of the
-                            // travel lands in the first ~100ms and the screen
-                            // reads as an instant cut that then settles. The
-                            // fade stays on decelerate, where the fast start is
-                            // what makes the incoming surface feel lit.
-                            slideInHorizontally(
-                                initialOffsetX = { fullWidth -> fullWidth / 3 },
-                                animationSpec = tween(500, easing = Emphasized)
-                            ) + fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate))
-                        } else {
-                            // Subscreen <-> subscreen: the same shared axis X as the
-                            // root -> subscreen case. It used to be a bare fade, which
-                            // is what made opening a submenu feel instant -- there was
-                            // no positional movement to read as travel.
-                            slideInHorizontally(
-                                initialOffsetX = { fullWidth -> fullWidth / 3 },
-                                animationSpec = tween(400, easing = EmphasizedDecelerate)
-                            ) + fadeIn(animationSpec = tween(400, easing = EmphasizedDecelerate))
-                        }
-                    },
-                    exitTransition = {
-                        if (initialState.destination.route == "get_started" && targetState.destination.route in bottomBarRoutes) {
-                            fadeOut(animationSpec = tween(700))
-                        } else if (initialState.destination.route in bottomBarRoutes && targetState.destination.route !in bottomBarRoutes) {
-                            // The outgoing page has to travel with the incoming one
-                            // or the pair reads as a new screen sliding over a
-                            // static one. MD3 fade-through keeps the distance
-                            // small and the exit short; it uses -1/8 at 90ms
-                            // precisely because the incoming screen does the
-                            // travelling. The incoming screen here moves far
-                            // enough to need a real handoff, so the outgoing one
-                            // is pushed to -1/3 over the emphasized curve and is
-                            // NOT faded -- a fade would blank it out well before
-                            // the incoming one has covered it, leaving a bare
-                            // background visible for the rest of the transition.
-                            slideOutHorizontally(
-                                targetOffsetX = { fullWidth: Int -> -(fullWidth / 3) },
-                                animationSpec = tween(500, easing = Emphasized)
-                            )
-                        } else {
-                            // Subscreen <-> subscreen or root <-> subscreen (backwards): use
-                            // M3 shared axis X, but give the outgoing content a short
-                            // fade so the transition reads smooth rather than abrupt.
-                            slideOutHorizontally(
-                                targetOffsetX = { fullWidth: Int -> -(fullWidth / 6) },
-                                animationSpec = tween(200, easing = EmphasizedAccelerate)
-                            ) + fadeOut(animationSpec = tween(200, easing = EmphasizedAccelerate))
-                        }
-                    },
-                    popEnterTransition = {
-                        fadeIn(animationSpec = tween(100))
-                    },
-                    popExitTransition = {
-                        if (initialState.destination.route !in bottomBarRoutes) {
-                            slideOutHorizontally(
-                                targetOffsetX = { fullWidth: Int -> fullWidth },
-                                animationSpec = tween(250, easing = EmphasizedAccelerate)
-                            ) + fadeOut(animationSpec = tween(250, easing = EmphasizedAccelerate))
-                        } else {
-                            fadeOut(animationSpec = tween(150))
-                        }
-                    }
+                    enterTransition = { zx.azenith.ui.navigation.aospSharedAxisEnter() },
+                    exitTransition = { zx.azenith.ui.navigation.aospSharedAxisExit() },
+                    popEnterTransition = { zx.azenith.ui.navigation.aospSharedAxisPopEnter() },
+                    popExitTransition = { zx.azenith.ui.navigation.aospSharedAxisPopExit() }
                 ) {
                     composable("get_started") {
                         // get_started writes has_completed_get_started itself and
