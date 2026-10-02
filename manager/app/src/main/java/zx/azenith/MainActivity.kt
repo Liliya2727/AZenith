@@ -424,10 +424,10 @@ fun MainScreen(fromTileType: String? = null) {
                         .background(MaterialTheme.colorScheme.surface)
                         .nestedScroll(nestedScrollConnection)
                         .graphicsLayer { alpha = 0.99f },
-                    enterTransition = { zx.azenith.ui.navigation.aospSharedAxisEnter() },
-                    exitTransition = { zx.azenith.ui.navigation.aospSharedAxisExit() },
-                    popEnterTransition = { zx.azenith.ui.navigation.aospSharedAxisPopEnter() },
-                    popExitTransition = { zx.azenith.ui.navigation.aospSharedAxisPopExit() }
+                    enterTransition = { zx.azenith.ui.navigation.enterTransition() },
+                    exitTransition = { zx.azenith.ui.navigation.exitTransition() },
+                    popEnterTransition = { zx.azenith.ui.navigation.popEnterTransition() },
+                    popExitTransition = { zx.azenith.ui.navigation.popExitTransition() }
                 ) {
                     composable("get_started") {
                         // get_started writes has_completed_get_started itself and
