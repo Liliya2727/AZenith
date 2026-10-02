@@ -13,7 +13,7 @@ composeMarkdown = "0.7.2"
 
 # UI & Library
 material3 = "1.5.0-alpha23"
-activity-compose = "1.13.0-alpha01"
+activity-compose = "1.13.0"
 lifecycle = "2.11.0-beta02"
 navigation = "2.9.8"
 
