@@ -363,54 +363,15 @@ fun MainScreen(fromTileType: String? = null) {
         RootDialogsProvider {
             val isAnyDialogOpen = zx.azenith.ui.component.LocalActiveDialogCount.current.value > 0 || installingDialog.isShown || updateDialog.isShown || rebootDialog.isShown
             
-            if (android.os.Build.VERSION.SDK_INT >= 33) {
-                val currentOnBack by androidx.compose.runtime.rememberUpdatedState {
-                    if (showExitConfirm) {
-                        showExitConfirm = false
-                    } else if (pagerState.currentPage != 0) {
-                        coroutineScope.launch { pagerState.animateScrollToPage(0) }
-                    } else {
-                        showExitConfirm = true
-                    }
-                }
-                val backCallback = androidx.compose.runtime.remember {
-                    android.window.OnBackInvokedCallback {
-                        currentOnBack()
-                    }
-                }
-                androidx.compose.runtime.DisposableEffect(isOnMainPager, isAnyDialogOpen, context) {
-                    var currentContext = context
-                    var activity: android.app.Activity? = null
-                    while (currentContext is android.content.ContextWrapper) {
-                        if (currentContext is android.app.Activity) {
-                            activity = currentContext
-                            break
-                        }
-                        currentContext = currentContext.baseContext
-                    }
-                    val dispatcher = activity?.onBackInvokedDispatcher
-                    if (isOnMainPager && !isAnyDialogOpen && dispatcher != null) {
-                        dispatcher.registerOnBackInvokedCallback(
-                            android.window.OnBackInvokedDispatcher.PRIORITY_OVERLAY,
-                            backCallback
-                        )
-                    }
-                    onDispose {
-                        dispatcher?.unregisterOnBackInvokedCallback(backCallback)
-                    }
-                }
-            } else {
-                androidx.activity.compose.BackHandler(enabled = isOnMainPager && !isAnyDialogOpen) {
-                    if (showExitConfirm) {
-                        showExitConfirm = false
-                    } else if (pagerState.currentPage != 0) {
-                        coroutineScope.launch { pagerState.animateScrollToPage(0) }
-                    } else {
-                        showExitConfirm = true
-                    }
+            androidx.activity.compose.BackHandler(enabled = isOnMainPager && !isAnyDialogOpen) {
+                if (showExitConfirm) {
+                    showExitConfirm = false
+                } else if (pagerState.currentPage != 0) {
+                    coroutineScope.launch { pagerState.animateScrollToPage(0) }
+                } else {
+                    showExitConfirm = true
                 }
             }
-
             Box(
                 modifier = Modifier.fillMaxSize()
             ) {
