@@ -407,8 +407,6 @@ fun MainScreen(fromTileType: String? = null) {
                     
                     // Route Pager (Kode 2)
                     composable("main") {
-                        zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
-
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -416,6 +414,11 @@ fun MainScreen(fromTileType: String? = null) {
                                     if (isBlurEnabled) Modifier.hazeSource(state = hazeState) else Modifier
                                 )
                         ) {
+                            zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this@composable) {
+
+                                Box(
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
                             HorizontalPager(
                                 state = pagerState,
                                 modifier = Modifier.fillMaxSize(),
@@ -455,9 +458,10 @@ fun MainScreen(fromTileType: String? = null) {
                         } // ends HorizontalPager
                         
 
-                    } // ends Box
-                        }
-                } // ends composable
+                                } // ends Box
+                            } // ends ScreenWrapper
+                        } // ends outer Box
+                    } // ends composable
 
                     // Subscreens
                     composable("color_palette") {
