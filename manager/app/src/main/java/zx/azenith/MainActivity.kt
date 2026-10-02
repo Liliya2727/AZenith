@@ -500,20 +500,7 @@ fun MainScreen(fromTileType: String? = null) {
                         HorizontalPager(
                             state = pagerState,
                             modifier = Modifier.fillMaxSize(),
-                            // Keeps the immediate neighbour composed so a
-                            // drag has something to scroll into. A multi-page
-                            // jump composes the pages it passes through on the
-                            // way -- they enter the viewport as it scrolls -- so
-                            // this only has to cover a single drag's lead.
-                            // Raised from 1 to 3 because a jump from the first
-                            // to the last tab passes two intermediate pages,
-                            // and with only one neighbour prefetched each of
-                            // them was composed mid-animation. Composing a full
-                            // screen inside a running scroll animation is what
-                            // made tab 1 -> 4 stall for a frame or two before
-                            // it started moving. Prefetching every page removes
-                            // the work from the animation entirely; there are
-                            // only four pages, so the memory cost is bounded.
+                            // Prefetch all adjacent pages for long jumps.
                             beyondViewportPageCount = 3
                         ) { page ->
                             val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
