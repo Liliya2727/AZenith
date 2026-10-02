@@ -86,6 +86,7 @@ import coil.decode.ImageDecoderDecoder
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.material3.Material3
 import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.hazeSource
 import zx.azenith.R
@@ -305,11 +306,7 @@ fun BannerCard(
     
     val bannerHazeState = remember { HazeState() }
 
-    val statusBgColor = if (isAlive) {
-        if (isBlurEnabled) colorScheme.secondaryContainer.copy(alpha = 0.45f) else colorScheme.secondaryContainer
-    } else {
-        if (isBlurEnabled) colorScheme.errorContainer.copy(alpha = 0.45f) else colorScheme.errorContainer
-    }
+    val statusBgColor = if (isAlive) colorScheme.secondaryContainer else colorScheme.errorContainer
 
     val statusTextColor = if (isAlive) colorScheme.onSecondaryContainer else colorScheme.onErrorContainer
 
@@ -349,13 +346,15 @@ fun BannerCard(
                     horizontalAlignment = Alignment.Start
                 ) {
                     Surface(
-                        color = statusBgColor,
+                        color = if (isBlurEnabled) Color.Transparent else statusBgColor,
                         shape = CircleShape,
                         modifier = Modifier
                             .clip(CircleShape)
                             .then(if (isBlurEnabled) Modifier.hazeBlur(
                                 input = HazeInput.Sources(bannerHazeState),
-                                style = HazeBlurStyle { blurRadius(14.dp) }
+                                style = HazeBlurStyle.Material3(
+                                    containerColor = statusBgColor
+                                ) { blurRadius(14.dp) }
                             ) else Modifier)
                     ) {
                         AnimatedContent(
@@ -378,13 +377,15 @@ fun BannerCard(
                     if (isAlive) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Surface(
-                            color = if (isBlurEnabled) colorScheme.secondaryContainer.copy(alpha = 0.45f) else colorScheme.secondaryContainer, 
+                            color = if (isBlurEnabled) Color.Transparent else colorScheme.secondaryContainer, 
                             shape = CircleShape,
                             modifier = Modifier
                                 .clip(CircleShape)
                                 .then(if (isBlurEnabled) Modifier.hazeBlur(
                                 input = HazeInput.Sources(bannerHazeState),
-                                style = HazeBlurStyle { blurRadius(14.dp) }
+                                style = HazeBlurStyle.Material3(
+                                    containerColor = colorScheme.secondaryContainer
+                                ) { blurRadius(14.dp) }
                             ) else Modifier)
                         ) {
                             AnimatedContent(

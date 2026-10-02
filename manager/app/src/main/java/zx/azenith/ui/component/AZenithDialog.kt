@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.material3.Material3
 import dev.chrisbanes.haze.blur.hazeBlur
 
 /**
@@ -148,12 +149,14 @@ fun AZenithDialog(
                             if (isBlurEnabled && hazeState != null) {
                                 Modifier.hazeBlur(
                                 input = HazeInput.Sources(hazeState),
-                                style = HazeBlurStyle { blurRadius(24.dp) }
+                                style = HazeBlurStyle.Material3(
+                                    containerColor = containerColor.copy(alpha = 0.35f)
+                                ) { blurRadius(24.dp) }
                             )
                             } else Modifier
                         )
                         .background(
-                            if (isBlurEnabled) containerColor.copy(alpha = 0.35f) else containerColor
+                            if (isBlurEnabled) Color.Transparent else containerColor
                         )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },

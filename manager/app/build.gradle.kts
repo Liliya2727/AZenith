@@ -118,6 +118,7 @@ dependencies {
     implementation(libs.material.kolor)
     implementation(libs.haze)
     implementation(libs.haze.blur)
+    implementation(libs.haze.blur.material3)
     implementation(libs.me.zhanghai.android.appiconloader.coil)
     implementation(libs.io.coil.kt.coil.compose)
 

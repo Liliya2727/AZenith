@@ -78,6 +78,7 @@ import com.topjohnwu.superuser.Shell
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.material3.Material3
 import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.hazeSource
 import java.io.File
@@ -674,16 +675,14 @@ fun BottomNavBar(
                 .widthIn(max = 350.dp)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(28.dp)) 
-                .then(
-                    if (isBlurEnabled && hazeState != null) {
-                        Modifier.hazeBlur(
-                            input = HazeInput.Sources(hazeState),
-                            style = HazeBlurStyle { blurRadius(24.dp) }
-                        )
-                    } else Modifier
-                ),
+                .then(if (isBlurEnabled && hazeState != null) Modifier.hazeBlur(
+                                input = HazeInput.Sources(hazeState),
+                                style = HazeBlurStyle.Material3(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
+                                ) { blurRadius(24.dp) }
+                            ) else Modifier),
             shape = RoundedCornerShape(28.dp),
-            color = if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceContainer,
+            color = if (isBlurEnabled) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer,
             shadowElevation = if (isBlurEnabled) 0.dp else 8.dp
         ) {
             // Measured label widths, so the selected pill can interpolate its
