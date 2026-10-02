@@ -24,6 +24,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.BackHandler
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -443,8 +444,8 @@ fun MainScreen(fromTileType: String? = null) {
                         if (initialState.destination.route !in bottomBarRoutes) {
                             slideOutHorizontally(
                                 targetOffsetX = { fullWidth: Int -> fullWidth },
-                                animationSpec = tween(400, easing = Emphasized)
-                            ) + fadeOut(animationSpec = tween(400, easing = Emphasized))
+                                animationSpec = tween(250, easing = EmphasizedAccelerate)
+                            ) + fadeOut(animationSpec = tween(250, easing = EmphasizedAccelerate))
                         } else {
                             fadeOut(animationSpec = tween(150))
                         }
@@ -473,9 +474,9 @@ fun MainScreen(fromTileType: String? = null) {
                         if (initialState.destination.route !in bottomBarRoutes) {
                             slideOutOfContainer(
                                 towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                                animationSpec = tween(400, easing = Emphasized)
+                                animationSpec = tween(250, easing = EmphasizedAccelerate)
                             ) { fullWidth: Int -> fullWidth } +
-                                fadeOut(animationSpec = tween(400, easing = Emphasized))
+                                fadeOut(animationSpec = tween(250, easing = EmphasizedAccelerate))
                         } else {
                             fadeOut(animationSpec = tween(150))
                         }
@@ -497,6 +498,27 @@ fun MainScreen(fromTileType: String? = null) {
                     
                     // Route Pager (Kode 2)
                     composable("main") {
+                        val exitDialog = rememberConfirmDialog(
+                            onConfirm = {
+                                (context as? android.app.Activity)?.finishAffinity()
+                            }
+                        )
+                        
+                        BackHandler(enabled = true) {
+                            if (pagerState.currentPage != 0) {
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(0)
+                                }
+                            } else {
+                                exitDialog.showConfirm(
+                                    title = context.getString(R.string.app_name),
+                                    content = context.getString(R.string.dialog_exit_confirm_content),
+                                    confirm = context.getString(R.string.dialog_exit_confirm_button),
+                                    dismiss = context.getString(R.string.dialog_cancel)
+                                )
+                            }
+                        }
+
                         HorizontalPager(
                             state = pagerState,
                             modifier = Modifier.fillMaxSize(),
