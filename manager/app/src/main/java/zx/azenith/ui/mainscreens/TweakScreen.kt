@@ -63,6 +63,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInWindow
+
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -110,7 +113,9 @@ fun TweakScreen(
     val colorScheme = MaterialTheme.colorScheme
     var showBackupRestoreSheet by remember { mutableStateOf(false) }
     var showRendererDialog by remember { mutableStateOf(false) }
+    var rendererDialogOrigin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset(0.5f, 0.5f)) }
     var showRefreshRateDialog by remember { mutableStateOf(false) }
+    var refreshRateDialogOrigin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset(0.5f, 0.5f)) }
     var pendingRestoreData by remember { mutableStateOf<Map<String, String>?>(null) }
     var showRestoreDialog by remember { mutableStateOf(false) }
     
@@ -367,8 +372,18 @@ fun TweakScreen(
                             .fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+                        val density = androidx.compose.ui.platform.LocalDensity.current
+                        val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+                        val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
                         ExpressiveTile(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).onGloballyPositioned { coordinates ->
+                                val bounds = coordinates.boundsInWindow()
+                                refreshRateDialogOrigin = androidx.compose.ui.geometry.Offset(
+                                    bounds.center.x / screenWidthPx,
+                                    bounds.center.y / screenHeightPx
+                                )
+                            },
                             icon = Icons.Rounded.WebStories,
                             label = stringResource(R.string.refreshrates),
                             value = stringResource(R.string.refresh_rate_format, viewModel.currentRefreshRate.toString()),
@@ -380,7 +395,13 @@ fun TweakScreen(
                         }
 
                         ExpressiveTile(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(1f).onGloballyPositioned { coordinates ->
+                                val bounds = coordinates.boundsInWindow()
+                                rendererDialogOrigin = androidx.compose.ui.geometry.Offset(
+                                    bounds.center.x / screenWidthPx,
+                                    bounds.center.y / screenHeightPx
+                                )
+                            },
                             icon = Icons.Rounded.SettingsSuggest,
                             label = stringResource(R.string.renderengine),
                             value = viewModel.currentRenderer!!.uppercase(),
@@ -578,7 +599,8 @@ fun TweakScreen(
         RendererDialog(
             show = showRendererDialog,
             onDismiss = { showRendererDialog = false },
-            onRenderer = { reason -> viewModel.executeSetRenderer(reason, context) }
+            onRenderer = { reason -> viewModel.executeSetRenderer(reason, context) },
+            origin = rendererDialogOrigin
         )
     }
 
@@ -586,7 +608,8 @@ fun TweakScreen(
         RefreshRatePickerDialog(
             show = showRefreshRateDialog,
             onDismiss = { showRefreshRateDialog = false },
-            onRefreshRatePicker = { reason -> viewModel.executeSetRefreshRates(reason, context) }
+            onRefreshRatePicker = { reason -> viewModel.executeSetRefreshRates(reason, context) },
+            origin = refreshRateDialogOrigin
         )
     }
 }

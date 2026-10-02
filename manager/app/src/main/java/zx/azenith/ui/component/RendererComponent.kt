@@ -120,9 +120,10 @@ fun RendererDialog(
             visible = show,
             enter = Motion.cardEnterFrom(origin),
             exit = Motion.cardExitTo(origin),
-            modifier = Modifier.align(Alignment.Center)
+            modifier = Modifier.fillMaxSize()
         ) {
-            Box(
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(
                 modifier = Modifier
                     .widthIn(min = 320.dp, max = 400.dp)
                     .padding(24.dp)
@@ -185,3 +186,4 @@ fun RendererDialog(
         }
     }
 
+}
