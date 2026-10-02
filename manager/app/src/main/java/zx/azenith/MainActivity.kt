@@ -422,8 +422,7 @@ fun MainScreen(fromTileType: String? = null) {
                     modifier = Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.surface)
-                        .nestedScroll(nestedScrollConnection)
-                        .graphicsLayer { alpha = 0.99f },
+                        .nestedScroll(nestedScrollConnection),
                     enterTransition = { zx.azenith.ui.navigation.aospSharedAxisEnter() },
                     exitTransition = { zx.azenith.ui.navigation.aospSharedAxisExit() },
                     popEnterTransition = { zx.azenith.ui.navigation.aospSharedAxisPopEnter() },
