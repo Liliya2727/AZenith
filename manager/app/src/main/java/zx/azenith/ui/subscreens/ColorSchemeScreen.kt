@@ -18,6 +18,7 @@
 
 package zx.azenith.ui.subscreens
 
+import zx.azenith.ui.navigation.safePopBackStack
 import android.app.Activity
 import android.content.Context
 import android.os.Build
@@ -171,7 +172,7 @@ fun ColorSchemeSettings(navController: NavController) {
     Scaffold(
         modifier = Modifier,
         topBar = {
-            ColorSchemeTopAppBar(onBack = { navController.popBackStack() })
+            ColorSchemeTopAppBar(onBack = { navController.safePopBackStack() })
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = colorScheme.surface

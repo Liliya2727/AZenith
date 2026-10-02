@@ -19,6 +19,7 @@
 package zx.azenith.ui.subscreens
 
 
+import zx.azenith.ui.navigation.safePopBackStack
 import android.app.Activity
 import android.content.Context
 import android.os.Build
@@ -105,7 +106,7 @@ fun FpsGoSettings(navController: NavController) {
     Scaffold(
         modifier = Modifier,
         topBar = { FpsGoTopAppBar(
-            onBack = { navController.popBackStack() }
+            onBack = { navController.safePopBackStack() }
             ) 
         },
         containerColor = MaterialTheme.colorScheme.surface

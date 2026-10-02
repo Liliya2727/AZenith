@@ -19,6 +19,7 @@
 package zx.azenith.ui.subscreens
 
 
+import zx.azenith.ui.navigation.safePopBackStack
 import android.app.Activity
 import android.content.Context
 import android.media.MediaMetadataRetriever
@@ -362,7 +363,7 @@ fun ColorPaletteScreen(navController: NavController) {
         },
         topBar = {
             PaletteTopAppBar(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.safePopBackStack() }
             )
         },
         containerColor = MaterialTheme.colorScheme.surface

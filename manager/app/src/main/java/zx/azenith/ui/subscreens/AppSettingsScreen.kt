@@ -19,6 +19,7 @@
 package zx.azenith.ui.subscreens
 
 
+import zx.azenith.ui.navigation.safePopBackStack
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -206,7 +207,7 @@ fun AppSettingsScreen(
                     },
                     onBack = { 
                         appListViewModel.loadApps(context, forceRefresh = true) 
-                        navController.popBackStack() 
+                        navController.safePopBackStack() 
                     }
                 ) 
             },

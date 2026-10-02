@@ -19,6 +19,7 @@
 package zx.azenith.ui.subscreens
 
 
+import zx.azenith.ui.navigation.safePopBackStack
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -100,7 +101,7 @@ fun AboutScreen(navController: NavController) {
         modifier = Modifier,
         topBar = { 
             AboutTopAppBar(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.safePopBackStack() }
             ) 
         },
         containerColor = MaterialTheme.colorScheme.surface

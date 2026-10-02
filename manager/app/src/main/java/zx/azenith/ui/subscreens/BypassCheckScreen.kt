@@ -19,6 +19,7 @@
 package zx.azenith.ui.subscreens
 
 
+import zx.azenith.ui.navigation.safePopBackStack
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -229,7 +230,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
         modifier = Modifier,
         topBar = { 
             BypassChgCheckTopAppBar(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.safePopBackStack() }
             ) 
         }
     ) { innerPadding ->

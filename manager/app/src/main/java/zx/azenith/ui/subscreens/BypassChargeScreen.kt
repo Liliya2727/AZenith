@@ -19,6 +19,7 @@
 package zx.azenith.ui.subscreens
 
 
+import zx.azenith.ui.navigation.safePopBackStack
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
@@ -129,7 +130,7 @@ fun BypassChargeScreen(navController: NavController) {
 
     Scaffold(
         modifier = Modifier,
-        topBar = { BypassChgTopAppBar(onBack = { navController.popBackStack() }) },
+        topBar = { BypassChgTopAppBar(onBack = { navController.safePopBackStack() }) },
         containerColor = colorScheme.surface 
     ) { innerPadding ->
         LazyColumn(

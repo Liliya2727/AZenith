@@ -19,6 +19,7 @@
 package zx.azenith.ui.subscreens
 
 
+import zx.azenith.ui.navigation.safePopBackStack
 import android.app.Activity
 import android.content.Context
 import android.os.Build
@@ -108,7 +109,7 @@ fun GovSettings(
     Scaffold(
         modifier = Modifier,
         topBar = { GovSettingsTopAppBar(
-            onBack = { navController.popBackStack() }
+            onBack = { navController.safePopBackStack() }
             ) 
         },
         containerColor = MaterialTheme.colorScheme.surface
