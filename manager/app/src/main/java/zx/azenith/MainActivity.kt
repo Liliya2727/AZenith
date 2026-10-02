@@ -455,28 +455,11 @@ fun MainScreen(fromTileType: String? = null) {
                         EnterTransition.None
                     },
                     predictivePopExitTransition = {
-                        // Predictive back needs a SEEKABLE transition, not an
-                        // animated one. NavHost collects the gesture and calls
-                        // SeekableTransitionState.seekTo(progress) on every frame
-                        // of the drag, which re-evaluates this offset against the
-                        // fraction travelled. slideOutHorizontally cannot be
-                        // seeked -- it owns its own animation clock -- so with it
-                        // the screen only moves on release and the gesture is
-                        // indistinguishable from a plain back press.
-                        // slideOutOfContainer derives its offset from the
-                        // transition's own fraction instead, so the dismissed
-                        // screen stays under the finger.
-                        //
-                        // The travel is a full screen width so the offset tracks
-                        // the finger one-to-one across the display, rather than a
-                        // fraction of it that would finish the slide well before
-                        // the gesture does and then look like it had stalled.
                         if (initialState.destination.route !in bottomBarRoutes) {
-                            slideOutOfContainer(
-                                towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                            slideOutHorizontally(
+                                targetOffsetX = { fullWidth: Int -> fullWidth },
                                 animationSpec = tween(250, easing = EmphasizedAccelerate)
-                            ) { fullWidth: Int -> fullWidth } +
-                                fadeOut(animationSpec = tween(250, easing = EmphasizedAccelerate))
+                            ) + fadeOut(animationSpec = tween(250, easing = EmphasizedAccelerate))
                         } else {
                             fadeOut(animationSpec = tween(150))
                         }
@@ -498,33 +481,27 @@ fun MainScreen(fromTileType: String? = null) {
                     
                     // Route Pager (Kode 2)
                     composable("main") {
-                        val exitDialog = rememberConfirmDialog(
-                            onConfirm = {
-                                (context as? android.app.Activity)?.finishAffinity()
-                            }
-                        )
+                        var showExitConfirm by remember { mutableStateOf(false) }
                         
                         BackHandler(enabled = true) {
-                            if (pagerState.currentPage != 0) {
+                            if (showExitConfirm) {
+                                showExitConfirm = false
+                            } else if (pagerState.currentPage != 0) {
                                 coroutineScope.launch {
                                     pagerState.animateScrollToPage(0)
                                 }
                             } else {
-                                exitDialog.showConfirm(
-                                    title = context.getString(R.string.app_name),
-                                    content = context.getString(R.string.dialog_exit_confirm_content),
-                                    confirm = context.getString(R.string.dialog_exit_confirm_button),
-                                    dismiss = context.getString(R.string.dialog_cancel)
-                                )
+                                showExitConfirm = true
                             }
                         }
 
-                        HorizontalPager(
-                            state = pagerState,
-                            modifier = Modifier.fillMaxSize(),
-                            // Prefetch all adjacent pages for long jumps.
-                            beyondViewportPageCount = 3
-                        ) { page ->
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            HorizontalPager(
+                                state = pagerState,
+                                modifier = Modifier.fillMaxSize(),
+                                // Prefetch all adjacent pages for long jumps.
+                                beyondViewportPageCount = 3
+                            ) { page ->
                             val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
                             val absOffset = kotlin.math.abs(pageOffset)
                             
@@ -554,9 +531,16 @@ fun MainScreen(fromTileType: String? = null) {
                                     "settings" -> SettingsScreen(navController)
                                 }
                             }
-                        }
-                    }
-
+                            
+                        } // ends HorizontalPager
+                        
+                        zx.azenith.ui.component.ExitPopup(
+                            visible = showExitConfirm,
+                            onDismiss = { showExitConfirm = false },
+                            onConfirm = { (context as? android.app.Activity)?.finishAffinity() }
+                        )
+                    } // ends Box
+                } // ends composable
 
                     // Subscreens
                     composable("color_palette") { ColorPaletteScreen(navController) }

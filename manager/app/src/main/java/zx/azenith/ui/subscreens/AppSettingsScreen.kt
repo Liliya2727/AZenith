@@ -175,11 +175,7 @@ fun AppSettingsScreen(
         else -> 0
     }
     
-    DisposableEffect(Unit) {
-        onDispose {
-            appListViewModel.loadApps(context, forceRefresh = true)
-        }
-    }  
+    // Removed DisposableEffect calling loadApps onDispose to prevent animation lag.
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
