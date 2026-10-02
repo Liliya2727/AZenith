@@ -76,8 +76,9 @@ import androidx.navigation.navArgument
 import androidx.tracing.Trace
 import com.topjohnwu.superuser.Shell
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.blur.blurEffect
-import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.hazeSource
 import java.io.File
 import kotlin.math.abs
@@ -675,11 +676,10 @@ fun BottomNavBar(
                 .clip(RoundedCornerShape(28.dp)) 
                 .then(
                     if (isBlurEnabled && hazeState != null) {
-                        Modifier.hazeEffect(state = hazeState) {
-                            blurEffect {
-                                blurRadius = 24.dp
-                            }
-                        }
+                        Modifier.hazeBlur(
+                            input = HazeInput.Sources(hazeState),
+                            style = HazeBlurStyle { blurRadius(24.dp) }
+                        )
                     } else Modifier
                 ),
             shape = RoundedCornerShape(28.dp),

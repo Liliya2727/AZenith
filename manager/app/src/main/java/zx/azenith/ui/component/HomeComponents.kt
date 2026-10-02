@@ -84,8 +84,9 @@ import coil.compose.AsyncImage
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.blur.blurEffect
-import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.hazeSource
 import zx.azenith.R
 import zx.azenith.ui.util.getAppVersion
@@ -352,7 +353,10 @@ fun BannerCard(
                         shape = CircleShape,
                         modifier = Modifier
                             .clip(CircleShape)
-                            .then(if (isBlurEnabled) Modifier.hazeEffect(state = bannerHazeState) { blurEffect { blurRadius = 14.dp } } else Modifier)
+                            .then(if (isBlurEnabled) Modifier.hazeBlur(
+                                input = HazeInput.Sources(bannerHazeState),
+                                style = HazeBlurStyle { blurRadius(14.dp) }
+                            ) else Modifier)
                     ) {
                         AnimatedContent(
                             targetState = status,
@@ -378,7 +382,10 @@ fun BannerCard(
                             shape = CircleShape,
                             modifier = Modifier
                                 .clip(CircleShape)
-                                .then(if (isBlurEnabled) Modifier.hazeEffect(state = bannerHazeState) { blurEffect { blurRadius = 14.dp } } else Modifier)
+                                .then(if (isBlurEnabled) Modifier.hazeBlur(
+                                input = HazeInput.Sources(bannerHazeState),
+                                style = HazeBlurStyle { blurRadius(14.dp) }
+                            ) else Modifier)
                         ) {
                             AnimatedContent(
                                 targetState = pid,
