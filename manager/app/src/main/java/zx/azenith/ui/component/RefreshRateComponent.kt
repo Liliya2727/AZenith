@@ -81,9 +81,16 @@ fun RefreshRatePickerDialog(
     val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
     val hazeState = LocalAppHazeState.current
     val options = remember(context) { getRefreshRatePickerOptions(context) }
+    val activeDialogCount = LocalActiveDialogCount.current
+    androidx.compose.runtime.DisposableEffect(show) {
+        if (show) activeDialogCount.value++
+        onDispose {
+            if (show) activeDialogCount.value--
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        BackHandler(onBack = onDismiss)
+        BackHandler(enabled = show, onBack = onDismiss)
         // Scrim is a sibling of the card, not its parent: AnimatedVisibility transitions the whole
         // subtree, so a fullscreen scrim sharing the card's container transform makes the card's
         // scale pivot resolve against screen bounds and it grows from the middle of the screen.

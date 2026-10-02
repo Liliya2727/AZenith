@@ -79,8 +79,16 @@ fun RendererDialog(
     val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
     val hazeState = LocalAppHazeState.current
     val options = getRendererOptions(context)
+    val activeDialogCount = LocalActiveDialogCount.current
+    androidx.compose.runtime.DisposableEffect(show) {
+        if (show) activeDialogCount.value++
+        onDispose {
+            if (show) activeDialogCount.value--
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        BackHandler(enabled = show, onBack = onDismiss)
 
         // The scrim is a sibling of the card rather than its parent. AnimatedVisibility applies
         // its transition to the whole subtree, so nesting the card inside a fullscreen scrim that

@@ -66,6 +66,7 @@ private const val TAG = "DialogComponent"
 
 val LocalAppHazeState = compositionLocalOf<HazeState?> { null }
 val LocalRootDialogs = compositionLocalOf<MutableMap<String, @Composable () -> Unit>> { error("RootDialogsProvider not found") }
+val LocalActiveDialogCount = androidx.compose.runtime.compositionLocalOf { androidx.compose.runtime.mutableStateOf(0) }
 
 @Composable
 fun RootDialogsProvider(content: @Composable () -> Unit) {
@@ -307,6 +308,13 @@ fun ConfirmDialogHost(handle: ConfirmDialogHandle) {
 
 @Composable
 private fun LoadingDialog(visible: Boolean) {
+    val activeDialogCount = LocalActiveDialogCount.current
+    androidx.compose.runtime.DisposableEffect(visible) {
+        if (visible) activeDialogCount.value++
+        onDispose {
+            if (visible) activeDialogCount.value--
+        }
+    }
     val context = LocalContext.current
     val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
     val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
@@ -366,6 +374,13 @@ private fun ConfirmDialog(
     confirm: () -> Unit, 
     dismiss: () -> Unit
 ) {
+    val activeDialogCount = LocalActiveDialogCount.current
+    androidx.compose.runtime.DisposableEffect(visible) {
+        if (visible) activeDialogCount.value++
+        onDispose {
+            if (visible) activeDialogCount.value--
+        }
+    }
     val context = LocalContext.current
     val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
     val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
@@ -483,7 +498,7 @@ fun CustomContentDialog(
                    animationSpec = tween(150, easing = FastOutSlowInEasing)
                )
     ) {
-        BackHandler(onBack = onDismiss)
+        BackHandler(enabled = visible, onBack = onDismiss)
         Box(
             modifier = Modifier
                 .fillMaxSize()

@@ -47,7 +47,7 @@ fun ExitPopup(
     onConfirm: () -> Unit
 ) {
     if (visible) {
-        BackHandler(onBack = onDismiss)
+        BackHandler(enabled = visible, onBack = onDismiss)
     }
     
     AnimatedVisibility(

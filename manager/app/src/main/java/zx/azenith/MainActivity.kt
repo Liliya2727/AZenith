@@ -170,6 +170,7 @@ fun MainScreen(fromTileType: String? = null) {
     val pagerState = rememberPagerState(initialPage = 0) { pagerRoutes.size }
     
     val bottomBarRoutes = remember { setOf("main") }
+    var showExitConfirm by remember { androidx.compose.runtime.mutableStateOf(false) }
 
     LaunchedEffect(fromTileType) {
         val rootNav = "main"
@@ -308,6 +309,7 @@ fun MainScreen(fromTileType: String? = null) {
             Shell.cmd("svc power reboot || reboot").submit()
         }
     )
+
     
     LaunchedEffect(rootStatus) {
         if (rootStatus) {
@@ -353,8 +355,62 @@ fun MainScreen(fromTileType: String? = null) {
     }
 
    
-    CompositionLocalProvider(LocalAppHazeState provides hazeState) {
+    val activeDialogCount = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
+    CompositionLocalProvider(
+        LocalAppHazeState provides hazeState,
+        zx.azenith.ui.component.LocalActiveDialogCount provides activeDialogCount
+    ) {
         RootDialogsProvider {
+            val isAnyDialogOpen = zx.azenith.ui.component.LocalActiveDialogCount.current.value > 0 || installingDialog.isShown || updateDialog.isShown || rebootDialog.isShown
+            
+            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                val currentOnBack by androidx.compose.runtime.rememberUpdatedState {
+                    if (showExitConfirm) {
+                        showExitConfirm = false
+                    } else if (pagerState.currentPage != 0) {
+                        coroutineScope.launch { pagerState.animateScrollToPage(0) }
+                    } else {
+                        showExitConfirm = true
+                    }
+                }
+                val backCallback = androidx.compose.runtime.remember {
+                    android.window.OnBackInvokedCallback {
+                        currentOnBack()
+                    }
+                }
+                androidx.compose.runtime.DisposableEffect(isOnMainPager, isAnyDialogOpen, context) {
+                    var currentContext = context
+                    var activity: android.app.Activity? = null
+                    while (currentContext is android.content.ContextWrapper) {
+                        if (currentContext is android.app.Activity) {
+                            activity = currentContext
+                            break
+                        }
+                        currentContext = currentContext.baseContext
+                    }
+                    val dispatcher = activity?.onBackInvokedDispatcher
+                    if (isOnMainPager && !isAnyDialogOpen && dispatcher != null) {
+                        dispatcher.registerOnBackInvokedCallback(
+                            android.window.OnBackInvokedDispatcher.PRIORITY_OVERLAY,
+                            backCallback
+                        )
+                    }
+                    onDispose {
+                        dispatcher?.unregisterOnBackInvokedCallback(backCallback)
+                    }
+                }
+            } else {
+                androidx.activity.compose.BackHandler(enabled = isOnMainPager && !isAnyDialogOpen) {
+                    if (showExitConfirm) {
+                        showExitConfirm = false
+                    } else if (pagerState.currentPage != 0) {
+                        coroutineScope.launch { pagerState.animateScrollToPage(0) }
+                    } else {
+                        showExitConfirm = true
+                    }
+                }
+            }
+
             Box(
                 modifier = Modifier.fillMaxSize()
             ) {
@@ -366,10 +422,7 @@ fun MainScreen(fromTileType: String? = null) {
                     modifier = Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.surface)
-                        .nestedScroll(nestedScrollConnection)
-                        .then(
-                            if (isBlurEnabled) Modifier.hazeSource(state = hazeState) else Modifier
-                        ),
+                        .nestedScroll(nestedScrollConnection),
                     enterTransition = {
                         if (initialState.destination.route == "get_started" && targetState.destination.route in bottomBarRoutes) {
                             fadeIn(animationSpec = tween(700))
@@ -432,13 +485,7 @@ fun MainScreen(fromTileType: String? = null) {
                         }
                     },
                     popEnterTransition = {
-                        // The screen underneath stays put. It is already sitting
-                        // at its final position, so any enter offset on it makes
-                        // the two surfaces cross in opposite directions and the
-                        // pair reads as two screens sliding past each other
-                        // rather than one screen being dismissed off a still
-                        // background. Only popExit moves.
-                        EnterTransition.None
+                        fadeIn(animationSpec = tween(100))
                     },
                     popExitTransition = {
                         if (initialState.destination.route !in bottomBarRoutes) {
@@ -451,7 +498,6 @@ fun MainScreen(fromTileType: String? = null) {
                         }
                     },
                     predictivePopEnterTransition = {
-                        // Static background, same as the non-predictive pop.
                         EnterTransition.None
                     },
                     predictivePopExitTransition = {
@@ -481,21 +527,14 @@ fun MainScreen(fromTileType: String? = null) {
                     
                     // Route Pager (Kode 2)
                     composable("main") {
-                        var showExitConfirm by remember { mutableStateOf(false) }
-                        
-                        BackHandler(enabled = true) {
-                            if (showExitConfirm) {
-                                showExitConfirm = false
-                            } else if (pagerState.currentPage != 0) {
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(0)
-                                }
-                            } else {
-                                showExitConfirm = true
-                            }
-                        }
 
-                        Box(modifier = Modifier.fillMaxSize()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .then(
+                                    if (isBlurEnabled) Modifier.hazeSource(state = hazeState) else Modifier
+                                )
+                        ) {
                             HorizontalPager(
                                 state = pagerState,
                                 modifier = Modifier.fillMaxSize(),
@@ -534,11 +573,7 @@ fun MainScreen(fromTileType: String? = null) {
                             
                         } // ends HorizontalPager
                         
-                        zx.azenith.ui.component.ExitPopup(
-                            visible = showExitConfirm,
-                            onDismiss = { showExitConfirm = false },
-                            onConfirm = { (context as? android.app.Activity)?.finishAffinity() }
-                        )
+
                     } // ends Box
                 } // ends composable
 
@@ -678,6 +713,12 @@ fun MainScreen(fromTileType: String? = null) {
             ConfirmDialogHost(handle = updateDialog)
             ConfirmDialogHost(handle = rebootDialog)
             InstallingDialogHost(handle = installingDialog)
+            
+            zx.azenith.ui.component.ExitPopup(
+                visible = showExitConfirm,
+                onDismiss = { showExitConfirm = false },
+                onConfirm = { (context as? android.app.Activity)?.finishAffinity() }
+            )
         }
     }
 }

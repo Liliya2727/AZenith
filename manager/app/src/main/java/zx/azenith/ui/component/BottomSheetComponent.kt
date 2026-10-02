@@ -79,7 +79,7 @@ fun CustomBottomSheet(
     }
 
     if (visible) {
-        BackHandler(onBack = onDismiss)
+        BackHandler(enabled = visible, onBack = onDismiss)
     }
 
 

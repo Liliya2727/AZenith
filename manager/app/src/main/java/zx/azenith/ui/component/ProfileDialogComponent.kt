@@ -78,10 +78,17 @@ fun ProfileDialog(
     val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
     val hazeState = LocalAppHazeState.current
     val options = getProfileOptions()
+    val activeDialogCount = LocalActiveDialogCount.current
+    androidx.compose.runtime.DisposableEffect(show) {
+        if (show) activeDialogCount.value++
+        onDispose {
+            if (show) activeDialogCount.value--
+        }
+    }
 
 
     Box(modifier = Modifier.fillMaxSize()) {
-        BackHandler(onBack = onDismiss)
+        BackHandler(enabled = show, onBack = onDismiss)
         AnimatedVisibility(
             visible = show,
             enter = Motion.scrimEnter(),
