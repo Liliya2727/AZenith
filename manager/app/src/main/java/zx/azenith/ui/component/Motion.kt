@@ -21,8 +21,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.TransformOrigin
 
@@ -52,51 +50,44 @@ object Motion {
     const val DurationMedium3 = 350
 
     /**
-     * Enter transition for a dialog: scrim fade, container scale-up and a short upward lift,
-     * all on one clock so the surface resolves rather than merely appearing.
+     * Scrim enter/exit — a plain opacity ramp on the full-screen backdrop.
      *
-     * EmphasizedDecelerate finishes ~70% of its travel in the first third of the duration, so
-     * the scale and slide are already near their final value by mid-transition — visible motion
-     * without a sluggish tail.
+     * The scrim is deliberately kept on its own transition rather than sharing the dialog's
+     * container transform. `AnimatedVisibility` applies its enter/exit to the whole subtree, so
+     * putting the card and the scrim in one `AnimatedVisibility` makes the scale pivot resolve
+     * against the scrim's fullscreen bounds — the dialog then appears to grow out of the middle
+     * of the screen with the overlay attached, instead of from the control that opened it.
+     * Callers wrap the card in one `AnimatedVisibility` and the scrim in another.
      */
-    fun dialogEnter() = fadeIn(
-        animationSpec = tween(DurationMedium2, easing = EmphasizedDecelerate)
-    ) + scaleIn(
-        initialScale = 0.86f,
-        animationSpec = tween(DurationMedium2, easing = EmphasizedDecelerate)
-    ) + slideInVertically(
-        initialOffsetY = { it / 8 },
-        animationSpec = tween(DurationMedium2, easing = EmphasizedDecelerate)
-    )
+    fun scrimEnter() = fadeIn(animationSpec = tween(DurationShort4, easing = Emphasized))
+
+    fun scrimExit() = fadeOut(animationSpec = tween(DurationShort4, easing = Emphasized))
 
     /**
-     * Container-transform enter: the dialog grows out of the tap point rather than fading in at
-     * its own centre, so it reads as the triggering control expanding.
+     * Container-transform enter: the dialog grows out of the tap point rather than appearing at
+     * its own centre, so it reads as the triggering control expanding into the dialog.
      *
-     * [origin] is the tap position in the dialog's own coordinate space, already normalised so
-     * (0,0) is the dialog's top-left. Compose's `scaleIn` grows about a fixed centre, so the
-     * pivot is moved to the origin with `transformOrigin` and the container is offset by
-     * `offset` to compensate — without the compensation the surface would visibly jump as the
-     * pivot changes.
+     * [origin] is the tap position already converted into the card's own coordinate space and
+     * normalised so (0, 0) is its top-left and (1, 1) its bottom-right. `scaleIn` grows about
+     * `transformOrigin`, so moving the pivot to [origin] makes the card expand away from that
+     * corner while its final resting position stays exactly where the layout put it.
      *
-     * The pivot is deliberately left biased toward the top of the surface: a dialog growing from
-     * dead centre reads as a popup, and growing from the exact tap point reads as a detached
-     * element chasing a cursor. Growing from just above the tap point is what M3's own
-     * container transform does.
+     * The initial scale is small on purpose: at 0.1 the card is nearly the size of the triggering
+     * tile, which is what makes the eye read continuity between the two rather than a pop-up.
      */
-    fun dialogEnterFrom(origin: Offset) = fadeIn(
+    fun cardEnterFrom(origin: Offset) = fadeIn(
         animationSpec = tween(DurationShort4, easing = EmphasizedDecelerate)
     ) + scaleIn(
-        initialScale = 0.2f,
+        initialScale = 0.1f,
         animationSpec = tween(DurationMedium2, easing = EmphasizedDecelerate),
         transformOrigin = TransformOrigin(origin.x, origin.y)
     )
 
-    /** Counterpart to [dialogEnterFrom] — collapses back toward the control that opened it. */
-    fun dialogExitTo(origin: Offset) = fadeOut(
+    /** Counterpart to [cardEnterFrom] — collapses back toward the control that opened it. */
+    fun cardExitTo(origin: Offset) = fadeOut(
         animationSpec = tween(DurationShort4, easing = EmphasizedAccelerate)
     ) + scaleOut(
-        targetScale = 0.2f,
+        targetScale = 0.1f,
         animationSpec = tween(DurationShort4, easing = EmphasizedAccelerate),
         transformOrigin = TransformOrigin(origin.x, origin.y)
     )

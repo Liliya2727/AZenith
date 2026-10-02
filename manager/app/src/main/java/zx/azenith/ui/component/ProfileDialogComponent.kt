@@ -80,28 +80,35 @@ fun ProfileDialog(
     val options = getProfileOptions()
 
 
-    AnimatedVisibility(
-        visible = show,
-        enter = Motion.dialogEnterFrom(origin),
-        exit = Motion.dialogExitTo(origin)
-    ) {
-
+    Box(modifier = Modifier.fillMaxSize()) {
         BackHandler(onBack = onDismiss)
-        
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .zIndex(100f) 
-                .background(Color.Black.copy(alpha = 0.42f)) 
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onDismiss 
-                ),
-            contentAlignment = Alignment.Center
+        AnimatedVisibility(
+            visible = show,
+            enter = Motion.scrimEnter(),
+            exit = Motion.scrimExit(),
+            modifier = Modifier.fillMaxSize()
         ) {
-
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.42f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onDismiss
+                    )
+            )
+        }
+        // The card's AnimatedVisibility is sized to the card itself and centred in the root Box.
+        // Giving it fillMaxSize would make its bounds fullscreen, and the scale pivot would then
+        // resolve against screen coordinates — which is exactly the centre-of-screen pop this
+        // replaces. Bounds of this node must equal bounds of the card for the origin to be right.
+        AnimatedVisibility(
+            visible = show,
+            enter = Motion.cardEnterFrom(origin),
+            exit = Motion.cardExitTo(origin),
+            modifier = Modifier.align(Alignment.Center)
+        ) {
             Box(
                 modifier = Modifier
                     .widthIn(min = 320.dp, max = 400.dp) 
@@ -161,7 +168,6 @@ fun ProfileDialog(
                         content = content
                     )
                 }
-
             }
         }
     }

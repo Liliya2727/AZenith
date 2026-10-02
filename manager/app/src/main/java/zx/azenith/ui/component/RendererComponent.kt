@@ -34,7 +34,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -81,24 +80,39 @@ fun RendererDialog(
     val hazeState = LocalAppHazeState.current
     val options = getRendererOptions(context)
 
-    AnimatedVisibility(
-        visible = show,
-        enter = Motion.dialogEnterFrom(origin),
-        exit = Motion.dialogExitTo(origin)
-    ) {
-        BackHandler(onBack = onDismiss)
-        
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .zIndex(100f) 
-                .background(Color.Black.copy(alpha = 0.42f)) 
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onDismiss 
-                ),
-            contentAlignment = Alignment.Center
+    Box(modifier = Modifier.fillMaxSize()) {
+
+        // The scrim is a sibling of the card rather than its parent. AnimatedVisibility applies
+        // its transition to the whole subtree, so nesting the card inside a fullscreen scrim that
+        // also animates makes the card's scale pivot resolve against screen-sized bounds, and the
+        // dialog then appears to grow from the middle of the screen instead of from the tap point.
+        AnimatedVisibility(
+            visible = show,
+            enter = Motion.scrimEnter(),
+            exit = Motion.scrimExit(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.42f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onDismiss
+                    )
+            )
+        }
+
+        // The card's AnimatedVisibility is sized to the card itself and centred in the root Box.
+        // Giving it fillMaxSize would make its bounds fullscreen, and the scale pivot would then
+        // resolve against screen coordinates — which is exactly the centre-of-screen pop this
+        // replaces. Bounds of this node must equal bounds of the card for the origin to be right.
+        AnimatedVisibility(
+            visible = show,
+            enter = Motion.cardEnterFrom(origin),
+            exit = Motion.cardExitTo(origin),
+            modifier = Modifier.align(Alignment.Center)
         ) {
             Box(
                 modifier = Modifier
@@ -111,7 +125,7 @@ fun RendererDialog(
                         } else Modifier
                     )
                     .background(
-                        if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f) 
+                        if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)
                         else MaterialTheme.colorScheme.surfaceContainerHigh
                     )
                     .clickable(
@@ -120,46 +134,46 @@ fun RendererDialog(
                         onClick = {}
                     )
             ) {
-                                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.Renderer_Select),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.Renderer_Select),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
 
-                    val content = options.map { option ->
-                        @Composable {
-                            ExpressiveListItem(
-                                modifier = Modifier.padding(vertical = 4.dp),
-                                headlineContent = { 
-                                    Text(
-                                        text = option.titleRes,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    ) 
-                                },
-                                leadingContent = { 
-                                    SmallLeadingIcon(icon = option.icon) 
-                                },
-                                onClick = {
-                                    onDismiss()
-                                    onRenderer(option.reason)
-                                }
-                            )
+                        val content = options.map { option ->
+                            @Composable {
+                                ExpressiveListItem(
+                                    modifier = Modifier.padding(vertical = 4.dp),
+                                    headlineContent = {
+                                        Text(
+                                            text = option.titleRes,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    },
+                                    leadingContent = {
+                                        SmallLeadingIcon(icon = option.icon)
+                                    },
+                                    onClick = {
+                                        onDismiss()
+                                        onRenderer(option.reason)
+                                    }
+                                )
+                            }
                         }
+
+                        ExpressiveColumn(
+                            modifier = Modifier.fillMaxWidth(),
+                            content = content
+                        )
                     }
-
-                    ExpressiveColumn(
-                        modifier = Modifier.fillMaxWidth(),
-                        content = content
-                    )
                 }
-
             }
         }
     }
-}
+

@@ -82,24 +82,38 @@ fun RefreshRatePickerDialog(
     val hazeState = LocalAppHazeState.current
     val options = remember(context) { getRefreshRatePickerOptions(context) }
 
-    AnimatedVisibility(
-        visible = show,
-        enter = Motion.dialogEnterFrom(origin),
-        exit = Motion.dialogExitTo(origin)
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         BackHandler(onBack = onDismiss)
-        
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .zIndex(100f) 
-                .background(Color.Black.copy(alpha = 0.42f)) 
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onDismiss 
-                ),
-            contentAlignment = Alignment.Center
+        // Scrim is a sibling of the card, not its parent: AnimatedVisibility transitions the whole
+        // subtree, so a fullscreen scrim sharing the card's container transform makes the card's
+        // scale pivot resolve against screen bounds and it grows from the middle of the screen.
+        AnimatedVisibility(
+            visible = show,
+            enter = Motion.scrimEnter(),
+            exit = Motion.scrimExit(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.42f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onDismiss
+                    )
+            )
+        }
+
+        // The card's AnimatedVisibility is sized to the card itself and centred in the root Box.
+        // Giving it fillMaxSize would make its bounds fullscreen, and the scale pivot would then
+        // resolve against screen coordinates — which is exactly the centre-of-screen pop this
+        // replaces. Bounds of this node must equal bounds of the card for the origin to be right.
+        AnimatedVisibility(
+            visible = show,
+            enter = Motion.cardEnterFrom(origin),
+            exit = Motion.cardExitTo(origin),
+            modifier = Modifier.align(Alignment.Center)
         ) {
             Box(
                 modifier = Modifier
@@ -159,7 +173,6 @@ fun RefreshRatePickerDialog(
                         content = content
                     )
                 }
-
             }
         }
     }
