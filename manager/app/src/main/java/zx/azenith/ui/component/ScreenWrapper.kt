@@ -76,7 +76,10 @@ fun ScreenWrapper(
     val hasVisibleNonMainRootScreen = syncVisibleEntries.any { entry ->
         entry.destination.route?.let { route -> (route != "main" && route != "get_started") } == true
     }
-    val shouldRunDepthEffects = !isMainRootScreen || hasVisibleNonMainRootScreen
+    
+    val transition = animatedVisibilityScope?.transition
+    val isTransitionFinished = transition?.currentState == EnterExitState.Visible && transition?.targetState == EnterExitState.Visible
+    val shouldRunDepthEffects = !isMainRootScreen || (hasVisibleNonMainRootScreen && !isTransitionFinished)
 
     // Dim/Blur Logic: the screen "behind" during any transition — forward push, committed pop,
     // or an in-progress predictive back gesture — is always the entry directly below the top of
@@ -98,8 +101,6 @@ fun ScreenWrapper(
     val shouldDim = myEntry != null && previousEntryId == myEntry.id
 
     val disableBlurAllOver = false
-
-    val transition = animatedVisibilityScope?.transition
 
     // Declarative Animations
     val targetRadius = if (shouldRunDepthEffects && !isResumed) 32f else 0f
