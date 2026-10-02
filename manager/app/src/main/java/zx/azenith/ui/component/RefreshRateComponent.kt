@@ -85,8 +85,7 @@ fun RefreshRatePickerDialog(
         visible = show,
         onDismiss = onDismiss,
         origin = origin,
-        minWidth = 320.dp,
-        maxWidth = 400.dp
+        spec = DialogSpec.Choice
     ) {
         Text(
             text = stringResource(R.string.RefreshRatePicker_Select),

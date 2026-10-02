@@ -178,7 +178,11 @@ object RootUtils {
         awaitClose { observer.stopWatching() }
     }.flowOn(Dispatchers.IO)
 
-    fun getCurrentProfileValue(): String = readRootFile(PROFILE_PATH)?.trim().orEmpty()
+    fun getCurrentProfileValue(): String {
+        val appMirror = readRootFile(PROFILE_PATH)?.trim()
+        if (!appMirror.isNullOrEmpty()) return appMirror
+        return readRootFile(DAEMON_PROFILE_PATH)?.trim().orEmpty()
+    }
 
     fun observeProfileRes(): Flow<Int> = callbackFlow {
         syncProfileState()

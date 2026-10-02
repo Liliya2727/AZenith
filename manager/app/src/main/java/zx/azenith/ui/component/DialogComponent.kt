@@ -312,11 +312,7 @@ private fun LoadingDialog(visible: Boolean) {
     AZenithDialog(
         visible = visible,
         onDismiss = {},
-        dismissible = false,
-        minWidth = 100.dp,
-        maxWidth = 100.dp,
-        cornerRadius = 24.dp,
-        containerColor = MaterialTheme.colorScheme.surface
+        spec = DialogSpec.Loading
     ) {
         Box(
             modifier = Modifier
@@ -339,9 +335,7 @@ private fun ConfirmDialog(
     AZenithDialog(
         visible = visible,
         onDismiss = dismiss,
-        minWidth = 350.dp,
-        maxWidth = 500.dp,
-        containerColor = AlertDialogDefaults.containerColor
+        spec = DialogSpec.Confirm
     ) {
         Text(
             text = visuals.title,
@@ -392,9 +386,7 @@ fun CustomContentDialog(
         visible = visible,
         onDismiss = onDismiss,
         origin = origin,
-        minWidth = 350.dp,
-        maxWidth = 500.dp,
-        containerColor = AlertDialogDefaults.containerColor
+        spec = DialogSpec.Confirm
     ) {
         Text(
             text = title,
@@ -470,10 +462,7 @@ private fun InstallingDialog(visible: Boolean) {
     AZenithDialog(
         visible = visible,
         onDismiss = {},
-        dismissible = false,
-        minWidth = 280.dp,
-        maxWidth = 350.dp,
-        containerColor = AlertDialogDefaults.containerColor
+        spec = DialogSpec.Installing
     ) {
         Text(
             text = stringResource(R.string.str_installing_update),

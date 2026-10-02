@@ -388,6 +388,7 @@
     <string name="str_bypass_need_setup">Bypass charge path hasn\'t been set up yet. Please complete the setup via Compatibility Check first.</string>
     <string name="reboot_required_content">This option requires a reboot to be applied. Continue?</string>
     <string name="show_notifications">Show Current Profile Notifications</string>
+    <string name="dialog_exit_confirm_title">Close AZenith?</string>
     <string name="dialog_exit_confirm_content">Are you sure you want to exit the application?</string>
     <string name="dialog_exit_confirm_button">Exit</string>
 </resources>

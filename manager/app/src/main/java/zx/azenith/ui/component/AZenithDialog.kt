@@ -19,6 +19,8 @@ package zx.azenith.ui.component
 import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -44,7 +46,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -52,46 +53,44 @@ import dev.chrisbanes.haze.blur.blurEffect
 import dev.chrisbanes.haze.hazeEffect
 
 /**
- * The one dialog shell. Everything that pops a card over the app goes through here so the motion
- * is identical everywhere and lives in one place.
+ * The one dialog shell. Every dialog in the app goes through here, so motion, layout and the
+ * global animation toggle are decided in one place instead of per call site.
  *
- * Two rules the layout depends on, both learned by breaking them first:
- * the scrim and the card are separate [AnimatedVisibility] nodes, and the card's node carries the
- * card's own bounds — a fullscreen parent would resolve [origin] against screen coordinates and
- * the dialog would grow from the middle of the screen instead of the control that opened it.
+ * Two rules the layout depends on, both learned by breaking them first: the scrim and the card
+ * are separate [AnimatedVisibility] nodes, and the card's node carries the card's own bounds — a
+ * fullscreen parent would resolve [origin] against screen coordinates and the dialog would grow
+ * from the middle of the screen instead of the control that opened it.
+ *
+ * [origin] is the trigger position normalised against the root (0..1), which is what
+ * `DialogOriginState.origin` produces. It is rebased into card-local space before use.
+ *
+ * [animate] false drops straight to a plain M3 popup with no motion.
  */
 @Composable
 fun AZenithDialog(
     visible: Boolean,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    spec: DialogSpec = DialogSpec(),
     origin: Offset = Offset(0.5f, 0.5f),
-    dismissible: Boolean = true,
-    registersActiveDialog: Boolean = true,
-    zIndex: Float = 0f,
-    minWidth: Dp = 280.dp,
-    maxWidth: Dp = 352.dp,
-    screenMargin: Dp = 24.dp,
-    contentPadding: Dp = 24.dp,
-    cornerRadius: Dp = 28.dp,
-    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    animate: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val context = LocalContext.current
     val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
     val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
+    val dialogsAnimated = animate
     val hazeState = LocalAppHazeState.current
 
     val activeDialogCount = LocalActiveDialogCount.current
-    DisposableEffect(visible, registersActiveDialog) {
-        if (visible && registersActiveDialog) activeDialogCount.value++
-        onDispose { if (visible && registersActiveDialog) activeDialogCount.value-- }
+    DisposableEffect(visible, spec.registersActiveDialog) {
+        if (visible && spec.registersActiveDialog) activeDialogCount.value++
+        onDispose { if (visible && spec.registersActiveDialog) activeDialogCount.value-- }
     }
 
     var rootSize by remember { mutableStateOf(IntSize.Zero) }
     var cardSize by remember { mutableStateOf(IntSize.Zero) }
 
-    // origin is screen-normalised, but the scale pivot is relative to the card, so rebase it.
     val cardOrigin = if (rootSize == IntSize.Zero || cardSize == IntSize.Zero) {
         origin
     } else {
@@ -101,17 +100,19 @@ fun AZenithDialog(
         )
     }
 
+    val containerColor = spec.containerColor ?: MaterialTheme.colorScheme.surfaceContainerHigh
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .onGloballyPositioned { rootSize = it.size }
     ) {
-        BackHandler(enabled = visible, onBack = { if (dismissible) onDismiss() })
+        BackHandler(enabled = visible, onBack = { if (spec.dismissible) onDismiss() })
 
         AnimatedVisibility(
             visible = visible,
-            enter = Motion.scrimEnter(),
-            exit = Motion.scrimExit()
+            enter = if (dialogsAnimated) Motion.scrimEnter() else EnterTransition.None,
+            exit = if (dialogsAnimated) Motion.scrimExit() else ExitTransition.None
         ) {
             Box(
                 modifier = Modifier
@@ -120,7 +121,7 @@ fun AZenithDialog(
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                        onClick = { if (dismissible) onDismiss() }
+                        onClick = { if (spec.dismissible) onDismiss() }
                     )
             )
         }
@@ -128,20 +129,20 @@ fun AZenithDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .zIndex(zIndex)
-                .padding(screenMargin),
+                .zIndex(spec.zIndex)
+                .padding(24.dp),
             contentAlignment = Alignment.Center
         ) {
             AnimatedVisibility(
                 visible = visible,
-                enter = Motion.cardEnterFrom(cardOrigin),
-                exit = Motion.cardExitTo(cardOrigin)
+                enter = if (dialogsAnimated) Motion.cardEnterFrom(cardOrigin) else EnterTransition.None,
+                exit = if (dialogsAnimated) Motion.cardExitTo(cardOrigin) else ExitTransition.None
             ) {
                 Box(
                     modifier = Modifier
-                        .widthIn(min = minWidth, max = maxWidth)
+                        .widthIn(min = spec.minWidth, max = spec.maxWidth)
                         .onGloballyPositioned { cardSize = it.size }
-                        .clip(RoundedCornerShape(cornerRadius))
+                        .clip(RoundedCornerShape(spec.cornerRadius))
                         .then(
                             if (isBlurEnabled && hazeState != null) {
                                 Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
@@ -159,7 +160,7 @@ fun AZenithDialog(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(contentPadding)
+                            .padding(spec.contentPadding)
                     ) {
                         content()
                     }
