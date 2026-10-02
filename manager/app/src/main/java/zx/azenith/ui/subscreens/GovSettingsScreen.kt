@@ -52,6 +52,7 @@ import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,6 +73,7 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.topjohnwu.superuser.Shell
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zx.azenith.R
@@ -92,21 +94,22 @@ fun GovSettings(
     val listState = rememberLazyListState()
     val colorScheme = MaterialTheme.colorScheme
     val snackbarHostState = remember { SnackbarHostState() }
-    var isReady by remember { mutableStateOf(false) }
-    
-    LaunchedEffect(Unit) {
-        delay(200) // Allow navigation slide animation to finish smoothly
-        isReady = true
+    val coroutineScope = rememberCoroutineScope()
+
+    val isReady by produceState(false) {
+        // Allow navigation slide animation to finish smoothly
+        delay(200)
+        value = true
         if (!viewModel.isUiLoaded) {
             viewModel.loadAllConfiguration(context)
         }
     }
-    
+
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { GovSettingsTopAppBar(
             scrollBehavior,
-            onBack = { navController.popBackStack() }
+            onBack = { coroutineScope.launch { navController.popBackStack() } }
             ) 
         },
         containerColor = MaterialTheme.colorScheme.surface

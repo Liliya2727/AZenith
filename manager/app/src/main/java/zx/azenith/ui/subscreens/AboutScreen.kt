@@ -89,6 +89,7 @@ fun AboutScreen(navController: NavController) {
     val context = LocalContext.current
     val listState = rememberLazyListState()
     
+    val coroutineScope = rememberCoroutineScope()
 
     val openLink = { url: String ->
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
@@ -100,7 +101,7 @@ fun AboutScreen(navController: NavController) {
         topBar = { 
             AboutTopAppBar(
                 scrollBehavior = scrollBehavior,
-                onBack = { navController.popBackStack() }
+                onBack = { coroutineScope.launch { navController.popBackStack() } }
             ) 
         },
         containerColor = MaterialTheme.colorScheme.surface

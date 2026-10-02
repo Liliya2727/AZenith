@@ -362,7 +362,7 @@ fun ColorPaletteScreen(navController: NavController) {
         topBar = {
             PaletteTopAppBar(
                 scrollBehavior,
-                onBack = { navController.popBackStack() }
+                onBack = { coroutineScope.launch { navController.popBackStack() } }
             )
         },
         containerColor = MaterialTheme.colorScheme.surface

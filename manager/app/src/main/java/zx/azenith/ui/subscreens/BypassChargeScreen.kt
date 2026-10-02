@@ -53,7 +53,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -82,6 +82,9 @@ import com.topjohnwu.superuser.Shell
 import com.yalantis.ucrop.UCrop
 import java.io.File
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.theme.ColorMode
@@ -90,9 +93,6 @@ import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.clearHeaderImage
 import zx.azenith.ui.util.getHeaderImage
 import zx.azenith.ui.util.saveHeaderImage
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import zx.azenith.ui.util.RootUtils
 
 
@@ -101,6 +101,7 @@ fun BypassChargeScreen(navController: NavController) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
+    val coroutineScope = rememberCoroutineScope()
 
     var bypassPath by remember { mutableStateOf("") }
     var bypassChgState by remember { mutableStateOf<Boolean?>(null) }
@@ -112,12 +113,10 @@ fun BypassChargeScreen(navController: NavController) {
     // The switch and slider callbacks are plain lambdas, so they run on the main
     // thread. Route the file writes through a scope on IO rather than making the
     // tap handler block on a root round trip.
-    val writeScope = rememberCoroutineScope()    
+    val writeScope = rememberCoroutineScope()   
 
+    // Load properties asynchronously - skeleton shows immediately while loading
     LaunchedEffect(Unit) {
-        // Property reads go through a root shell on first use, so they must not
-        // run on the composition dispatcher -- this LaunchedEffect would block the
-        // first frame of the screen.
         withContext(Dispatchers.IO) {
             bypassPath = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "")
 
@@ -130,7 +129,7 @@ fun BypassChargeScreen(navController: NavController) {
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = { BypassChgTopAppBar(scrollBehavior, onBack = { navController.popBackStack() }) },
+        topBar = { BypassChgTopAppBar(scrollBehavior, onBack = { coroutineScope.launch { navController.popBackStack() } }) },
         containerColor = colorScheme.surface 
     ) { innerPadding ->
         LazyColumn(
@@ -201,7 +200,6 @@ fun BypassChargeScreen(navController: NavController) {
                                 checked = bypassChgState!!,
                                 enabled = !isUnsupported,
                                 onCheckedChange = { isChecked ->
-                                    bypassChgState = isChecked
                                     val value = if (isChecked) "1" else "0"
                                     PropertyUtils.set("persist.sys.azenithconf.bypasschg", value)
                                     writeScope.launch(Dispatchers.IO) {

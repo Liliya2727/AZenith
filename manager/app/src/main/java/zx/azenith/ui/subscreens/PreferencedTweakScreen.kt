@@ -51,6 +51,7 @@ import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -89,10 +90,44 @@ fun PreferenceTweakScreen(navController: NavController) {
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val colorScheme = MaterialTheme.colorScheme
-    
+    val coroutineScope = rememberCoroutineScope()
+
     var isFullModeEnabled by remember { mutableStateOf(false) }
+    var socType by remember { mutableStateOf<String?>(null) }
+    var schedTunes by remember { mutableStateOf<Boolean?>(null) }
+    var sflstate by remember { mutableStateOf<Boolean?>(null) }
+    var jitstate by remember { mutableStateOf<Boolean?>(null) }
+    var malischedstate by remember { mutableStateOf<Boolean?>(null) }
+    var waltTunes by remember { mutableStateOf<Boolean?>(null) }
+    var DTraces by remember { mutableStateOf<Boolean?>(null) }
+    var dlogcat by remember { mutableStateOf<Boolean?>(null) }
+    var distherm by remember { mutableStateOf<Boolean?>(null) }
+
+    // Load all properties asynchronously - skeleton shows immediately while loading
     LaunchedEffect(Unit) {
         isFullModeEnabled = DebugUtils.isFullModeEnabled()
+        socType = withContext(Dispatchers.IO) { getChipsetVendor(context) }
+        schedTunes = withContext(Dispatchers.IO) { PropertyUtils.get("persist.sys.azenithconf.schedtunes") == "1" }
+        sflstate = withContext(Dispatchers.IO) { PropertyUtils.get("persist.sys.azenithconf.SFL") == "1" }
+        jitstate = withContext(Dispatchers.IO) { PropertyUtils.get("persist.sys.azenithconf.justintime") == "1" }
+        malischedstate = withContext(Dispatchers.IO) { PropertyUtils.get("persist.sys.azenithconf.malisched") == "1" }
+        waltTunes = withContext(Dispatchers.IO) { PropertyUtils.get("persist.sys.azenithconf.walttunes") == "1" }
+        DTraces = withContext(Dispatchers.IO) { PropertyUtils.get("persist.sys.azenithconf.disabletrace") == "1" }
+        dlogcat = withContext(Dispatchers.IO) { PropertyUtils.get("persist.sys.azenithconf.logd") == "1" }
+        distherm = withContext(Dispatchers.IO) { PropertyUtils.get("persist.sys.azenithconf.DThermal") == "1" }
+
+        // Capture baselines after all values are loaded
+        if (socType != null && schedTunes != null && sflstate != null && jitstate != null && 
+            malischedstate != null && waltTunes != null && DTraces != null && dlogcat != null && distherm != null) {
+            RebootManager.captureBaselineOnce("pref_schedtunes", schedTunes!!)
+            RebootManager.captureBaselineOnce("pref_SFL", sflstate!!)
+            RebootManager.captureBaselineOnce("pref_justintime", jitstate!!)
+            RebootManager.captureBaselineOnce("pref_malisched", malischedstate!!)
+            RebootManager.captureBaselineOnce("pref_walttunes", waltTunes!!)
+            RebootManager.captureBaselineOnce("pref_disabletrace", DTraces!!)
+            RebootManager.captureBaselineOnce("pref_logd", dlogcat!!)
+            RebootManager.captureBaselineOnce("pref_DThermal", distherm!!)
+        }
     }
 
     // --- Reboot confirm dialog plumbing ---
@@ -124,7 +159,7 @@ fun PreferenceTweakScreen(navController: NavController) {
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { PreferenceTweakTopAppBar(
             scrollBehavior,
-            onBack = { navController.popBackStack() }
+            onBack = { coroutineScope.launch { navController.popBackStack() } }
             ) 
         },
         containerColor = colorScheme.surface
@@ -155,45 +190,14 @@ fun PreferenceTweakScreen(navController: NavController) {
             }
 
             item { PrefSectionTitle(stringResource(R.string.section_prefstweaks)) }
-            item {
-                var socType by remember { mutableStateOf<String?>(null) }
-                var schedTunes by remember { mutableStateOf<Boolean?>(null) }
-                var sflstate by remember { mutableStateOf<Boolean?>(null) }
-                var jitstate by remember { mutableStateOf<Boolean?>(null) }
+                        item {
+                            if (socType != null && schedTunes != null && sflstate != null && jitstate != null && 
+                                malischedstate != null && waltTunes != null && DTraces != null && dlogcat != null && distherm != null) {
 
-                var malischedstate by remember { mutableStateOf<Boolean?>(null) }
-                var waltTunes by remember { mutableStateOf<Boolean?>(null) }
-                var DTraces by remember { mutableStateOf<Boolean?>(null) }
-                var dlogcat by remember { mutableStateOf<Boolean?>(null) }
-                var distherm by remember { mutableStateOf<Boolean?>(null) }
+                                val isMediaTek   = socType == "mediatek"
+                                val isSnapdragon = socType == "qualcomm"
 
-                LaunchedEffect(Unit) {
-                    socType = withContext(Dispatchers.IO) { getChipsetVendor(context) }
-                    schedTunes = PropertyUtils.get("persist.sys.azenithconf.schedtunes") == "1"
-                    sflstate = PropertyUtils.get("persist.sys.azenithconf.SFL") == "1"
-                    jitstate = PropertyUtils.get("persist.sys.azenithconf.justintime") == "1"                        
-                    malischedstate = PropertyUtils.get("persist.sys.azenithconf.malisched") == "1"
-                    waltTunes = PropertyUtils.get("persist.sys.azenithconf.walttunes") == "1"
-                    DTraces = PropertyUtils.get("persist.sys.azenithconf.disabletrace") == "1"
-                    dlogcat = PropertyUtils.get("persist.sys.azenithconf.logd") == "1"
-                    distherm = PropertyUtils.get("persist.sys.azenithconf.DThermal") == "1"
-
-                    RebootManager.captureBaselineOnce("pref_schedtunes", schedTunes!!)
-                    RebootManager.captureBaselineOnce("pref_SFL", sflstate!!)
-                    RebootManager.captureBaselineOnce("pref_justintime", jitstate!!)
-                    RebootManager.captureBaselineOnce("pref_malisched", malischedstate!!)
-                    RebootManager.captureBaselineOnce("pref_walttunes", waltTunes!!)
-                    RebootManager.captureBaselineOnce("pref_disabletrace", DTraces!!)
-                    RebootManager.captureBaselineOnce("pref_logd", dlogcat!!)
-                    RebootManager.captureBaselineOnce("pref_DThermal", distherm!!)
-                }
-
-                if (socType != null && schedTunes != null && distherm != null && dlogcat != null && DTraces != null && waltTunes != null && sflstate != null && jitstate != null && malischedstate != null) { 
-
-                    val isMediaTek   = socType == "mediatek"
-                    val isSnapdragon = socType == "qualcomm"
-
-                    ExpressiveList(
+                                ExpressiveList(
                         content = buildList {
                             add {
                                 ExpressiveSwitchItem(

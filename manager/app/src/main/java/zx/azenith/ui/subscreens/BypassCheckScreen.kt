@@ -87,7 +87,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
     val colorScheme = MaterialTheme.colorScheme
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
+    val coroutineScope = rememberCoroutineScope()
 
     val confirmDialogHandle = rememberConfirmDialog()
 
@@ -116,7 +116,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
         scope.launch(Dispatchers.IO) {
             val output = Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service -bpl").exec().out
             val parsedList = output
-                .map { it.replace("\u001B\\[[;\\d]*m".toRegex(), "") }
+                .map { it.replace("\\u001B\\[[;\\d]*m".toRegex(), "") }
                 .filter { it.contains("FOUND") && !it.contains("NOT FOUND") }
                 .map { line ->
                     val parts = line.split("|")
@@ -229,7 +229,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
         topBar = { 
             BypassChgCheckTopAppBar(
                 scrollBehavior = scrollBehavior, 
-                onBack = { navController.popBackStack() }
+                onBack = { coroutineScope.launch { navController.popBackStack() } }
             ) 
         }
     ) { innerPadding ->

@@ -170,7 +170,7 @@ fun ColorSchemeSettings(navController: NavController) {
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            ColorSchemeTopAppBar(scrollBehavior, onBack = { navController.popBackStack() })
+            ColorSchemeTopAppBar(scrollBehavior, onBack = { coroutineScope.launch { navController.popBackStack() } })
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = colorScheme.surface

@@ -77,6 +77,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import java.io.File
+import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.component.ExpressiveDropdownItem
@@ -115,6 +116,7 @@ fun AppSettingsScreen(
         isFullModeEnabled = DebugUtils.isFullModeEnabled()
     }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    val coroutineScope = rememberCoroutineScope()
 
     var localMasterOn by remember(config != null) { mutableStateOf(config != null) }
     
@@ -204,7 +206,7 @@ fun AppSettingsScreen(
                 },
                 onBack = { 
                     appListViewModel.loadApps(context, forceRefresh = true) 
-                    navController.popBackStack() 
+                    coroutineScope.launch { navController.popBackStack() }
                 }
             ) 
         }

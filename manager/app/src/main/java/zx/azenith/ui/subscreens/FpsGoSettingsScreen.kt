@@ -52,6 +52,7 @@ import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,8 +72,10 @@ import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.navigation.NavController
 import com.topjohnwu.superuser.Shell
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.util.PropertyUtils
@@ -85,12 +88,25 @@ fun FpsGoSettings(navController: NavController) {
     val listState = rememberLazyListState()
     val colorScheme = MaterialTheme.colorScheme
     val snackbarHostState = remember { SnackbarHostState() }
-    
+    val coroutineScope = rememberCoroutineScope()
+
+    val fpsgostate by produceState<Boolean?>(null) {
+        value = withContext(Dispatchers.IO) {
+            PropertyUtils.get("persist.sys.azenithconf.usefpsgo") == "1"
+        }
+    }
+
+    val fpsgogedstate by produceState<Boolean?>(null) {
+        value = withContext(Dispatchers.IO) {
+            PropertyUtils.get("persist.sys.azenithconf.fpsged") == "1"
+        }
+    }
+
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { FpsGoTopAppBar(
             scrollBehavior,
-            onBack = { navController.popBackStack() }
+            onBack = { coroutineScope.launch { navController.popBackStack() } }
             ) 
         },
         containerColor = MaterialTheme.colorScheme.surface
@@ -125,14 +141,6 @@ fun FpsGoSettings(navController: NavController) {
             }
 
             item {
-                var fpsgostate by remember { mutableStateOf<Boolean?>(null) }
-
-                LaunchedEffect(Unit) {
-                    fpsgostate = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        PropertyUtils.get("persist.sys.azenithconf.usefpsgo") == "1"
-                    }
-                }
-
                 Spacer(modifier = Modifier.height(16.dp))
 
                 if (fpsgostate != null) {
@@ -145,7 +153,6 @@ fun FpsGoSettings(navController: NavController) {
                                      summary = stringResource(R.string.str_use_fpsgo_summary),
                                     checked = fpsgostate!!,
                                     onCheckedChange = { isChecked ->
-                                        fpsgostate = isChecked
                                         PropertyUtils.set("persist.sys.azenithconf.usefpsgo", if (isChecked) "1" else "0")
                                     }
                                 )
@@ -160,14 +167,6 @@ fun FpsGoSettings(navController: NavController) {
             item { PrefSectionTitle(stringResource(R.string.section_prefstweaks)) }
 
             item {
-                var fpsgogedstate by remember { mutableStateOf<Boolean?>(null) }
-
-                LaunchedEffect(Unit) {
-                    fpsgogedstate = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        PropertyUtils.get("persist.sys.azenithconf.fpsged") == "1"
-                    }
-                }
-
                 if (fpsgogedstate != null) {
                     ExpressiveList(
                         content = listOf(
@@ -178,7 +177,6 @@ fun FpsGoSettings(navController: NavController) {
                                     summary = stringResource(R.string.fpsgo_ged_desc),
                                     checked = fpsgogedstate!!,
                                     onCheckedChange = { isChecked ->
-                                        fpsgogedstate = isChecked
                                         PropertyUtils.set("persist.sys.azenithconf.fpsged", if (isChecked) "1" else "0")
                                     }
                                 )

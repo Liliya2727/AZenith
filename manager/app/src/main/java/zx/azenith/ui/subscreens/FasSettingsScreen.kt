@@ -85,12 +85,13 @@ fun FasScreen(navController: NavController) {
     val listState = rememberLazyListState()
     val colorScheme = MaterialTheme.colorScheme
     val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
     
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = { FasTopAppBar(
             scrollBehavior,
-            onBack = { navController.popBackStack() }
+            onBack = { coroutineScope.launch { navController.popBackStack() } }
             ) 
         },
         containerColor = MaterialTheme.colorScheme.surface
