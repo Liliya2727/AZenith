@@ -79,123 +79,57 @@ fun RefreshRatePickerDialog(
     currentRefreshRate: String? = null
 ) {
     val context = LocalContext.current
-    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
-    val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
-    val hazeState = LocalAppHazeState.current
     val options = remember(context) { getRefreshRatePickerOptions(context) }
-    val activeDialogCount = LocalActiveDialogCount.current
-    androidx.compose.runtime.DisposableEffect(show) {
-        if (show) activeDialogCount.value++
-        onDispose {
-            if (show) activeDialogCount.value--
-        }
-    }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        BackHandler(enabled = show, onBack = onDismiss)
-        // Scrim is a sibling of the card, not its parent: AnimatedVisibility transitions the whole
-        // subtree, so a fullscreen scrim sharing the card's container transform makes the card's
-        // scale pivot resolve against screen bounds and it grows from the middle of the screen.
-        AnimatedVisibility(
-            visible = show,
-            enter = Motion.scrimEnter(),
-            exit = Motion.scrimExit(),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.42f))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onDismiss
-                    )
-            )
-        }
+    AZenithDialog(
+        visible = show,
+        onDismiss = onDismiss,
+        origin = origin,
+        minWidth = 320.dp,
+        maxWidth = 400.dp
+    ) {
+        Text(
+            text = stringResource(R.string.RefreshRatePicker_Select),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
 
-        // The card's AnimatedVisibility is sized to the card itself and centred in the root Box.
-        // Giving it fillMaxSize would make its bounds fullscreen, and the scale pivot would then
-        // resolve against screen coordinates — which is exactly the centre-of-screen pop this
-        // replaces. Bounds of this node must equal bounds of the card for the origin to be right.
-        AnimatedVisibility(
-            visible = show,
-            enter = Motion.cardEnterFrom(origin),
-            exit = Motion.cardExitTo(origin),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Box(
-                modifier = Modifier
-                    .widthIn(min = 320.dp, max = 400.dp) 
-                    .padding(24.dp) 
-                    .clip(RoundedCornerShape(28.dp))
-                    .then(
-                        if (isBlurEnabled && hazeState != null) {
-                            Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
-                        } else Modifier
-                    )
-                    .background(
-                        if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f) 
-                        else MaterialTheme.colorScheme.surfaceContainerHigh
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}
-                    )
-            ) {
-                                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.RefreshRatePicker_Select),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-
-                    val content = options.map { option ->
-                        @Composable {
-                            val isSelected = option.reason.equals(currentRefreshRate, ignoreCase = true)
-                            ExpressiveListItemHighlight(
-                                modifier = Modifier.padding(vertical = 4.dp).clip(RoundedCornerShape(20.dp)),
-                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                                headlineContent = { 
-                                    Text(
-                                        text = option.titleString,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                                    ) 
-                                },
-                                leadingContent = { 
-                                    SmallLeadingIcon(icon = option.icon) 
-                                },
-                                trailingContent = if (isSelected) {
-                                    {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Check,
-                                            contentDescription = "Selected",
-                                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                        )
-                                    }
-                                } else null,
-                                onClick = {
-                                    onDismiss()
-                                    onRefreshRatePicker(option.reason)
-                                }
+        val content = options.map { option ->
+            @Composable {
+                val isSelected = option.reason.equals(currentRefreshRate, ignoreCase = true)
+                ExpressiveListItemHighlight(
+                    modifier = Modifier.padding(vertical = 4.dp).clip(RoundedCornerShape(20.dp)),
+                    containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                    headlineContent = {
+                        Text(
+                            text = option.titleString,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                        )
+                    },
+                    leadingContent = {
+                        SmallLeadingIcon(icon = option.icon)
+                    },
+                    trailingContent = if (isSelected) {
+                        {
+                            Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = "Selected",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
+                    } else null,
+                    onClick = {
+                        onDismiss()
+                        onRefreshRatePicker(option.reason)
                     }
-
-                    ExpressiveColumn(
-                            modifier = Modifier.fillMaxWidth(),
-                            content = content
-                        )
-                    }
-                }
+                )
             }
         }
+
+        ExpressiveColumn(
+            modifier = Modifier.fillMaxWidth(),
+            content = content
+        )
     }
 }

@@ -65,6 +65,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
 
     var showRebootSheet by remember { mutableStateOf(false) }
     var showProfileDialog by remember { mutableStateOf(false) }
+    val profileDialogOrigin = rememberDialogOrigin()
+    val profileTileModifier = profileDialogOrigin.trackedModifier()
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -134,7 +136,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 .height(IntrinsicSize.Max),
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                            Box(modifier = Modifier.weight(1f).fillMaxHeight().then(profileTileModifier)) {
                                 BannerCard(
                                     status = bannerStatus, pid = uiState.servicePid,
                                     isBannerEnabled = uiState.isBannerEnabled, 
@@ -144,11 +146,11 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                             }
 
                             Row(
-                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                modifier = Modifier.weight(1f).fillMaxHeight().then(profileTileModifier),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 InfoTile(
-                                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                                    modifier = Modifier.weight(1f).fillMaxHeight().then(profileTileModifier),
                                     icon = Icons.Rounded.Token, 
                                     label = stringResource(R.string.current_profile), 
                                     value = stringResource(uiState.currentProfileRes), 
@@ -157,7 +159,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 ) { if (uiState.autoMode == "0") showProfileDialog = true }
 
                                 InfoTile(
-                                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                                    modifier = Modifier.weight(1f).fillMaxHeight().then(profileTileModifier),
                                     icon = Icons.Rounded.Security, 
                                     label = stringResource(R.string.root_access), 
                                     value = if (uiState.rootStatus) stringResource(R.string.root_granted) else stringResource(R.string.root_not_granted), 
@@ -221,7 +223,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             InfoTile(
-                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                modifier = Modifier.weight(1f).fillMaxHeight().then(profileTileModifier),
                                 icon = Icons.Rounded.Token, 
                                 label = stringResource(R.string.current_profile), 
                                 value = stringResource(uiState.currentProfileRes), 
@@ -230,7 +232,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                             ) { if (uiState.autoMode == "0") showProfileDialog = true }
 
                             InfoTile(
-                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                modifier = Modifier.weight(1f).fillMaxHeight().then(profileTileModifier),
                                 icon = Icons.Rounded.Security, 
                                 label = stringResource(R.string.root_access), 
                                 value = if (uiState.rootStatus) stringResource(R.string.root_granted) else stringResource(R.string.root_not_granted), 
@@ -261,6 +263,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         ProfileDialog(
             show = showProfileDialog,
             onDismiss = { showProfileDialog = false },
+            origin = profileDialogOrigin.origin,
             onProfile = { profileReason ->
                 viewModel.applyProfile(profileReason) {
                     coroutineScope.launch {

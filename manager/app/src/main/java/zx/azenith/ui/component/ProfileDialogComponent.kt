@@ -73,109 +73,46 @@ fun ProfileDialog(
     onProfile: (String) -> Unit,
     origin: Offset = Offset(0.5f, 0.28f)
 ) {
-    val context = LocalContext.current
-    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
-    val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
-    val hazeState = LocalAppHazeState.current
     val options = getProfileOptions()
-    val activeDialogCount = LocalActiveDialogCount.current
-    androidx.compose.runtime.DisposableEffect(show) {
-        if (show) activeDialogCount.value++
-        onDispose {
-            if (show) activeDialogCount.value--
-        }
-    }
 
+    AZenithDialog(
+        visible = show,
+        onDismiss = onDismiss,
+        origin = origin,
+        minWidth = 320.dp,
+        maxWidth = 400.dp
+    ) {
+        Text(
+            text = stringResource(R.string.Profile_Select),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        BackHandler(enabled = show, onBack = onDismiss)
-        AnimatedVisibility(
-            visible = show,
-            enter = Motion.scrimEnter(),
-            exit = Motion.scrimExit(),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.42f))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onDismiss
-                    )
-            )
-        }
-        // The card's AnimatedVisibility is sized to the card itself and centred in the root Box.
-        // Giving it fillMaxSize would make its bounds fullscreen, and the scale pivot would then
-        // resolve against screen coordinates — which is exactly the centre-of-screen pop this
-        // replaces. Bounds of this node must equal bounds of the card for the origin to be right.
-        AnimatedVisibility(
-            visible = show,
-            enter = Motion.cardEnterFrom(origin),
-            exit = Motion.cardExitTo(origin),
-            modifier = Modifier.align(Alignment.Center)
-        ) {
-            Box(
-                modifier = Modifier
-                    .widthIn(min = 320.dp, max = 400.dp) 
-                    .padding(24.dp) 
-                    .clip(RoundedCornerShape(28.dp))
-                    .then(
-                        if (isBlurEnabled && hazeState != null) {
-                            Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
-                        } else Modifier
-                    )
-                    .background(
-                        if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f) 
-                        else MaterialTheme.colorScheme.surfaceContainerHigh
-                    )
-
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}
-                    )
-            ) {
-                                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.Profile_Select),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-
-                    val content = options.map { option ->
-                        @Composable {
-                            ExpressiveListItem(
-                                modifier = Modifier.padding(vertical = 4.dp),
-                                headlineContent = {
-                                    Text(
-                                        text = stringResource(option.titleRes),
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                },
-                                leadingContent = { 
-                                    SmallLeadingIcon(icon = option.icon) 
-                                },
-                                onClick = {
-                                    onDismiss()
-                                    onProfile(option.reason)
-                                }
-                            )
-                        }
+        val content = options.map { option ->
+            @Composable {
+                ExpressiveListItem(
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    headlineContent = {
+                        Text(
+                            text = stringResource(option.titleRes),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    },
+                    leadingContent = {
+                        SmallLeadingIcon(icon = option.icon)
+                    },
+                    onClick = {
+                        onDismiss()
+                        onProfile(option.reason)
                     }
-
-                    ExpressiveColumn(
-                        modifier = Modifier.fillMaxWidth(),
-                        content = content
-                    )
-                }
+                )
             }
         }
+
+        ExpressiveColumn(
+            modifier = Modifier.fillMaxWidth(),
+            content = content
+        )
     }
 }

@@ -46,81 +46,43 @@ fun ExitPopup(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    if (visible) {
-        BackHandler(enabled = visible, onBack = onDismiss)
-    }
-    
-    AnimatedVisibility(
+    AZenithDialog(
         visible = visible,
-        enter = fadeIn(tween(250)),
-        exit = fadeOut(tween(200)),
-        modifier = Modifier.fillMaxSize().zIndex(100f)
+        onDismiss = onDismiss,
+        minWidth = 280.dp,
+        maxWidth = 340.dp
     ) {
-        Box(
+        Icon(
+            imageVector = Icons.AutoMirrored.Rounded.ExitToApp,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.secondary,
             modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.5f))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onDismiss
-                ),
-            contentAlignment = Alignment.Center
+                .align(Alignment.CenterHorizontally)
+                .padding(bottom = 16.dp)
+        )
+        Text(
+            text = stringResource(R.string.app_name),
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        Text(
+            text = stringResource(R.string.dialog_exit_confirm_content),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
         ) {
-            AnimatedVisibility(
-                visible = visible,
-                enter = scaleIn(tween(250), initialScale = 0.8f) + fadeIn(tween(250)),
-                exit = scaleOut(tween(200), targetScale = 0.8f) + fadeOut(tween(200))
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(28.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    modifier = Modifier
-                        .padding(horizontal = 32.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {} // Consume clicks so they don't dismiss
-                        )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.ExitToApp,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        )
-                        Text(
-                            text = stringResource(R.string.app_name),
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        )
-                        Text(
-                            text = stringResource(R.string.dialog_exit_confirm_content),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
-                            TextButton(onClick = onDismiss) {
-                                Text(stringResource(R.string.dialog_cancel))
-                            }
-                            TextButton(onClick = onConfirm) {
-                                Text(stringResource(R.string.dialog_exit_confirm_button), color = MaterialTheme.colorScheme.error)
-                            }
-                        }
-                    }
-                }
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.dialog_cancel))
+            }
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.dialog_exit_confirm_button), color = MaterialTheme.colorScheme.error)
             }
         }
     }

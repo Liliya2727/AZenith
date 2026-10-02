@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -308,167 +309,73 @@ fun ConfirmDialogHost(handle: ConfirmDialogHandle) {
 
 @Composable
 private fun LoadingDialog(visible: Boolean) {
-    val activeDialogCount = LocalActiveDialogCount.current
-    androidx.compose.runtime.DisposableEffect(visible) {
-        if (visible) activeDialogCount.value++
-        onDispose {
-            if (visible) activeDialogCount.value--
-        }
-    }
-    val context = LocalContext.current
-    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
-    val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
-    val hazeState = LocalAppHazeState.current
-
-    AnimatedVisibility(
+    AZenithDialog(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) +
-                scaleIn(
-                    initialScale = 0.92f,
-                    animationSpec = tween(250, easing = LinearOutSlowInEasing)
-                ),
-        exit = fadeOut(animationSpec = tween(150, easing = FastOutSlowInEasing)) +
-               scaleOut(
-                   targetScale = 0.92f,
-                   animationSpec = tween(150, easing = FastOutSlowInEasing)
-               )
+        onDismiss = {},
+        dismissible = false,
+        minWidth = 100.dp,
+        maxWidth = 100.dp,
+        cornerRadius = 24.dp,
+        containerColor = MaterialTheme.colorScheme.surface
     ) {
-        BackHandler(onBack = { })
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .zIndex(100f) 
-                .background(Color.Black.copy(alpha = 0.42f))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = {} 
-                ),
+                .fillMaxWidth()
+                .align(Alignment.CenterHorizontally),
             contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .then(
-                        if (isBlurEnabled && hazeState != null) {
-                            Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
-                        } else Modifier
-                    )
-                    .background(
-                        if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)
-                        else MaterialTheme.colorScheme.surface
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularWavyProgressIndicator()
-            }
+            CircularWavyProgressIndicator()
         }
     }
 }
 
 @Composable
 private fun ConfirmDialog(
-    visible: Boolean, 
-    visuals: ConfirmDialogVisuals, 
-    confirm: () -> Unit, 
+    visible: Boolean,
+    visuals: ConfirmDialogVisuals,
+    confirm: () -> Unit,
     dismiss: () -> Unit
 ) {
-    val activeDialogCount = LocalActiveDialogCount.current
-    androidx.compose.runtime.DisposableEffect(visible) {
-        if (visible) activeDialogCount.value++
-        onDispose {
-            if (visible) activeDialogCount.value--
-        }
-    }
-    val context = LocalContext.current
-    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
-    val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
-    val hazeState = LocalAppHazeState.current
-
-    AnimatedVisibility(
+    AZenithDialog(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) +
-                scaleIn(
-                    initialScale = 0.92f,
-                    animationSpec = tween(250, easing = LinearOutSlowInEasing)
-                ),
-        exit = fadeOut(animationSpec = tween(150, easing = FastOutSlowInEasing)) +
-               scaleOut(
-                   targetScale = 0.92f,
-                   animationSpec = tween(150, easing = FastOutSlowInEasing)
-               )
+        onDismiss = dismiss,
+        minWidth = 350.dp,
+        maxWidth = 500.dp,
+        containerColor = AlertDialogDefaults.containerColor
     ) {
-        BackHandler(onBack = dismiss)
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .zIndex(100f) 
-                .background(Color.Black.copy(alpha = 0.42f)) 
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = dismiss 
-                ),
-            contentAlignment = Alignment.Center
+        Text(
+            text = visuals.title,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        visuals.content?.let { contentText ->
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = contentText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
         ) {
-            Box(
-                modifier = Modifier
-                    .widthIn(min = 350.dp, max = 500.dp) 
-                    .padding(24.dp) 
-                    .clip(RoundedCornerShape(28.dp))
-                    .then(
-                        if (isBlurEnabled && hazeState != null) {
-                            Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
-                        } else Modifier
-                    )
-                    .background(
-                        if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f) 
-                        else AlertDialogDefaults.containerColor
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}
-                    )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp)
-                ) {
-                    Text(
-                        text = visuals.title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    visuals.content?.let { contentText ->
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = contentText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        TextButton(onClick = dismiss) {
-                            Text(text = visuals.dismiss ?: stringResource(id = android.R.string.cancel))
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        TextButton(onClick = confirm) {
-                            Text(text = visuals.confirm ?: stringResource(id = android.R.string.ok))
-                        }
-                    }
-                }
+            TextButton(onClick = dismiss) {
+                Text(text = visuals.dismiss ?: stringResource(id = android.R.string.cancel))
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            TextButton(onClick = confirm) {
+                Text(text = visuals.confirm ?: stringResource(id = android.R.string.ok))
             }
         }
     }
 }
 
+/**
+ * Thin wrapper over [AZenithDialog] for confirm-style dialogs: title, body, and a cancel/confirm
+ * row. Kept so existing call sites keep working — they just get the shared motion now.
+ */
 @Composable
 fun CustomContentDialog(
     visible: Boolean,
@@ -478,88 +385,35 @@ fun CustomContentDialog(
     confirmEnabled: Boolean = true,
     confirmText: String = stringResource(id = android.R.string.ok),
     dismissText: String = stringResource(id = android.R.string.cancel),
+    origin: Offset = Offset(0.5f, 0.5f),
     content: @Composable () -> Unit
 ) {
-    val context = LocalContext.current
-    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
-    val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
-    val hazeState = LocalAppHazeState.current
-
-    AnimatedVisibility(
+    AZenithDialog(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) +
-                scaleIn(
-                    initialScale = 0.92f,
-                    animationSpec = tween(250, easing = LinearOutSlowInEasing)
-                ),
-        exit = fadeOut(animationSpec = tween(150, easing = FastOutSlowInEasing)) +
-               scaleOut(
-                   targetScale = 0.92f,
-                   animationSpec = tween(150, easing = FastOutSlowInEasing)
-               )
+        onDismiss = onDismiss,
+        origin = origin,
+        minWidth = 350.dp,
+        maxWidth = 500.dp,
+        containerColor = AlertDialogDefaults.containerColor
     ) {
-        BackHandler(enabled = visible, onBack = onDismiss)
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .zIndex(100f) 
-                .background(Color.Black.copy(alpha = 0.42f)) 
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onDismiss 
-                ),
-            contentAlignment = Alignment.Center
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        content()
+        Spacer(modifier = Modifier.height(24.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
         ) {
-            Box(
-                modifier = Modifier
-                    .widthIn(min = 350.dp, max = 500.dp) 
-                    .padding(24.dp) 
-                    .clip(RoundedCornerShape(28.dp))
-                    .then(
-                        if (isBlurEnabled && hazeState != null) {
-                            Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
-                        } else Modifier
-                    )
-                    .background(
-                        if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f) 
-                        else AlertDialogDefaults.containerColor
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {}
-                    )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp)
-                ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-
-                    content()
-
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        TextButton(onClick = onDismiss) {
-                            Text(text = dismissText)
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        TextButton(onClick = onConfirm, enabled = confirmEnabled) {
-                            Text(text = confirmText)
-                        }
-                    }
-                }
+            TextButton(onClick = onDismiss) {
+                Text(text = dismissText)
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            TextButton(onClick = onConfirm, enabled = confirmEnabled) {
+                Text(text = confirmText)
             }
         }
     }
@@ -613,78 +467,34 @@ fun InstallingDialogHost(handle: InstallingDialogHandle) {
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun InstallingDialog(visible: Boolean) {
-    val context = LocalContext.current
-    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
-    val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
-    val hazeState = LocalAppHazeState.current
-
-    AnimatedVisibility(
+    AZenithDialog(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(250, easing = LinearOutSlowInEasing)) +
-                scaleIn(
-                    initialScale = 0.92f,
-                    animationSpec = tween(250, easing = LinearOutSlowInEasing)
-                ),
-        exit = fadeOut(animationSpec = tween(150, easing = FastOutSlowInEasing)) +
-               scaleOut(
-                   targetScale = 0.92f,
-                   animationSpec = tween(150, easing = FastOutSlowInEasing)
-               )
+        onDismiss = {},
+        dismissible = false,
+        minWidth = 280.dp,
+        maxWidth = 350.dp,
+        containerColor = AlertDialogDefaults.containerColor
     ) {
-        BackHandler(onBack = { })
-        Box(
+        Text(
+            text = stringResource(R.string.str_installing_update),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontWeight = FontWeight.SemiBold,
             modifier = Modifier
-                .fillMaxSize()
-                .zIndex(100f) 
-                .background(Color.Black.copy(alpha = 0.42f))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = {} 
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .widthIn(min = 280.dp, max = 350.dp)
-                    .clip(RoundedCornerShape(28.dp))
-                    .then(
-                        if (isBlurEnabled && hazeState != null) {
-                            Modifier.hazeEffect(state = hazeState) { blurEffect { blurRadius = 24.dp } }
-                        } else Modifier
-                    )
-                    .background(
-                        if (isBlurEnabled) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f)
-                        else AlertDialogDefaults.containerColor
-                    )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = stringResource(R.string.str_installing_update),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = stringResource(R.string.str_please_do_not_close_the_app),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(32.dp))
-                    
-
-                    LinearWavyProgressIndicator(
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-            }
-        }
+                .align(Alignment.CenterHorizontally)
+                .padding(bottom = 16.dp)
+        )
+        Text(
+            text = stringResource(R.string.str_please_do_not_close_the_app),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(bottom = 32.dp)
+        )
+        LinearWavyProgressIndicator(
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
     }
 }

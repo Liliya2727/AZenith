@@ -113,9 +113,11 @@ fun TweakScreen(
     val colorScheme = MaterialTheme.colorScheme
     var showBackupRestoreSheet by remember { mutableStateOf(false) }
     var showRendererDialog by remember { mutableStateOf(false) }
-    var rendererDialogOrigin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset(0.5f, 0.5f)) }
+    val rendererOrigin = rememberDialogOrigin()
     var showRefreshRateDialog by remember { mutableStateOf(false) }
-    var refreshRateDialogOrigin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset(0.5f, 0.5f)) }
+    val refreshRateOrigin = rememberDialogOrigin()
+    val backupOptionsOrigin = rememberDialogOrigin()
+    val restoreDialogOrigin = rememberDialogOrigin()
     var pendingRestoreData by remember { mutableStateOf<Map<String, String>?>(null) }
     var showRestoreDialog by remember { mutableStateOf(false) }
     
@@ -198,7 +200,9 @@ fun TweakScreen(
         topBar = {
             TweakScreenTopAppBar(
                 scrollBehavior = scrollBehavior,
-                onMoreClick = { showBackupRestoreSheet = true }
+                onMoreClick = { showBackupRestoreSheet = true },
+                modifier = backupOptionsOrigin.trackedModifier(),
+                onMoreModifier = backupOptionsOrigin.trackedModifier()
             )
         },
         snackbarHost = {
@@ -372,19 +376,9 @@ fun TweakScreen(
                             .fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        val configuration = androidx.compose.ui.platform.LocalConfiguration.current
-                        val density = androidx.compose.ui.platform.LocalDensity.current
-                        val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
-                        val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
-                        ExpressiveTile(
-                            modifier = Modifier.weight(1f).onGloballyPositioned { coordinates ->
-                                val bounds = coordinates.boundsInWindow()
-                                refreshRateDialogOrigin = androidx.compose.ui.geometry.Offset(
-                                    bounds.center.x / screenWidthPx,
-                                    bounds.center.y / screenHeightPx
-                                )
-                            },
-                            icon = Icons.Rounded.WebStories,
+     ExpressiveTile(
+         modifier = Modifier.weight(1f).then(refreshRateOrigin.trackedModifier()),
+         icon = Icons.Rounded.WebStories,
                             label = stringResource(R.string.refreshrates),
                             value = stringResource(R.string.refresh_rate_format, viewModel.currentRefreshRate.toString()),
                             showArrow = isFullModeEnabled,
@@ -395,13 +389,7 @@ fun TweakScreen(
                         }
 
                         ExpressiveTile(
-                            modifier = Modifier.weight(1f).onGloballyPositioned { coordinates ->
-                                val bounds = coordinates.boundsInWindow()
-                                rendererDialogOrigin = androidx.compose.ui.geometry.Offset(
-                                    bounds.center.x / screenWidthPx,
-                                    bounds.center.y / screenHeightPx
-                                )
-                            },
+                            modifier = Modifier.weight(1f).then(rendererOrigin.trackedModifier()),
                             icon = Icons.Rounded.SettingsSuggest,
                             label = stringResource(R.string.renderengine),
                             value = viewModel.currentRenderer!!.uppercase(),
@@ -493,6 +481,7 @@ fun TweakScreen(
         CustomContentDialog(
             visible = showBackupOptionsDialog,
             title = context.getString(R.string.dialog_backup_options_title),
+            origin = backupOptionsOrigin.origin,
             confirmText = context.getString(R.string.dialog_backup_options_confirm),
             confirmEnabled = optBackupTweaks || optBackupApplist,
             onDismiss = { showBackupOptionsDialog = false },
@@ -527,6 +516,7 @@ fun TweakScreen(
         CustomContentDialog(
             visible = showRestoreDialog,
             title = context.getString(R.string.str_restore_configuration),
+            origin = restoreDialogOrigin.origin,
             confirmText = context.getString(R.string.dialog_restore_confirm),
             confirmEnabled = pendingRestoreResult?.let { result ->
                 val isSocMismatch = result.socType != currentSocType
@@ -600,7 +590,7 @@ fun TweakScreen(
             show = showRendererDialog,
             onDismiss = { showRendererDialog = false },
             onRenderer = { reason -> viewModel.executeSetRenderer(reason, context) },
-            origin = rendererDialogOrigin,
+            origin = rendererOrigin.origin,
             currentRenderer = viewModel.currentRenderer
         )
     }
@@ -610,7 +600,7 @@ fun TweakScreen(
             show = showRefreshRateDialog,
             onDismiss = { showRefreshRateDialog = false },
             onRefreshRatePicker = { reason -> viewModel.executeSetRefreshRates(reason, context) },
-            origin = refreshRateDialogOrigin,
+            origin = refreshRateOrigin.origin,
             currentRefreshRate = viewModel.currentRefreshRate?.toString()
         )
     }
@@ -828,7 +818,12 @@ fun ExpressiveTile(
 
 
 @Composable
-fun TweakScreenTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onMoreClick: () -> Unit) {
+fun TweakScreenTopAppBar(
+    scrollBehavior: TopAppBarScrollBehavior,
+    onMoreClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    onMoreModifier: Modifier = Modifier
+) {
     val colorScheme = MaterialTheme.colorScheme
 
     val smoothGradient = Brush.verticalGradient(
@@ -843,10 +838,10 @@ fun TweakScreenTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onMoreClick: (
     )
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(smoothGradient)
-            .statusBarsPadding()
+    modifier = modifier
+        .fillMaxWidth()
+        .background(smoothGradient)
+        .statusBarsPadding()
     ) {
         LargeFlexibleTopAppBar(
             navigationIcon = {
@@ -876,7 +871,7 @@ fun TweakScreenTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onMoreClick: (
                 scrolledContainerColor = Color.Transparent
             ),
             actions = {
-                IconButton(onClick = onMoreClick) {
+                IconButton(onClick = onMoreClick, modifier = onMoreModifier) {
                     Icon(
                         imageVector = Icons.Outlined.Cloud,
                         contentDescription = stringResource(R.string.cd_menu)
