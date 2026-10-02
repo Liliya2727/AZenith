@@ -435,16 +435,19 @@ fun MainScreen(fromTileType: String? = null) {
                         // "am start -S", which force-stops the process first, so
                         // finishing setup restarted the app from cold instead of
                         // moving on to "main".
-                        GetStartedScreen(navController) {
+                        zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
+                            GetStartedScreen(navController) {
                             navController.navigate("main") {
                                 popUpTo("get_started") { inclusive = true }
                                 launchSingleTop = true
                             }
                         }
+                        }
                     }
                     
                     // Route Pager (Kode 2)
                     composable("main") {
+                        zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
 
                         Box(
                             modifier = Modifier
@@ -493,24 +496,63 @@ fun MainScreen(fromTileType: String? = null) {
                         
 
                     } // ends Box
+                        }
                 } // ends composable
 
                     // Subscreens
-                    composable("color_palette") { ColorPaletteScreen(navController) }
-                    composable("colorscheme") { ColorSchemeSettings(navController) }
-                    composable("FasScreen") { FasScreen(navController) }
-                    composable("bypasschg") { BypassChargeScreen(navController) }
-                    composable("bypasschg_check") { BypassChargeCheckScreen(navController) }
-                    composable("preferenced") { PreferenceTweakScreen(navController) }
-                    composable("aboutscreen") { AboutScreen(navController) }
-                    composable("fpsgoscreen") { FpsGoSettings(navController) }
-                    composable("governorsettings") { GovSettings(navController) }
+                    composable("color_palette") {
+                        zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
+                            ColorPaletteScreen(navController)
+                        }
+                    }
+                    composable("colorscheme") {
+                        zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
+                            ColorSchemeSettings(navController)
+                        }
+                    }
+                    composable("FasScreen") {
+                        zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
+                            FasScreen(navController)
+                        }
+                    }
+                    composable("bypasschg") {
+                        zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
+                            BypassChargeScreen(navController)
+                        }
+                    }
+                    composable("bypasschg_check") {
+                        zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
+                            BypassChargeCheckScreen(navController)
+                        }
+                    }
+                    composable("preferenced") {
+                        zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
+                            PreferenceTweakScreen(navController)
+                        }
+                    }
+                    composable("aboutscreen") {
+                        zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
+                            AboutScreen(navController)
+                        }
+                    }
+                    composable("fpsgoscreen") {
+                        zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
+                            FpsGoSettings(navController)
+                        }
+                    }
+                    composable("governorsettings") {
+                        zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
+                            GovSettings(navController)
+                        }
+                    }
                     composable(
                         route = "app_settings/{pkg}",
                         arguments = listOf(navArgument("pkg") { type = NavType.StringType })
                     ) { backStackEntry ->
                         val pkg = backStackEntry.arguments?.getString("pkg")
-                        AppSettingsScreen(navController, pkg)
+                        zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
+                            AppSettingsScreen(navController, pkg)
+                        }
                     }
                 }
                 
