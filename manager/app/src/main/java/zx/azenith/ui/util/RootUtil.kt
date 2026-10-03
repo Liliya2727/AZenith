@@ -183,11 +183,17 @@ object RootUtils {
      * changes. Watch the daemon's directory and mirror the value across on
      * every event; the app then reads a file it can actually reach.
      */
+    /**
+     * /data/adb is drwx------ root, so an inotify watch on the daemon's API dir
+     * always fails with EACCES and FileObserver swallows it -- the app never sees
+     * a single event. Poll the daemon file through root instead, and mirror it
+     * into the app-private dir so the rest of the app can read it directly.
+     */
     private suspend fun CoroutineScope.watchDaemonProfile(
         fileName: String = PROFILE_FILE_NAME,
         onChange: () -> Unit
     ) {
-        val dir = SuFile(DAEMON_API_DIR_PATH)
+        val dir = SuFile(API_DIR_PATH)
         if (!dir.exists()) dir.mkdirs()
 
         val observer = object : FileObserver(dir.absolutePath, MODIFY or CREATE or MOVED_TO) {
@@ -197,7 +203,15 @@ object RootUtils {
         }
         observer.startWatching()
         try {
-            awaitCancellation()
+            var last: String? = null
+            while (true) {
+                val current = readRootFile(DAEMON_API_DIR_PATH + "/" + fileName)?.trim()
+                if (current != null && current != last) {
+                    last = current
+                    onChange()
+                }
+                delay(600)
+            }
         } finally {
             observer.stopWatching()
         }
