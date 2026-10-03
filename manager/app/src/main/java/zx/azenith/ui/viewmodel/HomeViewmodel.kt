@@ -137,6 +137,24 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun refreshRootStatus(onResult: (changed: Boolean) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val isRooted = RootUtils.requestRootAccess()
+            val isModuleInstalled = RootUtils.isModuleInstalled()
+            val before = _uiState.value
+            val after = before.copy(
+                rootStatus = isRooted,
+                rootStatusState = if (isRooted) RootStatusState.Granted else RootStatusState.NotGranted,
+                moduleInstalled = isModuleInstalled
+            )
+            _uiState.value = after
+            viewModelScope.launch(Dispatchers.Main) {
+                onResult(before.rootStatusState != after.rootStatusState ||
+                        before.moduleInstalled != after.moduleInstalled)
+            }
+        }
+    }
+
     fun applyProfile(profileReason: String, onSuccess: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(

@@ -71,6 +71,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -294,6 +295,7 @@ fun BannerCard(
     isBannerEnabled: Boolean,
     isBlurEnabled: Boolean = false,
     modifier: Modifier = Modifier,
+    clickable: Boolean = true,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -310,7 +312,8 @@ fun BannerCard(
 
     if (isBannerEnabled) {
         Card(
-            modifier = modifier.clip(RoundedCornerShape(26.dp)).clickable { onClick() },
+            modifier = modifier.clip(RoundedCornerShape(26.dp))
+                    .then(if (clickable) Modifier.clickable { onClick() } else Modifier),
             shape = RoundedCornerShape(26.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
@@ -411,8 +414,8 @@ fun BannerCard(
         Surface(
             modifier = modifier
                 .clip(RoundedCornerShape(26.dp))
-                .clickable { onClick() }
-                .animateContentSize(animationSpec = spring()), 
+                .then(if (clickable) Modifier.clickable { onClick() } else Modifier)
+                .animateContentSize(animationSpec = spring()),
             color = colorScheme.secondaryContainer, 
             shape = RoundedCornerShape(26.dp)
         ) {
@@ -469,6 +472,29 @@ fun BannerCard(
 /** Status semantics for [InfoTile]; Neutral keeps the pre-existing highlight behaviour. */
 enum class InfoTileTone { Neutral, Good, Bad }
 
+/**
+ * Granted is deliberately off-scheme: a fixed green reads as "authorised"
+ * regardless of which seed colour the user picked, which a tonal role cannot.
+ */
+private val RootGrantedLight = Color(0xFF1B5E20)
+private val RootGrantedLightContainer = Color(0xFFB7F0B0)
+private val RootGrantedOnContainerLight = Color(0xFF002204)
+private val RootGrantedDark = Color(0xFF7FDB8B)
+private val RootGrantedDarkContainer = Color(0xFF14521B)
+private val RootGrantedOnContainerDark = Color(0xFFB7F0B0)
+
+data class GrantedPalette(val container: Color, val onContainer: Color, val label: Color)
+
+@Composable
+private fun grantedPalette(): GrantedPalette {
+    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    return if (dark) {
+        GrantedPalette(RootGrantedDarkContainer, RootGrantedOnContainerDark, RootGrantedDark)
+    } else {
+        GrantedPalette(RootGrantedLightContainer, RootGrantedOnContainerLight, RootGrantedLight)
+    }
+}
+
 @Composable
 fun InfoTile(
     modifier: Modifier, 
@@ -483,6 +509,7 @@ fun InfoTile(
     onClick: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val granted = grantedPalette()
 
     val cardBgColor = colorScheme.surfaceColorAtElevation(1.dp)
 
@@ -491,7 +518,7 @@ fun InfoTile(
     val toneTransition = updateTransition(targetState = tone, label = "tileTone")
     val iconBoxBgColor by toneTransition.animateColor(label = "iconBoxBg") { target ->
         when {
-            target == InfoTileTone.Good -> colorScheme.tertiaryContainer
+            target == InfoTileTone.Good -> granted.container
             target == InfoTileTone.Bad -> colorScheme.errorContainer
             highlight -> colorScheme.primaryContainer
             else -> colorScheme.surfaceContainerHighest
@@ -500,7 +527,7 @@ fun InfoTile(
 
     val iconColor by toneTransition.animateColor(label = "iconColor") { target ->
         when {
-            target == InfoTileTone.Good -> colorScheme.onTertiaryContainer
+            target == InfoTileTone.Good -> granted.onContainer
             target == InfoTileTone.Bad -> colorScheme.onErrorContainer
             highlight -> colorScheme.onPrimaryContainer
             else -> colorScheme.onSurfaceVariant
@@ -509,7 +536,7 @@ fun InfoTile(
 
     val valueColor by toneTransition.animateColor(label = "valueColor") { target ->
         when {
-            target == InfoTileTone.Good -> colorScheme.tertiary
+            target == InfoTileTone.Good -> granted.label
             target == InfoTileTone.Bad -> colorScheme.error
             else -> colorScheme.onSurfaceVariant
         }

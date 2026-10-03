@@ -19,6 +19,14 @@
 package zx.azenith.ui.mainscreens
 
 
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
+import zx.azenith.ui.util.RootUtils
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
@@ -148,10 +156,11 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                                BannerCard(
+                                BannerWithEasterEgg(
                                     status = bannerStatus, pid = uiState.servicePid,
-                                    isBannerEnabled = uiState.isBannerEnabled, 
+                                    isBannerEnabled = uiState.isBannerEnabled,
                                     isBlurEnabled = isBlurEnabled,
+                                    moduleName = rememberModuleName(),
                                     modifier = Modifier.fillMaxSize()
                                 ) { }
                             }
@@ -178,7 +187,17 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                     value = stringResource(rootValueRes(uiState.rootStatusState)),
                                     tone = rootTone(uiState.rootStatusState),
                                     highlight = false
-                                ) {}
+                                ) {
+                                    viewModel.refreshRootStatus { changed ->
+                                        if (changed) {
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar(
+                                                    context.getString(R.string.root_status_changed)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -203,10 +222,11 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
 
 
                     Column() {
-                        BannerCard(
+                        BannerWithEasterEgg(
                             status = bannerStatus, pid = uiState.servicePid,
                             isBannerEnabled = uiState.isBannerEnabled,
                             isBlurEnabled = isBlurEnabled,
+                            moduleName = rememberModuleName(),
                             modifier = if (uiState.isBannerEnabled) Modifier.fillMaxWidth().aspectRatio(20 / 9f) else Modifier.fillMaxWidth().height(100.dp)
                         ) { }
 
@@ -254,7 +274,17 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 value = stringResource(rootValueRes(uiState.rootStatusState)),
                                 tone = rootTone(uiState.rootStatusState),
                                 highlight = false
-                            ) {}
+                            ) {
+                                viewModel.refreshRootStatus { changed ->
+                                    if (changed) {
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar(
+                                                context.getString(R.string.root_status_changed)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -311,3 +341,13 @@ private fun rootTone(state: RootStatusState) = when (state) {
     RootStatusState.NotGranted -> InfoTileTone.Bad
 }
 
+/** Module name from module.prop; falls back to the branded default when root is unavailable. */
+@Composable
+private fun rememberModuleName(): String {
+    val context = LocalContext.current
+    var name by remember { mutableStateOf("AZenith\u706b") }
+    LaunchedEffect(Unit) {
+        name = withContext(Dispatchers.IO) { RootUtils.getModuleName() }
+    }
+    return name
+}

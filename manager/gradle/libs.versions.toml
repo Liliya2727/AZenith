@@ -1,4 +1,5 @@
 [versions]
+confettikit = "0.9.0"
 # Engine dari KernelSU (Bleeding Edge)
 agp = "9.2.0"
 kotlin = "2.3.10"
@@ -48,6 +49,7 @@ libsu = "6.0.0"
 
 [libraries]
 compose-markdown = { group = "com.github.jeziellago", name = "compose-markdown", version.ref = "composeMarkdown" }
+confettikit = { group = "io.github.vinceglb", name = "confettikit", version.ref = "confettikit" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 hiddenapibypass = { module = "org.lsposed.hiddenapibypass:hiddenapibypass", version.ref = "hiddenapibypass" }
