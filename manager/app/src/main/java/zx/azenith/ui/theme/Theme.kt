@@ -26,6 +26,9 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.*
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowInsetsControllerCompat
@@ -183,6 +186,9 @@ fun AZenithTheme(
         }
     }
     
+    val pers = rememberPersonalization()
+    val density = LocalDensity.current
+
     val systemDarkTheme = isSystemInDarkTheme()
     val darkTheme = themeState.colorMode.getDarkThemeValue(systemDarkTheme)
     val amoledMode = themeState.colorMode == ColorMode.DARKAMOLED
@@ -218,7 +224,9 @@ fun AZenithTheme(
     }
 
     val view = androidx.compose.ui.platform.LocalView.current
-    val animatedColorScheme = animateColorSchemeAsState(targetColorScheme = colorScheme)
+    val animatedColorScheme = animateColorSchemeAsState(
+        targetColorScheme = colorScheme.withContentContrast(pers.contentContrast)
+    )
     
     LaunchedEffect(darkTheme) {
         val window = (context as? Activity)?.window ?: return@LaunchedEffect
@@ -228,13 +236,23 @@ fun AZenithTheme(
         controller.isAppearanceLightNavigationBars = !darkTheme
     }
 
-    MaterialExpressiveTheme(
-        colorScheme = animatedColorScheme,
-        typography = Typography,
-        shapes = ExpressiveShapes,
-        motionScheme = MotionScheme.expressive(),
-        content = content
-    )
+    CompositionLocalProvider(
+        LocalPersonalization provides pers,
+        // Text scale is applied at the theme root so every descendant -- including
+        // screens composed outside this composition -- inherits one multiplier.
+        LocalDensity provides Density(density.density, density.fontScale * pers.textScale)
+    ) {
+        MaterialExpressiveTheme(
+            colorScheme = animatedColorScheme,
+            typography = Typography,
+            shapes = if (pers.isStockShape) ExpressiveShapes else pers.shapes,
+            motionScheme = ScaledMotionScheme(
+                delegate = MotionScheme.expressive(),
+                factor = pers.motionFactor
+            ),
+            content = content
+        )
+    }
 }
 
 @Composable

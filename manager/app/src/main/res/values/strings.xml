@@ -396,4 +396,30 @@
     <string name="dialog_exit_confirm_title">Close AZenith?</string>
     <string name="dialog_exit_confirm_content">Are you sure you want to exit the application?</string>
     <string name="dialog_exit_confirm_button">Exit</string>
+    <!-- Personalization: color engine labels and the new section headers -->
+    <string name="spec_material_you">Material You</string>
+    <string name="spec_material_expressive">Material Expressive</string>
+    <string name="personalization_colors_header">Colors</string>
+    <string name="personalization_display_header">Display</string>
+    <string name="personalization_motion_header">Motion</string>
+    <string name="personalization_effects_header">Effects</string>
+    <string name="pers_shape">Shape</string>
+    <string name="pers_shape_summary">Corner roundness across the whole app</string>
+    <string name="pers_shape_extra_small">Sharp</string>
+    <string name="pers_shape_small">Square</string>
+    <string name="pers_shape_medium">Standard</string>
+    <string name="pers_shape_large">Rounded</string>
+    <string name="pers_shape_extra_large">Extra round</string>
+    <string name="pers_text_scale">Text size</string>
+    <string name="pers_text_scale_summary">Scales every label in the app</string>
+    <string name="pers_motion">Motion</string>
+    <string name="pers_motion_summary">Animation speed and intensity</string>
+    <string name="pers_motion_full">Full</string>
+    <string name="pers_motion_reduced">Reduced</string>
+    <string name="pers_motion_minimal">Minimal</string>
+    <string name="pers_corners">Corner boost</string>
+    <string name="pers_contrast">Content contrast</string>
+    <string name="pers_contrast_summary">Lift surface separation behind cards and lists</string>
+    <string name="pers_look">Look &amp; feel</string>
+    <string name="pers_look_summary">Shape, text size, motion and contrast</string>
 </resources>

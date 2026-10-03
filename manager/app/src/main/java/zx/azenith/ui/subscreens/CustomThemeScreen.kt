@@ -31,11 +31,17 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.updateTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -57,6 +63,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -70,6 +77,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.navigation.NavController
@@ -93,6 +101,9 @@ import zx.azenith.ui.util.saveMediaDirectly
 import zx.azenith.ui.util.setBannerGradientAlpha
 import zx.azenith.ui.util.setBannerImageEnabled
 import zx.azenith.ui.component.ZenithSlider
+import zx.azenith.ui.theme.Personalization
+import zx.azenith.ui.theme.withContentContrast
+import zx.azenith.ui.component.LookAndFeelSection
 
 
 /**
@@ -155,8 +166,49 @@ fun ColorPaletteScreen(navController: NavController) {
     var useScrollAnimation by rememberSaveable {
         mutableStateOf(prefs.getBoolean("use_scroll_animation", true))
     }
+
+    var personalization by remember { mutableStateOf(Personalization.read(context)) }
+    // Shape/text/motion changes are felt instantly across the whole app, so they are
+    // written on every drag frame rather than on release: the slider is the preview.
+    val persistPersonalization: (Personalization) -> Unit = { next ->
+        personalization = next
+        prefs.edit()
+            .putString(Personalization.PREF_SHAPE, next.shapeScale.ordinal.toString())
+            .putString(Personalization.PREF_MOTION, next.motionScale.ordinal.toString())
+            .putFloat(Personalization.PREF_TEXT, next.textScale)
+            .putFloat(Personalization.PREF_CORNERS, next.cornerBoost)
+            .putBoolean(Personalization.PREF_CONTRAST, next.contentContrast)
+            .apply()
+    }
     
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+
+    // The mock preview is pinned above the list instead of scrolling away in it: expanded at
+    // rest, shrunk once the list has moved, and re-expanded on tap for a closer look.
+    // Collapsing keys off isScrollInProgress rather than the scroll offset because the header's
+    // own height change reflows the list and would otherwise re-trigger itself immediately.
+    val lazyListState = rememberLazyListState()
+    var previewExpandedByTap by rememberSaveable { mutableStateOf(false) }
+    val listScrolled by remember {
+        derivedStateOf {
+            lazyListState.firstVisibleItemIndex > 0 ||
+                lazyListState.firstVisibleItemScrollOffset > 8
+        }
+    }
+    val listSettling by remember { derivedStateOf { lazyListState.isScrollInProgress } }
+    LaunchedEffect(listSettling) {
+        if (listSettling) previewExpandedByTap = false
+    }
+
+    val previewTransition = updateTransition(
+        targetState = if (previewExpandedByTap || !listScrolled) PreviewSize.Expanded else PreviewSize.Collapsed,
+        label = "previewSize"
+    )
+    // One transition drives both the header height and the card's internal detail, so the
+    // collapse reads as the same object getting smaller rather than two separate animations.
+    val previewDetail by previewTransition.animateFloat(label = "previewDetail") { target ->
+        if (target == PreviewSize.Expanded) 1f else 0f
+    }
 
     val cropLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -282,15 +334,10 @@ fun ColorPaletteScreen(navController: NavController) {
     
     // Theme edits are staged here and only written to SharedPreferences when
     // the user saves, so a choice can be previewed and then backed out of.
-    // `saved*` is the committed baseline the bar compares against to decide
-    // whether there is anything to save or discard.
     val savedSettings = remember { ThemeController.getAppSettings(context) }
     var currentColorMode by remember { mutableStateOf(savedSettings.colorMode) }
     var currentKeyColor by remember { mutableIntStateOf(savedSettings.keyColor) }
     var currentColorSpec by remember { mutableStateOf(savedSettings.colorSpec) }
-    var savedColorMode by remember { mutableStateOf(savedSettings.colorMode) }
-    var savedKeyColor by remember { mutableIntStateOf(savedSettings.keyColor) }
-    var savedColorSpec by remember { mutableStateOf(savedSettings.colorSpec) }
 
     // One scheme cache for every swatch on the screen, so the accent row derives
     // each scheme once for the whole screen rather than once per swatch. It is
@@ -299,51 +346,29 @@ fun ColorPaletteScreen(navController: NavController) {
         mutableStateMapOf<Int, ColorScheme>()
     }
 
-    val hasPendingChanges = currentColorMode != savedColorMode ||
-        currentKeyColor != savedKeyColor ||
-        currentColorSpec != savedColorSpec
-
-    // Idle -> the bar is ready. Applying -> the write and the recomposition
-    // that follows it are landing. Applied -> a brief confirmation, then the
-    // bar leaves on its own.
-    var barPhase by remember { mutableStateOf(ThemeBarPhase.Idle) }
-    LaunchedEffect(barPhase) {
-        if (barPhase == ThemeBarPhase.Applied) {
-            kotlinx.coroutines.delay(1400)
-            barPhase = ThemeBarPhase.Idle
-        }
-    }
-
-    val savePendingTheme = {
+    // The save bar is gone, so the theme writes itself as each choice is made, the same
+    // way the banner/blur/scroll toggles below already do.
+    fun persistTheme(mode: ColorMode, key: Int, spec: ColorSpec.SpecVersion) {
         coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             prefs.edit()
-                .putInt("key_color", currentKeyColor)
-                .putInt("color_mode", currentColorMode.value)
-                .putString("color_spec", currentColorSpec.name)
+                .putInt("key_color", key)
+                .putInt("color_mode", mode.value)
+                .putString("color_spec", spec.name)
                 .commit()
         }
-        savedKeyColor = currentKeyColor
-        savedColorMode = currentColorMode
-        savedColorSpec = currentColorSpec
-        barPhase = ThemeBarPhase.Applying
     }
 
-    val discardPendingTheme = {
-        currentColorMode = savedColorMode
-        currentKeyColor = savedKeyColor
-        currentColorSpec = savedColorSpec
-        barPhase = ThemeBarPhase.Idle
+    val onColorModeChange = { mode: ColorMode ->
+        currentColorMode = mode
+        persistTheme(mode, currentKeyColor, currentColorSpec)
     }
-
-    // The save is a preferences write plus a theme rebuild; the checkmark only
-    // appears once the new scheme is actually on screen. The holds are sized so
-    // the morphing indicator is legible before it is replaced, and the tick has
-    // time to be read rather than flash past.
-    LaunchedEffect(barPhase) {
-        if (barPhase == ThemeBarPhase.Applying) {
-            kotlinx.coroutines.delay(700)
-            barPhase = ThemeBarPhase.Applied
-        }
+    val onKeyColorChange = { key: Int ->
+        currentKeyColor = key
+        persistTheme(currentColorMode, key, currentColorSpec)
+    }
+    val onColorSpecChange = { spec: ColorSpec.SpecVersion ->
+        currentColorSpec = spec
+        persistTheme(currentColorMode, currentKeyColor, spec)
     }
 
     val isDark = currentColorMode.getDarkThemeValue(isSystemInDarkTheme())
@@ -353,15 +378,6 @@ fun ColorPaletteScreen(navController: NavController) {
     Scaffold(
         modifier = Modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            ThemeChangeBar(
-                visible = hasPendingChanges || barPhase != ThemeBarPhase.Idle,
-                phase = barPhase,
-                onSave = savePendingTheme,
-                onDiscard = discardPendingTheme,
-                modifier = Modifier.navigationBarsPadding()
-            )
-        },
         topBar = {
             PaletteTopAppBar(
                 onBack = { navController.safePopBackStack() },
@@ -390,7 +406,11 @@ fun ColorPaletteScreen(navController: NavController) {
                         colorSpec = currentColorSpec,
                         isDark = isDark, 
                         isAmoled = amoledMode,
-                        isLandscape = true
+                        isLandscape = true,
+                        isBannerEnabled = isBannerEnabled,
+                        gradientAlpha = bannerGradientAlpha,
+                        customBannerUri = customBannerUri,
+                        personalization = personalization
                     )
                 }
 
@@ -414,10 +434,11 @@ fun ColorPaletteScreen(navController: NavController) {
                         bannerGradientAlpha = bannerGradientAlpha,
                         customBannerUri = customBannerUri,
                         isBlurEnabled = isBlurEnabled,
+                        isLandscape = true,
                         prefs = prefs,
-                        onColorModeChange = { currentColorMode = it },
-                        onKeyColorChange = { currentKeyColor = it },
-                        onColorSpecChange = { currentColorSpec = it },
+                        onColorModeChange = onColorModeChange,
+                        onKeyColorChange = onKeyColorChange,
+                        onColorSpecChange = onColorSpecChange,
                         onBannerEnabledChange = { 
                             isBannerEnabled = it 
                             coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { context.setBannerImageEnabled(it) }
@@ -437,6 +458,11 @@ fun ColorPaletteScreen(navController: NavController) {
                             coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putBoolean("use_scroll_animation", it).commit() }
                         },
                         imagePicker = imagePicker,
+                        personalization = personalization,
+                        onPersonalizationChange = { next ->
+                            personalization = next
+                            persistPersonalization(next)
+                        },
                         context = context,
                         snackbarHostState = snackbarHostState,
                         coroutineScope = coroutineScope
@@ -444,68 +470,88 @@ fun ColorPaletteScreen(navController: NavController) {
                 }
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().hazePageSource(),
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding(),
-                    bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                ),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                item {
-                    ThemePreviewCard(
-                        keyColor = currentKeyColor, 
-                        colorSpec = currentColorSpec,
-                        isDark = isDark, 
-                        isAmoled = amoledMode,
-                        isLandscape = false
+            // The preview lives outside the list, so it stays put while the settings scroll
+            // underneath it; the list's own offset is what collapses it.
+            Column(modifier = Modifier.fillMaxSize()) {
+                PinnedPreviewHeader(
+                    detail = previewDetail,
+                    expanded = previewExpandedByTap || !listScrolled,
+                    // Only the tapped-open state zooms to the banner. At rest the full home
+                    // screen is what you want to see, so it stays unzoomed.
+                    focusTop = previewExpandedByTap,
+                    personalization = personalization,
+                    onToggle = { previewExpandedByTap = !previewExpandedByTap },
+                    keyColor = currentKeyColor,
+                    colorSpec = currentColorSpec,
+                    isDark = isDark,
+                    isAmoled = amoledMode,
+                    isBannerEnabled = isBannerEnabled,
+                    gradientAlpha = bannerGradientAlpha,
+                    customBannerUri = customBannerUri,
+                    modifier = Modifier.padding(top = innerPadding.calculateTopPadding())
+                )
+
+                LazyColumn(
+                    // weight, not fillMaxSize: the header already claims its animated height,
+                    // and fillMaxSize would make the list overflow the Column instead of taking
+                    // the space that is left -- which left it with no scrollable area at all.
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .hazePageSource(),
+                    state = lazyListState,
+                    contentPadding = PaddingValues(
+                        top = 8.dp,
+                        bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                        settingsItems(
+                        currentColorMode = currentColorMode,
+                        currentKeyColor = currentKeyColor,
+                        currentColorSpec = currentColorSpec,
+                        swatchSchemeCache = swatchSchemeCache,
+                        isDark = isDark,
+                        isBannerEnabled = isBannerEnabled,
+                        isBlurEnabled = isBlurEnabled,
+                        bannerGradientAlpha = bannerGradientAlpha,
+                        customBannerUri = customBannerUri,
+                        isLandscape = false,
+                        prefs = prefs,
+                        onColorModeChange = onColorModeChange,
+                        onKeyColorChange = onKeyColorChange,
+                        onColorSpecChange = onColorSpecChange,
+                        onBannerEnabledChange = { 
+                            isBannerEnabled = it 
+                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { context.setBannerImageEnabled(it) }
+                        },
+                        onBannerGradientAlphaChange = {
+                            bannerGradientAlpha = it
+                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { context.setBannerGradientAlpha(it) }
+                        },
+                        onBlurEnabledChange = {
+                            isBlurEnabled = it
+                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putBoolean("expressive_blur_ui", it).commit() }
+                        },
+                        useScrollAnimation = useScrollAnimation,
+                        onUseScrollAnimationChange = {
+                            useScrollAnimation = it
+                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putBoolean("use_scroll_animation", it).commit() }
+                        },
+                        onBannerUpdated = { customBannerUri = it },
+                        imagePicker = imagePicker,
+                        personalization = personalization,
+                        onPersonalizationChange = { next ->
+                            personalization = next
+                            persistPersonalization(next)
+                        },
+                        context = context,
+                        snackbarHostState = snackbarHostState,
+                        coroutineScope = coroutineScope
                     )
                 }
-
-                settingsItems(
-                    currentColorMode = currentColorMode,
-                    currentKeyColor = currentKeyColor,
-                    currentColorSpec = currentColorSpec,
-                    swatchSchemeCache = swatchSchemeCache,
-                    isDark = isDark,
-                    isBannerEnabled = isBannerEnabled,
-                    isBlurEnabled = isBlurEnabled,
-                    bannerGradientAlpha = bannerGradientAlpha,
-                    customBannerUri = customBannerUri,
-                    prefs = prefs,
-                    onColorModeChange = { currentColorMode = it },
-                    onKeyColorChange = { currentKeyColor = it },
-                    onColorSpecChange = { currentColorSpec = it },
-                    onBannerEnabledChange = { 
-                        isBannerEnabled = it 
-                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { context.setBannerImageEnabled(it) }
-                    },
-                    onBannerGradientAlphaChange = {
-                        bannerGradientAlpha = it
-                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { context.setBannerGradientAlpha(it) }
-                    },
-                    onBlurEnabledChange = {
-                        isBlurEnabled = it
-                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putBoolean("expressive_blur_ui", it).commit() }
-                    },
-                    useScrollAnimation = useScrollAnimation,
-                    onUseScrollAnimationChange = {
-                        useScrollAnimation = it
-                        coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putBoolean("use_scroll_animation", it).commit() }
-                    },
-                    onBannerUpdated = { customBannerUri = it },
-                    imagePicker = imagePicker,
-                    context = context,
-                    snackbarHostState = snackbarHostState,
-                    coroutineScope = coroutineScope
-                )
             }
         }
-
-        // Sits on top of the scaffold so the box is centred over the whole
-        // screen rather than over the list. Non-blocking: the theme is already
-        // committed, so this only reports progress.
-        ThemeAppliedOverlay(phase = barPhase)
     }
 }
 
@@ -522,6 +568,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     useScrollAnimation: Boolean,
     onUseScrollAnimationChange: (Boolean) -> Unit,
     isBlurEnabled: Boolean,
+    isLandscape: Boolean,
     prefs: android.content.SharedPreferences,
     onColorModeChange: (ColorMode) -> Unit,
     onKeyColorChange: (Int) -> Unit,
@@ -531,10 +578,59 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     onBannerUpdated: (String?) -> Unit,
     onBlurEnabledChange: (Boolean) -> Unit,
     imagePicker: androidx.activity.result.ActivityResultLauncher<PickVisualMediaRequest>,
+    personalization: Personalization,
+    onPersonalizationChange: (Personalization) -> Unit,
     context: Context,
     snackbarHostState: SnackbarHostState,
     coroutineScope: kotlinx.coroutines.CoroutineScope
 ) {
+    item {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                stringResource(R.string.str_color_specification),
+                modifier = Modifier.padding(horizontal = 12.dp),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            
+            val specOptions = ColorSpec.SpecVersion.entries
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+            ) {
+                specOptions.forEachIndexed { index, spec ->
+                    ToggleButton(
+                        checked = currentColorSpec == spec,
+                        onCheckedChange = { checked ->
+                            if (checked) onColorSpecChange(spec)
+                        },
+                        modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
+                        shapes = when (index) {
+                            0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                            specOptions.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                            else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                        },
+                        colors = ToggleButtonDefaults.toggleButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+                        )
+                    ) {
+                        Text(
+                            text = when (spec) {
+                                ColorSpec.SpecVersion.SPEC_2021 -> stringResource(R.string.spec_material_you)
+                                else -> stringResource(R.string.spec_material_expressive)
+                            },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+    }
     item {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
@@ -585,6 +681,15 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                     )
                 }
             }
+        }
+    }
+
+    item {
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            LookAndFeelSection(
+                pers = personalization,
+                onPersonalizationChange = onPersonalizationChange
+            )
         }
     }
 
@@ -756,11 +861,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                 )
                             }
                             
-                            BannerGradientPreview(
-                                gradientAlpha = bannerGradientAlpha,
-                                customBannerUri = customBannerUri
-                            )
-
                             Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -851,48 +951,18 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
             }
         )
     }
-    
-    item {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                stringResource(R.string.str_color_specification),
-                modifier = Modifier.padding(horizontal = 12.dp),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-            
-            val specOptions = ColorSpec.SpecVersion.entries
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
-            ) {
-                specOptions.forEachIndexed { index, spec ->
-                    ToggleButton(
-                        checked = currentColorSpec == spec,
-                        onCheckedChange = { checked ->
-                            if (checked) onColorSpecChange(spec)
-                        },
-                        modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
-                        shapes = when (index) {
-                            0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                            specOptions.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                            else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                        },
-                        colors = ToggleButtonDefaults.toggleButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
-                        )
-                    ) {
-                        Text(spec.name.replace("_", " "), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-            }
-        }
-    }
 }
+
+/** Two sizes the mock preview can be pinned at; [PreviewSize.Expanded] is the readable one. */
+private enum class PreviewSize { Expanded, Collapsed }
+
+// Natural size the mock is authored at; everything else scales it to fit.
+private val MOCK_W = 190.dp
+private val MOCK_H = 396.dp
+
+// How far the mock scales up when the card is tapped to frame the banner. 2.2x fills the
+// card width from the mock's top edge, which puts the banner dead centre in the frame.
+private const val FOCUS_ZOOM = 2.2f
 
 @Composable
 fun PaletteTopAppBar(
@@ -929,14 +999,112 @@ fun PaletteTopAppBar(
     }
 }
 
+/**
+ * The pinned mock preview.
+ *
+ * Height, corner radius and the card's internal detail all ride the same [previewTransition], so
+ * shrinking on scroll and growing on tap are one continuous motion instead of a swap between two
+ * layouts. [previewDetail] fades the small internal blocks out as the card shortens, which reads as
+ * the mock zooming away rather than being cropped.
+ */
 @Composable
-private fun BannerGradientPreview(gradientAlpha: Float, customBannerUri: String?) {
+private fun PinnedPreviewHeader(
+    detail: Float,
+    expanded: Boolean,
+    focusTop: Boolean,
+    personalization: Personalization,
+    onToggle: () -> Unit,
+    keyColor: Int,
+    colorSpec: ColorSpec.SpecVersion,
+    isDark: Boolean,
+    isAmoled: Boolean,
+    isBannerEnabled: Boolean = true,
+    gradientAlpha: Float = 1f,
+    customBannerUri: String? = null,
+    modifier: Modifier = Modifier
+) {
+    BoxWithConstraints(modifier = modifier) {
+        // Collapsed is a square tile; expanded is taller than that square, so the two never
+        // read as inverted (maxWidth is wider than any fixed height would be).
+        val targetHeight = if (expanded) maxWidth * 1.45f else maxWidth
+        val height by animateDpAsState(
+            targetValue = targetHeight,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            ),
+            label = "previewHeight"
+        )
+        Box(modifier = Modifier.height(height)) {
+            ThemePreviewCard(
+                keyColor = keyColor,
+                colorSpec = colorSpec,
+                isDark = isDark,
+                isAmoled = isAmoled,
+                isLandscape = false,
+                isBannerEnabled = isBannerEnabled,
+                gradientAlpha = gradientAlpha,
+                customBannerUri = customBannerUri,
+                detail = detail,
+                focusTop = focusTop,
+                personalization = personalization,
+                onClick = onToggle,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun BannerGradientPreview(
+    gradientAlpha: Float,
+    customBannerUri: String?,
+    isBannerEnabled: Boolean = true,
+    modifier: Modifier = Modifier
+) {
     val colorScheme = MaterialTheme.colorScheme
 
+    if (!isBannerEnabled) {
+        // Mirrors BannerCard's image-off branch: a solid secondaryContainer row with a
+        // leading glyph, so the mock shows what Home actually renders with the banner off.
+        Surface(
+            modifier = modifier.fillMaxWidth(),
+            color = colorScheme.secondaryContainer,
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.CheckCircle,
+                    contentDescription = null,
+                    tint = colorScheme.onSecondaryContainer,
+                    modifier = Modifier.size(20.dp)
+                )
+                Box(
+                    modifier = Modifier
+                        .height(20.dp)
+                        .width(1.dp)
+                        .background(colorScheme.onSecondaryContainer.copy(alpha = 0.3f))
+                )
+                Text(
+                    text = stringResource(R.string.status_alive),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = colorScheme.onSecondaryContainer
+                )
+            }
+        }
+        return
+    }
+
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(20 / 9f)
             .clip(RoundedCornerShape(16.dp)),
         color = colorScheme.surfaceContainerHighest
     ) {
@@ -961,27 +1129,58 @@ private fun BannerGradientPreview(gradientAlpha: Float, customBannerUri: String?
                     )
             )
 
-            Surface(
+            // The status/pid pills overlay the banner's bottom start, as they do on Home.
+            Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = 16.dp, bottom = 12.dp),
-                color = colorScheme.secondaryContainer,
-                shape = CircleShape
+                    .padding(start = 12.dp, bottom = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.str_preview), 
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp), 
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = colorScheme.onSecondaryContainer
-                )
+                Surface(
+                    color = colorScheme.secondaryContainer,
+                    shape = CircleShape
+                ) {
+                    Text(
+                        text = stringResource(R.string.status_alive),
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 2.dp),
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colorScheme.onSecondaryContainer
+                    )
+                }
+                Surface(
+                    color = colorScheme.secondaryContainer,
+                    shape = CircleShape
+                ) {
+                    Text(
+                        text = stringResource(R.string.pid_format, "0"),
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = colorScheme.onSecondaryContainer
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ThemePreviewCard(keyColor: Int, colorSpec: ColorSpec.SpecVersion, isDark: Boolean, isAmoled: Boolean, isLandscape: Boolean) { 
+private fun ThemePreviewCard(
+    keyColor: Int,
+    colorSpec: ColorSpec.SpecVersion,
+    isDark: Boolean,
+    isAmoled: Boolean,
+    isLandscape: Boolean,
+    isBannerEnabled: Boolean = true,
+    gradientAlpha: Float = 1f,
+    customBannerUri: String? = null,
+    detail: Float = 1f,
+    focusTop: Boolean = false,
+    personalization: Personalization = Personalization(),
+    onClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     
     val targetColorScheme = if (keyColor == 0) {
@@ -1012,7 +1211,11 @@ private fun ThemePreviewCard(keyColor: Int, colorSpec: ColorSpec.SpecVersion, is
         )
     }
 
-    val colorScheme = animateColorSchemeAsState(targetColorScheme)
+    // The mock has to run the same personalization transform as the real theme,
+    // otherwise the preview lies about exactly the settings the user is changing.
+    val colorScheme = animateColorSchemeAsState(
+        targetColorScheme = targetColorScheme.withContentContrast(personalization.contentContrast)
+    )
 
     Box(
         modifier = Modifier
@@ -1021,20 +1224,52 @@ private fun ThemePreviewCard(keyColor: Int, colorSpec: ColorSpec.SpecVersion, is
         contentAlignment = Alignment.Center
     ) {
         Surface(
-            modifier = Modifier
-                .fillMaxWidth(if (isLandscape) 0.85f else 0.55f) 
-                .aspectRatio(0.48f), 
+            modifier = (modifier
+                // The mock keeps its own aspect ratio and is scaled to fit, rather than
+                // deriving height from width -- otherwise collapsing the header changes nothing
+                // about the card and it overflows the pinned slot.
+                .then(
+                    if (isLandscape) Modifier.fillMaxWidth(0.85f)
+                    else Modifier.fillMaxSize()
+                )
+                .let { m -> if (onClick != null) m.clickable { onClick() } else m }),
             color = colorScheme.surface,
             shape = RoundedCornerShape(26.dp),
             border = BorderStroke(1.dp, color = colorScheme.outlineVariant.copy(alpha = 0.5f)),
             shadowElevation = 8.dp
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 12.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
+            val detailAlpha = detail.coerceIn(0f, 1f)
+            // The mock is drawn at its natural 0.48 aspect and scaled to fit the card, so a
+            // collapsed (square) card shows the whole mock smaller instead of a stretched crop.
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                // focusTop frames the banner instead of the whole screen: the mock scales past
+                // the card and slides down so the banner -- which lives in the upper half -- is
+                // what fills the frame. Only the drawing moves; the card's own bounds do not.
+                val zoom by animateFloatAsState(
+                    targetValue = if (focusTop) FOCUS_ZOOM else 1f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    ),
+                    label = "previewZoom"
+                )
+                // Scale by WIDTH and anchor the origin at top-center: a centre-origin scale grows
+                // past the card's top edge and silently crops the mock's own header off, which is
+                // what made widgets vanish in the expanded state.
+                val fit = maxWidth / MOCK_W * zoom
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .width(MOCK_W)
+                        .height(MOCK_H)
+                        .graphicsLayer(
+                            scaleX = fit,
+                            scaleY = fit,
+                            transformOrigin = TransformOrigin(0.5f, 0f)
+                        )
+                        .padding(horizontal = 12.dp, vertical = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         stringResource(R.string.app_name), 
@@ -1045,35 +1280,52 @@ private fun ThemePreviewCard(keyColor: Int, colorSpec: ColorSpec.SpecVersion, is
                     )
                 }
 
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(75.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    color = colorScheme.secondaryContainer.copy(alpha = 0.6f)
-                ) {}
+                // The banner sits exactly where Home's does: below the app name, filling the width,
+                // with the status/pid pills overlaid at the bottom start. When the banner image is
+                // off, Home shows a compact secondaryContainer row instead, and so does this.
+                BannerGradientPreview(
+                    gradientAlpha = gradientAlpha,
+                    customBannerUri = customBannerUri,
+                    isBannerEnabled = isBannerEnabled,
+                    modifier = Modifier.height(86.dp)
+                )
 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // The lower mock blocks shrink and fade with `detail` instead of being cropped:
+                // at collapsed height the card still reads as the same screen, just zoomed out.
+                if (detailAlpha > 0.01f) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .graphicsLayer { alpha = detailAlpha },
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(55.dp * detailAlpha),
+                            color = colorScheme.secondaryContainer,
+                            shape = RoundedCornerShape(16.dp)
+                        ) {}
+
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(55.dp * detailAlpha),
+                            color = colorScheme.surfaceColorAtElevation(1.dp),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {}
+                    }
+
                     Surface(
-                        modifier = Modifier.weight(1f).height(55.dp),
-                        color = colorScheme.secondaryContainer,
-                        shape = RoundedCornerShape(16.dp)
-                    ) {}
-                    
-                    Surface(
-                        modifier = Modifier.weight(1f).height(55.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(110.dp * detailAlpha)
+                            .graphicsLayer { alpha = detailAlpha },
                         color = colorScheme.surfaceColorAtElevation(1.dp),
                         shape = RoundedCornerShape(16.dp)
                     ) {}
                 }
-
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(110.dp),
-                    color = colorScheme.surfaceColorAtElevation(1.dp),
-                    shape = RoundedCornerShape(16.dp)
-                ) {}
+                }
             }
         }
     }
