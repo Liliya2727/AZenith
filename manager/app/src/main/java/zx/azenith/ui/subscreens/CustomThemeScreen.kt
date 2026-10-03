@@ -910,7 +910,7 @@ fun PaletteTopAppBar(
         TopAppBar(
             title = { 
                 Text(
-                    text = stringResource(R.string.theme),
+                    text = stringResource(R.string.personalization_title),
                     fontWeight = FontWeight.Bold
                 ) 
             },

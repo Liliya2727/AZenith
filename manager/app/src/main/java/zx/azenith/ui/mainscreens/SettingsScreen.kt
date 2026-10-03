@@ -239,8 +239,8 @@ fun SettingsScreen(
                             {
                                 ExpressiveListItem(
                                     onClick = { navController.navigate("color_palette") },
-                                    headlineContent = { Text(stringResource(R.string.theme)) },
-                                    supportingContent = { Text(stringResource(R.string.theme_desc)) },
+                                    headlineContent = { Text(stringResource(R.string.personalization_title)) },
+                                    supportingContent = { Text(stringResource(R.string.personalization_desc)) },
                                     leadingContent = { LeadingIcon(icon = Icons.Filled.Palette) },
                                     trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
                                 )
