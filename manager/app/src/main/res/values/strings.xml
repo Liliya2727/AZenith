@@ -89,6 +89,7 @@
     <string name="dialog_update_available_dismiss">Later</string>
     <string name="dialog_update_available_title">App Update Available</string>
     <string name="disable_auto_mode">Disable Auto Mode</string>
+    <string name="disable_auto_mode_desc">Stops profiles from switching automatically when a game is detected. You then set the profile yourself from the Current Profile tile on the Home page.</string>
     <string name="disable_logging">Disable System Logging</string>
     <string name="disable_logging_desc">Disable system log services to reduce background resource usage</string>
     <string name="disable_thermals">Disable Thermal Control</string>

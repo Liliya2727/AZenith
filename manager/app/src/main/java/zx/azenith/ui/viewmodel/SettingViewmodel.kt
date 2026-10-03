@@ -86,6 +86,9 @@ class SettingsViewModel : ViewModel() {
     fun setAutoMode(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(autoMode = enabled)
         val state = if (enabled) "0" else "1"
+        // Home and Settings are separate ViewModel instances, so the home
+        // screen cannot see this state change on its own. Broadcast it.
+        AutoModeBus.notify(state)
         viewModelScope.launch(Dispatchers.IO) {
             PropertyUtils.set("persist.sys.azenithconf.AIenabled", state)
             RootUtils.writeRootFile("/data/adb/.config/AZenith/API/current_modes", "$state\n")

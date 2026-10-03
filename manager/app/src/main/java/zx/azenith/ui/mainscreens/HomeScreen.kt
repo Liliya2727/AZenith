@@ -80,6 +80,12 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
     }
 
+    // Turning auto mode back on takes manual switching away, so a dialog left
+    // open across that change would keep offering a choice that no longer applies.
+    LaunchedEffect(uiState.autoMode) {
+        if (uiState.autoMode != "0") showProfileDialog = false
+    }
+
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {

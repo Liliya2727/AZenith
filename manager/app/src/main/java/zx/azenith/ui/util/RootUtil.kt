@@ -22,7 +22,10 @@ import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.io.SuFile
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -36,7 +39,10 @@ object RootUtils {
     private const val API_DIR_PATH = "/data/data/zx.azenith/API"
     private const val PROFILE_FILE_NAME = "current_profile"
     private const val PROFILE_PATH = "$API_DIR_PATH/$PROFILE_FILE_NAME"
-    private const val DAEMON_PROFILE_PATH = "/data/adb/.config/AZenith/API/current_profile"
+    private const val DAEMON_API_DIR_PATH = "/data/adb/.config/AZenith/API"
+    private const val DAEMON_PROFILE_PATH = "$DAEMON_API_DIR_PATH/$PROFILE_FILE_NAME"
+    private const val MODES_FILE_NAME = "current_modes"
+    private const val DAEMON_MODES_PATH = "$DAEMON_API_DIR_PATH/$MODES_FILE_NAME"
 
     /**
      * Read a file through the root shell. Returns null when the file is missing
@@ -161,22 +167,63 @@ object RootUtils {
 
         trySend(getCurrentProfileValue())
 
-        val apiDir = File(API_DIR_PATH)
-        if (!apiDir.exists()) {
-            SuFile(API_DIR_PATH).mkdirs()
-        }
-
-        val observer = object : FileObserver(apiDir, MODIFY or CREATE or MOVED_TO) {
-            override fun onEvent(event: Int, path: String?) {
-                if (path == PROFILE_FILE_NAME) {
-                    trySend(getCurrentProfileValue())
-                }
+        val job = launch {
+            watchDaemonProfile {
+                syncProfileState()
+                trySend(getCurrentProfileValue())
             }
         }
 
-        observer.startWatching()
-        awaitClose { observer.stopWatching() }
+        awaitClose { job.cancel() }
     }.flowOn(Dispatchers.IO)
+
+    /**
+     * The daemon owns the profile file and writes it under /data/adb, so a
+     * FileObserver on the app-private mirror never fires when the profile
+     * changes. Watch the daemon's directory and mirror the value across on
+     * every event; the app then reads a file it can actually reach.
+     */
+    private suspend fun CoroutineScope.watchDaemonProfile(
+        fileName: String = PROFILE_FILE_NAME,
+        onChange: () -> Unit
+    ) {
+        val dir = SuFile(DAEMON_API_DIR_PATH)
+        if (!dir.exists()) dir.mkdirs()
+
+        val observer = object : FileObserver(dir.absolutePath, MODIFY or CREATE or MOVED_TO) {
+            override fun onEvent(event: Int, path: String?) {
+                if (path == fileName) onChange()
+            }
+        }
+        observer.startWatching()
+        try {
+            awaitCancellation()
+        } finally {
+            observer.stopWatching()
+        }
+    }
+
+    /**
+     * Auto mode lives in AIenabled but is mirrored to current_modes by whoever
+     * flips the toggle, so watch the mirror rather than polling a property the
+     * app itself wrote -- that way a change made from the Settings tab or the
+     * tile both reach the home screen immediately.
+     */
+    fun observeAutoMode(): Flow<String> = callbackFlow {
+        trySend(getAutoModeValue())
+
+        val job = launch {
+            watchDaemonProfile(fileName = MODES_FILE_NAME) {
+                trySend(getAutoModeValue())
+            }
+        }
+
+        awaitClose { job.cancel() }
+    }.flowOn(Dispatchers.IO)
+
+    private fun getAutoModeValue(): String =
+        readRootFile(DAEMON_MODES_PATH)?.trim()
+            ?: PropertyUtils.get("persist.sys.azenithconf.AIenabled")
 
     fun getCurrentProfileValue(): String {
         val appMirror = readRootFile(PROFILE_PATH)?.trim()
@@ -189,21 +236,14 @@ object RootUtils {
 
         trySend(getCurrentProfileRes())
 
-        val apiDir = File(API_DIR_PATH)
-        if (!apiDir.exists()) {
-            SuFile(API_DIR_PATH).mkdirs()
-        }
-
-        val observer = object : FileObserver(apiDir, MODIFY or CREATE or MOVED_TO) {
-            override fun onEvent(event: Int, path: String?) {
-                if (path == PROFILE_FILE_NAME) {
-                    trySend(getCurrentProfileRes())
-                }
+        val job = launch {
+            watchDaemonProfile {
+                syncProfileState()
+                trySend(getCurrentProfileRes())
             }
         }
 
-        observer.startWatching()
-        awaitClose { observer.stopWatching() }
+        awaitClose { job.cancel() }
     }.flowOn(Dispatchers.IO)
 
     fun getCurrentProfileRes(): Int {

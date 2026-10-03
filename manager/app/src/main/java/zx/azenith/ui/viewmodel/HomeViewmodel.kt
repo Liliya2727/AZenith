@@ -87,6 +87,16 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         viewModelScope.launch(Dispatchers.IO) {
+            AutoModeBus.changes.collect { mode ->
+                _uiState.value = _uiState.value.copy(autoMode = mode)
+            }
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            RootUtils.observeAutoMode().collect { mode ->
+                _uiState.value = _uiState.value.copy(autoMode = mode)
+            }
+        }
+        viewModelScope.launch(Dispatchers.IO) {
             RootUtils.observeGameInfo().collect { info ->
                 _uiState.value = _uiState.value.copy(
                     runningGamePkg = info.pkg,

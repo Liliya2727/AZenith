@@ -275,6 +275,7 @@ fun SettingsScreen(
                                     ExpressiveSwitchItem(
                                         icon = Icons.Filled.Assistant,
                                         title = stringResource(R.string.disable_auto_mode),
+                                        summary = stringResource(R.string.disable_auto_mode_desc),
                                         checked = uiState.autoMode,
                                         onCheckedChange = settingsViewModel::setAutoMode
                                     )
