@@ -853,47 +853,20 @@ fun RebootBottomSheet(
         add(Triple(stringResource(R.string.reboot_edl), "edl", Icons.Outlined.DeveloperMode))
     }
 
-
-    CustomBottomSheet(
-        visible = show,
-        onDismiss = onDismiss
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.reboot),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-
-                modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 16.dp)
-            )
-
-
-            ExpressiveList(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                content = options.map { (label, reason, icon) ->
-                    {
-                        ExpressiveListItem(
-
-                            headlineContent = { 
-                                Text(text = label, color = MaterialTheme.colorScheme.onSurface) 
-                            },
-                            leadingContent = { SmallLeadingIcon(icon) },
-                            onClick = {
-                                onDismiss()
-                                onReboot(reason)
-                            }
-                        )
-                    }
-                }
-            )
-        }
-    }
+    AZenithSheet(
+        show = show,
+        onDismiss = onDismiss,
+        title = stringResource(R.string.reboot),
+        style = SheetRowStyle.Action,
+        items = options.map { (label, _, icon) ->
+            SheetItem(label = label, icon = icon)
+        },
+        onItemClick = { index ->
+            val reason = options.getOrNull(index)?.second ?: return@AZenithSheet
+            onDismiss()
+            onReboot(reason)
+        },
+    )
 }
 
 @Composable

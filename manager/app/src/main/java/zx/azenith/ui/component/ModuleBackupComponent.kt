@@ -47,51 +47,26 @@ fun BackupRestoreBottomSheet(
     onBackup: () -> Unit,
     onRestore: () -> Unit
 ) {
-    CustomBottomSheet(
-        visible = show,
-        onDismiss = onDismiss
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.str_backup_restore),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
-            )
-
-            ExpressiveList(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                content = listOf(
-                    {
-                        ExpressiveListItem(
-                            headlineContent = { Text(stringResource(R.string.str_backup_configuration), color = MaterialTheme.colorScheme.onSurface) },
-                            supportingContent = { Text(stringResource(R.string.str_save_your_current_tweak_settin), color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                            leadingContent = { SmallLeadingIcon(Icons.Outlined.Save) },
-                            onClick = {
-                                onDismiss()
-                                onBackup()
-                            }
-                        )
-                    },
-                    {
-                        ExpressiveListItem(
-                            headlineContent = { Text(stringResource(R.string.str_restore_configuration), color = MaterialTheme.colorScheme.onSurface) },
-                            supportingContent = { Text(stringResource(R.string.str_load_a_previously_saved_backup), color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                            leadingContent = { SmallLeadingIcon(Icons.Outlined.SettingsBackupRestore) },
-                            onClick = {
-                                onDismiss()
-                                onRestore()
-                            }
-                        )
-                    }
-                )
-            )
-        }
-    }
+    AZenithSheet(
+        show = show,
+        onDismiss = onDismiss,
+        title = stringResource(R.string.str_backup_restore),
+        style = SheetRowStyle.Action,
+        items = listOf(
+            SheetItem(
+                label = stringResource(R.string.str_backup_configuration),
+                summary = stringResource(R.string.str_save_your_current_tweak_settin),
+                icon = Icons.Outlined.Save,
+            ),
+            SheetItem(
+                label = stringResource(R.string.str_restore_configuration),
+                summary = stringResource(R.string.str_load_a_previously_saved_backup),
+                icon = Icons.Outlined.SettingsBackupRestore,
+            ),
+        ),
+        onItemClick = { index ->
+            onDismiss()
+            if (index == 0) onBackup() else onRestore()
+        },
+    )
 }

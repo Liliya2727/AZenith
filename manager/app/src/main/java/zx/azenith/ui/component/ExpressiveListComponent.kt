@@ -532,74 +532,6 @@ fun ExpressiveDropdownItem(
     }
 }
 
-/**
- * One option row in [OptionPickerSheet].
- *
- * The press state is local to the row and the animated scale is read inside
- * [Modifier.graphicsLayer], so a press animates the draw phase only and the
- * sheet's other rows are not invalidated with it. Scaling the layer rather
- * than the modifier keeps the touch target at full size, which is what
- * stops a fast tap from cancelling the gesture mid-animation.
- */
-@Composable
-private fun OptionRow(
-    text: String,
-    selected: Boolean,
-    accent: Color,
-    onClick: () -> Unit,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.97f else 1f,
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f),
-        label = "OptionRowScale",
-    )
-    val color by animateColorAsState(
-        targetValue = if (selected) {
-            MaterialTheme.colorScheme.secondaryContainer
-        } else {
-            Color.Transparent
-        },
-        label = "OptionRowColor",
-    )
-
-    ExpressiveListItemHighlight(
-        onClick = onClick,
-        containerColor = color,
-        modifier = Modifier
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(ExpressiveShapes.large),
-        headlineContent = {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface,
-            )
-        },
-        trailingContent = {
-            RadioButton(
-                selected = selected,
-                onClick = null,
-                colors = androidx.compose.material3.RadioButtonDefaults.colors(
-                    selectedColor = accent,
-                    unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
-        }
-    )
-}
-
-/**
- * The option list for an option-picker selection.
- *
- * Plain radio rows read as a settings dump, so the selected option is
- * surfaced as a filled container instead — the same emphasis Material gives
- * a chosen list item — and the check mark sits on the trailing edge, which
- * keeps the text column aligned with the rest of the settings list.
- */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun OptionPickerSheet(
     show: Boolean,
@@ -611,111 +543,22 @@ private fun OptionPickerSheet(
     onSelect: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    // ModalBottomSheet is a real Dialog window, so the window manager lays it out
-    // against the display instead of the caller's slot. A sheet hand-assembled
-    // from AnimatedVisibility + fillMaxSize() -- or from a Popup -- inherits the
-    // caller's constraints, and for a list row that is the row itself: the scrim
-    // and the options get measured into the row and the sheet reads as inline with
-    // the toggle rather than overlaying the app. The Popup variant was tried and
-    // does not fix it either -- a Popup is still positioned by its anchor.
-    if (!show) return
+    val safeIndex = if (selectedIndex in items.indices) selectedIndex else -1
 
-    val sheetState = rememberModalBottomSheetState()
-    val listState = rememberLazyListState()
-    val shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-
-    // A picker whose current value is far down the list opens showing the top
-    // of the options instead, so the row the user is about to change looks
-    // unselected. Scroll the selection into view on first layout, anchored a
-    // little above centre so it is not flush against the top edge. Guarded on
-    // the index being in range: items can be empty while a governor list is
-    // still being read from sysfs.
-    LaunchedEffect(selectedIndex) {
-        if (selectedIndex in items.indices) {
-            listState.scrollToItem(selectedIndex, scrollOffset = -80)
-        }
-    }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = Color.Transparent,
-        scrimColor = Color.Black.copy(alpha = 0.42f),
-        shape = shape,
-        dragHandle = null,
-        contentWindowInsets = { WindowInsets(0, 0, 0, 0) }
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(shape)
-                .background(MaterialTheme.colorScheme.surfaceContainer)
-                .padding(horizontal = 16.dp)
-                .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            // Drawn rather than Material's own dragHandle: the stock handle is a
-            // pill sized for the stock sheet shape and does not sit right against
-            // this sheet's wider corner radius.
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(top = 12.dp, bottom = 4.dp)
-                    .width(32.dp)
-                    .height(4.dp)
-                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f), CircleShape)
-            )
-
-            // Title and subtitle stay outside the scrolling list so they do not
-            // scroll away with the options.
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 4.dp),
-            )
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 4.dp),
-                )
-            }
-
-            // A long governor or scheduler list is taller than the sheet, so the
-            // rows live in their own lazy column rather than a Column that measures
-            // every child up front. heightIn caps the list at the point where the
-            // whole set is still scannable, and -- unlike the weight(1f, fill=false)
-            // this replaced -- needs no unbounded parent constraint to resolve.
-            Surface(
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 420.dp)
-                        .padding(vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    itemsIndexed(items) { index, text ->
-                        OptionRow(
-                            text = text,
-                            selected = index == selectedIndex,
-                            accent = accent,
-                            onClick = {
-                                onSelect(index)
-                                onDismiss()
-                            },
-                        )
-                    }
-                }
-            }
-        }
-    }
+    AZenithSheet(
+        show = show,
+        onDismiss = onDismiss,
+        title = title,
+        subtitle = subtitle,
+        style = SheetRowStyle.SingleSelect,
+        items = items.mapIndexed { index, label ->
+            SheetItem(label = label, selected = index == safeIndex)
+        },
+        onItemClick = { index ->
+            if (index in items.indices) onSelect(index)
+            onDismiss()
+        },
+    )
 }
 
 
