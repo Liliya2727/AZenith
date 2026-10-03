@@ -533,10 +533,12 @@ fun MainScreen(fromTileType: String? = null) {
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
+                        // Animating alpha here left the layer translucent, and haze skips
+                        // the source capture for a non-opaque layer -- which is why the
+                        // pill's blur only appeared once a nav round-trip settled the tween.
+                        // Slide only; keep the layer fully opaque.
                         .graphicsLayer {
-                            val hideFraction = (1f - navBarVisibilityProgressState.value).coerceIn(0f, 1f)
-                            translationY = size.height * hideFraction
-                            alpha = navBarVisibilityProgressState.value.coerceIn(0f, 1f)
+                            translationY = size.height * (1f - navBarVisibilityProgressState.value.coerceIn(0f, 1f))
                         }
                 ) {
                     BottomNavBar(

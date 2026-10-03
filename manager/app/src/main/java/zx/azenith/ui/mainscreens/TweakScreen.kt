@@ -111,6 +111,8 @@ fun TweakScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val colorScheme = MaterialTheme.colorScheme
+    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    val blurOn = settingsPrefs.getBoolean("expressive_blur_ui", false)
     var showBackupRestoreSheet by remember { mutableStateOf(false) }
     var showRendererDialog by remember { mutableStateOf(false) }
     val rendererOrigin = rememberDialogOrigin()
@@ -203,6 +205,7 @@ fun TweakScreen(
                 onMoreClick = { showBackupRestoreSheet = true },
                 modifier = backupOptionsOrigin.trackedModifier(),
                 onMoreModifier = backupOptionsOrigin.trackedModifier(),
+                isBlurEnabled = blurOn,
             )
         },
         snackbarHost = {
@@ -822,12 +825,9 @@ fun TweakScreenTopAppBar(
     scrollBehavior: TopAppBarScrollBehavior,
     onMoreClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onMoreModifier: Modifier = Modifier
+    onMoreModifier: Modifier = Modifier,
+    isBlurEnabled: Boolean = false
 ) {
-    val colorScheme = MaterialTheme.colorScheme
-    val context = LocalContext.current
-    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
-    val blurOn = settingsPrefs.getBoolean("expressive_blur_ui", false)
 
     Box(
     modifier = modifier
@@ -835,10 +835,10 @@ fun TweakScreenTopAppBar(
         .statusBarsPadding()
     ) {
         AppBarFade(
-            surface = colorScheme.surface,
+            surface = MaterialTheme.colorScheme.surface,
             modifier = Modifier.matchParentSize(),
-            hazeState = if (blurOn) LocalAppHazeState.current else null,
-            isBlurEnabled = blurOn,
+            hazeState = if (isBlurEnabled) LocalAppHazeState.current else null,
+            isBlurEnabled = isBlurEnabled,
         )
         LargeFlexibleTopAppBar(
             navigationIcon = {
@@ -847,7 +847,7 @@ fun TweakScreenTopAppBar(
                         .padding(start = 16.dp, end = 12.dp, top = 8.dp, bottom = 8.dp)
                         .size(38.dp)
                         .clip(CircleShape)
-                        .background(colorScheme.surfaceVariant)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Image(
                         painter = painterResource(R.drawable.avatar),
