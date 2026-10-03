@@ -101,6 +101,7 @@ import zx.azenith.ui.util.getChipsetName
 import zx.azenith.ui.util.getHeaderImage
 import zx.azenith.ui.util.getRealDeviceName
 import zx.azenith.ui.util.getSELinuxStatus
+import zx.azenith.ui.theme.currentPersonalization
 
 
 @Composable
@@ -305,6 +306,10 @@ fun BannerCard(
     val isAlive = status == stringResource(R.string.status_alive)
     
     val bannerHazeState = remember { HazeState() }
+    // Percent-based so Pill reads as a capsule regardless of the banner's height,
+    // which a fixed dp radius cannot do once the aspect ratio changes.
+    val bannerShape = currentPersonalization().bannerShape
+    val bannerRadius = RoundedCornerShape(percent = (bannerShape.radiusFraction * 100).toInt())
 
     val statusBgColor = if (isAlive) colorScheme.secondaryContainer else colorScheme.errorContainer
 
@@ -312,9 +317,9 @@ fun BannerCard(
 
     if (isBannerEnabled) {
         Card(
-            modifier = modifier.clip(RoundedCornerShape(26.dp))
+            modifier = modifier.clip(bannerRadius)
                     .then(if (clickable) Modifier.clickable { onClick() } else Modifier),
-            shape = RoundedCornerShape(26.dp),
+            shape = bannerRadius,
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Box(

@@ -422,4 +422,15 @@
     <string name="pers_contrast_summary">Lift surface separation behind cards and lists</string>
     <string name="pers_look">Look &amp; feel</string>
     <string name="pers_look_summary">Shape, text size, motion and contrast</string>
+    <string name="pers_accent_intensity">Accent intensity</string>
+    <string name="pers_accent_intensity_summary">How loudly the accent reads against the surfaces</string>
+    <string name="pers_accent_neutral">Muted</string>
+    <string name="pers_accent_balanced">Balanced</string>
+    <string name="pers_accent_vivid">Vivid</string>
+    <string name="pers_accent_neon">Neon</string>
+    <string name="pers_banner_shape">Banner corners</string>
+    <string name="pers_banner_shape_summary">Corner treatment for the banner image</string>
+    <string name="pers_banner_square">Square</string>
+    <string name="pers_banner_rounded">Rounded</string>
+    <string name="pers_banner_pill">Pill</string>
 </resources>

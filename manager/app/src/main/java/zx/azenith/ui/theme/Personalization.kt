@@ -53,12 +53,59 @@ enum class MotionScale(val labelRes: Int) {
     }
 }
 
+/**
+ * How far the palette is pushed from what Material You generated. Tone goes the
+ * other way from the usual "vivid" slider: a dynamic scheme derived from a
+ * wallpaper is often already near-neutral, so the useful knob is how much
+ * saturation is added on top, not removed.
+ */
+enum class AccentIntensity(val labelRes: Int) {
+    Neutral(R.string.pers_accent_neutral),
+    Balanced(R.string.pers_accent_balanced),
+    Vivid(R.string.pers_accent_vivid),
+    Neon(R.string.pers_accent_neon);
+
+    /** Multiplier applied to the HSL saturation of every accent role. */
+    val saturationFactor: Float
+        get() = when (this) {
+            Neutral -> 0.72f
+            Balanced -> 1f
+            Vivid -> 1.28f
+            Neon -> 1.55f
+        }
+
+    companion object {
+        fun fromValue(value: Int): AccentIntensity = entries.getOrElse(value) { Balanced }
+    }
+}
+
+/** Corner treatment for the banner and other full-bleed surfaces. */
+enum class BannerShape(val labelRes: Int) {
+    Rectangular(R.string.pers_banner_square),
+    Rounded(R.string.pers_banner_rounded),
+    Pill(R.string.pers_banner_pill);
+
+    /** Corner radius as a fraction of the surface's own height. */
+    val radiusFraction: Float
+        get() = when (this) {
+            Rectangular -> 0f
+            Rounded -> 0.12f
+            Pill -> 0.5f
+        }
+
+    companion object {
+        fun fromValue(value: Int): BannerShape = entries.getOrElse(value) { Rounded }
+    }
+}
+
 data class Personalization(
     val shapeScale: ShapeScale = ShapeScale.Medium,
     val textScale: Float = 1f,
     val motionScale: MotionScale = MotionScale.Full,
     val cornerBoost: Float = 0f,
-    val contentContrast: Boolean = false
+    val contentContrast: Boolean = false,
+    val accentIntensity: AccentIntensity = AccentIntensity.Balanced,
+    val bannerShape: BannerShape = BannerShape.Rounded
 ) {
     /**
      * The M3 shape ramp. Two independent knobs compose: [ShapeScale] picks the
@@ -109,6 +156,8 @@ data class Personalization(
         const val PREF_MOTION = "pers_motion_scale"
         const val PREF_CORNERS = "pers_corner_boost"
         const val PREF_CONTRAST = "pers_content_contrast"
+        const val PREF_ACCENT = "pers_accent_intensity"
+        const val PREF_BANNER_SHAPE = "pers_banner_shape"
 
         fun read(context: Context): Personalization {
             val p = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -121,7 +170,13 @@ data class Personalization(
                     p.getString(PREF_MOTION, null)?.toIntOrNull() ?: MotionScale.Full.ordinal
                 ),
                 cornerBoost = p.getFloat(PREF_CORNERS, 0f).coerceIn(0f, 0.75f),
-                contentContrast = p.getBoolean(PREF_CONTRAST, false)
+                contentContrast = p.getBoolean(PREF_CONTRAST, false),
+                accentIntensity = AccentIntensity.fromValue(
+                    p.getString(PREF_ACCENT, null)?.toIntOrNull() ?: AccentIntensity.Balanced.ordinal
+                ),
+                bannerShape = BannerShape.fromValue(
+                    p.getString(PREF_BANNER_SHAPE, null)?.toIntOrNull() ?: BannerShape.Rounded.ordinal
+                )
             )
         }
     }
@@ -182,6 +237,79 @@ private fun Color.push(amount: Float): Color {
 @Composable
 @ReadOnlyComposable
 fun currentPersonalization(): Personalization = LocalPersonalization.current
+
+/**
+ * Scales saturation of every accent role while leaving neutrals alone.
+ *
+ * Saturation is adjusted in HSL rather than by mixing toward a fixed hue: mixing
+ * toward a constant drags the hue with it, which is exactly the wrong behaviour
+ * when the user picked a specific accent and only asked for it to read louder.
+ * Surface roles are excluded on purpose -- a tinted surface at 1.55x saturation
+ * stops reading as a background.
+ */
+fun ColorScheme.withAccentIntensity(intensity: AccentIntensity): ColorScheme {
+    if (intensity == AccentIntensity.Balanced) return this
+    val f = intensity.saturationFactor
+    return copy(
+        primary = primary.scaledSaturation(f),
+        onPrimary = onPrimary.scaledSaturation(f),
+        primaryContainer = primaryContainer.scaledSaturation(f),
+        onPrimaryContainer = onPrimaryContainer.scaledSaturation(f),
+        secondary = secondary.scaledSaturation(f),
+        onSecondary = onSecondary.scaledSaturation(f),
+        secondaryContainer = secondaryContainer.scaledSaturation(f),
+        tertiary = tertiary.scaledSaturation(f),
+        tertiaryContainer = tertiaryContainer.scaledSaturation(f)
+    )
+}
+
+private fun Color.scaledSaturation(factor: Float): Color {
+    val hsl = FloatArray(3)
+    colorToHSL(this, hsl)
+    hsl[1] = (hsl[1] * factor).coerceIn(0f, 1f)
+    return hslToColor(hsl, this.alpha)
+}
+
+private fun colorToHSL(color: Color, out: FloatArray) {
+    val r = color.red
+    val g = color.green
+    val b = color.blue
+    val max = maxOf(r, g, b)
+    val min = minOf(r, g, b)
+    val l = (max + min) / 2f
+    out[2] = l
+    if (max == min) {
+        out[0] = 0f
+        out[1] = 0f
+        return
+    }
+    val d = max - min
+    out[1] = if (l > 0.5f) d / (2f - max - min) else d / (max + min)
+    out[0] = when (max) {
+        r -> ((g - b) / d + if (g < b) 6f else 0f) / 6f
+        g -> ((b - r) / d + 2f) / 6f
+        else -> ((r - g) / d + 4f) / 6f
+    }
+}
+
+private fun hslToColor(hsl: FloatArray, alpha: Float): Color {
+    val (h, s, l) = hsl
+    if (s == 0f) return Color(l, l, l, alpha)
+    val q = if (l < 0.5f) l * (1f + s) else l + s - l * s
+    val p = 2f * l - q
+    fun channel(t: Float): Float {
+        var tt = t
+        if (tt < 0f) tt += 1f
+        if (tt > 1f) tt -= 1f
+        return when {
+            tt < 1f / 6f -> p + (q - p) * 6f * tt
+            tt < 1f / 2f -> q
+            tt < 2f / 3f -> p + (q - p) * (2f / 3f - tt) * 6f
+            else -> p
+        }
+    }
+    return Color(channel(h + 1f / 3f), channel(h), channel(h - 1f / 3f), alpha)
+}
 
 /**
  * Wraps a [MotionScheme] and stretches every spec it hands out.

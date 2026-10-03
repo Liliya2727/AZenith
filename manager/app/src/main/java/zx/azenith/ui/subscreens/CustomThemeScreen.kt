@@ -102,6 +102,8 @@ import zx.azenith.ui.util.setBannerGradientAlpha
 import zx.azenith.ui.util.setBannerImageEnabled
 import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.theme.Personalization
+import zx.azenith.ui.theme.BannerShape
+import zx.azenith.ui.theme.withAccentIntensity
 import zx.azenith.ui.theme.withContentContrast
 import zx.azenith.ui.component.LookAndFeelSection
 
@@ -178,6 +180,8 @@ fun ColorPaletteScreen(navController: NavController) {
             .putFloat(Personalization.PREF_TEXT, next.textScale)
             .putFloat(Personalization.PREF_CORNERS, next.cornerBoost)
             .putBoolean(Personalization.PREF_CONTRAST, next.contentContrast)
+            .putString(Personalization.PREF_ACCENT, next.accentIntensity.ordinal.toString())
+            .putString(Personalization.PREF_BANNER_SHAPE, next.bannerShape.ordinal.toString())
             .apply()
     }
     
@@ -1062,9 +1066,11 @@ private fun BannerGradientPreview(
     gradientAlpha: Float,
     customBannerUri: String?,
     isBannerEnabled: Boolean = true,
+    bannerShape: BannerShape = BannerShape.Rounded,
     modifier: Modifier = Modifier
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    val bannerRadius = RoundedCornerShape(percent = (bannerShape.radiusFraction * 100).toInt())
 
     if (!isBannerEnabled) {
         // Mirrors BannerCard's image-off branch: a solid secondaryContainer row with a
@@ -1072,7 +1078,7 @@ private fun BannerGradientPreview(
         Surface(
             modifier = modifier.fillMaxWidth(),
             color = colorScheme.secondaryContainer,
-            shape = RoundedCornerShape(16.dp)
+            shape = bannerRadius
         ) {
             Row(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
@@ -1105,7 +1111,7 @@ private fun BannerGradientPreview(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp)),
+            .clip(bannerRadius),
         color = colorScheme.surfaceContainerHighest
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -1214,7 +1220,9 @@ private fun ThemePreviewCard(
     // The mock has to run the same personalization transform as the real theme,
     // otherwise the preview lies about exactly the settings the user is changing.
     val colorScheme = animateColorSchemeAsState(
-        targetColorScheme = targetColorScheme.withContentContrast(personalization.contentContrast)
+        targetColorScheme = targetColorScheme
+            .withAccentIntensity(personalization.accentIntensity)
+            .withContentContrast(personalization.contentContrast)
     )
 
     Box(
@@ -1287,6 +1295,7 @@ private fun ThemePreviewCard(
                     gradientAlpha = gradientAlpha,
                     customBannerUri = customBannerUri,
                     isBannerEnabled = isBannerEnabled,
+                    bannerShape = personalization.bannerShape,
                     modifier = Modifier.height(86.dp)
                 )
 

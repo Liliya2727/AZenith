@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Brightness1
 import androidx.compose.material.icons.filled.Contrast
+import androidx.compose.material.icons.filled.CropOriginal
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.RoundedCorner
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.Tune
@@ -36,9 +39,12 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import zx.azenith.R
+import zx.azenith.ui.theme.AccentIntensity
+import zx.azenith.ui.theme.BannerShape
 import zx.azenith.ui.theme.MotionScale
 import zx.azenith.ui.theme.Personalization
 import zx.azenith.ui.theme.ShapeScale
+import zx.azenith.ui.theme.withAccentIntensity
 
 /**
  * Shape, text size, motion and content contrast.
@@ -102,6 +108,30 @@ fun LookAndFeelSection(
             onSelect = { onPersonalizationChange(pers.copy(motionScale = it)) }
         )
 
+        LabeledControl(Icons.Filled.Palette, stringResource(R.string.pers_accent_intensity))
+        Text(
+            stringResource(R.string.pers_accent_intensity_summary),
+            modifier = Modifier.padding(start = 36.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        AccentSpecimen(pers)
+        ConnectedToggleRow(
+            options = AccentIntensity.entries,
+            selected = pers.accentIntensity,
+            label = { stringResource(it.labelRes) },
+            onSelect = { onPersonalizationChange(pers.copy(accentIntensity = it)) }
+        )
+
+        LabeledControl(Icons.Filled.CropOriginal, stringResource(R.string.pers_banner_shape))
+        ConnectedToggleRow(
+            options = BannerShape.entries,
+            selected = pers.bannerShape,
+            label = { stringResource(it.labelRes) },
+            onSelect = { onPersonalizationChange(pers.copy(bannerShape = it)) }
+        )
+        BannerShapeSpecimen(pers)
+
         ExpressiveSwitchItem(
             icon = Icons.Filled.Contrast,
             title = stringResource(R.string.pers_contrast),
@@ -109,6 +139,59 @@ fun LookAndFeelSection(
             checked = pers.contentContrast,
             onCheckedChange = { onPersonalizationChange(pers.copy(contentContrast = it)) }
         )
+    }
+}
+
+/**
+ * Swatches of the accent roles at the chosen intensity, computed with the same
+ * transform the theme applies. This is what makes the control trustworthy: the
+ * chips are the live values, not a mock-up of them.
+ */
+@Composable
+private fun AccentSpecimen(pers: Personalization, modifier: Modifier = Modifier) {
+    val scheme = MaterialTheme.colorScheme.withAccentIntensity(pers.accentIntensity)
+    Row(
+        modifier = modifier.padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        listOf(
+            scheme.primary,
+            scheme.secondary,
+            scheme.tertiary,
+            scheme.primaryContainer
+        ).forEach { c ->
+            Box(
+                Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(c)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
+            )
+        }
+    }
+}
+
+/** Three banner silhouettes at the chosen corner treatment, widest ratio. */
+@Composable
+private fun BannerShapeSpecimen(pers: Personalization, modifier: Modifier = Modifier) {
+    val fill = MaterialTheme.colorScheme.secondaryContainer
+    Row(
+        modifier = modifier.padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        BannerShape.entries.forEach { shape ->
+            Box(
+                Modifier
+                    .size(width = 56.dp, height = 34.dp)
+                    .clip(RoundedCornerShape(percent = (shape.radiusFraction * 100).toInt()))
+                    .background(fill)
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant,
+                        RoundedCornerShape(percent = (shape.radiusFraction * 100).toInt())
+                    )
+            )
+        }
     }
 }
 

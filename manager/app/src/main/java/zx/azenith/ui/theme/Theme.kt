@@ -225,7 +225,9 @@ fun AZenithTheme(
 
     val view = androidx.compose.ui.platform.LocalView.current
     val animatedColorScheme = animateColorSchemeAsState(
-        targetColorScheme = colorScheme.withContentContrast(pers.contentContrast)
+        targetColorScheme = colorScheme
+            .withAccentIntensity(pers.accentIntensity)
+            .withContentContrast(pers.contentContrast)
     )
     
     LaunchedEffect(darkTheme) {
