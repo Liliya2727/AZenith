@@ -204,6 +204,7 @@ fun BypassChargeScreen(navController: NavController) {
                                 enabled = !isUnsupported,
                                 onCheckedChange = { isChecked ->
                                     val value = if (isChecked) "1" else "0"
+                                    bypassChgState = isChecked
                                     PropertyUtils.set("persist.sys.azenithconf.bypasschg", value)
                                     writeScope.launch(Dispatchers.IO) {
                                         RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasschg", "$value\n")

@@ -90,15 +90,16 @@ fun FpsGoSettings(navController: NavController) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
 
-    val fpsgostate by produceState<Boolean?>(null) {
-        value = withContext(Dispatchers.IO) {
-            PropertyUtils.get("persist.sys.azenithconf.usefpsgo") == "1"
-        }
-    }
+    val fpsgostate = remember { mutableStateOf<Boolean?>(null) }
+    val fpsgogedstate = remember { mutableStateOf<Boolean?>(null) }
 
-    val fpsgogedstate by produceState<Boolean?>(null) {
-        value = withContext(Dispatchers.IO) {
-            PropertyUtils.get("persist.sys.azenithconf.fpsged") == "1"
+    // One-shot read of the two props; the toggles assign back into these
+    // holders so the switch tracks the tap immediately rather than only
+    // after the screen is torn down and rebuilt.
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            fpsgostate.value = PropertyUtils.get("persist.sys.azenithconf.usefpsgo") == "1"
+            fpsgogedstate.value = PropertyUtils.get("persist.sys.azenithconf.fpsged") == "1"
         }
     }
 
@@ -145,16 +146,17 @@ fun FpsGoSettings(navController: NavController) {
             item {
                 Spacer(modifier = Modifier.height(16.dp))
 
-                if (fpsgostate != null) {
+                if (fpsgostate.value != null) {
                     ExpressiveList(
                         content = listOf(
                             {
                                  ExpressiveSwitchItem(
                                     icon = Icons.Rounded.Speed,
-                                     title = stringResource(R.string.str_use_fpsgo_title),
-                                     summary = stringResource(R.string.str_use_fpsgo_summary),
-                                    checked = fpsgostate!!,
+                                    title = stringResource(R.string.str_use_fpsgo_title),
+                                    summary = stringResource(R.string.str_use_fpsgo_summary),
+                                    checked = fpsgostate.value == true,
                                     onCheckedChange = { isChecked ->
+                                        fpsgostate.value = isChecked
                                         PropertyUtils.set("persist.sys.azenithconf.usefpsgo", if (isChecked) "1" else "0")
                                     }
                                 )
@@ -169,7 +171,7 @@ fun FpsGoSettings(navController: NavController) {
             item { PrefSectionTitle(stringResource(R.string.section_prefstweaks)) }
 
             item {
-                if (fpsgogedstate != null) {
+                if (fpsgogedstate.value != null) {
                     ExpressiveList(
                         content = listOf(
                             {
@@ -177,8 +179,9 @@ fun FpsGoSettings(navController: NavController) {
                                     icon = Icons.Rounded.Speed,
                                     title = stringResource(R.string.fpsgo_ged),
                                     summary = stringResource(R.string.fpsgo_ged_desc),
-                                    checked = fpsgogedstate!!,
+                                    checked = fpsgogedstate.value == true,
                                     onCheckedChange = { isChecked ->
+                                        fpsgogedstate.value = isChecked
                                         PropertyUtils.set("persist.sys.azenithconf.fpsged", if (isChecked) "1" else "0")
                                     }
                                 )
