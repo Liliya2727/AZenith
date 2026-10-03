@@ -269,7 +269,7 @@ object RootUtils {
         val content = readRootFile(PROFILE_PATH)?.trim()
 
         if (content.isNullOrBlank()) {
-            android.util.Log.w("AZDIAG", "getCurrentProfileRes: blank/null content from $PROFILE_PATH")
+            return R.string.status_unknown
         }
 
         return when (content) {
