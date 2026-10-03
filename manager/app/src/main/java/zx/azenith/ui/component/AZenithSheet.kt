@@ -264,7 +264,7 @@ private fun AZenithSheet(
                             item = sheetItem,
                             style = style,
                             groupFill = sheetSurface.group,
-                            paintsGroupFill = style.isSelectable,
+                            paintsGroupFill = true,
                             first = index == 0,
                             last = index == items.lastIndex,
                             onClick = { onItemClick(index) },
