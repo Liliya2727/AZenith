@@ -217,11 +217,12 @@ fun SettingsScreen(
                     )
                 ) 
             },
-            containerColor = MaterialTheme.colorScheme.surface
+            contentColor = ScaffoldContentColor(),
+            containerColor = ScaffoldContainerColor(MaterialTheme.colorScheme.surface)
         ) { innerPadding ->
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().hazePageSource(),
                 contentPadding = PaddingValues(
                     top = innerPadding.calculateTopPadding(),
                     start = 16.dp,
@@ -553,21 +554,10 @@ fun SettingsScreenTopAppBar(
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
-    val smoothGradient = Brush.verticalGradient(
-        0.0f to colorScheme.surface,
-        0.4f to colorScheme.surface.copy(alpha = 0.9f),
-        0.5f to colorScheme.surface.copy(alpha = 0.8f),
-        0.6f to colorScheme.surface.copy(alpha = 0.7f),
-        0.7f to colorScheme.surface.copy(alpha = 0.5f),
-        0.8f to colorScheme.surface.copy(alpha = 0.4f),
-        0.9f to colorScheme.surface.copy(alpha = 0.3f),
-        1.0f to Color.Transparent 
-    )
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(smoothGradient)
+            .appBarFade(colorScheme.surface, scrollBehavior.state.overlappedFraction)
             .statusBarsPadding()
     ) {
         LargeFlexibleTopAppBar(

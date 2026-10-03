@@ -360,6 +360,7 @@ fun MainScreen(fromTileType: String? = null) {
     val activeDialogCount = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
     CompositionLocalProvider(
         LocalAppHazeState provides hazeState,
+        zx.azenith.ui.component.LocalAppBlurEnabled provides isBlurEnabled,
         zx.azenith.ui.component.LocalActiveDialogCount provides activeDialogCount
     ) {
         RootDialogsProvider {
@@ -412,9 +413,6 @@ fun MainScreen(fromTileType: String? = null) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .then(
-                                    if (isBlurEnabled) Modifier.hazeSource(state = hazeState) else Modifier
-                                )
                         ) {
                             zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this@composable) {
 

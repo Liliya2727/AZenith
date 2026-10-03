@@ -96,11 +96,12 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                 )
             )
         },
-        containerColor = MaterialTheme.colorScheme.surface
+        contentColor = ScaffoldContentColor(),
+        containerColor = ScaffoldContainerColor(MaterialTheme.colorScheme.surface)
     ) { innerPadding ->
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().hazePageSource(),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
                 start = 16.dp, end = 16.dp,

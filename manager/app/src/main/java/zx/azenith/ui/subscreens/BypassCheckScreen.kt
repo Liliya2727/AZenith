@@ -44,6 +44,7 @@ import androidx.compose.material.icons.automirrored.rounded.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -230,12 +231,13 @@ fun BypassChargeCheckScreen(navController: NavController) {
         modifier = Modifier,
         topBar = { 
             BypassChgCheckTopAppBar(
-                onBack = { navController.safePopBackStack() }
+                onBack = { navController.safePopBackStack() },
+            scrollBehavior = scrollBehavior
             ) 
         }
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().hazePageSource(),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
                 start = 16.dp,
@@ -538,24 +540,16 @@ fun BypassCheckTitle(text: String) {
 }
 
 @Composable
-fun BypassChgCheckTopAppBar(onBack: () -> Unit) {
+fun BypassChgCheckTopAppBar(
+    onBack: () -> Unit,
+    scrollBehavior: TopAppBarScrollBehavior
+) {
     val colorScheme = MaterialTheme.colorScheme
-
-    val smoothGradient = Brush.verticalGradient(
-        0.0f to colorScheme.surface,
-        0.4f to colorScheme.surface.copy(alpha = 0.9f),
-        0.5f to colorScheme.surface.copy(alpha = 0.8f),
-        0.6f to colorScheme.surface.copy(alpha = 0.7f),
-        0.7f to colorScheme.surface.copy(alpha = 0.5f),
-        0.8f to colorScheme.surface.copy(alpha = 0.4f),
-        0.9f to colorScheme.surface.copy(alpha = 0.3f),
-        1.0f to Color.Transparent
-    )
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(smoothGradient)
+            .appBarFade(colorScheme.surface, scrollBehavior.state.overlappedFraction)
             .statusBarsPadding()
     ) {
         TopAppBar(

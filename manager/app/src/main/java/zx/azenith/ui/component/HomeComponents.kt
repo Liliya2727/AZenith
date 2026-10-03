@@ -244,16 +244,10 @@ fun MediaBannerRenderer(
 @Composable
 fun HomeTopAppBar(scrollBehavior: TopAppBarScrollBehavior, onRebootClick: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
-    val smoothGradient = Brush.verticalGradient(
-        0.0f to colorScheme.surface,
-        0.4f to colorScheme.surface.copy(alpha = 0.9f),
-        1.0f to Color.Transparent
-    )
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(smoothGradient)
+            .appBarFade(colorScheme.surface, scrollBehavior.state.overlappedFraction)
             .statusBarsPadding()
     ) {
         LargeFlexibleTopAppBar(

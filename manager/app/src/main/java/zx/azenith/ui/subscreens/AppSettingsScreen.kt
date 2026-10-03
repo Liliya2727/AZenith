@@ -207,14 +207,16 @@ fun AppSettingsScreen(
                     },
                     onBack = { 
                         appListViewModel.loadApps(context, forceRefresh = true) 
-                        navController.safePopBackStack() 
-                    }
+                        navController.safePopBackStack()
+                    },
+                    scrollBehavior = scrollBehavior
                 ) 
             },
-            containerColor = colorScheme.surface
+            contentColor = ScaffoldContentColor(),
+            containerColor = ScaffoldContainerColor(colorScheme.surface)
         ) { innerPadding ->
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().hazePageSource(),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
                 bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -647,25 +649,15 @@ fun getAppDetails(context: android.content.Context, packageName: String?): Tripl
 fun AppSettingsTopAppBar(
     onLaunchApp: () -> Unit,
     onOpenAppInfo: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    scrollBehavior: TopAppBarScrollBehavior
 ) {
     val colorScheme = MaterialTheme.colorScheme
-
-    val smoothGradient = Brush.verticalGradient(
-        0.0f to colorScheme.surface,
-        0.4f to colorScheme.surface.copy(alpha = 0.9f),
-        0.5f to colorScheme.surface.copy(alpha = 0.8f),
-        0.6f to colorScheme.surface.copy(alpha = 0.7f),
-        0.7f to colorScheme.surface.copy(alpha = 0.5f),
-        0.8f to colorScheme.surface.copy(alpha = 0.4f),
-        0.9f to colorScheme.surface.copy(alpha = 0.3f),
-        1.0f to Color.Transparent
-    )
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(smoothGradient)
+            .appBarFade(colorScheme.surface, scrollBehavior.state.overlappedFraction)
             .statusBarsPadding()
     ) {
         TopAppBar(

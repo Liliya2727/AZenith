@@ -113,6 +113,7 @@ fun TweakScreen(
     val colorScheme = MaterialTheme.colorScheme
     val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
     val blurOn = settingsPrefs.getBoolean("expressive_blur_ui", false)
+    val scaffoldColor = ScaffoldContainerColor(MaterialTheme.colorScheme.surface)
     var showBackupRestoreSheet by remember { mutableStateOf(false) }
     var showRendererDialog by remember { mutableStateOf(false) }
     val rendererOrigin = rememberDialogOrigin()
@@ -205,7 +206,6 @@ fun TweakScreen(
                 onMoreClick = { showBackupRestoreSheet = true },
                 modifier = backupOptionsOrigin.trackedModifier(),
                 onMoreModifier = backupOptionsOrigin.trackedModifier(),
-                isBlurEnabled = blurOn,
             )
         },
         snackbarHost = {
@@ -216,12 +216,13 @@ fun TweakScreen(
                 )
             )
         },
-        containerColor = MaterialTheme.colorScheme.surface
+        containerColor = scaffoldColor,
+        contentColor = ScaffoldContentColor()
     ) { innerPadding ->
 
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().hazePageSource(),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
                 start = 16.dp,
@@ -825,21 +826,15 @@ fun TweakScreenTopAppBar(
     scrollBehavior: TopAppBarScrollBehavior,
     onMoreClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onMoreModifier: Modifier = Modifier,
-    isBlurEnabled: Boolean = false
+    onMoreModifier: Modifier = Modifier
 ) {
 
     Box(
     modifier = modifier
         .fillMaxWidth()
+        .appBarFade(MaterialTheme.colorScheme.surface, scrollBehavior.state.overlappedFraction)
         .statusBarsPadding()
     ) {
-        AppBarFade(
-            surface = MaterialTheme.colorScheme.surface,
-            modifier = Modifier.matchParentSize(),
-            hazeState = if (isBlurEnabled) LocalAppHazeState.current else null,
-            isBlurEnabled = isBlurEnabled,
-        )
         LargeFlexibleTopAppBar(
             navigationIcon = {
                 Box(
