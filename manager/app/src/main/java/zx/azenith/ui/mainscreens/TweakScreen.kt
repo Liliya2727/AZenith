@@ -202,7 +202,7 @@ fun TweakScreen(
                 scrollBehavior = scrollBehavior,
                 onMoreClick = { showBackupRestoreSheet = true },
                 modifier = backupOptionsOrigin.trackedModifier(),
-                onMoreModifier = backupOptionsOrigin.trackedModifier()
+                onMoreModifier = backupOptionsOrigin.trackedModifier(),
             )
         },
         snackbarHost = {
@@ -825,24 +825,21 @@ fun TweakScreenTopAppBar(
     onMoreModifier: Modifier = Modifier
 ) {
     val colorScheme = MaterialTheme.colorScheme
-
-    val smoothGradient = Brush.verticalGradient(
-        0.0f to colorScheme.surface,
-        0.4f to colorScheme.surface.copy(alpha = 0.9f),
-        0.5f to colorScheme.surface.copy(alpha = 0.8f),
-        0.6f to colorScheme.surface.copy(alpha = 0.7f),
-        0.7f to colorScheme.surface.copy(alpha = 0.5f),
-        0.8f to colorScheme.surface.copy(alpha = 0.4f),
-        0.9f to colorScheme.surface.copy(alpha = 0.3f),
-        1.0f to Color.Transparent 
-    )
+    val context = LocalContext.current
+    val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    val blurOn = settingsPrefs.getBoolean("expressive_blur_ui", false)
 
     Box(
     modifier = modifier
         .fillMaxWidth()
-        .background(smoothGradient)
         .statusBarsPadding()
     ) {
+        AppBarFade(
+            surface = colorScheme.surface,
+            modifier = Modifier.matchParentSize(),
+            hazeState = if (blurOn) LocalAppHazeState.current else null,
+            isBlurEnabled = blurOn,
+        )
         LargeFlexibleTopAppBar(
             navigationIcon = {
                 Box(
