@@ -128,14 +128,6 @@ object RootUtils {
         }
     }
 
-    fun getModuleName(): String {
-        val content = readRootFile("$MODULE_DIR/module.prop") ?: return "AZenith\u706b"
-        val line = content.lineSequence()
-            .firstOrNull { it.startsWith("name=") }
-            ?: return "AZenith\u706b"
-        return line.substringAfter("name=").trim().takeIf { it.isNotEmpty() } ?: "AZenith\u706b"
-    }
-
     fun getModuleVersionCode(): Int {
         // Was `grep '^versionCode=' … | cut -d= -f2` through a shell. Read the
         // file and take the line directly rather than spawning grep and cut.

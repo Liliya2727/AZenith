@@ -160,7 +160,6 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                     status = bannerStatus, pid = uiState.servicePid,
                                     isBannerEnabled = uiState.isBannerEnabled,
                                     isBlurEnabled = isBlurEnabled,
-                                    moduleName = rememberModuleName(),
                                     modifier = Modifier.fillMaxSize()
                                 ) { }
                             }
@@ -226,7 +225,6 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                             status = bannerStatus, pid = uiState.servicePid,
                             isBannerEnabled = uiState.isBannerEnabled,
                             isBlurEnabled = isBlurEnabled,
-                            moduleName = rememberModuleName(),
                             modifier = if (uiState.isBannerEnabled) Modifier.fillMaxWidth().aspectRatio(20 / 9f) else Modifier.fillMaxWidth().height(100.dp)
                         ) { }
 
@@ -341,13 +339,3 @@ private fun rootTone(state: RootStatusState) = when (state) {
     RootStatusState.NotGranted -> InfoTileTone.Bad
 }
 
-/** Module name from module.prop; falls back to the branded default when root is unavailable. */
-@Composable
-private fun rememberModuleName(): String {
-    val context = LocalContext.current
-    var name by remember { mutableStateOf("AZenith\u706b") }
-    LaunchedEffect(Unit) {
-        name = withContext(Dispatchers.IO) { RootUtils.getModuleName() }
-    }
-    return name
-}
