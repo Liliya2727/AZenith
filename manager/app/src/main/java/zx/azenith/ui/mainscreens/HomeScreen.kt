@@ -162,7 +162,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                     label = stringResource(R.string.current_profile), 
                                     value = stringResource(uiState.currentProfileRes), 
                                     highlight = (uiState.currentProfileRes != R.string.status_initializing), 
-                                    showArrow = uiState.autoMode == "0"
+                                    showArrow = uiState.autoMode == "0",
+                                    isLoading = uiState.isProfileApplying
                                 ) { if (uiState.autoMode == "0") showProfileDialog = true }
 
                                 InfoTile(
@@ -235,7 +236,8 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                                 label = stringResource(R.string.current_profile), 
                                 value = stringResource(uiState.currentProfileRes), 
                                 highlight = (uiState.currentProfileRes != R.string.status_initializing), 
-                                showArrow = uiState.autoMode == "0"
+                                showArrow = uiState.autoMode == "0",
+                                isLoading = uiState.isProfileApplying
                             ) { if (uiState.autoMode == "0") showProfileDialog = true }
 
                             InfoTile(

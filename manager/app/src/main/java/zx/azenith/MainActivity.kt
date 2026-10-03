@@ -156,7 +156,8 @@ data class NavItem(
 
 // Shared so the pill and its call site agree on one spec. Hoisted to file level
 // because a composable default argument cannot see a local of the other scope.
-private val NAV_PILL_SPEC: FiniteAnimationSpec<Color> = tween(300, easing = FastOutSlowInEasing)
+private val NAV_PILL_SPEC: FiniteAnimationSpec<Color> =
+    androidx.compose.material3.MotionScheme.Companion.expressive().defaultEffectsSpec()
 
 
 
@@ -520,23 +521,38 @@ fun MainScreen(fromTileType: String? = null) {
                     }
                 }
                 
+                // Haze captures its sources on the frame after the blurred layer's bounds are
+                // known, so a navbar that slides in on frame zero reaches the user before there
+                // is anything to blur -- it reads as a floating transparent pill. Hold it off
+                // screen until two frames have passed and the source capture has settled.
+                var navBarRevealGateOpen by androidx.compose.runtime.remember {
+                    androidx.compose.runtime.mutableStateOf(false)
+                }
+                LaunchedEffect(Unit) {
+                    withFrameNanos { }
+                    withFrameNanos { }
+                    delay(160)
+                    navBarRevealGateOpen = true
+                }
+
                 val shouldShowNavBar = rawRoute in bottomBarRoutes
                 val navBarVisibilityProgressState = androidx.compose.animation.core.animateFloatAsState(
-                    targetValue = if (shouldShowNavBar) 1f else 0f,
-                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 220, easing = androidx.compose.animation.core.LinearOutSlowInEasing),
+                    targetValue = if (shouldShowNavBar && navBarRevealGateOpen) 1f else 0f,
+                    // M3's own spatial spec, so the navbar arrives with the same spring the
+                    // rest of the expressive motion uses rather than a hand-picked one.
+                    animationSpec = androidx.compose.material3.MotionScheme.Companion.expressive()
+                        .defaultSpatialSpec(),
                     label = "NavBarVisibilityProgress"
                 )
-                
+
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        // Animating alpha here left the layer translucent, and haze skips
-                        // the source capture for a non-opaque layer -- which is why the
-                        // pill's blur only appeared once a nav round-trip settled the tween.
-                        // Slide only; keep the layer fully opaque.
+                        // Slide only, never alpha: a translucent layer is skipped by the haze
+                        // source capture, so animating opacity silently drops the blur.
                         .graphicsLayer {
-                            translationY = size.height * (1f - navBarVisibilityProgressState.value.coerceIn(0f, 1f))
+                            translationY = size.height * (1f - navBarVisibilityProgressState.value)
                         }
                 ) {
                     BottomNavBar(
@@ -759,7 +775,11 @@ private fun NavPill(
 
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.95f else 1f,
-        animationSpec = tween(150), label = "scale"
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+        ),
+        label = "scale"
     )
 
     // Colours and the label are driven by the continuous progress value rather
@@ -770,6 +790,18 @@ private fun NavPill(
     val onPrimary = MaterialTheme.colorScheme.onPrimary
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
     val unselectedBg = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+
+    // A second spring on the selection itself: as the highlight arrives the pill
+    // settles past its target and eases back, which is what gives the tab switch its
+    // M3 bounce. The press spring above is separate so the two do not fight.
+    val selectionScale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = 1f + 0.10f * progress,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+        ),
+        label = "selectionScale"
+    )
 
     val bgColor by animateColorAsState(
         targetValue = if (isBlurEnabled) {
@@ -798,7 +830,7 @@ private fun NavPill(
     
     Row(
         modifier = modifier
-            .scale(scale)
+            .scale(scale * selectionScale)
             .height(48.dp)
             .defaultMinSize(minWidth = 48.dp)
             .clip(shape)

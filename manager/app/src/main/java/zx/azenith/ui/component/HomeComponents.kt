@@ -470,6 +470,7 @@ fun InfoTile(
     value: String, 
     highlight: Boolean,
     showArrow: Boolean = false, 
+    isLoading: Boolean = false,
     onClick: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -507,12 +508,24 @@ fun InfoTile(
                     .background(iconBoxBgColor),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = icon, 
-                    contentDescription = null, 
-                    tint = iconColor,
-                    modifier = Modifier.size(36.dp) 
-                )
+                AnimatedContent(
+                    targetState = isLoading,
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(160)) togetherWith fadeOut(animationSpec = tween(120))
+                    },
+                    label = "TileIconLoadingAnim"
+                ) { loading ->
+                    if (loading) {
+                        ContainedLoadingIndicator(modifier = Modifier.size(28.dp))
+                    } else {
+                        Icon(
+                            imageVector = icon, 
+                            contentDescription = null, 
+                            tint = iconColor,
+                            modifier = Modifier.size(36.dp) 
+                        )
+                    }
+                }
 
                 if (showArrow) {
                     Icon(

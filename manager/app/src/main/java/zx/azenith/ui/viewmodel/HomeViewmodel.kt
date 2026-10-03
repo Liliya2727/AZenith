@@ -43,6 +43,8 @@ data class HomeUiState(
     val servicePid: String = "",
     val currentProfileRes: Int = R.string.status_initializing,
     val currentProfileValue: String = "",
+    val isProfileApplying: Boolean = false,
+    val pendingProfileValue: String = "",
     val runningGamePkg: String? = null,
     val runningGameStartTime: String? = null
 )
@@ -82,7 +84,17 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
         viewModelScope.launch(Dispatchers.IO) {
             RootUtils.observeProfileValue().collect { value ->
-                _uiState.value = _uiState.value.copy(currentProfileValue = value)
+                _uiState.value = _uiState.value.copy(
+                    currentProfileValue = value,
+                    // The daemon has confirmed the switch, so the spinner has done its job.
+                    // Resolving on value rather than on the call returning is what keeps it
+                    // honest: applyProfile returns before the profile actually changes.
+                    isProfileApplying = if (_uiState.value.isProfileApplying && value == _uiState.value.pendingProfileValue) {
+                        false
+                    } else {
+                        _uiState.value.isProfileApplying
+                    }
+                )
             }
         }
 
@@ -123,6 +135,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun applyProfile(profileReason: String, onSuccess: () -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
+            _uiState.value = _uiState.value.copy(
+                isProfileApplying = true,
+                pendingProfileValue = profileReason
+            )
             Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service -p $profileReason").submit()
             viewModelScope.launch(Dispatchers.Main) { onSuccess() }
         }
