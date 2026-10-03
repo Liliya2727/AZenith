@@ -33,13 +33,16 @@ import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.util.isBannerImageEnabled
 import zx.azenith.ui.util.PropertyUtils
 
+enum class RootStatusState { Checking, Granted, NotGranted }
+
 
 data class HomeUiState(
     val isBannerEnabled: Boolean = false,
     val moduleInstalled: Boolean = false,
     val autoMode: String? = null,
     val rootStatus: Boolean = false,
-    val serviceStatusRes: Int = R.string.status_suspended,
+    val rootStatusState: RootStatusState = RootStatusState.Checking,
+    val serviceStatusRes: Int = R.string.status_initializing,
     val servicePid: String = "",
     val currentProfileRes: Int = R.string.status_initializing,
     val currentProfileValue: String = "",
@@ -127,6 +130,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
             _uiState.value = _uiState.value.copy(
                 rootStatus = isRooted,
+                rootStatusState = if (isRooted) RootStatusState.Granted else RootStatusState.NotGranted,
                 moduleInstalled = isModuleInstalled,
                 autoMode = mode
             )

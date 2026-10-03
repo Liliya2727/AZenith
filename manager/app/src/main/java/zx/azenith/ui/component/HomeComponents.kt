@@ -33,9 +33,13 @@ import android.webkit.MimeTypeMap
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColor
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.animateColor
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -462,6 +466,9 @@ fun BannerCard(
 }
 
 
+/** Status semantics for [InfoTile]; Neutral keeps the pre-existing highlight behaviour. */
+enum class InfoTileTone { Neutral, Good, Bad }
+
 @Composable
 fun InfoTile(
     modifier: Modifier, 
@@ -471,23 +478,42 @@ fun InfoTile(
     highlight: Boolean,
     showArrow: Boolean = false, 
     isLoading: Boolean = false,
+    tone: InfoTileTone = InfoTileTone.Neutral,
+    iconOverride: ImageVector? = null,
     onClick: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
 
     val cardBgColor = colorScheme.surfaceColorAtElevation(1.dp)
 
-    val iconBoxBgColor by animateColorAsState(
-        targetValue = if (highlight) colorScheme.primaryContainer else colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        animationSpec = tween(400), 
-        label = "iconBoxBgColorAnim"
-    )
+    // One spring drives every colour, so the container, icon and value label
+    // cross-fade as a single change instead of three staggered tweens.
+    val toneTransition = updateTransition(targetState = tone, label = "tileTone")
+    val iconBoxBgColor by toneTransition.animateColor(label = "iconBoxBg") { target ->
+        when {
+            target == InfoTileTone.Good -> colorScheme.tertiaryContainer
+            target == InfoTileTone.Bad -> colorScheme.errorContainer
+            highlight -> colorScheme.primaryContainer
+            else -> colorScheme.surfaceContainerHighest
+        }
+    }
 
-    val iconColor by animateColorAsState(
-        targetValue = if (highlight) colorScheme.onPrimaryContainer else colorScheme.onSurfaceVariant,
-        animationSpec = tween(400),
-        label = "iconColorAnim"
-    )
+    val iconColor by toneTransition.animateColor(label = "iconColor") { target ->
+        when {
+            target == InfoTileTone.Good -> colorScheme.onTertiaryContainer
+            target == InfoTileTone.Bad -> colorScheme.onErrorContainer
+            highlight -> colorScheme.onPrimaryContainer
+            else -> colorScheme.onSurfaceVariant
+        }
+    }
+
+    val valueColor by toneTransition.animateColor(label = "valueColor") { target ->
+        when {
+            target == InfoTileTone.Good -> colorScheme.tertiary
+            target == InfoTileTone.Bad -> colorScheme.error
+            else -> colorScheme.onSurfaceVariant
+        }
+    }
 
     Surface(
         modifier = modifier
@@ -518,12 +544,28 @@ fun InfoTile(
                     if (loading) {
                         ContainedLoadingIndicator(modifier = Modifier.size(28.dp))
                     } else {
-                        Icon(
-                            imageVector = icon, 
-                            contentDescription = null, 
-                            tint = iconColor,
-                            modifier = Modifier.size(36.dp) 
-                        )
+                        AnimatedContent(
+                            targetState = iconOverride ?: icon,
+                            transitionSpec = {
+                                (fadeIn(animationSpec = tween(260)) +
+                                        scaleIn(initialScale = 0.7f, animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                            stiffness = Spring.StiffnessMedium
+                                        )))
+                                    .togetherWith(
+                                        fadeOut(animationSpec = tween(120)) +
+                                                scaleOut(targetScale = 1.25f, animationSpec = tween(120))
+                                    )
+                            },
+                            label = "TileIconSwap"
+                        ) { targetIcon ->
+                            Icon(
+                                imageVector = targetIcon,
+                                contentDescription = null,
+                                tint = iconColor,
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
                     }
                 }
 
@@ -571,7 +613,7 @@ fun InfoTile(
                     Text(
                         text = targetValue, 
                         style = MaterialTheme.typography.bodySmall, 
-                        color = colorScheme.onSurfaceVariant, 
+                        color = valueColor, 
                         maxLines = 1, 
                         overflow = TextOverflow.Ellipsis,
                         lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified

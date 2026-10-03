@@ -47,6 +47,7 @@ import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.viewmodel.HomeViewModel
+import zx.azenith.ui.viewmodel.RootStatusState
 
 
 @Composable
@@ -116,7 +117,10 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                val bannerStatus = if (!uiState.moduleInstalled) stringResource(R.string.module_not_installed) else stringResource(uiState.serviceStatusRes)
+                val bannerStatus = when {
+                    !uiState.moduleInstalled -> stringResource(R.string.module_not_installed)
+                    else -> stringResource(uiState.serviceStatusRes)
+                }
 
 
                 val isPerformanceMode = uiState.currentProfileRes == R.string.Profile_Performance || uiState.currentProfileRes == R.string.profile_perflite
@@ -168,9 +172,11 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
 
                                 InfoTile(
                                     modifier = Modifier.weight(1f).fillMaxHeight(),
-                                    icon = Icons.Rounded.Security, 
-                                    label = stringResource(R.string.root_access), 
-                                    value = if (uiState.rootStatus) stringResource(R.string.root_granted) else stringResource(R.string.root_not_granted), 
+                                    icon = Icons.Rounded.Security,
+                                    iconOverride = rootIcon(uiState.rootStatusState),
+                                    label = stringResource(R.string.root_access),
+                                    value = stringResource(rootValueRes(uiState.rootStatusState)),
+                                    tone = rootTone(uiState.rootStatusState),
                                     highlight = false
                                 ) {}
                             }
@@ -242,9 +248,11 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
 
                             InfoTile(
                                 modifier = Modifier.weight(1f).fillMaxHeight(),
-                                icon = Icons.Rounded.Security, 
-                                label = stringResource(R.string.root_access), 
-                                value = if (uiState.rootStatus) stringResource(R.string.root_granted) else stringResource(R.string.root_not_granted), 
+                                icon = Icons.Rounded.Security,
+                                iconOverride = rootIcon(uiState.rootStatusState),
+                                label = stringResource(R.string.root_access),
+                                value = stringResource(rootValueRes(uiState.rootStatusState)),
+                                tone = rootTone(uiState.rootStatusState),
                                 highlight = false
                             ) {}
                         }
@@ -284,3 +292,22 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
         )
     }
 }
+
+private fun rootValueRes(state: RootStatusState): Int = when (state) {
+    RootStatusState.Checking -> R.string.status_checking
+    RootStatusState.Granted -> R.string.root_granted
+    RootStatusState.NotGranted -> R.string.root_not_granted
+}
+
+private fun rootIcon(state: RootStatusState) = when (state) {
+    RootStatusState.Checking -> Icons.Rounded.Security
+    RootStatusState.Granted -> Icons.Rounded.VerifiedUser
+    RootStatusState.NotGranted -> Icons.Rounded.LockPerson
+}
+
+private fun rootTone(state: RootStatusState) = when (state) {
+    RootStatusState.Checking -> InfoTileTone.Neutral
+    RootStatusState.Granted -> InfoTileTone.Good
+    RootStatusState.NotGranted -> InfoTileTone.Bad
+}
+
