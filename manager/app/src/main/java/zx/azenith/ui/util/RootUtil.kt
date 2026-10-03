@@ -66,7 +66,12 @@ object RootUtils {
      */
     internal fun writeRootFile(path: String, content: String) {
         try {
-            SuFile(path).newOutputStream().use { it.write(content.toByteArray()) }
+            val file = SuFile(path)
+            val dir = SuFile(path.substringBeforeLast('/', ""))
+            if (!dir.exists()) dir.mkdirs()
+            val tmp = SuFile(dir, file.name + ".tmp_" + System.nanoTime())
+            tmp.newOutputStream().use { it.write(content.toByteArray()) }
+            tmp.renameTo(file)
         } catch (e: Exception) {
             // no-op
         }
@@ -261,7 +266,11 @@ object RootUtils {
     }.flowOn(Dispatchers.IO)
 
     fun getCurrentProfileRes(): Int {
-        val content = readRootFile(PROFILE_PATH)
+        val content = readRootFile(PROFILE_PATH)?.trim()
+
+        if (content.isNullOrBlank()) {
+            android.util.Log.w("AZDIAG", "getCurrentProfileRes: blank/null content from $PROFILE_PATH")
+        }
 
         return when (content) {
             "0" -> R.string.status_initializing
