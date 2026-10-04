@@ -106,6 +106,11 @@ import zx.azenith.ui.theme.BannerShape
 import zx.azenith.ui.theme.withAccentIntensity
 import zx.azenith.ui.theme.withContentContrast
 import zx.azenith.ui.component.LookAndFeelSection
+import zx.azenith.ui.theme.ColorEngine
+import zx.azenith.ui.theme.NavStyle
+import zx.azenith.ui.theme.NavShape
+import zx.azenith.ui.theme.NavLabelMode
+import androidx.compose.ui.graphics.Shape
 
 
 /**
@@ -182,6 +187,9 @@ fun ColorPaletteScreen(navController: NavController) {
             .putBoolean(Personalization.PREF_CONTRAST, next.contentContrast)
             .putString(Personalization.PREF_ACCENT, next.accentIntensity.ordinal.toString())
             .putString(Personalization.PREF_BANNER_SHAPE, next.bannerShape.ordinal.toString())
+            .putString(Personalization.PREF_NAV_STYLE, next.navStyle.ordinal.toString())
+            .putString(Personalization.PREF_NAV_SHAPE, next.navShape.ordinal.toString())
+            .putString(Personalization.PREF_NAV_LABELS, next.navLabels.ordinal.toString())
             .apply()
     }
     
@@ -210,9 +218,7 @@ fun ColorPaletteScreen(navController: NavController) {
     )
     // One transition drives both the header height and the card's internal detail, so the
     // collapse reads as the same object getting smaller rather than two separate animations.
-    val previewDetail by previewTransition.animateFloat(label = "previewDetail") { target ->
-        if (target == PreviewSize.Expanded) 1f else 0f
-    }
+
 
     val cropLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -352,12 +358,12 @@ fun ColorPaletteScreen(navController: NavController) {
 
     // The save bar is gone, so the theme writes itself as each choice is made, the same
     // way the banner/blur/scroll toggles below already do.
-    fun persistTheme(mode: ColorMode, key: Int, spec: ColorSpec.SpecVersion) {
+    fun persistTheme(mode: ColorMode, key: Int, spec: ColorEngine) {
         coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             prefs.edit()
                 .putInt("key_color", key)
                 .putInt("color_mode", mode.value)
-                .putString("color_spec", spec.name)
+                .putString("color_spec", spec.persistedName)
                 .commit()
         }
     }
@@ -370,7 +376,7 @@ fun ColorPaletteScreen(navController: NavController) {
         currentKeyColor = key
         persistTheme(currentColorMode, key, currentColorSpec)
     }
-    val onColorSpecChange = { spec: ColorSpec.SpecVersion ->
+    val onColorSpecChange = { spec: ColorEngine ->
         currentColorSpec = spec
         persistTheme(currentColorMode, currentKeyColor, spec)
     }
@@ -405,17 +411,26 @@ fun ColorPaletteScreen(navController: NavController) {
                         .padding(top = innerPadding.calculateTopPadding()), 
                     contentAlignment = Alignment.Center
                 ) {
-                    ThemePreviewCard(
-                        keyColor = currentKeyColor,
-                        colorSpec = currentColorSpec,
-                        isDark = isDark, 
-                        isAmoled = amoledMode,
-                        isLandscape = true,
-                        isBannerEnabled = isBannerEnabled,
-                        gradientAlpha = bannerGradientAlpha,
-                        customBannerUri = customBannerUri,
-                        personalization = personalization
-                    )
+MockCardFrame(
+                        scheme = mockColorScheme(
+                            keyColor = currentKeyColor,
+                            colorSpec = currentColorSpec,
+                            isDark = isDark,
+                            isAmoled = amoledMode,
+                            personalization = personalization
+                        ),
+                        shape = personalization.shapes.extraLarge,
+                        modifier = Modifier.fillMaxWidth(0.85f)
+                    ) {
+                        MockScreen(
+                            scheme = MaterialTheme.colorScheme,
+                            personalization = personalization,
+                            isBannerEnabled = isBannerEnabled,
+                            isBlurEnabled = isBlurEnabled,
+                            gradientAlpha = bannerGradientAlpha,
+                            customBannerUri = customBannerUri
+                        )
+                    }
                 }
 
                 LazyColumn(
@@ -478,11 +493,9 @@ fun ColorPaletteScreen(navController: NavController) {
             // underneath it; the list's own offset is what collapses it.
             Column(modifier = Modifier.fillMaxSize()) {
                 PinnedPreviewHeader(
-                    detail = previewDetail,
                     expanded = previewExpandedByTap || !listScrolled,
                     // Only the tapped-open state zooms to the banner. At rest the full home
                     // screen is what you want to see, so it stays unzoomed.
-                    focusTop = previewExpandedByTap,
                     personalization = personalization,
                     onToggle = { previewExpandedByTap = !previewExpandedByTap },
                     keyColor = currentKeyColor,
@@ -563,7 +576,7 @@ fun ColorPaletteScreen(navController: NavController) {
 private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     currentColorMode: ColorMode,
     currentKeyColor: Int,
-    currentColorSpec: ColorSpec.SpecVersion,
+    currentColorSpec: ColorEngine,
     swatchSchemeCache: SnapshotStateMap<Int, ColorScheme>,
     isDark: Boolean,
     isBannerEnabled: Boolean,
@@ -576,7 +589,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     prefs: android.content.SharedPreferences,
     onColorModeChange: (ColorMode) -> Unit,
     onKeyColorChange: (Int) -> Unit,
-    onColorSpecChange: (ColorSpec.SpecVersion) -> Unit,
+    onColorSpecChange: (ColorEngine) -> Unit,
     onBannerEnabledChange: (Boolean) -> Unit,
     onBannerGradientAlphaChange: (Float) -> Unit,
     onBannerUpdated: (String?) -> Unit,
@@ -600,7 +613,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                 color = MaterialTheme.colorScheme.primary
             )
             
-            val specOptions = ColorSpec.SpecVersion.entries
+            val specOptions = ColorEngine.entries
             
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -624,8 +637,11 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                     ) {
                         Text(
                             text = when (spec) {
-                                ColorSpec.SpecVersion.SPEC_2021 -> stringResource(R.string.spec_material_you)
-                                else -> stringResource(R.string.spec_material_expressive)
+                                ColorEngine.MaterialYou -> stringResource(R.string.spec_material_you)
+                                ColorEngine.MaterialExpressive ->
+                                    stringResource(R.string.spec_material_expressive)
+                                ColorEngine.MaterialExpressive2026 ->
+                                    stringResource(R.string.spec_material_expressive_2026)
                             },
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -961,12 +977,14 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
 private enum class PreviewSize { Expanded, Collapsed }
 
 // Natural size the mock is authored at; everything else scales it to fit.
+private val MOCK_NAV_LABELS = intArrayOf(
+    R.string.nav_home, R.string.nav_applist, R.string.nav_tweaks, R.string.nav_settings
+)
 private val MOCK_W = 190.dp
 private val MOCK_H = 396.dp
 
 // How far the mock scales up when the card is tapped to frame the banner. 2.2x fills the
 // card width from the mock's top edge, which puts the banner dead centre in the frame.
-private const val FOCUS_ZOOM = 2.2f
 
 @Composable
 fun PaletteTopAppBar(
@@ -1004,33 +1022,53 @@ fun PaletteTopAppBar(
 }
 
 /**
- * The pinned mock preview.
+ * The mock preview.
  *
- * Height, corner radius and the card's internal detail all ride the same [previewTransition], so
- * shrinking on scroll and growing on tap are one continuous motion instead of a swap between two
- * layouts. [previewDetail] fades the small internal blocks out as the card shortens, which reads as
- * the mock zooming away rather than being cropped.
+ * One transition drives the layout: collapsed, the mock is cut into two halves
+ * that sit side by side -- so the navbar and the banner are each shown at a
+ * readable size instead of a squeezed portrait phone; expanded, the halves join
+ * back into the whole portrait screen.
  */
 @Composable
 private fun PinnedPreviewHeader(
-    detail: Float,
     expanded: Boolean,
-    focusTop: Boolean,
     personalization: Personalization,
     onToggle: () -> Unit,
     keyColor: Int,
-    colorSpec: ColorSpec.SpecVersion,
+    colorSpec: ColorEngine,
     isDark: Boolean,
     isAmoled: Boolean,
     isBannerEnabled: Boolean = true,
+    isBlurEnabled: Boolean = false,
     gradientAlpha: Float = 1f,
     customBannerUri: String? = null,
     modifier: Modifier = Modifier
 ) {
+    val scheme = mockColorScheme(
+        keyColor = keyColor,
+        colorSpec = colorSpec,
+        isDark = isDark,
+        isAmoled = isAmoled,
+        personalization = personalization
+    )
+
     BoxWithConstraints(modifier = modifier) {
-        // Collapsed is a square tile; expanded is taller than that square, so the two never
-        // read as inverted (maxWidth is wider than any fixed height would be).
-        val targetHeight = if (expanded) maxWidth * 1.45f else maxWidth
+        // The expanded card is the tall portrait phone; the collapsed row is only
+        // as tall as the two half-screens need, which is what leaves room for the
+        // list underneath instead of an empty band.
+        // Card aspect follows the mock's own 190:396 ratio once collapsed, so the
+        // uniform scale fills both axes instead of leaving dead margins on one side.
+        // Expanded: the tall portrait phone. Collapsed: the same phone shrunk, so the
+        // card must scale DOWN with the frame -- deriving height from maxWidth alone
+        // made the collapsed card taller than the expanded one.
+        // Two measured heights, not the mock's aspect: MockScreen already scales to
+        // fit, so deriving height from 190:396 either overshot the viewport or left a
+        // dead band. Clamping to maxHeight made the card full-screen.
+        val mockAspect = MOCK_H / MOCK_W
+        // Collapsed: height is DERIVED from the width so the frame keeps the mock's
+        // 190:396 ratio exactly. Setting them independently made MockScreen's minOf
+        // go height-limited, which shrank the widgets and opened a dead margin.
+        val targetHeight = if (expanded) maxWidth * 1.45f else maxWidth * 0.40f * mockAspect
         val height by animateDpAsState(
             targetValue = targetHeight,
             animationSpec = spring(
@@ -1039,23 +1077,162 @@ private fun PinnedPreviewHeader(
             ),
             label = "previewHeight"
         )
-        Box(modifier = Modifier.height(height)) {
-            ThemePreviewCard(
-                keyColor = keyColor,
-                colorSpec = colorSpec,
-                isDark = isDark,
-                isAmoled = isAmoled,
-                isLandscape = false,
-                isBannerEnabled = isBannerEnabled,
+        val shape = personalization.shapes.extraLarge
+        val fullWidth = maxWidth
+        val targetWidth = if (expanded) fullWidth else fullWidth * 0.40f
+        val frameWidth by animateDpAsState(
+            targetValue = targetWidth,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            ),
+            label = "previewWidth"
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(height)
+                .padding(horizontal = 16.dp)
+        ) {
+            // A fixed-dp radius reads rounder once the frame is smaller, because the
+            // corner takes up more of the box. Scale it with the frame so the same
+            // shape reads the same at any size.
+            val cornerScale = frameWidth / fullWidth
+            val base = 28.dp * cornerScale * personalization.cornerMultiplier
+            val scaledShape = RoundedCornerShape(base)
+            MockCardFrame(
+                scheme = scheme,
+                shape = scaledShape,
+                // Centered shrink: keep it visually centered and unchanged in corner style.
+                // The tap target is the frame itself: swiping that starts on the card's
+                // dead margins still reaches the list, while a tap on the mock expands it.
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .width(frameWidth)
+                    .fillMaxHeight()
+                    .clickable(onClick = onToggle)
+            ) {
+                MockScreen(
+                    scheme = scheme,
+                    personalization = personalization,
+                    isBannerEnabled = isBannerEnabled,
+                    isBlurEnabled = isBlurEnabled,
+                    gradientAlpha = gradientAlpha,
+                    customBannerUri = customBannerUri,
+                    isCollapsed = !expanded
+                )
+            }
+        }
+    }
+}
+
+/** The mock's own device frame: surface, shape ramp and hairline border. */
+@Composable
+private fun MockCardFrame(
+    scheme: ColorScheme,
+    shape: Shape,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Surface(
+        modifier = modifier,
+        color = scheme.surface,
+        // The frame follows the shape ramp, otherwise the corner controls change
+        // nothing the user can see.
+        shape = shape,
+        border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.5f)),
+        shadowElevation = 8.dp
+    ) { content() }
+}
+
+
+/**
+ * The mock's screen contents, drawn at a fixed [MOCK_W] x [MOCK_H] and scaled by
+ * the caller. Everything here comes from the same [Personalization] state as the
+ * real UI, so the preview never lies about what a setting does.
+ */
+@Composable
+private fun MockScreen(
+    scheme: ColorScheme,
+    personalization: Personalization,
+    isBannerEnabled: Boolean,
+    isBlurEnabled: Boolean,
+    gradientAlpha: Float,
+    customBannerUri: String?,
+    isCollapsed: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    BoxWithConstraints(modifier = modifier) {
+        // Fit both axes: scaling by width alone overflowed the slot vertically and
+        // cropped the bottom rows -- the navbar -- away.
+        val fit = minOf(maxWidth / MOCK_W, maxHeight / MOCK_H)
+        // Clamp to half the widget's own height: past that a rectangle IS a circle.
+        val k = personalization.cornerMultiplier
+        val mediumShape = RoundedCornerShape((12.dp * k).coerceAtMost(27.5.dp))
+        val largeShape = RoundedCornerShape((16.dp * k).coerceAtMost(52.dp))
+        Column(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .width(MOCK_W)
+                .height(MOCK_H)
+                .graphicsLayer(
+                    scaleX = fit,
+                    scaleY = fit,
+                    transformOrigin = TransformOrigin(0.5f, 0.5f)
+                )
+                .padding(horizontal = 8.dp, vertical = if (isCollapsed) 2.dp else 9.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = scheme.onSurface,
+                    modifier = Modifier.padding(start = 2.dp)
+                )
+            }
+
+            // The banner sits exactly where Home's does: below the app name,
+            // filling the width, with the status/pid pills at the bottom start.
+            BannerGradientPreview(
                 gradientAlpha = gradientAlpha,
                 customBannerUri = customBannerUri,
-                detail = detail,
-                focusTop = focusTop,
-                personalization = personalization,
-                onClick = onToggle,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp)
+                isBannerEnabled = isBannerEnabled,
+                bannerShape = personalization.bannerShape,
+                modifier = Modifier.height(76.dp)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    modifier = Modifier.weight(1f).height(55.dp),
+                    color = scheme.secondaryContainer,
+                    shape = mediumShape
+                ) {}
+
+                Surface(
+                    modifier = Modifier.weight(1f).height(55.dp),
+                    color = scheme.surfaceColorAtElevation(1.dp),
+                    shape = mediumShape
+                ) {}
+            }
+
+            Surface(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                color = scheme.surfaceColorAtElevation(1.dp),
+                shape = largeShape
+            ) {}
+
+            NavBarMock(
+                navStyle = personalization.navStyle,
+                navShape = personalization.navShape,
+                labelMode = personalization.navLabels,
+                isBlurEnabled = isBlurEnabled,
+                colorScheme = scheme
             )
         }
     }
@@ -1171,169 +1348,139 @@ private fun BannerGradientPreview(
     }
 }
 
+/**
+ * The scheme the mock draws with, including the same personalization transforms the
+ * real theme applies, so the preview cannot disagree with what ships.
+ */
 @Composable
-private fun ThemePreviewCard(
+private fun mockColorScheme(
     keyColor: Int,
-    colorSpec: ColorSpec.SpecVersion,
+    colorSpec: ColorEngine,
     isDark: Boolean,
     isAmoled: Boolean,
-    isLandscape: Boolean,
-    isBannerEnabled: Boolean = true,
-    gradientAlpha: Float = 1f,
-    customBannerUri: String? = null,
-    detail: Float = 1f,
-    focusTop: Boolean = false,
-    personalization: Personalization = Personalization(),
-    onClick: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
-) {
+    personalization: Personalization
+): ColorScheme {
     val context = LocalContext.current
-    
-    val targetColorScheme = if (keyColor == 0) {
-        val baseScheme = when {
+    val target = if (keyColor == 0) {
+        val base = when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
                 if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            else ->
-                if (isDark) darkColorScheme() else expressiveLightColorScheme()
+            else -> if (isDark) darkColorScheme() else expressiveLightColorScheme()
         }
         rememberDynamicColorScheme(
-            seedColor = baseScheme.primary,
+            seedColor = base.primary,
             isDark = isDark,
             isAmoled = isAmoled,
-            specVersion = colorSpec,
-            primary = baseScheme.primary,
-            secondary = baseScheme.secondary,
-            tertiary = baseScheme.tertiary,
-            neutral = baseScheme.surface,
-            neutralVariant = baseScheme.surfaceVariant,
-            error = baseScheme.error
+            specVersion = colorSpec.librarySpec,
+            primary = base.primary,
+            secondary = base.secondary,
+            tertiary = base.tertiary,
+            neutral = base.surface,
+            neutralVariant = base.surfaceVariant,
+            error = base.error
         )
     } else {
         rememberDynamicColorScheme(
-            seedColor = Color(keyColor), 
-            isDark = isDark, 
+            seedColor = Color(keyColor),
+            isDark = isDark,
             isAmoled = isAmoled,
-            specVersion = colorSpec
+            specVersion = colorSpec.librarySpec
         )
     }
-
-    // The mock has to run the same personalization transform as the real theme,
-    // otherwise the preview lies about exactly the settings the user is changing.
-    val colorScheme = animateColorSchemeAsState(
-        targetColorScheme = targetColorScheme
+    return animateColorSchemeAsState(
+        target
             .withAccentIntensity(personalization.accentIntensity)
             .withContentContrast(personalization.contentContrast)
     )
+}
+
+/**
+ * The mock's navigation bar, drawn from the same [Personalization] state as the real
+ * one so the preview never lies about the bar the user is configuring. A pinned bar
+ * has no corners and no pill background; a floating one follows [navShape], and the
+ * blur control shows through as a translucent surface exactly as it does on device.
+ */
+@Composable
+private fun NavBarMock(
+    navStyle: NavStyle,
+    navShape: NavShape,
+    labelMode: NavLabelMode,
+    isBlurEnabled: Boolean,
+    colorScheme: ColorScheme,
+    modifier: Modifier = Modifier
+) {
+    val pinned = navStyle == NavStyle.Pinned
+    val accent = colorScheme.primary
+    val muted = colorScheme.onSurfaceVariant
+    val radius = if (pinned) 0.dp else (14.dp * (navShape.radiusFraction / 0.5f).coerceIn(0f, 2f)).coerceAtMost(8.dp)
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp), 
-        contentAlignment = Alignment.Center
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = if (pinned) Alignment.Center else Alignment.Center
     ) {
         Surface(
-            modifier = (modifier
-                // The mock keeps its own aspect ratio and is scaled to fit, rather than
-                // deriving height from width -- otherwise collapsing the header changes nothing
-                // about the card and it overflows the pinned slot.
-                .then(
-                    if (isLandscape) Modifier.fillMaxWidth(0.85f)
-                    else Modifier.fillMaxSize()
-                )
-                .let { m -> if (onClick != null) m.clickable { onClick() } else m }),
-            color = colorScheme.surface,
-            shape = RoundedCornerShape(26.dp),
-            border = BorderStroke(1.dp, color = colorScheme.outlineVariant.copy(alpha = 0.5f)),
-            shadowElevation = 8.dp
+            modifier = Modifier
+                .then(if (pinned) Modifier.fillMaxWidth() else Modifier.width(150.dp))
+                .clip(RoundedCornerShape(radius)),
+            // Blur is a translucency here: the mock has nothing behind it to blur,
+            // so it shows the wash that Haze produces rather than faking a blur.
+            color = when {
+                pinned -> colorScheme.surfaceContainerHigh
+                isBlurEnabled -> colorScheme.surfaceContainer.copy(alpha = 0.4f)
+                else -> colorScheme.surfaceContainer
+            },
+            border = if (isBlurEnabled && !pinned)
+                BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.4f)) else null
         ) {
-            val detailAlpha = detail.coerceIn(0f, 1f)
-            // The mock is drawn at its natural 0.48 aspect and scaled to fit the card, so a
-            // collapsed (square) card shows the whole mock smaller instead of a stretched crop.
-            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                // focusTop frames the banner instead of the whole screen: the mock scales past
-                // the card and slides down so the banner -- which lives in the upper half -- is
-                // what fills the frame. Only the drawing moves; the card's own bounds do not.
-                val zoom by animateFloatAsState(
-                    targetValue = if (focusTop) FOCUS_ZOOM else 1f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMediumLow
-                    ),
-                    label = "previewZoom"
-                )
-                // Scale by WIDTH and anchor the origin at top-center: a centre-origin scale grows
-                // past the card's top edge and silently crops the mock's own header off, which is
-                // what made widgets vanish in the expanded state.
-                val fit = maxWidth / MOCK_W * zoom
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .width(MOCK_W)
-                        .height(MOCK_H)
-                        .graphicsLayer(
-                            scaleX = fit,
-                            scaleY = fit,
-                            transformOrigin = TransformOrigin(0.5f, 0f)
-                        )
-                        .padding(horizontal = 12.dp, vertical = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        stringResource(R.string.app_name), 
-                        style = MaterialTheme.typography.labelMedium, 
-                        fontWeight = FontWeight.Bold, 
-                        color = colorScheme.onSurface,
-                        modifier = Modifier.padding(start = 4.dp)
-                    )
-                }
-
-                // The banner sits exactly where Home's does: below the app name, filling the width,
-                // with the status/pid pills overlaid at the bottom start. When the banner image is
-                // off, Home shows a compact secondaryContainer row instead, and so does this.
-                BannerGradientPreview(
-                    gradientAlpha = gradientAlpha,
-                    customBannerUri = customBannerUri,
-                    isBannerEnabled = isBannerEnabled,
-                    bannerShape = personalization.bannerShape,
-                    modifier = Modifier.height(86.dp)
-                )
-
-                // The lower mock blocks shrink and fade with `detail` instead of being cropped:
-                // at collapsed height the card still reads as the same screen, just zoomed out.
-                if (detailAlpha > 0.01f) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = if (pinned) 8.dp else 6.dp, vertical = 5.dp),
+                horizontalArrangement = Arrangement.spacedBy(if (pinned) 0.dp else 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                repeat(4) { index ->
+                    val selected = index == 1
+                    // SelectedOnly is the shipped behaviour, so the mock shows the
+                    // label on one tab only and the icons on the rest.
+                    val showLabel = when (labelMode) {
+                        NavLabelMode.Always -> true
+                        NavLabelMode.SelectedOnly -> selected
+                        NavLabelMode.Never -> false
+                    }
                     Row(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .graphicsLayer { alpha = detailAlpha },
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            .then(
+                                if (selected && !pinned) Modifier
+                                    .background(accent, RoundedCornerShape(percent = 50))
+                                    .padding(horizontal = 6.dp, vertical = 3.dp)
+                                else Modifier
+                            )
+                            .weight(1f),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Surface(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(55.dp * detailAlpha),
-                            color = colorScheme.secondaryContainer,
-                            shape = RoundedCornerShape(16.dp)
-                        ) {}
-
-                        Surface(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(55.dp * detailAlpha),
-                            color = colorScheme.surfaceColorAtElevation(1.dp),
-                            shape = RoundedCornerShape(16.dp)
-                        ) {}
+                        Box(
+                            Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    // A pinned bar carries selection with tint alone.
+                                    if (selected) accent
+                                    else muted.copy(alpha = if (pinned) 1f else 0.55f)
+                                )
+                        )
+                        if (showLabel) {
+                            Spacer(Modifier.width(3.dp))
+                            Text(
+                                text = stringResource(MOCK_NAV_LABELS[index]),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (selected && !pinned) colorScheme.onPrimary else muted,
+                                maxLines = 1
+                            )
+                        }
                     }
-
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(110.dp * detailAlpha)
-                            .graphicsLayer { alpha = detailAlpha },
-                        color = colorScheme.surfaceColorAtElevation(1.dp),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {}
-                }
                 }
             }
         }
@@ -1345,7 +1492,7 @@ private fun ColorButton(
     color: Color,
     isSelected: Boolean,
     isDark: Boolean,
-    colorSpec: ColorSpec.SpecVersion,
+    colorSpec: ColorEngine,
     schemeCache: SnapshotStateMap<Int, ColorScheme>,
     onClick: () -> Unit
 ) {
@@ -1371,7 +1518,7 @@ private fun ColorButton(
             rememberDynamicColorScheme(
                 seedColor = baseScheme.primary,
                 isDark = isDark,
-                specVersion = colorSpec,
+                specVersion = colorSpec.librarySpec,
                 primary = baseScheme.primary,
                 secondary = baseScheme.secondary,
                 tertiary = baseScheme.tertiary,
@@ -1385,7 +1532,7 @@ private fun ColorButton(
             rememberDynamicColorScheme(
                 seedColor = color,
                 isDark = isDark,
-                specVersion = colorSpec
+                specVersion = colorSpec.librarySpec
             )
         }
     }

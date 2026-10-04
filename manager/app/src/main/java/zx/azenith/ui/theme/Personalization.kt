@@ -105,7 +105,12 @@ data class Personalization(
     val cornerBoost: Float = 0f,
     val contentContrast: Boolean = false,
     val accentIntensity: AccentIntensity = AccentIntensity.Balanced,
-    val bannerShape: BannerShape = BannerShape.Rounded
+    val bannerShape: BannerShape = BannerShape.Rounded,
+    val navStyle: NavStyle = NavStyle.Floating,
+    val navShape: NavShape = NavShape.Rounded,
+    // SelectedOnly is the shipped behaviour: the pill interpolates its label open
+    // with the swipe and every unselected tab shows the icon alone.
+    val navLabels: NavLabelMode = NavLabelMode.SelectedOnly
 ) {
     /**
      * The M3 shape ramp. Two independent knobs compose: [ShapeScale] picks the
@@ -133,6 +138,11 @@ data class Personalization(
     val isStockShape: Boolean
         get() = shapeScale == ShapeScale.Medium && cornerBoost == 0f
 
+    /** Corner scale of the extraLarge ramp step, exposed so a preview can keep its
+     *  corners proportional while it shrinks. */
+    val cornerMultiplier: Float
+        get() = shapeScaleMultiplier * (1f + cornerBoost)
+
     private val shapeScaleMultiplier: Float
         get() = when (shapeScale) {
             ShapeScale.ExtraSmall -> 0.15f
@@ -158,6 +168,9 @@ data class Personalization(
         const val PREF_CONTRAST = "pers_content_contrast"
         const val PREF_ACCENT = "pers_accent_intensity"
         const val PREF_BANNER_SHAPE = "pers_banner_shape"
+        const val PREF_NAV_STYLE = "pers_nav_style"
+        const val PREF_NAV_SHAPE = "pers_nav_shape"
+        const val PREF_NAV_LABELS = "pers_nav_labels"
 
         fun read(context: Context): Personalization {
             val p = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -176,6 +189,15 @@ data class Personalization(
                 ),
                 bannerShape = BannerShape.fromValue(
                     p.getString(PREF_BANNER_SHAPE, null)?.toIntOrNull() ?: BannerShape.Rounded.ordinal
+                ),
+                navStyle = NavStyle.fromValue(
+                    p.getString(PREF_NAV_STYLE, null)?.toIntOrNull() ?: NavStyle.Floating.ordinal
+                ),
+                navShape = NavShape.fromValue(
+                    p.getString(PREF_NAV_SHAPE, null)?.toIntOrNull() ?: NavShape.Rounded.ordinal
+                ),
+                navLabels = NavLabelMode.fromValue(
+                    p.getString(PREF_NAV_LABELS, null)?.toIntOrNull() ?: NavLabelMode.SelectedOnly.ordinal
                 )
             )
         }
@@ -362,3 +384,48 @@ private fun <T> FiniteAnimationSpec<T>.stretched(factor: Float): FiniteAnimation
 
         else -> this
     }
+
+
+/**
+ * How the navigation bar is presented.
+ *
+ * [Pinned] is the pre-M3 bar: full width, edge to edge, icons only.
+ * [Floating] is the current pill that floats clear of the screen edges.
+ * Surfaced in the UI as one "Floating Navigation Bar" toggle, so these two are
+ * the only states worth carrying.
+ */
+enum class NavStyle(val labelRes: Int) {
+    Floating(R.string.nav_style_floating),
+    Pinned(R.string.nav_style_pinned);
+
+    companion object {
+        fun fromValue(value: Int): NavStyle = entries.getOrElse(value) { Floating }
+    }
+}
+
+/**
+ * Corner treatment for the navigation bar surface. Percent-based so a fully
+ * rounded bar stays a capsule at any bar height, which a fixed dp radius cannot
+ * guarantee once the user changes [NavStyle].
+ */
+enum class NavShape(val labelRes: Int, val radiusFraction: Float) {
+    Square(R.string.nav_shape_square, 0f),
+    Soft(R.string.nav_shape_soft, 0.30f),
+    Rounded(R.string.nav_shape_rounded, 0.50f),
+    Full(R.string.nav_shape_full, 1f);
+
+    companion object {
+        fun fromValue(value: Int): NavShape = entries.getOrElse(value) { Rounded }
+    }
+}
+
+/** Whether the tab labels are drawn at all. */
+enum class NavLabelMode(val labelRes: Int) {
+    Always(R.string.nav_label_always),
+    SelectedOnly(R.string.nav_label_selected),
+    Never(R.string.nav_label_never);
+
+    companion object {
+        fun fromValue(value: Int): NavLabelMode = entries.getOrElse(value) { SelectedOnly }
+    }
+}

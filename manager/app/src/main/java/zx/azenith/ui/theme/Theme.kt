@@ -145,7 +145,7 @@ enum class ColorMode(val value: Int) {
     }
 }
 
-data class AppSettings(val colorMode: ColorMode, val keyColor: Int, val colorSpec: ColorSpec.SpecVersion)
+data class AppSettings(val colorMode: ColorMode, val keyColor: Int, val colorSpec: ColorEngine)
 
 object ThemeController {
     fun getAppSettings(context: Context): AppSettings {
@@ -155,12 +155,7 @@ object ThemeController {
         )
         val keyColor = prefs.getInt("key_color", 0) 
         
-        val colorSpecStr = prefs.getString("color_spec", "DEFAULT")
-        val colorSpec = try {
-            ColorSpec.SpecVersion.valueOf(colorSpecStr ?: "DEFAULT")
-        } catch (_: Exception) {
-            ColorSpec.SpecVersion.entries.firstOrNull() ?: error("Fallback SpecVersion failed")
-        }
+        val colorSpec = ColorEngine.fromPersisted(prefs.getString("color_spec", null))
         
         return AppSettings(colorMode, keyColor, colorSpec)
     }
@@ -193,7 +188,7 @@ fun AZenithTheme(
     val darkTheme = themeState.colorMode.getDarkThemeValue(systemDarkTheme)
     val amoledMode = themeState.colorMode == ColorMode.DARKAMOLED
     val isDynamic = themeState.keyColor == 0
-    val colorSpec = themeState.colorSpec
+    val colorSpec = themeState.colorSpec.librarySpec
 
     val colorScheme = if (isDynamic) {
         val baseScheme = when {

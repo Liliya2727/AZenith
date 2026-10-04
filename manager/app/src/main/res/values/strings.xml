@@ -433,4 +433,23 @@
     <string name="pers_banner_square">Square</string>
     <string name="pers_banner_rounded">Rounded</string>
     <string name="pers_banner_pill">Pill</string>
+    <string name="pers_navbar">Navigation bar</string>
+    <string name="pers_navbar_summary">How the bar sits on screen and how it is drawn</string>
+    <string name="nav_style_floating">Floating pill</string>
+    <string name="pers_nav_floating">Floating Navigation Bar</string>
+    <string name="pers_nav_floating_on">Floating pill clear of the screen edges</string>
+    <string name="pers_nav_floating_off">Classic bar, pinned edge to edge, icons only</string>
+    <string name="nav_style_pinned">Pinned</string>
+    <string name="pers_nav_shape">Bar corners</string>
+    <string name="nav_shape_square">Square</string>
+    <string name="nav_shape_soft">Soft</string>
+    <string name="nav_shape_rounded">Rounded</string>
+    <string name="nav_shape_full">Full</string>
+    <string name="pers_nav_labels">Tab labels</string>
+    <string name="nav_label_always">Always</string>
+    <string name="nav_label_selected">Selected only</string>
+    <string name="nav_label_never">Never</string>
+    <string name="nav_style_preview_pinned">Pinned bar, icons only, edge to edge</string>
+    <string name="nav_style_preview_floating">Floating pill clear of the screen edges</string>
+    <string name="spec_material_expressive_2026">Material Expressive 2026</string>
 </resources>

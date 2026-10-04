@@ -93,6 +93,11 @@ import zx.azenith.ui.mainscreens.*
 import zx.azenith.ui.subscreens.*
 import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.util.*
+import zx.azenith.ui.theme.NavLabelMode
+import zx.azenith.ui.theme.NavShape
+import zx.azenith.ui.theme.NavStyle
+import zx.azenith.ui.theme.currentPersonalization
+import androidx.compose.ui.graphics.RectangleShape
 
 
 class MainActivity : ComponentActivity() {
@@ -561,6 +566,9 @@ fun MainScreen(fromTileType: String? = null) {
                         pagerState = pagerState,
                         isBlurEnabled = isBlurEnabled,
                         hazeState = hazeState,
+                        navStyle = currentPersonalization().navStyle,
+                        navShape = currentPersonalization().navShape,
+                        navLabels = currentPersonalization().navLabels,
                         modifier = Modifier.align(Alignment.BottomCenter),
                         onItemSelected = { route ->
                             val targetIndex = pagerRoutes.indexOf(route)
@@ -677,29 +685,49 @@ fun BottomNavBar(
     modifier: Modifier = Modifier,
     isBlurEnabled: Boolean = false,
     hazeState: HazeState? = null,
-    pagerState: PagerState? = null
+    pagerState: PagerState? = null,
+    navStyle: NavStyle = NavStyle.Floating,
+    navShape: NavShape = NavShape.Rounded,
+    navLabels: NavLabelMode = NavLabelMode.SelectedOnly
 ) {
+    val pinned = navStyle == NavStyle.Pinned
+    // Percent-based so Full stays a capsule at any bar height; a fixed dp radius
+    // cannot, because the height differs between Pinned and the other two.
+    // A pinned bar is flush with the window edges, so the corner choice cannot
+    // apply to it; only the floating bar reads navShape.
+    val barRadius = if (pinned) RectangleShape
+        else RoundedCornerShape(percent = (navShape.radiusFraction * 100).toInt())
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.navigationBars)
-            .padding(horizontal = 26.dp, vertical = 20.dp),
+            // Pinned is edge to edge; the other two keep the floating margin.
+            .padding(horizontal = if (pinned) 0.dp else 26.dp, vertical = if (pinned) 0.dp else 20.dp),
         contentAlignment = Alignment.Center
     ) {
         Surface(
             modifier = Modifier
-                .widthIn(max = 350.dp)
+                .widthIn(max = if (pinned) Dp.Unspecified else 350.dp)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(28.dp)) 
+                .clip(barRadius)
                 .then(if (isBlurEnabled && hazeState != null) Modifier.hazeBlur(
                                 input = HazeInput.Sources(hazeState),
                                 style = HazeBlurStyle.Material3(
                                     containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
                                 ) { blurRadius(24.dp) }
                             ) else Modifier),
-            shape = RoundedCornerShape(28.dp),
-            color = if (isBlurEnabled) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer,
-            shadowElevation = if (isBlurEnabled) 0.dp else 8.dp
+            shape = barRadius,
+            // A pinned bar sits flush against the page, so it needs a surface one
+            // step up from the content behind it or the two run together.
+            color = when {
+                isBlurEnabled -> Color.Transparent
+                pinned -> MaterialTheme.colorScheme.surfaceContainerHigh
+                else -> MaterialTheme.colorScheme.surfaceContainer
+            },
+            // A pinned bar sits flush with the window rather than floating over the
+            // page, so it needs no drop shadow; the others keep theirs to lift off.
+            shadowElevation = if (isBlurEnabled || pinned) 0.dp else 8.dp
         ) {
             // Measured label widths, so the selected pill can interpolate its
             // width open and closed with the swipe instead of switching between
@@ -720,8 +748,11 @@ fun BottomNavBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                    .padding(
+                        horizontal = if (pinned) 0.dp else 12.dp,
+                        vertical = if (pinned) 0.dp else 10.dp
+                    ),
+                horizontalArrangement = Arrangement.spacedBy(if (pinned) 0.dp else 12.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 items.forEachIndexed { index, item ->
@@ -743,6 +774,9 @@ fun BottomNavBar(
                         selectionProgress = progress,
                         labelWidth = labelWidths[index] + 5.dp,
                         isBlurEnabled = isBlurEnabled,
+                        labelMode = navLabels,
+                        isPinned = pinned,
+                        modifier = if (pinned) Modifier.weight(1f) else Modifier,
                         // While the pager is being dragged the target changes
                         // every frame, so the tween would restart on each one
                         // and never reach its end value. Snap to the drag instead
@@ -763,6 +797,8 @@ private fun NavPill(
     selectionProgress: Float,
     labelWidth: Dp,
     isBlurEnabled: Boolean = false,
+    labelMode: NavLabelMode = NavLabelMode.SelectedOnly,
+    isPinned: Boolean = false,
     animationSpec: FiniteAnimationSpec<Color> = NAV_PILL_SPEC,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -795,7 +831,7 @@ private fun NavPill(
     // settles past its target and eases back, which is what gives the tab switch its
     // M3 bounce. The press spring above is separate so the two do not fight.
     val selectionScale by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = 1f + 0.10f * progress,
+        targetValue = if (isPinned) 1f else 1f + 0.10f * progress,
         animationSpec = androidx.compose.animation.core.spring(
             dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
             stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
@@ -804,20 +840,23 @@ private fun NavPill(
     )
 
     val bgColor by animateColorAsState(
-        targetValue = if (isBlurEnabled) {
-            if (isSelected) primary.copy(alpha = 0.25f) else unselectedBg
-        } else {
-            if (isSelected) primary else unselectedBg
+        targetValue = when {
+            // The classic bar has no pill at all: selection is carried by the
+            // icon tint alone, which is what made the old bar read as a navbar.
+            isPinned -> Color.Transparent
+            isBlurEnabled -> if (isSelected) primary.copy(alpha = 0.25f) else unselectedBg
+            else -> if (isSelected) primary else unselectedBg
         },
         animationSpec = animationSpec,
         label = "bgColor"
     )
 
     val contentColor by animateColorAsState(
-        targetValue = if (isSelected) {
-            if (isBlurEnabled) primary else onPrimary
-        } else {
-            onSurfaceVariant
+        targetValue = when {
+            isPinned && isSelected -> primary
+            isPinned -> onSurfaceVariant
+            isSelected -> if (isBlurEnabled) primary else onPrimary
+            else -> onSurfaceVariant
         },
         animationSpec = animationSpec,
         label = "contentColor"
@@ -831,7 +870,7 @@ private fun NavPill(
     Row(
         modifier = modifier
             .scale(scale * selectionScale)
-            .height(48.dp)
+            .height(if (isPinned) 56.dp else 48.dp)
             .defaultMinSize(minWidth = 48.dp)
             .clip(shape)
             .background(bgColor)
@@ -855,9 +894,22 @@ private fun NavPill(
         // swipe, instead of AnimatedVisibility switching it on only once the
         // selection flipped. Clipping to the scaled width (and zero width when
         // unselected) prevents layout changes from stretching icons.
+        // Always lays the label out for every tab. SelectedOnly is the shipped
+        // behaviour, where it is interpolated open with the swipe. Never collapses
+        // the pill to the icon alone.
+        val labelFraction = when {
+            // A classic bar is icons only by definition; letting the selected
+            // label open is what made pinned read as a wide floating pill.
+            isPinned -> 0f
+            else -> when (labelMode) {
+                NavLabelMode.Always -> 1f
+                NavLabelMode.SelectedOnly -> progress
+                NavLabelMode.Never -> 0f
+            }
+        }
         Box(
             modifier = Modifier
-                .width(labelWidth * progress)
+                .width(labelWidth * labelFraction)
                 .clipToBounds()
         ) {
             Text(
@@ -870,7 +922,7 @@ private fun NavPill(
                 overflow = TextOverflow.Clip,
                 modifier = Modifier
                     .padding(start = 5.dp)
-                    .alpha(progress)
+                    .alpha(labelFraction)
             )
         }
     }

@@ -45,6 +45,14 @@ import zx.azenith.ui.theme.MotionScale
 import zx.azenith.ui.theme.Personalization
 import zx.azenith.ui.theme.ShapeScale
 import zx.azenith.ui.theme.withAccentIntensity
+import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.filled.ViewAgenda
+import zx.azenith.ui.theme.NavLabelMode
+import zx.azenith.ui.theme.NavShape
+import zx.azenith.ui.theme.NavStyle
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
 
 /**
  * Shape, text size, motion and content contrast.
@@ -106,6 +114,50 @@ fun LookAndFeelSection(
             selected = pers.motionScale,
             label = { stringResource(it.labelRes) },
             onSelect = { onPersonalizationChange(pers.copy(motionScale = it)) }
+        )
+
+        LabeledControl(Icons.Filled.ViewAgenda, stringResource(R.string.pers_navbar))
+        Text(
+            stringResource(R.string.pers_navbar_summary),
+            modifier = Modifier.padding(start = 36.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        NavStyleSpecimen(pers)
+        ExpressiveSwitchItem(
+            icon = Icons.Filled.ViewAgenda,
+            title = stringResource(R.string.pers_nav_floating),
+            summary = stringResource(
+                if (pers.navStyle == NavStyle.Floating) R.string.pers_nav_floating_on
+                else R.string.pers_nav_floating_off
+            ),
+            checked = pers.navStyle == NavStyle.Floating,
+            onCheckedChange = { floating ->
+                onPersonalizationChange(
+                    pers.copy(navStyle = if (floating) NavStyle.Floating else NavStyle.Pinned)
+                )
+            }
+        )
+
+        // A pinned bar is flush with the window edges and has no corners to round,
+        // so the corner choice is only offered while the bar floats.
+        if (pers.navStyle == NavStyle.Floating) {
+            LabeledControl(Icons.Filled.RoundedCorner, stringResource(R.string.pers_nav_shape))
+            NavShapeSpecimen(pers)
+            ConnectedToggleRow(
+                options = NavShape.entries,
+                selected = pers.navShape,
+                label = { stringResource(it.labelRes) },
+                onSelect = { onPersonalizationChange(pers.copy(navShape = it)) }
+            )
+        }
+
+        LabeledControl(Icons.Filled.Label, stringResource(R.string.pers_nav_labels))
+        ConnectedToggleRow(
+            options = NavLabelMode.entries,
+            selected = pers.navLabels,
+            label = { stringResource(it.labelRes) },
+            onSelect = { onPersonalizationChange(pers.copy(navLabels = it)) }
         )
 
         LabeledControl(Icons.Filled.Palette, stringResource(R.string.pers_accent_intensity))
@@ -343,5 +395,96 @@ private fun LabeledSlider(
             steps = steps,
             modifier = Modifier.fillMaxWidth()
         )
+    }
+}
+
+/**
+ * Silhouettes of the three bar layouts at true relative width, so the choice is
+ * made by shape rather than by reading three labels.
+ */
+@Composable
+private fun NavStyleSpecimen(pers: Personalization, modifier: Modifier = Modifier) {
+    val fill = MaterialTheme.colorScheme.surfaceContainerHighest
+    val accent = MaterialTheme.colorScheme.primary
+    Row(
+        modifier = modifier.padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        NavStyle.entries.forEach { style ->
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    Modifier
+                        .width(86.dp)
+                        .height(34.dp)
+                        .clip(
+                            RoundedCornerShape(
+                                percent = when {
+                                    style == NavStyle.Pinned -> 0
+                                    else -> (pers.navShape.radiusFraction * 100).toInt()
+                                }
+                            )
+                        )
+                        .background(fill)
+                        .border(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant,
+                            RoundedCornerShape(
+                                percent = when {
+                                    style == NavStyle.Pinned -> 0
+                                    else -> (pers.navShape.radiusFraction * 100).toInt()
+                                }
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Pinned shows four evenly spread icon dots edge to edge; the
+                    // others show one selected pill centred among them.
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(if (style == NavStyle.Pinned) 6.dp else 3.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        repeat(4) { i ->
+                            val on = if (style == NavStyle.Pinned) i == 0 else i == 1
+                            Box(
+                                Modifier
+                                    .size(9.dp)
+                                    .clip(RoundedCornerShape(percent = 50))
+                                    .background(if (on) accent else MaterialTheme.colorScheme.onSurfaceVariant)
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    stringResource(style.labelRes),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+/** The four corner treatments at the real bar proportions. */
+@Composable
+private fun NavShapeSpecimen(pers: Personalization, modifier: Modifier = Modifier) {
+    val fill = MaterialTheme.colorScheme.surfaceContainerHighest
+    Row(
+        modifier = modifier.padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        NavShape.entries.forEach { shape ->
+            Box(
+                Modifier
+                    .size(width = 52.dp, height = 30.dp)
+                    .clip(RoundedCornerShape(percent = (shape.radiusFraction * 100).toInt()))
+                    .background(fill)
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant,
+                        RoundedCornerShape(percent = (shape.radiusFraction * 100).toInt())
+                    )
+            )
+        }
     }
 }
