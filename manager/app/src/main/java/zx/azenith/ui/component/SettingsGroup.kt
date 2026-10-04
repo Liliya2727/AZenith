@@ -46,7 +46,7 @@ internal fun SettingsGroup(
     titleRes: Int,
     modifier: Modifier = Modifier,
     captionRes: Int? = null,
-    horizontalPadding: Dp = 16.dp,
+    horizontalPadding: Dp = 28.dp,
     content: @Composable () -> Unit
 ) {
     Column(

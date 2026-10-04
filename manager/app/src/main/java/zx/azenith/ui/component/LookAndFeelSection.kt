@@ -134,21 +134,7 @@ fun LookAndFeelSection(
             titleRes = R.string.pers_navbar,
             captionRes = R.string.pers_navbar_summary
         ) {
-            ExpressiveSwitchItem(
-                icon = Icons.Filled.ViewAgenda,
-                title = stringResource(R.string.pers_nav_floating),
-                summary = stringResource(
-                    if (pers.navStyle == NavStyle.Floating) R.string.pers_nav_floating_on
-                    else R.string.pers_nav_floating_off
-                ),
-                checked = pers.navStyle == NavStyle.Floating,
-                onCheckedChange = { floating ->
-                    onPersonalizationChange(
-                        pers.copy(navStyle = if (floating) NavStyle.Floating else NavStyle.Pinned)
-                    )
-                }
-            )
-
+            
             // A pinned bar is flush with the window edges and has no corners to round,
             // so the corner choice is only offered while the bar floats.
             if (pers.navStyle == NavStyle.Floating) {

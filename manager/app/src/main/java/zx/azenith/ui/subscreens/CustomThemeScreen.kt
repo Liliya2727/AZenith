@@ -619,7 +619,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     // palette is generated from, and the accent picked out of it. Intensity and
     // contrast live further down, in the Colour group inside LookAndFeelSection.
     item {
-        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+        Column {
             LookAndFeelSection(
                 pers = personalization,
                 onPersonalizationChange = onPersonalizationChange,
@@ -727,155 +727,182 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     }
 
     item {
-        Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
-            SettingsGroup(titleRes = R.string.banner) {
-                ExpressiveColumn(
-                    content = buildList {
-                        add {
-                            Column {
-                                ExpressiveSwitchItem(
-                                    icon = Icons.Outlined.Image,
-                                    title = stringResource(R.string.str_enable_banner),
-                                    checked = isBannerEnabled,
-                                    onCheckedChange = onBannerEnabledChange
-                                )
-                                
-                                AnimatedVisibility(
-                                    visible = isBannerEnabled,
-                                    enter = expandVertically(animationSpec = tween(400)) + fadeIn(animationSpec = tween(400)),
-                                    exit = shrinkVertically(animationSpec = tween(400)) + fadeOut(animationSpec = tween(400))
+        SettingsGroup(titleRes = R.string.banner) {
+            ExpressiveColumn(
+                content = buildList {
+                    add {
+                        Column {
+                            ExpressiveSwitchItem(
+                                icon = Icons.Outlined.Image,
+                                title = stringResource(R.string.str_enable_banner),
+                                checked = isBannerEnabled,
+                                onCheckedChange = onBannerEnabledChange
+                            )
+    
+                            AnimatedVisibility(
+                                visible = isBannerEnabled,
+                                enter = expandVertically(animationSpec = tween(400)) + fadeIn(animationSpec = tween(400)),
+                                exit = shrinkVertically(animationSpec = tween(400)) + fadeOut(animationSpec = tween(400))
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp) 
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
                                     ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+                                        OutlinedButton(
+                                            onClick = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp, topEnd = 0.dp, bottomEnd = 0.dp),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                            colors = ButtonDefaults.outlinedButtonColors(
+                                                contentColor = MaterialTheme.colorScheme.onSurface
+                                            )
                                         ) {
-                                            OutlinedButton(
-                                                onClick = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
-                                                modifier = Modifier.weight(1f),
-                                                shape = RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp, topEnd = 0.dp, bottomEnd = 0.dp),
-                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                                colors = ButtonDefaults.outlinedButtonColors(
-                                                    contentColor = MaterialTheme.colorScheme.onSurface
-                                                )
-                                            ) {
-                                                Icon(Icons.Filled.Image, contentDescription = null, modifier = Modifier.size(18.dp))
-                                                Spacer(Modifier.width(8.dp))
-                                                Text(stringResource(R.string.str_pick_media), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                            }
-                                            
-                                            OutlinedButton(
-                                                onClick = {
-                                                    context.clearHeaderImage()
-                                                    onBannerUpdated(null)
-                                                    coroutineScope.launch {
-                                                        snackbarHostState.showSnackbar(context.getString(R.string.str_default_banner_toast))
-                                                    }
-                                                },
-                                                modifier = Modifier.weight(1f),
-                                                shape = RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 50.dp, bottomEnd = 50.dp),
-                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                                colors = ButtonDefaults.outlinedButtonColors(
-                                                    contentColor = MaterialTheme.colorScheme.onSurface
-                                                )
-                                            ) {
-                                                Icon(Icons.Filled.Restore, contentDescription = null, modifier = Modifier.size(18.dp))
-                                                Spacer(Modifier.width(8.dp))
-                                                Text(stringResource(R.string.default_label), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                            }
+                                            Icon(Icons.Filled.Image, contentDescription = null, modifier = Modifier.size(18.dp))
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(stringResource(R.string.str_pick_media), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        }
+    
+                                        OutlinedButton(
+                                            onClick = {
+                                                context.clearHeaderImage()
+                                                onBannerUpdated(null)
+                                                coroutineScope.launch {
+                                                    snackbarHostState.showSnackbar(context.getString(R.string.str_default_banner_toast))
+                                                }
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 50.dp, bottomEnd = 50.dp),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                            colors = ButtonDefaults.outlinedButtonColors(
+                                                contentColor = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        ) {
+                                            Icon(Icons.Filled.Restore, contentDescription = null, modifier = Modifier.size(18.dp))
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(stringResource(R.string.default_label), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         }
                                     }
-                                }
-                            }
-                        }
-                    }
-                )
-
-                AnimatedVisibility(
-                    visible = isBannerEnabled,
-                    enter = expandVertically(animationSpec = tween(400)) + fadeIn(animationSpec = tween(400)),
-                    exit = shrinkVertically(animationSpec = tween(400)) + fadeOut(animationSpec = tween(400))
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            LeadingIcon(icon = Icons.Outlined.Gradient)
-                            Spacer(Modifier.width(16.dp))
-                            Text(
-                                text = stringResource(R.string.str_adjust_gradient),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        
-                        Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.str_gradient_opacity),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.str_bannergradientalpha_100_toint, (bannerGradientAlpha * 100).toInt()),
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                    IconButton(
-                                        onClick = { onBannerGradientAlphaChange(0.5f) },
-                                        modifier = Modifier.size(28.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Filled.Restore,
-                                            contentDescription = stringResource(R.string.reset),
-                                            modifier = Modifier.size(18.dp),
-                                            tint = MaterialTheme.colorScheme.primary
+    
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        LeadingIcon(icon = Icons.Outlined.Gradient)
+                                        Spacer(Modifier.width(16.dp))
+                                        Text(
+                                            text = stringResource(R.string.str_adjust_gradient),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+    
+                                    Column {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = stringResource(R.string.str_gradient_opacity),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Text(
+                                                    text = stringResource(R.string.str_bannergradientalpha_100_toint, (bannerGradientAlpha * 100).toInt()),
+                                                    style = MaterialTheme.typography.labelLarge,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                                IconButton(
+                                                    onClick = { onBannerGradientAlphaChange(0.5f) },
+                                                    modifier = Modifier.size(28.dp)
+                                                ) {
+                                                    Icon(
+                                                        Icons.Filled.Restore,
+                                                        contentDescription = stringResource(R.string.reset),
+                                                        modifier = Modifier.size(18.dp),
+                                                        tint = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        ZenithSlider(
+                                            value = bannerGradientAlpha,
+                                            onValueChange = { newValue ->
+                                                val snapped = if (newValue in 0.47f..0.53f) 0.5f else newValue
+                                                onBannerGradientAlphaChange(snapped)
+                                            },
+                                            onValueChangeFinished = {},
+                                            valueRange = 0f..1f,
+                                            modifier = Modifier.fillMaxWidth().height(40.dp)
                                         )
                                     }
                                 }
                             }
-                            ZenithSlider(
-                                value = bannerGradientAlpha,
-                                onValueChange = { newValue ->
-                                    val snappedValue = if (newValue in 0.47f..0.53f) 0.5f else newValue
-                                    onBannerGradientAlphaChange(snappedValue)
-                                },
-                                onValueChangeFinished = {},
-                                valueRange = 0f..1f,
-                                modifier = Modifier.fillMaxWidth().height(40.dp)
-                            )
+
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    LeadingIcon(icon = Icons.Filled.CropOriginal)
+                                    Spacer(Modifier.width(16.dp))
+                                    Text(
+                                        text = stringResource(R.string.pers_banner_shape),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                            
+                                Column {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.End,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = cornerLabel(personalization.bannerRadius, BANNER_CENTER),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        IconButton(
+                                            onClick = { onPersonalizationChange(personalization.copy(bannerRadius = BANNER_CENTER)) },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Filled.Restore,
+                                                contentDescription = stringResource(R.string.reset),
+                                                modifier = Modifier.size(18.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                    ZenithSlider(
+                                        value = personalization.bannerRadius,
+                                        onValueChange = { newValue ->
+                                            val snapped = if (kotlin.math.abs(newValue - BANNER_CENTER) < 0.03f) BANNER_CENTER else newValue
+                                            onPersonalizationChange(personalization.copy(bannerRadius = snapped))
+                                        },
+                                        onValueChangeFinished = {},
+                                        valueRange = 0f..1f,
+                                        modifier = Modifier.fillMaxWidth().height(40.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
-
-                // Corner treatment is a property of the banner, so it belongs with the
-                // banner rather than in the global shape group.
-                // A dial, not a preset row: the mock banner above already shows the
-                // real corner, so a second picture of it only duplicated what was
-                // already on screen and the row's labels did not fit.
-                LabeledSlider(
-                    icon = Icons.Filled.CropOriginal,
-                    label = stringResource(R.string.pers_banner_shape),
-                    value = personalization.bannerRadius,
-                    valueText = cornerLabel(personalization.bannerRadius, BANNER_CENTER),
-                    valueRange = 0f..1f,
-                    steps = 0,
-                    snapTo = BANNER_CENTER,
-                    onValueChange = { onPersonalizationChange(personalization.copy(bannerRadius = it)) }
-                )
-            }
+            )
         }
     }
     
@@ -899,6 +926,24 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                             summary = stringResource(R.string.str_use_scroll_animation_summary),
                             checked = useScrollAnimation,
                             onCheckedChange = onUseScrollAnimationChange
+                        )
+                    }
+                    add {
+                        ExpressiveSwitchItem(
+                            icon = Icons.Filled.ViewAgenda,
+                            title = stringResource(R.string.pers_nav_floating),
+                            summary = stringResource(
+                                if (personalization.navStyle == NavStyle.Floating) R.string.pers_nav_floating_on
+                                else R.string.pers_nav_floating_off
+                            ),
+                            checked = personalization.navStyle == NavStyle.Floating,
+                            onCheckedChange = { floating ->
+                                onPersonalizationChange(
+                                    personalization.copy(
+                                        navStyle = if (floating) NavStyle.Floating else NavStyle.Pinned
+                                    )
+                                )
+                            }
                         )
                     }
                 }
