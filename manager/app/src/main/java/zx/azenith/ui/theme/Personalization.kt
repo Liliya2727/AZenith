@@ -31,28 +31,6 @@ import zx.azenith.R
  * factor rather than an on/off because the interesting middle is "halve every
  * duration", which an on/off switch cannot express.
  */
-enum class ShapeScale(val labelRes: Int) {
-    ExtraSmall(R.string.pers_shape_extra_small),
-    Small(R.string.pers_shape_small),
-    Medium(R.string.pers_shape_medium),
-    Large(R.string.pers_shape_large),
-    ExtraLarge(R.string.pers_shape_extra_large);
-
-    companion object {
-        fun fromValue(value: Int): ShapeScale = entries.getOrElse(value) { Medium }
-    }
-}
-
-enum class MotionScale(val labelRes: Int) {
-    Full(R.string.pers_motion_full),
-    Reduced(R.string.pers_motion_reduced),
-    Minimal(R.string.pers_motion_minimal);
-
-    companion object {
-        fun fromValue(value: Int): MotionScale = entries.getOrElse(value) { Full }
-    }
-}
-
 /**
  * How far the palette is pushed from what Material You generated. Tone goes the
  * other way from the usual "vivid" slider: a dynamic scheme derived from a
@@ -79,52 +57,49 @@ enum class AccentIntensity(val labelRes: Int) {
     }
 }
 
-/** Corner treatment for the banner and other full-bleed surfaces. */
-enum class BannerShape(val labelRes: Int) {
-    Rectangular(R.string.pers_banner_square),
-    Rounded(R.string.pers_banner_rounded),
-    Pill(R.string.pers_banner_pill);
 
-    /** Corner radius as a fraction of the surface's own height. */
-    val radiusFraction: Float
-        get() = when (this) {
-            Rectangular -> 0f
-            Rounded -> 0.12f
-            Pill -> 0.5f
-        }
 
-    companion object {
-        fun fromValue(value: Int): BannerShape = entries.getOrElse(value) { Rounded }
-    }
-}
+/**
+ * Slider positions, not amounts of change.
+ *
+ * The track is a dial around the stock ramp: [SHARP_END] and [ROUND_END] are the
+ * extremes of the M3 shape scale and [CENTER] is the untouched stock ramp, so the
+ * user always has a neutral point to fall back on and both directions read the
+ * same way. Every other corner control follows the same convention -- boxed at
+ * one end, pill at the other, stock in the middle.
+ */
+private const val SHARP_END = 0f
+const val CENTER = 0.5f
+private const val ROUND_END = 1f
+
+/** Corner scale of the stock ramp, and of each end of the dial. */
+private const val CENTER_MULTIPLIER = 1f
+private const val SHARP_MULTIPLIER = 0.15f
+private const val ROUND_MULTIPLIER = 2.4f
 
 data class Personalization(
-    val shapeScale: ShapeScale = ShapeScale.Medium,
+    val roundness: Float = CENTER,
     val textScale: Float = 1f,
-    val motionScale: MotionScale = MotionScale.Full,
-    val cornerBoost: Float = 0f,
-    val contentContrast: Boolean = false,
     val accentIntensity: AccentIntensity = AccentIntensity.Balanced,
-    val bannerShape: BannerShape = BannerShape.Rounded,
+    val bannerRadius: Float = BANNER_CENTER_RADIUS,
     val navStyle: NavStyle = NavStyle.Floating,
-    val navShape: NavShape = NavShape.Rounded,
+    val navRadius: Float = NAV_CENTER_RADIUS,
     // SelectedOnly is the shipped behaviour: the pill interpolates its label open
     // with the swipe and every unselected tab shows the icon alone.
     val navLabels: NavLabelMode = NavLabelMode.SelectedOnly
 ) {
     /**
-     * The M3 shape ramp. Two independent knobs compose: [ShapeScale] picks the
-     * preset (what the toggle row sets) and [cornerBoost] is the fine trim on top
-     * (what the slider sets). Every corner derives from one multiplier so the
-     * ramp stays monotonic -- mixing per-role literals is what makes a custom
-     * shape scheme look like a mistake.
+     * The M3 shape ramp, scaled by one continuous [roundness] value.
      *
-     * At the default preset with no trim this returns the app's stock ramp, so
-     * the common case is byte-identical to having no personalization at all.
+     * One knob, not a preset plus a trim: both used to move the same multiplier,
+     * so two controls described one dimension. The mapping is linear on each side
+     * of [DEFAULT_ROUNDNESS] so the stock ramp sits exactly at the centre of the
+     * travel -- sharp and fully round are equidistant from the default, which is
+     * what makes "released near the middle snaps back to stock" feel right.
      */
     val shapes: Shapes
         get() {
-            val m = shapeScaleMultiplier * (1f + cornerBoost)
+            val m = cornerMultiplier
             return Shapes(
                 extraSmall = RoundedCornerShape(4.dp * m),
                 small = RoundedCornerShape(8.dp * m),
@@ -136,66 +111,79 @@ data class Personalization(
 
     /** True when the ramp is the stock one, so the theme can skip overriding it. */
     val isStockShape: Boolean
-        get() = shapeScale == ShapeScale.Medium && cornerBoost == 0f
+        get() = roundness == CENTER
 
     /** Corner scale of the extraLarge ramp step, exposed so a preview can keep its
      *  corners proportional while it shrinks. */
     val cornerMultiplier: Float
-        get() = shapeScaleMultiplier * (1f + cornerBoost)
-
-    private val shapeScaleMultiplier: Float
-        get() = when (shapeScale) {
-            ShapeScale.ExtraSmall -> 0.15f
-            ShapeScale.Small -> 0.5f
-            ShapeScale.Medium -> 1f
-            ShapeScale.Large -> 1.6f
-            ShapeScale.ExtraLarge -> 2.4f
+        get() {
+            val r = roundness.coerceIn(SHARP_END, ROUND_END)
+            // Distance from centre, so the stock ramp is the slider's zero point.
+            val t = 2f * kotlin.math.abs(r - CENTER)
+            val extreme = if (r < CENTER) SHARP_MULTIPLIER else ROUND_MULTIPLIER
+            return lerp(CENTER_MULTIPLIER, extreme, t)
         }
 
-    /** Duration multiplier applied to the app's expressive motion scheme. */
-    val motionFactor: Float
-        get() = when (motionScale) {
-            MotionScale.Full -> 1f
-            MotionScale.Reduced -> 1.6f
-            MotionScale.Minimal -> 2.6f
-        }
+    private fun lerp(from: Float, to: Float, t: Float): Float = from + (to - from) * t
 
     companion object {
-        const val PREF_SHAPE = "pers_shape_scale"
+        const val PREF_ROUNDNESS = "pers_roundness"
         const val PREF_TEXT = "pers_text_scale"
-        const val PREF_MOTION = "pers_motion_scale"
-        const val PREF_CORNERS = "pers_corner_boost"
-        const val PREF_CONTRAST = "pers_content_contrast"
         const val PREF_ACCENT = "pers_accent_intensity"
         const val PREF_BANNER_SHAPE = "pers_banner_shape"
         const val PREF_NAV_STYLE = "pers_nav_style"
         const val PREF_NAV_SHAPE = "pers_nav_shape"
         const val PREF_NAV_LABELS = "pers_nav_labels"
 
+        /**
+         * Reads a float that a previous build may have stored as a String.
+         *
+         * Returns [fallback] for anything that is not a finite number in range,
+         * which covers the ordinal-string case, a String that was never a number,
+         * and a value a future version wrote that this one does not understand.
+         */
+        private fun SharedPreferences.floatOr(
+            key: String,
+            fallback: Float,
+            range: ClosedFloatingPointRange<Float> = 0f..1f
+        ): Float {
+            val stored = try {
+                all[key]
+            } catch (_: ClassCastException) {
+                null
+            }
+            val value = when (stored) {
+                is Float -> stored
+                is Int -> stored.toFloat()
+                is String -> stored.toFloatOrNull()
+                is Boolean -> null
+                else -> null
+            }
+            return if (value != null && value.isFinite() && value in range) value else fallback
+        }
+
         fun read(context: Context): Personalization {
             val p = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
             return Personalization(
-                shapeScale = ShapeScale.fromValue(
-                    p.getString(PREF_SHAPE, null)?.toIntOrNull() ?: ShapeScale.Medium.ordinal
-                ),
-                textScale = p.getFloat(PREF_TEXT, 1f).coerceIn(0.85f, 1.3f),
-                motionScale = MotionScale.fromValue(
-                    p.getString(PREF_MOTION, null)?.toIntOrNull() ?: MotionScale.Full.ordinal
-                ),
-                cornerBoost = p.getFloat(PREF_CORNERS, 0f).coerceIn(0f, 0.75f),
-                contentContrast = p.getBoolean(PREF_CONTRAST, false),
+                // Older builds wrote a preset ordinal and a trim into two keys; both
+                // collapsed onto the stock ramp only when neither was set, so any
+                // migrated value that is not exactly the default is dropped rather
+                // than guessed at.
+                roundness = p.floatOr(PREF_ROUNDNESS, CENTER),
+                textScale = p.floatOr(PREF_TEXT, 1f, 0.85f..1.3f),
                 accentIntensity = AccentIntensity.fromValue(
                     p.getString(PREF_ACCENT, null)?.toIntOrNull() ?: AccentIntensity.Balanced.ordinal
                 ),
-                bannerShape = BannerShape.fromValue(
-                    p.getString(PREF_BANNER_SHAPE, null)?.toIntOrNull() ?: BannerShape.Rounded.ordinal
-                ),
+                // Banner and nav corners used to be enum ordinals written with
+                // putString, then became continuous fractions written with
+                // putFloat. getFloat casts the stored value unchecked, so an
+                // install upgrading across that change would throw on every
+                // launch; read the stored Object and coerce instead.
+                bannerRadius = p.floatOr(PREF_BANNER_SHAPE, BANNER_CENTER_RADIUS),
                 navStyle = NavStyle.fromValue(
                     p.getString(PREF_NAV_STYLE, null)?.toIntOrNull() ?: NavStyle.Floating.ordinal
                 ),
-                navShape = NavShape.fromValue(
-                    p.getString(PREF_NAV_SHAPE, null)?.toIntOrNull() ?: NavShape.Rounded.ordinal
-                ),
+                navRadius = p.floatOr(PREF_NAV_SHAPE, NAV_CENTER_RADIUS),
                 navLabels = NavLabelMode.fromValue(
                     p.getString(PREF_NAV_LABELS, null)?.toIntOrNull() ?: NavLabelMode.SelectedOnly.ordinal
                 )
@@ -221,26 +209,6 @@ fun rememberPersonalization(): Personalization {
     }
     return state.value
 }
-
-/**
- * Pushes surface-container values apart. Material You's default surface ramp
- * can read as flat next to a saturated accent; nudging the container steps and
- * the outline restores the separation without touching the accent itself, which
- * would change the palette the user explicitly picked.
- */
-fun ColorScheme.withContentContrast(enabled: Boolean): ColorScheme {
-    if (!enabled) return this
-    return copy(
-        surfaceContainer = surfaceContainer.push(0.012f),
-        surfaceContainerHigh = surfaceContainerHigh.push(0.016f),
-        surfaceContainerHighest = surfaceContainerHighest.push(0.02f),
-        surfaceContainerLow = surfaceContainerLow.push(0.008f),
-        surfaceBright = surfaceBright.push(0.02f),
-        outline = outline.push(0.08f),
-        outlineVariant = outlineVariant.push(0.06f)
-    )
-}
-
 /**
  * Moves a colour toward the opposite pole of its own scheme. Pushing luminance
  * alone would clip in wide-gamut, so the mix is done in sRGB against the colour's
@@ -334,39 +302,6 @@ private fun hslToColor(hsl: FloatArray, alpha: Float): Color {
 }
 
 /**
- * Wraps a [MotionScheme] and stretches every spec it hands out.
- *
- * MotionScheme is the single funnel for MD3 component animation specs, so
- * decorating it scales the whole app's motion from one place -- including
- * components that build their specs internally and never read a duration of
- * their own. Only duration is touched: the easing curves stay as authored,
- * because a slower curve with the wrong shape reads as sluggish rather than
- * calm.
- */
-class ScaledMotionScheme(
-    private val delegate: MotionScheme,
-    private val factor: Float
-) : MotionScheme {
-    override fun <T> defaultSpatialSpec(): FiniteAnimationSpec<T> =
-        delegate.defaultSpatialSpec<T>().stretched(factor)
-
-    override fun <T> fastSpatialSpec(): FiniteAnimationSpec<T> =
-        delegate.fastSpatialSpec<T>().stretched(factor)
-
-    override fun <T> slowSpatialSpec(): FiniteAnimationSpec<T> =
-        delegate.slowSpatialSpec<T>().stretched(factor)
-
-    override fun <T> defaultEffectsSpec(): FiniteAnimationSpec<T> =
-        delegate.defaultEffectsSpec<T>().stretched(factor)
-
-    override fun <T> fastEffectsSpec(): FiniteAnimationSpec<T> =
-        delegate.fastEffectsSpec<T>().stretched(factor)
-
-    override fun <T> slowEffectsSpec(): FiniteAnimationSpec<T> =
-        delegate.slowEffectsSpec<T>().stretched(factor)
-}
-
-/**
  * A spring carries its character in stiffness/damping, not in a duration, so
  * stretching one would need the physics re-derived. Specs that do have a
  * duration get it multiplied; springs are returned untouched, which keeps every
@@ -408,16 +343,19 @@ enum class NavStyle(val labelRes: Int) {
  * rounded bar stays a capsule at any bar height, which a fixed dp radius cannot
  * guarantee once the user changes [NavStyle].
  */
-enum class NavShape(val labelRes: Int, val radiusFraction: Float) {
-    Square(R.string.nav_shape_square, 0f),
-    Soft(R.string.nav_shape_soft, 0.30f),
-    Rounded(R.string.nav_shape_rounded, 0.50f),
-    Full(R.string.nav_shape_full, 1f);
+/**
+ * Corner radius as a fraction of the surface's own height, so a fully rounded
+ * bar stays a capsule whatever the bar's height is.
+ *
+ * Both corner sliders run the same dial as [CENTER]: boxed at one end, pill at
+ * the other, stock in the middle.
+ */
+/** The stock value each corner slider rests at, so the UI can snap to the same point. */
+const val BANNER_CENTER = 0.12f
+const val NAV_CENTER = 0.50f
 
-    companion object {
-        fun fromValue(value: Int): NavShape = entries.getOrElse(value) { Rounded }
-    }
-}
+private const val BANNER_CENTER_RADIUS = BANNER_CENTER
+private const val NAV_CENTER_RADIUS = NAV_CENTER
 
 /** Whether the tab labels are drawn at all. */
 enum class NavLabelMode(val labelRes: Int) {

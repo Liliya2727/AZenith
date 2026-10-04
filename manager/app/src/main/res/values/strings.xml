@@ -422,6 +422,12 @@
     <string name="pers_contrast_summary">Lift surface separation behind cards and lists</string>
     <string name="pers_look">Look &amp; feel</string>
     <string name="pers_look_summary">Shape, text size, motion and contrast</string>
+    <string name="pers_colour_group">Colour</string>
+    <string name="pers_shape_group">Shape &amp; size</string>
+    <string name="pers_roundness">Roundness</string>
+    <string name="pers_roundness_sharp">Sharp</string>
+    <string name="pers_roundness_default">Default</string>
+    <string name="pers_roundness_round">Round</string>
     <string name="pers_accent_intensity">Accent intensity</string>
     <string name="pers_accent_intensity_summary">How loudly the accent reads against the surfaces</string>
     <string name="pers_accent_neutral">Muted</string>
@@ -451,5 +457,4 @@
     <string name="nav_label_never">Never</string>
     <string name="nav_style_preview_pinned">Pinned bar, icons only, edge to edge</string>
     <string name="nav_style_preview_floating">Floating pill clear of the screen edges</string>
-    <string name="spec_material_expressive_2026">Material Expressive 2026</string>
-</resources>
+    </resources>

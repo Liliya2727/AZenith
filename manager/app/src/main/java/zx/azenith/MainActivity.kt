@@ -94,7 +94,6 @@ import zx.azenith.ui.subscreens.*
 import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.util.*
 import zx.azenith.ui.theme.NavLabelMode
-import zx.azenith.ui.theme.NavShape
 import zx.azenith.ui.theme.NavStyle
 import zx.azenith.ui.theme.currentPersonalization
 import androidx.compose.ui.graphics.RectangleShape
@@ -567,7 +566,7 @@ fun MainScreen(fromTileType: String? = null) {
                         isBlurEnabled = isBlurEnabled,
                         hazeState = hazeState,
                         navStyle = currentPersonalization().navStyle,
-                        navShape = currentPersonalization().navShape,
+                        navShape = currentPersonalization().navRadius,
                         navLabels = currentPersonalization().navLabels,
                         modifier = Modifier.align(Alignment.BottomCenter),
                         onItemSelected = { route ->
@@ -687,7 +686,7 @@ fun BottomNavBar(
     hazeState: HazeState? = null,
     pagerState: PagerState? = null,
     navStyle: NavStyle = NavStyle.Floating,
-    navShape: NavShape = NavShape.Rounded,
+    navShape: Float = 0.5f,
     navLabels: NavLabelMode = NavLabelMode.SelectedOnly
 ) {
     val pinned = navStyle == NavStyle.Pinned
@@ -696,7 +695,7 @@ fun BottomNavBar(
     // A pinned bar is flush with the window edges, so the corner choice cannot
     // apply to it; only the floating bar reads navShape.
     val barRadius = if (pinned) RectangleShape
-        else RoundedCornerShape(percent = (navShape.radiusFraction * 100).toInt())
+        else RoundedCornerShape(percent = (navShape * 100).toInt())
 
     Box(
         modifier = modifier

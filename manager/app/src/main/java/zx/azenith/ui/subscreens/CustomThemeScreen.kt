@@ -33,7 +33,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.updateTransition
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -58,6 +57,8 @@ import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
@@ -88,6 +89,7 @@ import com.yalantis.ucrop.UCrop
 import java.io.File
 import kotlinx.coroutines.launch
 import zx.azenith.R
+import zx.azenith.ui.theme.BANNER_CENTER
 import zx.azenith.ui.component.*
 import zx.azenith.ui.theme.ColorMode
 import zx.azenith.ui.theme.ThemeController
@@ -102,13 +104,10 @@ import zx.azenith.ui.util.setBannerGradientAlpha
 import zx.azenith.ui.util.setBannerImageEnabled
 import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.theme.Personalization
-import zx.azenith.ui.theme.BannerShape
 import zx.azenith.ui.theme.withAccentIntensity
-import zx.azenith.ui.theme.withContentContrast
 import zx.azenith.ui.component.LookAndFeelSection
 import zx.azenith.ui.theme.ColorEngine
 import zx.azenith.ui.theme.NavStyle
-import zx.azenith.ui.theme.NavShape
 import zx.azenith.ui.theme.NavLabelMode
 import androidx.compose.ui.graphics.Shape
 
@@ -117,7 +116,6 @@ import androidx.compose.ui.graphics.Shape
  * Cache key for the wallpaper-derived swatch, which has no seed colour of its
  * own. Real seeds are ARGB ints, so this cannot collide with one.
  */
-private const val DYNAMIC_KEY = 0
 
 private val keyColorOptions = listOf(
     Color(0xFFF44336).toArgb(),
@@ -180,15 +178,12 @@ fun ColorPaletteScreen(navController: NavController) {
     val persistPersonalization: (Personalization) -> Unit = { next ->
         personalization = next
         prefs.edit()
-            .putString(Personalization.PREF_SHAPE, next.shapeScale.ordinal.toString())
-            .putString(Personalization.PREF_MOTION, next.motionScale.ordinal.toString())
             .putFloat(Personalization.PREF_TEXT, next.textScale)
-            .putFloat(Personalization.PREF_CORNERS, next.cornerBoost)
-            .putBoolean(Personalization.PREF_CONTRAST, next.contentContrast)
+            .putFloat(Personalization.PREF_ROUNDNESS, next.roundness)
             .putString(Personalization.PREF_ACCENT, next.accentIntensity.ordinal.toString())
-            .putString(Personalization.PREF_BANNER_SHAPE, next.bannerShape.ordinal.toString())
+            .putFloat(Personalization.PREF_BANNER_SHAPE, next.bannerRadius)
             .putString(Personalization.PREF_NAV_STYLE, next.navStyle.ordinal.toString())
-            .putString(Personalization.PREF_NAV_SHAPE, next.navShape.ordinal.toString())
+            .putFloat(Personalization.PREF_NAV_SHAPE, next.navRadius)
             .putString(Personalization.PREF_NAV_LABELS, next.navLabels.ordinal.toString())
             .apply()
     }
@@ -572,6 +567,13 @@ MockCardFrame(
     }
 }
 
+/** Which string names each [ColorEngine] option; the enum itself stays display-free. */
+private fun specLabelRes(spec: ColorEngine): Int = when (spec) {
+    ColorEngine.MaterialYou -> R.string.spec_material_you
+    ColorEngine.MaterialExpressive -> R.string.spec_material_expressive
+
+}
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     currentColorMode: ColorMode,
@@ -601,375 +603,295 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     snackbarHostState: SnackbarHostState,
     coroutineScope: kotlinx.coroutines.CoroutineScope
 ) {
-    item {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                stringResource(R.string.str_color_specification),
-                modifier = Modifier.padding(horizontal = 12.dp),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-            
-            val specOptions = ColorEngine.entries
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
-            ) {
-                specOptions.forEachIndexed { index, spec ->
-                    ToggleButton(
-                        checked = currentColorSpec == spec,
-                        onCheckedChange = { checked ->
-                            if (checked) onColorSpecChange(spec)
-                        },
-                        modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
-                        shapes = when (index) {
-                            0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                            specOptions.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                            else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                        },
-                        colors = ToggleButtonDefaults.toggleButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
-                        )
-                    ) {
-                        Text(
-                            text = when (spec) {
-                                ColorEngine.MaterialYou -> stringResource(R.string.spec_material_you)
-                                ColorEngine.MaterialExpressive ->
-                                    stringResource(R.string.spec_material_expressive)
-                                ColorEngine.MaterialExpressive2026 ->
-                                    stringResource(R.string.spec_material_expressive_2026)
-                            },
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-            }
-        }
-    }
-    item {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                stringResource(R.string.accent_color),
-                modifier = Modifier.padding(horizontal = 28.dp),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-            
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer { alpha = 0.99f }
-                    .drawWithContent {
-                        drawContent()
-                        drawRect(
-                            brush = Brush.horizontalGradient(
-                                0.0f to Color.Transparent,
-                                0.08f to Color.Black,
-                                0.92f to Color.Black,
-                                1.0f to Color.Transparent
-                            ),
-                            blendMode = BlendMode.DstIn
-                        )
-                    },
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp)
-            ) {
-                item {
-                    ColorButton(
-                        color = Color.Unspecified,
-                        isSelected = currentKeyColor == 0,
-                        isDark = isDark,
-                        colorSpec = currentColorSpec,
-                        schemeCache = swatchSchemeCache,
-                        onClick = { onKeyColorChange(0) }
-                    )
-                }
-
-                items(keyColorOptions) { colorInt ->
-                    ColorButton(
-                        color = Color(colorInt),
-                        isSelected = currentKeyColor == colorInt,
-                        isDark = isDark,
-                        colorSpec = currentColorSpec,
-                        schemeCache = swatchSchemeCache,
-                        onClick = { onKeyColorChange(colorInt) }
-                    )
-                }
-            }
-        }
-    }
-
+    // Everything that decides *which colours* exist sits together: the spec the
+    // palette is generated from, and the accent picked out of it. Intensity and
+    // contrast live further down, in the Colour group inside LookAndFeelSection.
     item {
         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
             LookAndFeelSection(
                 pers = personalization,
-                onPersonalizationChange = onPersonalizationChange
-            )
-        }
-    }
-
-    item {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                stringResource(R.string.appearance),
-                modifier = Modifier.padding(horizontal = 12.dp),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            val options = listOf(
-                ColorMode.SYSTEM, ColorMode.LIGHT, ColorMode.DARK, ColorMode.DARKAMOLED
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
-            ) {
-                options.forEachIndexed { index, mode ->
-                    ToggleButton(
-                        checked = currentColorMode == mode,
-                        onCheckedChange = { checked ->
-                            if (checked) onColorModeChange(mode)
-                        },
-                        modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
-                        shapes = when (index) {
-                            0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                            options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                            else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                        },
-                        colors = ToggleButtonDefaults.toggleButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
-                        )
-                    ) {
-                        Icon(
-                            imageVector = when (mode) {
-                                ColorMode.SYSTEM -> Icons.Filled.Brightness4
-                                ColorMode.LIGHT -> Icons.Filled.Brightness7
-                                ColorMode.DARK -> Icons.Filled.Brightness3
-                                ColorMode.DARKAMOLED -> Icons.Filled.Brightness1
+                onPersonalizationChange = onPersonalizationChange,
+                // Colour controls live in the section's Colour group so the spec
+                // picker, the accent swatches, accent intensity and contrast read as
+                // one cluster instead of being split by the section boundary.
+                colorSpecContent = {
+                    LabeledControl(
+                        Icons.Filled.Palette,
+                        stringResource(R.string.str_color_specification)
+                    )
+                    ConnectedToggleRow(
+                        options = ColorEngine.entries,
+                        selected = currentColorSpec,
+                        label = { stringResource(specLabelRes(it)) },
+                        onSelect = onColorSpecChange,
+                        // Kept on the older elevation-derived surface rather than the
+                        // shared default: this row sits in its own group.
+                        containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+                    )
+                },
+                accentSwatchContent = {
+                    LabeledControl(Icons.Filled.Palette, stringResource(R.string.accent_color))
+                    LazyRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .graphicsLayer { alpha = 0.99f }
+                            .drawWithContent {
+                                drawContent()
+                                drawRect(
+                                    brush = Brush.horizontalGradient(
+                                        0.0f to Color.Transparent,
+                                        0.08f to Color.Black,
+                                        0.92f to Color.Black,
+                                        1.0f to Color.Transparent
+                                    ),
+                                    blendMode = BlendMode.DstIn
+                                )
                             },
-                            contentDescription = mode.name
-                        )
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        item {
+                            ColorButton(
+                                color = Color.Unspecified,
+                                isSelected = currentKeyColor == 0,
+                                isDark = isDark,
+                                colorSpec = currentColorSpec,
+                                schemeCache = swatchSchemeCache,
+                                onClick = { onKeyColorChange(0) }
+                            )
+                        }
+
+                        items(keyColorOptions) { colorInt ->
+                            ColorButton(
+                                color = Color(colorInt),
+                                isSelected = currentKeyColor == colorInt,
+                                isDark = isDark,
+                                colorSpec = currentColorSpec,
+                                schemeCache = swatchSchemeCache,
+                                onClick = { onKeyColorChange(colorInt) }
+                            )
+                        }
                     }
-                }
-            }
-        }
-    }
-    
-    item {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                stringResource(R.string.banner),
-                modifier = Modifier.padding(horizontal = 12.dp),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        ExpressiveColumn(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            content = buildList {
-                
-
-                add {
-                    Column {
-                        ExpressiveSwitchItem(
-                            icon = Icons.Outlined.Image,
-                            title = stringResource(R.string.str_enable_banner),
-                            checked = isBannerEnabled,
-                            onCheckedChange = onBannerEnabledChange
-                        )
-                        
-                        AnimatedVisibility(
-                            visible = isBannerEnabled,
-                            enter = expandVertically(animationSpec = tween(400)) + fadeIn(animationSpec = tween(400)),
-                            exit = shrinkVertically(animationSpec = tween(400)) + fadeOut(animationSpec = tween(400))
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-
-                                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp) 
+                },
+                colorModeContent = {
+                    LabeledControl(Icons.Filled.Brightness4, stringResource(R.string.appearance))
+                    val options = listOf(
+                        ColorMode.SYSTEM, ColorMode.LIGHT, ColorMode.DARK, ColorMode.DARKAMOLED
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+                    ) {
+                        options.forEachIndexed { index, mode ->
+                            ToggleButton(
+                                checked = currentColorMode == mode,
+                                onCheckedChange = { checked ->
+                                    if (checked) onColorModeChange(mode)
+                                },
+                                modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
+                                shapes = when (index) {
+                                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                    options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                                },
+                                colors = ToggleButtonDefaults.toggleButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+                                )
                             ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
-                                ) {
-                                    OutlinedButton(
-                                        onClick = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp, topEnd = 0.dp, bottomEnd = 0.dp),
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            contentColor = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    ) {
-                                        Icon(Icons.Filled.Image, contentDescription = null, modifier = Modifier.size(18.dp))
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(stringResource(R.string.str_pick_media), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    }
-                                    
-                                    OutlinedButton(
-                                        onClick = {
-                                            context.clearHeaderImage()
-                                            onBannerUpdated(null)
-                                            coroutineScope.launch {
-                                                snackbarHostState.showSnackbar(context.getString(R.string.str_default_banner_toast))
-                                            }
-                                        },
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 50.dp, bottomEnd = 50.dp),
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            contentColor = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    ) {
-                                        Icon(Icons.Filled.Restore, contentDescription = null, modifier = Modifier.size(18.dp))
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(stringResource(R.string.default_label), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    }
-                                }
+                                Icon(
+                                    imageVector = when (mode) {
+                                        ColorMode.SYSTEM -> Icons.Filled.Brightness4
+                                        ColorMode.LIGHT -> Icons.Filled.Brightness7
+                                        ColorMode.DARK -> Icons.Filled.Brightness3
+                                        ColorMode.DARKAMOLED -> Icons.Filled.Brightness1
+                                    },
+                                    contentDescription = mode.name
+                                )
                             }
                         }
                     }
                 }
-            }
-        )
-        
-        AnimatedVisibility(
-            visible = isBannerEnabled,
-            enter = expandVertically(animationSpec = tween(400)) + fadeIn(animationSpec = tween(400)),
-            exit = shrinkVertically(animationSpec = tween(400)) + fadeOut(animationSpec = tween(400))
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
+            )
         }
-        
-        ExpressiveColumn(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            content = buildList {
+    }
 
-                add {
-                    AnimatedVisibility(
-                        visible = isBannerEnabled,
-                        enter = expandVertically(animationSpec = tween(400)) + fadeIn(animationSpec = tween(400)),
-                        exit = shrinkVertically(animationSpec = tween(400)) + fadeOut(animationSpec = tween(400))
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                LeadingIcon(icon = Icons.Outlined.Gradient)
-                                Spacer(Modifier.width(16.dp))
-                                Text(
-                                    text = stringResource(R.string.str_adjust_gradient),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurface
+    item {
+        Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+            SettingsGroup(titleRes = R.string.banner) {
+                ExpressiveColumn(
+                    content = buildList {
+                        add {
+                            Column {
+                                ExpressiveSwitchItem(
+                                    icon = Icons.Outlined.Image,
+                                    title = stringResource(R.string.str_enable_banner),
+                                    checked = isBannerEnabled,
+                                    onCheckedChange = onBannerEnabledChange
                                 )
-                            }
-                            
-                            Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                
+                                AnimatedVisibility(
+                                    visible = isBannerEnabled,
+                                    enter = expandVertically(animationSpec = tween(400)) + fadeIn(animationSpec = tween(400)),
+                                    exit = shrinkVertically(animationSpec = tween(400)) + fadeOut(animationSpec = tween(400))
                                 ) {
-                                    Text(
-                                        text = stringResource(R.string.str_gradient_opacity),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp) 
                                     ) {
-                                        Text(
-                                            text = stringResource(R.string.str_bannergradientalpha_100_toint, (bannerGradientAlpha * 100).toInt()),
-                                            style = MaterialTheme.typography.labelLarge,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                        IconButton(
-                                            onClick = { onBannerGradientAlphaChange(0.5f) },
-                                            modifier = Modifier.size(28.dp)
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
                                         ) {
-                                            Icon(
-                                                Icons.Filled.Restore,
-                                                contentDescription = stringResource(R.string.reset),
-                                                modifier = Modifier.size(18.dp),
-                                                tint = MaterialTheme.colorScheme.primary
-                                            )
+                                            OutlinedButton(
+                                                onClick = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
+                                                modifier = Modifier.weight(1f),
+                                                shape = RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp, topEnd = 0.dp, bottomEnd = 0.dp),
+                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                                colors = ButtonDefaults.outlinedButtonColors(
+                                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            ) {
+                                                Icon(Icons.Filled.Image, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                Spacer(Modifier.width(8.dp))
+                                                Text(stringResource(R.string.str_pick_media), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            }
+                                            
+                                            OutlinedButton(
+                                                onClick = {
+                                                    context.clearHeaderImage()
+                                                    onBannerUpdated(null)
+                                                    coroutineScope.launch {
+                                                        snackbarHostState.showSnackbar(context.getString(R.string.str_default_banner_toast))
+                                                    }
+                                                },
+                                                modifier = Modifier.weight(1f),
+                                                shape = RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 50.dp, bottomEnd = 50.dp),
+                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                                colors = ButtonDefaults.outlinedButtonColors(
+                                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            ) {
+                                                Icon(Icons.Filled.Restore, contentDescription = null, modifier = Modifier.size(18.dp))
+                                                Spacer(Modifier.width(8.dp))
+                                                Text(stringResource(R.string.default_label), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            }
                                         }
                                     }
                                 }
-                                ZenithSlider(
-                                    value = bannerGradientAlpha,
-                                    onValueChange = { newValue ->
-                                        val snappedValue = if (newValue in 0.47f..0.53f) 0.5f else newValue
-                                        onBannerGradientAlphaChange(snappedValue)
-                                    },
-                                    onValueChangeFinished = {},
-                                    valueRange = 0f..1f,
-                                    modifier = Modifier.fillMaxWidth().height(40.dp)
-                                )
                             }
                         }
                     }
+                )
+
+                AnimatedVisibility(
+                    visible = isBannerEnabled,
+                    enter = expandVertically(animationSpec = tween(400)) + fadeIn(animationSpec = tween(400)),
+                    exit = shrinkVertically(animationSpec = tween(400)) + fadeOut(animationSpec = tween(400))
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            LeadingIcon(icon = Icons.Outlined.Gradient)
+                            Spacer(Modifier.width(16.dp))
+                            Text(
+                                text = stringResource(R.string.str_adjust_gradient),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        
+                        Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.str_gradient_opacity),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.str_bannergradientalpha_100_toint, (bannerGradientAlpha * 100).toInt()),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    IconButton(
+                                        onClick = { onBannerGradientAlphaChange(0.5f) },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Filled.Restore,
+                                            contentDescription = stringResource(R.string.reset),
+                                            modifier = Modifier.size(18.dp),
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
+                            ZenithSlider(
+                                value = bannerGradientAlpha,
+                                onValueChange = { newValue ->
+                                    val snappedValue = if (newValue in 0.47f..0.53f) 0.5f else newValue
+                                    onBannerGradientAlphaChange(snappedValue)
+                                },
+                                onValueChangeFinished = {},
+                                valueRange = 0f..1f,
+                                modifier = Modifier.fillMaxWidth().height(40.dp)
+                            )
+                        }
+                    }
                 }
+
+                // Corner treatment is a property of the banner, so it belongs with the
+                // banner rather than in the global shape group.
+                // A dial, not a preset row: the mock banner above already shows the
+                // real corner, so a second picture of it only duplicated what was
+                // already on screen and the row's labels did not fit.
+                LabeledSlider(
+                    icon = Icons.Filled.CropOriginal,
+                    label = stringResource(R.string.pers_banner_shape),
+                    value = personalization.bannerRadius,
+                    valueText = cornerLabel(personalization.bannerRadius, BANNER_CENTER),
+                    valueRange = 0f..1f,
+                    steps = 0,
+                    snapTo = BANNER_CENTER,
+                    onValueChange = { onPersonalizationChange(personalization.copy(bannerRadius = it)) }
+                )
             }
-        )
+        }
     }
     
     item {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                stringResource(R.string.str_interface),
-                modifier = Modifier.padding(horizontal = 12.dp),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary
+        SettingsGroup(titleRes = R.string.str_interface) {
+            ExpressiveColumn(
+                content = buildList {
+                    add {
+                        ExpressiveSwitchItem(
+                            icon = Icons.Filled.BlurOn,
+                            title = stringResource(R.string.str_expressive_blur),
+                            summary = stringResource(R.string.str_expressive_blur_summary),
+                            checked = isBlurEnabled,
+                            onCheckedChange = onBlurEnabledChange
+                        )
+                    }
+                    add {
+                        ExpressiveSwitchItem(
+                            icon = Icons.Filled.SwipeRight,
+                            title = stringResource(R.string.str_use_scroll_animation),
+                            summary = stringResource(R.string.str_use_scroll_animation_summary),
+                            checked = useScrollAnimation,
+                            onCheckedChange = onUseScrollAnimationChange
+                        )
+                    }
+                }
             )
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        ExpressiveColumn(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            content = buildList {
-                add {
-                    ExpressiveSwitchItem(
-                        icon = Icons.Filled.BlurOn,
-                        title = stringResource(R.string.str_expressive_blur),
-                        summary = stringResource(R.string.str_expressive_blur_summary),
-                        checked = isBlurEnabled,
-                        onCheckedChange = onBlurEnabledChange
-                    )
-                }
-                add {
-                    ExpressiveSwitchItem(
-                        icon = Icons.Filled.SwipeRight,
-                        title = stringResource(R.string.str_use_scroll_animation),
-                        summary = stringResource(R.string.str_use_scroll_animation_summary),
-                        checked = useScrollAnimation,
-                        onCheckedChange = onUseScrollAnimationChange
-                    )
-                }
-            }
-        )
     }
 }
 
@@ -982,6 +904,12 @@ private val MOCK_NAV_LABELS = intArrayOf(
 )
 private val MOCK_W = 190.dp
 private val MOCK_H = 396.dp
+
+private const val DYNAMIC_KEY = 0
+
+// Radius the mock dialog's scrim applies to the content behind it. Big enough to
+// visibly smear the banner text, small enough that the mock stays readable.
+private val MOCK_DIALOG_BLUR = 8.dp
 
 // How far the mock scales up when the card is tapped to frame the banner. 2.2x fills the
 // card width from the mock's top edge, which puts the banner dead centre in the frame.
@@ -1104,7 +1032,6 @@ private fun PinnedPreviewHeader(
             MockCardFrame(
                 scheme = scheme,
                 shape = scaledShape,
-                // Centered shrink: keep it visually centered and unchanged in corner style.
                 // The tap target is the frame itself: swiping that starts on the card's
                 // dead margins still reaches the list, while a tap on the mock expands it.
                 modifier = Modifier
@@ -1171,7 +1098,18 @@ private fun MockScreen(
         val k = personalization.cornerMultiplier
         val mediumShape = RoundedCornerShape((12.dp * k).coerceAtMost(27.5.dp))
         val largeShape = RoundedCornerShape((16.dp * k).coerceAtMost(52.dp))
-        Column(
+        // Real blur on the content the mock dialog covers, so the toggle changes
+        // something measurable instead of tinting a rectangle. Animated so the
+        // reveal reads as the dialog arriving rather than a setting flipping.
+        val blurRadius by animateDpAsState(
+            targetValue = if (isBlurEnabled) MOCK_DIALOG_BLUR else 0.dp,
+            animationSpec = spring(stiffness = Spring.StiffnessLow),
+            label = "mockDialogBlur"
+        )
+        // The blur demo needs a shared parent for the content and the dialog that
+        // covers it, so the two move together under the mock's scaling transform.
+        // Nothing about the content itself changes; only the box it sits in.
+        Box(
             modifier = Modifier
                 .align(Alignment.Center)
                 .width(MOCK_W)
@@ -1181,6 +1119,11 @@ private fun MockScreen(
                     scaleY = fit,
                     transformOrigin = TransformOrigin(0.5f, 0.5f)
                 )
+        ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(blurRadius)
                 .padding(horizontal = 8.dp, vertical = if (isCollapsed) 2.dp else 9.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -1200,7 +1143,7 @@ private fun MockScreen(
                 gradientAlpha = gradientAlpha,
                 customBannerUri = customBannerUri,
                 isBannerEnabled = isBannerEnabled,
-                bannerShape = personalization.bannerShape,
+                bannerRadius = personalization.bannerRadius,
                 modifier = Modifier.height(76.dp)
             )
 
@@ -1229,10 +1172,17 @@ private fun MockScreen(
 
             NavBarMock(
                 navStyle = personalization.navStyle,
-                navShape = personalization.navShape,
+                navShape = personalization.navRadius,
                 labelMode = personalization.navLabels,
                 isBlurEnabled = isBlurEnabled,
                 colorScheme = scheme
+            )
+        }
+
+            MockBlurDialog(
+                visible = isBlurEnabled,
+                cornerScale = k,
+                modifier = Modifier.matchParentSize()
             )
         }
     }
@@ -1243,11 +1193,11 @@ private fun BannerGradientPreview(
     gradientAlpha: Float,
     customBannerUri: String?,
     isBannerEnabled: Boolean = true,
-    bannerShape: BannerShape = BannerShape.Rounded,
+    bannerRadius: Float = 0.12f,
     modifier: Modifier = Modifier
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val bannerRadius = RoundedCornerShape(percent = (bannerShape.radiusFraction * 100).toInt())
+    val bannerShape = RoundedCornerShape(percent = (bannerRadius * 100).toInt())
 
     if (!isBannerEnabled) {
         // Mirrors BannerCard's image-off branch: a solid secondaryContainer row with a
@@ -1255,7 +1205,7 @@ private fun BannerGradientPreview(
         Surface(
             modifier = modifier.fillMaxWidth(),
             color = colorScheme.secondaryContainer,
-            shape = bannerRadius
+            shape = bannerShape
         ) {
             Row(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
@@ -1288,7 +1238,7 @@ private fun BannerGradientPreview(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(bannerRadius),
+            .clip(bannerShape),
         color = colorScheme.surfaceContainerHighest
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -1390,7 +1340,6 @@ private fun mockColorScheme(
     return animateColorSchemeAsState(
         target
             .withAccentIntensity(personalization.accentIntensity)
-            .withContentContrast(personalization.contentContrast)
     )
 }
 
@@ -1403,7 +1352,7 @@ private fun mockColorScheme(
 @Composable
 private fun NavBarMock(
     navStyle: NavStyle,
-    navShape: NavShape,
+    navShape: Float,
     labelMode: NavLabelMode,
     isBlurEnabled: Boolean,
     colorScheme: ColorScheme,
@@ -1412,7 +1361,7 @@ private fun NavBarMock(
     val pinned = navStyle == NavStyle.Pinned
     val accent = colorScheme.primary
     val muted = colorScheme.onSurfaceVariant
-    val radius = if (pinned) 0.dp else (14.dp * (navShape.radiusFraction / 0.5f).coerceIn(0f, 2f)).coerceAtMost(8.dp)
+    val radius = if (pinned) 0.dp else (14.dp * (navShape / 0.5f).coerceIn(0f, 2f)).coerceAtMost(8.dp)
 
     Box(
         modifier = modifier.fillMaxWidth(),
@@ -1480,6 +1429,123 @@ private fun NavBarMock(
                                 maxLines = 1
                             )
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Stands in for the profile picker dialog, the one place the app actually blurs.
+ *
+ * Haze needs real pixels behind it to sample, and the mock has none of its own,
+ * so the blur is applied to the mock content behind this card instead of to the
+ * card. Toggling the switch therefore scales, fades and blurs the same content
+ * the real dialog blurs, which is what makes the setting legible from the
+ * Personalization page alone.
+ */
+
+
+
+
+/**
+ * Stands in for the profile picker dialog, the one place the app actually blurs.
+ *
+ * Haze needs real pixels behind it to sample and the mock has none of its own, so
+ * the blur is applied to the mock content behind this card rather than to the
+ * card. Toggling the switch therefore scales, fades and blurs the same content
+ * the real dialog blurs, which is what makes the setting legible from the
+ * Personalization page alone.
+ */
+@Composable
+private fun MockBlurDialog(
+    visible: Boolean,
+    cornerScale: Float,
+    modifier: Modifier = Modifier
+) {
+    val scrimAlpha by animateFloatAsState(
+        targetValue = if (visible) 0.32f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "mockScrim"
+    )
+    val cardAlpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "mockCard"
+    )
+    val cardScale by animateFloatAsState(
+        targetValue = if (visible) 1f else 0.88f,
+        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+        label = "mockCardScale"
+    )
+    if (scrimAlpha == 0f && cardAlpha == 0f) return
+
+    Box(modifier) {
+        Box(
+            Modifier
+                .matchParentSize()
+                .background(Color.Black.copy(alpha = scrimAlpha))
+        )
+        Surface(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth(0.78f)
+                .alpha(cardAlpha)
+                .graphicsLayer {
+                    scaleX = cardScale
+                    scaleY = cardScale
+                },
+            // Translucent like the real dialog's blurred container: opaque would
+            // hide the blur the toggle is meant to demonstrate.
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.82f),
+            shape = RoundedCornerShape((20.dp * cornerScale).coerceAtMost(40.dp))
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Box(
+                    Modifier
+                        .size(width = 74.dp, height = 8.dp)
+                        .clip(RoundedCornerShape(percent = 50))
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                )
+                repeat(3) { index ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (index == 1) {
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+                                } else {
+                                    Color.Transparent
+                                }
+                            )
+                            .padding(horizontal = 8.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            Modifier
+                                .size(16.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (index == 1) {
+                                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                    }
+                                )
+                        )
+                        Box(
+                            Modifier
+                                .fillMaxWidth(0.5f)
+                                .height(7.dp)
+                                .clip(RoundedCornerShape(percent = 50))
+                                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
+                        )
                     }
                 }
             }

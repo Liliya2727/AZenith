@@ -222,7 +222,6 @@ fun AZenithTheme(
     val animatedColorScheme = animateColorSchemeAsState(
         targetColorScheme = colorScheme
             .withAccentIntensity(pers.accentIntensity)
-            .withContentContrast(pers.contentContrast)
     )
     
     LaunchedEffect(darkTheme) {
@@ -243,10 +242,7 @@ fun AZenithTheme(
             colorScheme = animatedColorScheme,
             typography = Typography,
             shapes = if (pers.isStockShape) ExpressiveShapes else pers.shapes,
-            motionScheme = ScaledMotionScheme(
-                delegate = MotionScheme.expressive(),
-                factor = pers.motionFactor
-            ),
+            motionScheme = MotionScheme.expressive(),
             content = content
         )
     }

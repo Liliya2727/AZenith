@@ -308,8 +308,9 @@ fun BannerCard(
     val bannerHazeState = remember { HazeState() }
     // Percent-based so Pill reads as a capsule regardless of the banner's height,
     // which a fixed dp radius cannot do once the aspect ratio changes.
-    val bannerShape = currentPersonalization().bannerShape
-    val bannerRadius = RoundedCornerShape(percent = (bannerShape.radiusFraction * 100).toInt())
+    val bannerShape = RoundedCornerShape(
+        percent = (currentPersonalization().bannerRadius * 100).toInt()
+    )
 
     val statusBgColor = if (isAlive) colorScheme.secondaryContainer else colorScheme.errorContainer
 
@@ -317,9 +318,9 @@ fun BannerCard(
 
     if (isBannerEnabled) {
         Card(
-            modifier = modifier.clip(bannerRadius)
+            modifier = modifier.clip(bannerShape)
                     .then(if (clickable) Modifier.clickable { onClick() } else Modifier),
-            shape = bannerRadius,
+            shape = bannerShape,
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Box(
