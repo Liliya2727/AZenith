@@ -46,25 +46,33 @@ internal fun SettingsGroup(
     titleRes: Int,
     modifier: Modifier = Modifier,
     captionRes: Int? = null,
-    horizontalPadding: Dp = 28.dp,
+    titlePadding: Dp = 28.dp,
+    contentPadding: Dp = 16.dp,
     content: @Composable () -> Unit
 ) {
     Column(
-        modifier = modifier.fillMaxWidth().padding(horizontal = horizontalPadding),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
             text = stringResource(titleRes),
             style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = titlePadding)
         )
         if (captionRes != null) {
             Text(
                 text = stringResource(captionRes),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = titlePadding)
             )
         }
-        content()
+        Column(
+            modifier = Modifier.padding(horizontal = contentPadding),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            content()
+        }
     }
 }
