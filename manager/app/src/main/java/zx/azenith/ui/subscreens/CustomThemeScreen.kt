@@ -38,6 +38,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -502,65 +503,76 @@ MockCardFrame(
                     customBannerUri = customBannerUri,
                     modifier = Modifier.padding(top = innerPadding.calculateTopPadding())
                 )
-
-                LazyColumn(
-                    // weight, not fillMaxSize: the header already claims its animated height,
-                    // and fillMaxSize would make the list overflow the Column instead of taking
-                    // the space that is left -- which left it with no scrollable area at all.
+                
+                Surface(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .hazePageSource(),
-                    state = lazyListState,
-                    contentPadding = PaddingValues(
-                        top = 8.dp,
-                        bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                        .padding(top = 12.dp),
+                    shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    tonalElevation = 1.dp
                 ) {
-                        settingsItems(
-                        currentColorMode = currentColorMode,
-                        currentKeyColor = currentKeyColor,
-                        currentColorSpec = currentColorSpec,
-                        swatchSchemeCache = swatchSchemeCache,
-                        isDark = isDark,
-                        isBannerEnabled = isBannerEnabled,
-                        isBlurEnabled = isBlurEnabled,
-                        bannerGradientAlpha = bannerGradientAlpha,
-                        customBannerUri = customBannerUri,
-                        isLandscape = false,
-                        prefs = prefs,
-                        onColorModeChange = onColorModeChange,
-                        onKeyColorChange = onKeyColorChange,
-                        onColorSpecChange = onColorSpecChange,
-                        onBannerEnabledChange = { 
-                            isBannerEnabled = it 
-                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { context.setBannerImageEnabled(it) }
-                        },
-                        onBannerGradientAlphaChange = {
-                            bannerGradientAlpha = it
-                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { context.setBannerGradientAlpha(it) }
-                        },
-                        onBlurEnabledChange = {
-                            isBlurEnabled = it
-                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putBoolean("expressive_blur_ui", it).commit() }
-                        },
-                        useScrollAnimation = useScrollAnimation,
-                        onUseScrollAnimationChange = {
-                            useScrollAnimation = it
-                            coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putBoolean("use_scroll_animation", it).commit() }
-                        },
-                        onBannerUpdated = { customBannerUri = it },
-                        imagePicker = imagePicker,
-                        personalization = personalization,
-                        onPersonalizationChange = { next ->
-                            personalization = next
-                            persistPersonalization(next)
-                        },
-                        context = context,
-                        snackbarHostState = snackbarHostState,
-                        coroutineScope = coroutineScope
-                    )
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        SheetHandle(onClick = { previewExpandedByTap = !previewExpandedByTap })
+        
+                        LazyColumn(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .hazePageSource(),
+                            state = lazyListState,
+                            contentPadding = PaddingValues(
+                                top = 4.dp,
+                                bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            settingsItems(
+                            currentColorMode = currentColorMode,
+                            currentKeyColor = currentKeyColor,
+                            currentColorSpec = currentColorSpec,
+                            swatchSchemeCache = swatchSchemeCache,
+                            isDark = isDark,
+                            isBannerEnabled = isBannerEnabled,
+                            isBlurEnabled = isBlurEnabled,
+                            bannerGradientAlpha = bannerGradientAlpha,
+                            customBannerUri = customBannerUri,
+                            isLandscape = false,
+                            prefs = prefs,
+                            onColorModeChange = onColorModeChange,
+                            onKeyColorChange = onKeyColorChange,
+                            onColorSpecChange = onColorSpecChange,
+                            onBannerEnabledChange = { 
+                                isBannerEnabled = it 
+                                coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { context.setBannerImageEnabled(it) }
+                            },
+                            onBannerGradientAlphaChange = {
+                                bannerGradientAlpha = it
+                                coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { context.setBannerGradientAlpha(it) }
+                            },
+                            onBlurEnabledChange = {
+                                isBlurEnabled = it
+                                coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putBoolean("expressive_blur_ui", it).commit() }
+                            },
+                            useScrollAnimation = useScrollAnimation,
+                            onUseScrollAnimationChange = {
+                                useScrollAnimation = it
+                                coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putBoolean("use_scroll_animation", it).commit() }
+                            },
+                            onBannerUpdated = { customBannerUri = it },
+                            imagePicker = imagePicker,
+                            personalization = personalization,
+                            onPersonalizationChange = { next ->
+                                personalization = next
+                                persistPersonalization(next)
+                            },
+                            context = context,
+                            snackbarHostState = snackbarHostState,
+                            coroutineScope = coroutineScope
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -913,6 +925,29 @@ private val MOCK_DIALOG_BLUR = 8.dp
 
 // How far the mock scales up when the card is tapped to frame the banner. 2.2x fills the
 // card width from the mock's top edge, which puts the banner dead centre in the frame.
+
+/** Drag-handle pill di atas sheet settings, gaya Instagram comment sheet. */
+@Composable
+private fun SheetHandle(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+            .padding(vertical = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = 36.dp, height = 4.dp)
+                .clip(RoundedCornerShape(percent = 50))
+                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+        )
+    }
+}
 
 @Composable
 fun PaletteTopAppBar(
