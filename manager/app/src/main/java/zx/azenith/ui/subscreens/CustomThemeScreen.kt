@@ -866,25 +866,35 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                 Column {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.End,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = cornerLabel(personalization.bannerRadius, BANNER_CENTER),
-                                            style = MaterialTheme.typography.labelLarge,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.primary
+                                            text = "Roundness",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
-                                        IconButton(
-                                            onClick = { onPersonalizationChange(personalization.copy(bannerRadius = BANNER_CENTER)) },
-                                            modifier = Modifier.size(28.dp)
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
-                                            Icon(
-                                                Icons.Filled.Restore,
-                                                contentDescription = stringResource(R.string.reset),
-                                                modifier = Modifier.size(18.dp),
-                                                tint = MaterialTheme.colorScheme.primary
+                                            Text(
+                                                text = cornerLabel(personalization.bannerRadius, BANNER_CENTER),
+                                                style = MaterialTheme.typography.labelLarge,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary
                                             )
+                                            IconButton(
+                                                onClick = { onPersonalizationChange(personalization.copy(bannerRadius = BANNER_CENTER)) },
+                                                modifier = Modifier.size(28.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Filled.Restore,
+                                                    contentDescription = stringResource(R.string.reset),
+                                                    modifier = Modifier.size(18.dp),
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
                                         }
                                     }
                                     ZenithSlider(
