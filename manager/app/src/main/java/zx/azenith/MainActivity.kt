@@ -250,14 +250,7 @@ fun MainScreen(fromTileType: String? = null) {
     var rootStatus by remember { mutableStateOf(false) }
     var moduleInstalled by remember { mutableStateOf(false) }
 
-    val navItems = remember {
-        listOf(
-            NavItem("home", R.string.nav_home, Icons.Rounded.Home),
-            NavItem("applist", R.string.nav_applist, Icons.Rounded.Widgets),
-            NavItem("tweaks", R.string.nav_tweaks, Icons.Rounded.SettingsInputComponent),
-            NavItem("settings", R.string.nav_settings, Icons.Rounded.Settings)
-        )
-    }
+    val navItems = remember { AZENITH_NAV_ITEMS }
     
     val pendingReboot by RebootManager.pendingReboot.collectAsState()
 
@@ -680,6 +673,17 @@ fun MainScreen(fromTileType: String? = null) {
         }
     }
 }
+
+/**
+ * The one list of tabs. Public so the Personalization preview can hand the real
+ * [BottomNavBar] the same items instead of keeping a parallel copy that drifts.
+ */
+val AZENITH_NAV_ITEMS = listOf(
+    NavItem("home", R.string.nav_home, Icons.Rounded.Home),
+    NavItem("applist", R.string.nav_applist, Icons.Rounded.Widgets),
+    NavItem("tweaks", R.string.nav_tweaks, Icons.Rounded.SettingsInputComponent),
+    NavItem("settings", R.string.nav_settings, Icons.Rounded.Settings)
+)
 
 @Composable
 fun BottomNavBar(
