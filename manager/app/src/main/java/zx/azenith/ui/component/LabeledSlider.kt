@@ -64,6 +64,10 @@ internal fun LabeledSlider(
     var dragValue by remember(value) { mutableFloatStateOf(value) }
     val shown = if (commitOnRelease) dragValue else value
     val shownText = if (commitOnRelease) valueTextOf(dragValue) else valueText
+    // A tap-to-seek reports its value and finishes within one event, before Compose
+    // recomposes, so [shown] would still hold the pre-tap value and the finish would
+    // overwrite the seek. Track the newest reported value synchronously instead.
+    val latest = remember { mutableFloatStateOf(value) }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
@@ -86,6 +90,7 @@ internal fun LabeledSlider(
         ZenithSlider(
             value = shown,
             onValueChange = { raw ->
+                latest.floatValue = raw
                 if (commitOnRelease) {
                     dragValue = raw
                 } else {
@@ -93,8 +98,8 @@ internal fun LabeledSlider(
                 }
             },
             onValueChangeFinished = {
-                val pulled = snapTo?.let { snapNear(shown, it, valueRange) }
-                    ?: shown.toTick(valueRange, steps)
+                val pulled = snapTo?.let { snapNear(latest.floatValue, it, valueRange) }
+                    ?: latest.floatValue.toTick(valueRange, steps)
                 if (commitOnRelease) dragValue = pulled
                 onValueChange(pulled)
             },
