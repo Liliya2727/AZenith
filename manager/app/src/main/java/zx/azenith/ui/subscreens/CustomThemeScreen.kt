@@ -90,6 +90,8 @@ import java.io.File
 import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.theme.BANNER_CENTER
+import zx.azenith.ui.theme.CENTER
+import zx.azenith.ui.theme.NAV_CENTER
 import zx.azenith.ui.component.*
 import zx.azenith.ui.theme.ColorMode
 import zx.azenith.ui.theme.ThemeController
@@ -697,7 +699,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                     }
                 },
                 colorModeContent = {
-                    LabeledControl(Icons.Filled.Brightness4, stringResource(R.string.appearance))
+                    LabeledControl(Icons.Filled.Brightness4, stringResource(R.string.pers_color_mode))
                     val options = listOf(
                         ColorMode.SYSTEM, ColorMode.LIGHT, ColorMode.DARK, ColorMode.DARKAMOLED
                     )
@@ -739,9 +741,83 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     }
 
     item {
-        SettingsGroup(titleRes = R.string.banner, icon = Icons.Outlined.Wallpaper) {
+        SettingsGroup(titleRes = R.string.pers_shape_group, icon = Icons.Filled.RoundedCorner) {
             ExpressiveColumn(
                 content = buildList {
+                    add {
+                        CardItem {
+                            LabeledSlider(
+                                icon = Icons.Filled.BorderAll,
+                                label = stringResource(R.string.pers_roundness),
+                                value = personalization.roundness,
+                                valueText = cornerLabel(personalization.roundness, CENTER),
+                                valueRange = 0f..1f,
+                                steps = 0,
+                                snapTo = CENTER,
+                                onValueChange = { onPersonalizationChange(personalization.copy(roundness = it)) }
+                            )
+                        }
+                    }
+                    add {
+                        CardItem {
+                            LabeledSlider(
+                                icon = Icons.Filled.FormatSize,
+                                label = stringResource(R.string.pers_text_scale),
+                                value = personalization.textScale,
+                                valueText = "${(personalization.textScale * 100).toInt()}%",
+                                valueRange = 0.85f..1.3f,
+                                steps = 8,
+                                commitOnRelease = true,
+                                valueTextOf = { "${(it * 100).toInt()}%" },
+                                onValueChange = { onPersonalizationChange(personalization.copy(textScale = it)) }
+                            )
+                        }
+                    }
+                }
+            )
+        }
+    }
+
+    item {
+        SettingsGroup(titleRes = R.string.str_interface, icon = Icons.Filled.AutoAwesome) {
+            ExpressiveColumn(
+                content = buildList {
+                    add {
+                        ExpressiveSwitchItem(
+                            icon = Icons.Filled.ViewAgenda,
+                            title = stringResource(R.string.pers_nav_floating),
+                            summary = stringResource(R.string.pers_navbar_summary),
+                            checked = personalization.navStyle == NavStyle.Floating,
+                            onCheckedChange = { onPersonalizationChange(personalization.copy(navStyle = if (it) NavStyle.Floating else NavStyle.Pinned)) }
+                        )
+                    }
+                    if (personalization.navStyle == NavStyle.Floating) {
+                        add {
+                            CardItem {
+                                LabeledSlider(
+                                    icon = Icons.Filled.HorizontalRule,
+                                    label = stringResource(R.string.pers_nav_shape),
+                                    value = personalization.navRadius,
+                                    valueText = cornerLabel(personalization.navRadius, NAV_CENTER),
+                                    valueRange = 0f..1f,
+                                    steps = 0,
+                                    snapTo = NAV_CENTER,
+                                    onValueChange = { onPersonalizationChange(personalization.copy(navRadius = it)) }
+                                )
+                            }
+                        }
+                    }
+                    add {
+                        CardItem {
+                            LabeledControl(Icons.Filled.Label, stringResource(R.string.pers_nav_labels))
+                            ConnectedToggleRow(
+                                options = NavLabelMode.entries,
+                                selected = personalization.navLabels,
+                                label = { stringResource(it.labelRes) },
+                                onSelect = { onPersonalizationChange(personalization.copy(navLabels = it)) }
+                            )
+                        }
+                    }
                     add {
                         Column {
                             ExpressiveSwitchItem(
@@ -802,7 +878,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                     }
     
                                     LabeledControl(
-                                        Icons.Outlined.Gradient,
+                                        Icons.Filled.Contrast,
                                         stringResource(R.string.str_adjust_gradient)
                                     )
     
@@ -861,7 +937,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 LabeledControl(
-                                    Icons.Outlined.CropOriginal,
+                                    Icons.Filled.CropSquare,
                                     stringResource(R.string.pers_banner_shape)
                                 )
                             
@@ -913,15 +989,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                             }
                         }
                     }
-                }
-            )
-        }
-    }
-    
-    item {
-        SettingsGroup(titleRes = R.string.str_interface, icon = Icons.Filled.AutoAwesome) {
-            ExpressiveColumn(
-                content = buildList {
                     add {
                         ExpressiveSwitchItem(
                             icon = Icons.Filled.BlurOn,
@@ -944,6 +1011,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
             )
         }
     }
+
 }
 
 /** Two sizes the mock preview can be pinned at; [PreviewSize.Expanded] is the readable one. */
