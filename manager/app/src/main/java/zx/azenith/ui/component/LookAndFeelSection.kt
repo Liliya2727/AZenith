@@ -1,53 +1,53 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package zx.azenith.ui.component
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Brightness1
-import androidx.compose.material.icons.filled.Palette
-import zx.azenith.ui.theme.AccentIntensity
+import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.filled.FormatSize
+import androidx.compose.material.icons.filled.HorizontalRule
 import androidx.compose.material.icons.filled.RoundedCorner
-import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import kotlin.math.abs
-import kotlin.math.round
 import zx.azenith.R
-import zx.azenith.ui.theme.Personalization
-import zx.azenith.ui.theme.withAccentIntensity
-import androidx.compose.material.icons.filled.Label
-import androidx.compose.material.icons.filled.ViewAgenda
+import zx.azenith.ui.theme.AccentIntensity
 import zx.azenith.ui.theme.NavLabelMode
 import zx.azenith.ui.theme.NavStyle
 import zx.azenith.ui.theme.NAV_CENTER
-import zx.azenith.ui.theme.BANNER_CENTER
+import zx.azenith.ui.theme.Personalization
 import zx.azenith.ui.theme.CENTER
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.ColumnScope
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+/**
+ * Owns the Personalization screen's information architecture.
+ *
+ * One group per question the user is asking. Colour answers "how is the theme
+ * painted". Shape answers "how big are the corners and the type". Navigation
+ * answers "how does the bar behave".
+ */
 @Composable
 fun LookAndFeelSection(
     pers: Personalization,
@@ -58,7 +58,11 @@ fun LookAndFeelSection(
     colorModeContent: (@Composable () -> Unit)? = null
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(24.dp)) {
-        SettingsGroup(titleRes = R.string.pers_colour_group) {
+        SettingsGroup(
+            titleRes = R.string.pers_colour_group,
+            icon = Icons.Filled.Palette,
+            initiallyExpanded = true
+        ) {
             colorSpecContent?.invoke()
             accentSwatchContent?.invoke()
             colorModeContent?.invoke()
@@ -67,7 +71,7 @@ fun LookAndFeelSection(
                     add {
                         CardItem {
                             LabeledSlider(
-                                icon = Icons.Filled.Palette,
+                                icon = Icons.Filled.Tune,
                                 label = stringResource(R.string.pers_accent_intensity),
                                 value = pers.accentIntensity.ordinal.toFloat(),
                                 valueText = stringResource(pers.accentIntensity.labelRes),
@@ -90,7 +94,7 @@ fun LookAndFeelSection(
             )
         }
 
-        SettingsGroup(titleRes = R.string.pers_shape_group) {
+        SettingsGroup(titleRes = R.string.pers_shape_group, icon = Icons.Filled.RoundedCorner) {
             ExpressiveColumn(
                 content = buildList {
                     add {
@@ -110,7 +114,7 @@ fun LookAndFeelSection(
                     add {
                         CardItem {
                             LabeledSlider(
-                                icon = Icons.Filled.TextFields,
+                                icon = Icons.Filled.FormatSize,
                                 label = stringResource(R.string.pers_text_scale),
                                 value = pers.textScale,
                                 valueText = "${(pers.textScale * 100).toInt()}%",
@@ -126,14 +130,25 @@ fun LookAndFeelSection(
             )
         }
 
-        SettingsGroup(titleRes = R.string.pers_navbar) {
+        SettingsGroup(titleRes = R.string.pers_navbar, icon = Icons.Filled.ViewAgenda) {
             ExpressiveColumn(
                 content = buildList {
+                    add {
+                        CardItem {
+                            LabeledControl(Icons.Filled.ViewAgenda, stringResource(R.string.pers_nav_floating))
+                            ConnectedToggleRow(
+                                options = NavStyle.entries,
+                                selected = pers.navStyle,
+                                label = { stringResource(it.labelRes) },
+                                onSelect = { onPersonalizationChange(pers.copy(navStyle = it)) }
+                            )
+                        }
+                    }
                     if (pers.navStyle == NavStyle.Floating) {
                         add {
                             CardItem {
                                 LabeledSlider(
-                                    icon = Icons.Filled.RoundedCorner,
+                                    icon = Icons.Filled.HorizontalRule,
                                     label = stringResource(R.string.pers_nav_shape),
                                     value = pers.navRadius,
                                     valueText = cornerLabel(pers.navRadius, NAV_CENTER),
@@ -147,7 +162,7 @@ fun LookAndFeelSection(
                     }
                     add {
                         CardItem {
-                            LabeledControl(Icons.Filled.Label, stringResource(R.string.pers_nav_labels))
+                            LabeledControl(Icons.AutoMirrored.Filled.Label, stringResource(R.string.pers_nav_labels))
                             ConnectedToggleRow(
                                 options = NavLabelMode.entries,
                                 selected = pers.navLabels,

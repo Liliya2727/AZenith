@@ -640,7 +640,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                 // one cluster instead of being split by the section boundary.
                 colorSpecContent = {
                     LabeledControl(
-                        Icons.Filled.Palette,
+                        Icons.Filled.Brush,
                         stringResource(R.string.str_color_specification)
                     )
                     ConnectedToggleRow(
@@ -739,7 +739,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     }
 
     item {
-        SettingsGroup(titleRes = R.string.banner) {
+        SettingsGroup(titleRes = R.string.banner, icon = Icons.Outlined.Wallpaper) {
             ExpressiveColumn(
                 content = buildList {
                     add {
@@ -801,15 +801,10 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                         }
                                     }
     
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        LeadingIcon(icon = Icons.Outlined.Gradient)
-                                        Spacer(Modifier.width(16.dp))
-                                        Text(
-                                            text = stringResource(R.string.str_adjust_gradient),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
+                                    LabeledControl(
+                                        Icons.Outlined.Gradient,
+                                        stringResource(R.string.str_adjust_gradient)
+                                    )
     
                                     Column {
                                         Row(
@@ -865,15 +860,10 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                     .padding(horizontal = 16.dp, vertical = 8.dp),
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    LeadingIcon(icon = Icons.Filled.CropOriginal)
-                                    Spacer(Modifier.width(16.dp))
-                                    Text(
-                                        text = stringResource(R.string.pers_banner_shape),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
+                                LabeledControl(
+                                    Icons.Outlined.CropOriginal,
+                                    stringResource(R.string.pers_banner_shape)
+                                )
                             
                                 Column {
                                     Row(
@@ -882,7 +872,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = "Roundness",
+                                            text = stringResource(R.string.pers_roundness),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -929,7 +919,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     }
     
     item {
-        SettingsGroup(titleRes = R.string.str_interface) {
+        SettingsGroup(titleRes = R.string.str_interface, icon = Icons.Filled.AutoAwesome) {
             ExpressiveColumn(
                 content = buildList {
                     add {
@@ -948,24 +938,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                             summary = stringResource(R.string.str_use_scroll_animation_summary),
                             checked = useScrollAnimation,
                             onCheckedChange = onUseScrollAnimationChange
-                        )
-                    }
-                    add {
-                        ExpressiveSwitchItem(
-                            icon = Icons.Filled.ViewAgenda,
-                            title = stringResource(R.string.pers_nav_floating),
-                            summary = stringResource(
-                                if (personalization.navStyle == NavStyle.Floating) R.string.pers_nav_floating_on
-                                else R.string.pers_nav_floating_off
-                            ),
-                            checked = personalization.navStyle == NavStyle.Floating,
-                            onCheckedChange = { floating ->
-                                onPersonalizationChange(
-                                    personalization.copy(
-                                        navStyle = if (floating) NavStyle.Floating else NavStyle.Pinned
-                                    )
-                                )
-                            }
                         )
                     }
                 }
