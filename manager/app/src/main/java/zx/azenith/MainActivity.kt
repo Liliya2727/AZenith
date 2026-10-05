@@ -720,7 +720,9 @@ fun BottomNavBar(
                 horizontal = when {
                     pinned -> 0.dp
                     navLabels == NavLabelMode.Never -> 26.dp
-                    else -> 12.dp
+                    // The bar itself is a fixed width, so this is only the gap
+                    // between its edge and the window edge.
+                    else -> 14.dp
                 },
                 vertical = if (pinned) 0.dp else 20.dp
             ),
@@ -731,10 +733,19 @@ fun BottomNavBar(
                 // A stacked bar needs the full cap or its labels crowd; an inline
                 // one is laid out at intrinsic width and grows past the cap when
                 // the selected label opens, which is the old expanding pill.
-                .widthIn(
-                    max = if (navLabels == NavLabelMode.Always) 350.dp else Dp.Unspecified
+                // A fixed width for the inline floating bar, not wrap-content:
+                // hugging the content meant the surface grew and shrank on every
+                // tab change, and at its widest the label left no margin at all.
+                // Pinned is edge to edge; the stacked modes divide this width.
+                .then(
+                    when {
+                        pinned -> Modifier.fillMaxWidth()
+                        navLabels == NavLabelMode.Always -> Modifier
+                            .widthIn(max = 350.dp)
+                            .fillMaxWidth()
+                        else -> Modifier.width(NAV_FLOATING_WIDTH)
+                    }
                 )
-                .fillMaxWidth()
                 .clip(barRadius)
                 .then(if (isBlurEnabled && hazeState != null) Modifier.hazeBlur(
                                 input = HazeInput.Sources(hazeState),
@@ -809,8 +820,7 @@ fun BottomNavBar(
 
             when (navEdge) {
                 NavEdge.Bottom -> Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth()
                         .padding(
                             horizontal = when {
                                 pinned -> 0.dp
@@ -939,7 +949,11 @@ private fun NavPill(
     // icon on whichever tab is selected. Always stacks instead -- an expanded
     // label on all four tabs at once is what overflowed the bar -- so it reads
     // the same on both bar styles and costs no horizontal space.
-    val stacked = labelMode == NavLabelMode.Always
+    // Pinned stacks its label under the icon for Always *and* SelectedOnly: the
+    // inline pill opens to the right, which on a full-width bar reads as one tab
+    // shoving its neighbours aside rather than as a selected item. Never stays
+    // inline and collapsed.
+    val stacked = labelMode == NavLabelMode.Always || (isPinned && labelMode == NavLabelMode.SelectedOnly)
     val labelFraction = when (labelMode) {
         NavLabelMode.Always -> 1f
         NavLabelMode.SelectedOnly -> progress
@@ -1038,3 +1052,11 @@ private fun NavPill(
  * evenly.
  */
 private val NAV_STACKED_MAX_LABEL = 96.dp
+
+/**
+ * Fixed width of the inline floating bar.
+ *
+ * Sized so the expanded label plus three icon-only tabs just fill it, leaving a
+ * visible margin either side instead of running to the window edge.
+ */
+private val NAV_FLOATING_WIDTH = 300.dp
