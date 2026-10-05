@@ -643,7 +643,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                 colorSpecContent = {
                     LabeledControl(
                         Icons.Filled.Brush,
-                        stringResource(R.string.str_color_specification)
+                        stringResource(R.string.pers_color_scheme_label)
                     )
                     ConnectedToggleRow(
                         options = ColorEngine.entries,
@@ -937,7 +937,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                 verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 LabeledControl(
-                                    Icons.Filled.CropSquare,
+                                    Icons.Filled.Rectangle,
                                     stringResource(R.string.pers_banner_shape)
                                 )
                             
