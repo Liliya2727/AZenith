@@ -80,6 +80,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
@@ -118,6 +119,10 @@ import zx.azenith.ui.theme.NAV_SCALE_DEFAULT
 import zx.azenith.ui.theme.navScalePercent
 import zx.azenith.ui.theme.NAV_SPACING_MAX
 import zx.azenith.ui.theme.NAV_SPACING_MIN
+import androidx.compose.foundation.background
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.ui.graphics.vector.ImageVector
 
 
 /**
@@ -757,6 +762,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                 valueRange = 0f..1f,
                                 steps = 0,
                                 snapTo = CENTER,
+                                resetDefault = CENTER,
                                 onValueChange = { onPersonalizationChange(personalization.copy(roundness = it)) }
                             )
                         }
@@ -770,6 +776,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                 valueText = "${(personalization.textScale * 100).toInt()}%",
                                 valueRange = 0.85f..1.3f,
                                 steps = 8,
+                                resetDefault = 1f,
                                 commitOnRelease = true,
                                 valueTextOf = { "${(it * 100).toInt()}%" },
                                 onValueChange = { onPersonalizationChange(personalization.copy(textScale = it)) }
@@ -807,6 +814,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                 valueRange = 0f..1f,
                                 steps = 0,
                                 snapTo = NAV_CENTER,
+                                resetDefault = NAV_CENTER,
                                 onValueChange = { onPersonalizationChange(personalization.copy(navRadius = it)) }
                             )
                         }
@@ -825,6 +833,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                 label = stringResource(R.string.pers_nav_spacing),
                                 steps = 0,
                                 snapTo = 1f,
+                                resetDefault = 1f,
                                 commitOnRelease = true,
                                 valueTextOf = { "${(it * 100).toInt()}%" }
                             )
@@ -844,6 +853,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                 label = stringResource(R.string.pers_nav_size),
                                 steps = 0,
                                 snapTo = NAV_SCALE_DEFAULT,
+                                resetDefault = NAV_SCALE_DEFAULT,
                                 // Resizing the bar on every drag frame re-lays out four
                                 // icons plus the row, which stutters; the release
                                 // applies it once.
@@ -1080,6 +1090,14 @@ private enum class PreviewSize { Expanded, Collapsed }
 // Natural size the mock is authored at; everything else scales it to fit.
 private val MOCK_NAV_LABELS = intArrayOf(
     R.string.nav_home, R.string.nav_applist, R.string.nav_tweaks, R.string.nav_settings
+)
+// The same vectors MainActivity's navItems use, in the same order: a mock drawn
+// with stand-in circles is the one thing that cannot be compared to the real bar.
+private val MOCK_NAV_ICONS = arrayOf(
+    Icons.Rounded.Home,
+    Icons.Rounded.Widgets,
+    Icons.Rounded.SettingsInputComponent,
+    Icons.Rounded.Settings
 )
 private val MOCK_W = 190.dp
 private val MOCK_H = 396.dp
@@ -1386,6 +1404,9 @@ private fun MockScreen(
                 navStyle = personalization.navStyle,
                 navShape = personalization.navRadius,
                 labelMode = personalization.navLabels,
+                vibrantNav = personalization.vibrantNav,
+                navScale = personalization.navScale,
+                navSpacing = personalization.navSpacing,
                 isBlurEnabled = isBlurEnabled,
                 colorScheme = scheme
             )
@@ -1556,97 +1577,266 @@ private fun mockColorScheme(
 }
 
 /**
- * The mock's navigation bar, drawn from the same [Personalization] state as the real
- * one so the preview never lies about the bar the user is configuring. A pinned bar
- * has no corners and no pill background; a floating one follows [navShape], and the
- * blur control shows through as a translucent surface exactly as it does on device.
+ * The mock's navigation bar. Mirrors BottomNavBar/NavPill in MainActivity.kt --
+ * same four tabs, same stacked-vs-inline branch, same per-role colours and the
+ * same size/spacing scaling -- so every control below it changes the picture
+ * instead of only changing a number.
+ *
+ * The mock is 190dp wide against a 360dp screen, so dp values are scaled by
+ * [fit] upstream and the proportions below are what carry over, not the absolute
+ * sizes.
  */
 @Composable
 private fun NavBarMock(
     navStyle: NavStyle,
     navShape: Float,
     labelMode: NavLabelMode,
+    vibrantNav: Boolean,
+    navScale: Float,
+    navSpacing: Float,
     isBlurEnabled: Boolean,
     colorScheme: ColorScheme,
     modifier: Modifier = Modifier
 ) {
     val pinned = navStyle == NavStyle.Pinned
-    val accent = colorScheme.primary
-    val muted = colorScheme.onSurfaceVariant
-    val radius = if (pinned) 0.dp else (14.dp * (navShape / 0.5f).coerceIn(0f, 2f)).coerceAtMost(8.dp)
+    val primary = colorScheme.primary
+    val onPrimary = colorScheme.onPrimary
+    val onTile = if (vibrantNav) colorScheme.onPrimaryContainer else colorScheme.onSurfaceVariant
+    val unselectedBg =
+        if (vibrantNav) colorScheme.primaryContainer
+        else colorScheme.surfaceColorAtElevation(1.dp)
+    val stacked = labelMode == NavLabelMode.Always || (pinned && labelMode == NavLabelMode.SelectedOnly)
+    // Same percent ramp as the real bar, so "Round" stays a capsule here too.
+    val barRadius = RoundedCornerShape(percent = (navShape * 100).toInt())
+    // Every constant below is the real bar's own value, times MOCK_NAV_UNIT. The
+    // mock is 190dp wide and a phone is 360dp, so the real numbers do not fit: four
+    // 48dp tabs alone are wider than the mock. One factor keeps the proportions the
+    // real bar has, and keeps them the same in the expanded and collapsed previews
+    // because the whole mock is scaled by the same [fit] either way.
+    val u = MOCK_NAV_UNIT
+    val margin = 14.dp * u * navScale * navSpacing
+    val gap = 6.dp * u * navScale * navSpacing
+    val barPadV = 10.dp * u * navScale
+    val outerPadV = 20.dp * u * navScale
+    val pillPadX = (if (stacked) 4.dp else 12.dp) * u * navScale
+    val iconSize = (if (stacked) 22.dp else 24.dp) * u * navScale
+    val colH = (if (pinned) 64.dp else 56.dp) * u * navScale
+    val rowH = 48.dp * u * navScale
+    val minW = 48.dp * u * navScale
 
     Box(
-        modifier = modifier.fillMaxWidth(),
-        contentAlignment = if (pinned) Alignment.Center else Alignment.Center
+        modifier = modifier.fillMaxWidth().padding(vertical = if (pinned) 0.dp else outerPadV),
+        contentAlignment = Alignment.Center
     ) {
         Surface(
             modifier = Modifier
-                .then(if (pinned) Modifier.fillMaxWidth() else Modifier.width(150.dp))
-                .clip(RoundedCornerShape(radius)),
+                .then(if (pinned) Modifier.fillMaxWidth() else Modifier.wrapContentWidth())
+                .clip(barRadius),
             // Blur is a translucency here: the mock has nothing behind it to blur,
-            // so it shows the wash that Haze produces rather than faking a blur.
+            // so it shows the wash Haze produces rather than faking a blur.
             color = when {
+                isBlurEnabled -> if (vibrantNav)
+                    colorScheme.primaryContainer.darkenForMock(NAV_BAR_DARKEN_MOCK).copy(alpha = 0.4f)
+                else colorScheme.surfaceContainer.copy(alpha = 0.4f)
+                vibrantNav -> colorScheme.primaryContainer.darkenForMock(NAV_BAR_DARKEN_MOCK)
                 pinned -> colorScheme.surfaceContainerHigh
-                isBlurEnabled -> colorScheme.surfaceContainer.copy(alpha = 0.4f)
                 else -> colorScheme.surfaceContainer
             },
+            shape = barRadius,
+            shadowElevation = if (isBlurEnabled || pinned) 0.dp else 8.dp,
             border = if (isBlurEnabled && !pinned)
                 BorderStroke(1.dp, colorScheme.outlineVariant.copy(alpha = 0.4f)) else null
         ) {
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = if (pinned) 8.dp else 6.dp, vertical = 5.dp),
-                horizontalArrangement = Arrangement.spacedBy(if (pinned) 0.dp else 4.dp),
+                    .then(if (pinned) Modifier.fillMaxWidth() else Modifier.wrapContentWidth())
+                    .padding(
+                        horizontal = if (pinned) 0.dp else margin,
+                        vertical = if (pinned) 0.dp else barPadV
+                    ),
+                horizontalArrangement = Arrangement.spacedBy(gap),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                repeat(4) { index ->
+                MOCK_NAV_LABELS.forEachIndexed { index, labelRes ->
                     val selected = index == 1
-                    // SelectedOnly is the shipped behaviour, so the mock shows the
-                    // label on one tab only and the icons on the rest.
-                    val showLabel = when (labelMode) {
-                        NavLabelMode.Always -> true
-                        NavLabelMode.SelectedOnly -> selected
-                        NavLabelMode.Never -> false
-                    }
-                    Row(
-                        modifier = Modifier
-                            .then(
-                                if (selected && !pinned) Modifier
-                                    .background(accent, RoundedCornerShape(percent = 50))
-                                    .padding(horizontal = 6.dp, vertical = 3.dp)
-                                else Modifier
-                            )
-                            .weight(1f),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            Modifier
-                                .size(7.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    // A pinned bar carries selection with tint alone.
-                                    if (selected) accent
-                                    else muted.copy(alpha = if (pinned) 1f else 0.55f)
-                                )
-                        )
-                        if (showLabel) {
-                            Spacer(Modifier.width(3.dp))
-                            Text(
-                                text = stringResource(MOCK_NAV_LABELS[index]),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = if (selected && !pinned) colorScheme.onPrimary else muted,
-                                maxLines = 1
-                            )
-                        }
-                    }
+                    MockNavTab(
+                        icon = MOCK_NAV_ICONS[index],
+                        labelRes = labelRes,
+                        selected = selected,
+                        stacked = stacked,
+                        showLabel = when (labelMode) {
+                            NavLabelMode.Always -> true
+                            NavLabelMode.SelectedOnly -> selected
+                            NavLabelMode.Never -> false
+                        },
+                        primary = primary,
+                        onPrimary = onPrimary,
+                        onTile = onTile,
+                        unselectedBg = unselectedBg,
+                        isBlurEnabled = isBlurEnabled,
+                        pinned = pinned,
+                        iconSize = iconSize,
+                        colH = colH,
+                        rowH = rowH,
+                        minW = minW,
+                        discPad = 8.dp * u,
+                        pillPadX = pillPadX,
+                        modifier = if (pinned) Modifier.weight(1f) else Modifier
+                    )
                 }
             }
         }
     }
 }
+
+/**
+ * One mock tab. Only the selected one is marked, and in stacked mode only its
+ * icon carries the accent disc -- the same split NavPill makes, so switching
+ * Tab labels to Always visibly stacks them instead of drawing four wide pills.
+ */
+@Composable
+private fun MockNavTab(
+    icon: ImageVector,
+    labelRes: Int,
+    selected: Boolean,
+    stacked: Boolean,
+    showLabel: Boolean,
+    primary: Color,
+    onPrimary: Color,
+    onTile: Color,
+    unselectedBg: Color,
+    isBlurEnabled: Boolean,
+    pinned: Boolean,
+    iconSize: Dp,
+    colH: Dp,
+    rowH: Dp,
+    minW: Dp,
+    discPad: Dp,
+    pillPadX: Dp,
+    modifier: Modifier = Modifier
+) {
+    // Stacked and Pinned draw no pill at all: selection is the icon's accent disc
+    // and the label's colour. Under blur the disc goes translucent so it does not
+    // sit on the 40%-opaque bar like a sticker.
+    val pillBg = when {
+        stacked -> Color.Transparent
+        isBlurEnabled -> if (selected) primary.copy(alpha = 0.25f) else unselectedBg.copy(alpha = 0.55f)
+        else -> if (selected) primary else unselectedBg
+    }
+    val iconTint = if (selected) (if (isBlurEnabled) primary else onPrimary) else onTile
+    // The label never sits on the disc, so it takes the accent rather than onPrimary.
+    val labelTint = if (selected) primary else onTile
+    // Pinned stacks without a disc, exactly like NavPill's stackedIconBg: the
+    // accent would bleed into the full-width bar it sits on.
+    val discBg = when {
+        pinned -> Color.Transparent
+        selected && isBlurEnabled -> primary.copy(alpha = 0.25f)
+        selected -> primary
+        else -> Color.Transparent
+    }
+
+    if (stacked) {
+        Column(
+            modifier = modifier
+                .height(colH)
+                .defaultMinSize(minWidth = minW)
+                .clip(RoundedCornerShape(colH / 2))
+                .background(pillBg)
+                .padding(horizontal = pillPadX),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(discBg)
+                    .padding(horizontal = discPad, vertical = 3.dp * MOCK_NAV_UNIT)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(iconSize)
+                )
+            }
+            if (showLabel) {
+                Text(
+                    text = stringResource(labelRes),
+                    fontSize = MOCK_NAV_LABEL_SIZE,
+                    fontWeight = FontWeight.Medium,
+                    color = labelTint,
+                    maxLines = 1,
+                    softWrap = false,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 2.dp * MOCK_NAV_UNIT)
+                )
+            }
+        }
+    } else {
+        Row(
+            modifier = modifier
+                .height(rowH)
+                .defaultMinSize(minWidth = minW)
+                .clip(RoundedCornerShape(rowH / 2))
+                .background(pillBg)
+                .padding(horizontal = pillPadX),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(if (selected) primary else Color.Transparent)
+                    .padding(horizontal = 6.dp * MOCK_NAV_UNIT, vertical = 2.dp * MOCK_NAV_UNIT)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(iconSize)
+                )
+            }
+            if (showLabel) {
+                Spacer(Modifier.width(3.dp * MOCK_NAV_UNIT))
+                Text(
+                    text = stringResource(labelRes),
+                    fontSize = MOCK_NAV_LABEL_SIZE,
+                    fontWeight = FontWeight.Medium,
+                    color = labelTint,
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
+        }
+    }
+}
+
+/** Copy of MainActivity's Color.darken, which is private to that file. */
+private fun Color.darkenForMock(amount: Float): Color {
+    fun channel(c: Float): Float =
+        (1f - amount) * c + amount * (c * c * (c * 0.3053f + 0.6822f) + c * 0.0123f)
+    return Color(channel(red), channel(green), channel(blue), alpha)
+}
+
+private const val NAV_BAR_DARKEN_MOCK = 0.72f
+
+/**
+ * The mock's inner width against a phone's. MockScreen lays the mock out at
+ * MOCK_W and scales the result, so one factor here reproduces the real bar's
+ * proportions at any preview size: expanded and collapsed differ only by that
+ * scale, never by the bar's own geometry.
+ */
+private val MOCK_NAV_UNIT: Float = (MOCK_W - 16.dp) / 360.dp
+
+/**
+ * The mock's tab labels, at a size that keeps a four-label bar inside the mock.
+ * The real bar has ~120dp of slack on a 360dp screen that its labels spend; the
+ * mock has none, so its labels are set small rather than clipped.
+ */
+// The real bar's labelSmall is ~11sp against a 22dp icon. The mock's icon is
+// 22 * MOCK_NAV_UNIT, so the label has to shrink by the same factor or the
+// Always mode reads as caption text under a thumbnail.
+private val MOCK_NAV_LABEL_SIZE = 11.sp * MOCK_NAV_UNIT
 
 /**
  * Stands in for the profile picker dialog, the one place the app actually blurs.
