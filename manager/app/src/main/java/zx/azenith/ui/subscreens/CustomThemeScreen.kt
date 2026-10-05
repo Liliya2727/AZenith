@@ -54,7 +54,6 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -348,8 +347,21 @@ fun ColorPaletteScreen(navController: NavController) {
     // One scheme cache for every swatch on the screen, so the accent row derives
     // each scheme once for the whole screen rather than once per swatch. It is
     // keyed on the spec, so changing the spec drops every entry.
+    //
+    // Deliberately a plain map, not a SnapshotStateMap. Every swatch reads this
+    // on each composition, so a snapshot map both records a read per lookup and
+    // publishes a write per miss; 16 swatches filling it on a theme flip meant
+    // 16 invalidations of every reader, and each swatch recomposed again for
+    // every other swatch's insert.
+    //
+    // Entries are keyed on the mode as well as the seed, so a dark scheme is
+    // never handed back for a light seed. That is the bug this exists to hold:
+    // the seed alone does not distinguish the two, so without the mode bit the
+    // swatches already on screen kept the old mode's colours until something
+    // else invalidated them. Keying per mode rather than clearing on mode
+    // change means only the first flip in each direction pays the derivation.
     val swatchSchemeCache = remember(currentColorSpec) {
-        mutableStateMapOf<Int, ColorScheme>()
+        HashMap<SwatchKey, ColorScheme>()
     }
 
     // The save bar is gone, so the theme writes itself as each choice is made, the same
@@ -591,7 +603,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     currentColorMode: ColorMode,
     currentKeyColor: Int,
     currentColorSpec: ColorEngine,
-    swatchSchemeCache: SnapshotStateMap<Int, ColorScheme>,
+    swatchSchemeCache: HashMap<SwatchKey, ColorScheme>,
     isDark: Boolean,
     isBannerEnabled: Boolean,
     bannerGradientAlpha: Float,
@@ -972,7 +984,17 @@ private val MOCK_NAV_LABELS = intArrayOf(
 private val MOCK_W = 190.dp
 private val MOCK_H = 396.dp
 
-private const val DYNAMIC_KEY = 0
+/**
+ * Identity of one cached swatch scheme. The seed alone is not enough: the same
+ * seed produces a different scheme in dark and light, so the mode has to be part
+ * of the key or a dark entry gets served for a light swatch.
+ *
+ * [DYNAMIC_SEED] is not a real ARGB value -- swatch seeds are opaque
+ * `0xFF......` colours -- so the dynamic swatch can never collide with one.
+ */
+private const val DYNAMIC_SEED = 0
+
+private data class SwatchKey(val seed: Int, val isDark: Boolean)
 
 // Radius the mock dialog's scrim applies to the content behind it. Big enough to
 // visibly smear the banner text, small enough that the mock stays readable.
@@ -1649,7 +1671,7 @@ private fun ColorButton(
     isSelected: Boolean,
     isDark: Boolean,
     colorSpec: ColorEngine,
-    schemeCache: SnapshotStateMap<Int, ColorScheme>,
+    schemeCache: HashMap<SwatchKey, ColorScheme>,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -1664,7 +1686,7 @@ private fun ColorButton(
     // is keyed on the seed and the spec, so a scheme is derived once and every
     // later composition of the same swatch is a map lookup.
     val targetColorScheme = if (color == Color.Unspecified) {
-        schemeCache.getOrPut(DYNAMIC_KEY) {
+        schemeCache.getOrPut(SwatchKey(DYNAMIC_SEED, isDark)) {
             val baseScheme = when {
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
                     if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
@@ -1684,7 +1706,7 @@ private fun ColorButton(
             )
         }
     } else {
-        schemeCache.getOrPut(color.toArgb()) {
+        schemeCache.getOrPut(SwatchKey(color.toArgb(), isDark)) {
             rememberDynamicColorScheme(
                 seedColor = color,
                 isDark = isDark,
