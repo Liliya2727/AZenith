@@ -7,6 +7,7 @@ import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Composable
@@ -19,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import zx.azenith.R
 
 /**
@@ -77,6 +79,39 @@ private const val CENTER_MULTIPLIER = 1f
 private const val SHARP_MULTIPLIER = 0.15f
 private const val ROUND_MULTIPLIER = 2.4f
 
+/**
+ * Navbar size slider travel. The real range is deliberately narrow at the top --
+ * the bar is already near the width four tabs need, so it can only grow 5% past
+ * the original -- and generous at the bottom, where a compact bar is a real
+ * request.
+ */
+const val NAV_SCALE_MIN = 0.60f
+const val NAV_SCALE_MAX = 1.05f
+
+/**
+ * Rest point of the size dial: the shipped bar.
+ */
+const val NAV_SCALE_DEFAULT = 1f
+
+/** Tab spacing dial travel, as a multiple of the shipped gap. */
+const val NAV_SPACING_MIN = 0f
+const val NAV_SPACING_MAX = 2.5f
+
+/**
+ * The size readout as a percentage, which is not the same number as the scale.
+ *
+ * [NAV_SCALE_MAX] is only 5% taller than the default in reality, but the readout
+ * treats the whole travel as a boost, so the top end reads 150%. A raw 105%
+ * understates the range the slider actually offers.
+ */
+fun navScalePercent(scale: Float): Int =
+    (NAV_SCALE_MIN_READOUT +
+        (scale - NAV_SCALE_MIN) / (NAV_SCALE_MAX - NAV_SCALE_MIN) *
+            (NAV_SCALE_MAX_READOUT - NAV_SCALE_MIN_READOUT)).roundToInt()
+
+private const val NAV_SCALE_MIN_READOUT = 60f
+private const val NAV_SCALE_MAX_READOUT = 150f
+
 data class Personalization(
     val roundness: Float = CENTER,
     val textScale: Float = 1f,
@@ -86,7 +121,19 @@ data class Personalization(
     val navRadius: Float = NAV_CENTER_RADIUS,
     // SelectedOnly is the shipped behaviour: the pill interpolates its label open
     // with the swipe and every unselected tab shows the icon alone.
-    val navLabels: NavLabelMode = NavLabelMode.SelectedOnly
+    val navLabels: NavLabelMode = NavLabelMode.SelectedOnly,
+    // Off by default: the stock neutral surface is what most themes want, and an
+    // accent-tinted bar is a deliberate choice rather than the baseline.
+    val vibrantNav: Boolean = false,
+    // 1f is the shipped bar. The travel is deliberately lopsided -- it can shrink
+    // but only grows 5% past the original, because the bar is already near the
+    // width the four tabs need.
+    val navScale: Float = 1f,
+    // Gap between tabs, as a multiple of the shipped 6dp. Separate from
+    // navScale because the bar hugging its content means a tight gap reads as
+    // cramped even at a comfortable size, and widening it does not need a bigger
+    // icon to justify it.
+    val navSpacing: Float = 1f
 ) {
     /**
      * The M3 shape ramp, scaled by one continuous [roundness] value.
@@ -134,6 +181,23 @@ data class Personalization(
         const val PREF_NAV_STYLE = "pers_nav_style"
         const val PREF_NAV_SHAPE = "pers_nav_shape"
         const val PREF_NAV_LABELS = "pers_nav_labels"
+        const val PREF_NAV_VIBRANT = "pers_nav_vibrant"
+        const val PREF_NAV_SCALE = "pers_nav_scale"
+        const val PREF_NAV_SPACING = "pers_nav_spacing"
+
+        /**
+         * Reads a boolean a previous build may have stored as the string "1".
+         *
+         * A String is accepted because an earlier version of the nav prefs wrote
+         * every value through getString, and reading such a key with
+         * getBoolean throws ClassCastException on this platform.
+         */
+        private fun SharedPreferences.booleanOr(key: String, fallback: Boolean): Boolean =
+            when (val stored = all[key]) {
+                is Boolean -> stored
+                is String -> stored == "1" || stored.equals("true", ignoreCase = true)
+                else -> fallback
+            }
 
         /**
          * Reads a float that a previous build may have stored as a String.
@@ -186,7 +250,10 @@ data class Personalization(
                 navRadius = p.floatOr(PREF_NAV_SHAPE, NAV_CENTER_RADIUS),
                 navLabels = NavLabelMode.fromValue(
                     p.getString(PREF_NAV_LABELS, null)?.toIntOrNull() ?: NavLabelMode.SelectedOnly.ordinal
-                )
+                ),
+                vibrantNav = p.booleanOr(PREF_NAV_VIBRANT, false),
+                navScale = p.floatOr(PREF_NAV_SCALE, 1f, NAV_SCALE_MIN..NAV_SCALE_MAX),
+                navSpacing = p.floatOr(PREF_NAV_SPACING, 1f, NAV_SPACING_MIN..NAV_SPACING_MAX)
             )
         }
     }
@@ -378,4 +445,27 @@ enum class NavLabelMode(val labelRes: Int) {
     companion object {
         fun fromValue(value: Int): NavLabelMode = entries.getOrElse(value) { SelectedOnly }
     }
+}
+
+/**
+ * How far a blurred surface is pulled toward the accent. A plain blur over a
+ * neutral surface goes grey regardless of the theme's accent, so every blurred
+ * surface in the app carries a tint at this strength.
+ */
+const val ACCENT_TINT_BLUR = 0.14f
+
+/**
+ * Blends [amount] of the accent into this colour, keeping its alpha. Blur is a
+ * translucent pass, so the tint has to be applied before the alpha is used or it
+ * washes out entirely.
+ */
+@Composable
+fun Color.accentTint(amount: Float): Color {
+    val accent = MaterialTheme.colorScheme.primary
+    return Color(
+        red = red + (accent.red - red) * amount,
+        green = green + (accent.green - green) * amount,
+        blue = blue + (accent.blue - blue) * amount,
+        alpha = alpha
+    )
 }

@@ -102,6 +102,8 @@ import zx.azenith.ui.util.getHeaderImage
 import zx.azenith.ui.util.getRealDeviceName
 import zx.azenith.ui.util.getSELinuxStatus
 import zx.azenith.ui.theme.currentPersonalization
+import zx.azenith.ui.theme.ACCENT_TINT_BLUR
+import zx.azenith.ui.theme.accentTint
 
 
 @Composable
@@ -360,7 +362,7 @@ fun BannerCard(
                             .then(if (isBlurEnabled) Modifier.hazeBlur(
                                 input = HazeInput.Sources(bannerHazeState),
                                 style = HazeBlurStyle.Material3(
-                                    containerColor = statusBgColor
+                                    containerColor = statusBgColor.accentTint(ACCENT_TINT_BLUR)
                                 ) { blurRadius(14.dp) }
                             ) else Modifier)
                     ) {
@@ -392,6 +394,7 @@ fun BannerCard(
                                 input = HazeInput.Sources(bannerHazeState),
                                 style = HazeBlurStyle.Material3(
                                     containerColor = colorScheme.secondaryContainer
+                                        .accentTint(ACCENT_TINT_BLUR)
                                 ) { blurRadius(14.dp) }
                             ) else Modifier)
                         ) {

@@ -60,7 +60,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -81,8 +80,7 @@ import io.github.vinceglb.confettikit.core.Spread
 import io.github.vinceglb.confettikit.core.emitter.Emitter
 import io.github.vinceglb.confettikit.core.models.Shape
 import kotlin.time.Duration.Companion.milliseconds
-
-private const val TAP_PULSE_PEAK = 1.02f
+import zx.azenith.ui.theme.currentPersonalization
 
 /**
  * Wraps [BannerCard] with a hold-to-reveal easter egg: long-pressing the banner buzzes, crossfades
@@ -110,8 +108,8 @@ fun BannerWithEasterEgg(
     val parties = remember(burst) { twoSidedParade() }
     val confettiState = rememberConfettiKitState()
 
-    // Same press physics as the navbar pills (MainActivity.kt:776): scale down on touch, spring
-    // back with a little overshoot so the release reads as a bounce rather than a stop.
+    // Hold-only: scale down while the finger is down and spring back on release.
+    // No tap pulse, because a tap is over before the spring has travelled.
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
@@ -123,41 +121,16 @@ fun BannerWithEasterEgg(
         label = "pressScale"
     )
 
-    // The press spring alone is invisible on a tap: finger down and up inside ~50 ms, so the
-    // target flips back before the spring has travelled. This is the counterpart to the navbar's
-    // selectionScale (MainActivity.kt:797) — it swells, holds, then springs back through 1.0.
-    val tapPulse = remember { Animatable(1f) }
-    val scope = rememberCoroutineScope()
-
     Box(
         modifier = modifier
             .graphicsLayer {
-                val s = pressScale * tapPulse.value
-                scaleX = s
-                scaleY = s
+                scaleX = pressScale
+                scaleY = pressScale
             }
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
-                onClick = {
-                    scope.launch {
-                        tapPulse.animateTo(
-                            targetValue = TAP_PULSE_PEAK,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMedium
-                            )
-                        )
-                        tapPulse.animateTo(
-                            targetValue = 1f,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioLowBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            )
-                        )
-                    }
-                    onClick()
-                },
+                onClick = { onClick() },
                 onLongClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     buzz(context)
@@ -283,7 +256,12 @@ private fun EasterEggCard(compact: Boolean, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(26.dp))
+            // Same percent-based shape as BannerCard, so swapping the banner for
+            // the easter egg does not change the silhouette. A fixed dp radius
+            // here read as a different corner from the one it replaces.
+            .clip(
+                RoundedCornerShape(percent = (currentPersonalization().bannerRadius * 100).toInt())
+            )
             .background(
                 Brush.linearGradient(
                     0f to start,

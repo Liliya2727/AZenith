@@ -569,7 +569,10 @@ fun MainScreen(fromTileType: String? = null) {
                         hazeState = hazeState,
                         navStyle = currentPersonalization().navStyle,
                         navShape = currentPersonalization().navRadius,
-                        navLabels = currentPersonalization().navLabels,
+                                        navLabels = currentPersonalization().navLabels,
+                        vibrantNav = currentPersonalization().vibrantNav,
+                        navScale = currentPersonalization().navScale,
+                        navSpacing = currentPersonalization().navSpacing,
                         modifier = Modifier.align(Alignment.BottomCenter),
                         onItemSelected = { route ->
                             val targetIndex = pagerRoutes.indexOf(route)
@@ -688,6 +691,9 @@ fun BottomNavBar(
     hazeState: HazeState? = null,
     pagerState: PagerState? = null,
     navStyle: NavStyle = NavStyle.Floating,
+    vibrantNav: Boolean = false,
+    navScale: Float = 1f,
+    navSpacing: Float = 1f,
     navShape: Float = 0.5f,
     navLabels: NavLabelMode = NavLabelMode.SelectedOnly,
     // Carried as data so the landscape rail is an added enum value rather than a
@@ -697,7 +703,13 @@ fun BottomNavBar(
     val pinned = navStyle == NavStyle.Pinned
     // Read from the configuration rather than a constant: the bar has to keep
     // its margin on a narrow screen too, where a hard-coded cap would overflow.
-    val floatingMaxWidth = (LocalConfiguration.current.screenWidthDp.dp - NAV_FLOATING_MIN_MARGIN * 2)
+    val floatingMaxWidth =
+        (LocalConfiguration.current.screenWidthDp.dp - NAV_FLOATING_MIN_MARGIN * navScale * navSpacing * 2)
+
+    // The vibrant treatment tints the bar, the unselected pill and the blur from
+    // the accent. Off, the bar is the stock neutral surface, so it is the one
+    // place the accent never reaches.
+    val accentBar = vibrantNav
 
     // Measured label widths, so the selected pill can interpolate its
     // width open and closed with the swipe instead of switching between
@@ -738,7 +750,7 @@ fun BottomNavBar(
             // padding on this Box is dead space that just narrows the bar. The
             // margin lives on the row inside the surface instead, which is what
             // keeps it equal on both sides.
-            .padding(vertical = if (pinned) 0.dp else 20.dp),
+            .padding(vertical = if (pinned) 0.dp else NAV_FLOATING_OUTER_PAD * navScale),
         contentAlignment = Alignment.Center
     ) {
         Surface(
@@ -753,8 +765,8 @@ fun BottomNavBar(
                     when {
                         pinned -> Modifier.fillMaxWidth()
                         navLabels == NavLabelMode.Always -> Modifier
-                            .widthIn(max = 350.dp)
-                            .fillMaxWidth()
+                            .widthIn(max = floatingMaxWidth)
+                            .wrapContentWidth()
                         else -> Modifier
                             // Hug the tabs.
                             .widthIn(max = floatingMaxWidth)
@@ -765,14 +777,23 @@ fun BottomNavBar(
                 .then(if (isBlurEnabled && hazeState != null) Modifier.hazeBlur(
                                 input = HazeInput.Sources(hazeState),
                                 style = HazeBlurStyle.Material3(
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
+                                    containerColor = if (accentBar) {
+                                        MaterialTheme.colorScheme.primaryContainer
+                                            .darken(NAV_BAR_DARKEN).copy(alpha = 0.4f)
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
+                                    }
                                 ) { blurRadius(24.dp) }
                             ) else Modifier),
             shape = barRadius,
-            // A pinned bar sits flush against the page, so it needs a surface one
-            // step up from the content behind it or the two run together.
+            // Tinted off the accent rather than the surface: an OEM theme can
+            // resolve surfaceContainer to plain grey or black, which leaves the
+            // bar reading as a hole in the page. primaryContainer is already the
+            // accent at container strength, so darkening it a little gives a
+            // colour that belongs to the theme without competing with the pill.
             color = when {
                 isBlurEnabled -> Color.Transparent
+                accentBar -> MaterialTheme.colorScheme.primaryContainer.darken(NAV_BAR_DARKEN)
                 pinned -> MaterialTheme.colorScheme.surfaceContainerHigh
                 else -> MaterialTheme.colorScheme.surfaceContainer
             },
@@ -805,6 +826,8 @@ fun BottomNavBar(
                         isBlurEnabled = isBlurEnabled,
                         labelMode = navLabels,
                         isPinned = pinned,
+                        accentBar = accentBar,
+                        sizeScale = navScale,
                         modifier = pillModifier,
                         // While the pager is being dragged the target changes
                         // every frame, so the tween would restart on each one
@@ -821,18 +844,18 @@ fun BottomNavBar(
                 NavEdge.Bottom -> Row(
                     modifier = Modifier
                         // Matches the surface: the inline bar shrinks with its
-                        // content, the others divide the full width.
-                        .then(
-                            if (pinned || navLabels == NavLabelMode.Always) Modifier.fillMaxWidth()
-                            else Modifier.wrapContentWidth()
-                        )
+                        // content, the others divide the full width. The floating
+                        // stacked bar takes a width proportional to the slider, so
+                        // the gap between tabs shrinks with the icons instead of
+                        // each one keeping an equal share of the screen.
+                        .then(if (pinned) Modifier.fillMaxWidth() else Modifier.wrapContentWidth())
                         .padding(
-                            horizontal = when {
-                                pinned -> 0.dp
-                                navLabels == NavLabelMode.Never -> 12.dp
-                                else -> NAV_FLOATING_MIN_MARGIN
-                            },
-                            vertical = if (pinned) 0.dp else 10.dp
+                            // Scaled so a smaller bar is tighter on screen too;
+                            // a fixed margin kept the same gap at every size,
+                            // which left the bar looking barely resized.
+                            horizontal = if (pinned) 0.dp
+                            else NAV_FLOATING_MIN_MARGIN * navScale * navSpacing,
+                            vertical = if (pinned) 0.dp else NAV_BAR_VERTICAL_PAD * navScale
                         )
                         // Extend the pinned row past the gesture bar so the surface
                         // fills to the bottom edge instead of stopping above it.
@@ -842,19 +865,17 @@ fun BottomNavBar(
                             ) else Modifier
                         ),
                     horizontalArrangement = Arrangement.spacedBy(
-                        if (pinned || navLabels == NavLabelMode.Never) 0.dp else NAV_PILL_GAP,
+                        if (pinned || navLabels == NavLabelMode.Never) 0.dp
+                        else NAV_PILL_GAP * navScale * navSpacing,
                         Alignment.CenterHorizontally
                     ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Inline pills size to their content so the selected tab can
-                    // grow its label open -- weighting them all equally caps that
-                    // growth at a quarter of the bar, which is what stopped the
-                    // expanding pill. Stacked labels all draw at once, so those
-                    // do share the width evenly instead.
-                    navItemsContent(
-                        if (pinned || navLabels == NavLabelMode.Always) Modifier.weight(1f) else Modifier
-                    )
+                    // Pinned divides the screen evenly. Floating sizes every tab to
+                    // its own label, so the row hugs and the slider shrinks the
+                    // icons, the gaps and the margins together. Weighting them
+                    // would divide the screen instead and leave the gaps fixed.
+                    navItemsContent(if (pinned) Modifier.weight(1f) else Modifier)
                 }
 
                 // Landscape rail. Not reachable from the UI yet; laid out here so
@@ -882,6 +903,8 @@ private fun NavPill(
     isBlurEnabled: Boolean = false,
     labelMode: NavLabelMode = NavLabelMode.SelectedOnly,
     isPinned: Boolean = false,
+    accentBar: Boolean = false,
+    sizeScale: Float = 1f,
     animationSpec: FiniteAnimationSpec<Color> = NAV_PILL_SPEC,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -905,10 +928,20 @@ private fun NavPill(
     // than by the selected boolean, so during a drag they interpolate. The
     // boolean form only had two states, which is what made the bar appear to
     // freeze mid-swipe and then jump when the selection finally flipped.
+    val stacked = labelMode == NavLabelMode.Always || (isPinned && labelMode == NavLabelMode.SelectedOnly)
     val primary = MaterialTheme.colorScheme.primary
     val onPrimary = MaterialTheme.colorScheme.onPrimary
-    val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
-    val unselectedBg = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+    // Only the vibrant preset recolours the unselected tabs. The stock preset
+    // keeps onSurfaceVariant, which is what the bar has always used.
+    val onTile = if (accentBar) MaterialTheme.colorScheme.onPrimaryContainer
+        else MaterialTheme.colorScheme.onSurfaceVariant
+    // The accent's own value, not a darker version of it. The bar and the tile
+    // are the same hue, so all their separation has to come from value; darkening
+    // both by different amounts left them about one sRGB level apart, which is
+    // why the tile disappeared into the bar. Light mode keeps the neutral tile so
+    // the bar and pill agree with each other.
+    val unselectedBg = if (accentBar) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
 
     // A second spring on the selection itself: as the highlight arrives the pill
     // settles past its target and eases back, which is what gives the tab switch its
@@ -926,8 +959,15 @@ private fun NavPill(
         targetValue = when {
             // The classic bar has no pill at all: selection is carried by the
             // icon tint alone, which is what made the old bar read as a navbar.
-            isPinned -> Color.Transparent
-            isBlurEnabled -> if (isSelected) primary.copy(alpha = 0.25f) else unselectedBg
+            // Stacked shows every label at once, so a pill per tab highlighted
+            // the whole bar. The selected tab is marked on its icon instead and
+            // its label only changes colour. Pinned keeps no pill at all --
+            // selection there is carried by the icon tint alone.
+            isPinned || stacked -> Color.Transparent
+            // Under blur the bar is only 40% opaque, so an opaque tile would sit
+            // on it like a sticker; the alpha keeps both translucent and the
+            // accent hue still separates the tile from the surface behind it.
+            isBlurEnabled -> if (isSelected) primary.copy(alpha = 0.25f) else unselectedBg.copy(alpha = 0.55f)
             else -> if (isSelected) primary else unselectedBg
         },
         animationSpec = animationSpec,
@@ -937,12 +977,33 @@ private fun NavPill(
     val contentColor by animateColorAsState(
         targetValue = when {
             isPinned && isSelected -> primary
-            isPinned -> onSurfaceVariant
+            isPinned -> onTile
             isSelected -> if (isBlurEnabled) primary else onPrimary
-            else -> onSurfaceVariant
+            else -> onTile
         },
         animationSpec = animationSpec,
         label = "contentColor"
+    )
+
+    // The label is never on the disc, so it must not take the icon's onPrimary.
+    // The selected label takes the accent itself: the icon's disc is already
+    // that colour, so a label in the same value would sit on the bar at the same
+    // strength as the icon it is labelling.
+    val labelColor by animateColorAsState(
+        targetValue = if (isSelected) primary else onTile,
+        animationSpec = animationSpec,
+        label = "labelColor"
+    )
+
+    // The stacked mode's only highlight: a disc behind the selected icon.
+    val stackedIconBg by animateColorAsState(
+        targetValue = when {
+            isPinned -> Color.Transparent
+            isSelected -> if (isBlurEnabled) primary.copy(alpha = 0.25f) else primary
+            else -> Color.Transparent
+        },
+        animationSpec = animationSpec,
+        label = "stackedIconBg"
     )
 
     // A 48 dp tall pill with a 24 dp radius is already a circle, so the old
@@ -952,13 +1013,7 @@ private fun NavPill(
 
     // Never and SelectedOnly share the inline pill: the label opens beside the
     // icon on whichever tab is selected. Always stacks instead -- an expanded
-    // label on all four tabs at once is what overflowed the bar -- so it reads
-    // the same on both bar styles and costs no horizontal space.
-    // Pinned stacks its label under the icon for Always *and* SelectedOnly: the
-    // inline pill opens to the right, which on a full-width bar reads as one tab
-    // shoving its neighbours aside rather than as a selected item. Never stays
-    // inline and collapsed.
-    val stacked = labelMode == NavLabelMode.Always || (isPinned && labelMode == NavLabelMode.SelectedOnly)
+    // label on all four tabs at once is what overflowed the bar.
     val labelFraction = when (labelMode) {
         NavLabelMode.Always -> 1f
         NavLabelMode.SelectedOnly -> progress
@@ -970,7 +1025,7 @@ private fun NavPill(
             imageVector = item.icon,
             contentDescription = null,
             tint = contentColor,
-            modifier = Modifier.size(if (stacked) 22.dp else 24.dp)
+            modifier = Modifier.size((if (stacked) 22.dp else 24.dp) * sizeScale)
         )
     }
 
@@ -981,8 +1036,8 @@ private fun NavPill(
         Column(
             modifier = modifier
                 .scale(scale * selectionScale)
-                .height(if (isPinned) 64.dp else 56.dp)
-                .defaultMinSize(minWidth = 48.dp)
+                .height((if (isPinned) 64.dp else 56.dp) * sizeScale)
+                .defaultMinSize(minWidth = 48.dp * sizeScale)
                 .clip(shape)
                 .background(bgColor)
                 .clickable(
@@ -990,11 +1045,16 @@ private fun NavPill(
                     indication = null,
                     onClick = onClick
                 )
-                .padding(horizontal = 4.dp),
+                .padding(horizontal = NAV_PILL_PAD_X * sizeScale),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            icon()
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(stackedIconBg)
+                    .padding(horizontal = 10.dp, vertical = 3.dp)
+            ) { icon() }
             // fillMaxWidth rather than a fixed measured width: a Text sized to
             // labelWidth started at the left edge of that box, so it read as
             // offset from the icon instead of centred under it.
@@ -1002,13 +1062,17 @@ private fun NavPill(
                 text = stringResource(item.labelRes),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Medium,
-                color = contentColor,
+                color = labelColor,
                 maxLines = 1,
                 softWrap = false,
                 textAlign = TextAlign.Center,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
-                    .fillMaxWidth()
+                    // wrapContentWidth, not fillMaxWidth: the column sizes to its
+                    // own content now, so filling the parent width would either
+                    // collapse to zero (inside a wrap-content row) or push the
+                    // label off its own icon.
+                    .wrapContentWidth()
                     .padding(top = 3.dp)
                     .alpha(labelFraction)
             )
@@ -1017,8 +1081,8 @@ private fun NavPill(
         Row(
             modifier = modifier
                 .scale(scale * selectionScale)
-                .height(if (isPinned) 56.dp else 48.dp)
-                .defaultMinSize(minWidth = 48.dp)
+                .height((if (isPinned) 56.dp else 48.dp) * sizeScale)
+                .defaultMinSize(minWidth = 48.dp * sizeScale)
                 .clip(shape)
                 .background(bgColor)
                 .clickable(
@@ -1026,7 +1090,7 @@ private fun NavPill(
                     indication = null,
                     onClick = onClick
                 )
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = NAV_PILL_PAD_INLINE_X * sizeScale),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
@@ -1070,9 +1134,43 @@ private val NAV_STACKED_MAX_LABEL = 96.dp
 // Sized so the longest shipped label still fits at the floor: 3 icon-only
 // tabs at 48dp + gaps + this pill's own chrome leaves 60dp of label room,
 // which clears "Settings" in English. A tighter floor clipped it to an ellipsis.
+/**
+ * Darkens [amount] toward black in linear light, so a mid-tone accent shifts
+ * perceptually even instead of the muddy result a straight RGB multiply gives.
+ * Blending in sRGB crushes the channels unevenly and desaturates as it goes.
+ */
+private fun Color.darken(amount: Float): Color {
+    fun channel(c: Float): Float =
+        (1f - amount) * c + amount * (c * c * (c * 0.3053f + 0.6822f) + c * 0.0123f)
+    return Color(
+        red = channel(red),
+        green = channel(green),
+        blue = channel(blue),
+        alpha = alpha
+    )
+}
+
+/**
+ * How far the accent is darkened for the bar surface. The bar has to stay near
+ * the page it floats over, so most of the separation from a tile comes from
+ * leaving the tile at the accent's own value rather than from pushing the bar
+ * further down.
+ */
+private const val NAV_BAR_DARKEN = 0.72f
+
 /** Screen margin a floating bar keeps either side, whatever its content. */
 private val NAV_FLOATING_MIN_MARGIN = 14.dp
-/** Horizontal padding the row adds inside the surface. */
-private val NAV_ROW_PADDING = 4.dp
 /** Gap between two pills. */
 private val NAV_PILL_GAP = 6.dp
+
+/** Vertical padding the floating bar adds above and below its row. */
+private val NAV_BAR_VERTICAL_PAD = 10.dp
+
+/** Vertical padding the floating bar's container adds outside the surface. */
+private val NAV_FLOATING_OUTER_PAD = 20.dp
+
+/** Horizontal padding inside a stacked pill. */
+private val NAV_PILL_PAD_X = 4.dp
+
+/** Horizontal padding inside an inline pill, wide enough for the open label. */
+private val NAV_PILL_PAD_INLINE_X = 12.dp

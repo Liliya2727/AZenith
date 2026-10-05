@@ -66,6 +66,8 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.material3.Material3
 import dev.chrisbanes.haze.blur.hazeBlur
+import zx.azenith.ui.theme.ACCENT_TINT_BLUR
+import zx.azenith.ui.theme.accentTint
 
 /**
  * How a sheet presents its rows.
@@ -326,7 +328,7 @@ private fun Modifier.sheetSurface(
                 Modifier.hazeBlur(
                     input = HazeInput.Backdrop(hazeState),
                     style = HazeBlurStyle.Material3(
-                        containerColor = base.copy(alpha = 0.35f)
+                        containerColor = base.copy(alpha = 0.35f).accentTint(ACCENT_TINT_BLUR)
                     ) { blurRadius(24.dp) }
                 )
             } else Modifier

@@ -112,6 +112,12 @@ import zx.azenith.ui.theme.ColorEngine
 import zx.azenith.ui.theme.NavStyle
 import zx.azenith.ui.theme.NavLabelMode
 import androidx.compose.ui.graphics.Shape
+import zx.azenith.ui.theme.NAV_SCALE_MAX
+import zx.azenith.ui.theme.NAV_SCALE_MIN
+import zx.azenith.ui.theme.NAV_SCALE_DEFAULT
+import zx.azenith.ui.theme.navScalePercent
+import zx.azenith.ui.theme.NAV_SPACING_MAX
+import zx.azenith.ui.theme.NAV_SPACING_MIN
 
 
 /**
@@ -187,6 +193,9 @@ fun ColorPaletteScreen(navController: NavController) {
             .putString(Personalization.PREF_NAV_STYLE, next.navStyle.ordinal.toString())
             .putFloat(Personalization.PREF_NAV_SHAPE, next.navRadius)
             .putString(Personalization.PREF_NAV_LABELS, next.navLabels.ordinal.toString())
+            .putBoolean(Personalization.PREF_NAV_VIBRANT, next.vibrantNav)
+            .putFloat(Personalization.PREF_NAV_SCALE, next.navScale)
+            .putFloat(Personalization.PREF_NAV_SPACING, next.navSpacing)
             .apply()
     }
     
@@ -803,6 +812,58 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                         }
                     }
     
+                    add {
+                        CardItem {
+                            LabeledSlider(
+                                value = personalization.navSpacing,
+                                onValueChange = {
+                                    onPersonalizationChange(personalization.copy(navSpacing = it))
+                                },
+                                valueText = "${(personalization.navSpacing * 100).toInt()}%",
+                                valueRange = NAV_SPACING_MIN..NAV_SPACING_MAX,
+                                icon = Icons.Filled.HorizontalRule,
+                                label = stringResource(R.string.pers_nav_spacing),
+                                steps = 0,
+                                snapTo = 1f,
+                                commitOnRelease = true,
+                                valueTextOf = { "${(it * 100).toInt()}%" }
+                            )
+                        }
+                    }
+
+                    add {
+                        CardItem {
+                            LabeledSlider(
+                                value = personalization.navScale,
+                                onValueChange = {
+                                    onPersonalizationChange(personalization.copy(navScale = it))
+                                },
+                                valueText = "${navScalePercent(personalization.navScale)}%",
+                                valueRange = NAV_SCALE_MIN..NAV_SCALE_MAX,
+                                icon = Icons.Outlined.Straighten,
+                                label = stringResource(R.string.pers_nav_size),
+                                steps = 0,
+                                snapTo = NAV_SCALE_DEFAULT,
+                                // Resizing the bar on every drag frame re-lays out four
+                                // icons plus the row, which stutters; the release
+                                // applies it once.
+                                commitOnRelease = true,
+                                valueTextOf = { "${navScalePercent(it)}%" }
+                            )
+                        }
+                    }
+
+                    add {
+                        ExpressiveSwitchItem(
+                            icon = Icons.Outlined.Palette,
+                            title = stringResource(R.string.pers_nav_vibrant),
+                            checked = personalization.vibrantNav,
+                            onCheckedChange = {
+                                onPersonalizationChange(personalization.copy(vibrantNav = it))
+                            }
+                        )
+                    }
+
                     add {
                         CardItem {
                             LabeledControl(Icons.Filled.Label, stringResource(R.string.pers_nav_labels))

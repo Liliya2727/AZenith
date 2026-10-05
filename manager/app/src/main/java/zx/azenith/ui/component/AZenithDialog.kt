@@ -53,6 +53,8 @@ import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.material3.Material3
 import dev.chrisbanes.haze.blur.hazeBlur
+import zx.azenith.ui.theme.ACCENT_TINT_BLUR
+import zx.azenith.ui.theme.accentTint
 
 /**
  * The one dialog shell. Every dialog in the app goes through here, so motion, layout and the
@@ -151,6 +153,7 @@ fun AZenithDialog(
                                 input = HazeInput.Sources(hazeState),
                                 style = HazeBlurStyle.Material3(
                                     containerColor = containerColor.copy(alpha = 0.35f)
+                                        .accentTint(ACCENT_TINT_BLUR)
                                 ) { blurRadius(24.dp) }
                             )
                             } else Modifier

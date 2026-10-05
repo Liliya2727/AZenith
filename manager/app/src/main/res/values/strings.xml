@@ -454,6 +454,9 @@
     <string name="nav_shape_rounded">Rounded</string>
     <string name="nav_shape_full">Full</string>
     <string name="pers_nav_labels">Tab labels</string>
+    <string name="pers_nav_vibrant">Vibrant navbar colors</string>
+    <string name="pers_nav_size">Navbar size</string>
+    <string name="pers_nav_spacing">Navbar spacing</string>
     <string name="nav_label_always">Always</string>
     <string name="nav_label_selected">Selected only</string>
     <string name="nav_label_never">Never</string>
