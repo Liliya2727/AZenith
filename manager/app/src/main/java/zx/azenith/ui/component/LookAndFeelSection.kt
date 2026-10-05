@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ColorLens
-import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
@@ -45,21 +44,16 @@ fun LookAndFeelSection(
     colorModeContent: (@Composable () -> Unit)? = null
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(24.dp)) {
-        // Colors: what the palette is painted from. The spec the palette is
-        // generated from and the accent picked out of it are the same decision.
+        // One section: what the palette is built from, which accent is pulled
+        // out of it, how bright the app is lit and how strongly it speaks are a
+        // single colour decision, so they share one card rather than two headers
+        // that name the same thing.
         SettingsGroup(
             titleRes = R.string.personalization_colors_header,
             icon = Icons.Filled.ColorLens
         ) {
             colorSpecContent?.invoke()
             accentSwatchContent?.invoke()
-        }
-
-        // Appearance: how the app is lit, and how strongly it speaks.
-        SettingsGroup(
-            titleRes = R.string.appearance,
-            icon = Icons.Filled.DarkMode
-        ) {
             colorModeContent?.invoke()
             ExpressiveColumn(
                 content = buildList {

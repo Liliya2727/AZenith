@@ -159,11 +159,7 @@ internal fun LabeledControl(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        SmallLeadingIcon(icon = icon)
         Text(label, style = MaterialTheme.typography.bodyLarge)
     }
 }

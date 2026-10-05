@@ -641,10 +641,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                 // picker, the accent swatches, accent intensity and contrast read as
                 // one cluster instead of being split by the section boundary.
                 colorSpecContent = {
-                    LabeledControl(
-                        Icons.Filled.Brush,
-                        stringResource(R.string.pers_color_scheme_label)
-                    )
                     ConnectedToggleRow(
                         options = ColorEngine.entries,
                         selected = currentColorSpec,
@@ -656,7 +652,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                     )
                 },
                 accentSwatchContent = {
-                    LabeledControl(Icons.Filled.Palette, stringResource(R.string.accent_color))
                     LazyRow(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -699,7 +694,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                     }
                 },
                 colorModeContent = {
-                    LabeledControl(Icons.Filled.Brightness4, stringResource(R.string.pers_color_mode))
                     val options = listOf(
                         ColorMode.SYSTEM, ColorMode.LIGHT, ColorMode.DARK, ColorMode.DARKAMOLED
                     )
