@@ -352,10 +352,22 @@ enum class NavStyle(val labelRes: Int) {
  */
 /** The stock value each corner slider rests at, so the UI can snap to the same point. */
 const val BANNER_CENTER = 0.12f
-const val NAV_CENTER = 0.50f
+// The bar is edge to edge by default, so its rest point is sharp rather than
+// midway up a dial that also offers fully rounded.
+const val NAV_CENTER = 0f
 
 private const val BANNER_CENTER_RADIUS = BANNER_CENTER
 private const val NAV_CENTER_RADIUS = NAV_CENTER
+
+/**
+ * Which edge the bar is docked to when the screen is landscape.
+ *
+ * Only [Bottom] is reachable today; the bar is hardwired to the bottom edge and
+ * its reveal animation translates on Y. Carrying the choice as data rather than
+ * branching on `Configuration.orientation` at the call site means the vertical
+ * rail is an added enum value and a layout branch, not a new plumbing path.
+ */
+enum class NavEdge { Bottom, Start, End }
 
 /** Whether the tab labels are drawn at all. */
 enum class NavLabelMode(val labelRes: Int) {

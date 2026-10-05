@@ -93,6 +93,7 @@ import zx.azenith.ui.mainscreens.*
 import zx.azenith.ui.subscreens.*
 import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.util.*
+import zx.azenith.ui.theme.NavEdge
 import zx.azenith.ui.theme.NavLabelMode
 import zx.azenith.ui.theme.NavStyle
 import zx.azenith.ui.theme.currentPersonalization
@@ -687,27 +688,52 @@ fun BottomNavBar(
     pagerState: PagerState? = null,
     navStyle: NavStyle = NavStyle.Floating,
     navShape: Float = 0.5f,
-    navLabels: NavLabelMode = NavLabelMode.SelectedOnly
+    navLabels: NavLabelMode = NavLabelMode.SelectedOnly,
+    // Carried as data so the landscape rail is an added enum value rather than a
+    // second host composable; only Bottom is laid out today.
+    navEdge: NavEdge = NavEdge.Bottom
 ) {
     val pinned = navStyle == NavStyle.Pinned
     // Percent-based so Full stays a capsule at any bar height; a fixed dp radius
     // cannot, because the height differs between Pinned and the other two.
     // A pinned bar is flush with the window edges, so the corner choice cannot
     // apply to it; only the floating bar reads navShape.
-    val barRadius = if (pinned) RectangleShape
-        else RoundedCornerShape(percent = (navShape * 100).toInt())
+    // Pinned used to force RectangleShape, which is why it had no corner dial.
+    // It reads navShape like the floating bar does; the default (0) stays sharp.
+    val barRadius = RoundedCornerShape(percent = (navShape * 100).toInt())
+
+    // Pinned draws its own surface down past the gesture-bar inset so the
+    // background reaches the bottom edge; a floating bar instead *keeps* the
+    // inset as padding, which is what lifts it clear of the screen edge.
+    val insetPadding = if (pinned) Modifier else Modifier.windowInsetsPadding(WindowInsets.navigationBars)
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets.navigationBars)
+            .then(insetPadding)
             // Pinned is edge to edge; the other two keep the floating margin.
-            .padding(horizontal = if (pinned) 0.dp else 26.dp, vertical = if (pinned) 0.dp else 20.dp),
+            // The floating margin has to give way when a label has to open
+            // beside an icon: at 26dp each side the selected pill had 56dp left
+            // for its text, about two short of "Settings" in English and well
+            // short of a longer translation. Icons-only keeps the airy margin.
+            .padding(
+                horizontal = when {
+                    pinned -> 0.dp
+                    navLabels == NavLabelMode.Never -> 26.dp
+                    else -> 12.dp
+                },
+                vertical = if (pinned) 0.dp else 20.dp
+            ),
         contentAlignment = Alignment.Center
     ) {
         Surface(
             modifier = Modifier
-                .widthIn(max = if (pinned) Dp.Unspecified else 350.dp)
+                // A stacked bar needs the full cap or its labels crowd; an inline
+                // one is laid out at intrinsic width and grows past the cap when
+                // the selected label opens, which is the old expanding pill.
+                .widthIn(
+                    max = if (navLabels == NavLabelMode.Always) 350.dp else Dp.Unspecified
+                )
                 .fillMaxWidth()
                 .clip(barRadius)
                 .then(if (isBlurEnabled && hazeState != null) Modifier.hazeBlur(
@@ -744,16 +770,10 @@ fun BottomNavBar(
                 }
             }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        horizontal = if (pinned) 0.dp else 12.dp,
-                        vertical = if (pinned) 0.dp else 10.dp
-                    ),
-                horizontalArrangement = Arrangement.spacedBy(if (pinned) 0.dp else 12.dp, Alignment.CenterHorizontally),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            // One list of items, built once and placed by [navEdge]. Bottom lays
+            // them out in a row under the finger; Start/End stack the identical
+            // pills down a vertical rail for landscape.
+            val navItemsContent: @Composable (Modifier) -> Unit = { pillModifier ->
                 items.forEachIndexed { index, item ->
                     // A continuous 0..1 "how selected is this tab" value rather
                     // than a boolean, so a drag interpolates instead of
@@ -775,7 +795,7 @@ fun BottomNavBar(
                         isBlurEnabled = isBlurEnabled,
                         labelMode = navLabels,
                         isPinned = pinned,
-                        modifier = if (pinned) Modifier.weight(1f) else Modifier,
+                        modifier = pillModifier,
                         // While the pager is being dragged the target changes
                         // every frame, so the tween would restart on each one
                         // and never reach its end value. Snap to the drag instead
@@ -785,6 +805,55 @@ fun BottomNavBar(
                         onClick = { onItemSelected(item.route) }
                     )
                 }
+            }
+
+            when (navEdge) {
+                NavEdge.Bottom -> Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = when {
+                                pinned -> 0.dp
+                                navLabels == NavLabelMode.Never -> 12.dp
+                                else -> 4.dp
+                            },
+                            vertical = if (pinned) 0.dp else 10.dp
+                        )
+                        // Extend the pinned row past the gesture bar so the surface
+                        // fills to the bottom edge instead of stopping above it.
+                        .then(
+                            if (pinned) Modifier.padding(
+                                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                            ) else Modifier
+                        ),
+                    horizontalArrangement = Arrangement.spacedBy(
+                        if (pinned || navLabels == NavLabelMode.Never) 0.dp else 6.dp,
+                        Alignment.CenterHorizontally
+                    ),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Inline pills size to their content so the selected tab can
+                    // grow its label open -- weighting them all equally caps that
+                    // growth at a quarter of the bar, which is what stopped the
+                    // expanding pill. Stacked labels all draw at once, so those
+                    // do share the width evenly instead.
+                    navItemsContent(
+                        if (pinned || navLabels == NavLabelMode.Always) Modifier.weight(1f) else Modifier
+                    )
+                }
+
+                // Landscape rail. Not reachable from the UI yet; laid out here so
+                // adding the preference is a one-line change at the call site.
+                NavEdge.Start, NavEdge.End -> Column(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .padding(
+                            horizontal = if (pinned) 0.dp else 12.dp,
+                            vertical = if (pinned) 0.dp else 10.dp
+                        ),
+                    verticalArrangement = Arrangement.spacedBy(if (pinned) 0.dp else 12.dp, Alignment.CenterVertically),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) { navItemsContent(Modifier) }
             }
         }
     }
@@ -865,64 +934,107 @@ private fun NavPill(
     // CircleShape/RoundedCornerShape(24.dp) switch had no visual effect to
     // interpolate. Kept as a plain rounded shape.
     val shape = RoundedCornerShape(24.dp)
-    
-    Row(
-        modifier = modifier
-            .scale(scale * selectionScale)
-            .height(if (isPinned) 56.dp else 48.dp)
-            .defaultMinSize(minWidth = 48.dp)
-            .clip(shape)
-            .background(bgColor)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            )
-            .padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
+
+    // Never and SelectedOnly share the inline pill: the label opens beside the
+    // icon on whichever tab is selected. Always stacks instead -- an expanded
+    // label on all four tabs at once is what overflowed the bar -- so it reads
+    // the same on both bar styles and costs no horizontal space.
+    val stacked = labelMode == NavLabelMode.Always
+    val labelFraction = when (labelMode) {
+        NavLabelMode.Always -> 1f
+        NavLabelMode.SelectedOnly -> progress
+        NavLabelMode.Never -> 0f
+    }
+
+    val icon: @Composable () -> Unit = {
         Icon(
             imageVector = item.icon,
             contentDescription = null,
             tint = contentColor,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(if (stacked) 22.dp else 24.dp)
         )
+    }
 
-        // The label is always composed and its width is interpolated with the
-        // swipe, instead of AnimatedVisibility switching it on only once the
-        // selection flipped. Clipping to the scaled width (and zero width when
-        // unselected) prevents layout changes from stretching icons.
-        // Always lays the label out for every tab. SelectedOnly is the shipped
-        // behaviour, where it is interpolated open with the swipe. Never collapses
-        // the pill to the icon alone.
-        val labelFraction = when {
-            // A classic bar is icons only by definition; letting the selected
-            // label open is what made pinned read as a wide floating pill.
-            isPinned -> 0f
-            else -> when (labelMode) {
-                NavLabelMode.Always -> 1f
-                NavLabelMode.SelectedOnly -> progress
-                NavLabelMode.Never -> 0f
-            }
-        }
-        Box(
-            modifier = Modifier
-                .width(labelWidth * labelFraction)
-                .clipToBounds()
+    // The label is always composed and its extent is interpolated with the
+    // swipe rather than switched in once the selection flips, so a drag opens
+    // and closes it instead of popping.
+    if (stacked) {
+        Column(
+            modifier = modifier
+                .scale(scale * selectionScale)
+                .height(if (isPinned) 64.dp else 56.dp)
+                .defaultMinSize(minWidth = 48.dp)
+                .clip(shape)
+                .background(bgColor)
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick
+                )
+                .padding(horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
+            Box(
+                modifier = Modifier.padding(top = 6.dp),
+                contentAlignment = Alignment.Center
+            ) { icon() }
             Text(
                 text = stringResource(item.labelRes),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium,
                 color = contentColor,
                 maxLines = 1,
                 softWrap = false,
-                overflow = TextOverflow.Clip,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
-                    .padding(start = 5.dp)
+                    .width(labelWidth.coerceAtMost(NAV_STACKED_MAX_LABEL))
                     .alpha(labelFraction)
             )
         }
+    } else {
+        Row(
+            modifier = modifier
+                .scale(scale * selectionScale)
+                .height(if (isPinned) 56.dp else 48.dp)
+                .defaultMinSize(minWidth = 48.dp)
+                .clip(shape)
+                .background(bgColor)
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick
+                )
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            icon()
+            Box(
+                modifier = Modifier
+                    .width(labelWidth * labelFraction)
+                    .clipToBounds()
+            ) {
+                Text(
+                    text = stringResource(item.labelRes),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = contentColor,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .padding(start = 5.dp)
+                        .alpha(labelFraction)
+                )
+            }
+        }
     }
 }
+
+/**
+ * Ceiling on one stacked label, so a long translation cannot push a tab past
+ * its quarter of the bar. A quarter plus slack: four tabs share the width
+ * evenly.
+ */
+private val NAV_STACKED_MAX_LABEL = 96.dp

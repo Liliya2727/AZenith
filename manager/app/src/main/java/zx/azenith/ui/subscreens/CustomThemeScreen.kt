@@ -785,20 +785,18 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                             onCheckedChange = { onPersonalizationChange(personalization.copy(navStyle = if (it) NavStyle.Floating else NavStyle.Pinned)) }
                         )
                     }
-                    if (personalization.navStyle == NavStyle.Floating) {
-                        add {
-                            CardItem {
-                                LabeledSlider(
-                                    icon = Icons.Filled.HorizontalRule,
-                                    label = stringResource(R.string.pers_nav_shape),
-                                    value = personalization.navRadius,
-                                    valueText = cornerLabel(personalization.navRadius, NAV_CENTER),
-                                    valueRange = 0f..1f,
-                                    steps = 0,
-                                    snapTo = NAV_CENTER,
-                                    onValueChange = { onPersonalizationChange(personalization.copy(navRadius = it)) }
-                                )
-                            }
+                    add {
+                        CardItem {
+                            LabeledSlider(
+                                icon = Icons.Filled.HorizontalRule,
+                                label = stringResource(R.string.pers_nav_shape),
+                                value = personalization.navRadius,
+                                valueText = cornerLabel(personalization.navRadius, NAV_CENTER),
+                                valueRange = 0f..1f,
+                                steps = 0,
+                                snapTo = NAV_CENTER,
+                                onValueChange = { onPersonalizationChange(personalization.copy(navRadius = it)) }
+                            )
                         }
                     }
                     add {
