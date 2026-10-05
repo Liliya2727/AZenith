@@ -773,6 +773,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     }
 
     item {
+        val enter = expandVertically(animationSpec = tween(400)) + fadeIn(animationSpec = tween(400))
+        val exit = shrinkVertically(animationSpec = tween(400)) + fadeOut(animationSpec = tween(400))
+    
         SettingsGroup(titleRes = R.string.str_interface, icon = Icons.Filled.AutoAwesome) {
             ExpressiveColumn(
                 content = buildList {
@@ -785,8 +788,14 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                             onCheckedChange = { onPersonalizationChange(personalization.copy(navStyle = if (it) NavStyle.Floating else NavStyle.Pinned)) }
                         )
                     }
-                    if (personalization.navStyle == NavStyle.Floating) {
-                        add {
+    
+                    // Nav radius
+                    add {
+                        AnimatedVisibility(
+                            visible = personalization.navStyle == NavStyle.Floating,
+                            enter = enter,
+                            exit = exit
+                        ) {
                             CardItem {
                                 LabeledSlider(
                                     icon = Icons.Filled.HorizontalRule,
@@ -801,6 +810,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                             }
                         }
                     }
+    
                     add {
                         CardItem {
                             LabeledControl(Icons.Filled.Label, stringResource(R.string.pers_nav_labels))
@@ -812,65 +822,68 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                             )
                         }
                     }
+    
+                    // Banner switch
                     add {
-                        Column {
-                            ExpressiveSwitchItem(
-                                icon = Icons.Outlined.Image,
-                                title = stringResource(R.string.str_enable_banner),
-                                checked = isBannerEnabled,
-                                onCheckedChange = onBannerEnabledChange
-                            )
+                        ExpressiveSwitchItem(
+                            icon = Icons.Outlined.Image,
+                            title = stringResource(R.string.str_enable_banner),
+                            checked = isBannerEnabled,
+                            onCheckedChange = onBannerEnabledChange
+                        )
+                    }
     
-                            AnimatedVisibility(
-                                visible = isBannerEnabled,
-                                enter = expandVertically(animationSpec = tween(400)) + fadeIn(animationSpec = tween(400)),
-                                exit = shrinkVertically(animationSpec = tween(400)) + fadeOut(animationSpec = tween(400))
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    // Banner: pick / reset media
+                    add {
+                        AnimatedVisibility(visible = isBannerEnabled, enter = enter, exit = exit) {
+                            CardItem {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
                                 ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+                                    OutlinedButton(
+                                        onClick = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp, topEnd = 0.dp, bottomEnd = 0.dp),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            contentColor = MaterialTheme.colorScheme.onSurface
+                                        )
                                     ) {
-                                        OutlinedButton(
-                                            onClick = { imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
-                                            modifier = Modifier.weight(1f),
-                                            shape = RoundedCornerShape(topStart = 50.dp, bottomStart = 50.dp, topEnd = 0.dp, bottomEnd = 0.dp),
-                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                            colors = ButtonDefaults.outlinedButtonColors(
-                                                contentColor = MaterialTheme.colorScheme.onSurface
-                                            )
-                                        ) {
-                                            Icon(Icons.Filled.Image, contentDescription = null, modifier = Modifier.size(18.dp))
-                                            Spacer(Modifier.width(8.dp))
-                                            Text(stringResource(R.string.str_pick_media), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        }
-    
-                                        OutlinedButton(
-                                            onClick = {
-                                                context.clearHeaderImage()
-                                                onBannerUpdated(null)
-                                                coroutineScope.launch {
-                                                    snackbarHostState.showSnackbar(context.getString(R.string.str_default_banner_toast))
-                                                }
-                                            },
-                                            modifier = Modifier.weight(1f),
-                                            shape = RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 50.dp, bottomEnd = 50.dp),
-                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                                            colors = ButtonDefaults.outlinedButtonColors(
-                                                contentColor = MaterialTheme.colorScheme.onSurface
-                                            )
-                                        ) {
-                                            Icon(Icons.Filled.Restore, contentDescription = null, modifier = Modifier.size(18.dp))
-                                            Spacer(Modifier.width(8.dp))
-                                            Text(stringResource(R.string.default_label), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        }
+                                        Icon(Icons.Filled.Image, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(stringResource(R.string.str_pick_media), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
     
+                                    OutlinedButton(
+                                        onClick = {
+                                            context.clearHeaderImage()
+                                            onBannerUpdated(null)
+                                            coroutineScope.launch {
+                                                snackbarHostState.showSnackbar(context.getString(R.string.str_default_banner_toast))
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 50.dp, bottomEnd = 50.dp),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            contentColor = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    ) {
+                                        Icon(Icons.Filled.Restore, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(stringResource(R.string.default_label), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
+                                }
+                            }
+                        }
+                    }
+    
+                    // Banner: gradient opacity
+                    add {
+                        AnimatedVisibility(visible = isBannerEnabled, enter = enter, exit = exit) {
+                            CardItem {
+                                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                                     LabeledControl(
                                         Icons.Filled.Contrast,
                                         stringResource(R.string.str_adjust_gradient)
@@ -923,18 +936,18 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                     }
                                 }
                             }
-
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
+                        }
+                    }
+    
+                    // Banner: corners (selalu tampil)
+                    add {
+                        CardItem {
+                            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                                 LabeledControl(
                                     Icons.Filled.Rectangle,
                                     stringResource(R.string.pers_banner_shape)
                                 )
-                            
+    
                                 Column {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -983,6 +996,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                             }
                         }
                     }
+    
                     add {
                         ExpressiveSwitchItem(
                             icon = Icons.Filled.BlurOn,
@@ -1005,7 +1019,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
             )
         }
     }
-
 }
 
 /** Two sizes the mock preview can be pinned at; [PreviewSize.Expanded] is the readable one. */
