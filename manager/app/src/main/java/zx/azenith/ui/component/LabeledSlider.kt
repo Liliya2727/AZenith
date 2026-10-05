@@ -21,7 +21,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,6 +32,8 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -58,6 +62,7 @@ internal fun LabeledSlider(
     steps: Int,
     snapTo: Float? = null,
     commitOnRelease: Boolean = false,
+    resetDefault: Float? = null,
     valueTextOf: @Composable (Float) -> String = { valueText },
     onValueChange: (Float) -> Unit
 ) {
@@ -86,6 +91,28 @@ internal fun LabeledSlider(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary
             )
+            // Same restore affordance the gradient and banner-corner sliders use,
+            // so a slider that has been dragged knows its way back.
+            if (resetDefault != null) {
+                IconButton(
+                    onClick = {
+                        // These sliders commit on release, so the thumb and readout are
+                        // driven from local state; a reset that skipped it would snap
+                        // the value back on the next drag.
+                        latest.floatValue = resetDefault
+                        if (commitOnRelease) dragValue = resetDefault
+                        onValueChange(resetDefault)
+                    },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.Restore,
+                        contentDescription = stringResource(R.string.reset),
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
         }
         ZenithSlider(
             value = shown,

@@ -67,6 +67,7 @@ fun LookAndFeelSection(
                                 valueRange = 0f..3f,
                                 steps = 2,
                                 snapTo = 1f,
+                                resetDefault = 1f,
                                 onValueChange = {
                                     onPersonalizationChange(
                                         pers.copy(
