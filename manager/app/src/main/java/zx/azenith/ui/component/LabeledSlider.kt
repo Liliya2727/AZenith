@@ -123,15 +123,16 @@ private fun snapNear(value: Float, target: Float, range: ClosedFloatingPointRang
 private const val SNAP_WINDOW = 0.06f
 
 /**
- * The corner sliders name their three zones rather than printing a number: what a
+ * The corner sliders name their zones rather than printing a number: what a
  * fraction of the surface height means is not something the user can hold in their
- * head. Banded around [center] rather than the midpoint, since the stock radius
- * is not the middle of the track.
+ * head. [center] is the slider's rest point, and the bands are measured outward
+ * from it in whichever direction the track actually has room for -- the bar dial
+ * rests at full round, so its upper band would fall off the end.
  */
 @Composable
 internal fun cornerLabel(fraction: Float, center: Float): String = when {
-    fraction < center - CORNER_LABEL_BAND -> stringResource(R.string.pers_roundness_sharp)
     fraction > center + CORNER_LABEL_BAND -> stringResource(R.string.pers_roundness_round)
+    fraction < center - CORNER_LABEL_BAND -> stringResource(R.string.pers_roundness_sharp)
     else -> stringResource(R.string.pers_roundness_default)
 }
 

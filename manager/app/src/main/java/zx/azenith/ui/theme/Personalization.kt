@@ -352,9 +352,9 @@ enum class NavStyle(val labelRes: Int) {
  */
 /** The stock value each corner slider rests at, so the UI can snap to the same point. */
 const val BANNER_CENTER = 0.12f
-// The bar is edge to edge by default, so its rest point is sharp rather than
-// midway up a dial that also offers fully rounded.
-const val NAV_CENTER = 0f
+// Rest point of the bar-corners dial: fully rounded, which is the Material
+// capsule the stock floating bar uses.
+const val NAV_CENTER = 1f
 
 private const val BANNER_CENTER_RADIUS = BANNER_CENTER
 private const val NAV_CENTER_RADIUS = NAV_CENTER

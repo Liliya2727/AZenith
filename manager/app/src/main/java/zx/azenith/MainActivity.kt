@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
@@ -694,6 +695,26 @@ fun BottomNavBar(
     navEdge: NavEdge = NavEdge.Bottom
 ) {
     val pinned = navStyle == NavStyle.Pinned
+    // Read from the configuration rather than a constant: the bar has to keep
+    // its margin on a narrow screen too, where a hard-coded cap would overflow.
+    val floatingMaxWidth = (LocalConfiguration.current.screenWidthDp.dp - NAV_FLOATING_MIN_MARGIN * 2)
+
+    // Measured label widths, so the selected pill can interpolate its
+    // width open and closed with the swipe instead of switching between
+    // "icon only" and "icon + label" layouts. Measuring once per
+    // composition keeps the per-frame path free of text layout.
+    val labelMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val labelStyle = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
+    val labelWidths = items.map { item ->
+        with(density) {
+            labelMeasurer.measure(
+                text = AnnotatedString(stringResource(item.labelRes)),
+                style = labelStyle
+            ).size.width.toDp()
+        }
+    }
+
     // Percent-based so Full stays a capsule at any bar height; a fixed dp radius
     // cannot, because the height differs between Pinned and the other two.
     // A pinned bar is flush with the window edges, so the corner choice cannot
@@ -711,39 +732,33 @@ fun BottomNavBar(
         modifier = modifier
             .fillMaxWidth()
             .then(insetPadding)
-            // Pinned is edge to edge; the other two keep the floating margin.
-            // The floating margin has to give way when a label has to open
-            // beside an icon: at 26dp each side the selected pill had 56dp left
-            // for its text, about two short of "Settings" in English and well
-            // short of a longer translation. Icons-only keeps the airy margin.
-            .padding(
-                horizontal = when {
-                    pinned -> 0.dp
-                    navLabels == NavLabelMode.Never -> 26.dp
-                    // The bar itself is a fixed width, so this is only the gap
-                    // between its edge and the window edge.
-                    else -> 14.dp
-                },
-                vertical = if (pinned) 0.dp else 20.dp
-            ),
+            // Pinned is edge to edge; the other two keep the floating margin,
+            // which lives on the row inside the surface rather than here.
+            // No horizontal padding on this Box: the surface hugs its own content, so
+            // padding on this Box is dead space that just narrows the bar. The
+            // margin lives on the row inside the surface instead, which is what
+            // keeps it equal on both sides.
+            .padding(vertical = if (pinned) 0.dp else 20.dp),
         contentAlignment = Alignment.Center
     ) {
         Surface(
             modifier = Modifier
-                // A stacked bar needs the full cap or its labels crowd; an inline
-                // one is laid out at intrinsic width and grows past the cap when
-                // the selected label opens, which is the old expanding pill.
-                // A fixed width for the inline floating bar, not wrap-content:
-                // hugging the content meant the surface grew and shrank on every
-                // tab change, and at its widest the label left no margin at all.
-                // Pinned is edge to edge; the stacked modes divide this width.
+                // A stacked bar needs the full width or its labels crowd. An
+                // inline one hugs its tabs and keeps [NAV_FLOATING_MIN_MARGIN]
+                // as row padding inside, so the margin is the same on both sides
+                // whatever the selected label measures. widthIn is what keeps the
+                // hug honest: on a long translation the content would otherwise
+                // run to the window edges.
                 .then(
                     when {
                         pinned -> Modifier.fillMaxWidth()
                         navLabels == NavLabelMode.Always -> Modifier
                             .widthIn(max = 350.dp)
                             .fillMaxWidth()
-                        else -> Modifier.width(NAV_FLOATING_WIDTH)
+                        else -> Modifier
+                            // Hug the tabs.
+                            .widthIn(max = floatingMaxWidth)
+                            .wrapContentWidth()
                     }
                 )
                 .clip(barRadius)
@@ -765,22 +780,6 @@ fun BottomNavBar(
             // page, so it needs no drop shadow; the others keep theirs to lift off.
             shadowElevation = if (isBlurEnabled || pinned) 0.dp else 8.dp
         ) {
-            // Measured label widths, so the selected pill can interpolate its
-            // width open and closed with the swipe instead of switching between
-            // "icon only" and "icon + label" layouts. Measuring once per
-            // composition keeps the per-frame path free of text layout.
-            val labelMeasurer = rememberTextMeasurer()
-            val density = LocalDensity.current
-            val labelStyle = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
-            val labelWidths = items.map { item ->
-                with(density) {
-                    labelMeasurer.measure(
-                        text = AnnotatedString(stringResource(item.labelRes)),
-                        style = labelStyle
-                    ).size.width.toDp()
-                }
-            }
-
             // One list of items, built once and placed by [navEdge]. Bottom lays
             // them out in a row under the finger; Start/End stack the identical
             // pills down a vertical rail for landscape.
@@ -820,12 +819,18 @@ fun BottomNavBar(
 
             when (navEdge) {
                 NavEdge.Bottom -> Row(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        // Matches the surface: the inline bar shrinks with its
+                        // content, the others divide the full width.
+                        .then(
+                            if (pinned || navLabels == NavLabelMode.Always) Modifier.fillMaxWidth()
+                            else Modifier.wrapContentWidth()
+                        )
                         .padding(
                             horizontal = when {
                                 pinned -> 0.dp
                                 navLabels == NavLabelMode.Never -> 12.dp
-                                else -> 4.dp
+                                else -> NAV_FLOATING_MIN_MARGIN
                             },
                             vertical = if (pinned) 0.dp else 10.dp
                         )
@@ -837,7 +842,7 @@ fun BottomNavBar(
                             ) else Modifier
                         ),
                     horizontalArrangement = Arrangement.spacedBy(
-                        if (pinned || navLabels == NavLabelMode.Never) 0.dp else 6.dp,
+                        if (pinned || navLabels == NavLabelMode.Never) 0.dp else NAV_PILL_GAP,
                         Alignment.CenterHorizontally
                     ),
                     verticalAlignment = Alignment.CenterVertically
@@ -989,10 +994,10 @@ private fun NavPill(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Box(
-                modifier = Modifier.padding(top = 6.dp),
-                contentAlignment = Alignment.Center
-            ) { icon() }
+            icon()
+            // fillMaxWidth rather than a fixed measured width: a Text sized to
+            // labelWidth started at the left edge of that box, so it read as
+            // offset from the icon instead of centred under it.
             Text(
                 text = stringResource(item.labelRes),
                 style = MaterialTheme.typography.labelSmall,
@@ -1000,9 +1005,11 @@ private fun NavPill(
                 color = contentColor,
                 maxLines = 1,
                 softWrap = false,
+                textAlign = TextAlign.Center,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
-                    .width(labelWidth.coerceAtMost(NAV_STACKED_MAX_LABEL))
+                    .fillMaxWidth()
+                    .padding(top = 3.dp)
                     .alpha(labelFraction)
             )
         }
@@ -1054,9 +1061,18 @@ private fun NavPill(
 private val NAV_STACKED_MAX_LABEL = 96.dp
 
 /**
- * Fixed width of the inline floating bar.
+ * Bounds on the inline floating bar's width, which follows the selected label.
  *
- * Sized so the expanded label plus three icon-only tabs just fill it, leaving a
- * visible margin either side instead of running to the window edge.
+ * The minimum is what keeps a short label clear of the window edge; the
+ * maximum is derived from the screen at the call site so a long translation is
+ * capped instead of running off both sides.
  */
-private val NAV_FLOATING_WIDTH = 300.dp
+// Sized so the longest shipped label still fits at the floor: 3 icon-only
+// tabs at 48dp + gaps + this pill's own chrome leaves 60dp of label room,
+// which clears "Settings" in English. A tighter floor clipped it to an ellipsis.
+/** Screen margin a floating bar keeps either side, whatever its content. */
+private val NAV_FLOATING_MIN_MARGIN = 14.dp
+/** Horizontal padding the row adds inside the surface. */
+private val NAV_ROW_PADDING = 4.dp
+/** Gap between two pills. */
+private val NAV_PILL_GAP = 6.dp
