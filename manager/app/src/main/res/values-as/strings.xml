@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (থ্ৰেডযুক্ত)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (থ্ৰেডযুক্ত)</string>
+    <string name="str_libraries_hint">এই এপটোৱে ব্যৱহাৰ কৰা সকলো তৃতীয় পক্ষৰ লাইব্ৰেৰী</string>
+    <string name="str_libraries_used">মুক্ত উৎস লাইব্ৰেৰীসমূহ</string>
+    <string name="str_licenses">অনুজ্ঞাপত্ৰ</string>
+    <string name="str_project_license_desc">AZenith এটা বিনামূলীয়া আৰু মুক্ত-উৎস চফ্টৱেৰ, Apache অনুজ্ঞা 2.0 ৰ অধীনত মুকলি কৰা হৈছে ।</string>
+    <string name="str_update_channel">চেনেল আপডেট কৰক</string>
+    <string name="str_view_full_license">সম্পূৰ্ণ অনুজ্ঞাপত্ৰ চাওক</string>
+    <string name="str_view_on_github">GitHub ত চাওক</string>
 </resources>

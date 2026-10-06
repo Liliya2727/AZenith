@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">СкиаГЛ (навој)</string>
     <string name="renderer_opengl_es">ОпенГЛ ЕС</string>
     <string name="renderer_opengl_es_threaded">ОпенГЛ ЕС (навој)</string>
+    <string name="str_libraries_hint">Све библиотеке трећих страна које користи ова апликација</string>
+    <string name="str_libraries_used">Библиотеке отвореног кода</string>
+    <string name="str_licenses">Лиценце</string>
+    <string name="str_project_license_desc">АЗенитх је бесплатан софтвер отвореног кода, објављен под Апацхе лиценцом 2.0.</string>
+    <string name="str_update_channel">Ажурирајте канал</string>
+    <string name="str_view_full_license">Погледајте пуну лиценцу</string>
+    <string name="str_view_on_github">Погледајте на ГитХуб-у</string>
 </resources>

@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (ത്രെഡ്ഡ്)</string>
     <string name="renderer_opengl_es">ഓപ്പൺജിഎൽ ഇഎസ്</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (ത്രെഡ്ഡ്)</string>
+    <string name="str_libraries_hint">ഈ ആപ്പ് ഉപയോഗിക്കുന്ന എല്ലാ മൂന്നാം കക്ഷി ലൈബ്രറികളും</string>
+    <string name="str_libraries_used">ഓപ്പൺ സോഴ്സ് ലൈബ്രറികൾ</string>
+    <string name="str_licenses">ലൈസൻസുകൾ</string>
+    <string name="str_project_license_desc">അപ്പാച്ചെ ലൈസൻസ് 2.0 പ്രകാരം പുറത്തിറക്കിയ സ്വതന്ത്രവും ഓപ്പൺ സോഴ്‌സ് സോഫ്റ്റ്‌വെയറുമാണ് AZenith.</string>
+    <string name="str_update_channel">ചാനൽ അപ്ഡേറ്റ് ചെയ്യുക</string>
+    <string name="str_view_full_license">മുഴുവൻ ലൈസൻസും കാണുക</string>
+    <string name="str_view_on_github">GitHub-ൽ കാണുക</string>
 </resources>

@@ -102,6 +102,7 @@ fun AboutScreen(navController: NavController) {
         modifier = Modifier,
         topBar = { 
             AboutTopAppBar(
+                title = stringResource(R.string.section_about),
                 onBack = { navController.safePopBackStack() },
                 scrollBehavior = scrollBehavior
             ) 
@@ -128,11 +129,11 @@ fun AboutScreen(navController: NavController) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.avatar),
+                        painter = painterResource(id = R.mipmap.ic_launcher),
                         contentDescription = stringResource(R.string.app_name),
                         modifier = Modifier
                             .size(96.dp)
-                            .clip(CircleShape)
+                            .clip(RoundedCornerShape(24.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                     )
 
@@ -178,7 +179,7 @@ fun AboutScreen(navController: NavController) {
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.str_channel))
+                            Text(stringResource(R.string.str_update_channel))
                         }
                     }
                 }
@@ -322,15 +323,35 @@ fun AboutScreen(navController: NavController) {
             }
             item {
                 ExpressiveList(
-                    content = listOf {
-                        ExpressiveListItem(
-                            onClick = { openLink("https://github.com/Liliya2727/AZenith") },
-                            headlineContent = { Text(stringResource(R.string.str_source_code)) },
-                            supportingContent = { Text(stringResource(R.string.str_view_the_source_code_on_github)) },
-                            leadingContent = { LeadingIcon(icon = Icons.Rounded.Code) },
-                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                        )
-                    }
+                    content = listOf(
+                        {
+                            ExpressiveListItem(
+                                onClick = { navController.navigate("licensescreen") },
+                                headlineContent = { Text(stringResource(R.string.str_licenses)) },
+                                supportingContent = { Text(stringResource(R.string.str_apache_license_2)) },
+                                leadingContent = { LeadingIcon(icon = Icons.Rounded.Gavel) },
+                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                            )
+                        },
+                        {
+                            ExpressiveListItem(
+                                onClick = { navController.navigate("librariesscreen") },
+                                headlineContent = { Text(stringResource(R.string.str_libraries_used)) },
+                                supportingContent = { Text(stringResource(R.string.str_libraries_hint)) },
+                                leadingContent = { LeadingIcon(icon = Icons.Rounded.LibraryBooks) },
+                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                            )
+                        },
+                        {
+                            ExpressiveListItem(
+                                onClick = { openLink("https://github.com/Liliya2727/AZenith") },
+                                headlineContent = { Text(stringResource(R.string.str_source_code)) },
+                                supportingContent = { Text(stringResource(R.string.str_view_the_source_code_on_github)) },
+                                leadingContent = { LeadingIcon(icon = Icons.Rounded.Code) },
+                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                            )
+                        }
+                    )
                 )
             }
         }
@@ -354,6 +375,7 @@ fun AboutSectionTitle(text: String) {
 
 @Composable
 fun AboutTopAppBar(
+    title: String,
     onBack: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior
 ) {

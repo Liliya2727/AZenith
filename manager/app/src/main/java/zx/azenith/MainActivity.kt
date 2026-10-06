@@ -499,6 +499,16 @@ fun MainScreen(fromTileType: String? = null) {
                             AboutScreen(navController)
                         }
                     }
+                    composable("licensescreen") {
+                        zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
+                            LicensesScreen(navController)
+                        }
+                    }
+                    composable("librariesscreen") {
+                        zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
+                            LibrariesScreen(navController)
+                        }
+                    }
                     composable("fpsgoscreen") {
                         zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
                             FpsGoSettings(navController)

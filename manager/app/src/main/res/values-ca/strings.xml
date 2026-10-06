@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (roscat)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (roscat)</string>
+    <string name="str_libraries_hint">Totes les biblioteques de tercers que utilitza aquesta aplicació</string>
+    <string name="str_libraries_used">Biblioteques de codi obert</string>
+    <string name="str_licenses">Llicències</string>
+    <string name="str_project_license_desc">AZenith és un programari gratuït i de codi obert, publicat sota la llicència Apache 2.0.</string>
+    <string name="str_update_channel">Actualitza el canal</string>
+    <string name="str_view_full_license">Veure la llicència completa</string>
+    <string name="str_view_on_github">Veure a GitHub</string>
 </resources>

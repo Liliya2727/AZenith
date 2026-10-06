@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (tishli)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (Tishli)</string>
+    <string name="str_libraries_hint">Ushbu ilova tomonidan foydalaniladigan barcha uchinchi tomon kutubxonalari</string>
+    <string name="str_libraries_used">Ochiq kodli kutubxonalar</string>
+    <string name="str_licenses">Litsenziyalar</string>
+    <string name="str_project_license_desc">AZenith bepul va ochiq kodli dasturiy ta\'minot bo\'lib, Apache License 2.0 ostida chiqarilgan.</string>
+    <string name="str_update_channel">Kanalni yangilash</string>
+    <string name="str_view_full_license">To\'liq litsenziyani ko\'rish</string>
+    <string name="str_view_on_github">GitHub-da ko\'rish</string>
 </resources>

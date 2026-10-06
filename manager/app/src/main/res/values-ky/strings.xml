@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (жиптүү)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (Treaded)</string>
+    <string name="str_libraries_hint">Бул колдонмо тарабынан колдонулган бардык үчүнчү тараптын китепканалары</string>
+    <string name="str_libraries_used">Ачык булак китепканалары</string>
+    <string name="str_licenses">Лицензиялар</string>
+    <string name="str_project_license_desc">AZenith – бул Apache License 2.0 астында чыгарылган эркин жана ачык булактуу программа.</string>
+    <string name="str_update_channel">Каналды жаңыртуу</string>
+    <string name="str_view_full_license">Толук лицензияны көрүү</string>
+    <string name="str_view_on_github">GitHub\'да көрүү</string>
 </resources>

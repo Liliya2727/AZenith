@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (Inayo nyuzi)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (Inayo nyuzi)</string>
+    <string name="str_libraries_hint">Maktaba zote za wahusika wengine zinazotumiwa na programu hii</string>
+    <string name="str_libraries_used">Maktaba ya Chanzo Huria</string>
+    <string name="str_licenses">Leseni</string>
+    <string name="str_project_license_desc">AZenith ni programu huria na huria, iliyotolewa chini ya Leseni ya Apache 2.0.</string>
+    <string name="str_update_channel">Sasisha kituo</string>
+    <string name="str_view_full_license">Tazama leseni kamili</string>
+    <string name="str_view_on_github">Tazama kwenye GitHub</string>
 </resources>

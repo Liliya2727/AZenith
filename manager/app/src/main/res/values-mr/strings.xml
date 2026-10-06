@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (थ्रेडेड)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (थ्रेडेड)</string>
+    <string name="str_libraries_hint">या ॲपद्वारे वापरलेली सर्व तृतीय-पक्ष लायब्ररी</string>
+    <string name="str_libraries_used">ओपन सोर्स लायब्ररी</string>
+    <string name="str_licenses">परवाने</string>
+    <string name="str_project_license_desc">AZenith हे विनामूल्य आणि मुक्त-स्रोत सॉफ्टवेअर आहे, जे Apache License 2.0 अंतर्गत प्रसिद्ध झाले आहे.</string>
+    <string name="str_update_channel">चॅनल अपडेट करा</string>
+    <string name="str_view_full_license">पूर्ण परवाना पहा</string>
+    <string name="str_view_on_github">GitHub वर पहा</string>
 </resources>

@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (เกลียว)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (เธรด)</string>
+    <string name="str_libraries_hint">ไลบรารีบุคคลที่สามทั้งหมดที่ใช้โดยแอปนี้</string>
+    <string name="str_libraries_used">ไลบรารีโอเพ่นซอร์ส</string>
+    <string name="str_licenses">ใบอนุญาต</string>
+    <string name="str_project_license_desc">AZenith เป็นซอฟต์แวร์โอเพ่นซอร์สฟรีที่เผยแพร่ภายใต้ Apache License 2.0</string>
+    <string name="str_update_channel">อัพเดทช่อง</string>
+    <string name="str_view_full_license">ดูใบอนุญาตฉบับเต็ม</string>
+    <string name="str_view_on_github">ดูบน GitHub</string>
 </resources>

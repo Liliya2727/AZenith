@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.agp.app)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.aboutlibraries)
     id("kotlin-parcelize")
 }
 
@@ -140,6 +141,7 @@ dependencies {
     implementation(libs.hiddenapibypass)
     implementation(libs.coil.gif)
     implementation(libs.compose.markdown)
+    implementation(libs.aboutlibraries.compose.m3)
 
     // Ships src/main/baseline-prof.txt and installs it on first run. See the
     // note in libs.versions.toml for why the app is slow without it.

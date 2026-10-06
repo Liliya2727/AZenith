@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (Threaded)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (Threaded)</string>
+    <string name="str_libraries_hint">Lahat ng third-party na library na ginagamit ng app na ito</string>
+    <string name="str_libraries_used">Mga Open Source na Aklatan</string>
+    <string name="str_licenses">Mga lisensya</string>
+    <string name="str_project_license_desc">Ang AZenith ay libre at open-source na software, na inilabas sa ilalim ng Apache License 2.0.</string>
+    <string name="str_update_channel">I-update ang channel</string>
+    <string name="str_view_full_license">Tingnan ang buong lisensya</string>
+    <string name="str_view_on_github">Tingnan sa GitHub</string>
 </resources>

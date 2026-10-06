@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (keermestatud)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (lõimega)</string>
+    <string name="str_libraries_hint">Kõik selle rakenduse kasutatavad kolmandate osapoolte raamatukogud</string>
+    <string name="str_libraries_used">Avatud lähtekoodiga raamatukogud</string>
+    <string name="str_licenses">Litsentsid</string>
+    <string name="str_project_license_desc">AZenith on tasuta ja avatud lähtekoodiga tarkvara, mis on välja antud Apache License 2.0 all.</string>
+    <string name="str_update_channel">Värskenda kanalit</string>
+    <string name="str_view_full_license">Vaadake täielikku litsentsi</string>
+    <string name="str_view_on_github">Vaadake GitHubis</string>
 </resources>

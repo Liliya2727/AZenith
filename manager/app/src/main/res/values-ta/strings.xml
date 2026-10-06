@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (திரிக்கப்பட்ட)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (திரிக்கப்பட்ட)</string>
+    <string name="str_libraries_hint">இந்த ஆப்ஸ் பயன்படுத்தும் அனைத்து மூன்றாம் தரப்பு நூலகங்களும்</string>
+    <string name="str_libraries_used">திறந்த மூல நூலகங்கள்</string>
+    <string name="str_licenses">உரிமங்கள்</string>
+    <string name="str_project_license_desc">AZenith ஒரு இலவச மற்றும் திறந்த மூல மென்பொருளாகும், இது Apache உரிமம் 2.0 இன் கீழ் வெளியிடப்பட்டது.</string>
+    <string name="str_update_channel">சேனலைப் புதுப்பிக்கவும்</string>
+    <string name="str_view_full_license">முழு உரிமத்தையும் பார்க்கவும்</string>
+    <string name="str_view_on_github">GitHub இல் காண்க</string>
 </resources>

@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (ଥ୍ରେଡ୍)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (ଥ୍ରେଡ୍)</string>
+    <string name="str_libraries_hint">ଏହି ଆପ୍ ଦ୍ୱାରା ବ୍ୟବହୃତ ସମସ୍ତ ତୃତୀୟ-ପକ୍ଷ ଲାଇବ୍ରେରୀଗୁଡ଼ିକ |</string>
+    <string name="str_libraries_used">ମୁକ୍ତ ଉତ୍ସ ଲାଇବ୍ରେରୀଗୁଡ଼ିକ |</string>
+    <string name="str_licenses">ଲାଇସେନ୍ସ |</string>
+    <string name="str_project_license_desc">AZenith ମାଗଣା ଏବଂ ମୁକ୍ତ ଉତ୍ସ ସଫ୍ଟୱେର୍, ଆପାଚେ ଲାଇସେନ୍ସ 2.0 ଅଧୀନରେ ପ୍ରକାଶିତ |</string>
+    <string name="str_update_channel">ଚ୍ୟାନେଲ୍ ଅଦ୍ୟତନ କରନ୍ତୁ |</string>
+    <string name="str_view_full_license">ପୂର୍ଣ୍ଣ ଲାଇସେନ୍ସ ଦେଖନ୍ତୁ |</string>
+    <string name="str_view_on_github">GitHub ରେ ଦେଖନ୍ତୁ |</string>
 </resources>

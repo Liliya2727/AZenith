@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (Có ren)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (Có luồng)</string>
+    <string name="str_libraries_hint">Tất cả thư viện của bên thứ ba được ứng dụng này sử dụng</string>
+    <string name="str_libraries_used">Thư viện nguồn mở</string>
+    <string name="str_licenses">Giấy phép</string>
+    <string name="str_project_license_desc">AZenith là phần mềm mã nguồn mở và miễn phí, được phát hành theo Giấy phép Apache 2.0.</string>
+    <string name="str_update_channel">Cập nhật kênh</string>
+    <string name="str_view_full_license">Xem giấy phép đầy đủ</string>
+    <string name="str_view_on_github">Xem trên GitHub</string>
 </resources>

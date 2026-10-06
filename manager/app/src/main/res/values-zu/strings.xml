@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">I-SkiaGL (Enemicu)</string>
     <string name="renderer_opengl_es">I-OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">I-OpenGL ES (Enemicu)</string>
+    <string name="str_libraries_hint">Wonke amalabhulali ezinkampani zangaphandle asetshenziswa yilolu hlelo lokusebenza</string>
+    <string name="str_libraries_used">Imitapo yolwazi yomthombo ovulekile</string>
+    <string name="str_licenses">Amalayisense</string>
+    <string name="str_project_license_desc">I-AZenith iyisoftware yamahhala futhi enomthombo ovulekile, ekhishwe ngaphansi kwe-Apache License 2.0.</string>
+    <string name="str_update_channel">Buyekeza isiteshi</string>
+    <string name="str_view_full_license">Buka ilayisense egcwele</string>
+    <string name="str_view_on_github">Buka ku-GitHub</string>
 </resources>

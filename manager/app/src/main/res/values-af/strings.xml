@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (Draad)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (Draad)</string>
+    <string name="str_libraries_hint">Alle derdeparty-biblioteke wat deur hierdie toepassing gebruik word</string>
+    <string name="str_libraries_used">Oopbronbiblioteke</string>
+    <string name="str_licenses">Lisensies</string>
+    <string name="str_project_license_desc">AZenith is gratis en oopbronsagteware, vrygestel onder die Apache-lisensie 2.0.</string>
+    <string name="str_update_channel">Dateer kanaal op</string>
+    <string name="str_view_full_license">Bekyk volledige lisensie</string>
+    <string name="str_view_on_github">Kyk op GitHub</string>
 </resources>

@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (þráður)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (þráður)</string>
+    <string name="str_libraries_hint">Öll þriðju aðila bókasöfn notuð af þessu forriti</string>
+    <string name="str_libraries_used">Open Source bókasöfn</string>
+    <string name="str_licenses">Leyfi</string>
+    <string name="str_project_license_desc">AZenith er ókeypis og opinn hugbúnaður, gefinn út undir Apache License 2.0.</string>
+    <string name="str_update_channel">Uppfæra rás</string>
+    <string name="str_view_full_license">Skoða fullt leyfi</string>
+    <string name="str_view_on_github">Skoðaðu á GitHub</string>
 </resources>

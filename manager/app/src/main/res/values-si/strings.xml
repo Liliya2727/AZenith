@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (නූල්)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (නූල්)</string>
+    <string name="str_libraries_hint">මෙම යෙදුම මගින් භාවිතා කරන සියලුම තෙවන පාර්ශවීය පුස්තකාල</string>
+    <string name="str_libraries_used">විවෘත මූලාශ්ර පුස්තකාල</string>
+    <string name="str_licenses">බලපත්ර</string>
+    <string name="str_project_license_desc">AZenith යනු Apache බලපත්‍රය 2.0 යටතේ නිකුත් කරන ලද නිදහස් සහ විවෘත මෘදුකාංගයකි.</string>
+    <string name="str_update_channel">නාලිකාව යාවත්කාලීන කරන්න</string>
+    <string name="str_view_full_license">සම්පූර්ණ බලපත්‍රය බලන්න</string>
+    <string name="str_view_on_github">GitHub මත බලන්න</string>
 </resources>

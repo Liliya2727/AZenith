@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (sriegiuotas)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (sriegiuotas)</string>
+    <string name="str_libraries_hint">Visos šios programos naudojamos trečiųjų šalių bibliotekos</string>
+    <string name="str_libraries_used">Atvirojo kodo bibliotekos</string>
+    <string name="str_licenses">Licencijos</string>
+    <string name="str_project_license_desc">AZenith yra nemokama atvirojo kodo programinė įranga, išleista pagal Apache licenciją 2.0.</string>
+    <string name="str_update_channel">Atnaujinti kanalą</string>
+    <string name="str_view_full_license">Žiūrėti visą licenciją</string>
+    <string name="str_view_on_github">Žiūrėti GitHub</string>
 </resources>

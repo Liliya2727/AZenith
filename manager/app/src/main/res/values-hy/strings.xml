@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (Թելերով)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (Treaded)</string>
+    <string name="str_libraries_hint">Այս հավելվածի կողմից օգտագործվող բոլոր երրորդ կողմի գրադարանները</string>
+    <string name="str_libraries_used">Բաց կոդով գրադարաններ</string>
+    <string name="str_licenses">Լիցենզիաներ</string>
+    <string name="str_project_license_desc">AZenith-ը անվճար և բաց կոդով ծրագրակազմ է, որը թողարկվել է Apache License 2.0-ի ներքո:</string>
+    <string name="str_update_channel">Թարմացրեք ալիքը</string>
+    <string name="str_view_full_license">Դիտել ամբողջական լիցենզիան</string>
+    <string name="str_view_on_github">Դիտել GitHub-ում</string>
 </resources>

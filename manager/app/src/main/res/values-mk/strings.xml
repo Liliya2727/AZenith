@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (навојна)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (навојна)</string>
+    <string name="str_libraries_hint">Сите библиотеки од трети страни што ги користи оваа апликација</string>
+    <string name="str_libraries_used">Библиотеки со отворен код</string>
+    <string name="str_licenses">Лиценци</string>
+    <string name="str_project_license_desc">AZenith е бесплатен софтвер со отворен код, објавен под лиценцата Apache 2.0.</string>
+    <string name="str_update_channel">Ажурирајте го каналот</string>
+    <string name="str_view_full_license">Погледнете ја целосната лиценца</string>
+    <string name="str_view_on_github">Погледнете на GitHub</string>
 </resources>

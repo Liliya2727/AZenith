@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (థ్రెడ్)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (థ్రెడ్)</string>
+    <string name="str_libraries_hint">ఈ యాప్ ఉపయోగించే అన్ని థర్డ్-పార్టీ లైబ్రరీలు</string>
+    <string name="str_libraries_used">ఓపెన్ సోర్స్ లైబ్రరీలు</string>
+    <string name="str_licenses">లైసెన్స్‌లు</string>
+    <string name="str_project_license_desc">AZenith అనేది అపాచీ లైసెన్స్ 2.0 క్రింద విడుదల చేయబడిన ఉచిత మరియు ఓపెన్ సోర్స్ సాఫ్ట్‌వేర్.</string>
+    <string name="str_update_channel">ఛానెల్‌ని నవీకరించండి</string>
+    <string name="str_view_full_license">పూర్తి లైసెన్స్‌ని వీక్షించండి</string>
+    <string name="str_view_on_github">GitHubలో వీక్షించండి</string>
 </resources>

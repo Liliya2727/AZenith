@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (gängad)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (gängad)</string>
+    <string name="str_libraries_hint">Alla tredjepartsbibliotek som används av denna app</string>
+    <string name="str_libraries_used">Bibliotek med öppen källkod</string>
+    <string name="str_licenses">Licenser</string>
+    <string name="str_project_license_desc">AZenith är gratis programvara med öppen källkod, släppt under Apache License 2.0.</string>
+    <string name="str_update_channel">Uppdatera kanal</string>
+    <string name="str_view_full_license">Se hela licensen</string>
+    <string name="str_view_on_github">Visa på GitHub</string>
 </resources>

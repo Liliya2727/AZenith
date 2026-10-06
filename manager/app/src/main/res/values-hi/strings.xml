@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">स्कियाजीएल (थ्रेडेड)</string>
     <string name="renderer_opengl_es">ओपनजीएल ईएस</string>
     <string name="renderer_opengl_es_threaded">ओपनजीएल ईएस (थ्रेडेड)</string>
+    <string name="str_libraries_hint">इस ऐप द्वारा उपयोग की जाने वाली सभी तृतीय-पक्ष लाइब्रेरीज़</string>
+    <string name="str_libraries_used">मुक्त स्रोत पुस्तकालय</string>
+    <string name="str_licenses">लाइसेंस</string>
+    <string name="str_project_license_desc">एज़ेनिथ मुफ़्त और ओपन-सोर्स सॉफ़्टवेयर है, जिसे अपाचे लाइसेंस 2.0 के तहत जारी किया गया है।</string>
+    <string name="str_update_channel">चैनल अपडेट करें</string>
+    <string name="str_view_full_license">पूर्ण लाइसेंस देखें</string>
+    <string name="str_view_on_github">GitHub पर देखें</string>
 </resources>

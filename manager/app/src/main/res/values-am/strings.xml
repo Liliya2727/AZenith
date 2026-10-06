@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (የተጣራ)</string>
     <string name="renderer_opengl_es">ጂኤል ኢኤስን ይክፈቱ</string>
     <string name="renderer_opengl_es_threaded">ክፍት ጂኤል ኢኤስ (የተጣራ)</string>
+    <string name="str_libraries_hint">በዚህ መተግበሪያ የሚጠቀሙባቸው ሁሉም የሶስተኛ ወገን ቤተ-ፍርግሞች</string>
+    <string name="str_libraries_used">ክፍት ምንጭ ቤተ-መጻሕፍት</string>
+    <string name="str_licenses">ፍቃዶች</string>
+    <string name="str_project_license_desc">AZenith ነፃ እና ክፍት ምንጭ ሶፍትዌር ነው፣ በ Apache License 2.0 ስር የተለቀቀ።</string>
+    <string name="str_update_channel">ቻናል አዘምን</string>
+    <string name="str_view_full_license">ሙሉ ፍቃድ ይመልከቱ</string>
+    <string name="str_view_on_github">በ GitHub ላይ ይመልከቱ</string>
 </resources>

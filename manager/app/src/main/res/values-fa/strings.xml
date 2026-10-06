@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (رشته ای)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (رشته ای)</string>
+    <string name="str_libraries_hint">تمام کتابخانه های شخص ثالث استفاده شده توسط این برنامه</string>
+    <string name="str_libraries_used">کتابخانه های متن باز</string>
+    <string name="str_licenses">مجوزها</string>
+    <string name="str_project_license_desc">AZenith یک نرم افزار رایگان و متن باز است که تحت مجوز Apache 2.0 منتشر شده است.</string>
+    <string name="str_update_channel">به روز رسانی کانال</string>
+    <string name="str_view_full_license">مشاهده مجوز کامل</string>
+    <string name="str_view_on_github">در GitHub مشاهده کنید</string>
 </resources>

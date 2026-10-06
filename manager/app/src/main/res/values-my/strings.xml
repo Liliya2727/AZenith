@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (Threaded)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (Threaded)</string>
+    <string name="str_libraries_hint">ဤအက်ပ်က အသုံးပြုသည့် ပြင်ပအဖွဲ့အစည်း စာကြည့်တိုက်များအားလုံး</string>
+    <string name="str_libraries_used">Open Source စာကြည့်တိုက်များ</string>
+    <string name="str_licenses">လိုင်စင်များ</string>
+    <string name="str_project_license_desc">AZenith သည် Apache License 2.0 အောက်တွင် ထုတ်ဝေထားသော အခမဲ့ဖြစ်ပြီး open-source software ဖြစ်သည်။</string>
+    <string name="str_update_channel">ချန်နယ်ကို အပ်ဒိတ်လုပ်ပါ။</string>
+    <string name="str_view_full_license">လိုင်စင်အပြည့်အစုံကိုကြည့်ပါ။</string>
+    <string name="str_view_on_github">GitHub တွင်ကြည့်ရှုပါ။</string>
 </resources>

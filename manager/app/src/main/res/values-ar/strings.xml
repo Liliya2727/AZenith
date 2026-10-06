@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (مترابطة)</string>
     <string name="renderer_opengl_es">برنامج OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">برنامج OpenGL ES (مترابط)</string>
+    <string name="str_libraries_hint">جميع مكتبات الطرف الثالث التي يستخدمها هذا التطبيق</string>
+    <string name="str_libraries_used">المكتبات مفتوحة المصدر</string>
+    <string name="str_licenses">التراخيص</string>
+    <string name="str_project_license_desc">AZenith هو برنامج مجاني ومفتوح المصدر، تم إصداره بموجب ترخيص Apache 2.0.</string>
+    <string name="str_update_channel">تحديث القناة</string>
+    <string name="str_view_full_license">عرض الترخيص الكامل</string>
+    <string name="str_view_on_github">عرض على جيثب</string>
 </resources>

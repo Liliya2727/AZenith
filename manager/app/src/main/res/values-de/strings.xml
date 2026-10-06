@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (Gewinde)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (Threaded)</string>
+    <string name="str_libraries_hint">Alle von dieser App verwendeten Bibliotheken von Drittanbietern</string>
+    <string name="str_libraries_used">Open-Source-Bibliotheken</string>
+    <string name="str_licenses">Lizenzen</string>
+    <string name="str_project_license_desc">AZenith ist eine kostenlose Open-Source-Software, die unter der Apache-Lizenz 2.0 veröffentlicht wird.</string>
+    <string name="str_update_channel">Kanal aktualisieren</string>
+    <string name="str_view_full_license">Vollständige Lizenz anzeigen</string>
+    <string name="str_view_on_github">Auf GitHub ansehen</string>
 </resources>

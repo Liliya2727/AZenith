@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (שרשור)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (שרשור)</string>
+    <string name="str_libraries_hint">כל ספריות צד שלישי המשמשות את האפליקציה הזו</string>
+    <string name="str_libraries_used">ספריות קוד פתוח</string>
+    <string name="str_licenses">רישיונות</string>
+    <string name="str_project_license_desc">AZenith היא תוכנת קוד פתוח בחינם, שפורסמה תחת רישיון Apache 2.0.</string>
+    <string name="str_update_channel">עדכן ערוץ</string>
+    <string name="str_view_full_license">צפה ברישיון המלא</string>
+    <string name="str_view_on_github">הצג ב-GitHub</string>
 </resources>

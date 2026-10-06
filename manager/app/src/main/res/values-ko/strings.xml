@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL(스레드형)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES(스레드)</string>
+    <string name="str_libraries_hint">이 앱에서 사용되는 모든 타사 라이브러리</string>
+    <string name="str_libraries_used">오픈 소스 라이브러리</string>
+    <string name="str_licenses">라이센스</string>
+    <string name="str_project_license_desc">AZenith는 Apache License 2.0에 따라 출시되는 무료 오픈 소스 소프트웨어입니다.</string>
+    <string name="str_update_channel">채널 업데이트</string>
+    <string name="str_view_full_license">정식 라이센스 보기</string>
+    <string name="str_view_on_github">GitHub에서 보기</string>
 </resources>

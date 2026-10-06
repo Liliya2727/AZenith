@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (Berulir)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (Berulir)</string>
+    <string name="str_libraries_hint">Semua perpustakaan pihak ketiga yang digunakan oleh aplikasi ini</string>
+    <string name="str_libraries_used">Perpustakaan Sumber Terbuka</string>
+    <string name="str_licenses">Lisensi</string>
+    <string name="str_project_license_desc">AZenith adalah perangkat lunak gratis dan sumber terbuka, dirilis di bawah Lisensi Apache 2.0.</string>
+    <string name="str_update_channel">Perbarui saluran</string>
+    <string name="str_view_full_license">Lihat lisensi penuh</string>
+    <string name="str_view_on_github">Lihat di GitHub</string>
 </resources>

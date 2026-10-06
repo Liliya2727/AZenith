@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (hariduna)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (hariduna)</string>
+    <string name="str_libraries_hint">Aplikazio honek erabiltzen dituen hirugarrenen liburutegi guztiak</string>
+    <string name="str_libraries_used">Kode irekiko liburutegiak</string>
+    <string name="str_licenses">Lizentziak</string>
+    <string name="str_project_license_desc">AZenith doako eta kode irekiko softwarea da, Apache License 2.0 lizentziapean kaleratua.</string>
+    <string name="str_update_channel">Eguneratu kanala</string>
+    <string name="str_view_full_license">Ikusi lizentzia osoa</string>
+    <string name="str_view_on_github">Ikusi GitHub-en</string>
 </resources>

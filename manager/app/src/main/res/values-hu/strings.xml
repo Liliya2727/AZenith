@@ -479,4 +479,11 @@
     <string name="renderer_skiagl_threaded">SkiaGL (menetes)</string>
     <string name="renderer_opengl_es">OpenGL ES</string>
     <string name="renderer_opengl_es_threaded">OpenGL ES (szálas)</string>
+    <string name="str_libraries_hint">Az alkalmazás által használt összes harmadik féltől származó könyvtár</string>
+    <string name="str_libraries_used">Nyílt forráskódú könyvtárak</string>
+    <string name="str_licenses">Licencek</string>
+    <string name="str_project_license_desc">Az AZenith egy ingyenes és nyílt forráskódú szoftver, amelyet az Apache License 2.0 alatt adtak ki.</string>
+    <string name="str_update_channel">Frissítse a csatornát</string>
+    <string name="str_view_full_license">Teljes licenc megtekintése</string>
+    <string name="str_view_on_github">Megtekintés a GitHubon</string>
 </resources>
