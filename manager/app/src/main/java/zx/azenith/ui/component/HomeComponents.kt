@@ -420,13 +420,16 @@ fun BannerCard(
         }
     } else {
 
+        // The banner carries its own corner control, so the widget ramp does not
+        // touch it.
+        val bannerShape = currentPersonalization().widgetCorner(26.dp)
         Surface(
             modifier = modifier
-                .clip(RoundedCornerShape(26.dp))
+                .clip(bannerShape)
                 .then(if (clickable) Modifier.clickable { onClick() } else Modifier)
                 .animateContentSize(animationSpec = spring()),
             color = colorScheme.secondaryContainer, 
-            shape = RoundedCornerShape(26.dp)
+            shape = bannerShape
         ) {
             Row(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
@@ -551,13 +554,15 @@ fun InfoTile(
         }
     }
 
+    val pers = currentPersonalization()
+    val cardShape = pers.widgetCorner(26.dp)
     Surface(
         modifier = modifier
-            .clip(RoundedCornerShape(26.dp))
+            .clip(cardShape)
             .clickable { onClick() }
             .animateContentSize(animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow)),
         color = cardBgColor,
-        shape = RoundedCornerShape(26.dp)
+        shape = cardShape
     ) {
         Column(
             modifier = Modifier.padding(14.dp) 
@@ -566,7 +571,7 @@ fun InfoTile(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(82.dp) 
-                    .clip(RoundedCornerShape(18.dp)) 
+                    .clip(pers.widgetCorner(18.dp, 82.dp)) 
                     .background(iconBoxBgColor),
                 contentAlignment = Alignment.Center
             ) {
@@ -694,7 +699,7 @@ fun DeviceInfoCard() {
     )
 
     Surface(
-        shape = RoundedCornerShape(26.dp), 
+        shape = currentPersonalization().widgetCorner(26.dp),
         color = colorScheme.surfaceColorAtElevation(1.dp),
         onClick = { isExpanded = !isExpanded }
     ) {
@@ -823,7 +828,7 @@ fun DeviceInfoGridItem(modifier: Modifier = Modifier, title: String, value: Stri
 
         modifier = modifier.height(86.dp),
         color = colorScheme.surfaceVariant.copy(alpha = 0.5f), 
-        shape = RoundedCornerShape(18.dp) 
+        shape = currentPersonalization().widgetCorner(18.dp, 86.dp)
     ) {
         Column(
             modifier = Modifier
@@ -867,7 +872,7 @@ fun DeviceInfoGridItem(modifier: Modifier = Modifier, title: String, value: Stri
 @Composable
 fun LinkCard(icon: ImageVector, titleRes: Int, descRes: Int, onClick: () -> Unit) {
     val colorScheme = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(26.dp)
+    val shape = currentPersonalization().widgetCorner(26.dp)
     
     Surface(
         shape = shape, 
@@ -1002,10 +1007,11 @@ fun RunningGameCard(
 
 
 
+    val cardShape = currentPersonalization().widgetCorner(26.dp)
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(26.dp))
+            .clip(cardShape)
             .then(
 
                 if (!isNoApp) {
@@ -1019,7 +1025,7 @@ fun RunningGameCard(
                 } else Modifier
             ),
         color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = RoundedCornerShape(26.dp)
+        shape = cardShape
     ) {
         Row(
             modifier = Modifier.padding(12.dp),

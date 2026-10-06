@@ -1323,9 +1323,11 @@ private fun MockScreen(
         // cropped the bottom rows -- the navbar -- away.
         val fit = minOf(maxWidth / MOCK_W, maxHeight / MOCK_H)
         // Clamp to half the widget's own height: past that a rectangle IS a circle.
+        // The same helper the real widgets use, so the preview cannot drift from
+        // what Home renders. The clamp bounds are the mock's own tile heights.
         val k = personalization.cornerMultiplier
-        val mediumShape = RoundedCornerShape((12.dp * k).coerceAtMost(27.5.dp))
-        val largeShape = RoundedCornerShape((16.dp * k).coerceAtMost(52.dp))
+        val mediumShape = personalization.widgetCorner(12.dp, 55.dp)
+        val largeShape = personalization.widgetCorner(26.dp, 86.dp)
         // Real blur on the content the mock dialog covers, so the toggle changes
         // something measurable instead of tinting a rectangle. Animated so the
         // reveal reads as the dialog arriving rather than a setting flipping.

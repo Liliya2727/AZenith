@@ -17,8 +17,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 import zx.azenith.R
@@ -172,6 +174,25 @@ data class Personalization(
         }
 
     private fun lerp(from: Float, to: Float, t: Float): Float = from + (to - from) * t
+
+    /**
+     * A widget corner that tracks [roundness], from a radius the surface would
+     * have used on its own.
+     *
+     * Widgets cannot read [shapes] directly: the card surfaces are authored
+     * against a 26dp radius that sits between the large and extraLarge ramp
+     * steps, so scaling a ramp step moves them off the shape they were designed
+     * for. Scaling the authored radius instead keeps the widget's proportions at
+     * the stock setting and puts the sharp and round ends on the same dial.
+     */
+    fun widgetCorner(base: Dp): Shape = RoundedCornerShape(base * cornerMultiplier)
+
+    /**
+     * A widget corner that cannot exceed half of [height]: past that the ends
+     * meet and a rectangle stops being a rectangle.
+     */
+    fun widgetCorner(base: Dp, height: Dp): Shape =
+        RoundedCornerShape((base * cornerMultiplier).coerceAtMost(height / 2))
 
     companion object {
         const val PREF_ROUNDNESS = "pers_roundness"
