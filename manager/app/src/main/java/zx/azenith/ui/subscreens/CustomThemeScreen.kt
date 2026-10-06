@@ -127,6 +127,9 @@ import androidx.compose.foundation.background
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.ui.graphics.vector.ImageVector
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 
 
 /**
@@ -1312,6 +1315,9 @@ private fun MockScreen(
     isCollapsed: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    // One haze state for the mock's content and the nav bar that blurs it, so
+    // the bar samples this column rather than the empty space behind the card.
+    val mockHaze = rememberHazeState()
     BoxWithConstraints(modifier = modifier) {
         // Fit both axes: scaling by width alone overflowed the slot vertically and
         // cropped the bottom rows -- the navbar -- away.
@@ -1346,6 +1352,8 @@ private fun MockScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .blur(blurRadius)
+                // The nav bar blurs this column, so it has to be a haze source.
+                .hazeSource(mockHaze)
                 .padding(horizontal = 8.dp, vertical = if (isCollapsed) 2.dp else 9.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -1398,7 +1406,9 @@ private fun MockScreen(
                 labelMode = personalization.navLabels,
                 vibrantNav = personalization.vibrantNav,
                 navScale = personalization.navScale,
-                navSpacing = personalization.navSpacing
+                navSpacing = personalization.navSpacing,
+                isBlurEnabled = isBlurEnabled,
+                mockHaze = mockHaze
             )
         }
 
@@ -1592,6 +1602,8 @@ private fun NavBarMock(
     vibrantNav: Boolean,
     navScale: Float,
     navSpacing: Float,
+    isBlurEnabled: Boolean,
+    mockHaze: HazeState,
     modifier: Modifier = Modifier
 ) {
     // Derive the scale from the width the bar is actually handed, not from
@@ -1615,8 +1627,11 @@ private fun NavBarMock(
                 // The preview never navigates; the selected tab is the one it shows.
                 selectedRoute = "applist",
                 onItemSelected = {},
-                isBlurEnabled = false,
-                hazeState = null,
+                // The card under this bar is the tap target that zooms the mock, so
+                // a live tab would swallow it.
+                interactive = false,
+                isBlurEnabled = isBlurEnabled,
+                hazeState = mockHaze,
                 pagerState = null,
                 navStyle = navStyle,
                 vibrantNav = vibrantNav,
@@ -1645,15 +1660,6 @@ private val AZENITH_NAV_WIDTH = 360.dp
 
 
 
-/**
- * Stands in for the profile picker dialog, the one place the app actually blurs.
- *
- * Haze needs real pixels behind it to sample and the mock has none of its own, so
- * the blur is applied to the mock content behind this card rather than to the
- * card. Toggling the switch therefore scales, fades and blurs the same content
- * the real dialog blurs, which is what makes the setting legible from the
- * Personalization page alone.
- */
 @Composable
 private fun MockBlurDialog(
     visible: Boolean,
@@ -1670,11 +1676,9 @@ private fun MockBlurDialog(
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "mockCard"
     )
-    val cardScale by animateFloatAsState(
-        targetValue = if (visible) 1f else 0.88f,
-        animationSpec = spring(stiffness = Spring.StiffnessMedium),
-        label = "mockCardScale"
-    )
+    // No scale-in: the card used to spring up from 0.88 as the toggle flipped,
+    // which read as a dialog animating rather than a blur setting changing, and
+    // it pushed the card around while the user was trying to judge the blur.
     if (scrimAlpha == 0f && cardAlpha == 0f) return
 
     Box(modifier) {
@@ -1687,11 +1691,7 @@ private fun MockBlurDialog(
             modifier = Modifier
                 .align(Alignment.Center)
                 .fillMaxWidth(0.78f)
-                .alpha(cardAlpha)
-                .graphicsLayer {
-                    scaleX = cardScale
-                    scaleY = cardScale
-                },
+                .alpha(cardAlpha),
             // Translucent like the real dialog's blurred container: opaque would
             // hide the blur the toggle is meant to demonstrate.
             color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.82f),
