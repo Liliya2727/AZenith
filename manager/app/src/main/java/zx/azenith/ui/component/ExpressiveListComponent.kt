@@ -417,12 +417,19 @@ fun ExpressiveSwitchItem(
     summary: String? = null,
     checked: Boolean,
     enabled: Boolean = true,
+    // A disabled switch still has to explain itself, so the row stays clickable
+    // when this is set and the tap does not reach onCheckedChange.
+    onDisabledClick: (() -> Unit)? = null,
     onCheckedChange: (Boolean) -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
     ExpressiveListItem(
-        onClick = { onCheckedChange(!checked) },
+        onClick = if (enabled || onDisabledClick == null) {
+            { onCheckedChange(!checked) }
+        } else {
+            onDisabledClick
+        },
         modifier = Modifier.toggleable(
             value = checked,
             interactionSource = interactionSource,
@@ -432,7 +439,16 @@ fun ExpressiveSwitchItem(
             onValueChange = onCheckedChange
         ),
         headlineContent = { Text(title) },
-        leadingContent = icon?.let { { LeadingIcon(icon = it, contentDescription = title) } },
+        leadingContent = icon?.let {
+            {
+                LeadingIcon(
+                    icon = it,
+                    contentDescription = title,
+                    contentColor = if (enabled) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                )
+            }
+        },
         trailingContent = {
             Switch(
                 checked = checked,
@@ -442,7 +458,8 @@ fun ExpressiveSwitchItem(
                         Icon(
                             imageVector = Icons.Filled.Check,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = if (enabled) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
                             modifier = Modifier.size(SwitchDefaults.IconSize),
                         )
                     } else {

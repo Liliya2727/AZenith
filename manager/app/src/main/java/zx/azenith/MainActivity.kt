@@ -563,7 +563,9 @@ fun MainScreen(fromTileType: String? = null) {
                         navStyle = currentPersonalization().navStyle,
                         navShape = currentPersonalization().navRadius,
                                         navLabels = currentPersonalization().navLabels,
-                        vibrantNav = currentPersonalization().vibrantNav,
+                        // The blur owns the bar's colour, so the tint is off
+                        // whenever it is on regardless of what the pref still says.
+                        vibrantNav = currentPersonalization().vibrantNav && !isBlurEnabled,
                         navScale = currentPersonalization().navScale,
                         navSpacing = currentPersonalization().navSpacing,
                         modifier = Modifier.align(Alignment.BottomCenter),

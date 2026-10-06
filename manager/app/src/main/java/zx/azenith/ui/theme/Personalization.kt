@@ -44,16 +44,16 @@ import zx.azenith.R
 enum class AccentIntensity(val labelRes: Int) {
     Neutral(R.string.pers_accent_neutral),
     Balanced(R.string.pers_accent_balanced),
-    Vivid(R.string.pers_accent_vivid),
-    Neon(R.string.pers_accent_neon);
+    Bright(R.string.pers_accent_bright),
+    Vibrant(R.string.pers_accent_vibrant);
 
     /** Multiplier applied to the HSL saturation of every accent role. */
     val saturationFactor: Float
         get() = when (this) {
             Neutral -> 0.72f
             Balanced -> 1f
-            Vivid -> 1.28f
-            Neon -> 1.55f
+            Bright -> 1.28f
+            Vibrant -> 1.55f
         }
 
     companion object {

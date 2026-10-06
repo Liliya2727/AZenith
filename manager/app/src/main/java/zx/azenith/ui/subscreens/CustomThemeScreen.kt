@@ -500,6 +500,12 @@ MockCardFrame(
                         onBannerUpdated = { customBannerUri = it },
                         onBlurEnabledChange = {
                             isBlurEnabled = it
+                            // Enabling the blur clears the navbar tint, so the stored value
+                            // cannot outlive the state that invalidated it.
+                            if (it) {
+                                personalization = personalization.copy(vibrantNav = false)
+                                persistPersonalization(personalization)
+                            }
                             coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putBoolean("expressive_blur_ui", it).commit() }
                         },
                         useScrollAnimation = useScrollAnimation,
@@ -588,6 +594,12 @@ MockCardFrame(
                             },
                             onBlurEnabledChange = {
                                 isBlurEnabled = it
+                                // Enabling the blur clears the navbar tint, so the stored value
+                                // cannot outlive the state that invalidated it.
+                                if (it) {
+                                    personalization = personalization.copy(vibrantNav = false)
+                                    persistPersonalization(personalization)
+                                }
                                 coroutineScope.launch(kotlinx.coroutines.Dispatchers.IO) { prefs.edit().putBoolean("expressive_blur_ui", it).commit() }
                             },
                             useScrollAnimation = useScrollAnimation,
@@ -871,10 +883,26 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                     }
 
                     add {
+                        // The blur already owns the bar's colour, so a tinted bar
+                        // under it is invisible at best. Blur wins and the switch
+                        // turns itself off rather than refusing the change.
+                        val vibrantBlocked = isBlurEnabled
                         ExpressiveSwitchItem(
                             icon = Icons.Outlined.Palette,
                             title = stringResource(R.string.pers_nav_vibrant),
-                            checked = personalization.vibrantNav,
+                            summary = stringResource(
+                                if (vibrantBlocked) R.string.pers_nav_vibrant_summary_blur
+                                else R.string.pers_nav_vibrant_summary
+                            ),
+                            checked = personalization.vibrantNav && !vibrantBlocked,
+                            enabled = !vibrantBlocked,
+                            onDisabledClick = {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        context.getString(R.string.pers_nav_vibrant_blur_conflict)
+                                    )
+                                }
+                            },
                             onCheckedChange = {
                                 onPersonalizationChange(personalization.copy(vibrantNav = it))
                             }
