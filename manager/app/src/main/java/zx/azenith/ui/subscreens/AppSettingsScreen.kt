@@ -132,13 +132,13 @@ fun AppSettingsScreen(
 
     val rendererModes = listOf(
         stringResource(R.string.Renderer_Default),
-        "SkiaVK",
-        "SkiaVK (Threaded)",
-        "SkiaGL",
-        "SkiaGL (Threaded)",
-        "OpenGL ES",
-        "OpenGL ES (Threaded)",
-        "Vulkan"
+        stringResource(R.string.renderer_skia_vk),
+        stringResource(R.string.renderer_skia_vk_threaded),
+        stringResource(R.string.renderer_skiagl),
+        stringResource(R.string.renderer_skiagl_threaded),
+        stringResource(R.string.renderer_opengl_es),
+        stringResource(R.string.renderer_opengl_es_threaded),
+        stringResource(R.string.Renderer_Vulkan)
     )
 
     val rendererValues = listOf(

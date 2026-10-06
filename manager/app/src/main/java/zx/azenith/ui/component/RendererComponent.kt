@@ -56,13 +56,13 @@ private data class RendererOption(
 private fun getRendererOptions(context: Context): List<RendererOption> {
     return listOf(
         RendererOption(context.getString(R.string.Renderer_Default), "default", Icons.Rounded.Layers),
-        RendererOption("SkiaVK", "skiavk", Icons.Rounded.Layers),
-        RendererOption("SkiaVK (Threaded)", "skiavkthreaded", Icons.Rounded.Layers),
-        RendererOption("SkiaGL", "skiagl", Icons.Rounded.Layers),
-        RendererOption("SkiaGL (Threaded)", "skiaglthreaded", Icons.Rounded.Layers),
-        RendererOption("OpenGL ES", "opengl", Icons.Rounded.Layers),
-        RendererOption("OpenGL ES (Threaded)", "openglthreaded", Icons.Rounded.Layers),
-        RendererOption("Vulkan", "vulkan", Icons.Rounded.Layers),
+        RendererOption(context.getString(R.string.renderer_skia_vk), "skiavk", Icons.Rounded.Layers),
+        RendererOption(context.getString(R.string.renderer_skia_vk_threaded), "skiavkthreaded", Icons.Rounded.Layers),
+        RendererOption(context.getString(R.string.renderer_skiagl), "skiagl", Icons.Rounded.Layers),
+        RendererOption(context.getString(R.string.renderer_skiagl_threaded), "skiaglthreaded", Icons.Rounded.Layers),
+        RendererOption(context.getString(R.string.renderer_opengl_es), "opengl", Icons.Rounded.Layers),
+        RendererOption(context.getString(R.string.renderer_opengl_es_threaded), "openglthreaded", Icons.Rounded.Layers),
+        RendererOption(context.getString(R.string.Renderer_Vulkan), "vulkan", Icons.Rounded.Layers),
     )
 }
 
@@ -110,7 +110,7 @@ fun RendererDialog(
                         {
                             Icon(
                                 imageVector = Icons.Rounded.Check,
-                                contentDescription = "Selected",
+                                contentDescription = stringResource(R.string.cd_selected),
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }

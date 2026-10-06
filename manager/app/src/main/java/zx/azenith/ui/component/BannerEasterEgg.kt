@@ -80,6 +80,8 @@ import io.github.vinceglb.confettikit.core.Spread
 import io.github.vinceglb.confettikit.core.emitter.Emitter
 import io.github.vinceglb.confettikit.core.models.Shape
 import kotlin.time.Duration.Companion.milliseconds
+import androidx.compose.ui.res.stringResource
+import zx.azenith.R
 import zx.azenith.ui.theme.currentPersonalization
 
 /**
@@ -346,14 +348,14 @@ private fun AnimatedSlogan(
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         SloganLine(
-            text = "Zenith your game",
+            text = stringResource(R.string.banner_slogan_title),
             fontSize = titleSize,
             weight = FontWeight.ExtraBold,
             progress = lead,
             color = color
         )
         SloganLine(
-            text = "Zenith your performance",
+            text = stringResource(R.string.banner_slogan_subtitle),
             fontSize = subtitleSize,
             weight = FontWeight.SemiBold,
             progress = follow,

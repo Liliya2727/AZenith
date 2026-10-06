@@ -396,7 +396,9 @@ fun TweakScreen(
                             modifier = Modifier.weight(1f).then(rendererOrigin.trackedModifier()),
                             icon = Icons.Rounded.SettingsSuggest,
                             label = stringResource(R.string.renderengine),
-                            value = viewModel.currentRenderer!!.uppercase(),
+                            value = viewModel.currentRenderer!!.let { r ->
+                                if (r.startsWith("Default")) stringResource(R.string.Renderer_Default) + r.removePrefix("Default") else r
+                            }.uppercase(),
                             showArrow = true,
                             highlight = true,
                             isLoading = viewModel.isRendererLoading
@@ -548,7 +550,7 @@ fun TweakScreen(
         ) {
 
             pendingRestoreResult?.let { result ->
-                val socName = zx.azenith.ui.util.BackupManager.getSocName(result.socType)
+                val socName = zx.azenith.ui.util.BackupManager.getSocName(context, result.socType)
                 val isSocMismatch = result.socType != currentSocType
 
                 Column {

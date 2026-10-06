@@ -10,7 +10,7 @@
         android:id="@+id/dialog_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Select Profile"
+        android:text="@string/Profile_Select"
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="?android:attr/textColorPrimary"
@@ -39,7 +39,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Performance"
+            android:text="@string/Profile_Performance"
             android:textSize="16sp"
             android:textColor="?android:attr/textColorPrimary"
             android:maxLines="1"
@@ -70,7 +70,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Balanced"
+            android:text="@string/Profile_Balanced"
             android:textSize="16sp"
             android:textColor="?android:attr/textColorPrimary"
             android:maxLines="1"
@@ -101,7 +101,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Eco Mode"
+            android:text="@string/Profile_ECO_mode"
             android:textSize="16sp"
             android:textColor="?android:attr/textColorPrimary"
             android:maxLines="1"

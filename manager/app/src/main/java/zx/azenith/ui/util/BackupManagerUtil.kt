@@ -24,6 +24,7 @@ import java.io.ByteArrayOutputStream
 import javax.crypto.Cipher
 import javax.crypto.spec.SecretKeySpec
 import org.json.JSONObject
+import zx.azenith.R
 
 
 object BackupManager {
@@ -32,14 +33,14 @@ object BackupManager {
     private const val ALGORITHM = "AES"
 
 
-    fun getSocName(type: String?): String {
+    fun getSocName(context: Context, type: String?): String {
         return when (type) {
             "1" -> "MediaTek"
             "2" -> "Snapdragon"
             "3" -> "Exynos"
             "4" -> "Unisoc"
             "5" -> "Tensor"
-            else -> "Unknown ($type)"
+            else -> context.getString(R.string.str_unknown_soc, type ?: "null")
         }
     }
 

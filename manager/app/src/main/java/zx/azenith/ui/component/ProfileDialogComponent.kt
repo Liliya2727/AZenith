@@ -107,7 +107,7 @@ fun ProfileDialog(
                         {
                             Icon(
                                 imageVector = Icons.Rounded.Check,
-                                contentDescription = "Selected",
+                                contentDescription = stringResource(R.string.cd_selected),
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }

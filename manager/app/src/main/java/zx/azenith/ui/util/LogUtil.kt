@@ -28,6 +28,7 @@ import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import zx.azenith.R
 
 
 suspend fun dumpDiagnosticLogs(context: Context, saveToDownloads: Boolean): File? = withContext(Dispatchers.IO) {
@@ -169,6 +170,6 @@ fun getShareLogIntent(context: Context, file: File): Intent {
         putExtra(Intent.EXTRA_STREAM, uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    return Intent.createChooser(intent, "Send AZenith Logs")
+    return Intent.createChooser(intent, context.getString(R.string.send_logs_title))
 }
 

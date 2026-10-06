@@ -226,7 +226,7 @@ fun PreferenceTweakScreen(navController: NavController) {
                                     ExpressiveSwitchItem(
                                         icon = Icons.Rounded.Timeline,
                                         title = stringResource(R.string.walt_tunes),
-                                        summary = if (isSnapdragon) stringResource(R.string.walt_tunes_desc) else "This option is only available for Snapdragon devices.",
+                                        summary = if (isSnapdragon) stringResource(R.string.walt_tunes_desc) else stringResource(R.string.str_unavailable_snapdragon),
                                         checked = waltTunes!!,
                                         enabled = isSnapdragon,
                                         onCheckedChange = { isChecked ->
@@ -315,7 +315,7 @@ fun PreferenceTweakScreen(navController: NavController) {
                                     ExpressiveSwitchItem(
                                         icon = Icons.Rounded.DeveloperBoard,
                                         title = stringResource(R.string.gpu_mali),
-                                        summary = if (isMediaTek) stringResource(R.string.gpu_mali_desc) else "This option is only available for MediaTek devices.",
+                                        summary = if (isMediaTek) stringResource(R.string.gpu_mali_desc) else stringResource(R.string.str_unavailable_mediatek),
                                         checked = malischedstate!!,
                                         enabled = isMediaTek,
                                         onCheckedChange = { isChecked ->
@@ -334,7 +334,7 @@ fun PreferenceTweakScreen(navController: NavController) {
                                         ExpressiveSwitchItem(
                                             icon = Icons.Rounded.Thermostat,
                                             title = stringResource(R.string.disable_thermals),
-                                            summary = if (isMediaTek) stringResource(R.string.disable_thermals_desc) else "This option is only available for MediaTek devices.",
+                                            summary = if (isMediaTek) stringResource(R.string.disable_thermals_desc) else stringResource(R.string.str_unavailable_mediatek),
                                             checked = distherm!!,
                                             enabled = isMediaTek,
                                             onCheckedChange = { isChecked ->

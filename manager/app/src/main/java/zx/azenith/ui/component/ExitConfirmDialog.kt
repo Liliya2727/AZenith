@@ -27,10 +27,10 @@ fun ExitConfirmDialog(
             Icon(Icons.Rounded.ExitToApp, contentDescription = null)
         },
         title = {
-            Text(text = "Exit AZenith")
+            Text(text = stringResource(R.string.dialog_exit_confirm_title))
         },
         text = {
-            Text(text = "Are you sure you want to exit the application?")
+            Text(text = stringResource(R.string.dialog_exit_confirm_content))
         },
         confirmButton = {
             TextButton(
@@ -38,14 +38,14 @@ fun ExitConfirmDialog(
                     onConfirm()
                 }
             ) {
-                Text("Exit", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.dialog_exit_confirm_button), color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = {
             TextButton(
                 onClick = onDismiss
             ) {
-                Text("Cancel")
+                Text(stringResource(R.string.dialog_cancel))
             }
         }
     )

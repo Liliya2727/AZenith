@@ -465,4 +465,21 @@
     <string name="nav_label_never">Never</string>
     <string name="nav_style_preview_pinned">Pinned bar, icons only, edge to edge</string>
     <string name="nav_style_preview_floating">Floating pill clear of the screen edges</string>
-    </resources>
+    <string name="cd_selected">Selected</string>
+    <string name="banner_slogan_title" translatable="false">Zenith your game</string>
+    <string name="banner_slogan_subtitle" translatable="false">Zenith your performance</string>
+    <string name="str_unavailable_snapdragon">This option is only available for Snapdragon devices.</string>
+    <string name="str_unavailable_mediatek">This option is only available for MediaTek devices.</string>
+    <string name="send_logs_title">Send AZenith Logs</string>
+    <string name="str_unknown_soc">Unknown (%1$s)</string>
+    <string name="color_preset_vivid">Vivid</string>
+    <string name="color_preset_warm">Warm</string>
+    <string name="color_preset_cool">Cool</string>
+    <string name="color_preset_amoled">AMOLED</string>
+    <string name="renderer_skia_vk">SkiaVK</string>
+    <string name="renderer_skia_vk_threaded">SkiaVK (Threaded)</string>
+    <string name="renderer_skiagl">SkiaGL</string>
+    <string name="renderer_skiagl_threaded">SkiaGL (Threaded)</string>
+    <string name="renderer_opengl_es">OpenGL ES</string>
+    <string name="renderer_opengl_es_threaded">OpenGL ES (Threaded)</string>
+</resources>
