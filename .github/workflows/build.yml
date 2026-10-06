@@ -141,6 +141,31 @@ jobs:
           path: manager/app/build/outputs/apk/**/*.apk
           if-no-files-found: error
 
+      - name: Report APK Size
+        run: |
+          python3 - <<'EOF'
+          import zipfile, os, glob, collections
+          apk = glob.glob('manager/app/build/outputs/apk/**/*.apk', recursive=True)[0]
+          z = zipfile.ZipFile(apk)
+          print(f'APK_REPORT file={os.path.basename(apk)} apk_bytes={os.path.getsize(apk)}')
+          cat = collections.defaultdict(lambda: [0, 0])
+          for i in z.infolist():
+              n = i.filename
+              if n.endswith('.dex'): k = 'dex'
+              elif n.startswith('lib/'): k = 'lib'
+              elif n.startswith('assets/'): k = 'assets'
+              elif n == 'resources.arsc': k = 'arsc'
+              elif n.startswith('res/'): k = 'res'
+              elif n.startswith('META-INF/'): k = 'meta'
+              else: k = 'other'
+              cat[k][0] += i.compress_size
+              cat[k][1] += i.file_size
+          for k in ['dex', 'lib', 'assets', 'arsc', 'res', 'meta', 'other']:
+              print(f'APK_REPORT {k} packed={cat[k][0]} stored={cat[k][1]}')
+          for i in sorted(z.infolist(), key=lambda x: -x.compress_size)[:30]:
+              print(f'APK_REPORT entry packed={i.compress_size} stored={i.file_size} {i.filename}')
+          EOF
+
       - name: Compile Flashable Zip
         id: compileZip
         run: bash .github/scripts/compile_zip.sh
