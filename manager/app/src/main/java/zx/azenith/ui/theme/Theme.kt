@@ -62,8 +62,16 @@ fun animateColorSchemeAsState(
     var to by remember { mutableStateOf(targetColorScheme) }
     val progress = remember { Animatable(1f) }
 
-    LaunchedEffect(targetColorScheme) {
-        if (targetColorScheme == to) return@LaunchedEffect
+    // ColorScheme has no equals(), so the guard has to compare the roles
+    // themselves. Testing the instance instead restarts the cross-fade on every
+    // recomposition, which rebases `from` onto the live scheme and turns the
+    // tween into a swap -- visible whenever the accent intensity is not
+    // Balanced, because withAccentIntensity() then hands back a fresh copy()
+    // each recomposition rather than the same instance.
+    val key = targetColorScheme.roleColors()
+
+    LaunchedEffect(key) {
+        if (key == to.roleColors()) return@LaunchedEffect
         from = to
         to = targetColorScheme
         progress.snapTo(0f)
@@ -76,6 +84,22 @@ fun animateColorSchemeAsState(
         lerpScheme(from, to, progress.value)
     }
 }
+
+/**
+ * The roles [lerpScheme] blends, as a value list so two schemes can be compared.
+ */
+private fun ColorScheme.roleColors(): List<Color> = listOf(
+    primary, onPrimary, primaryContainer, onPrimaryContainer, inversePrimary,
+    secondary, onSecondary, secondaryContainer, onSecondaryContainer,
+    tertiary, onTertiary, tertiaryContainer, onTertiaryContainer,
+    background, onBackground, surface, onSurface, surfaceVariant, onSurfaceVariant,
+    surfaceTint, inverseSurface, inverseOnSurface,
+    error, onError, errorContainer, onErrorContainer,
+    outline, outlineVariant, scrim,
+    surfaceBright, surfaceDim,
+    surfaceContainer, surfaceContainerHigh, surfaceContainerHighest,
+    surfaceContainerLow, surfaceContainerLowest
+)
 
 /**
  * Blend every role of [from] toward the matching role of [to] by [t].
