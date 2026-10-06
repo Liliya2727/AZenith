@@ -75,6 +75,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.navigation.NavController
+import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -129,7 +130,9 @@ fun AboutScreen(navController: NavController) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Image(
-                        painter = painterResource(id = R.mipmap.ic_launcher),
+                        painter = rememberDrawablePainter(
+                            context.applicationInfo.loadIcon(context.packageManager)
+                        ),
                         contentDescription = stringResource(R.string.app_name),
                         modifier = Modifier
                             .size(96.dp)

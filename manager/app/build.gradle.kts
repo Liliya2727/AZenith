@@ -142,6 +142,7 @@ dependencies {
     implementation(libs.coil.gif)
     implementation(libs.compose.markdown)
     implementation(libs.aboutlibraries.compose.m3)
+    implementation(libs.accompanist.drawablepainter)
 
     // Ships src/main/baseline-prof.txt and installs it on first run. See the
     // note in libs.versions.toml for why the app is slow without it.
