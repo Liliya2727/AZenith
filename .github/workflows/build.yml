@@ -133,7 +133,14 @@ jobs:
           fi
         env:
           KS_PWD: ${{ secrets.KEYSTORE_PASSWORD }}
-                    
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: azenith-apk
+          path: manager/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+
       - name: Compile Flashable Zip
         id: compileZip
         run: bash .github/scripts/compile_zip.sh
