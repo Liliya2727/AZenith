@@ -71,6 +71,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -79,6 +80,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
@@ -1574,9 +1576,13 @@ private fun mockColorScheme(
  * previews is worse than no preview at all. Composing the real bar means the
  * only way it can be wrong is if the real bar is wrong.
  *
- * The bar lays itself out for a phone screen, not for the mock's width, so it is
- * measured at [AZENITH_NAV_WIDTH] and scaled down here. Letting it lay out at
- * the mock's own width instead clips the fourth tab and squashes the labels.
+ * The bar is laid out under a reduced [LocalDensity] rather than measured at a
+ * phone's width and scaled afterwards. Density is the honest way to shrink a
+ * design: every dp constant in the bar shrinks with it, so the four 48dp tabs
+ * that will not fit the mock's 190dp become tabs that do, and the bar's own
+ * fillMaxWidth then lands it exactly on the mock's width. Scaling the painted
+ * output instead leaves the layout at phone size and the bar either overflows
+ * the card or floats off to one side of it.
  */
 @Composable
 private fun NavBarMock(
@@ -1588,39 +1594,38 @@ private fun NavBarMock(
     navSpacing: Float,
     modifier: Modifier = Modifier
 ) {
-    val k = MOCK_W / AZENITH_NAV_WIDTH
-    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-        BottomNavBar(
-            items = AZENITH_NAV_ITEMS,
-            // The preview never navigates; the selected tab is the one it shows.
-            selectedRoute = "applist",
-            onItemSelected = {},
-            isBlurEnabled = false,
-            hazeState = null,
-            pagerState = null,
-            navStyle = navStyle,
-            vibrantNav = vibrantNav,
-            navScale = navScale,
-            navSpacing = navSpacing,
-            navShape = navShape,
-            navLabels = labelMode,
-            // Measured at the phone's width, then scaled and clipped into the mock.
-            // The layout pass reports the scaled height so the mock's column
-            // reserves the right room, and clip=true stops the pre-scale width from
-            // painting past the card's edge.
-            // Width-fixed so the bar lays itself out for a phone screen, then
-            // scaled into the mock. graphicsLayer reports the scaled size, so the
-            // mock's column reserves the right height; clip=true stops the
-            // pre-scale width from painting past the card's edge.
-            modifier = Modifier
-                .width(AZENITH_NAV_WIDTH)
-                .graphicsLayer {
-                    scaleX = k
-                    scaleY = k
-                    transformOrigin = TransformOrigin(0f, 0f)
-                    clip = true
-                }
-        )
+    // Derive the scale from the width the bar is actually handed, not from
+    // MOCK_W: the mock's column pads itself, so the slot is always narrower than
+    // MOCK_W and a fixed factor left the bar slightly wider than its slot, which
+    // only showed up as a clipped right edge once the card shrank.
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val k = maxWidth / AZENITH_NAV_WIDTH
+        val density = LocalDensity.current
+        CompositionLocalProvider(
+            // Only density is scaled. sp converts to px as sp * fontScale * density,
+            // so touching fontScale as well would shrink the labels by k^2 and leave
+            // them a quarter size next to the geometry they sit in.
+            LocalDensity provides Density(
+                density = density.density * k,
+                fontScale = density.fontScale
+            )
+        ) {
+            BottomNavBar(
+                items = AZENITH_NAV_ITEMS,
+                // The preview never navigates; the selected tab is the one it shows.
+                selectedRoute = "applist",
+                onItemSelected = {},
+                isBlurEnabled = false,
+                hazeState = null,
+                pagerState = null,
+                navStyle = navStyle,
+                vibrantNav = vibrantNav,
+                navScale = navScale,
+                navSpacing = navSpacing,
+                navShape = navShape,
+                navLabels = labelMode
+            )
+        }
     }
 }
 
