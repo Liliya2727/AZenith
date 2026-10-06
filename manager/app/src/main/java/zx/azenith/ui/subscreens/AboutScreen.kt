@@ -71,6 +71,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
@@ -157,15 +158,17 @@ fun AboutScreen(navController: NavController) {
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         FilledTonalButton(
-                            onClick = { openLink("https://t.me/ArchHavenDisc") }
+                            onClick = { openLink("https://t.me/ArchHavenDisc") },
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_telegram), 
+                                painter = painterResource(id = R.drawable.ic_telegram),
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -174,10 +177,11 @@ fun AboutScreen(navController: NavController) {
                         }
 
                         OutlinedButton(
-                            onClick = { openLink("https://t.me/ZeshArch") }
+                            onClick = { openLink("https://t.me/ZeshArch") },
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_telegram), 
+                                painter = painterResource(id = R.drawable.ic_telegram),
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -189,8 +193,50 @@ fun AboutScreen(navController: NavController) {
             }
 
 
-            item { 
-                AboutSectionTitle(stringResource(R.string.str_maintainer)) 
+            item {
+                AboutSectionTitle(stringResource(R.string.str_open_source))
+            }
+            item {
+                Column(
+                    modifier = Modifier.clip(RoundedCornerShape(26.dp)),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    OpenSourceRow(
+                        shape = RoundedCornerShape(
+                            topStart = 26.dp,
+                            topEnd = 26.dp,
+                            bottomStart = 4.dp,
+                            bottomEnd = 4.dp
+                        ),
+                        icon = Icons.Rounded.Gavel,
+                        title = stringResource(R.string.str_licenses),
+                        supporting = stringResource(R.string.str_apache_license_2),
+                        onClick = { navController.navigate("licensescreen") }
+                    )
+                    OpenSourceRow(
+                        shape = RoundedCornerShape(4.dp),
+                        icon = Icons.Rounded.LibraryBooks,
+                        title = stringResource(R.string.str_libraries_used),
+                        supporting = stringResource(R.string.str_libraries_hint),
+                        onClick = { navController.navigate("librariesscreen") }
+                    )
+                    OpenSourceRow(
+                        shape = RoundedCornerShape(
+                            topStart = 4.dp,
+                            topEnd = 4.dp,
+                            bottomStart = 26.dp,
+                            bottomEnd = 26.dp
+                        ),
+                        icon = Icons.Rounded.Code,
+                        title = stringResource(R.string.str_source_code),
+                        supporting = stringResource(R.string.str_view_the_source_code_on_github),
+                        onClick = { openLink("https://github.com/Liliya2727/AZenith") }
+                    )
+                }
+            }
+
+            item {
+                AboutSectionTitle(stringResource(R.string.str_maintainer))
             }
             item {
                 ExpressiveList(
@@ -321,43 +367,65 @@ fun AboutScreen(navController: NavController) {
                 )
             }
 
-            item { 
-                AboutSectionTitle(stringResource(R.string.str_open_source)) 
-            }
-            item {
-                ExpressiveList(
-                    content = listOf(
-                        {
-                            ExpressiveListItem(
-                                onClick = { navController.navigate("licensescreen") },
-                                headlineContent = { Text(stringResource(R.string.str_licenses)) },
-                                supportingContent = { Text(stringResource(R.string.str_apache_license_2)) },
-                                leadingContent = { LeadingIcon(icon = Icons.Rounded.Gavel) },
-                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                            )
-                        },
-                        {
-                            ExpressiveListItem(
-                                onClick = { navController.navigate("librariesscreen") },
-                                headlineContent = { Text(stringResource(R.string.str_libraries_used)) },
-                                supportingContent = { Text(stringResource(R.string.str_libraries_hint)) },
-                                leadingContent = { LeadingIcon(icon = Icons.Rounded.LibraryBooks) },
-                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                            )
-                        },
-                        {
-                            ExpressiveListItem(
-                                onClick = { openLink("https://github.com/Liliya2727/AZenith") },
-                                headlineContent = { Text(stringResource(R.string.str_source_code)) },
-                                supportingContent = { Text(stringResource(R.string.str_view_the_source_code_on_github)) },
-                                leadingContent = { LeadingIcon(icon = Icons.Rounded.Code) },
-                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                            )
-                        }
-                    )
-                )
+        }
+    }
+}
+
+@Composable
+private fun OpenSourceRow(
+    shape: RoundedCornerShape,
+    icon: ImageVector,
+    title: String,
+    supporting: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp), shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier.size(40.dp)
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp))
             }
         }
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = supporting,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -393,9 +461,9 @@ fun AboutTopAppBar(
         TopAppBar(
             title = { 
                 Text(
-                    text = stringResource(R.string.section_about),
+                    text = title,
                     fontWeight = FontWeight.Bold
-                ) 
+                )
             },
             navigationIcon = {
                 IconButton(onClick = onBack) {
