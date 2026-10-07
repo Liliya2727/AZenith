@@ -152,6 +152,7 @@ fun AZenithSheetContent(
     onDismiss: () -> Unit,
     title: String,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     AZenithSheet(
@@ -159,7 +160,7 @@ fun AZenithSheetContent(
         onDismiss = onDismiss,
         title = title,
         modifier = modifier,
-        subtitle = null,
+        subtitle = subtitle,
         style = SheetRowStyle.Action,
         onItemClick = {},
         items = emptyList(),

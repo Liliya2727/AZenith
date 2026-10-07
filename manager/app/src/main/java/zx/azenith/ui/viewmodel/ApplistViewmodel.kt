@@ -84,7 +84,30 @@ class ApplistViewmodel : ViewModel() {
     }
 
     var isRefreshing by mutableStateOf(false)
-    var showSystemApps by mutableStateOf(false)
+
+    enum class SystemFilter { SHOW_ALL, ONLY_SYSTEM, HIDE_SYSTEM }
+
+    // Filters stack: flags are AND-ed across groups, and the two service-state
+    // flags are OR-ed with each other (neither or both checked = no service
+    // constraint), so Games + Disabled yields exactly the disabled games.
+    // HIDE_SYSTEM is the baseline, matching the old show_system_apps=false default.
+    var systemFilter by mutableStateOf(SystemFilter.HIDE_SYSTEM)
+    var filterGames by mutableStateOf(false)
+    var filterEnabled by mutableStateOf(false)
+    var filterDisabled by mutableStateOf(false)
+
+    val activeFilterCount: Int
+        get() = (if (filterGames) 1 else 0) +
+                (if (filterEnabled) 1 else 0) +
+                (if (filterDisabled) 1 else 0) +
+                (if (systemFilter != SystemFilter.HIDE_SYSTEM) 1 else 0)
+
+    fun resetFilters() {
+        filterGames = false
+        filterEnabled = false
+        filterDisabled = false
+        systemFilter = SystemFilter.HIDE_SYSTEM
+    }
     
     var searchTextFieldValue by mutableStateOf(TextFieldValue(""))
         private set
@@ -92,7 +115,7 @@ class ApplistViewmodel : ViewModel() {
     private val searchQueryString: String get() = searchTextFieldValue.text
     
     val searchQuery: String get() = searchTextFieldValue.text
-    
+
     fun updateSearch(newValue: TextFieldValue) {
         searchTextFieldValue = newValue
     }
@@ -103,15 +126,48 @@ class ApplistViewmodel : ViewModel() {
 
     private val configPath = "/data/adb/.config/AZenith/gamelist/azenithApplist.json"
 
+    // One predicate for the list and for the per-option counts, so a count can
+    // never drift from what selecting that option would actually show.
+    private fun matchesFilters(
+        app: AppInfo,
+        query: String,
+        games: Boolean,
+        enabled: Boolean,
+        disabled: Boolean,
+        system: SystemFilter,
+    ): Boolean {
+        if (!(app.searchLabel.contains(query) || app.searchPackage.contains(query))) return false
+        if (games && !app.isRecommended) return false
+        val serviceOk = (!enabled && !disabled) ||
+            (enabled && app.isEnabledInConfig) ||
+            (disabled && !app.isEnabledInConfig)
+        if (!serviceOk) return false
+        return when (system) {
+            SystemFilter.SHOW_ALL -> true
+            SystemFilter.ONLY_SYSTEM -> app.isSystem
+            SystemFilter.HIDE_SYSTEM -> !app.isSystem
+        }
+    }
+
     val filteredApps by derivedStateOf {
         val query = searchQueryString.lowercase(Locale.getDefault())
         synchronized(appsLock) {
-            apps.filter { app ->
-                val matchesSearch = app.searchLabel.contains(query) ||
-                                  app.searchPackage.contains(query)
-                val matchesSystem = showSystemApps || !app.isSystem
-                matchesSearch && matchesSystem
+            apps.filter {
+                matchesFilters(it, query, filterGames, filterEnabled, filterDisabled, systemFilter)
             }.sortedWith(appComparator)
+        }
+    }
+
+    /** What one option would show if turned on, holding every other group fixed. */
+    fun countIf(
+        games: Boolean = filterGames,
+        enabled: Boolean = filterEnabled,
+        disabled: Boolean = filterDisabled,
+        system: SystemFilter = systemFilter,
+    ): Int {
+        val query = searchQueryString.lowercase(Locale.getDefault())
+        return synchronized(appsLock) {
+            apps.count { matchesFilters(it, query, games, enabled, disabled, system) }
         }
     }
 

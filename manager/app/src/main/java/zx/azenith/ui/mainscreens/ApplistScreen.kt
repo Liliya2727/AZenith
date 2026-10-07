@@ -19,7 +19,6 @@
 package zx.azenith.ui.mainscreens
 
 
-import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -98,16 +97,15 @@ fun ApplistScreen(navController: NavController) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(topAppBarState)
     
     val pullToRefreshState = rememberPullToRefreshState()
-    
-    val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+
     LaunchedEffect(Unit) {
-        viewModel.showSystemApps = prefs.getBoolean("show_system_apps", false)
         if (ApplistViewmodel.apps.isEmpty()) {
             viewModel.loadApps(context)
         }
     }
 
     var isSearchMode by remember { mutableStateOf(false) }
+    var showFilterSheet by rememberSaveable { mutableStateOf(false) }
     
     BackHandler(enabled = isSearchMode) {
         viewModel.clearSearch()
@@ -147,11 +145,8 @@ fun ApplistScreen(navController: NavController) {
                 },
                 searchQuery = viewModel.searchTextFieldValue,
                 onSearchChange = { viewModel.updateSearch(it) },
-                showSystemApps = viewModel.showSystemApps,
-                onToggleSystem = { newValue ->
-                    viewModel.showSystemApps = newValue
-                    prefs.edit().putBoolean("show_system_apps", newValue).apply()
-                },
+                onOpenFilters = { showFilterSheet = true },
+                activeFilterCount = viewModel.activeFilterCount,
                 onRefresh = { viewModel.loadApps(context, forceRefresh = true) },
                 focusRequester = focusRequester
             )
@@ -186,15 +181,24 @@ fun ApplistScreen(navController: NavController) {
                     enter = fadeIn(animationSpec = spring(stiffness = 300f)),
                     exit = fadeOut(animationSpec = spring(stiffness = 500f))
                 ) {
-                    Box(
+                    Column(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
                         Text(
-                            text = stringResource(R.string.no_apps_found),
+                            text = stringResource(
+                                if (viewModel.activeFilterCount > 0) R.string.no_apps_match_filters
+                                else R.string.no_apps_found
+                            ),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        if (viewModel.activeFilterCount > 0) {
+                            TextButton(onClick = { viewModel.resetFilters() }) {
+                                Text(stringResource(R.string.reset))
+                            }
+                        }
                     }
                 }
                 AnimatedVisibility(
@@ -266,6 +270,14 @@ fun ApplistScreen(navController: NavController) {
             )
         }
     }
+
+    AppFilterSheet(
+        show = showFilterSheet,
+        onDismiss = { showFilterSheet = false },
+        viewModel = viewModel,
+        onSystemFilterChange = { viewModel.systemFilter = it },
+        onReset = { viewModel.resetFilters() }
+    )
 }
 
 @Composable
@@ -275,13 +287,14 @@ fun ApplistTopAppBar(
     onSearchModeChange: (Boolean) -> Unit,
     searchQuery: TextFieldValue,
     onSearchChange: (TextFieldValue) -> Unit,
-    showSystemApps: Boolean,
-    onToggleSystem: (Boolean) -> Unit,
+    onOpenFilters: () -> Unit,
+    activeFilterCount: Int,
     onRefresh: () -> Unit,
     focusRequester: FocusRequester
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val colorScheme = MaterialTheme.colorScheme
+    val motionScheme = MaterialTheme.motionScheme
 
     Box(
         modifier = Modifier
@@ -370,6 +383,37 @@ fun ApplistTopAppBar(
                         }
                     },
                     actions = {
+                        IconButton(onClick = onOpenFilters) {
+                            BadgedBox(
+                                badge = {
+                                    AnimatedContent(
+                                        targetState = activeFilterCount,
+                                        transitionSpec = {
+                                            (scaleIn(
+                                                animationSpec = motionScheme.defaultSpatialSpec(),
+                                                initialScale = 0.4f
+                                            ) + fadeIn(motionScheme.defaultEffectsSpec())) togetherWith
+                                                (scaleOut(
+                                                    animationSpec = motionScheme.defaultSpatialSpec(),
+                                                    targetScale = 0.4f
+                                                ) + fadeOut(motionScheme.defaultEffectsSpec()))
+                                        },
+                                        label = "filterBadge"
+                                    ) { count ->
+                                        if (count > 0) {
+                                            Badge { Text(count.toString()) }
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Default.FilterList,
+                                    contentDescription = stringResource(R.string.cd_filter),
+                                    tint = if (activeFilterCount > 0) colorScheme.primary
+                                           else colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                         IconButton(onClick = { onSearchModeChange(true) }) {
                             Icon(Icons.Default.Search, stringResource(R.string.cd_search))
                         }
@@ -385,15 +429,6 @@ fun ApplistTopAppBar(
                                     menuExpanded = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.Refresh, null) }
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.menu_show_system_apps)) },
-                                trailingIcon = {
-                                    if (showSystemApps) {
-                                        Icon(Icons.Default.Check, null)
-                                    }
-                                },
-                                onClick = { onToggleSystem(!showSystemApps); menuExpanded = false }
                             )
                         }
                     }

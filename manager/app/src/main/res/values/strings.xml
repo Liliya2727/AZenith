@@ -29,6 +29,7 @@
     <string name="cd_back">Back</string>
     <string name="cd_changelog">Changelog</string>
     <string name="cd_clear">Clear</string>
+    <string name="cd_filter">Filter</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menu</string>
     <string name="cd_open_link">Open Link</string>
@@ -133,6 +134,19 @@
     <string name="memory_killer_desc">Free RAM memory when a game starts</string>
     <string name="menu_refresh">Refresh</string>
     <string name="menu_show_system_apps">Show System Apps</string>
+    <string name="filter_games">Games</string>
+    <string name="filter_enabled">Enabled</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filters</string>
+    <string name="filter_sheet_subtitle">Filters stack together</string>
+    <string name="filter_sheet_count">%1$d apps shown</string>
+    <string name="filter_group_type">App type</string>
+    <string name="filter_group_service">AZenith service</string>
+    <string name="filter_group_system">System apps</string>
+    <string name="filter_system_show">All</string>
+    <string name="filter_system_only">Only</string>
+    <string name="filter_system_hide">Hide</string>
+    <string name="no_apps_match_filters">No apps match these filters</string>
     <string name="min_val">Min (%1$d)</string>
     <string name="module_not_installed">Module Not Installed</string>
     <string name="nav_applist">Apps</string>
