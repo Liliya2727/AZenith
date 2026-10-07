@@ -131,6 +131,7 @@ fun AZenithSheet(
         title = title,
         modifier = modifier,
         subtitle = subtitle,
+        titleBlurBoxed = false,
         style = style,
         onItemClick = onItemClick,
         items = items,
@@ -153,6 +154,7 @@ fun AZenithSheetContent(
     title: String,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
+    titleBlurBoxed: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     AZenithSheet(
@@ -161,6 +163,7 @@ fun AZenithSheetContent(
         title = title,
         modifier = modifier,
         subtitle = subtitle,
+        titleBlurBoxed = titleBlurBoxed,
         style = SheetRowStyle.Action,
         onItemClick = {},
         items = emptyList(),
@@ -176,6 +179,7 @@ private fun AZenithSheet(
     title: String,
     modifier: Modifier,
     subtitle: String?,
+    titleBlurBoxed: Boolean,
     style: SheetRowStyle,
     onItemClick: (Int) -> Unit,
     items: List<SheetItem>,
@@ -221,19 +225,44 @@ private fun AZenithSheet(
                     .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f), CircleShape)
             )
 
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 4.dp),
-            )
-            if (subtitle != null) {
+            // Title/subtitle sit in their own boxed surface when the caller
+            // opts in (the filter sheet), so blur leaves them readable; the
+            // drag handle stays above them, on the sheet's own surface.
+            if (titleBlurBoxed) {
+                SplitBlurCard(
+                    isBlurEnabled = isBlurEnabled,
+                    hazeState = hazeState,
+                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp)
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    if (subtitle != null) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
+                }
+            } else {
                 Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 4.dp),
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 4.dp),
                 )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 4.dp),
+                    )
+                }
             }
 
             val navBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -334,6 +363,41 @@ private fun Modifier.sheetSurface(
                 )
             } else Modifier
         )
+}
+
+/**
+ * Boxed blurred surface used by sheets that opt in, so their title/subtitle
+ * stay readable over expressive blur. Mirrors the split-card look of the app
+ * list: a rounded surface container, blurred when expressive blur is on.
+ */
+@Composable
+private fun SplitBlurCard(
+    isBlurEnabled: Boolean,
+    hazeState: HazeState?,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val shape = RoundedCornerShape(20.dp)
+    val fill = MaterialTheme.colorScheme.surfaceContainer
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .then(
+                if (isBlurEnabled && hazeState != null) {
+                    Modifier.hazeBlur(
+                        input = HazeInput.Backdrop(hazeState),
+                        style = HazeBlurStyle.Material3(
+                            containerColor = fill.copy(alpha = 0.35f).accentTint(ACCENT_TINT_BLUR)
+                        ) { blurRadius(24.dp) }
+                    )
+                } else Modifier
+            )
+            .background(if (isBlurEnabled) Color.Transparent else fill, shape)
+            .padding(14.dp),
+        content = content,
+    )
 }
 
 /** MD3 elevation level 1 -- the level a modal bottom sheet occupies. */
