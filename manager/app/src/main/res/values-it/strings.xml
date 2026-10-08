@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Icona app</string>
     <string name="cd_back">Indietro</string>
     <string name="cd_changelog">Registro modifiche</string>
+    <string name="cd_filter">Filtra</string>
     <string name="cd_clear">Cancella</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menu</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">Parametri FPSGO e GED</string>
     <string name="fpsgo_ged_desc">Applica valori di ottimizzazione per FPSGO e GED</string>
     <string name="freq_offset">Offset frequenza</string>
+    <string name="filter_games">Giochi</string>
+    <string name="filter_enabled">Abilitato</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filtri</string>
+    <string name="filter_sheet_subtitle">Combina i filtri per restringere l\'elenco delle app</string>
+    <string name="filter_sheet_count">%1$d app mostrate</string>
+    <string name="filter_group_type">Tipo di applicazione</string>
+    <string name="filter_group_service">Servizio AZenith</string>
+    <string name="filter_group_system">App di sistema</string>
+    <string name="filter_system_show">Tutto</string>
+    <string name="filter_system_only">Solo</string>
+    <string name="filter_system_hide">Nasconditi</string>
     <string name="game_preload">Precaricamento gioco</string>
     <string name="game_preload_desc">Precarica le librerie di runtime all\'avvio del gioco</string>
     <string name="gpu_mali">Scheduling GPU Mali</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Questa opzione richiede il riavvio per essere applicata. Continuare?</string>
     <string name="disable_auto_mode_desc">Impedisce il cambio automatico dei profili quando viene rilevato un gioco. Quindi imposti tu stesso il profilo dal riquadro Profilo corrente nella home page.</string>
     <string name="no_apps_found">Nessuna app corrisponde a questa ricerca</string>
+    <string name="no_apps_match_filters">Nessuna app corrisponde a questi filtri</string>
     <string name="theme_save">Salva</string>
     <string name="theme_discard">Scartare</string>
     <string name="theme_unsaved">Modifiche al tema non salvate</string>

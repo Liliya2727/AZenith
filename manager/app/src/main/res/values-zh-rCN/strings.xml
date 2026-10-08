@@ -28,6 +28,7 @@
     <string name="cd_app_icon">应用图标</string>
     <string name="cd_back">返回</string>
     <string name="cd_changelog">更新日志</string>
+    <string name="cd_filter">过滤器</string>
     <string name="cd_clear">清除</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">菜单</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO 与 GED 参数</string>
     <string name="fpsgo_ged_desc">应用 FPSGO 和 GED 参数优化值</string>
     <string name="freq_offset">频率偏移</string>
+    <string name="filter_games">游戏</string>
+    <string name="filter_enabled">启用</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">过滤器</string>
+    <string name="filter_sheet_subtitle">组合过滤器以缩小应用程序列表的范围</string>
+    <string name="filter_sheet_count">显示 %1$d 个应用</string>
+    <string name="filter_group_type">应用程序类型</string>
+    <string name="filter_group_service">AZenith服务</string>
+    <string name="filter_group_system">系统应用程序</string>
+    <string name="filter_system_show">全部</string>
+    <string name="filter_system_only">仅</string>
+    <string name="filter_system_hide">隐藏</string>
     <string name="game_preload">游戏预加载</string>
     <string name="game_preload_desc">游戏启动时预加载运行库</string>
     <string name="gpu_mali">GPU Mali 调度</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">此选项需要重启设备才能生效。是否继续？</string>
     <string name="disable_auto_mode_desc">检测到游戏时阻止配置文件自动切换。然后，您可以从主页上的“当前配置文件”磁贴自行设置配置文件。</string>
     <string name="no_apps_found">没有与此搜索匹配的应用</string>
+    <string name="no_apps_match_filters">没有应用程序匹配这些过滤器</string>
     <string name="theme_save">保存</string>
     <string name="theme_discard">丢弃</string>
     <string name="theme_unsaved">未保存的主题更改</string>

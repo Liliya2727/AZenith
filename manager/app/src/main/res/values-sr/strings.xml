@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Ikona aplikacije</string>
     <string name="cd_back">Nazad</string>
     <string name="cd_changelog">Dnevnik promena</string>
+    <string name="cd_filter">Филтер</string>
     <string name="cd_clear">Obriši</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Meni</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO i GED parametri</string>
     <string name="fpsgo_ged_desc">Primenjuje optimizovane vrednosti FPSGO i GED parametara</string>
     <string name="freq_offset">Frekventni ofset</string>
+    <string name="filter_games">Игре</string>
+    <string name="filter_enabled">Омогућено</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Филтери</string>
+    <string name="filter_sheet_subtitle">Комбинујте филтере да бисте сузили листу апликација</string>
+    <string name="filter_sheet_count">%1$d apps shown</string>
+    <string name="filter_group_type">Тип апликације</string>
+    <string name="filter_group_service">AZenith сервис</string>
+    <string name="filter_group_system">Системске апликације</string>
+    <string name="filter_system_show">Све</string>
+    <string name="filter_system_only">Само</string>
+    <string name="filter_system_hide">Сакриј се</string>
     <string name="game_preload">Prethodno učitavanje igre</string>
     <string name="game_preload_desc">Prethodno učitava runtime biblioteke prilikom pokretanja igre</string>
     <string name="gpu_mali">Mali GPU planiranje</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Ова опција захтева поновно покретање да би ступила на снагу. Наставити?</string>
     <string name="disable_auto_mode_desc">Спречава аутоматско пребацивање профила када се открије игра. Затим сами постављате профил са плочице Тренутни профил на почетној страници.</string>
     <string name="no_apps_found">Ниједна апликација не одговара овој претрази</string>
+    <string name="no_apps_match_filters">Ниједна апликација не одговара овим филтерима</string>
     <string name="theme_save">Сачувај</string>
     <string name="theme_discard">Одбаци</string>
     <string name="theme_unsaved">Несачуване промене теме</string>

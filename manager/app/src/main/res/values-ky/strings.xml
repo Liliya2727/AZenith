@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Колдонмо сөлөкөтү</string>
     <string name="cd_back">Артка</string>
     <string name="cd_changelog">Өзгөртүү журналы</string>
+    <string name="cd_filter">Фильтр</string>
     <string name="cd_clear">Тазалоо</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Меню</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO жана GED параметрлери</string>
     <string name="fpsgo_ged_desc">FPSGO жана GED параметрлеринин оптималдуу маанилерин колдонуу</string>
     <string name="freq_offset">Жыштык офсети</string>
+    <string name="filter_games">Оюндар</string>
+    <string name="filter_enabled">Иштетилди</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Чыпкалар</string>
+    <string name="filter_sheet_subtitle">Колдонмолор тизмесин тарытуу үчүн чыпкаларды бириктириңиз</string>
+    <string name="filter_sheet_count">%1$d колдонмо көрсөтүлдү</string>
+    <string name="filter_group_type">Колдонмо түрү</string>
+    <string name="filter_group_service">AZenith кызматы</string>
+    <string name="filter_group_system">Системалык колдонмолор</string>
+    <string name="filter_system_show">Баары</string>
+    <string name="filter_system_only">гана</string>
+    <string name="filter_system_hide">Жашыруу</string>
     <string name="game_preload">Оюнду алдын ала жүктөө</string>
     <string name="game_preload_desc">Оюн ишке киргенде иштөө китепканаларын алдын ала жүктөө</string>
     <string name="gpu_mali">GPU Mali график</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Бул параметр колдонулушу үчүн кайра жүктөө талап кылынат. Улантуу керекпи?</string>
     <string name="disable_auto_mode_desc">Оюн аныкталганда профилдердин автоматтык түрдө которулушун токтотот. Андан кийин Башкы беттеги Учурдагы Профиль плиткасынан профилди өзүңүз орнотосуз.</string>
     <string name="no_apps_found">Бул издөөгө дал келген колдонмолор жок</string>
+    <string name="no_apps_match_filters">Бул чыпкаларга дал келген колдонмолор жок</string>
     <string name="theme_save">Сактоо</string>
     <string name="theme_discard">Жок кылуу</string>
     <string name="theme_unsaved">Сакталбаган тема өзгөртүүлөр</string>

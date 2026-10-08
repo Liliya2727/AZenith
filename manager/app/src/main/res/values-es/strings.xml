@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Icono de la aplicación</string>
     <string name="cd_back">Atrás</string>
     <string name="cd_changelog">Registro de cambios</string>
+    <string name="cd_filter">Filtrar</string>
     <string name="cd_clear">Limpiar</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menú</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">Parámetros FPSGO y GED</string>
     <string name="fpsgo_ged_desc">Aplicar valores de optimización de FPSGO y GED</string>
     <string name="freq_offset">Desplazamiento de frecuencia</string>
+    <string name="filter_games">Juegos</string>
+    <string name="filter_enabled">Habilitado</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filtros</string>
+    <string name="filter_sheet_subtitle">Combina filtros para limitar la lista de aplicaciones</string>
+    <string name="filter_sheet_count">%1$d aplicaciones mostradas</string>
+    <string name="filter_group_type">Tipo de aplicación</string>
+    <string name="filter_group_service">Servicio AZenith</string>
+    <string name="filter_group_system">Aplicaciones del sistema</string>
+    <string name="filter_system_show">Todos</string>
+    <string name="filter_system_only">Sólo</string>
+    <string name="filter_system_hide">Ocultar</string>
     <string name="game_preload">Precarga del juego</string>
     <string name="game_preload_desc">Precargar bibliotecas en tiempo de ejecución al iniciar el juego</string>
     <string name="gpu_mali">Programación GPU Mali</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Esta opción requiere reiniciar para aplicarse. ¿Continuar?</string>
     <string name="disable_auto_mode_desc">Evita que los perfiles cambien automáticamente cuando se detecta un juego. Luego, usted mismo configura el perfil desde el mosaico Perfil actual en la página de inicio.</string>
     <string name="no_apps_found">Ninguna aplicación coincide con esta búsqueda</string>
+    <string name="no_apps_match_filters">Ninguna aplicación coincide con estos filtros</string>
     <string name="theme_save">Guardar</string>
     <string name="theme_discard">Descartar</string>
     <string name="theme_unsaved">Cambios de tema no guardados</string>

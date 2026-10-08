@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Икона на апликацијата</string>
     <string name="cd_back">Назад</string>
     <string name="cd_changelog">Дневник на промени</string>
+    <string name="cd_filter">Филтер</string>
     <string name="cd_clear">Исчисти</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Мени</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO и GED параметри</string>
     <string name="fpsgo_ged_desc">Примени оптимизирани вредности на FPSGO и GED параметрите</string>
     <string name="freq_offset">Фреквентен офсет</string>
+    <string name="filter_games">Игри</string>
+    <string name="filter_enabled">Овозможено</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Филтри</string>
+    <string name="filter_sheet_subtitle">Комбинирајте филтри за да го стесните списокот со апликации</string>
+    <string name="filter_sheet_count">Прикажани се %1$d апликации</string>
+    <string name="filter_group_type">Тип на апликација</string>
+    <string name="filter_group_service">AZenith услуга</string>
+    <string name="filter_group_system">Системски апликации</string>
+    <string name="filter_system_show">Сите</string>
+    <string name="filter_system_only">Само</string>
+    <string name="filter_system_hide">Скриј</string>
     <string name="game_preload">Предвчитување на игри</string>
     <string name="game_preload_desc">Предвчитајте ги библиотеките за извршување при стартување на играта</string>
     <string name="gpu_mali">GPU Mali распоредување</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Оваа опција бара рестартирање за да се примени. Продолжи?</string>
     <string name="disable_auto_mode_desc">Го спречува автоматското префрлување на профилите кога ќе се открие игра. Потоа сами го поставувате профилот од плочката Тековен профил на почетната страница.</string>
     <string name="no_apps_found">Ниту една апликација не одговара на ова пребарување</string>
+    <string name="no_apps_match_filters">Ниту една апликација не одговара на овие филтри</string>
     <string name="theme_save">Зачувај</string>
     <string name="theme_discard">Отфрли</string>
     <string name="theme_unsaved">Незачувани промени на темата</string>

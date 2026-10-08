@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Programos piktograma</string>
     <string name="cd_back">Grįžti</string>
     <string name="cd_changelog">Pakeitimų žurnalas</string>
+    <string name="cd_filter">Filtruoti</string>
     <string name="cd_clear">Išvalyti</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Meniu</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO ir GED parametrai</string>
     <string name="fpsgo_ged_desc">Taikyti FPSGO ir GED parametrų optimizavimo reikšmes</string>
     <string name="freq_offset">Dažnio poslinkis</string>
+    <string name="filter_games">Žaidimai</string>
+    <string name="filter_enabled">Įjungta</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filtrai</string>
+    <string name="filter_sheet_subtitle">Sujunkite filtrus, kad susiaurintumėte programų sąrašą</string>
+    <string name="filter_sheet_count">Parodyta %1$d programa</string>
+    <string name="filter_group_type">Programos tipas</string>
+    <string name="filter_group_service">AZenith servisas</string>
+    <string name="filter_group_system">Sistemos programos</string>
+    <string name="filter_system_show">Visi</string>
+    <string name="filter_system_only">Tik</string>
+    <string name="filter_system_hide">Slėpti</string>
     <string name="game_preload">Išankstinis žaidimų įkėlimas</string>
     <string name="game_preload_desc">Iš anksto įkelti vykdymo bibliotekas, kai žaidimas paleidžiamas</string>
     <string name="gpu_mali">GPU Mali planavimas</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Norint pritaikyti šią parinktį, reikia paleisti iš naujo. Tęsti?</string>
     <string name="disable_auto_mode_desc">Sustabdo profilių automatinį perjungimą, kai aptinkamas žaidimas. Tada jūs patys nustatote profilį iš dabartinio profilio plytelės pagrindiniame puslapyje.</string>
     <string name="no_apps_found">Šią paiešką neatitinka jokių programų</string>
+    <string name="no_apps_match_filters">Nė viena programa neatitinka šių filtrų</string>
     <string name="theme_save">Išsaugoti</string>
     <string name="theme_discard">Išmesti</string>
     <string name="theme_unsaved">Neišsaugoti temų pakeitimai</string>

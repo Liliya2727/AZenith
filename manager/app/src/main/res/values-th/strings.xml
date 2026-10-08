@@ -28,6 +28,7 @@
     <string name="cd_app_icon">ไอคอนแอป</string>
     <string name="cd_back">ย้อนกลับ</string>
     <string name="cd_changelog">บันทึกการเปลี่ยนแปลง</string>
+    <string name="cd_filter">ตัวกรอง</string>
     <string name="cd_clear">ล้าง</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">เมนู</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">พารามิเตอร์ FPSGO และ GED</string>
     <string name="fpsgo_ged_desc">ใช้ค่าที่เหมาะสมที่สุดของพารามิเตอร์ FPSGO และ GED</string>
     <string name="freq_offset">การชดเชยความถี่</string>
+    <string name="filter_games">เกมส์</string>
+    <string name="filter_enabled">เปิดใช้งานแล้ว</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">ตัวกรอง</string>
+    <string name="filter_sheet_subtitle">รวมตัวกรองเพื่อจำกัดรายการแอปให้แคบลง</string>
+    <string name="filter_sheet_count">แสดง %1$d แอปแล้ว</string>
+    <string name="filter_group_type">ประเภทแอป</string>
+    <string name="filter_group_service">AZenith เซอร์วิส</string>
+    <string name="filter_group_system">แอพระบบ</string>
+    <string name="filter_system_show">ทั้งหมด</string>
+    <string name="filter_system_only">เท่านั้น</string>
+    <string name="filter_system_hide">ซ่อน</string>
     <string name="game_preload">โหลดเกมล่วงหน้า</string>
     <string name="game_preload_desc">โหลดไลบรารีรันไทม์ล่วงหน้าเมื่อเริ่มเกม</string>
     <string name="gpu_mali">การจัดลำดับ GPU Mali</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">ตัวเลือกนี้ต้องรีบูตเครื่องเพื่อนำไปใช้ ดำเนินการต่อหรือไม่?</string>
     <string name="disable_auto_mode_desc">หยุดโปรไฟล์จากการสลับโดยอัตโนมัติเมื่อตรวจพบเกม จากนั้นคุณตั้งค่าโปรไฟล์ด้วยตนเองจากไทล์โปรไฟล์ปัจจุบันบนโฮมเพจ</string>
     <string name="no_apps_found">ไม่มีแอปที่ตรงกับการค้นหานี้</string>
+    <string name="no_apps_match_filters">ไม่มีแอปที่ตรงกับตัวกรองเหล่านี้</string>
     <string name="theme_save">บันทึก</string>
     <string name="theme_discard">ทิ้ง</string>
     <string name="theme_unsaved">การเปลี่ยนแปลงธีมที่ไม่ได้บันทึก</string>

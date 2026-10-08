@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Tətbiq ikonu</string>
     <string name="cd_back">Geri</string>
     <string name="cd_changelog">Dəyişiklik jurnalı</string>
+    <string name="cd_filter">Filtr</string>
     <string name="cd_clear">Təmizlə</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menyu</string>
@@ -109,6 +110,19 @@
     <string name="fpsgo_ged">FPSGO və GED parametrləri</string>
     <string name="fpsgo_ged_desc">FPSGO və GED parametr optimallaşdırma dəyərlərini tətbiq edin</string>
     <string name="freq_offset">Tezlik ofseti</string>
+    <string name="filter_games">Oyunlar</string>
+    <string name="filter_enabled">Aktivdir</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filtrlər</string>
+    <string name="filter_sheet_subtitle">Tətbiq siyahısını daraltmaq üçün filtrləri birləşdirin</string>
+    <string name="filter_sheet_count">%1$d tətbiq göstərilib</string>
+    <string name="filter_group_type">Proqram növü</string>
+    <string name="filter_group_service">AZenith xidməti</string>
+    <string name="filter_group_system">Sistem proqramları</string>
+    <string name="filter_system_show">Hamısı</string>
+    <string name="filter_system_only">Yalnız</string>
+    <string name="filter_system_hide">Gizlət</string>
+
     <string name="game_preload">Oyun əvvəlcədən yüklənməsi</string>
     <string name="game_preload_desc">Oyun başladıqda işləmə kitabxanalarını əvvəlcədən yükləyin</string>
     <string name="gpu_mali">GPU Mali planlaması</string>
@@ -382,6 +396,7 @@
     <string name="reboot_required_content">Bu seçimin tətbiq edilməsi üçün yenidən başlatma tələb olunur. Davam edilsin?</string>
     <string name="disable_auto_mode_desc">Oyun aşkar edildikdə profillərin avtomatik olaraq dəyişməsini dayandırır. Daha sonra siz Əsas səhifədəki Cari Profil plitəsindən profili özünüz təyin edirsiniz.</string>
     <string name="no_apps_found">Bu axtarışa uyğun proqram yoxdur</string>
+    <string name="no_apps_match_filters">Bu filtrlərə uyğun proqram yoxdur</string>
     <string name="theme_save">Saxla</string>
     <string name="theme_discard">Atın</string>
     <string name="theme_unsaved">Yadda saxlanmamış tema dəyişiklikləri</string>

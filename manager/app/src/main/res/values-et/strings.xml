@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Rakenduse ikoon</string>
     <string name="cd_back">Tagasi</string>
     <string name="cd_changelog">Muudatuste logi</string>
+    <string name="cd_filter">Filter</string>
     <string name="cd_clear">Puhasta</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menüü</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO ja GED parameetrid</string>
     <string name="fpsgo_ged_desc">Rakenda FPSGO ja GED parameetrite optimeeritud väärtused</string>
     <string name="freq_offset">Sageduse nihe</string>
+    <string name="filter_games">Mängud</string>
+    <string name="filter_enabled">Lubatud</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filtrid</string>
+    <string name="filter_sheet_subtitle">Rakenduste loendi kitsendamiseks kombineerige filtreid</string>
+    <string name="filter_sheet_count">Näidatud on %1$d rakendust</string>
+    <string name="filter_group_type">Rakenduse tüüp</string>
+    <string name="filter_group_service">AZenithi teenus</string>
+    <string name="filter_group_system">Süsteemirakendused</string>
+    <string name="filter_system_show">Kõik</string>
+    <string name="filter_system_only">Ainult</string>
+    <string name="filter_system_hide">Peida</string>
     <string name="game_preload">Mängu eellaadimine</string>
     <string name="game_preload_desc">Mängu käivitamisel eellaadi käitusajateegid</string>
     <string name="gpu_mali">GPU Mali ajastamine</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Selle valiku rakendamiseks on vaja taaskäivitust. Kas jätkata?</string>
     <string name="disable_auto_mode_desc">Peatab profiilide automaatse ümberlülitumise, kui mäng tuvastatakse. Seejärel määrate profiili avalehe paani Praegune profiil ise.</string>
     <string name="no_apps_found">Sellele otsingule ei vasta ükski rakendus</string>
+    <string name="no_apps_match_filters">Nendele filtritele ei vasta ükski rakendus</string>
     <string name="theme_save">Salvesta</string>
     <string name="theme_discard">Visake ära</string>
     <string name="theme_unsaved">Salvestamata teemamuudatused</string>

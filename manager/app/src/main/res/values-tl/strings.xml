@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Icon ng app</string>
     <string name="cd_back">Bumalik</string>
     <string name="cd_changelog">Changelog</string>
+    <string name="cd_filter">Salain</string>
     <string name="cd_clear">I-clear</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menu</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO at GED parameter</string>
     <string name="fpsgo_ged_desc">Ilapat ang optimized values ng FPSGO at GED parameter</string>
     <string name="freq_offset">Frequency offset</string>
+    <string name="filter_games">Mga laro</string>
+    <string name="filter_enabled">Pinagana</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Mga filter</string>
+    <string name="filter_sheet_subtitle">Pagsamahin ang mga filter upang paliitin ang listahan ng app</string>
+    <string name="filter_sheet_count">%1$d app ang ipinakita</string>
+    <string name="filter_group_type">Uri ng app</string>
+    <string name="filter_group_service">Serbisyo ng AZenith</string>
+    <string name="filter_group_system">Mga system app</string>
+    <string name="filter_system_show">Lahat</string>
+    <string name="filter_system_only">Tanging</string>
+    <string name="filter_system_hide">Magtago</string>
     <string name="game_preload">Game preloading</string>
     <string name="game_preload_desc">I-preload ang runtime libraries sa pagsisimula ng laro</string>
     <string name="gpu_mali">GPU Mali scheduling</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Ang opsyong ito ay nangangailangan ng pag-reboot upang mailapat. Magpatuloy?</string>
     <string name="disable_auto_mode_desc">Pinipigilan ang mga profile sa awtomatikong paglipat kapag may natukoy na laro. Pagkatapos ay itinakda mo mismo ang profile mula sa tile ng Kasalukuyang Profile sa Home page.</string>
     <string name="no_apps_found">Walang mga app na tumutugma sa paghahanap na ito</string>
+    <string name="no_apps_match_filters">Walang mga app na tumutugma sa mga filter na ito</string>
     <string name="theme_save">I-save</string>
     <string name="theme_discard">Itapon</string>
     <string name="theme_unsaved">Mga pagbabago sa hindi na-save na tema</string>

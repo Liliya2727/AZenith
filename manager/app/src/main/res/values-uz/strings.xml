@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Ilova belgisi</string>
     <string name="cd_back">Orqaga</string>
     <string name="cd_changelog">O‘zgarishlar jurnali</string>
+    <string name="cd_filter">Filtr</string>
     <string name="cd_clear">Tozalash</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menyu</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO va GED parametrlari</string>
     <string name="fpsgo_ged_desc">FPSGO va GED parametrlarining optimallashtirilgan qiymatlarini qo‘llash</string>
     <string name="freq_offset">Chastota siljishi</string>
+    <string name="filter_games">O\'yinlar</string>
+    <string name="filter_enabled">Yoqilgan</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filtrlar</string>
+    <string name="filter_sheet_subtitle">Ilovalar roʻyxatini toraytirish uchun filtrlarni birlashtiring</string>
+    <string name="filter_sheet_count">%1$d ta ilova koʻrsatilgan</string>
+    <string name="filter_group_type">Ilova turi</string>
+    <string name="filter_group_service">AZenith xizmati</string>
+    <string name="filter_group_system">Tizim ilovalari</string>
+    <string name="filter_system_show">Hammasi</string>
+    <string name="filter_system_only">Faqat</string>
+    <string name="filter_system_hide">Yashirish</string>
     <string name="game_preload">O‘yinni oldindan yuklash</string>
     <string name="game_preload_desc">O‘yin boshlanganda ishga tushirish kutubxonalarini oldindan yuklash</string>
     <string name="gpu_mali">GPU Mali rejalashtirish</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Ushbu parametrni qoʻllash uchun qayta yuklash talab qilinadi. Davom etilsinmi?</string>
     <string name="disable_auto_mode_desc">O\'yin aniqlanganda profillarni avtomatik ravishda almashtirishni to\'xtatadi. Keyin asosiy sahifadagi Joriy profil plitasidan profilni o\'zingiz o\'rnatasiz.</string>
     <string name="no_apps_found">Bu qidiruvga hech qanday ilova topilmadi</string>
+    <string name="no_apps_match_filters">Hech qanday ilova ushbu filtrlarga mos kelmaydi</string>
     <string name="theme_save">Saqlash</string>
     <string name="theme_discard">Bekor qilish</string>
     <string name="theme_unsaved">Saqlanmagan mavzu o\'zgarishlari</string>

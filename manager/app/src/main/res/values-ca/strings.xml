@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Icona de l\'aplicació</string>
     <string name="cd_back">Tornar</string>
     <string name="cd_changelog">Registre de canvis</string>
+    <string name="cd_filter">Filtre</string>
     <string name="cd_clear">Netejar</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menú</string>
@@ -109,6 +110,19 @@
     <string name="fpsgo_ged">Paràmetres FPSGO i GED</string>
     <string name="fpsgo_ged_desc">Aplica els valors optimitzats dels paràmetres FPSGO i GED</string>
     <string name="freq_offset">Desplaçament de freqüència</string>
+    <string name="filter_games">Jocs</string>
+    <string name="filter_enabled">Habilitat</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filtres</string>
+    <string name="filter_sheet_subtitle">Combina els filtres per reduir la llista d\'aplicacions</string>
+    <string name="filter_sheet_count">Es mostren %1$d aplicacions</string>
+    <string name="filter_group_type">Tipus d\'aplicació</string>
+    <string name="filter_group_service">Servei AZenith</string>
+    <string name="filter_group_system">Aplicacions del sistema</string>
+    <string name="filter_system_show">Tots</string>
+    <string name="filter_system_only">Només</string>
+    <string name="filter_system_hide">Amaga</string>
+
     <string name="game_preload">Precàrrega de jocs</string>
     <string name="game_preload_desc">Precarrega les llibreries d\'execució en iniciar el joc</string>
     <string name="gpu_mali">Planificació Mali GPU</string>
@@ -382,6 +396,7 @@
     <string name="reboot_required_content">Aquesta opció requereix reiniciar per aplicar-se. Vols continuar?</string>
     <string name="disable_auto_mode_desc">Impedeix que els perfils canviïn automàticament quan es detecta un joc. A continuació, configureu el perfil des de la fitxa Perfil actual de la pàgina d\'inici.</string>
     <string name="no_apps_found">No hi ha cap aplicació que coincideixi amb aquesta cerca</string>
+    <string name="no_apps_match_filters">Cap aplicació coincideix amb aquests filtres</string>
     <string name="theme_save">Desa</string>
     <string name="theme_discard">Descartar</string>
     <string name="theme_unsaved">Canvis de tema no desats</string>

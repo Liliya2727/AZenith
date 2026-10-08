@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Програмын дүрс</string>
     <string name="cd_back">Буцах</string>
     <string name="cd_changelog">Өөрчлөлтийн бүртгэл</string>
+    <string name="cd_filter">Шүүлтүүр</string>
     <string name="cd_clear">Цэвэрлэх</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Цэс</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO болон GED параметрүүд</string>
     <string name="fpsgo_ged_desc">FPSGO болон GED параметрийн оновчтой утгыг хэрэглэх</string>
     <string name="freq_offset">Давтамжийн зөрүү</string>
+    <string name="filter_games">Тоглоомууд</string>
+    <string name="filter_enabled">Идэвхжүүлсэн</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Шүүлтүүр</string>
+    <string name="filter_sheet_subtitle">Програмын жагсаалтыг нарийсгахын тулд шүүлтүүрүүдийг нэгтгэнэ үү</string>
+    <string name="filter_sheet_count">%1$d програмыг харуулав</string>
+    <string name="filter_group_type">Програмын төрөл</string>
+    <string name="filter_group_service">AZenith үйлчилгээ</string>
+    <string name="filter_group_system">Системийн програмууд</string>
+    <string name="filter_system_show">Бүгд</string>
+    <string name="filter_system_only">Зөвхөн</string>
+    <string name="filter_system_hide">Нуух</string>
     <string name="game_preload">Тоглоомын урьдчилсан ачаалал</string>
     <string name="game_preload_desc">Тоглоом эхлэх үед ажиллагааны номын сангуудыг урьдчилан ачаалах</string>
     <string name="gpu_mali">GPU Mali хуваарь</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Энэ сонголтыг хэрэгжүүлэхийн тулд дахин ачаалах шаардлагатай. Үргэлжлүүлэх үү?</string>
     <string name="disable_auto_mode_desc">Тоглоом илэрсэн үед профайлыг автоматаар солихыг зогсооно. Дараа нь та нүүр хуудасны Одоогийн профайл хавтан дээрээс профайлыг өөрөө тохируулна.</string>
     <string name="no_apps_found">No apps match this search</string>
+    <string name="no_apps_match_filters">Эдгээр шүүлтүүртэй тохирох апп алга</string>
     <string name="theme_save">Хадгалах</string>
     <string name="theme_discard">Хая</string>
     <string name="theme_unsaved">Хадгалагдаагүй загварын өөрчлөлтүүд</string>

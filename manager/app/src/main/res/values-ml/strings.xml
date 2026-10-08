@@ -28,6 +28,7 @@
     <string name="cd_app_icon">ആപ്പ് ഐക്കൺ</string>
     <string name="cd_back">തിരികെ</string>
     <string name="cd_changelog">മാറ്റ രേഖ</string>
+    <string name="cd_filter">ഫിൽട്ടർ ചെയ്യുക</string>
     <string name="cd_clear">മായ്ക്കുക</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">മെനു</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO, GED പാരാമീറ്ററുകൾ</string>
     <string name="fpsgo_ged_desc">FPSGO, GED പാരാമീറ്റർ ഒപ്റ്റിമൈസേഷൻ മൂല്യങ്ങൾ പ്രയോഗിക്കുക</string>
     <string name="freq_offset">ഫ്രീക്വൻസി ഓഫ്സെറ്റ്</string>
+    <string name="filter_games">ഗെയിമുകൾ</string>
+    <string name="filter_enabled">പ്രവർത്തനക്ഷമമാക്കി</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">ഫിൽട്ടറുകൾ</string>
+    <string name="filter_sheet_subtitle">ആപ്പ് ലിസ്റ്റ് ചുരുക്കാൻ ഫിൽട്ടറുകൾ സംയോജിപ്പിക്കുക</string>
+    <string name="filter_sheet_count">%1$d ആപ്പുകൾ കാണിച്ചിരിക്കുന്നു</string>
+    <string name="filter_group_type">ആപ്പ് തരം</string>
+    <string name="filter_group_service">AZenith സേവനം</string>
+    <string name="filter_group_system">സിസ്റ്റം ആപ്പുകൾ</string>
+    <string name="filter_system_show">എല്ലാം</string>
+    <string name="filter_system_only">മാത്രം</string>
+    <string name="filter_system_hide">മറയ്ക്കുക</string>
     <string name="game_preload">ഗെയിം പ്രീലോഡ്</string>
     <string name="game_preload_desc">ഗെയിം ആരംഭിക്കുമ്പോൾ റൺടൈം ലൈബ്രറികൾ പ്രീലോഡ് ചെയ്യുക</string>
     <string name="gpu_mali">GPU Mali ഷെഡ്യൂളിംഗ്</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">ഈ ഓപ്ഷൻ പ്രയോഗിക്കാൻ ഉപകരണം പുനരാരംഭിക്കേണ്ടതുണ്ട്. തുടരണോ?</string>
     <string name="disable_auto_mode_desc">ഒരു ഗെയിം കണ്ടെത്തുമ്പോൾ പ്രൊഫൈലുകൾ സ്വയമേവ മാറുന്നത് നിർത്തുന്നു. തുടർന്ന് നിങ്ങൾ ഹോം പേജിലെ നിലവിലെ പ്രൊഫൈൽ ടൈലിൽ നിന്ന് പ്രൊഫൈൽ സ്വയം സജ്ജമാക്കുക.</string>
     <string name="no_apps_found">ഈ തിരയലുമായി പൊരുത്തപ്പെടുന്ന അപ്ലിക്കേഷനുകളൊന്നുമില്ല</string>
+    <string name="no_apps_match_filters">ഈ ഫിൽട്ടറുകളുമായി പൊരുത്തപ്പെടുന്ന ആപ്പുകളൊന്നും ഇല്ല</string>
     <string name="theme_save">സംരക്ഷിക്കുക</string>
     <string name="theme_discard">നിരസിക്കുക</string>
     <string name="theme_unsaved">സംരക്ഷിക്കാത്ത തീം മാറ്റങ്ങൾ</string>

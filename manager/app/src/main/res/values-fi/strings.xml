@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Sovelluskuvake</string>
     <string name="cd_back">Takaisin</string>
     <string name="cd_changelog">Muutosloki</string>
+    <string name="cd_filter">Suodata</string>
     <string name="cd_clear">Tyhjennä</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Valikko</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO- ja GED-parametrit</string>
     <string name="fpsgo_ged_desc">Käytä FPSGO- ja GED-parametrien optimoituja arvoja</string>
     <string name="freq_offset">Taajuuspoikkeama</string>
+    <string name="filter_games">Pelit</string>
+    <string name="filter_enabled">Käytössä</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Suodattimet</string>
+    <string name="filter_sheet_subtitle">Yhdistä suodattimia rajataksesi sovellusluetteloa</string>
+    <string name="filter_sheet_count">%1$d sovellusta näytetään</string>
+    <string name="filter_group_type">Sovelluksen tyyppi</string>
+    <string name="filter_group_service">AZenith palvelu</string>
+    <string name="filter_group_system">Järjestelmäsovellukset</string>
+    <string name="filter_system_show">Kaikki</string>
+    <string name="filter_system_only">Vain</string>
+    <string name="filter_system_hide">Piilota</string>
     <string name="game_preload">Pelin esilataus</string>
     <string name="game_preload_desc">Esilataa suorituskirjastot pelin käynnistyessä</string>
     <string name="gpu_mali">GPU Mali -aikataulutus</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Tämä vaihtoehto vaatii laitteen uudelleenkäynnistyksen tullakseen voimaan. Jatketaanko?</string>
     <string name="disable_auto_mode_desc">Estää profiilien vaihtamisen automaattisesti, kun peli havaitaan. Tämän jälkeen asetat profiilin itse Kotisivun Nykyinen profiili -ruudusta.</string>
     <string name="no_apps_found">Yksikään sovellus ei vastaa tätä hakua</string>
+    <string name="no_apps_match_filters">Mikään sovellus ei vastaa näitä suodattimia</string>
     <string name="theme_save">Tallenna</string>
     <string name="theme_discard">Hävitä</string>
     <string name="theme_unsaved">Tallentamattomat teemamuutokset</string>

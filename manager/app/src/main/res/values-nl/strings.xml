@@ -28,6 +28,7 @@
     <string name="cd_app_icon">App-pictogram</string>
     <string name="cd_back">Terug</string>
     <string name="cd_changelog">Wijzigingslog</string>
+    <string name="cd_filter">Filteren</string>
     <string name="cd_clear">Wissen</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menu</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO- en GED-parameters</string>
     <string name="fpsgo_ged_desc">Optimalisatiewaarden voor FPSGO- en GED-parameters toepassen</string>
     <string name="freq_offset">Frequentie-offset</string>
+    <string name="filter_games">Spellen</string>
+    <string name="filter_enabled">Ingeschakeld</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filters</string>
+    <string name="filter_sheet_subtitle">Combineer filters om de applijst te verkleinen</string>
+    <string name="filter_sheet_count">%1$d apps weergegeven</string>
+    <string name="filter_group_type">App-type</string>
+    <string name="filter_group_service">AZenith-service</string>
+    <string name="filter_group_system">Systeem-apps</string>
+    <string name="filter_system_show">Allemaal</string>
+    <string name="filter_system_only">Alleen</string>
+    <string name="filter_system_hide">Verbergen</string>
     <string name="game_preload">Spelvoorladen</string>
     <string name="game_preload_desc">Voorlaad runtime-bibliotheken bij spelstart</string>
     <string name="gpu_mali">GPU Mali-plannning</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Deze optie vereist een herstart om te worden toegepast. Doorgaan?</string>
     <string name="disable_auto_mode_desc">Voorkomt dat profielen automatisch wisselen wanneer een game wordt gedetecteerd. Vervolgens stelt u het profiel zelf in via de tegel Huidig ​​profiel op de startpagina.</string>
     <string name="no_apps_found">Er zijn geen apps die overeenkomen met deze zoekopdracht</string>
+    <string name="no_apps_match_filters">Er zijn geen apps die overeenkomen met deze filters</string>
     <string name="theme_save">Opslaan</string>
     <string name="theme_discard">Gooi weg</string>
     <string name="theme_unsaved">Niet-opgeslagen themawijzigingen</string>

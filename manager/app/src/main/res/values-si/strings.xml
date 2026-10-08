@@ -28,6 +28,7 @@
     <string name="cd_app_icon">යෙදුම් අයිකනය</string>
     <string name="cd_back">ආපසු</string>
     <string name="cd_changelog">වෙනස්කම් ලොගය</string>
+    <string name="cd_filter">පෙරහන</string>
     <string name="cd_clear">මකන්න</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">මෙනුව</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO සහ GED පරාමිතීන්</string>
     <string name="fpsgo_ged_desc">FPSGO සහ GED පරාමිතීන්හි ප්‍රශස්ත අගයන් යොදන්න</string>
     <string name="freq_offset">සංඛ්‍යාත ඕෆ්සෙට්</string>
+    <string name="filter_games">ක්රීඩා</string>
+    <string name="filter_enabled">සබල කර ඇත</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">පෙරහන්</string>
+    <string name="filter_sheet_subtitle">යෙදුම් ලැයිස්තුව පටු කිරීමට පෙරහන් ඒකාබද්ධ කරන්න</string>
+    <string name="filter_sheet_count">යෙදුම් %1$dක් පෙන්වා ඇත</string>
+    <string name="filter_group_type">යෙදුම් වර්ගය</string>
+    <string name="filter_group_service">AZenith සේවාව</string>
+    <string name="filter_group_system">පද්ධති යෙදුම්</string>
+    <string name="filter_system_show">සියල්ල</string>
+    <string name="filter_system_only">පමණයි</string>
+    <string name="filter_system_hide">සඟවන්න</string>
     <string name="game_preload">ක්‍රීඩා පූර්ව පූරණය</string>
     <string name="game_preload_desc">ක්‍රීඩාව ආරම්භ වන විට ධාවන පුස්තකාල පූර්ව පූරණය කරන්න</string>
     <string name="gpu_mali">GPU Mali උපලේඛනය</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">මෙම විකල්පය යෙදීමට නැවත ආරම්භ කිරීමක් අවශ්‍ය වේ. ඉදිරියට යන්නද?</string>
     <string name="disable_auto_mode_desc">ක්‍රීඩාවක් අනාවරණය වූ විට පැතිකඩ ස්වයංක්‍රීයව මාරු වීම නවත්වයි. ඉන්පසු ඔබ මුල් පිටුවේ වත්මන් පැතිකඩ ටයිල් එකෙන් පැතිකඩ ඔබම සකසන්න.</string>
     <string name="no_apps_found">මෙම සෙවුමට ගැලපෙන යෙදුම් නොමැත</string>
+    <string name="no_apps_match_filters">මෙම පෙරහන් වලට ගැළපෙන යෙදුම් කිසිවක් නැත</string>
     <string name="theme_save">සුරකින්න</string>
     <string name="theme_discard">ඉවතලන්න</string>
     <string name="theme_unsaved">නොසුරකින ලද තේමා වෙනස්කම්</string>

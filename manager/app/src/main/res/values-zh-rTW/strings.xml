@@ -28,6 +28,7 @@
     <string name="cd_app_icon">應用程式圖示</string>
     <string name="cd_back">返回</string>
     <string name="cd_changelog">更新日誌</string>
+    <string name="cd_filter">過濾器</string>
     <string name="cd_clear">清除</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">選單</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO 與 GED 參數</string>
     <string name="fpsgo_ged_desc">套用 FPSGO 和 GED 參數最佳化值</string>
     <string name="freq_offset">頻率偏移</string>
+    <string name="filter_games">遊戲</string>
+    <string name="filter_enabled">啟用</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">過濾器</string>
+    <string name="filter_sheet_subtitle">組合過濾器以縮小應用程式清單的範圍</string>
+    <string name="filter_sheet_count">顯示 %1$d 個應用</string>
+    <string name="filter_group_type">應用程式類型</string>
+    <string name="filter_group_service">AZenith服務</string>
+    <string name="filter_group_system">系統應用程式</string>
+    <string name="filter_system_show">全部</string>
+    <string name="filter_system_only">僅</string>
+    <string name="filter_system_hide">隱藏</string>
     <string name="game_preload">遊戲預載</string>
     <string name="game_preload_desc">遊戲啟動時預載執行檔</string>
     <string name="gpu_mali">GPU Mali 排程</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">此選項需要重新啟動才能生效。是否繼續？</string>
     <string name="disable_auto_mode_desc">偵測到遊戲時阻止設定檔自動切換。然後，您可以從主頁上的「目前設定檔」磁貼自行設定設定檔。</string>
     <string name="no_apps_found">沒有與此搜尋相符的應用</string>
+    <string name="no_apps_match_filters">沒有應用程式匹配這些過濾器</string>
     <string name="theme_save">儲存</string>
     <string name="theme_discard">丟棄</string>
     <string name="theme_unsaved">未儲存的主題更改</string>

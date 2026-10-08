@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Εικονίδιο εφαρμογής</string>
     <string name="cd_back">Πίσω</string>
     <string name="cd_changelog">Αρχείο αλλαγών</string>
+    <string name="cd_filter">Φίλτρο</string>
     <string name="cd_clear">Εκκαθάριση</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Μενού</string>
@@ -109,6 +110,19 @@
     <string name="fpsgo_ged">Παράμετροι FPSGO και GED</string>
     <string name="fpsgo_ged_desc">Εφαρμογή βελτιστοποιημένων παραμέτρων FPSGO και GED</string>
     <string name="freq_offset">Μετατόπιση συχνότητας</string>
+    <string name="filter_games">Παιχνίδια</string>
+    <string name="filter_enabled">Ενεργοποιημένο</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Φίλτρα</string>
+    <string name="filter_sheet_subtitle">Συνδυάστε φίλτρα για να περιορίσετε τη λίστα εφαρμογών</string>
+    <string name="filter_sheet_count">Εμφανίζονται %1$d εφαρμογές</string>
+    <string name="filter_group_type">Τύπος εφαρμογής</string>
+    <string name="filter_group_service">Υπηρεσία AZenith</string>
+    <string name="filter_group_system">Εφαρμογές συστήματος</string>
+    <string name="filter_system_show">Όλα</string>
+    <string name="filter_system_only">Μόνο</string>
+    <string name="filter_system_hide">Απόκρυψη</string>
+
     <string name="game_preload">Προφόρτωση παιχνιδιού</string>
     <string name="game_preload_desc">Προφόρτωση βιβλιοθηκών εκτέλεσης κατά την εκκίνηση παιχνιδιού</string>
     <string name="gpu_mali">Χρονοπρογραμματισμός GPU Mali</string>
@@ -382,6 +396,7 @@
     <string name="reboot_required_content">Αυτή η επιλογή απαιτεί επανεκκίνηση για να εφαρμοστεί. Συνέχεια;</string>
     <string name="disable_auto_mode_desc">Διακόπτει την αυτόματη εναλλαγή προφίλ όταν ανιχνεύεται ένα παιχνίδι. Στη συνέχεια, ορίζετε μόνοι σας το προφίλ από το πλακίδιο Τρέχον προφίλ στην Αρχική σελίδα.</string>
     <string name="no_apps_found">Δεν υπάρχουν εφαρμογές που να αντιστοιχούν σε αυτήν την αναζήτηση</string>
+    <string name="no_apps_match_filters">Καμία εφαρμογή δεν αντιστοιχεί σε αυτά τα φίλτρα</string>
     <string name="theme_save">Αποθήκευση</string>
     <string name="theme_discard">Απορρίψτε</string>
     <string name="theme_unsaved">Μη αποθηκευμένες αλλαγές θέματος</string>

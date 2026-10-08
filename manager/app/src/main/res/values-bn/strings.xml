@@ -28,6 +28,7 @@
     <string name="cd_app_icon">অ্যাপ আইকন</string>
     <string name="cd_back">পেছনে</string>
     <string name="cd_changelog">পরিবর্তন লগ</string>
+    <string name="cd_filter">ফিল্টার</string>
     <string name="cd_clear">মুছুন</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">মেনু</string>
@@ -109,6 +110,19 @@
     <string name="fpsgo_ged">FPSGO ও GED প্যারামিটার</string>
     <string name="fpsgo_ged_desc">FPSGO এবং GED প্যারামিটার অপ্টিমাইজেশন মান প্রয়োগ করুন</string>
     <string name="freq_offset">ফ্রিকোয়েন্সি অফসেট</string>
+    <string name="filter_games">গেমস</string>
+    <string name="filter_enabled">সক্রিয়</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">ফিল্টার</string>
+    <string name="filter_sheet_subtitle">অ্যাপ তালিকা সংকীর্ণ করতে ফিল্টার একত্রিত করুন</string>
+    <string name="filter_sheet_count">%1$dটি অ্যাপ দেখানো হয়েছে</string>
+    <string name="filter_group_type">অ্যাপের ধরন</string>
+    <string name="filter_group_service">এজেনিথ সার্ভিস</string>
+    <string name="filter_group_system">সিস্টেম অ্যাপস</string>
+    <string name="filter_system_show">সব</string>
+    <string name="filter_system_only">শুধুমাত্র</string>
+    <string name="filter_system_hide">লুকান</string>
+
     <string name="game_preload">গেম প্রি-লোড</string>
     <string name="game_preload_desc">গেম শুরু করার সময় রানটাইম লাইব্রেরি প্রি-লোড করুন</string>
     <string name="gpu_mali">GPU Mali শিডিউলিং</string>
@@ -382,6 +396,7 @@
     <string name="reboot_required_content">এই বিকল্পটি প্রয়োগ করার জন্য ডিভাইসটি রিবুট করা আবশ্যক। চালিয়ে যাবেন?</string>
     <string name="disable_auto_mode_desc">একটি গেম সনাক্ত করা হলে স্বয়ংক্রিয়ভাবে স্যুইচ করা থেকে প্রোফাইল বন্ধ করে। তারপর আপনি হোম পেজে বর্তমান প্রোফাইল টাইল থেকে প্রোফাইলটি নিজেই সেট করুন।</string>
     <string name="no_apps_found">এই অনুসন্ধানের সাথে কোনো অ্যাপ মেলে না</string>
+    <string name="no_apps_match_filters">এই ফিল্টারের সাথে কোনো অ্যাপ মেলে না</string>
     <string name="theme_save">সংরক্ষণ করুন</string>
     <string name="theme_discard">বাতিল করুন</string>
     <string name="theme_unsaved">অসংরক্ষিত থিম পরিবর্তন</string>

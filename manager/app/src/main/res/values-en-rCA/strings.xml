@@ -28,6 +28,7 @@
     <string name="cd_app_icon">App Icon</string>
     <string name="cd_back">Back</string>
     <string name="cd_changelog">Changelog</string>
+    <string name="cd_filter">Filter</string>
     <string name="cd_clear">Clear</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menu</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO &amp; GED Parameters</string>
     <string name="fpsgo_ged_desc">Apply optimized FPSGO and GED parameter values</string>
     <string name="freq_offset">Frequency Offset</string>
+    <string name="filter_games">Games</string>
+    <string name="filter_enabled">Enabled</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filters</string>
+    <string name="filter_sheet_subtitle">Combine filters to narrow the app list</string>
+    <string name="filter_sheet_count">%1$d apps shown</string>
+    <string name="filter_group_type">App type</string>
+    <string name="filter_group_service">AZenith service</string>
+    <string name="filter_group_system">System apps</string>
+    <string name="filter_system_show">All</string>
+    <string name="filter_system_only">Only</string>
+    <string name="filter_system_hide">Hide</string>
     <string name="game_preload">Game Preload</string>
     <string name="game_preload_desc">Preload runtime libraries when game starts</string>
     <string name="gpu_mali">GPU Mali Scheduling</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">This option requires a reboot to be applied. Continue?</string>
     <string name="disable_auto_mode_desc">Stops profiles from switching automatically when a game is detected. You then set the profile yourself from the Current Profile tile on the Home page.</string>
     <string name="no_apps_found">No apps match this search</string>
+    <string name="no_apps_match_filters">No apps match these filters</string>
     <string name="theme_save">Save</string>
     <string name="theme_discard">Discard</string>
     <string name="theme_unsaved">Unsaved theme changes</string>

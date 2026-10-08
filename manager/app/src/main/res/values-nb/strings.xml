@@ -28,6 +28,7 @@
     <string name="cd_app_icon">App-ikon</string>
     <string name="cd_back">Tilbake</string>
     <string name="cd_changelog">Endringslogg</string>
+    <string name="cd_filter">Filter</string>
     <string name="cd_clear">Tøm</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Meny</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO og GED-parametere</string>
     <string name="fpsgo_ged_desc">Bruk optimaliserte FPSGO- og GED-parametere</string>
     <string name="freq_offset">Frekvensforskyvning</string>
+    <string name="filter_games">Spill</string>
+    <string name="filter_enabled">Aktivert</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filtre</string>
+    <string name="filter_sheet_subtitle">Kombiner filtre for å begrense applisten</string>
+    <string name="filter_sheet_count">%1$d apper vist</string>
+    <string name="filter_group_type">Apptype</string>
+    <string name="filter_group_service">AZenith-tjeneste</string>
+    <string name="filter_group_system">Systemapper</string>
+    <string name="filter_system_show">Alle</string>
+    <string name="filter_system_only">Bare</string>
+    <string name="filter_system_hide">Skjul</string>
     <string name="game_preload">Forhåndslast spill</string>
     <string name="game_preload_desc">Forhåndslast kjørebiblioteker ved spillstart</string>
     <string name="gpu_mali">GPU Mali-planlegging</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Dette alternativet krever en omstart for å tre i kraft. Fortsette?</string>
     <string name="disable_auto_mode_desc">Stopper profiler fra å bytte automatisk når et spill oppdages. Du angir deretter profilen selv fra Current Profile-flisen på hjemmesiden.</string>
     <string name="no_apps_found">Ingen apper samsvarer med dette søket</string>
+    <string name="no_apps_match_filters">Ingen apper samsvarer med disse filtrene</string>
     <string name="theme_save">Lagre</string>
     <string name="theme_discard">Kast</string>
     <string name="theme_unsaved">Ulagrede temaendringer</string>

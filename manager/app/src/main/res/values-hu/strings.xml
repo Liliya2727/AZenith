@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Alkalmazásikon</string>
     <string name="cd_back">Vissza</string>
     <string name="cd_changelog">Változásnapló</string>
+    <string name="cd_filter">Szűrés</string>
     <string name="cd_clear">Törlés</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menü</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO és GED paraméterek</string>
     <string name="fpsgo_ged_desc">FPSGO és GED paraméterek optimalizált értékeinek alkalmazása</string>
     <string name="freq_offset">Frekvencia eltolás</string>
+    <string name="filter_games">Játékok</string>
+    <string name="filter_enabled">Engedélyezve</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Szűrők</string>
+    <string name="filter_sheet_subtitle">A szűrők kombinálásával szűkítheti az alkalmazáslistát</string>
+    <string name="filter_sheet_count">%1$d alkalmazás megjelenítve</string>
+    <string name="filter_group_type">Alkalmazás típusa</string>
+    <string name="filter_group_service">AZenith szerviz</string>
+    <string name="filter_group_system">Rendszeralkalmazások</string>
+    <string name="filter_system_show">Mind</string>
+    <string name="filter_system_only">Csak</string>
+    <string name="filter_system_hide">Elrejtés</string>
     <string name="game_preload">Játék előtöltése</string>
     <string name="game_preload_desc">Futásidejű könyvtárak előtöltése a játék indításakor</string>
     <string name="gpu_mali">GPU Mali ütemezés</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Ennek a beállításnak az alkalmazásához újraindítás szükséges. Folytatja?</string>
     <string name="disable_auto_mode_desc">Leállítja a profilok automatikus váltását, ha játékot észlel. Ezután saját maga állíthatja be a profilt a Kezdőlap Jelenlegi profil csempéből.</string>
     <string name="no_apps_found">Egyetlen alkalmazás sem felel meg ennek a keresésnek</string>
+    <string name="no_apps_match_filters">Egyetlen alkalmazás sem felel meg ezeknek a szűrőknek</string>
     <string name="theme_save">Mentés</string>
     <string name="theme_discard">Eldobni</string>
     <string name="theme_unsaved">Nem mentett témamódosítások</string>

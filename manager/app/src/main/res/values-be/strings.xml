@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Значок прыкладання</string>
     <string name="cd_back">Назад</string>
     <string name="cd_changelog">Чэйнджлаг</string>
+    <string name="cd_filter">Фільтраваць</string>
     <string name="cd_clear">Ачысціць</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Меню</string>
@@ -109,6 +110,19 @@
     <string name="fpsgo_ged">Параметры FPSGO і GED</string>
     <string name="fpsgo_ged_desc">Прымяніць аптымізаваныя значэнні FPSGO і GED</string>
     <string name="freq_offset">Зрушэнне частаты</string>
+    <string name="filter_games">гульні</string>
+    <string name="filter_enabled">Уключана</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Фільтры</string>
+    <string name="filter_sheet_subtitle">Камбінуйце фільтры, каб звузіць спіс прыкладанняў</string>
+    <string name="filter_sheet_count">Паказана праграм: %1$d</string>
+    <string name="filter_group_type">Тып праграмы</string>
+    <string name="filter_group_service">Сэрвіс AZenith</string>
+    <string name="filter_group_system">Сістэмныя праграмы</string>
+    <string name="filter_system_show">Усе</string>
+    <string name="filter_system_only">Толькі</string>
+    <string name="filter_system_hide">Схаваць</string>
+
     <string name="game_preload">Перадзагрузка гульні</string>
     <string name="game_preload_desc">Перадзагружаць бібліятэкі падчас запуску гульні</string>
     <string name="gpu_mali">Планаванне Mali GPU</string>
@@ -382,6 +396,7 @@
     <string name="reboot_required_content">Для прымянення гэтай опцыі патрабуецца перазагрузка. Працягнуць?</string>
     <string name="disable_auto_mode_desc">Спыняе аўтаматычнае пераключэнне профіляў пры выяўленні гульні. Затым вы самастойна задаеце профіль з пліткі «Бягучы профіль» на галоўнай старонцы.</string>
     <string name="no_apps_found">Няма праграм, якія адпавядаюць гэтаму пошуку</string>
+    <string name="no_apps_match_filters">Няма праграм, якія адпавядаюць гэтым фільтрам</string>
     <string name="theme_save">Захаваць</string>
     <string name="theme_discard">Адкідаць</string>
     <string name="theme_unsaved">Незахаваныя змены тэмы</string>

@@ -28,6 +28,7 @@
     <string name="cd_app_icon">အက်ပ်သင်္ကေတ</string>
     <string name="cd_back">နောက်သို့</string>
     <string name="cd_changelog">ပြောင်းလဲမှုမှတ်တမ်း</string>
+    <string name="cd_filter">ဇကာ</string>
     <string name="cd_clear">ရှင်းလင်းပါ</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">မီနူး</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO နှင့် GED ပါရာမီတာများ</string>
     <string name="fpsgo_ged_desc">FPSGO နှင့် GED ပါရာမီတာအကောင်းဆုံးတန်ဖိုးများကို အသုံးချပါ</string>
     <string name="freq_offset">ကြိမ်နှုန်းလျော်ကြေး</string>
+    <string name="filter_games">ဂိမ်းများ</string>
+    <string name="filter_enabled">ဖွင့်ထားသည်။</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">စစ်ထုတ်မှုများ</string>
+    <string name="filter_sheet_subtitle">အက်ပ်စာရင်းကို ကျဉ်းစေရန် စစ်ထုတ်မှုများ ပေါင်းစပ်ပါ။</string>
+    <string name="filter_sheet_count">အက်ပ် %1$d ခု ပြထားသည်။</string>
+    <string name="filter_group_type">အက်ပ်အမျိုးအစား</string>
+    <string name="filter_group_service">AZenith ဝန်ဆောင်မှု</string>
+    <string name="filter_group_system">စနစ်အက်ပ်များ</string>
+    <string name="filter_system_show">အားလုံး</string>
+    <string name="filter_system_only">သာ</string>
+    <string name="filter_system_hide">ဖျောက်ပါ။</string>
     <string name="game_preload">ဂိမ်းကြိုတင်တင်ခြင်း</string>
     <string name="game_preload_desc">ဂိမ်းစတင်သောအခါ run-time library များကို ကြိုတင်တင်ပါ</string>
     <string name="gpu_mali">GPU Mali အချိန်ဇယား</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">ဤရွေးချယ်မှုကို အသုံးပြုရန် စက်ကို ပြန်လည်စတင်ရန် လိုအပ်သည်။ ဆက်လုပ်မလား။</string>
     <string name="disable_auto_mode_desc">ဂိမ်းတစ်ခုကို တွေ့ရှိသောအခါ ပရိုဖိုင်များကို အလိုအလျောက်ပြောင်းခြင်းမှ ရပ်တန့်သည်။ ထို့နောက် ပင်မစာမျက်နှာရှိ လက်ရှိပရိုဖိုင်အကွက်မှ သင်ကိုယ်တိုင် ပရိုဖိုင်ကို သတ်မှတ်ပါ။</string>
     <string name="no_apps_found">ဤရှာဖွေမှုနှင့် ကိုက်ညီသောအက်ပ်မရှိပါ။</string>
+    <string name="no_apps_match_filters">ဤစစ်ထုတ်မှုများနှင့် ကိုက်ညီသောအက်ပ်မရှိပါ။</string>
     <string name="theme_save">သိမ်းဆည်းပါ။</string>
     <string name="theme_discard">ပစ်ပယ်</string>
     <string name="theme_unsaved">မသိမ်းဆည်းရသေးသော အပြင်အဆင် ပြောင်းလဲမှုများ</string>

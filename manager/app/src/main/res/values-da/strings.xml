@@ -28,6 +28,7 @@
     <string name="cd_app_icon">App-ikon</string>
     <string name="cd_back">Tilbage</string>
     <string name="cd_changelog">Ændringslog</string>
+    <string name="cd_filter">Filter</string>
     <string name="cd_clear">Ryd</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menu</string>
@@ -109,6 +110,19 @@
     <string name="fpsgo_ged">FPSGO- og GED-parametre</string>
     <string name="fpsgo_ged_desc">Anvend optimerede værdier for FPSGO- og GED-parametre</string>
     <string name="freq_offset">Frekvensforskydning</string>
+    <string name="filter_games">Spil</string>
+    <string name="filter_enabled">Aktiveret</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filtre</string>
+    <string name="filter_sheet_subtitle">Kombiner filtre for at indsnævre applisten</string>
+    <string name="filter_sheet_count">%1$d apps vist</string>
+    <string name="filter_group_type">App type</string>
+    <string name="filter_group_service">AZenith service</string>
+    <string name="filter_group_system">System apps</string>
+    <string name="filter_system_show">Alle</string>
+    <string name="filter_system_only">Kun</string>
+    <string name="filter_system_hide">Skjul</string>
+
     <string name="game_preload">Forudindlæsning af spil</string>
     <string name="game_preload_desc">Forudindlæs runtime-biblioteker ved spilstart</string>
     <string name="gpu_mali">GPU Mali-planlægning</string>
@@ -382,6 +396,7 @@
     <string name="reboot_required_content">Denne indstilling kræver en genstart for at blive anvendt. Vil du fortsætte?</string>
     <string name="disable_auto_mode_desc">Stopper profiler i at skifte automatisk, når et spil registreres. Du indstiller derefter selv profilen fra feltet Current Profile på startsiden.</string>
     <string name="no_apps_found">Ingen apps matcher denne søgning</string>
+    <string name="no_apps_match_filters">Ingen apps matcher disse filtre</string>
     <string name="theme_save">Gem</string>
     <string name="theme_discard">Kassér</string>
     <string name="theme_unsaved">Ikke-gemte temaændringer</string>

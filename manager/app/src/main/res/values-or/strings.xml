@@ -28,6 +28,7 @@
     <string name="cd_app_icon">ଆପ୍ ଆଇକନ୍</string>
     <string name="cd_back">ପଛକୁ</string>
     <string name="cd_changelog">ପରିବର୍ତ୍ତନ ଲଗ୍</string>
+    <string name="cd_filter">ଫିଲ୍ଟର୍ |</string>
     <string name="cd_clear">ସଫା କରନ୍ତୁ</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">ମେନୁ</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO ଏବଂ GED ପାରାମିଟର</string>
     <string name="fpsgo_ged_desc">FPSGO ଏବଂ GED ପାରାମିଟର ଅପ୍ଟିମାଇଜ୍ ମାନ ପ୍ରୟୋଗ କରନ୍ତୁ</string>
     <string name="freq_offset">ଫ୍ରିକ୍ୱେନ୍ସି ଅଫସେଟ୍</string>
+    <string name="filter_games">ଖେଳଗୁଡିକ</string>
+    <string name="filter_enabled">ସକ୍ଷମ</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">ଫିଲ୍ଟର୍ |</string>
+    <string name="filter_sheet_subtitle">ଆପ୍ ତାଲିକାକୁ ସଂକୀର୍ଣ୍ଣ କରିବାକୁ ଫିଲ୍ଟର୍ଗୁଡ଼ିକୁ ମିଶ୍ରଣ କରନ୍ତୁ |</string>
+    <string name="filter_sheet_count">%1$d apps shown</string>
+    <string name="filter_group_type">ଆପ୍ ପ୍ରକାର |</string>
+    <string name="filter_group_service">AZenith ସେବା |</string>
+    <string name="filter_group_system">ସିଷ୍ଟମ୍ ଆପ୍ସ |</string>
+    <string name="filter_system_show">ସମସ୍ତ</string>
+    <string name="filter_system_only">କେବଳ</string>
+    <string name="filter_system_hide">ଲୁଚାନ୍ତୁ |</string>
     <string name="game_preload">ଖେଳ ପ୍ରିଲୋଡ୍</string>
     <string name="game_preload_desc">ଖେଳ ଆରମ୍ଭରେ ରନ୍ ଟାଇମ୍ ଲାଇବ୍ରେରୀ ପ୍ରିଲୋଡ୍ କରନ୍ତୁ</string>
     <string name="gpu_mali">GPU Mali ନିର୍ଦ୍ଧାରଣ</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">ଏହି ବିକଳ୍ପ ପ୍ରୟୋଗ ହେବା ପାଇଁ ରିବୁଟ୍ ଆବଶ୍ୟକ। ଜାରି ରଖିବେ?</string>
     <string name="disable_auto_mode_desc">ଏକ ଖେଳ ଚିହ୍ନଟ ହେଲେ ସ୍ୱୟଂଚାଳିତ ଭାବରେ ସୁଇଚ୍ କରିବା ଠାରୁ ପ୍ରୋଫାଇଲ୍ ବନ୍ଦ କରେ | ତାପରେ ଆପଣ ମୂଳ ପୃଷ୍ଠାରେ ସାମ୍ପ୍ରତିକ ପ୍ରୋଫାଇଲ୍ ଟାଇଲରୁ ପ୍ରୋଫାଇଲ୍ ନିଜେ ସେଟ୍ କରନ୍ତି |</string>
     <string name="no_apps_found">କ search ଣସି ଆପ୍ ଏହି ସନ୍ଧାନ ସହିତ ମେଳ ଖାଉ ନାହିଁ |</string>
+    <string name="no_apps_match_filters">କ apps ଣସି ଆପ୍ ଏହି ଫିଲ୍ଟର୍ ସହିତ ମେଳ ଖାଉ ନାହିଁ |</string>
     <string name="theme_save">ସଞ୍ଚୟ କରନ୍ତୁ |</string>
     <string name="theme_discard">ପରିତ୍ୟାଗ କରନ୍ତୁ |</string>
     <string name="theme_unsaved">ସଂରକ୍ଷିତ ଥିମ୍ ପରିବର୍ତ୍ତନ |</string>

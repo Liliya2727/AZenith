@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Ikona aplikacije</string>
     <string name="cd_back">Natrag</string>
     <string name="cd_changelog">Dnevnik promjena</string>
+    <string name="cd_filter">Filter</string>
     <string name="cd_clear">Očisti</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Izbornik</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO i GED parametri</string>
     <string name="fpsgo_ged_desc">Primijeni optimizirane vrijednosti FPSGO i GED parametara</string>
     <string name="freq_offset">Pomak frekvencije</string>
+    <string name="filter_games">Igre</string>
+    <string name="filter_enabled">Omogućeno</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filteri</string>
+    <string name="filter_sheet_subtitle">Kombinirajte filtre kako biste suzili popis aplikacija</string>
+    <string name="filter_sheet_count">%1$d prikazanih aplikacija</string>
+    <string name="filter_group_type">Vrsta aplikacije</string>
+    <string name="filter_group_service">AZenith servis</string>
+    <string name="filter_group_system">Aplikacije sustava</string>
+    <string name="filter_system_show">sve</string>
+    <string name="filter_system_only">Samo</string>
+    <string name="filter_system_hide">Sakrij se</string>
     <string name="game_preload">Prethodno učitavanje igre</string>
     <string name="game_preload_desc">Prethodno učitaj izvršne biblioteke pri pokretanju igre</string>
     <string name="gpu_mali">GPU Mali planiranje</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Ova opcija zahtijeva ponovno pokretanje kako bi se primijenila. Nastaviti?</string>
     <string name="disable_auto_mode_desc">Zaustavlja automatsko prebacivanje profila kada se otkrije igra. Zatim sami postavljate profil s pločice Trenutni profil na početnoj stranici.</string>
     <string name="no_apps_found">Nijedna aplikacija ne odgovara ovoj pretrazi</string>
+    <string name="no_apps_match_filters">Nijedna aplikacija ne odgovara ovim filtrima</string>
     <string name="theme_save">spremiti</string>
     <string name="theme_discard">Odbaciti</string>
     <string name="theme_unsaved">Unsaved theme changes</string>

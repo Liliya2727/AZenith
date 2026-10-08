@@ -28,6 +28,7 @@
     <string name="cd_app_icon">एप आइकन</string>
     <string name="cd_back">फर्कनुहोस्</string>
     <string name="cd_changelog">परिवर्तन लग</string>
+    <string name="cd_filter">फिल्टर गर्नुहोस्</string>
     <string name="cd_clear">सफा गर्नुहोस्</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">मेनु</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO र GED प्यारामिटरहरू</string>
     <string name="fpsgo_ged_desc">FPSGO र GED प्यारामिटर अनुकूलन मानहरू लागू गर्नुहोस्</string>
     <string name="freq_offset">फ्रिक्वेन्सी अफसेट</string>
+    <string name="filter_games">खेलहरू</string>
+    <string name="filter_enabled">सक्षम गरियो</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">फिल्टरहरू</string>
+    <string name="filter_sheet_subtitle">अनुप्रयोग सूची साँघुरो गर्न फिल्टरहरू जोड्नुहोस्</string>
+    <string name="filter_sheet_count">%1$d एपहरू देखाइयो</string>
+    <string name="filter_group_type">एप प्रकार</string>
+    <string name="filter_group_service">AZenith सेवा</string>
+    <string name="filter_group_system">प्रणाली एपहरू</string>
+    <string name="filter_system_show">सबै</string>
+    <string name="filter_system_only">मात्र</string>
+    <string name="filter_system_hide">लुकाउनुहोस्</string>
     <string name="game_preload">खेल पूर्व-लोड</string>
     <string name="game_preload_desc">खेल सुरु हुँदा रनटाइम लाइब्रेरीहरू पूर्व-लोड गर्नुहोस्</string>
     <string name="gpu_mali">GPU Mali तालिका</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">यो विकल्प लागू गर्न पुन: सुरु गर्न आवश्यक छ। जारी राख्नुहुन्छ?</string>
     <string name="disable_auto_mode_desc">खेल पत्ता लाग्दा प्रोफाइलहरूलाई स्वचालित रूपमा स्विच गर्नबाट रोक्छ। त्यसपछि तपाईंले गृह पृष्ठमा हालको प्रोफाइल टाइलबाट प्रोफाइल आफैं सेट गर्नुहोस्।</string>
     <string name="no_apps_found">कुनै पनि एप यो खोजसँग मेल खाँदैन</string>
+    <string name="no_apps_match_filters">यी फिल्टरहरूसँग कुनै एपहरू मेल खाँदैनन्</string>
     <string name="theme_save">बचत गर्नुहोस्</string>
     <string name="theme_discard">खारेज गर्नुहोस्</string>
     <string name="theme_unsaved">असुरक्षित विषयवस्तु परिवर्तनहरू</string>

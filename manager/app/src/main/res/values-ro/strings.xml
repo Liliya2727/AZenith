@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Pictogramă aplicație</string>
     <string name="cd_back">Înapoi</string>
     <string name="cd_changelog">Jurnal modificări</string>
+    <string name="cd_filter">Filtru</string>
     <string name="cd_clear">Ștergere</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Meniu</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">Parametri FPSGO și GED</string>
     <string name="fpsgo_ged_desc">Aplică valorile optime ale parametrilor FPSGO și GED</string>
     <string name="freq_offset">Offset frecvență</string>
+    <string name="filter_games">Jocuri</string>
+    <string name="filter_enabled">Activat</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filtre</string>
+    <string name="filter_sheet_subtitle">Combinați filtre pentru a restrânge lista de aplicații</string>
+    <string name="filter_sheet_count">%1$d aplicații afișate</string>
+    <string name="filter_group_type">Tip aplicație</string>
+    <string name="filter_group_service">Serviciul AZenith</string>
+    <string name="filter_group_system">Aplicații de sistem</string>
+    <string name="filter_system_show">Toate</string>
+    <string name="filter_system_only">Numai</string>
+    <string name="filter_system_hide">Ascunde</string>
     <string name="game_preload">Preîncărcare joc</string>
     <string name="game_preload_desc">Preîncarcă bibliotecile de rulare la pornirea jocului</string>
     <string name="gpu_mali">Planificare GPU Mali</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Această opțiune necesită o repornire pentru a fi aplicată. Continuați?</string>
     <string name="disable_auto_mode_desc">Oprește comutarea automată a profilurilor atunci când este detectat un joc. Apoi setați singur profilul din panoul Profil curent de pe pagina de pornire.</string>
     <string name="no_apps_found">Nicio aplicație nu corespunde acestei căutări</string>
+    <string name="no_apps_match_filters">Nicio aplicație nu se potrivește cu aceste filtre</string>
     <string name="theme_save">Salvați</string>
     <string name="theme_discard">Aruncă</string>
     <string name="theme_unsaved">Modificări nesalvate ale temei</string>

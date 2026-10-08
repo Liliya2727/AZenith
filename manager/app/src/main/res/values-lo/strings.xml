@@ -28,6 +28,7 @@
     <string name="cd_app_icon">ໄອຄອນແອັບ</string>
     <string name="cd_back">ກັບຄືນ</string>
     <string name="cd_changelog">ບັນທຶກການອັບເດດ</string>
+    <string name="cd_filter">ການກັ່ນຕອງ</string>
     <string name="cd_clear">ລຶບ</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">ເມນູ</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">ຕົວກຳນົດ FPSGO ແລະ GED</string>
     <string name="fpsgo_ged_desc">ນຳໃຊ້ຄ່າທີ່ດີທີ່ສຸດຂອງ FPSGO ແລະ GED</string>
     <string name="freq_offset">ການປ່ຽນຄວາມຖີ່</string>
+    <string name="filter_games">ເກມ</string>
+    <string name="filter_enabled">ເປີດໃຊ້ແລ້ວ</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">ການກັ່ນຕອງ</string>
+    <string name="filter_sheet_subtitle">ສົມທົບການກັ່ນຕອງເພື່ອແຄບລາຍການແອັບຯ</string>
+    <string name="filter_sheet_count">ສະແດງ %1$d ແອັບ</string>
+    <string name="filter_group_type">ປະເພດແອັບ</string>
+    <string name="filter_group_service">ບໍລິການ AZenith</string>
+    <string name="filter_group_system">ແອັບລະບົບ</string>
+    <string name="filter_system_show">ທັງໝົດ</string>
+    <string name="filter_system_only">ເທົ່ານັ້ນ</string>
+    <string name="filter_system_hide">ເຊື່ອງ</string>
     <string name="game_preload">ການໂຫຼດເກມລ່ວງໜ້າ</string>
     <string name="game_preload_desc">ໂຫຼດ runtime library ລ່ວງໜ້າເມື່ອເປີດເກມ</string>
     <string name="gpu_mali">ການຈັດການ Mali GPU</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">ຕົວເລືອກນີ້ຕ້ອງການການຣີສະຕາດເພື່ອໃຫ້ມີຜົນ. ສືບຕໍ່ບໍ?</string>
     <string name="disable_auto_mode_desc">ຢຸດເຊົາການປ່ຽນໂປຣໄຟລ໌ອັດຕະໂນມັດເມື່ອເກມຖືກກວດພົບ. ຈາກນັ້ນທ່ານຕັ້ງໂປຣໄຟລ໌ດ້ວຍຕົວທ່ານເອງຈາກກະເບື້ອງໂປຣໄຟລ໌ປັດຈຸບັນຢູ່ໃນຫນ້າທໍາອິດ.</string>
     <string name="no_apps_found">ບໍ່ມີແອັບໃດກົງກັບການຄົ້ນຫານີ້</string>
+    <string name="no_apps_match_filters">ບໍ່ມີແອັບຯໃດກົງກັບຕົວກອງເຫຼົ່ານີ້</string>
     <string name="theme_save">ບັນທຶກ</string>
     <string name="theme_discard">ຖິ້ມ</string>
     <string name="theme_unsaved">ການປ່ຽນແປງຮູບແບບສີສັນທີ່ຍັງບໍ່ໄດ້ບັນທຶກໄວ້</string>

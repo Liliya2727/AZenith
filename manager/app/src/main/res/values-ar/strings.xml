@@ -28,6 +28,7 @@
     <string name="cd_app_icon">أيقونة التطبيق</string>
     <string name="cd_back">رجوع</string>
     <string name="cd_changelog">سجل التغييرات</string>
+    <string name="cd_filter">تصفية</string>
     <string name="cd_clear">مسح</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">قائمة</string>
@@ -109,6 +110,19 @@
     <string name="fpsgo_ged">معلمات FPSGO و GED</string>
     <string name="fpsgo_ged_desc">تطبيق قيم تحسين معلمات FPSGO و GED</string>
     <string name="freq_offset">إزاحة التردد</string>
+    <string name="filter_games">العاب</string>
+    <string name="filter_enabled">ممكّن</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">المرشحات</string>
+    <string name="filter_sheet_subtitle">الجمع بين المرشحات لتضييق قائمة التطبيقات</string>
+    <string name="filter_sheet_count">تم عرض %1$d من التطبيقات</string>
+    <string name="filter_group_type">نوع التطبيق</string>
+    <string name="filter_group_service">خدمة AZenith</string>
+    <string name="filter_group_system">تطبيقات النظام</string>
+    <string name="filter_system_show">الكل</string>
+    <string name="filter_system_only">فقط</string>
+    <string name="filter_system_hide">إخفاء</string>
+
     <string name="game_preload">التحميل المسبق للألعاب</string>
     <string name="game_preload_desc">التحميل المسبق لمكتبات التشغيل عند بدء اللعبة</string>
     <string name="gpu_mali">جدولة GPU Mali</string>
@@ -382,6 +396,7 @@
     <string name="reboot_required_content">يتطلب هذا الخيار إعادة التشغيل ليتم تطبيقه. متابعة؟</string>
     <string name="disable_auto_mode_desc">يوقف الملفات الشخصية من التبديل تلقائيًا عند اكتشاف لعبة. يمكنك بعد ذلك تعيين ملف التعريف بنفسك من مربع ملف التعريف الحالي في الصفحة الرئيسية.</string>
     <string name="no_apps_found">لا توجد تطبيقات تطابق هذا البحث</string>
+    <string name="no_apps_match_filters">لا توجد تطبيقات تتطابق مع هذه المرشحات</string>
     <string name="theme_save">حفظ</string>
     <string name="theme_discard">تجاهل</string>
     <string name="theme_unsaved">تغييرات الموضوع غير المحفوظة</string>

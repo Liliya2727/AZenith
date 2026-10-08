@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Ikona aplikacji</string>
     <string name="cd_back">Wstecz</string>
     <string name="cd_changelog">Dziennik zmian</string>
+    <string name="cd_filter">Filtruj</string>
     <string name="cd_clear">Wyczyść</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menu</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">Parametry FPSGO i GED</string>
     <string name="fpsgo_ged_desc">Zastosuj zoptymalizowane wartości parametrów FPSGO i GED</string>
     <string name="freq_offset">Przesunięcie częstotliwości</string>
+    <string name="filter_games">Gry</string>
+    <string name="filter_enabled">Włączone</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filtry</string>
+    <string name="filter_sheet_subtitle">Połącz filtry, aby zawęzić listę aplikacji</string>
+    <string name="filter_sheet_count">Wyświetlono %1$d aplikacji</string>
+    <string name="filter_group_type">Typ aplikacji</string>
+    <string name="filter_group_service">Serwis AZenith</string>
+    <string name="filter_group_system">Aplikacje systemowe</string>
+    <string name="filter_system_show">Wszystko</string>
+    <string name="filter_system_only">Tylko</string>
+    <string name="filter_system_hide">Ukryj</string>
     <string name="game_preload">Wstępne ładowanie gry</string>
     <string name="game_preload_desc">Wstępnie załaduj biblioteki uruchomieniowe podczas uruchamiania gry</string>
     <string name="gpu_mali">Planowanie GPU Mali</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Ta opcja wymaga ponownego uruchomienia, aby została zastosowana. Kontynuować?</string>
     <string name="disable_auto_mode_desc">Uniemożliwia automatyczne przełączanie profili po wykryciu gry. Następnie samodzielnie ustawiasz profil na kafelku Bieżący profil na stronie głównej.</string>
     <string name="no_apps_found">Żadna aplikacja nie pasuje do tego wyszukiwania</string>
+    <string name="no_apps_match_filters">Żadna aplikacja nie pasuje do tych filtrów</string>
     <string name="theme_save">Zapisz</string>
     <string name="theme_discard">Odrzuć</string>
     <string name="theme_unsaved">Niezapisane zmiany motywu</string>

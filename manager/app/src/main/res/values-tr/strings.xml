@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Uygulama simgesi</string>
     <string name="cd_back">Geri</string>
     <string name="cd_changelog">Sürüm notları</string>
+    <string name="cd_filter">Filtre</string>
     <string name="cd_clear">Temizle</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menü</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO ve GED parametreleri</string>
     <string name="fpsgo_ged_desc">FPSGO ve GED parametrelerinin optimize edilmiş değerlerini uygula</string>
     <string name="freq_offset">Frekans ofseti</string>
+    <string name="filter_games">Oyunlar</string>
+    <string name="filter_enabled">Etkin</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filtreler</string>
+    <string name="filter_sheet_subtitle">Uygulama listesini daraltmak için filtreleri birleştirin</string>
+    <string name="filter_sheet_count">%1$d uygulama gösteriliyor</string>
+    <string name="filter_group_type">Uygulama türü</string>
+    <string name="filter_group_service">AZenith hizmeti</string>
+    <string name="filter_group_system">Sistem uygulamaları</string>
+    <string name="filter_system_show">Hepsi</string>
+    <string name="filter_system_only">Yalnızca</string>
+    <string name="filter_system_hide">Gizle</string>
     <string name="game_preload">Oyun ön yüklemesi</string>
     <string name="game_preload_desc">Oyun başlatılırken çalışma zamanı kitaplıklarını önceden yükle</string>
     <string name="gpu_mali">GPU Mali zamanlaması</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Bu seçeneğin uygulanması için yeniden başlatma gerekir. Devam edilsin mi?</string>
     <string name="disable_auto_mode_desc">Bir oyun algılandığında profillerin otomatik olarak değişmesini durdurur. Daha sonra profili Ana sayfadaki Geçerli Profil kutucuğundan kendiniz ayarlarsınız.</string>
     <string name="no_apps_found">Bu aramayla eşleşen uygulama yok</string>
+    <string name="no_apps_match_filters">Bu filtrelerle eşleşen uygulama yok</string>
     <string name="theme_save">Kaydet</string>
     <string name="theme_discard">At</string>
     <string name="theme_unsaved">Kaydedilmemiş tema değişiklikleri</string>

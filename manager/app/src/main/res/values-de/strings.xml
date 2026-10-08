@@ -28,6 +28,7 @@
     <string name="cd_app_icon">App-Symbol</string>
     <string name="cd_back">Zurück</string>
     <string name="cd_changelog">Änderungsprotokoll</string>
+    <string name="cd_filter">Filtern</string>
     <string name="cd_clear">Löschen</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menü</string>
@@ -109,6 +110,19 @@
     <string name="fpsgo_ged">FPSGO und GED-Parameter</string>
     <string name="fpsgo_ged_desc">Optimierte Werte für FPSGO und GED-Parameter anwenden</string>
     <string name="freq_offset">Frequenzversatz</string>
+    <string name="filter_games">Spiele</string>
+    <string name="filter_enabled">Aktiviert</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filter</string>
+    <string name="filter_sheet_subtitle">Kombinieren Sie Filter, um die App-Liste einzugrenzen</string>
+    <string name="filter_sheet_count">%1$d Apps angezeigt</string>
+    <string name="filter_group_type">App-Typ</string>
+    <string name="filter_group_service">AZenith-Service</string>
+    <string name="filter_group_system">System-Apps</string>
+    <string name="filter_system_show">Alle</string>
+    <string name="filter_system_only">Nur</string>
+    <string name="filter_system_hide">Verstecken</string>
+
     <string name="game_preload">Spiel-Vorladung</string>
     <string name="game_preload_desc">Laufzeitbibliotheken beim Start des Spiels vorladen</string>
     <string name="gpu_mali">GPU Mali-Scheduling</string>
@@ -382,6 +396,7 @@
     <string name="reboot_required_content">Diese Option erfordert einen Neustart, um angewendet zu werden. Fortfahren?</string>
     <string name="disable_auto_mode_desc">Verhindert, dass Profile automatisch wechseln, wenn ein Spiel erkannt wird. Anschließend legen Sie das Profil selbst über die Kachel „Aktuelles Profil“ auf der Startseite fest.</string>
     <string name="no_apps_found">Zu dieser Suche passen keine Apps</string>
+    <string name="no_apps_match_filters">Keine Apps entsprechen diesen Filtern</string>
     <string name="theme_save">Speichern</string>
     <string name="theme_discard">Verwerfen</string>
     <string name="theme_unsaved">Nicht gespeicherte Designänderungen</string>

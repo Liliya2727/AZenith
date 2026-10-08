@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Program ikoon</string>
     <string name="cd_back">Terug</string>
     <string name="cd_changelog">Veranderingslogboek</string>
+    <string name="cd_filter">Filter</string>
     <string name="cd_clear">Vee uit</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Kieslys</string>
@@ -109,6 +110,19 @@
     <string name="fpsgo_ged">FPSGO en GED parameters</string>
     <string name="fpsgo_ged_desc">Pas FPSGO en GED parameter optimaliserings toe</string>
     <string name="freq_offset">Frekwensie afwyking</string>
+    <string name="filter_games">Speletjies</string>
+    <string name="filter_enabled">Geaktiveer</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filters</string>
+    <string name="filter_sheet_subtitle">Kombineer filters om die programlys te verklein</string>
+    <string name="filter_sheet_count">%1$d programme gewys</string>
+    <string name="filter_group_type">App tipe</string>
+    <string name="filter_group_service">AZenith diens</string>
+    <string name="filter_group_system">Stelseltoepassings</string>
+    <string name="filter_system_show">Almal</string>
+    <string name="filter_system_only">Slegs</string>
+    <string name="filter_system_hide">Versteek</string>
+
     <string name="game_preload">Speletjie vooraf laai</string>
     <string name="game_preload_desc">Laai looptyd biblioteke vooraf wanneer speletjie begin</string>
     <string name="gpu_mali">GPU Mali skedulering</string>
@@ -382,6 +396,7 @@
     <string name="reboot_required_content">Hierdie opsie vereis \'n herbegin om toegepas te word. Gaan voort?</string>
     <string name="disable_auto_mode_desc">Stop profiele om outomaties oor te skakel wanneer \'n speletjie bespeur word. Jy stel dan self die profiel vanaf die Huidige profiel-teël op die tuisblad.</string>
     <string name="no_apps_found">Geen programme pas by hierdie soektog nie</string>
+    <string name="no_apps_match_filters">Geen programme pas by hierdie filters nie</string>
     <string name="theme_save">Stoor</string>
     <string name="theme_discard">Gooi weg</string>
     <string name="theme_unsaved">Ongestoorde temaveranderings</string>

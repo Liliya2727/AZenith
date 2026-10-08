@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Іконка застосунку</string>
     <string name="cd_back">Назад</string>
     <string name="cd_changelog">Журнал змін</string>
+    <string name="cd_filter">фільтр</string>
     <string name="cd_clear">Очистити</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Меню</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">Параметри FPSGO та GED</string>
     <string name="fpsgo_ged_desc">Застосувати оптимізовані значення FPSGO та GED</string>
     <string name="freq_offset">Зміщення частоти</string>
+    <string name="filter_games">Ігри</string>
+    <string name="filter_enabled">Увімкнено</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Фільтри</string>
+    <string name="filter_sheet_subtitle">Комбінуйте фільтри, щоб звузити список програм</string>
+    <string name="filter_sheet_count">Показано %1$d програм</string>
+    <string name="filter_group_type">Тип програми</string>
+    <string name="filter_group_service">Сервіс AZenith</string>
+    <string name="filter_group_system">Системні програми</string>
+    <string name="filter_system_show">все</string>
+    <string name="filter_system_only">Тільки</string>
+    <string name="filter_system_hide">Сховати</string>
     <string name="game_preload">Попереднє завантаження гри</string>
     <string name="game_preload_desc">Попереднє завантаження бібліотек під час запуску гри</string>
     <string name="gpu_mali">Планування GPU Mali</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Для застосування цього параметра потрібне перезавантаження. Продовжити?</string>
     <string name="disable_auto_mode_desc">Зупиняє автоматичне перемикання профілів у разі виявлення гри. Потім ви самостійно встановлюєте профіль на плитці «Поточний профіль» на домашній сторінці.</string>
     <string name="no_apps_found">Жодна програма не відповідає цьому пошуковому запиту</string>
+    <string name="no_apps_match_filters">Жодна програма не відповідає цим фільтрам</string>
     <string name="theme_save">зберегти</string>
     <string name="theme_discard">Відкинути</string>
     <string name="theme_unsaved">Незбережені зміни теми</string>

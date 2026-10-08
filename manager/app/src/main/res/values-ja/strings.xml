@@ -28,6 +28,7 @@
     <string name="cd_app_icon">アプリアイコン</string>
     <string name="cd_back">戻る</string>
     <string name="cd_changelog">変更履歴</string>
+    <string name="cd_filter">フィルター</string>
     <string name="cd_clear">クリア</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">メニュー</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGOとGEDパラメータ</string>
     <string name="fpsgo_ged_desc">FPSGOとGEDパラメータの最適値を適用</string>
     <string name="freq_offset">周波数オフセット</string>
+    <string name="filter_games">ゲーム</string>
+    <string name="filter_enabled">有効</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">フィルター</string>
+    <string name="filter_sheet_subtitle">フィルターを組み合わせてアプリのリストを絞り込む</string>
+    <string name="filter_sheet_count">%1$d 個のアプリが表示されました</string>
+    <string name="filter_group_type">アプリの種類</string>
+    <string name="filter_group_service">AZenith サービス</string>
+    <string name="filter_group_system">システムアプリ</string>
+    <string name="filter_system_show">すべて</string>
+    <string name="filter_system_only">のみ</string>
+    <string name="filter_system_hide">隠す</string>
     <string name="game_preload">ゲームプリロード</string>
     <string name="game_preload_desc">ゲーム起動時にランタイムライブラリをプリロード</string>
     <string name="gpu_mali">GPU Maliスケジューリング</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">このオプションを適用するには再起動が必要です。続行しますか？</string>
     <string name="disable_auto_mode_desc">ゲームが検出されたときにプロファイルが自動的に切り替わるのを停止します。次に、ホームページの現在のプロファイル タイルからプロファイルを自分で設定します。</string>
     <string name="no_apps_found">この検索に一致するアプリはありません</string>
+    <string name="no_apps_match_filters">これらのフィルターに一致するアプリはありません</string>
     <string name="theme_save">保存</string>
     <string name="theme_discard">廃棄する</string>
     <string name="theme_unsaved">保存されていないテーマの変更</string>

@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Appikon</string>
     <string name="cd_back">Tillbaka</string>
     <string name="cd_changelog">Ändringslogg</string>
+    <string name="cd_filter">Filtrera</string>
     <string name="cd_clear">Rensa</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Meny</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO och GED-parametrar</string>
     <string name="fpsgo_ged_desc">Tillämpa optimerade FPSGO- och GED-parametrar</string>
     <string name="freq_offset">Frekvensförskjutning</string>
+    <string name="filter_games">Spel</string>
+    <string name="filter_enabled">Aktiverad</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filter</string>
+    <string name="filter_sheet_subtitle">Kombinera filter för att begränsa applistan</string>
+    <string name="filter_sheet_count">%1$d appar visas</string>
+    <string name="filter_group_type">Apptyp</string>
+    <string name="filter_group_service">AZenith-tjänst</string>
+    <string name="filter_group_system">Systemappar</string>
+    <string name="filter_system_show">Alla</string>
+    <string name="filter_system_only">Endast</string>
+    <string name="filter_system_hide">Göm</string>
     <string name="game_preload">Förladda spel</string>
     <string name="game_preload_desc">Förladda runtime-bibliotek vid spelstart</string>
     <string name="gpu_mali">GPU Mali-schemaläggning</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Det här alternativet kräver en omstart för att tillämpas. Fortsätta?</string>
     <string name="disable_auto_mode_desc">Stoppar profiler från att byta automatiskt när ett spel upptäcks. Du ställer sedan in profilen själv från rutan Aktuell profil på startsidan.</string>
     <string name="no_apps_found">Inga appar matchar den här sökningen</string>
+    <string name="no_apps_match_filters">Inga appar matchar dessa filter</string>
     <string name="theme_save">Spara</string>
     <string name="theme_discard">Kasta</string>
     <string name="theme_unsaved">Osparade temaändringar</string>

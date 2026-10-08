@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Հավելվածի պատկերակ</string>
     <string name="cd_back">Վերադառնալ</string>
     <string name="cd_changelog">Փոփոխությունների մատյան</string>
+    <string name="cd_filter">Զտել</string>
     <string name="cd_clear">Մաքրել</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Մենյու</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO և GED պարամետրեր</string>
     <string name="fpsgo_ged_desc">Կիրառել FPSGO և GED պարամետրերի օպտիմիզացված արժեքները</string>
     <string name="freq_offset">Հաճախականության շեղում</string>
+    <string name="filter_games">Խաղեր</string>
+    <string name="filter_enabled">Միացված է</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Զտիչներ</string>
+    <string name="filter_sheet_subtitle">Միավորել զտիչները՝ հավելվածների ցանկը նեղացնելու համար</string>
+    <string name="filter_sheet_count">Ցուցադրված է %1$d հավելված</string>
+    <string name="filter_group_type">Հավելվածի տեսակը</string>
+    <string name="filter_group_service">AZenith ծառայություն</string>
+    <string name="filter_group_system">Համակարգային հավելվածներ</string>
+    <string name="filter_system_show">Բոլորը</string>
+    <string name="filter_system_only">Միայն</string>
+    <string name="filter_system_hide">Թաքցնել</string>
     <string name="game_preload">Խաղի նախաբեռնում</string>
     <string name="game_preload_desc">Խաղի մեկնարկի ժամանակ նախաբեռնել գործարկվող գրադարանները</string>
     <string name="gpu_mali">GPU Mali պլանավորում</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Այս տարբերակը կիրառելու համար անհրաժեշտ է վերագործարկել սարքը: Շարունակե՞լ:</string>
     <string name="disable_auto_mode_desc">Դադարեցնում է պրոֆիլների ավտոմատ փոխարկումը, երբ խաղ է հայտնաբերվում: Այնուհետև դուք ինքներդ սահմանում եք պրոֆիլը Գլխավոր էջի ընթացիկ պրոֆիլի սալիկից:</string>
     <string name="no_apps_found">Ոչ մի հավելված չի համապատասխանում այս որոնմանը</string>
+    <string name="no_apps_match_filters">Ոչ մի հավելված չի համապատասխանում այս զտիչներին</string>
     <string name="theme_save">Պահպանել</string>
     <string name="theme_discard">Վերացնել</string>
     <string name="theme_unsaved">Թեմայի չպահված փոփոխություններ</string>

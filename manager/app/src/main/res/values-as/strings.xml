@@ -28,6 +28,7 @@
     <string name="cd_app_icon">এপ আইকন</string>
     <string name="cd_back">উভতি যাওক</string>
     <string name="cd_changelog">পৰিৱৰ্তন লগ</string>
+    <string name="cd_filter">ফিল্টাৰ কৰক</string>
     <string name="cd_clear">পৰিষ্কাৰ কৰক</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">মেনু</string>
@@ -109,6 +110,19 @@
     <string name="fpsgo_ged">FPSGO আৰু GED পেৰামিটাৰ</string>
     <string name="fpsgo_ged_desc">FPSGO আৰু GED পেৰামিটাৰ অপ্টিমাইজেচন প্ৰয়োগ কৰক</string>
     <string name="freq_offset">ফ্ৰিকোৱেন্সি অফছেট</string>
+    <string name="filter_games">খেলা-ধূলা</string>
+    <string name="filter_enabled">সামৰ্থবান কৰা হৈছে</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">ফিল্টাৰসমূহ</string>
+    <string name="filter_sheet_subtitle">এপ তালিকাখন সংকুচিত কৰিবলৈ ফিল্টাৰসমূহ একত্ৰিত কৰক</string>
+    <string name="filter_sheet_count">%1$d এপসমূহ দেখুওৱা হৈছে</string>
+    <string name="filter_group_type">এপৰ ধৰণ</string>
+    <string name="filter_group_service">AZenith সেৱা</string>
+    <string name="filter_group_system">চিষ্টেম এপসমূহ</string>
+    <string name="filter_system_show">সকলো</string>
+    <string name="filter_system_only">কেৱল</string>
+    <string name="filter_system_hide">লুকুৱাই ৰাখক</string>
+
     <string name="game_preload">গেম প্ৰীলোড</string>
     <string name="game_preload_desc">গেম আৰম্ভ হোৱাৰ সময়ত ৰানটাইম লাইব্ৰেৰী প্ৰীলোড কৰক</string>
     <string name="gpu_mali">GPU Mali শিডিউলিং</string>
@@ -382,6 +396,7 @@
     <string name="reboot_required_content">এই বিকল্পটো প্ৰୟੋগ হ\'বলৈ ৰিবুট কৰাৰ প্ৰয়োজন। আগবাঢ়িবনে?</string>
     <string name="disable_auto_mode_desc">এটা খেল ধৰা পৰিলে প্ৰফাইলসমূহ স্বয়ংক্ৰিয়ভাৱে সলনি হোৱা বন্ধ কৰে। তাৰ পিছত আপুনি আলেখ্যন নিজেই হোম পৃষ্ঠাত বৰ্তমান আলেখ্যন টাইলৰ পৰা সংহতি কৰে।</string>
     <string name="no_apps_found">এই সন্ধানৰ সৈতে কোনো এপ মিল নাই</string>
+    <string name="no_apps_match_filters">কোনো এপ এই ফিল্টাৰবোৰৰ সৈতে মিল নাই</string>
     <string name="theme_save">সংৰক্ষণ কৰক</string>
     <string name="theme_discard">পেলাই দিয়ক</string>
     <string name="theme_unsaved">সংৰক্ষিত নোহোৱা থিম সলনি হয়</string>

@@ -28,6 +28,7 @@
     <string name="cd_app_icon">એપ આઇકોન</string>
     <string name="cd_back">પાછા</string>
     <string name="cd_changelog">ચેન્જલોગ</string>
+    <string name="cd_filter">ફિલ્ટર કરો</string>
     <string name="cd_clear">સાફ કરો</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">મેનુ</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO અને GED પરિમાણો</string>
     <string name="fpsgo_ged_desc">FPSGO અને GED પરિમાણ ઑપ્ટિમાઇઝેશન મૂલ્યો લાગુ કરો</string>
     <string name="freq_offset">આવૃત્તિ ઓફસેટ</string>
+    <string name="filter_games">રમતો</string>
+    <string name="filter_enabled">સક્ષમ</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">ફિલ્ટર્સ</string>
+    <string name="filter_sheet_subtitle">એપ્લિકેશન સૂચિને સાંકડી કરવા માટે ફિલ્ટર્સને જોડો</string>
+    <string name="filter_sheet_count">%1$d ઍપ બતાવવામાં આવી</string>
+    <string name="filter_group_type">એપ્લિકેશન પ્રકાર</string>
+    <string name="filter_group_service">AZenith સેવા</string>
+    <string name="filter_group_system">સિસ્ટમ એપ્લિકેશન્સ</string>
+    <string name="filter_system_show">બધા</string>
+    <string name="filter_system_only">માત્ર</string>
+    <string name="filter_system_hide">છુપાવો</string>
     <string name="game_preload">ગેમ પ્રિલોડ</string>
     <string name="game_preload_desc">ગેમ શરૂ કરતી વખતે રનટાઇમ લાઇબ્રેરીઓ પ્રિલોડ કરો</string>
     <string name="gpu_mali">GPU Mali શેડ્યુલિંગ</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">આ વિકલ્પ લાગુ કરવા માટે રીબૂટની જરૂર છે. ચાલુ રાખવું છે?</string>
     <string name="disable_auto_mode_desc">જ્યારે ગેમ શોધાય છે ત્યારે પ્રોફાઇલ્સને આપમેળે સ્વિચ કરવાથી રોકે છે. પછી તમે હોમ પેજ પર વર્તમાન પ્રોફાઇલ ટાઇલમાંથી પ્રોફાઇલ જાતે સેટ કરો.</string>
     <string name="no_apps_found">આ શોધ સાથે કોઈ એપ મેળ ખાતી નથી</string>
+    <string name="no_apps_match_filters">આ ફિલ્ટર્સ સાથે કોઈ એપ્લિકેશન મેળ ખાતી નથી</string>
     <string name="theme_save">સાચવો</string>
     <string name="theme_discard">કાઢી નાખો</string>
     <string name="theme_unsaved">વણસાચવેલ થીમ ફેરફારો</string>

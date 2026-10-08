@@ -28,6 +28,7 @@
     <string name="cd_app_icon">अ‍ॅप आयकॉन</string>
     <string name="cd_back">परत</string>
     <string name="cd_changelog">बदल लॉग</string>
+    <string name="cd_filter">फिल्टर करा</string>
     <string name="cd_clear">साफ करा</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">मेनू</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO आणि GED पॅरामीटर्स</string>
     <string name="fpsgo_ged_desc">FPSGO आणि GED पॅरामीटर ऑप्टिमायझेशन मूल्ये लागू करा</string>
     <string name="freq_offset">फ्रिक्वेंसी ऑफसेट</string>
+    <string name="filter_games">खेळ</string>
+    <string name="filter_enabled">सक्षम केले</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">फिल्टर</string>
+    <string name="filter_sheet_subtitle">ॲप सूची अरुंद करण्यासाठी फिल्टर एकत्र करा</string>
+    <string name="filter_sheet_count">%1$d ॲप्स दाखवले</string>
+    <string name="filter_group_type">ॲप प्रकार</string>
+    <string name="filter_group_service">AZenith सेवा</string>
+    <string name="filter_group_system">सिस्टम ॲप्स</string>
+    <string name="filter_system_show">सर्व</string>
+    <string name="filter_system_only">फक्त</string>
+    <string name="filter_system_hide">लपवा</string>
     <string name="game_preload">गेम प्रीलोड</string>
     <string name="game_preload_desc">गेम सुरू करताना रनटाइम लायब्ररी प्रीलोड करा</string>
     <string name="gpu_mali">GPU Mali शेड्यूलिंग</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">हा पर्याय लागू करण्यासाठी रीबूट करणे आवश्यक आहे. सुरू ठेवायचे?</string>
     <string name="disable_auto_mode_desc">गेम आढळल्यावर प्रोफाइल आपोआप स्विच होण्यापासून थांबवते. त्यानंतर तुम्ही मुख्यपृष्ठावरील वर्तमान प्रोफाइल टाइलमधून स्वतः प्रोफाइल सेट करा.</string>
     <string name="no_apps_found">या शोधाशी कोणतेही ॲप जुळत नाहीत</string>
+    <string name="no_apps_match_filters">कोणतेही ॲप्स या फिल्टरशी जुळत नाहीत</string>
     <string name="theme_save">जतन करा</string>
     <string name="theme_discard">टाकून द्या</string>
     <string name="theme_unsaved">जतन न केलेले थीम बदल</string>

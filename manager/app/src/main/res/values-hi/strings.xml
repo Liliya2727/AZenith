@@ -28,6 +28,7 @@
     <string name="cd_app_icon">ऐप आइकन</string>
     <string name="cd_back">वापस</string>
     <string name="cd_changelog">बदलाव लॉग</string>
+    <string name="cd_filter">फ़िल्टर करें</string>
     <string name="cd_clear">साफ़ करें</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">मेनू</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO और GED पैरामीटर</string>
     <string name="fpsgo_ged_desc">FPSGO और GED पैरामीटर ऑप्टिमाइज़ेशन मान लागू करें</string>
     <string name="freq_offset">आवृत्ति ऑफसेट</string>
+    <string name="filter_games">खेल</string>
+    <string name="filter_enabled">सक्षम</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">फिल्टर</string>
+    <string name="filter_sheet_subtitle">ऐप सूची को सीमित करने के लिए फ़िल्टर को संयोजित करें</string>
+    <string name="filter_sheet_count">%1$d ऐप्स दिखाए गए</string>
+    <string name="filter_group_type">ऐप का प्रकार</string>
+    <string name="filter_group_service">AZenith सेवा</string>
+    <string name="filter_group_system">सिस्टम ऐप्स</string>
+    <string name="filter_system_show">सब</string>
+    <string name="filter_system_only">केवल</string>
+    <string name="filter_system_hide">छिपाओ</string>
     <string name="game_preload">गेम प्रीलोड</string>
     <string name="game_preload_desc">गेम शुरू होने पर रनटाइम लाइब्रेरी प्रीलोड करें</string>
     <string name="gpu_mali">GPU Mali शेड्यूलिंग</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">इस विकल्प को लागू करने के लिए रीबूट की आवश्यकता है। जारी रखें?</string>
     <string name="disable_auto_mode_desc">किसी गेम का पता चलने पर प्रोफ़ाइल को स्वचालित रूप से स्विच होने से रोकता है। फिर आप होम पेज पर वर्तमान प्रोफ़ाइल टाइल से स्वयं प्रोफ़ाइल सेट करें।</string>
     <string name="no_apps_found">इस खोज से कोई ऐप मेल नहीं खाता</string>
+    <string name="no_apps_match_filters">कोई भी ऐप्स इन फ़िल्टर से मेल नहीं खाता</string>
     <string name="theme_save">सहेजें</string>
     <string name="theme_discard">त्यागें</string>
     <string name="theme_unsaved">सहेजे न गए विषय परिवर्तन</string>

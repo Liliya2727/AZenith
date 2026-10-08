@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Forritatákn</string>
     <string name="cd_back">Til baka</string>
     <string name="cd_changelog">Breytingaskrá</string>
+    <string name="cd_filter">Sía</string>
     <string name="cd_clear">Hreinsa</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Valmynd</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO og GED færibreytur</string>
     <string name="fpsgo_ged_desc">Nota hámarksgildi fyrir FPSGO og GED færibreytur</string>
     <string name="freq_offset">Tíðnifrávik</string>
+    <string name="filter_games">Leikir</string>
+    <string name="filter_enabled">Virkt</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Síur</string>
+    <string name="filter_sheet_subtitle">Sameina síur til að þrengja forritalistann</string>
+    <string name="filter_sheet_count">%1$d forrit sýnd</string>
+    <string name="filter_group_type">Tegund forrits</string>
+    <string name="filter_group_service">AZenith þjónusta</string>
+    <string name="filter_group_system">Kerfisforrit</string>
+    <string name="filter_system_show">Allt</string>
+    <string name="filter_system_only">Aðeins</string>
+    <string name="filter_system_hide">Fela</string>
     <string name="game_preload">Forhlaða leik</string>
     <string name="game_preload_desc">Forhlaða keyrslubókasöfnum þegar leikur ræsist</string>
     <string name="gpu_mali">GPU Mali forgangsröðun</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Þessi valkostur krefst endurræsingar til að taka gildi. Halda áfram?</string>
     <string name="disable_auto_mode_desc">Kemur í veg fyrir að snið skiptist sjálfkrafa þegar leikur greinist. Þú stillir síðan sniðið sjálfur frá Current Profile flísinni á heimasíðunni.</string>
     <string name="no_apps_found">Engin forrit passa við þessa leit</string>
+    <string name="no_apps_match_filters">Engin forrit passa við þessar síur</string>
     <string name="theme_save">Vista</string>
     <string name="theme_discard">Fargaðu</string>
     <string name="theme_unsaved">Óvistaðar þemabreytingar</string>

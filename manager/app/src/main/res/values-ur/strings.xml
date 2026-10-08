@@ -28,6 +28,7 @@
     <string name="cd_app_icon">ایپ کا آئیکون</string>
     <string name="cd_back">واپس</string>
     <string name="cd_changelog">تغییرات لاگ</string>
+    <string name="cd_filter">فلٹر</string>
     <string name="cd_clear">صاف کریں</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">مینیو</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO اور GED پیرامیٹرز</string>
     <string name="fpsgo_ged_desc">FPSGO اور GED پیرامیٹرز کی بہترین اقدار لاگو کریں</string>
     <string name="freq_offset">فریکوئنسی آفسیٹ</string>
+    <string name="filter_games">گیمز</string>
+    <string name="filter_enabled">فعال</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">فلٹرز</string>
+    <string name="filter_sheet_subtitle">ایپ کی فہرست کو تنگ کرنے کے لیے فلٹرز کو یکجا کریں۔</string>
+    <string name="filter_sheet_count">%1$d ایپس دکھائی گئیں۔</string>
+    <string name="filter_group_type">ایپ کی قسم</string>
+    <string name="filter_group_service">AZenith سروس</string>
+    <string name="filter_group_system">سسٹم ایپس</string>
+    <string name="filter_system_show">تمام</string>
+    <string name="filter_system_only">صرف</string>
+    <string name="filter_system_hide">چھپائیں</string>
     <string name="game_preload">گیم پری لوڈ</string>
     <string name="game_preload_desc">گیم شروع ہونے پر رن ٹائم لائبریریاں پری لوڈ کریں</string>
     <string name="gpu_mali">GPU Mali شیڈولنگ</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">اس آپشن کو لاگو کرنے کے لیے ریبوٹ درکار ہے۔ کیا جاری رکھیں؟</string>
     <string name="disable_auto_mode_desc">کسی گیم کا پتہ چلنے پر پروفائلز کو خود بخود تبدیل ہونے سے روکتا ہے۔ اس کے بعد آپ ہوم پیج پر موجودہ پروفائل ٹائل سے پروفائل خود سیٹ کریں۔</string>
     <string name="no_apps_found">کوئی ایپ اس تلاش سے مماثل نہیں ہے۔</string>
+    <string name="no_apps_match_filters">کوئی ایپ ان فلٹرز سے مماثل نہیں ہے۔</string>
     <string name="theme_save">محفوظ کریں۔</string>
     <string name="theme_discard">رد کر دیں۔</string>
     <string name="theme_unsaved">غیر محفوظ شدہ تھیم کی تبدیلیاں</string>

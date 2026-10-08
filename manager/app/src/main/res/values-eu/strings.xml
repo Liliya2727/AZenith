@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Aplikazioaren ikonoa</string>
     <string name="cd_back">Atzera</string>
     <string name="cd_changelog">Aldaketa-egunkaria</string>
+    <string name="cd_filter">Iragazkia</string>
     <string name="cd_clear">Garbitu</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menua</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO eta GED parametroak</string>
     <string name="fpsgo_ged_desc">Aplikatu FPSGO eta GED parametro optimizatuak</string>
     <string name="freq_offset">Maiztasun desbideratzea</string>
+    <string name="filter_games">Jolasak</string>
+    <string name="filter_enabled">Gaituta</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Iragazkiak</string>
+    <string name="filter_sheet_subtitle">Konbinatu iragazkiak aplikazioen zerrenda murrizteko</string>
+    <string name="filter_sheet_count">%1$d aplikazio erakusten dira</string>
+    <string name="filter_group_type">Aplikazio mota</string>
+    <string name="filter_group_service">AZenith zerbitzua</string>
+    <string name="filter_group_system">Sistemaren aplikazioak</string>
+    <string name="filter_system_show">Denak</string>
+    <string name="filter_system_only">Bakarrik</string>
+    <string name="filter_system_hide">Ezkutatu</string>
     <string name="game_preload">Jokoaren aurrekarga</string>
     <string name="game_preload_desc">Jokoaren abiaraztean exekuzio liburutegiak aurrez kargatu</string>
     <string name="gpu_mali">GPU Mali plangintza</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Aukera hau aplikatzeko berrabiarazi behar da. Jarraitu?</string>
     <string name="disable_auto_mode_desc">Profilak automatikoki aldatzeari uzten dio joko bat hautematen denean. Ondoren, zuk zeuk ezarriko duzu profila Hasierako orrialdeko Uneko profilaren lauzatik.</string>
     <string name="no_apps_found">Ez dago bilaketa honekin bat datorren aplikaziorik</string>
+    <string name="no_apps_match_filters">Ez dago iragazki hauekin bat datorren aplikaziorik</string>
     <string name="theme_save">Gorde</string>
     <string name="theme_discard">Baztertu</string>
     <string name="theme_unsaved">Gorde gabeko gaiaren aldaketak</string>

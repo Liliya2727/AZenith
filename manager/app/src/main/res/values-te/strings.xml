@@ -28,6 +28,7 @@
     <string name="cd_app_icon">యాప్ చిహ్నం</string>
     <string name="cd_back">తిరిగి వెళ్ళు</string>
     <string name="cd_changelog">మార్పుల చరిత్ర</string>
+    <string name="cd_filter">ఫిల్టర్ చేయండి</string>
     <string name="cd_clear">క్లియర్</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">మెనూ</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO మరియు GED పారామితులు</string>
     <string name="fpsgo_ged_desc">FPSGO మరియు GED పారామితి ఆప్టిమైజేషన్ విలువలను వర్తించండి</string>
     <string name="freq_offset">ఫ్రీక్వెన్సీ ఆఫ్‌సెట్</string>
+    <string name="filter_games">ఆటలు</string>
+    <string name="filter_enabled">ప్రారంభించబడింది</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">ఫిల్టర్లు</string>
+    <string name="filter_sheet_subtitle">యాప్ జాబితాను తగ్గించడానికి ఫిల్టర్‌లను కలపండి</string>
+    <string name="filter_sheet_count">%1$d యాప్‌లు చూపబడ్డాయి</string>
+    <string name="filter_group_type">యాప్ రకం</string>
+    <string name="filter_group_service">AZenith సేవ</string>
+    <string name="filter_group_system">సిస్టమ్ యాప్‌లు</string>
+    <string name="filter_system_show">అన్నీ</string>
+    <string name="filter_system_only">మాత్రమే</string>
+    <string name="filter_system_hide">దాచు</string>
     <string name="game_preload">గేమ్ ప్రీలోడ్</string>
     <string name="game_preload_desc">గేమ్ ప్రారంభంలో రన్‌టైమ్ లైబ్రరీలను ప్రీలోడ్ చేయండి</string>
     <string name="gpu_mali">GPU Mali షెడ్యూలింగ్</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">ఈ ఎంపికను వర్తింపజేయడానికి రీబూట్ అవసరం. కొనసాగించాలా?</string>
     <string name="disable_auto_mode_desc">గేమ్ కనుగొనబడినప్పుడు ప్రొఫైల్‌లు స్వయంచాలకంగా మారకుండా ఆపివేస్తుంది. మీరు హోమ్ పేజీలోని ప్రస్తుత ప్రొఫైల్ టైల్ నుండి ప్రొఫైల్‌ను మీరే సెట్ చేసుకోండి.</string>
     <string name="no_apps_found">ఈ శోధనకు సరిపోలే యాప్‌లు ఏవీ లేవు</string>
+    <string name="no_apps_match_filters">ఈ ఫిల్టర్‌లకు సరిపోలే యాప్‌లు ఏవీ లేవు</string>
     <string name="theme_save">సేవ్ చేయండి</string>
     <string name="theme_discard">విస్మరించండి</string>
     <string name="theme_unsaved">సేవ్ చేయని థీమ్ మార్పులు</string>

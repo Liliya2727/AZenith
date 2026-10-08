@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Ikona e aplikacionit</string>
     <string name="cd_back">Mbrapa</string>
     <string name="cd_changelog">Regjistri i ndryshimeve</string>
+    <string name="cd_filter">Filtro</string>
     <string name="cd_clear">Pastro</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menu</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">Parametrat FPSGO dhe GED</string>
     <string name="fpsgo_ged_desc">Apliko vlerat e optimizuara të FPSGO dhe GED</string>
     <string name="freq_offset">Largimi i frekuencës</string>
+    <string name="filter_games">Lojëra</string>
+    <string name="filter_enabled">Aktivizuar</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filtrat</string>
+    <string name="filter_sheet_subtitle">Kombinoni filtrat për të ngushtuar listën e aplikacioneve</string>
+    <string name="filter_sheet_count">%1$d aplikacione të shfaqura</string>
+    <string name="filter_group_type">Lloji i aplikacionit</string>
+    <string name="filter_group_service">Shërbimi AZenith</string>
+    <string name="filter_group_system">Aplikacionet e sistemit</string>
+    <string name="filter_system_show">Të gjitha</string>
+    <string name="filter_system_only">Vetëm</string>
+    <string name="filter_system_hide">Fshih</string>
     <string name="game_preload">Ngarkimi i lojës paraprakisht</string>
     <string name="game_preload_desc">Ngarko bibliotekat në fillim të lojës</string>
     <string name="gpu_mali">Planifikimi Mali GPU</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Ky opsion kërkon një rindezje për t\'u zbatuar. Të vazhdohet?</string>
     <string name="disable_auto_mode_desc">Ndalon ndërrimin automatik të profileve kur zbulohet një lojë. Më pas e vendosni vetë profilin nga tjegull "Profili aktual" në faqen kryesore.</string>
     <string name="no_apps_found">Asnjë aplikacion nuk përputhet me këtë kërkim</string>
+    <string name="no_apps_match_filters">Asnjë aplikacion nuk përputhet me këto filtra</string>
     <string name="theme_save">Ruaj</string>
     <string name="theme_discard">Hidhni</string>
     <string name="theme_unsaved">Ndryshime teme të paruajtura</string>

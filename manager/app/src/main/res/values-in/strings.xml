@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Ikon aplikasi</string>
     <string name="cd_back">Kembali</string>
     <string name="cd_changelog">Log perubahan</string>
+    <string name="cd_filter">Filter</string>
     <string name="cd_clear">Hapus</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menu</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">Parameter FPSGO dan GED</string>
     <string name="fpsgo_ged_desc">Terapkan nilai optimasi parameter FPSGO dan GED</string>
     <string name="freq_offset">Offset frekuensi</string>
+    <string name="filter_games">Game</string>
+    <string name="filter_enabled">Aktif</string>
+    <string name="filter_disabled">Nonaktif</string>
+    <string name="filter_sheet_title">Filter</string>
+    <string name="filter_sheet_subtitle">Gabungkan filter untuk mempersempit daftar aplikasi</string>
+    <string name="filter_sheet_count">%1$d aplikasi ditampilkan</string>
+    <string name="filter_group_type">Jenis aplikasi</string>
+    <string name="filter_group_service">Layanan AZenith</string>
+    <string name="filter_group_system">Aplikasi sistem</string>
+    <string name="filter_system_show">Semua</string>
+    <string name="filter_system_only">Hanya</string>
+    <string name="filter_system_hide">Sembunyikan</string>
     <string name="game_preload">Pramuat game</string>
     <string name="game_preload_desc">Pramuat runtime library saat game dimulai</string>
     <string name="gpu_mali">Penjadwalan GPU Mali</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Opsi ini memerlukan mulai ulang perangkat untuk diterapkan. Lanjutkan?</string>
     <string name="disable_auto_mode_desc">Menghentikan peralihan profil secara otomatis saat permainan terdeteksi. Anda kemudian mengatur profil sendiri dari ubin Profil Saat Ini di halaman Beranda.</string>
     <string name="no_apps_found">Tidak ada aplikasi yang cocok dengan penelusuran ini</string>
+    <string name="no_apps_match_filters">Tidak ada aplikasi yang cocok dengan filter ini</string>
     <string name="theme_save">Simpan</string>
     <string name="theme_discard">Buang</string>
     <string name="theme_unsaved">Perubahan tema yang belum disimpan</string>

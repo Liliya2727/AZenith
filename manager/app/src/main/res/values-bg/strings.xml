@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Икона на приложението</string>
     <string name="cd_back">Назад</string>
     <string name="cd_changelog">Списък с промени</string>
+    <string name="cd_filter">Филтър</string>
     <string name="cd_clear">Изчисти</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Меню</string>
@@ -109,6 +110,19 @@
     <string name="fpsgo_ged">Параметри FPSGO и GED</string>
     <string name="fpsgo_ged_desc">Прилагане на оптимизирани стойности за FPSGO и GED параметри</string>
     <string name="freq_offset">Честотно отместване</string>
+    <string name="filter_games">игри</string>
+    <string name="filter_enabled">Активирано</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Филтри</string>
+    <string name="filter_sheet_subtitle">Комбинирайте филтри, за да стесните списъка с приложения</string>
+    <string name="filter_sheet_count">Показани са %1$d приложения</string>
+    <string name="filter_group_type">Тип приложение</string>
+    <string name="filter_group_service">Сервиз AZenith</string>
+    <string name="filter_group_system">Системни приложения</string>
+    <string name="filter_system_show">Всички</string>
+    <string name="filter_system_only">само</string>
+    <string name="filter_system_hide">Скрий се</string>
+
     <string name="game_preload">Предварително зареждане на игра</string>
     <string name="game_preload_desc">Предварително зареждане на библиотеките по време на стартиране на играта</string>
     <string name="gpu_mali">GPU Mali планиране</string>
@@ -382,6 +396,7 @@
     <string name="reboot_required_content">Тази опция изисква рестартиране, за да бъде приложена. Продължаване?</string>
     <string name="disable_auto_mode_desc">Спира профилите да се превключват автоматично, когато бъде открита игра. След това сами задавате профила от плочката Текущ профил на началната страница.</string>
     <string name="no_apps_found">Няма приложения, отговарящи на това търсене</string>
+    <string name="no_apps_match_filters">Няма приложения, отговарящи на тези филтри</string>
     <string name="theme_save">Запазване</string>
     <string name="theme_discard">Изхвърлете</string>
     <string name="theme_unsaved">Незапазени промени в темата</string>

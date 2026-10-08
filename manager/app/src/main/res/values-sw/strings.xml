@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Aikoni ya programu</string>
     <string name="cd_back">Rudi</string>
     <string name="cd_changelog">Changelog</string>
+    <string name="cd_filter">Chuja</string>
     <string name="cd_clear">Futa</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menyu</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">Vigezo vya FPSGO na GED</string>
     <string name="fpsgo_ged_desc">Tumia thamani bora za vigezo vya FPSGO na GED</string>
     <string name="freq_offset">Mkondo wa masafa</string>
+    <string name="filter_games">Michezo</string>
+    <string name="filter_enabled">Imewashwa</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Vichujio</string>
+    <string name="filter_sheet_subtitle">Unganisha vichujio ili kupunguza orodha ya programu</string>
+    <string name="filter_sheet_count">Programu %1$d zimeonyeshwa</string>
+    <string name="filter_group_type">Aina ya programu</string>
+    <string name="filter_group_service">Huduma ya AZenith</string>
+    <string name="filter_group_system">Programu za mfumo</string>
+    <string name="filter_system_show">Wote</string>
+    <string name="filter_system_only">Pekee</string>
+    <string name="filter_system_hide">Ficha</string>
     <string name="game_preload">Upakiaji wa mchezo mapema</string>
     <string name="game_preload_desc">Pakia maktaba za runtime wakati mchezo unaanza</string>
     <string name="gpu_mali">Ratiba ya GPU Mali</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Chaguo hili linahitaji kuwasha upya kifaa ili kutumika. Endelea?</string>
     <string name="disable_auto_mode_desc">Huzuia wasifu kubadili kiotomatiki mchezo unapotambuliwa. Kisha unaweka wasifu mwenyewe kutoka kwa kigae cha Wasifu wa Sasa kwenye ukurasa wa Nyumbani.</string>
     <string name="no_apps_found">Hakuna programu zinazolingana na utafutaji huu</string>
+    <string name="no_apps_match_filters">Hakuna programu zinazolingana na vichujio hivi</string>
     <string name="theme_save">Hifadhi</string>
     <string name="theme_discard">Tupa</string>
     <string name="theme_unsaved">Mabadiliko ya mandhari ambayo hayajahifadhiwa</string>

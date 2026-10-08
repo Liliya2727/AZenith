@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Ikona aplikace</string>
     <string name="cd_back">Zpět</string>
     <string name="cd_changelog">Protokol změn</string>
+    <string name="cd_filter">Filtr</string>
     <string name="cd_clear">Vymazat</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Nabídka</string>
@@ -109,6 +110,19 @@
     <string name="fpsgo_ged">FPSGO a parametry GED</string>
     <string name="fpsgo_ged_desc">Použít optimalizované hodnoty FPSGO a GED.</string>
     <string name="freq_offset">Offset frekvence</string>
+    <string name="filter_games">Hry</string>
+    <string name="filter_enabled">Povoleno</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filtry</string>
+    <string name="filter_sheet_subtitle">Kombinací filtrů zúžíte seznam aplikací</string>
+    <string name="filter_sheet_count">Počet zobrazených aplikací: %1$d</string>
+    <string name="filter_group_type">Typ aplikace</string>
+    <string name="filter_group_service">Služba AZenith</string>
+    <string name="filter_group_system">Systémové aplikace</string>
+    <string name="filter_system_show">všechny</string>
+    <string name="filter_system_only">Pouze</string>
+    <string name="filter_system_hide">Skrýt</string>
+
     <string name="game_preload">Přednačítání her</string>
     <string name="game_preload_desc">Přednačíst běhové knihovny při spuštění hry.</string>
     <string name="gpu_mali">Plánování GPU Mali</string>
@@ -382,6 +396,7 @@
     <string name="reboot_required_content">Použití této možnosti vyžaduje restartování zařízení. Pokračovat?</string>
     <string name="disable_auto_mode_desc">Zastaví automatické přepínání profilů, když je detekována hra. Profil si pak nastavíte sami z dlaždice Aktuální profil na domovské stránce.</string>
     <string name="no_apps_found">Tomuto vyhledávání neodpovídají žádné aplikace</string>
+    <string name="no_apps_match_filters">Těmto filtrům neodpovídají žádné aplikace</string>
     <string name="theme_save">Uložit</string>
     <string name="theme_discard">Zahodit</string>
     <string name="theme_unsaved">Neuložené změny motivu</string>

@@ -28,6 +28,7 @@
     <string name="cd_app_icon">រូបតំណាងកម្មវិធី</string>
     <string name="cd_back">ត្រឡប់ក្រោយ</string>
     <string name="cd_changelog">កំណត់ត្រាកំណែ</string>
+    <string name="cd_filter">តម្រង</string>
     <string name="cd_clear">សម្អាត</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">ម៉ឺនុយ</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">ប៉ារ៉ាម៉ែត្រ FPSGO និង GED</string>
     <string name="fpsgo_ged_desc">អនុវត្តតម្លៃបង្កើនប្រសិទ្ធិភាពនៃ FPSGO និង GED</string>
     <string name="freq_offset">អុហ្វសិតប្រេកង់</string>
+    <string name="filter_games">ហ្គេម</string>
+    <string name="filter_enabled">បានបើក</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">តម្រង</string>
+    <string name="filter_sheet_subtitle">ផ្សំតម្រងដើម្បីបង្រួមបញ្ជីកម្មវិធី</string>
+    <string name="filter_sheet_count">កម្មវិធី %1$d ត្រូវបានបង្ហាញ</string>
+    <string name="filter_group_type">ប្រភេទកម្មវិធី</string>
+    <string name="filter_group_service">សេវាកម្ម AZenith</string>
+    <string name="filter_group_system">កម្មវិធីប្រព័ន្ធ</string>
+    <string name="filter_system_show">ទាំងអស់។</string>
+    <string name="filter_system_only">តែប៉ុណ្ណោះ</string>
+    <string name="filter_system_hide">លាក់</string>
     <string name="game_preload">ផ្ទុកហ្គេមជាមុន</string>
     <string name="game_preload_desc">ផ្ទុកបណ្ណាល័យដំណើរការជាមុនពេលចាប់ផ្តើមហ្គេម</string>
     <string name="gpu_mali">កាលវិភាគ GPU Mali</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">ជម្រើសនេះទាមទារឱ្យចាប់ផ្ដើមឡើងវិញដើម្បីអនុវត្ត។ បន្តទេ?</string>
     <string name="disable_auto_mode_desc">បញ្ឈប់ការប្តូរទម្រង់ដោយស្វ័យប្រវត្តិ នៅពេលហ្គេមត្រូវបានរកឃើញ។ បន្ទាប់មកអ្នកកំណត់ទម្រង់ដោយខ្លួនឯងពីផ្ទាំងទម្រង់បច្ចុប្បន្ននៅលើទំព័រដើម។</string>
     <string name="no_apps_found">គ្មានកម្មវិធីដែលត្រូវគ្នានឹងការស្វែងរកនេះទេ។</string>
+    <string name="no_apps_match_filters">គ្មានកម្មវិធីដែលត្រូវគ្នានឹងតម្រងទាំងនេះទេ។</string>
     <string name="theme_save">រក្សាទុក</string>
     <string name="theme_discard">បោះបង់</string>
     <string name="theme_unsaved">ការផ្លាស់ប្តូររូបរាងដែលមិនបានរក្សាទុក</string>

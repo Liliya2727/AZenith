@@ -28,6 +28,7 @@
     <string name="cd_app_icon">סמל אפליקציה</string>
     <string name="cd_back">חזרה</string>
     <string name="cd_changelog">יומן שינויים</string>
+    <string name="cd_filter">מסנן</string>
     <string name="cd_clear">נקה</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">תפריט</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">פרמטרי FPSGO ו-GED</string>
     <string name="fpsgo_ged_desc">החל ערכי אופטימיזציה של FPSGO ו-GED</string>
     <string name="freq_offset">הסטת תדר</string>
+    <string name="filter_games">משחקים</string>
+    <string name="filter_enabled">מופעל</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">מסננים</string>
+    <string name="filter_sheet_subtitle">שלב מסננים כדי לצמצם את רשימת האפליקציות</string>
+    <string name="filter_sheet_count">מוצגות %1$d אפליקציות</string>
+    <string name="filter_group_type">סוג אפליקציה</string>
+    <string name="filter_group_service">שירות AZenith</string>
+    <string name="filter_group_system">אפליקציות מערכת</string>
+    <string name="filter_system_show">הכל</string>
+    <string name="filter_system_only">רק</string>
+    <string name="filter_system_hide">הסתר</string>
     <string name="game_preload">טעינה מראש של משחק</string>
     <string name="game_preload_desc">טעינת ספריות ריצה מראש בעת השקת משחק</string>
     <string name="gpu_mali">תזמון GPU Mali</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">אפשרות זו דורשת הפעלה מחדש כדי לחול. להמשיך?</string>
     <string name="disable_auto_mode_desc">מונע מעבר אוטומטי של פרופילים כאשר מתגלה משחק. לאחר מכן אתה מגדיר את הפרופיל בעצמך מאריח הפרופיל הנוכחי בדף הבית.</string>
     <string name="no_apps_found">אין אפליקציות שתואמות את החיפוש הזה</string>
+    <string name="no_apps_match_filters">אין אפליקציות שתואמות למסננים אלו</string>
     <string name="theme_save">שמור</string>
     <string name="theme_discard">לזרוק</string>
     <string name="theme_unsaved">שינויים בערכת הנושא שלא נשמרו</string>

@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Icône de l\'application</string>
     <string name="cd_back">Retour</string>
     <string name="cd_changelog">Journal des modifications</string>
+    <string name="cd_filter">Filtrer</string>
     <string name="cd_clear">Effacer</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menu</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">Paramètres FPSGO et GED</string>
     <string name="fpsgo_ged_desc">Applique les valeurs d\'optimisation des paramètres FPSGO et GED</string>
     <string name="freq_offset">Décalage de fréquence</string>
+    <string name="filter_games">Jeux</string>
+    <string name="filter_enabled">Activé</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filtres</string>
+    <string name="filter_sheet_subtitle">Combinez des filtres pour affiner la liste des applications</string>
+    <string name="filter_sheet_count">%1$d applications affichées</string>
+    <string name="filter_group_type">Type d\'application</string>
+    <string name="filter_group_service">Service AZenith</string>
+    <string name="filter_group_system">Applications système</string>
+    <string name="filter_system_show">Tout</string>
+    <string name="filter_system_only">Seulement</string>
+    <string name="filter_system_hide">Masquer</string>
     <string name="game_preload">Préchargement du jeu</string>
     <string name="game_preload_desc">Précharge les bibliothèques d\'exécution au démarrage du jeu</string>
     <string name="gpu_mali">Planification GPU Mali</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Cette option nécessite un redémarrage pour être appliquée. Continuer ?</string>
     <string name="disable_auto_mode_desc">Empêche les profils de changer automatiquement lorsqu\'un jeu est détecté. Vous définissez ensuite vous-même le profil à partir de la vignette Profil actuel de la page d\'accueil.</string>
     <string name="no_apps_found">Aucune application ne correspond à cette recherche</string>
+    <string name="no_apps_match_filters">Aucune application ne correspond à ces filtres</string>
     <string name="theme_save">Enregistrer</string>
     <string name="theme_discard">Jeter</string>
     <string name="theme_unsaved">Modifications de thème non enregistrées</string>

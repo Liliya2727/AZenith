@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Isithonjana sesicelo</string>
     <string name="cd_back">Emuva</string>
     <string name="cd_changelog">Umlando wezinguquko</string>
+    <string name="cd_filter">Hlunga</string>
     <string name="cd_clear">Sula</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Imenyu</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">Amapharamitha e-FPSGO ne-GED</string>
     <string name="fpsgo_ged_desc">Faka amanani aphakanyisiwe we-FPSGO ne-GED</string>
     <string name="freq_offset">Ukwehluka kwe-frequency</string>
+    <string name="filter_games">Imidlalo</string>
+    <string name="filter_enabled">Inikwe amandla</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Izihlungi</string>
+    <string name="filter_sheet_subtitle">Hlanganisa izihlungi ukuze unciphise uhlu lohlelo lokusebenza</string>
+    <string name="filter_sheet_count">%1$d izinhlelo zokusebenza ezibonisiwe</string>
+    <string name="filter_group_type">Uhlobo lohlelo lokusebenza</string>
+    <string name="filter_group_service">Isevisi ye-AZenith</string>
+    <string name="filter_group_system">Izinhlelo zokusebenza zesistimu</string>
+    <string name="filter_system_show">Konke</string>
+    <string name="filter_system_only">Kuphela</string>
+    <string name="filter_system_hide">Fihla</string>
     <string name="game_preload">Ukulayisha umdlalo kusengaphambili</string>
     <string name="game_preload_desc">Layisha izindawo zokusebenza kusengaphambili ngesikhathi uqala umdlalo</string>
     <string name="gpu_mali">I-GPU Mali scheduling</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Le nketho idinga ukuqalisa kabusha ukuze isebenze. Qhubeka?</string>
     <string name="disable_auto_mode_desc">Imisa amaphrofayili ukuthi angashintshi ngokuzenzakalelayo lapho umdlalo utholwa. Bese usetha iphrofayela ngokwakho kusuka kuthayela Lephrofayela Yamanje ekhasini Lasekhaya.</string>
     <string name="no_apps_found">Azikho izinhlelo zokusebenza ezifana nalolu sesho</string>
+    <string name="no_apps_match_filters">Azikho izinhlelo zokusebenza ezifana nalezi zihlungi</string>
     <string name="theme_save">Londoloza</string>
     <string name="theme_discard">Lahla</string>
     <string name="theme_unsaved">Izinguquko zetimu engalondoloziwe</string>

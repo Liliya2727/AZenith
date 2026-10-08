@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Иконка приложения</string>
     <string name="cd_back">Назад</string>
     <string name="cd_changelog">Список изменений</string>
+    <string name="cd_filter">Фильтр</string>
     <string name="cd_clear">Очистить</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Меню</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">Параметры FPSGO и GED</string>
     <string name="fpsgo_ged_desc">Применить оптимальные значения параметров FPSGO и GED</string>
     <string name="freq_offset">Смещение частоты</string>
+    <string name="filter_games">Игры</string>
+    <string name="filter_enabled">Включено</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Фильтры</string>
+    <string name="filter_sheet_subtitle">Объедините фильтры, чтобы сузить список приложений</string>
+    <string name="filter_sheet_count">Показано %1$d приложений</string>
+    <string name="filter_group_type">Тип приложения</string>
+    <string name="filter_group_service">Сервис AZenith</string>
+    <string name="filter_group_system">Системные приложения</string>
+    <string name="filter_system_show">Все</string>
+    <string name="filter_system_only">Только</string>
+    <string name="filter_system_hide">Скрыть</string>
     <string name="game_preload">Предзагрузка игры</string>
     <string name="game_preload_desc">Предзагрузка библиотек времени выполнения при запуске игры</string>
     <string name="gpu_mali">Планирование GPU Mali</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Для применения этого параметра требуется перезагрузка. Продолжить?</string>
     <string name="disable_auto_mode_desc">Останавливает автоматическое переключение профилей при обнаружении игры. Затем вы самостоятельно устанавливаете профиль на плитке «Текущий профиль» на главной странице.</string>
     <string name="no_apps_found">Нет приложений, соответствующих этому запросу</string>
+    <string name="no_apps_match_filters">Ни одно приложение не соответствует этим фильтрам.</string>
     <string name="theme_save">Сохранить</string>
     <string name="theme_discard">Отбросить</string>
     <string name="theme_unsaved">Изменения несохраненной темы</string>

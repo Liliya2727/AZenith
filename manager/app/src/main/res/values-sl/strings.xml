@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Ikona aplikacije</string>
     <string name="cd_back">Nazaj</string>
     <string name="cd_changelog">Dnevnik sprememb</string>
+    <string name="cd_filter">Filter</string>
     <string name="cd_clear">Počisti</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Meni</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">Parametri FPSGO in GED</string>
     <string name="fpsgo_ged_desc">Uporabi optimizirane vrednosti parametrov FPSGO in GED</string>
     <string name="freq_offset">Frekvenčni odmik</string>
+    <string name="filter_games">igre</string>
+    <string name="filter_enabled">Omogočeno</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filtri</string>
+    <string name="filter_sheet_subtitle">Združite filtre, da zožite seznam aplikacij</string>
+    <string name="filter_sheet_count">%1$d prikazanih aplikacij</string>
+    <string name="filter_group_type">Vrsta aplikacije</string>
+    <string name="filter_group_service">Storitev AZenith</string>
+    <string name="filter_group_system">Sistemske aplikacije</string>
+    <string name="filter_system_show">Vse</string>
+    <string name="filter_system_only">Samo</string>
+    <string name="filter_system_hide">Skrij se</string>
     <string name="game_preload">Prednalaganje iger</string>
     <string name="game_preload_desc">Prednaloži izvajalne knjižnice ob zagonu igre</string>
     <string name="gpu_mali">GPU Mali načrtovanje</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Ta možnost zahteva ponovni zagon, da se uveljavi. Nadaljujem?</string>
     <string name="disable_auto_mode_desc">Prepreči samodejno preklapljanje profilov, ko je zaznana igra. Profil nato nastavite sami s ploščice Trenutni profil na domači strani.</string>
     <string name="no_apps_found">Nobena aplikacija ne ustreza temu iskanju</string>
+    <string name="no_apps_match_filters">Nobena aplikacija ne ustreza tem filtrom</string>
     <string name="theme_save">Shrani</string>
     <string name="theme_discard">Zavrzi</string>
     <string name="theme_unsaved">Neshranjene spremembe teme</string>

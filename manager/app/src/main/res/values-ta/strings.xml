@@ -28,6 +28,7 @@
     <string name="cd_app_icon">பயன்பாட்டு ஐகான்</string>
     <string name="cd_back">பின் செல்</string>
     <string name="cd_changelog">மாற்றப் பதிவு</string>
+    <string name="cd_filter">வடிகட்டி</string>
     <string name="cd_clear">அழி</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">மெனு</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO மற்றும் GED அளவுருக்கள்</string>
     <string name="fpsgo_ged_desc">FPSGO மற்றும் GED அளவுரு உகந்த மதிப்புகளைப் பயன்படுத்துகிறது</string>
     <string name="freq_offset">அதிர்வெண் மாற்று</string>
+    <string name="filter_games">விளையாட்டுகள்</string>
+    <string name="filter_enabled">இயக்கப்பட்டது</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">வடிப்பான்கள்</string>
+    <string name="filter_sheet_subtitle">பயன்பாட்டு பட்டியலை சுருக்க வடிப்பான்களை இணைக்கவும்</string>
+    <string name="filter_sheet_count">%1$d பயன்பாடுகள் காட்டப்பட்டுள்ளன</string>
+    <string name="filter_group_type">பயன்பாட்டு வகை</string>
+    <string name="filter_group_service">AZenith சேவை</string>
+    <string name="filter_group_system">கணினி பயன்பாடுகள்</string>
+    <string name="filter_system_show">அனைத்து</string>
+    <string name="filter_system_only">மட்டுமே</string>
+    <string name="filter_system_hide">மறை</string>
     <string name="game_preload">விளையாட்டு முன்னேற்றும்</string>
     <string name="game_preload_desc">விளையாட்டு தொடங்கும் போது ரன் டைம் நூலகங்களை முன்பதிவேற்றவும்</string>
     <string name="gpu_mali">GPU Mali திட்டமிடல்</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">இந்த விருப்பத்தைப் பயன்படுத்த மறுதொடக்கத்தைத் தேவைப்படுகிறது. தொடரவா?</string>
     <string name="disable_auto_mode_desc">கேம் கண்டறியப்பட்டால் சுயவிவரங்கள் தானாக மாறுவதை நிறுத்துகிறது. முகப்புப் பக்கத்தில் உள்ள தற்போதைய சுயவிவரத் தட்டிலிருந்து சுயவிவரத்தை நீங்களே அமைத்துக் கொள்ளுங்கள்.</string>
     <string name="no_apps_found">இந்தத் தேடலுடன் பொருந்தக்கூடிய பயன்பாடுகள் எதுவும் இல்லை</string>
+    <string name="no_apps_match_filters">இந்த வடிப்பான்களுடன் பொருந்தக்கூடிய பயன்பாடுகள் எதுவும் இல்லை</string>
     <string name="theme_save">சேமிக்கவும்</string>
     <string name="theme_discard">நிராகரி</string>
     <string name="theme_unsaved">சேமிக்கப்படாத தீம் மாற்றங்கள்</string>

@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Biểu tượng ứng dụng</string>
     <string name="cd_back">Quay lại</string>
     <string name="cd_changelog">Nhật ký thay đổi</string>
+    <string name="cd_filter">Lọc</string>
     <string name="cd_clear">Xóa</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menu</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">Tham số FPSGO và GED</string>
     <string name="fpsgo_ged_desc">Áp dụng giá trị tối ưu tham số FPSGO và GED</string>
     <string name="freq_offset">Độ lệch tần số</string>
+    <string name="filter_games">Trò chơi</string>
+    <string name="filter_enabled">Đã bật</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Bộ lọc</string>
+    <string name="filter_sheet_subtitle">Kết hợp các bộ lọc để thu hẹp danh sách ứng dụng</string>
+    <string name="filter_sheet_count">%1$d ứng dụng được hiển thị</string>
+    <string name="filter_group_type">Loại ứng dụng</string>
+    <string name="filter_group_service">Dịch vụ AZenith</string>
+    <string name="filter_group_system">Ứng dụng hệ thống</string>
+    <string name="filter_system_show">Tất cả</string>
+    <string name="filter_system_only">Chỉ</string>
+    <string name="filter_system_hide">Ẩn</string>
     <string name="game_preload">Tải trước trò chơi</string>
     <string name="game_preload_desc">Tải trước thư viện chạy khi khởi động trò chơi</string>
     <string name="gpu_mali">Lập lịch GPU Mali</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Tùy chọn này yêu cầu khởi động lại để áp dụng. Tiếp tục?</string>
     <string name="disable_auto_mode_desc">Ngăn chặn việc tự động chuyển đổi cấu hình khi phát hiện thấy trò chơi. Sau đó, bạn tự đặt cấu hình từ ô Cấu hình hiện tại trên Trang chủ.</string>
     <string name="no_apps_found">Không có ứng dụng nào phù hợp với tìm kiếm này</string>
+    <string name="no_apps_match_filters">Không có ứng dụng nào phù hợp với các bộ lọc này</string>
     <string name="theme_save">Lưu</string>
     <string name="theme_discard">Loại bỏ</string>
     <string name="theme_unsaved">Những thay đổi về chủ đề chưa được lưu</string>

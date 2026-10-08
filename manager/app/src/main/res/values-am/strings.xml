@@ -28,6 +28,7 @@
     <string name="cd_app_icon">የመተግበሪያ አዶ</string>
     <string name="cd_back">ተመለስ</string>
     <string name="cd_changelog">የለውጥ ሎግ</string>
+    <string name="cd_filter">አጣራ</string>
     <string name="cd_clear">አጽዳ</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">ምናሌ</string>
@@ -109,6 +110,19 @@
     <string name="fpsgo_ged">FPSGO እና GED መመዘኛዎች</string>
     <string name="fpsgo_ged_desc">የFPSGO እና GED መመዘኛዎች ምርጥ እሴቶችን ተግብር</string>
     <string name="freq_offset">ድግግሞሽ ማካካሻ</string>
+    <string name="filter_games">ጨዋታዎች</string>
+    <string name="filter_enabled">ነቅቷል</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">ማጣሪያዎች</string>
+    <string name="filter_sheet_subtitle">የመተግበሪያውን ዝርዝር ለማጥበብ ማጣሪያዎችን ያጣምሩ</string>
+    <string name="filter_sheet_count">%1$d መተግበሪያዎች ይታያሉ</string>
+    <string name="filter_group_type">የመተግበሪያ ዓይነት</string>
+    <string name="filter_group_service">AZenith አገልግሎት</string>
+    <string name="filter_group_system">የስርዓት መተግበሪያዎች</string>
+    <string name="filter_system_show">ሁሉም</string>
+    <string name="filter_system_only">ብቻ</string>
+    <string name="filter_system_hide">ደብቅ</string>
+
     <string name="game_preload">የጨዋታ ቅድመ-ጫኛ</string>
     <string name="game_preload_desc">ጨዋታ ሲጀምር የሩጫ ቤተ-መጻሕፍት ቅድመ-ጫን</string>
     <string name="gpu_mali">GPU Mali መርሐግብር</string>
@@ -382,6 +396,7 @@
     <string name="reboot_required_content">ይህ አማራጭ ተግባራዊ እንዲሆን ዳግም ማስነሳት ያስፈልጋል። ይቀጥሉ?</string>
     <string name="disable_auto_mode_desc">አንድ ጨዋታ ሲገኝ መገለጫዎች በራስ-ሰር እንዳይቀይሩ ያቆማል። ከዚያ በመነሻ ገጹ ላይ ካለው የአሁኑ የመገለጫ ንጣፍ ላይ መገለጫውን እራስዎ ያዘጋጁት።</string>
     <string name="no_apps_found">ከዚህ ፍለጋ ጋር የሚዛመዱ መተግበሪያዎች የሉም</string>
+    <string name="no_apps_match_filters">ከእነዚህ ማጣሪያዎች ጋር የሚዛመዱ መተግበሪያዎች የሉም</string>
     <string name="theme_save">አስቀምጥ</string>
     <string name="theme_discard">አስወግድ</string>
     <string name="theme_unsaved">ያልተቀመጠ ገጽታ ይቀየራል።</string>

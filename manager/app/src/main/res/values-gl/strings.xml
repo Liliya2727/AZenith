@@ -28,6 +28,7 @@
     <string name="cd_app_icon">Icona da aplicación</string>
     <string name="cd_back">Volver</string>
     <string name="cd_changelog">Rexistro de cambios</string>
+    <string name="cd_filter">Filtro</string>
     <string name="cd_clear">Limpar</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">Menú</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">Parámetros FPSGO e GED</string>
     <string name="fpsgo_ged_desc">Aplicar valores optimizados de FPSGO e GED</string>
     <string name="freq_offset">Desprazamento de frecuencia</string>
+    <string name="filter_games">Xogos</string>
+    <string name="filter_enabled">Activado</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">Filtros</string>
+    <string name="filter_sheet_subtitle">Combina filtros para restrinxir a lista de aplicacións</string>
+    <string name="filter_sheet_count">Móstrase %1$d aplicacións</string>
+    <string name="filter_group_type">Tipo de aplicación</string>
+    <string name="filter_group_service">Servizo AZenith</string>
+    <string name="filter_group_system">Aplicacións do sistema</string>
+    <string name="filter_system_show">Todos</string>
+    <string name="filter_system_only">Só</string>
+    <string name="filter_system_hide">Ocultar</string>
     <string name="game_preload">Precarga de xogo</string>
     <string name="game_preload_desc">Precarga de librarías en tempo de execución ao iniciar o xogo</string>
     <string name="gpu_mali">Planificación GPU Mali</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">Esta opción require reiniciar para aplicarse. Desexa continuar?</string>
     <string name="disable_auto_mode_desc">Evita que os perfís cambien automaticamente cando se detecta un xogo. Despois estableces o perfil desde o mosaico Perfil actual da páxina de inicio.</string>
     <string name="no_apps_found">Ningunha aplicación coincide con esta busca</string>
+    <string name="no_apps_match_filters">Ningunha aplicación coincide con estes filtros</string>
     <string name="theme_save">Gardar</string>
     <string name="theme_discard">Descartar</string>
     <string name="theme_unsaved">Cambios no tema sen gardar</string>

@@ -28,6 +28,7 @@
     <string name="cd_app_icon">ಅಪ್ಲಿಕೇಶನ್ ಐಕನ್</string>
     <string name="cd_back">ಹಿಂತಿರುಗಿ</string>
     <string name="cd_changelog">ಚೇಂಜ್‌ಲಾಗ್</string>
+    <string name="cd_filter">ಫಿಲ್ಟರ್</string>
     <string name="cd_clear">ತೆರವುಗೊಳಿಸಿ</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">ಮೆನು</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO ಮತ್ತು GED ಪ್ಯಾರಾಮೀಟರ್‌ಗಳು</string>
     <string name="fpsgo_ged_desc">FPSGO ಮತ್ತು GED ಪ್ಯಾರಾಮೀಟರ್ ಆಪ್ಟಿಮೈಸೇಶನ್ ಮೌಲ್ಯಗಳನ್ನು ಅನ್ವಯಿಸಿ</string>
     <string name="freq_offset">ಆವೃತ್ತಿ ಆಫ್ಸೆಟ್</string>
+    <string name="filter_games">ಆಟಗಳು</string>
+    <string name="filter_enabled">ಸಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">ಶೋಧಕಗಳು</string>
+    <string name="filter_sheet_subtitle">ಅಪ್ಲಿಕೇಶನ್ ಪಟ್ಟಿಯನ್ನು ಕಿರಿದಾಗಿಸಲು ಫಿಲ್ಟರ್‌ಗಳನ್ನು ಸಂಯೋಜಿಸಿ</string>
+    <string name="filter_sheet_count">%1$d ಅಪ್ಲಿಕೇಶನ್‌ಗಳನ್ನು ತೋರಿಸಲಾಗಿದೆ</string>
+    <string name="filter_group_type">ಅಪ್ಲಿಕೇಶನ್ ಪ್ರಕಾರ</string>
+    <string name="filter_group_service">AZenith ಸೇವೆ</string>
+    <string name="filter_group_system">ಸಿಸ್ಟಮ್ ಅಪ್ಲಿಕೇಶನ್‌ಗಳು</string>
+    <string name="filter_system_show">ಎಲ್ಲಾ</string>
+    <string name="filter_system_only">ಮಾತ್ರ</string>
+    <string name="filter_system_hide">ಮರೆಮಾಡಿ</string>
     <string name="game_preload">ಆಟದ ಪೂರ್ವ-ಲೋಡ್</string>
     <string name="game_preload_desc">ಆಟ ಪ್ರಾರಂಭವಾದಾಗ ರನ್‌ಟೈಮ್ ಲೈಬ್ರರಿಗಳನ್ನು ಪೂರ್ವ-ಲೋಡ್ ಮಾಡಿ</string>
     <string name="gpu_mali">GPU ಮಾಲಿ ಶೆಡ್ಯೂಲಿಂಗ್</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">ಈ ಆಯ್ಕೆಯನ್ನು ಅನ್ವಯಿಸಲು ಮರುಪ್ರಾರಂಭದ ಅಗತ್ಯವಿದೆ. ಮುಂದುವರಿಯುವುದೇ?</string>
     <string name="disable_auto_mode_desc">ಗೇಮ್ ಪತ್ತೆಯಾದಾಗ ಪ್ರೊಫೈಲ್‌ಗಳು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಸ್ವಿಚ್ ಆಗುವುದನ್ನು ನಿಲ್ಲಿಸುತ್ತದೆ. ನಂತರ ನೀವು ಮುಖಪುಟದಲ್ಲಿ ಪ್ರಸ್ತುತ ಪ್ರೊಫೈಲ್ ಟೈಲ್‌ನಿಂದ ಪ್ರೊಫೈಲ್ ಅನ್ನು ಹೊಂದಿಸಿ.</string>
     <string name="no_apps_found">ಈ ಹುಡುಕಾಟಕ್ಕೆ ಯಾವುದೇ ಅಪ್ಲಿಕೇಶನ್‌ಗಳು ಹೊಂದಿಕೆಯಾಗುವುದಿಲ್ಲ</string>
+    <string name="no_apps_match_filters">ಈ ಫಿಲ್ಟರ್‌ಗಳಿಗೆ ಯಾವುದೇ ಅಪ್ಲಿಕೇಶನ್‌ಗಳು ಹೊಂದಿಕೆಯಾಗುವುದಿಲ್ಲ</string>
     <string name="theme_save">ಉಳಿಸಿ</string>
     <string name="theme_discard">ತಿರಸ್ಕರಿಸು</string>
     <string name="theme_unsaved">ಉಳಿಸದ ಥೀಮ್ ಬದಲಾವಣೆಗಳು</string>

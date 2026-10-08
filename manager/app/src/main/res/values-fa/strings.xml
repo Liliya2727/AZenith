@@ -28,6 +28,7 @@
     <string name="cd_app_icon">آیکون برنامه</string>
     <string name="cd_back">بازگشت</string>
     <string name="cd_changelog">تاریخچه تغییرات</string>
+    <string name="cd_filter">فیلتر کنید</string>
     <string name="cd_clear">پاک کردن</string>
     <string name="cd_github">گیت‌هاب</string>
     <string name="cd_menu">منو</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">پارامترهای FPSGO و GED</string>
     <string name="fpsgo_ged_desc">اعمال مقادیر بهینه پارامترهای FPSGO و GED</string>
     <string name="freq_offset">افست فرکانس</string>
+    <string name="filter_games">بازی ها</string>
+    <string name="filter_enabled">فعال شد</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">فیلترها</string>
+    <string name="filter_sheet_subtitle">برای محدود کردن لیست برنامه ها، فیلترها را ترکیب کنید</string>
+    <string name="filter_sheet_count">%1$d برنامه نشان داده شده است</string>
+    <string name="filter_group_type">نوع برنامه</string>
+    <string name="filter_group_service">سرویس AZenith</string>
+    <string name="filter_group_system">برنامه های سیستمی</string>
+    <string name="filter_system_show">همه</string>
+    <string name="filter_system_only">فقط</string>
+    <string name="filter_system_hide">پنهان کردن</string>
     <string name="game_preload">پیش‌بارگذاری بازی</string>
     <string name="game_preload_desc">پیش‌بارگذاری کتابخانه‌های زمان اجرا هنگام شروع بازی</string>
     <string name="gpu_mali">زمان‌بندی Mali GPU</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">برای اعمال این گزینه به راه‌اندازی مجدد نیاز است. ادامه می‌دهید؟</string>
     <string name="disable_auto_mode_desc">هنگامی که یک بازی شناسایی می شود، پروفایل ها را به طور خودکار تغییر نمی دهد. سپس خودتان نمایه را از کاشی نمایه فعلی در صفحه اصلی تنظیم کنید.</string>
     <string name="no_apps_found">هیچ برنامه‌ای با این جستجو مطابقت ندارد</string>
+    <string name="no_apps_match_filters">هیچ برنامه‌ای با این فیلترها مطابقت ندارد</string>
     <string name="theme_save">ذخیره کنید</string>
     <string name="theme_discard">دور انداختن</string>
     <string name="theme_unsaved">تغییرات تم ذخیره نشده</string>

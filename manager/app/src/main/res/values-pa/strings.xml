@@ -28,6 +28,7 @@
     <string name="cd_app_icon">ਐਪ ਆਈਕਨ</string>
     <string name="cd_back">ਵਾਪਸ</string>
     <string name="cd_changelog">ਬਦਲਾਅ ਲੌਗ</string>
+    <string name="cd_filter">ਫਿਲਟਰ</string>
     <string name="cd_clear">ਸਾਫ਼ ਕਰੋ</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">ਮੀਨੂ</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO ਅਤੇ GED ਪੈਰਾਮੀਟਰ</string>
     <string name="fpsgo_ged_desc">FPSGO ਅਤੇ GED ਪੈਰਾਮੀਟਰ ਆਪਟੀਮਾਈਜੇਸ਼ਨ ਮੁੱਲ ਲਾਗੂ ਕਰੋ</string>
     <string name="freq_offset">ਫ਼੍ਰੀਕੁਐਂਸੀ ਆਫ਼ਸੈੱਟ</string>
+    <string name="filter_games">ਖੇਡਾਂ</string>
+    <string name="filter_enabled">ਸਮਰਥਿਤ</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">ਫਿਲਟਰ</string>
+    <string name="filter_sheet_subtitle">ਐਪ ਸੂਚੀ ਨੂੰ ਸੰਕੁਚਿਤ ਕਰਨ ਲਈ ਫਿਲਟਰਾਂ ਨੂੰ ਜੋੜੋ</string>
+    <string name="filter_sheet_count">%1$d ਐਪਾਂ ਦਿਖਾਈਆਂ ਗਈਆਂ</string>
+    <string name="filter_group_type">ਐਪ ਦੀ ਕਿਸਮ</string>
+    <string name="filter_group_service">AZenith ਸੇਵਾ</string>
+    <string name="filter_group_system">ਸਿਸਟਮ ਐਪਸ</string>
+    <string name="filter_system_show">ਸਾਰੇ</string>
+    <string name="filter_system_only">ਸਿਰਫ਼</string>
+    <string name="filter_system_hide">ਓਹਲੇ</string>
     <string name="game_preload">ਗੇਮ ਪ੍ਰੀ-ਲੋਡ</string>
     <string name="game_preload_desc">ਗੇਮ ਸ਼ੁਰੂ ਹੋਣ \'ਤੇ ਰਨ-ਟਾਈਮ ਲਾਇਬ੍ਰੇਰੀਆਂ ਪ੍ਰੀ-ਲੋਡ ਕਰੋ</string>
     <string name="gpu_mali">GPU Mali ਸ਼ਡਿਊਲ</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">ਇਸ ਵਿਕਲਪ ਨੂੰ ਲਾਗੂ ਕਰਨ ਲਈ ਰੀਬੂਟ ਦੀ ਲੋੜ ਹੈ। ਜਾਰੀ ਰੱਖਣਾ ਹੈ?</string>
     <string name="disable_auto_mode_desc">ਜਦੋਂ ਇੱਕ ਗੇਮ ਦਾ ਪਤਾ ਲਗਾਇਆ ਜਾਂਦਾ ਹੈ ਤਾਂ ਪ੍ਰੋਫਾਈਲਾਂ ਨੂੰ ਸਵੈਚਲਿਤ ਤੌਰ \'ਤੇ ਬਦਲਣ ਤੋਂ ਰੋਕਦਾ ਹੈ। ਫਿਰ ਤੁਸੀਂ ਹੋਮ ਪੇਜ \'ਤੇ ਮੌਜੂਦਾ ਪ੍ਰੋਫਾਈਲ ਟਾਈਲ ਤੋਂ ਪ੍ਰੋਫਾਈਲ ਆਪਣੇ ਆਪ ਸੈੱਟ ਕਰੋ।</string>
     <string name="no_apps_found">ਕੋਈ ਐਪ ਇਸ ਖੋਜ ਨਾਲ ਮੇਲ ਨਹੀਂ ਖਾਂਦੀ</string>
+    <string name="no_apps_match_filters">ਕੋਈ ਵੀ ਐਪ ਇਹਨਾਂ ਫਿਲਟਰਾਂ ਨਾਲ ਮੇਲ ਨਹੀਂ ਖਾਂਦੀ</string>
     <string name="theme_save">ਸੇਵ ਕਰੋ</string>
     <string name="theme_discard">ਰੱਦ ਕਰੋ</string>
     <string name="theme_unsaved">ਅਣਰੱਖਿਅਤ ਥੀਮ ਬਦਲਾਅ</string>

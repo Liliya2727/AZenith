@@ -28,6 +28,7 @@
     <string name="cd_app_icon">აპლიკაციის ხატულა</string>
     <string name="cd_back">უკან</string>
     <string name="cd_changelog">ცვლილებების ჟურნალი</string>
+    <string name="cd_filter">ფილტრი</string>
     <string name="cd_clear">გასუფთავება</string>
     <string name="cd_github">GitHub</string>
     <string name="cd_menu">მენიუ</string>
@@ -109,6 +110,18 @@
     <string name="fpsgo_ged">FPSGO და GED პარამეტრები</string>
     <string name="fpsgo_ged_desc">FPSGO და GED პარამეტრების ოპტიმიზაციის მნიშვნელობების გამოყენება</string>
     <string name="freq_offset">სიხშირის გადახრა</string>
+    <string name="filter_games">თამაშები</string>
+    <string name="filter_enabled">ჩართულია</string>
+    <string name="filter_disabled">Disabled</string>
+    <string name="filter_sheet_title">ფილტრები</string>
+    <string name="filter_sheet_subtitle">შეუთავსეთ ფილტრები აპების სიის შესამცირებლად</string>
+    <string name="filter_sheet_count">ნაჩვენებია %1$d აპი</string>
+    <string name="filter_group_type">აპლიკაციის ტიპი</string>
+    <string name="filter_group_service">AZenith სერვისი</string>
+    <string name="filter_group_system">სისტემის აპლიკაციები</string>
+    <string name="filter_system_show">ყველა</string>
+    <string name="filter_system_only">მხოლოდ</string>
+    <string name="filter_system_hide">დამალვა</string>
     <string name="game_preload">თამაშის წინასწარი ჩატვირთვა</string>
     <string name="game_preload_desc">სამუშაო ბიბლიოთეკების წინასწარი ჩატვირთვა თამაშის გაშვებისას</string>
     <string name="gpu_mali">GPU Mali განრიგი</string>
@@ -382,6 +395,7 @@
     <string name="reboot_required_content">ამ პარამეტრის გამოსაყენებლად საჭიროა გადატვირთვა. გსურთ გაგრძელება?</string>
     <string name="disable_auto_mode_desc">აჩერებს პროფილების ავტომატურად გადართვას თამაშის აღმოჩენისას. შემდეგ თქვენ თავად დააყენეთ პროფილი საწყისი გვერდის მიმდინარე პროფილის ფილიდან.</string>
     <string name="no_apps_found">არცერთი აპი არ შეესაბამება ამ ძიებას</string>
+    <string name="no_apps_match_filters">არცერთი აპი არ შეესაბამება ამ ფილტრებს</string>
     <string name="theme_save">შენახვა</string>
     <string name="theme_discard">გაუქმება</string>
     <string name="theme_unsaved">შენახული თემის ცვლილებები</string>
