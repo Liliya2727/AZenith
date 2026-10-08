@@ -44,6 +44,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -60,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.ColumnScope
 import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.HazeState
@@ -205,7 +207,15 @@ private fun AZenithSheet(
         scrimColor = Color.Black.copy(alpha = 0.42f),
         shape = shape,
         dragHandle = null,
-        contentWindowInsets = { WindowInsets(0, 0, 0, 0) }
+        // The sheet is its own dialog window, so its system-bar appearance is
+        // not inherited from the activity. The surface painted here is dark
+        // (rememberSheetBase), so force light status/nav icons; otherwise M3
+        // derives them from the content color and renders dark-on-dark.
+        properties = ModalBottomSheetProperties(
+            isAppearanceLightStatusBars = false,
+            isAppearanceLightNavigationBars = false,
+        ),
+        contentWindowInsets = { WindowInsets.safeDrawing }
     ) {
         Column(
             modifier = modifier
