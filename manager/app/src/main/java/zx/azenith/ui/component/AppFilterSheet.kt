@@ -34,11 +34,9 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.FlowRowScope
@@ -81,22 +79,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import dev.chrisbanes.haze.HazeInput
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.blur.HazeBlurStyle
-import dev.chrisbanes.haze.blur.hazeBlur
-import dev.chrisbanes.haze.blur.material3.Material3
 import zx.azenith.R
-import zx.azenith.ui.theme.ACCENT_TINT_BLUR
-import zx.azenith.ui.theme.accentTint
 import zx.azenith.ui.viewmodel.ApplistViewmodel
 
 // Expand/collapse is an emphasis moment: width overshoots ~20% then settles.
@@ -143,8 +134,14 @@ fun AppFilterSheet(
         titleBlurBoxed = true,
     ) {
         val navBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-        val scheme = MaterialTheme.colorScheme
-        val motion = MaterialTheme.motionScheme
+        // Gate mirrors the sheet's own read: solid split sections exist only
+        // over the blurred body, and the sections are never haze themselves.
+        val context = LocalContext.current
+        val settingsPrefs = remember(context) {
+            context.getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
+        }
+        val isBlurEnabled = settingsPrefs.getBoolean("expressive_blur_ui", false)
+        val sectionGap = if (isBlurEnabled) 2.dp else 16.dp
 
         Column(
             modifier = Modifier
@@ -152,46 +149,15 @@ fun AppFilterSheet(
                 .heightIn(max = 560.dp)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
-                .padding(top = 4.dp, bottom = navBar + 16.dp)
+                .padding(top = if (isBlurEnabled) 8.dp else 4.dp, bottom = navBar + 16.dp)
         ) {
-            // Split background cards mirror the app list: a separate rounded
-            // surface per section with 2dp gaps, each blurred when expressive
-            // blur is on so title, filters and actions stay readable over it.
-            val isBlurEnabled = LocalAppBlurEnabled.current
-            val hazeState = LocalAppHazeState.current
-
-            SplitBlurCard(isBlurEnabled, hazeState) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Surface(
-                        color = scheme.primaryContainer,
-                        shape = CircleShape
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                        ) {
-                            AnimatedContent(
-                                targetState = shownCount,
-                                transitionSpec = { odometerSpecs(motion) },
-                                label = "shownCount"
-                            ) { n ->
-                                Text(
-                                    text = stringResource(R.string.filter_sheet_count, n),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = scheme.onPrimaryContainer
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            ShownCountBadge(shownCount = shownCount)
 
             Spacer(modifier = Modifier.height(16.dp))
             FilterGroup(
                 title = stringResource(R.string.filter_group_type),
-                isBlurEnabled = isBlurEnabled,
-                hazeState = hazeState
+                boxed = isBlurEnabled,
+                shape = topShape
             ) {
                 FilterToggleButton(
                     label = stringResource(R.string.filter_games),
@@ -201,11 +167,10 @@ fun AppFilterSheet(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(sectionGap))
             FilterGroup(
                 title = stringResource(R.string.filter_group_service),
-                isBlurEnabled = isBlurEnabled,
-                hazeState = hazeState
+                boxed = isBlurEnabled
             ) {
                 FilterToggleButton(
                     label = stringResource(R.string.filter_enabled),
@@ -221,11 +186,10 @@ fun AppFilterSheet(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(sectionGap))
             FilterGroup(
                 title = stringResource(R.string.filter_group_system),
-                isBlurEnabled = isBlurEnabled,
-                hazeState = hazeState
+                boxed = isBlurEnabled
             ) {
                 SystemSegmentRow(
                     current = viewModel.systemFilter,
@@ -234,20 +198,13 @@ fun AppFilterSheet(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-            SplitBlurCard(isBlurEnabled, hazeState) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = onReset) {
-                        Text(stringResource(R.string.reset))
-                    }
-                    Button(onClick = onDismiss) {
-                        Text(stringResource(R.string.done))
-                    }
+            Spacer(modifier = Modifier.height(if (isBlurEnabled) 2.dp else 24.dp))
+            if (isBlurEnabled) {
+                SolidSectionBox(shape = bottomShape) {
+                    FilterActions(onReset = onReset, onDismiss = onDismiss)
                 }
+            } else {
+                FilterActions(onReset = onReset, onDismiss = onDismiss)
             }
         }
     }
@@ -262,71 +219,107 @@ private fun odometerSpecs(motion: MotionScheme): ContentTransform =
         (fadeOut(motion.defaultEffectsSpec()) + slideOutVertically(motion.defaultSpatialSpec()) { -it / 2 })
 
 /**
- * A titled group card: the label sits on the sheet, the options share one
- * rounded surface a step above it -- the same grouping the app's list cards use.
+ * A titled filter group. With the blur gate closed the label sits on the sheet
+ * above its card, as everywhere else in the app; with it open label and options
+ * share one solid split section, so nothing sits directly on the blurred body.
  */
 @Composable
 private fun FilterGroup(
     title: String,
-    isBlurEnabled: Boolean,
-    hazeState: HazeState?,
+    boxed: Boolean,
+    shape: RoundedCornerShape = middleShape,
     modifier: Modifier = Modifier,
     content: @Composable FlowRowScope.() -> Unit,
 ) {
-    SplitBlurCard(isBlurEnabled, hazeState, modifier = modifier) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 4.dp, bottom = 10.dp)
-        )
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            content = content
-        )
+    if (boxed) {
+        SolidSectionBox(shape = shape, modifier = modifier) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 4.dp, bottom = 10.dp)
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                content = content
+            )
+        }
+    } else {
+        Column(modifier = modifier.fillMaxWidth()) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+            )
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                FlowRow(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    content = content
+                )
+            }
+        }
     }
 }
 
 /**
- * One boxed section of the filter sheet, split the way the app list splits its
- * items: a separate rounded surface per block with 2dp gaps between them.
- *
- * When expressive blur is on each box becomes a haze-blurred card -- the same
- * Material3 style, radius and accent tint the sheet body and dialogs use --
- * falling back to a flat [ColorScheme.surfaceContainer] fill otherwise, so
- * the section's controls stay readable over the blur.
+ * The live result badge: the one number that says whether the current
+ * combination is what the user wants.
  */
 @Composable
-private fun SplitBlurCard(
-    isBlurEnabled: Boolean,
-    hazeState: HazeState?,
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit,
-) {
+private fun ShownCountBadge(shownCount: Int) {
+    val motion = MaterialTheme.motionScheme
     val scheme = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(20.dp)
-    val fill = scheme.surfaceContainer
-
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .then(
-                if (isBlurEnabled && hazeState != null) {
-                    Modifier.hazeBlur(
-                        input = HazeInput.Backdrop(hazeState),
-                        style = HazeBlurStyle.Material3(
-                            containerColor = fill.copy(alpha = 0.35f).accentTint(ACCENT_TINT_BLUR)
-                        ) { blurRadius(24.dp) }
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Surface(
+            color = scheme.primaryContainer,
+            shape = CircleShape
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                AnimatedContent(
+                    targetState = shownCount,
+                    transitionSpec = { odometerSpecs(motion) },
+                    label = "shownCount"
+                ) { n ->
+                    Text(
+                        text = stringResource(R.string.filter_sheet_count, n),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = scheme.onPrimaryContainer
                     )
-                } else Modifier
-            )
-            .background(if (isBlurEnabled) Color.Transparent else fill, shape)
-            .padding(12.dp),
-        content = content,
-    )
+                }
+            }
+        }
+    }
 }
+
+/** Reset / Done -- the split stack's last section when the gate is open. */
+@Composable
+private fun FilterActions(onReset: () -> Unit, onDismiss: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TextButton(onClick = onReset) {
+            Text(stringResource(R.string.reset))
+        }
+        Button(onClick = onDismiss) {
+            Text(stringResource(R.string.done))
+        }
+    }
+}
+
 @Composable
 private fun SystemSegmentRow(
     current: ApplistViewmodel.SystemFilter,

@@ -100,14 +100,14 @@ import zx.azenith.ExpressiveShapes
 private val largeCorner = 26.dp
 private val smallCorner = 4.dp
 
-private val topShape = RoundedCornerShape(
+internal val topShape = RoundedCornerShape(
     topStart = largeCorner,
     topEnd = largeCorner,
     bottomStart = smallCorner,
     bottomEnd = smallCorner
 )
-private val middleShape = RoundedCornerShape(smallCorner)
-private val bottomShape = RoundedCornerShape(
+internal val middleShape = RoundedCornerShape(smallCorner)
+internal val bottomShape = RoundedCornerShape(
     topStart = smallCorner,
     topEnd = smallCorner,
     bottomStart = largeCorner,

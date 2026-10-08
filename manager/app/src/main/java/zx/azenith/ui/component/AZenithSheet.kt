@@ -225,14 +225,13 @@ private fun AZenithSheet(
                     .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f), CircleShape)
             )
 
-            // Title/subtitle sit in their own boxed surface when the caller
-            // opts in (the filter sheet), so blur leaves them readable; the
-            // drag handle stays above them, on the sheet's own surface.
-            if (titleBlurBoxed) {
-                SplitBlurCard(
-                    isBlurEnabled = isBlurEnabled,
-                    hazeState = hazeState,
-                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp)
+            // With blur on, an opted-in title rides in its own rounded pill
+            // surface; the gate keeps it plain text on the opaque sheet.
+            if (titleBlurBoxed && isBlurEnabled) {
+                SolidSectionBox(
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 8.dp),
+                    contentPadding = PaddingValues(14.dp),
                 ) {
                     Text(
                         text = title,
@@ -330,15 +329,28 @@ private fun AZenithSheet(
 @Immutable
 private data class SheetSurface(val base: Color, val group: Color)
 
+/**
+ * The tinted colour sheets paint with: surfaceContainerLow lifted a step toward
+ * the accent, so the sheet reads as the theme's hue rather than flat near-black.
+ */
+@Composable
+private fun rememberSheetBase(): Color {
+    val scheme = MaterialTheme.colorScheme
+    return remember(scheme) {
+        val seed = scheme.primary.takeIf { it != scheme.surface } ?: scheme.surfaceTint
+        scheme.surfaceContainerLow.tonalElevation(seed, TINT_MD3_LEVEL_1)
+    }
+}
+
 @Composable
 private fun rememberSheetSurface(style: SheetRowStyle): SheetSurface {
+    val base = rememberSheetBase()
     val scheme = MaterialTheme.colorScheme
-    return remember(scheme, style) {
+    return remember(scheme, style, base) {
         val seed = scheme.primary.takeIf { it != scheme.surface } ?: scheme.surfaceTint
-        val from = scheme.surfaceContainerLow
         SheetSurface(
-            base = from.tonalElevation(seed, TINT_MD3_LEVEL_1),
-            group = from.tonalElevation(seed, TINT_MD3_LEVEL_1 + TINT_MD3_LEVEL_1),
+            base = base,
+            group = scheme.surfaceContainerLow.tonalElevation(seed, TINT_MD3_LEVEL_1 + TINT_MD3_LEVEL_1),
         )
     }
 }
@@ -366,36 +378,27 @@ private fun Modifier.sheetSurface(
 }
 
 /**
- * Boxed blurred surface used by sheets that opt in, so their title/subtitle
- * stay readable over expressive blur. Mirrors the split-card look of the app
- * list: a rounded surface container, blurred when expressive blur is on.
+ * One solid section of a filter-style sheet: an opaque rounded card that sits
+ * on the sheet's blurred body, so its content stays readable. Sections take
+ * the app list's split shapes (first/middle/last) and stack with 2dp gaps to
+ * read as one smooth split; the sections themselves are never haze-applied,
+ * only the sheet behind them blurs.
  */
 @Composable
-private fun SplitBlurCard(
-    isBlurEnabled: Boolean,
-    hazeState: HazeState?,
+fun SolidSectionBox(
+    shape: RoundedCornerShape,
     modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(12.dp),
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val shape = RoundedCornerShape(20.dp)
-    val fill = MaterialTheme.colorScheme.surfaceContainer
+    val fill = rememberSheetBase()
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
-            .then(
-                if (isBlurEnabled && hazeState != null) {
-                    Modifier.hazeBlur(
-                        input = HazeInput.Backdrop(hazeState),
-                        style = HazeBlurStyle.Material3(
-                            containerColor = fill.copy(alpha = 0.35f).accentTint(ACCENT_TINT_BLUR)
-                        ) { blurRadius(24.dp) }
-                    )
-                } else Modifier
-            )
-            .background(if (isBlurEnabled) Color.Transparent else fill, shape)
-            .padding(14.dp),
+            .background(fill, shape)
+            .padding(contentPadding),
         content = content,
     )
 }
