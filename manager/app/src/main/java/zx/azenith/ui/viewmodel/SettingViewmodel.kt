@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.util.TapHapticState
+import zx.azenith.ui.util.fireConfirmHaptic
 import zx.azenith.ui.util.isTapHapticEnabled
 import zx.azenith.ui.util.setTapHapticEnabled
 
@@ -79,6 +80,18 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setTapHaptic(enabled: Boolean) {
         _uiState.value = _uiState.value.copy(tapHaptic = enabled)
         setTapHapticEnabled(getApplication(), enabled)
+    }
+
+    /**
+     * The toggle owns its own feedback instead of leaning on the window hook. Turning it on pulses
+     * through the decor view, which the hook cannot do because the flag is still false while this
+     * runs; turning it off stays silent, and [TapHapticState.suppressTap] stands the hook down so
+     * switching feedback off cannot be the one action that still buzzes.
+     */
+    fun onTapHapticToggle(enabled: Boolean) {
+        if (enabled) fireConfirmHaptic(getApplication())
+        else TapHapticState.suppressTap = true
+        setTapHaptic(enabled)
     }
     
     fun setProfileNotifications(enabled: Boolean) {

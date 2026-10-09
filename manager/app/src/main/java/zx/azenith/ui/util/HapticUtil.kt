@@ -17,16 +17,16 @@
 package zx.azenith.ui.util
 
 import android.content.Context
+import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalViewConfiguration
@@ -35,17 +35,27 @@ const val PREF_TAP_HAPTIC = "tap_haptic_feedback"
 
 private const val PREFS = "settings"
 
+/** Detents a continuous slider is divided into, so a drag ticks instead of buzzing every frame. */
+private const val CONTINUOUS_TICKS = 100
+
 /** Default ON, so the app buzzes on a tap unless the user turns it off. */
 fun isTapHapticEnabled(context: Context): Boolean =
     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         .getBoolean(PREF_TAP_HAPTIC, true)
 
 /**
- * Live flag shared by the Settings row and the tap hook, so a change takes effect on the
- * next tap without recomposing the screens.
+ * Live flag shared by the Settings row and the haptic hooks, so a change takes effect on the
+ * next gesture without recomposing the screens.
  */
 object TapHapticState {
     val enabled = mutableStateOf(true)
+
+    /**
+     * Set by a control that owns its own feedback for this gesture, so the window hook stands down.
+     * Only meaningful within one gesture: the hook clears it on the next press, so a value that is
+     * never read (a gesture that ends in a drag) cannot leak into a later tap.
+     */
+    var suppressTap = false
 }
 
 fun setTapHapticEnabled(context: Context, enabled: Boolean) {
@@ -54,41 +64,92 @@ fun setTapHapticEnabled(context: Context, enabled: Boolean) {
     TapHapticState.enabled.value = enabled
 }
 
+/** One pulse, honouring the toggle. VirtualKey is the tap type and respects the OS setting. */
+fun fireTapHaptic(haptic: HapticFeedback) {
+    if (TapHapticState.enabled.value) {
+        haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+    }
+}
+
 /**
- * Haptic on tap for everything under the modifier.
+ * Confirmation pulse for the toggle that turns haptics on: the switch is off while this runs, so
+ * every other hook is gated out and the user would otherwise feel nothing at the moment of
+ * enabling. Runs through the window decor view, which is what makes it audible under the flag
+ * that is still false at this point. Deliberately not fired when disabling -- switching feedback
+ * off must be silent or the toggle appears broken.
+ */
+fun fireConfirmHaptic(context: Context) {
+    val view = android.view.View(context)
+    @Suppress("DEPRECATION")
+    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+}
+
+/**
+ * Tap haptic for everything under the modifier.
  *
- * A whole-window modifier rather than per-control: it reaches the clickables this app
- * passes `indication = null` (the nav pills) and the M3 controls that carry their own
- * ripple (Button, IconButton, Switch), which a `LocalIndication` override would miss.
+ * A whole-window modifier rather than per-control: it reaches the clickables this app passes
+ * `indication = null` (the nav pills) and the M3 controls that carry their own ripple (Button,
+ * IconButton, Switch), which a `LocalIndication` override would miss.
  *
- * A tap, not a touch: it fires on the up event, only when something interactive consumed
- * the gesture. A tap on empty space leaves the up unconsumed and stays silent, and a
- * scroll makes waitForUpOrCancellation return null before any up. A long press is
- * excluded by the touch timeout, which is also what the system uses to pick the long-press
- * feedback instead of a tap.
+ * The event is read at [PointerEventPass.Final], the last pass of an event. That is the whole
+ * trick: `Final` is the only pass where a descendant's consumption is already visible, so
+ * `isConsumed` there means "a control took this press". Reading it earlier (or asking
+ * `waitForUpOrCancellation` for the up) returns nothing on this app, because `clickable` and
+ * `toggleable` consume both the down and the up.
  *
- * VirtualKey is the tap type; it goes through `View.performHapticFeedback`, so the OS
- * touch-feedback setting silences this too.
+ * Firing on a consumed up is what keeps a tap on empty space and a scroll silent, and the
+ * long-press guard leaves a hold to the system's long-press feedback. The toggle is sampled at
+ * the press rather than at the release, so turning the setting off still feels the press that
+ * did it.
  */
 fun Modifier.tapHaptic(): Modifier = composed {
     val viewConfiguration = LocalViewConfiguration.current
     val haptic = LocalHapticFeedback.current
-    // A key that never changes: the gesture block reads TapHapticState itself, so toggling
-    // the pref must not restart the pointer input and lose an in-flight gesture.
-    val hapticKey = remember { Any() }
 
-    this.pointerInput(hapticKey) {
+    this.pointerInput(Unit) {
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-            val up = waitForUpOrCancellation(PointerEventPass.Final)
-            if (up != null &&
-                up.changedToUpIgnoreConsumed() &&
-                up.isConsumed &&
-                TapHapticState.enabled.value &&
-                (up.uptimeMillis - down.uptimeMillis) <= viewConfiguration.longPressTimeoutMillis
-            ) {
+            // Any leftover from a gesture that never produced a release is dropped here.
+            TapHapticState.suppressTap = false
+            val enabledAtPress = TapHapticState.enabled.value
+            val longPressTimeout = viewConfiguration.longPressTimeoutMillis
+
+            var up: PointerInputChange? = null
+            var sawDownEvent = false
+            while (true) {
+                val change = awaitPointerEvent(PointerEventPass.Final)
+                    .changes.firstOrNull { it.id == down.id } ?: break
+
+                if (!change.pressed) {
+                    up = change
+                    break
+                }
+                // The down event arrives already consumed by whichever control took it; only a
+                // later event being consumed means the gesture became a scroll or a drag.
+                if (sawDownEvent && change.isConsumed) break
+                if (change.uptimeMillis - down.uptimeMillis > longPressTimeout) break
+                sawDownEvent = true
+            }
+
+            // Read here, not at the press: the control's own handler runs in the Main pass, which
+            // is before this Final pass, so a flag it sets for this gesture is visible now.
+            val released = up
+            val suppressed = TapHapticState.suppressTap
+            if (released != null && released.isConsumed && enabledAtPress && !suppressed) {
                 haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
             }
         }
     }
+}
+
+/** Slot index of [value] on a slider's scale, so a drag ticks per detent and not per frame. */
+internal fun sliderTick(
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    steps: Int,
+): Int {
+    val span = range.endInclusive - range.start
+    if (span <= 0f) return 0
+    val divisions = if (steps > 0) steps + 1 else CONTINUOUS_TICKS
+    return ((value - range.start) / span * divisions).toInt()
 }

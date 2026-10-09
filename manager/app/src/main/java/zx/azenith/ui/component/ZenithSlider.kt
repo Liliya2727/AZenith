@@ -24,13 +24,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import kotlin.math.round
+import zx.azenith.ui.util.fireTapHaptic
+import zx.azenith.ui.util.sliderTick
 
 /**
  * The app's single slider implementation, so every slider matches instead of
@@ -60,6 +67,11 @@ internal fun ZenithSlider(
     enabled: Boolean = true,
     accent: Color = MaterialTheme.colorScheme.primary,
 ) {
+    val haptic = LocalHapticFeedback.current
+    // Buzzing from onValueChange would fire once per frame of a drag, which reads as a rattle
+    // rather than as detents. Tick on the index instead, so there is exactly one pulse per step.
+    var lastTick by remember { mutableIntStateOf(Int.MIN_VALUE) }
+
     Box(
         modifier = modifier.pointerInput(enabled, valueRange, steps) {
             // Material's own slider seeks only after the finger passes touch slop, so a
@@ -97,13 +109,21 @@ internal fun ZenithSlider(
                 if (!dragged) {
                     if (snapped != value) onValueChange(snapped)
                     onValueChangeFinished()
+                    fireTapHaptic(haptic)
                 }
             }
         }
     ) {
         Slider(
             value = value,
-            onValueChange = onValueChange,
+            onValueChange = { raw ->
+                val tick = sliderTick(raw, valueRange, steps)
+                if (tick != lastTick) {
+                    lastTick = tick
+                    fireTapHaptic(haptic)
+                }
+                onValueChange(raw)
+            },
             modifier = Modifier.fillMaxWidth(),
             enabled = enabled,
             valueRange = valueRange,

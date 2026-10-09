@@ -260,7 +260,7 @@ fun SettingsScreen(
                                         icon = Icons.Filled.Vibration,
                                         title = stringResource(R.string.tap_haptic_feedback),
                                         checked = uiState.tapHaptic,
-                                        onCheckedChange = settingsViewModel::setTapHaptic
+                                        onCheckedChange = settingsViewModel::onTapHapticToggle
                                     )
                                 },
                                 {
