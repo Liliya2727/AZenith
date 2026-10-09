@@ -356,7 +356,7 @@
     <string name="str_you_re_all_set">Todo configurado</string>
     <string name="support_us">Apoiarnos</string>
     <string name="support_us_desc">Axuda ao desenvolvemento para que AZenith siga mellorando.</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">Resposta háptica</string>
     <string name="theme">Tema</string>
     <string name="theme_desc">Personalizar tema e cor de acento</string>
     <string name="thermalcore_service">Servizo ThermalCore</string>
@@ -403,7 +403,7 @@
     <string name="theme_applied">Tema aplicado</string>
     <string name="theme_apply_action">Solicitar</string>
     <string name="status_checking">Comprobación</string>
-    <string name="root_status_changed">Actualizouse o estado da raíz</string>
+    <string name="root_status_changed">Actualizouse o estado da Root</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>

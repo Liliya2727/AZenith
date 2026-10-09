@@ -356,7 +356,7 @@
     <string name="str_you_re_all_set">הגדרות הושלמו</string>
     <string name="support_us">תמכו בנו</string>
     <string name="support_us_desc">תמיכה בפיתוח, עזרו ל-AZenith להמשיך להשתפר</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">משוב רטט</string>
     <string name="theme">ערכת נושא</string>
     <string name="theme_desc">התאם אישית ערכת נושא וצבע מבטא</string>
     <string name="thermalcore_service">שירות ThermalCore לבקרת טמפרטורה</string>
@@ -403,7 +403,7 @@
     <string name="theme_applied">הנושא הוחל</string>
     <string name="theme_apply_action">החל</string>
     <string name="status_checking">בודק</string>
-    <string name="root_status_changed">סטטוס השורש עודכן</string>
+    <string name="root_status_changed">סטטוס הRoot עודכן</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>

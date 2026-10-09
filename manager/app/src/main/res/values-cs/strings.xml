@@ -357,7 +357,7 @@
     <string name="str_you_re_all_set">Nastavení dokončeno</string>
     <string name="support_us">Podpořte nás</string>
     <string name="support_us_desc">Pomozte s vývojem, aby AZenith mohl být neustále vylepšován.</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">Hmatová odezva</string>
     <string name="theme">Motiv</string>
     <string name="theme_desc">Přizpůsobit motiv a akcentní barvu.</string>
     <string name="thermalcore_service">Služba ThermalCore</string>
@@ -404,7 +404,7 @@
     <string name="theme_applied">Téma bylo použito</string>
     <string name="theme_apply_action">Použít</string>
     <string name="status_checking">Kontrola</string>
-    <string name="root_status_changed">Kořenový stav aktualizován</string>
+    <string name="root_status_changed">Root stav aktualizován</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>

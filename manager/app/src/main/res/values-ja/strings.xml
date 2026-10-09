@@ -356,7 +356,7 @@
     <string name="str_you_re_all_set">設定完了</string>
     <string name="support_us">サポート</string>
     <string name="support_us_desc">開発を支援し、AZenithをさらに良くする</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">触覚フィードバック</string>
     <string name="theme">テーマ</string>
     <string name="theme_desc">テーマとアクセントカラーをカスタマイズ</string>
     <string name="thermalcore_service">ThermalCore温度制御サービス</string>

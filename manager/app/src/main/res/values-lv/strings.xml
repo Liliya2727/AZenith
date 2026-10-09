@@ -356,7 +356,7 @@
     <string name="str_you_re_all_set">Iestatīšana pabeigta</string>
     <string name="support_us">Atbalstīt mūs</string>
     <string name="support_us_desc">Palīdziet izstrādei, lai AZenith turpinātu uzlaboties</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">Taktilā atgriezeniskā saite</string>
     <string name="theme">Tēma</string>
     <string name="theme_desc">Pielāgot tēmu un akcenta krāsu</string>
     <string name="thermalcore_service">ThermalCore temperatūras kontroles pakalpojums</string>
@@ -403,7 +403,7 @@
     <string name="theme_applied">Motīvs ir lietots</string>
     <string name="theme_apply_action">Pieteikties</string>
     <string name="status_checking">Pārbauda</string>
-    <string name="root_status_changed">Saknes statuss ir atjaunināts</string>
+    <string name="root_status_changed">Root statuss ir atjaunināts</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>

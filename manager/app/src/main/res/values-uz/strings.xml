@@ -356,7 +356,7 @@
     <string name="str_you_re_all_set">Sozlash tugallandi</string>
     <string name="support_us">Bizni qo‘llab-quvvatlang</string>
     <string name="support_us_desc">Rivojlanishga yordam bering, AZenith ni doimiy takomillashtiring</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">Taktil javob</string>
     <string name="theme">Mavzu</string>
     <string name="theme_desc">Mavzu va mavzu rangini sozlash</string>
     <string name="thermalcore_service">ThermalCore harorat nazorati xizmati</string>
@@ -403,7 +403,7 @@
     <string name="theme_applied">Mavzu qo\'llanildi</string>
     <string name="theme_apply_action">Murojaat qiling</string>
     <string name="status_checking">Tekshirish</string>
-    <string name="root_status_changed">Ildiz holati yangilandi</string>
+    <string name="root_status_changed">Root holati yangilandi</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>

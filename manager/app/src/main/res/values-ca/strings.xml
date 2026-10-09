@@ -357,7 +357,7 @@
     <string name="str_you_re_all_set">Configuració completada</string>
     <string name="support_us">Dona\'ns suport</string>
     <string name="support_us_desc">Ajuda al desenvolupament perquè AZenith continuï millorant</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">Resposta hàptica</string>
     <string name="theme">Tema</string>
     <string name="theme_desc">Personalitzar tema i color d\'accent</string>
     <string name="thermalcore_service">Servei de control tèrmic ThermalCore</string>
@@ -404,7 +404,7 @@
     <string name="theme_applied">Tema aplicat</string>
     <string name="theme_apply_action">Aplicar</string>
     <string name="status_checking">Comprovació</string>
-    <string name="root_status_changed">Estat de l\'arrel actualitzat</string>
+    <string name="root_status_changed">Estat de l\'Root actualitzat</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>

@@ -356,7 +356,7 @@
     <string name="str_you_re_all_set">සැකසුම් සම්පූර්ණයි</string>
     <string name="support_us">අපට සහාය දක්වන්න</string>
     <string name="support_us_desc">සංවර්ධනයට සහාය වන්න, AZenith අඛණ්ඩව ප්‍රශස්ත කිරීමට ඉඩ දෙන්න</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">ස්පර්ශක ප්‍රතිපෝෂණය</string>
     <string name="theme">තේමාව</string>
     <string name="theme_desc">අභිරුචි තේමාව සහ තේමා වර්ණය</string>
     <string name="thermalcore_service">ThermalCore තාප පාලන සේවාව</string>
@@ -403,7 +403,7 @@
     <string name="theme_applied">තේමාව යොදන ලදී</string>
     <string name="theme_apply_action">අයදුම් කරන්න</string>
     <string name="status_checking">පරීක්ෂා කරනවා</string>
-    <string name="root_status_changed">මූල තත්ත්වය යාවත්කාලීන කරන ලදී</string>
+    <string name="root_status_changed">Root තත්ත්වය යාවත්කාලීන කරන ලදී</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>
