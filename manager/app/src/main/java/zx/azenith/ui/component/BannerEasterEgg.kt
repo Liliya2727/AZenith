@@ -129,9 +129,10 @@ fun BannerWithEasterEgg(
                 scaleX = pressScale
                 scaleY = pressScale
             }
+            .clip(RoundedCornerShape(percent = (currentPersonalization().bannerRadius * 100).toInt()))
             .combinedClickable(
                 interactionSource = interactionSource,
-                indication = null,
+                indication = androidx.compose.foundation.LocalIndication.current,
                 onClick = { onClick() },
                 onLongClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
