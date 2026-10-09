@@ -19,11 +19,14 @@ package zx.azenith.ui.util
 
 import android.app.WallpaperManager
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
+import com.topjohnwu.superuser.io.SuFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -53,14 +56,7 @@ object WallpaperCache {
 
         val job = scope.async {
             withContext(Dispatchers.IO) {
-                val wallpaperManager = WallpaperManager.getInstance(context)
-                val drawable = wallpaperManager.drawable ?: return@withContext null
-
-                val ratio = drawable.intrinsicWidth.toFloat() / drawable.intrinsicHeight.toFloat()
-                val targetHeight = 800
-                val targetWidth = (targetHeight * ratio).toInt()
-
-                drawable.toBitmap(width = targetWidth, height = targetHeight).asImageBitmap()
+                decodeWallpaper(context)
             }
         }
         inFlight = job
@@ -70,6 +66,74 @@ object WallpaperCache {
         bitmapState.value = runCatching { job.await() }.getOrNull()
         if (bitmapState.value != null) isLoaded = true
         inFlight = null
+    }
+
+    private fun decodeWallpaper(context: Context): ImageBitmap? {
+        val wallpaperManager = WallpaperManager.getInstance(context)
+        val drawable = wallpaperManager.drawable
+        if (drawable != null) {
+            val ratio = drawable.intrinsicWidth.toFloat() / drawable.intrinsicHeight.toFloat()
+            val targetHeight = 800
+            val targetWidth = (targetHeight * ratio).toInt()
+            return drawable.toBitmap(width = targetWidth, height = targetHeight).asImageBitmap()
+        }
+
+        // On a live wallpaper the platform returns null here, although a static
+        // image still exists behind the scene (the live wallpaper engine keeps
+        // a bitmap for launcher/lock). AOSP's fallback is the built-in
+        // `default_wallpaper`, but some vendors strip it, which is exactly the
+        // blank header on this device. Read the engine's own current bitmap
+        // through the root shell before giving up.
+        return decodeRootWallpaper() ?: readProviderFiles()
+    }
+
+    private fun decodeRootWallpaper(): ImageBitmap? {
+        val rootBitmap = readRootBitmap("/data/system/users/0/wallpaper")
+        return rootBitmap?.let { decodeToTarget(it) }
+    }
+
+    private fun readProviderFiles(): ImageBitmap? {
+        val dir = "/data/user_de/0/com.transsion.livewallpaper.custompictorial/files"
+        val providerFiles = listOf(
+            "$dir/wallpaper_launcher.jpg",
+            "$dir/wallpaper_keyguard.jpg",
+            "$dir/normal_fg_20261008074830.png",
+        )
+        for (path in providerFiles) {
+            val rootBitmap = readRootBitmap(path) ?: continue
+            val decoded = decodeToTarget(rootBitmap) ?: continue
+            return decoded
+        }
+        return null
+    }
+
+    /** Reads one file through the root shell and decodes it, bounded in size. */
+    private fun readRootBitmap(path: String): Bitmap? {
+        return try {
+            val file = SuFile(path)
+            if (!file.exists()) return null
+            val options = BitmapFactory.Options()
+            options.inJustDecodeBounds = true
+            file.newInputStream().use { BitmapFactory.decodeStream(it, null, options) }
+            if (options.outWidth <= 0 || options.outHeight <= 0) return null
+            var scale = 1
+            while (options.outHeight / (scale * 2) >= 800) scale *= 2
+            val opts = options
+            opts.inSampleSize = scale
+            opts.inJustDecodeBounds = false
+            file.newInputStream().use { BitmapFactory.decodeStream(it, null, opts) }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun decodeToTarget(bitmap: Bitmap): ImageBitmap? {
+        if (bitmap.width <= 0 || bitmap.height <= 0) return null
+        val ratio = bitmap.width.toFloat() / bitmap.height.toFloat()
+        val targetHeight = 800
+        val targetWidth = (targetHeight * ratio).toInt()
+        val scaled = Bitmap.createScaledBitmap(bitmap, targetWidth, targetHeight, true)
+        return scaled.asImageBitmap()
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
