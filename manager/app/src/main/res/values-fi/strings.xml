@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">Kaikki on valmista</string>
     <string name="support_us">Tue meitä</string>
     <string name="support_us_desc">Auta kehitystä ja pidä AZenith optimoituna</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Teema</string>
     <string name="theme_desc">Mukauta teema ja korostusväri</string>
     <string name="thermalcore_service">ThermalCore-lämpötilapalvelu</string>

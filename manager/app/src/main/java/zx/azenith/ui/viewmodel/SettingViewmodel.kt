@@ -16,7 +16,8 @@
 
 package zx.azenith.ui.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
@@ -26,10 +27,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.RootUtils
+import zx.azenith.ui.util.TapHapticState
+import zx.azenith.ui.util.isTapHapticEnabled
+import zx.azenith.ui.util.setTapHapticEnabled
 
 data class SettingsUiState(
     val disableTweak: Boolean = false,
     val stateToast: Boolean = false,
+    val tapHaptic: Boolean = true,
     val autoMode: Boolean = false,
     val debugMode: Boolean = false,
     val profileTimeout: Boolean = false,
@@ -37,7 +42,7 @@ data class SettingsUiState(
     val isLoaded: Boolean = false
 )
 
-class SettingsViewModel : ViewModel() {
+class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
@@ -50,14 +55,17 @@ class SettingsViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             val disableTweak = PropertyUtils.get("persist.sys.azenith.disabletweak") == "1"
             val stateToast = PropertyUtils.get("persist.sys.azenithconf.showtoast") == "1"
+            val tapHaptic = isTapHapticEnabled(getApplication())
             val autoMode = PropertyUtils.get("persist.sys.azenithconf.AIenabled") == "0"
             val debugMode = PropertyUtils.get("persist.sys.azenith.debugmode") == "true"
             val profileTimeout = PropertyUtils.get("persist.sys.azenith.dropforeground") == "1"
             val profileNotifications = PropertyUtils.get("persist.sys.azenith.profilenotifications") == "1"
     
+            TapHapticState.enabled.value = tapHaptic
             _uiState.value = SettingsUiState(
                 disableTweak = disableTweak,
                 stateToast = stateToast,
+                tapHaptic = tapHaptic,
                 autoMode = autoMode,
                 debugMode = debugMode,
                 profileTimeout = profileTimeout,
@@ -65,6 +73,12 @@ class SettingsViewModel : ViewModel() {
                 isLoaded = true
             )
         }
+    }
+
+    /** UI-only preference, so it is stored in SharedPreferences, not a system property. */
+    fun setTapHaptic(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(tapHaptic = enabled)
+        setTapHapticEnabled(getApplication(), enabled)
     }
     
     fun setProfileNotifications(enabled: Boolean) {

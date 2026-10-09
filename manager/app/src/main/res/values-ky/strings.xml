@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">Орнотуу аяктады</string>
     <string name="support_us">Бизди колдоо</string>
     <string name="support_us_desc">Өнүктүрүүгө жардам бериңиз, AZenithтин үзгүлтүксүз оптималдашуусуна салым кошуңуз</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Тема</string>
     <string name="theme_desc">Теманы жана тема түсүн ыңгайлаштыруу</string>
     <string name="thermalcore_service">ThermalCore температура көзөмөлдөө кызматы</string>

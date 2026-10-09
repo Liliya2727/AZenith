@@ -69,6 +69,7 @@ import dev.chrisbanes.haze.blur.material3.Material3
 import dev.chrisbanes.haze.blur.hazeBlur
 import zx.azenith.ui.theme.ACCENT_TINT_BLUR
 import zx.azenith.ui.theme.accentTint
+import zx.azenith.ui.util.tapHaptic
 
 /**
  * How a sheet presents its rows.
@@ -226,6 +227,7 @@ private fun AZenithSheet(
                 .fillMaxWidth()
                 .clip(shape)
                 .sheetSurface(isBlurEnabled, hazeState, sheetSurface)
+                .tapHaptic()
                 .navigationBarsPadding()
         ) {
             // Drawn rather than Material's own dragHandle: the stock handle is a

@@ -59,6 +59,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.parcelize.Parcelize
 import zx.azenith.R
+import zx.azenith.ui.util.tapHaptic
 
 
 private const val TAG = "DialogComponent"
@@ -71,7 +72,10 @@ val LocalActiveDialogCount = androidx.compose.runtime.compositionLocalOf { andro
 fun RootDialogsProvider(content: @Composable () -> Unit) {
     val dialogs = remember { mutableStateMapOf<String, @Composable () -> Unit>() }
     CompositionLocalProvider(LocalRootDialogs provides dialogs) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        // The whole main window, dialogs included, so one tap hook covers everything
+        // composed inline. The bottom sheet and Dialog hosts are separate windows and
+        // carry their own.
+        Box(modifier = Modifier.fillMaxSize().tapHaptic()) {
             content()
             dialogs.values.forEach { it() }
         }

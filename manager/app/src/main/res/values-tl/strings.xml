@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">Tapos na ang setup</string>
     <string name="support_us">Suportahan kami</string>
     <string name="support_us_desc">Tumulong sa pag-develop, patuloy na i-optimize ang AZenith</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Tema</string>
     <string name="theme_desc">I-customize ang tema at accent color</string>
     <string name="thermalcore_service">ThermalCore thermal control service</string>

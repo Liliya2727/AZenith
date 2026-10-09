@@ -366,6 +366,7 @@
     <string name="str_you_re_all_set">You\'re all set</string>
     <string name="support_us">Support Us</string>
     <string name="support_us_desc">Support development and let AZenith keep improving</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Theme</string>
     <string name="theme_applying">Applying theme…</string>
     <string name="theme_desc">Customize theme and accent color</string>

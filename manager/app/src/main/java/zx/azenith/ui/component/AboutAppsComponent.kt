@@ -19,6 +19,7 @@ package zx.azenith.ui.component
 
 import android.content.Context
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -57,6 +58,7 @@ import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import zx.azenith.BuildConfig
 import zx.azenith.R
+import zx.azenith.ui.util.tapHaptic
 
 
 @Preview
@@ -81,7 +83,10 @@ fun AboutDialog(dismiss: () -> Unit) {
     Dialog(
         onDismissRequest = { dismiss() }
     ) {
-        AboutCard()
+        // A Dialog is its own window, so the app-root tap hook does not reach it.
+        Box(modifier = Modifier.tapHaptic()) {
+            AboutCard()
+        }
     }
 }
 

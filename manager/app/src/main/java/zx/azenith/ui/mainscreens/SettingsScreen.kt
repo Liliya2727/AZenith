@@ -257,6 +257,14 @@ fun SettingsScreen(
                             content = listOf(
                                 {
                                     ExpressiveSwitchItem(
+                                        icon = Icons.Filled.Vibration,
+                                        title = stringResource(R.string.tap_haptic_feedback),
+                                        checked = uiState.tapHaptic,
+                                        onCheckedChange = settingsViewModel::setTapHaptic
+                                    )
+                                },
+                                {
+                                    ExpressiveSwitchItem(
                                         icon = Icons.Filled.Notifications,
                                         title = stringResource(R.string.show_toast),
                                         checked = uiState.stateToast,

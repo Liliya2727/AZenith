@@ -357,6 +357,7 @@
     <string name="str_you_re_all_set">Η ρύθμιση ολοκληρώθηκε</string>
     <string name="support_us">Υποστηρίξτε μας</string>
     <string name="support_us_desc">Βοηθήστε την ανάπτυξη, κάντε το AZenith ακόμα καλύτερο</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Θέμα</string>
     <string name="theme_desc">Προσαρμογή θέματος και χρώματος έμφασης</string>
     <string name="thermalcore_service">Υπηρεσία θερμικής διαχείρισης ThermalCore</string>

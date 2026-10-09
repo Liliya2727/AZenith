@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">நீங்கள் தயார்</string>
     <string name="support_us">எங்களை ஆதரிக்கவும்</string>
     <string name="support_us_desc">மேம்பாட்டிற்கு உதவுங்கள், AZenith தொடர்ந்து மேம்படுத்தப்படட்டும்</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">தீம்</string>
     <string name="theme_desc">தனிப்பயன் தீம் மற்றும் தீம் வண்ணம்</string>
     <string name="thermalcore_service">ThermalCore வெப்பக் கட்டுப்பாட்டு சேவை</string>

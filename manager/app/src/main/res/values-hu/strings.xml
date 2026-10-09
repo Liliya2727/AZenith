@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">Minden beállítva</string>
     <string name="support_us">Támogasson minket</string>
     <string name="support_us_desc">Segítse a fejlesztést, hogy az AZenith folyamatosan fejlődjön</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Téma</string>
     <string name="theme_desc">Egyéni téma és kiemelő szín</string>
     <string name="thermalcore_service">ThermalCore hőszabályozási szolgáltatás</string>

@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">Usanidi umekamilika</string>
     <string name="support_us">Kusaidia</string>
     <string name="support_us_desc">Saidia maendeleo, kuruhusu AZenith kuboreshwa kwa njia endelevu</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Mandhari</string>
     <string name="theme_desc">Binafsisha mandhari na rangi ya accent</string>
     <string name="thermalcore_service">Huduma ya ThermalCore ya udhibiti wa joto</string>

@@ -357,6 +357,7 @@
     <string name="str_you_re_all_set">Configuració completada</string>
     <string name="support_us">Dona\'ns suport</string>
     <string name="support_us_desc">Ajuda al desenvolupament perquè AZenith continuï millorant</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Tema</string>
     <string name="theme_desc">Personalitzar tema i color d\'accent</string>
     <string name="thermalcore_service">Servei de control tèrmic ThermalCore</string>

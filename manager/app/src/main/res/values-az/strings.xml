@@ -357,6 +357,7 @@
     <string name="str_you_re_all_set">Parametrlər tamamlandı</string>
     <string name="support_us">Bizi dəstəkləyin</string>
     <string name="support_us_desc">İnkişafa kömək edin, AZenith-in davamlı təkmilləşməsini təmin edin</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Mövzu</string>
     <string name="theme_desc">Xüsusi mövzu və vurğu rəngi</string>
     <string name="thermalcore_service">ThermalCore termal nəzarət xidməti</string>

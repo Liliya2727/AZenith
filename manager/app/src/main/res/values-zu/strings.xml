@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">Izilungiselelo seziqediwe</string>
     <string name="support_us">Sisekele</string>
     <string name="support_us_desc">Siza ekuthuthukiseni, vumela i-AZenith ukuthi iqhubeke nokuthuthukiswa</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Ingqikithi</string>
     <string name="theme_desc">Yenza ngokwezifiso ingqikithi nombala ogqamile</string>
     <string name="thermalcore_service">Isevisi ye-ThermalCore yokulawula izinga lokushisa</string>

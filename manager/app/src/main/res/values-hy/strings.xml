@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">Կարգավորումն ավարտված է</string>
     <string name="support_us">Աջակցեք մեզ</string>
     <string name="support_us_desc">Օգնել զարգացմանը, թույլ տալ AZenith-ին շարունակել բարելավվել</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Թեմա</string>
     <string name="theme_desc">Հարմարեցնել թեման և աքսենտ գույնը</string>
     <string name="thermalcore_service">ThermalCore ջերմային վերահսկման ծառայություն</string>

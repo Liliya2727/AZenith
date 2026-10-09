@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">Sozlash tugallandi</string>
     <string name="support_us">Bizni qo‘llab-quvvatlang</string>
     <string name="support_us_desc">Rivojlanishga yordam bering, AZenith ni doimiy takomillashtiring</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Mavzu</string>
     <string name="theme_desc">Mavzu va mavzu rangini sozlash</string>
     <string name="thermalcore_service">ThermalCore harorat nazorati xizmati</string>

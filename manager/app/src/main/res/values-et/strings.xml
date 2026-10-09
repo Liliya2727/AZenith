@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">Seadistamine lõpetatud</string>
     <string name="support_us">Toeta meid</string>
     <string name="support_us_desc">Aita arendust, et AZenith pidevalt täiustuks</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Teema</string>
     <string name="theme_desc">Kohandatud teema ja aktsentvärv</string>
     <string name="thermalcore_service">ThermalCore temperatuuriteenus</string>

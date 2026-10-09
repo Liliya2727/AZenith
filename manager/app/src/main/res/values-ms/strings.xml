@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">Persediaan selesai</string>
     <string name="support_us">Sokong kami</string>
     <string name="support_us_desc">Bantu pembangunan, biarkan AZenith terus dioptimumkan</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Tema</string>
     <string name="theme_desc">Sesuaikan tema dan warna aksen</string>
     <string name="thermalcore_service">Perkhidmatan kawalan suhu ThermalCore</string>

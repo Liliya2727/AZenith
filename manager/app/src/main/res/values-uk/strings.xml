@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">Налаштування завершено</string>
     <string name="support_us">Підтримайте нас</string>
     <string name="support_us_desc">Допоможіть розробці, щоб AZenith продовжував вдосконалюватися</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Тема</string>
     <string name="theme_desc">Налаштувати тему та акцентний колір</string>
     <string name="thermalcore_service">Служба термоконтролю ThermalCore</string>

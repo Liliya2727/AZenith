@@ -357,6 +357,7 @@
     <string name="str_you_re_all_set">Postavljanje je završeno</string>
     <string name="support_us">Podržite nas</string>
     <string name="support_us_desc">Pomognite razvoju kako bi AZenith nastavio s optimizacijama</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Tema</string>
     <string name="theme_desc">Prilagodi temu i naglasnu boju</string>
     <string name="thermalcore_service">ThermalCore termalna kontrola</string>

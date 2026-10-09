@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">설정 완료</string>
     <string name="support_us">지원하기</string>
     <string name="support_us_desc">개발을 지원하여 AZenith가 계속 발전할 수 있도록 도와주세요</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">테마</string>
     <string name="theme_desc">테마 및 테마 색상 사용자 정의</string>
     <string name="thermalcore_service">ThermalCore 온도 제어 서비스</string>

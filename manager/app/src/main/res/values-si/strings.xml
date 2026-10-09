@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">සැකසුම් සම්පූර්ණයි</string>
     <string name="support_us">අපට සහාය දක්වන්න</string>
     <string name="support_us_desc">සංවර්ධනයට සහාය වන්න, AZenith අඛණ්ඩව ප්‍රශස්ත කිරීමට ඉඩ දෙන්න</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">තේමාව</string>
     <string name="theme_desc">අභිරුචි තේමාව සහ තේමා වර්ණය</string>
     <string name="thermalcore_service">ThermalCore තාප පාලන සේවාව</string>

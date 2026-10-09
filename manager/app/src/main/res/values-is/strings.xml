@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">Þú ert tilbúin/nn</string>
     <string name="support_us">Styðja okkur</string>
     <string name="support_us_desc">Styðja þróun til að halda AZenith áfram að batna</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Þema</string>
     <string name="theme_desc">Sérsníða þema og áherslulit</string>
     <string name="thermalcore_service">ThermalCore hitastýringarþjónusta</string>

@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">Konfigurationen är klar</string>
     <string name="support_us">Stöd oss</string>
     <string name="support_us_desc">Hjälp till att utveckla och låta AZenith fortsätta förbättras</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Tema</string>
     <string name="theme_desc">Anpassa tema och accentfärg</string>
     <string name="thermalcore_service">ThermalCore-temperaturregleringstjänst</string>

@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">Viskas nustatyta</string>
     <string name="support_us">Palaikykite mus</string>
     <string name="support_us_desc">Padėkite kūrimui, kad AZenith būtų nuolat tobulinamas</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Tema</string>
     <string name="theme_desc">Pritaikyti temą ir akcentinę spalvą</string>
     <string name="thermalcore_service">ThermalCore temperatūros valdymo paslauga</string>

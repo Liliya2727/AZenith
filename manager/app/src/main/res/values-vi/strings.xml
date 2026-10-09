@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">Thiết lập hoàn tất</string>
     <string name="support_us">Ủng hộ chúng tôi</string>
     <string name="support_us_desc">Hỗ trợ phát triển, giúp AZenith được tối ưu liên tục</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Chủ đề</string>
     <string name="theme_desc">Tùy chỉnh chủ đề và màu chủ đạo</string>
     <string name="thermalcore_service">Dịch vụ kiểm soát nhiệt ThermalCore</string>

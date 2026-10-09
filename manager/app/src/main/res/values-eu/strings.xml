@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">Konfigurazioa amaituta</string>
     <string name="support_us">Lagundu iezaguzu</string>
     <string name="support_us_desc">Lagundu garapenean, AZenith hobetzen jarraitzeko</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Gaia</string>
     <string name="theme_desc">Pertsonalizatu gaia eta kolore nagusia</string>
     <string name="thermalcore_service">ThermalCore termiko zerbitzua</string>

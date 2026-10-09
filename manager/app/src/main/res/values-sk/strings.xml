@@ -356,6 +356,7 @@
     <string name="str_you_re_all_set">Všetko je nastavené</string>
     <string name="support_us">Podporte nás</string>
     <string name="support_us_desc">Pomôžte vývoju, aby sme mohli AZenith neustále vylepšovať.</string>
+    <string name="tap_haptic_feedback">Tap haptic feedback</string>
     <string name="theme">Téma</string>
     <string name="theme_desc">Prispôsobiť tému a akcentovú farbu</string>
     <string name="thermalcore_service">Služba ThermalCore</string>
