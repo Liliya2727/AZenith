@@ -59,9 +59,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.ColumnScope
 import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.HazeState
@@ -145,8 +144,8 @@ fun AZenithSheet(
  * Variant for sheets whose body is free-form scrolling content (a log list, a
  * rendered changelog) rather than a fixed item list.
  *
- * The caller owns the scroll container and must pad for the navigation bars,
- * since the sheet no longer does that around its own body.
+ * The caller owns the scroll container and pads its own bottom for spacing; the
+ * sheet already lifts it clear of the navigation bars.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -215,13 +214,19 @@ private fun AZenithSheet(
             isAppearanceLightStatusBars = false,
             isAppearanceLightNavigationBars = false,
         ),
-        contentWindowInsets = { WindowInsets.safeDrawing }
+        // Status bar only: safeDrawing would also inset the navigation bars, and
+        // this sheet's surface is applied to the content Column, so M3's own
+        // inset padding lands outside the surface and the sheet is cut off
+        // nav-bar-height short when dragged to the top. The rows and the
+        // free-form callers pad for the navigation bars themselves.
+        contentWindowInsets = { WindowInsets.statusBars }
     ) {
         Column(
             modifier = modifier
                 .fillMaxWidth()
                 .clip(shape)
                 .sheetSurface(isBlurEnabled, hazeState, sheetSurface)
+                .navigationBarsPadding()
         ) {
             // Drawn rather than Material's own dragHandle: the stock handle is a
             // pill sized for the stock sheet shape and does not sit right against
@@ -274,8 +279,6 @@ private fun AZenithSheet(
                 }
             }
 
-            val navBar = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-
             if (content != null) {
                 content()
             } else {
@@ -290,7 +293,7 @@ private fun AZenithSheet(
                         start = 16.dp,
                         end = 16.dp,
                         top = 8.dp,
-                        bottom = navBar + 16.dp,
+                        bottom = 16.dp,
                     ),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
