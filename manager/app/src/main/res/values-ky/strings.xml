@@ -356,7 +356,7 @@
     <string name="str_you_re_all_set">Орнотуу аяктады</string>
     <string name="support_us">Бизди колдоо</string>
     <string name="support_us_desc">Өнүктүрүүгө жардам бериңиз, AZenithтин үзгүлтүксүз оптималдашуусуна салым кошуңуз</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">Тактилдик пикир</string>
     <string name="theme">Тема</string>
     <string name="theme_desc">Теманы жана тема түсүн ыңгайлаштыруу</string>
     <string name="thermalcore_service">ThermalCore температура көзөмөлдөө кызматы</string>
@@ -403,7 +403,7 @@
     <string name="theme_applied">Тема колдонулду</string>
     <string name="theme_apply_action">Колдонуу</string>
     <string name="status_checking">Текшерүүдө</string>
-    <string name="root_status_changed">Тамыр статусу жаңырды</string>
+    <string name="root_status_changed">Root статусу жаңырды</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>

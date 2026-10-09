@@ -356,7 +356,7 @@
     <string name="str_you_re_all_set">تنظیمات کامل شد</string>
     <string name="support_us">از ما حمایت کنید</string>
     <string name="support_us_desc">کمک به توسعه، برای بهبود مستمر AZenith</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">بازخورد لمسی</string>
     <string name="theme">رنگ و تم</string>
     <string name="theme_desc">سفارشی‌سازی تم و رنگ تاکیدی</string>
     <string name="thermalcore_service">سرویس کنترل دما ThermalCore</string>

@@ -356,7 +356,7 @@
     <string name="str_you_re_all_set">设置完成</string>
     <string name="support_us">支持我们</string>
     <string name="support_us_desc">助力开发，让 AZenith 持续优化</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">触感反馈</string>
     <string name="theme">主题</string>
     <string name="theme_desc">自定义主题与主题色</string>
     <string name="thermalcore_service">ThermalCore 温控服务</string>
@@ -403,7 +403,7 @@
     <string name="theme_applied">应用主题</string>
     <string name="theme_apply_action">申请</string>
     <string name="status_checking">检查</string>
-    <string name="root_status_changed">根状态已更新</string>
+    <string name="root_status_changed">Root状态已更新</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>

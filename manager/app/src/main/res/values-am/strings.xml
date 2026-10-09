@@ -357,7 +357,7 @@
     <string name="str_you_re_all_set">ቅንብሮች ተጠናቀዋል</string>
     <string name="support_us">እኛን ይደግፉ</string>
     <string name="support_us_desc">ልማቱን ያግዙ፣ AZenith ቀጣይ ማሻሻያ እንዲያገኝ ያድርጉ</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">የዳሰሳ ምላሽ</string>
     <string name="theme">ጭብጥ</string>
     <string name="theme_desc">ጭብጥ እና ዋና ቀለም ያብጁ</string>
     <string name="thermalcore_service">የThermalCore የሙቀት ቁጥጥር አገልግሎት</string>

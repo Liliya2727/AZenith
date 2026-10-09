@@ -356,7 +356,7 @@
     <string name="str_you_re_all_set">Usanidi umekamilika</string>
     <string name="support_us">Kusaidia</string>
     <string name="support_us_desc">Saidia maendeleo, kuruhusu AZenith kuboreshwa kwa njia endelevu</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">Mwitiko wa mguso</string>
     <string name="theme">Mandhari</string>
     <string name="theme_desc">Binafsisha mandhari na rangi ya accent</string>
     <string name="thermalcore_service">Huduma ya ThermalCore ya udhibiti wa joto</string>
@@ -403,7 +403,7 @@
     <string name="theme_applied">Mandhari yametumika</string>
     <string name="theme_apply_action">Omba</string>
     <string name="status_checking">Kuangalia</string>
-    <string name="root_status_changed">Hali ya mizizi imesasishwa</string>
+    <string name="root_status_changed">Hali ya Root imesasishwa</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>

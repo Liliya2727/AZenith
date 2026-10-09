@@ -356,7 +356,7 @@
     <string name="str_you_re_all_set">ပြင်ဆင်မှုပြီးဆုံးပြီ</string>
     <string name="support_us">ကျွန်ုပ်တို့ကို ပံ့ပိုးပါ</string>
     <string name="support_us_desc">ဖွံ့ဖြိုးတိုးတက်ရေးကို ကူညီပါ၊ AZenith ကို ဆက်လက်အကောင်းဆုံးဖြစ်စေပါ</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">ထိတွေ့မှုဆိုင်ရာ တုံ့ပြန်ချက်</string>
     <string name="theme">အပြင်အဆင်</string>
     <string name="theme_desc">စိတ်ကြိုက်အပြင်အဆင်နှင့် အရောင်အလေးပေးမှု</string>
     <string name="thermalcore_service">ThermalCore အပူချိန်ထိန်းချုပ်မှု ဝန်ဆောင်မှု</string>

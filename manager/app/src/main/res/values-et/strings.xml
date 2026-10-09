@@ -356,7 +356,7 @@
     <string name="str_you_re_all_set">Seadistamine lõpetatud</string>
     <string name="support_us">Toeta meid</string>
     <string name="support_us_desc">Aita arendust, et AZenith pidevalt täiustuks</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">Haptiline tagasiside</string>
     <string name="theme">Teema</string>
     <string name="theme_desc">Kohandatud teema ja aktsentvärv</string>
     <string name="thermalcore_service">ThermalCore temperatuuriteenus</string>
@@ -403,7 +403,7 @@
     <string name="theme_applied">Teema rakendatud</string>
     <string name="theme_apply_action">Rakenda</string>
     <string name="status_checking">Kontrollimine</string>
-    <string name="root_status_changed">Juur olek värskendatud</string>
+    <string name="root_status_changed">Root olek värskendatud</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>

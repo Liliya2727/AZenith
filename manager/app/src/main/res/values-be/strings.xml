@@ -357,7 +357,7 @@
     <string name="str_you_re_all_set">Налады завершаны</string>
     <string name="support_us">Падтрымаць нас</string>
     <string name="support_us_desc">Дапамажыце распрацоўцы, каб AZenith працягваў удасканальвацца</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">Тактыльная аддача</string>
     <string name="theme">Тэма</string>
     <string name="theme_desc">Наладзіць тэму і акцэнтны колер</string>
     <string name="thermalcore_service">Служба тэрмарэгулявання ThermalCore</string>
@@ -404,7 +404,7 @@
     <string name="theme_applied">Тэма ўжыта</string>
     <string name="theme_apply_action">Ужыць</string>
     <string name="status_checking">Праверка</string>
-    <string name="root_status_changed">Каранёвы статус абноўлены</string>
+    <string name="root_status_changed">Root статус абноўлены</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>

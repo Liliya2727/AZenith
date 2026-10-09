@@ -356,7 +356,7 @@
     <string name="str_you_re_all_set">ការកំណត់ត្រូវបានបញ្ចប់</string>
     <string name="support_us">គាំទ្រពួកយើង</string>
     <string name="support_us_desc">ជួយអភិវឌ្ឍន៍ ឲ្យ AZenith បន្តកែលម្អ</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">ប្រតិកម្មតបប៉ះ</string>
     <string name="theme">ប្រធានបទ</string>
     <string name="theme_desc">ប្ដូរប្រធានបទ និងពណ៌សង្កត់តាមបំណង</string>
     <string name="thermalcore_service">សេវា ThermalCore គ្រប់គ្រងសីតុណ្ហភាព</string>
@@ -403,7 +403,7 @@
     <string name="theme_applied">បានអនុវត្តប្រធានបទ</string>
     <string name="theme_apply_action">អនុវត្ត</string>
     <string name="status_checking">កំពុងពិនិត្យ</string>
-    <string name="root_status_changed">ស្ថានភាពឫសគល់ត្រូវបានធ្វើបច្ចុប្បន្នភាព</string>
+    <string name="root_status_changed">ស្ថានភាពRootត្រូវបានធ្វើបច្ចុប្បន្នភាព</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>

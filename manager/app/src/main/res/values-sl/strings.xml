@@ -356,7 +356,7 @@
     <string name="str_you_re_all_set">Nastavitev končana</string>
     <string name="support_us">Podprite nas</string>
     <string name="support_us_desc">Pomagajte pri razvoju, da bo AZenith še boljši</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">Haptični odziv</string>
     <string name="theme">Tema</string>
     <string name="theme_desc">Prilagodi temo in poudarjeno barvo</string>
     <string name="thermalcore_service">Storitev ThermalCore</string>
@@ -403,7 +403,7 @@
     <string name="theme_applied">Tema uporabljena</string>
     <string name="theme_apply_action">Prijavite se</string>
     <string name="status_checking">Preverjanje</string>
-    <string name="root_status_changed">Korensko stanje je posodobljeno</string>
+    <string name="root_status_changed">Root stanje je posodobljeno</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>

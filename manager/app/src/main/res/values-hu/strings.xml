@@ -356,7 +356,7 @@
     <string name="str_you_re_all_set">Minden beállítva</string>
     <string name="support_us">Támogasson minket</string>
     <string name="support_us_desc">Segítse a fejlesztést, hogy az AZenith folyamatosan fejlődjön</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">Haptikus visszajelzés</string>
     <string name="theme">Téma</string>
     <string name="theme_desc">Egyéni téma és kiemelő szín</string>
     <string name="thermalcore_service">ThermalCore hőszabályozási szolgáltatás</string>
@@ -403,7 +403,7 @@
     <string name="theme_applied">Téma alkalmazva</string>
     <string name="theme_apply_action">Alkalmazni</string>
     <string name="status_checking">Ellenőrzés</string>
-    <string name="root_status_changed">A gyökér állapota frissítve</string>
+    <string name="root_status_changed">A Root állapota frissítve</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>

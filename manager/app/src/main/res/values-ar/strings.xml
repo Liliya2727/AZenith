@@ -205,9 +205,9 @@
     <string name="resolution_fps_target_title">معدل الإطارات المستهدف</string>
     <string name="restart_service">إعادة تشغيل الخدمة</string>
     <string name="restart_service_desc">إعادة تهيئة الخفي</string>
-    <string name="root_access">صلاحية الجذر</string>
-    <string name="root_access_found">تم الحصول على صلاحية الجذر</string>
-    <string name="root_access_not_found">لم يتم الحصول على صلاحية الجذر</string>
+    <string name="root_access">صلاحية الRoot</string>
+    <string name="root_access_found">تم الحصول على صلاحية الRoot</string>
+    <string name="root_access_not_found">لم يتم الحصول على صلاحية الRoot</string>
     <string name="root_granted">ممنوحة</string>
     <string name="root_not_granted">غير ممنوحة</string>
     <string name="RefreshRatePicker_Select">اختيار معدل التحديث</string>
@@ -357,7 +357,7 @@
     <string name="str_you_re_all_set">لقد انتهيت</string>
     <string name="support_us">ادعمنا</string>
     <string name="support_us_desc">ساعد في التطوير، واجعل AZenith يستمر في التحسن</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">الاستجابة اللمسية</string>
     <string name="theme">السمة</string>
     <string name="theme_desc">تخصيص السمة ولون التركيز</string>
     <string name="thermalcore_service">خدمة التحكم الحراري ThermalCore</string>
@@ -404,7 +404,7 @@
     <string name="theme_applied">تم تطبيق الموضوع</string>
     <string name="theme_apply_action">تطبيق</string>
     <string name="status_checking">التحقق</string>
-    <string name="root_status_changed">تم تحديث حالة الجذر</string>
+    <string name="root_status_changed">تم تحديث حالة الRoot</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>

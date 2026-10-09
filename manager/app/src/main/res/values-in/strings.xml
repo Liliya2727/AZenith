@@ -356,7 +356,7 @@
     <string name="str_you_re_all_set">Semua sudah siap</string>
     <string name="support_us">Dukung kami</string>
     <string name="support_us_desc">Bantu pengembangan, biarkan AZenith terus dioptimalkan</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">Umpan Balik Haptik</string>
     <string name="theme">Tema</string>
     <string name="theme_desc">Kustomisasi tema dan warna aksen</string>
     <string name="thermalcore_service">Layanan kontrol suhu ThermalCore</string>
@@ -403,7 +403,7 @@
     <string name="theme_applied">Tema diterapkan</string>
     <string name="theme_apply_action">Terapkan</string>
     <string name="status_checking">Memeriksa</string>
-    <string name="root_status_changed">Status akar diperbarui</string>
+    <string name="root_status_changed">Status Root diperbarui</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>

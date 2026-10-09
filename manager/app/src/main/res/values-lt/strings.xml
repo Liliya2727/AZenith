@@ -356,7 +356,7 @@
     <string name="str_you_re_all_set">Viskas nustatyta</string>
     <string name="support_us">Palaikykite mus</string>
     <string name="support_us_desc">Padėkite kūrimui, kad AZenith būtų nuolat tobulinamas</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">Haptinis grįžtamasis ryšys</string>
     <string name="theme">Tema</string>
     <string name="theme_desc">Pritaikyti temą ir akcentinę spalvą</string>
     <string name="thermalcore_service">ThermalCore temperatūros valdymo paslauga</string>
@@ -403,7 +403,7 @@
     <string name="theme_applied">Pritaikyta tema</string>
     <string name="theme_apply_action">Taikyti</string>
     <string name="status_checking">Tikrinama</string>
-    <string name="root_status_changed">Šakninė būsena atnaujinta</string>
+    <string name="root_status_changed">Root būsena atnaujinta</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>

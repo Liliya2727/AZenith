@@ -356,7 +356,7 @@
     <string name="str_you_re_all_set">Կարգավորումն ավարտված է</string>
     <string name="support_us">Աջակցեք մեզ</string>
     <string name="support_us_desc">Օգնել զարգացմանը, թույլ տալ AZenith-ին շարունակել բարելավվել</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">Շոշափելի արձագանք</string>
     <string name="theme">Թեմա</string>
     <string name="theme_desc">Հարմարեցնել թեման և աքսենտ գույնը</string>
     <string name="thermalcore_service">ThermalCore ջերմային վերահսկման ծառայություն</string>
@@ -403,7 +403,7 @@
     <string name="theme_applied">Թեման կիրառվեց</string>
     <string name="theme_apply_action">Դիմել</string>
     <string name="status_checking">Ստուգում</string>
-    <string name="root_status_changed">Արմատային կարգավիճակը թարմացվել է</string>
+    <string name="root_status_changed">Root կարգավիճակը թարմացվել է</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>

@@ -356,7 +356,7 @@
     <string name="str_you_re_all_set">Kurulum tamamlandı</string>
     <string name="support_us">Bizi destekleyin</string>
     <string name="support_us_desc">Geliştirmeye yardımcı olun, AZenith\'in sürekli iyileşmesine katkıda bulunun</string>
-    <string name="tap_haptic_feedback">Tap haptic feedback</string>
+    <string name="tap_haptic_feedback">Dokunsal geri bildirim</string>
     <string name="theme">Tema</string>
     <string name="theme_desc">Özel tema ve vurgu rengi</string>
     <string name="thermalcore_service">ThermalCore ısıl yönetim hizmeti</string>
@@ -403,7 +403,7 @@
     <string name="theme_applied">Tema uygulandı</string>
     <string name="theme_apply_action">Uygula</string>
     <string name="status_checking">Kontrol ediliyor</string>
-    <string name="root_status_changed">Kök durumu güncellendi</string>
+    <string name="root_status_changed">Root durumu güncellendi</string>
     <string name="status_fetching">Fetching…</string>
     <string name="status_root_unavailable">Root is unavailable</string>
     <string name="status_waiting_for_root">Waiting for Root</string>
