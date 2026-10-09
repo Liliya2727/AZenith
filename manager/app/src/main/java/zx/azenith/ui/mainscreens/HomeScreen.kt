@@ -56,6 +56,7 @@ import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.viewmodel.HomeViewModel
 import zx.azenith.ui.viewmodel.RootStatusState
+import zx.azenith.ui.viewmodel.StartupStage
 
 
 @Composable
@@ -125,11 +126,25 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                val bannerStatus = when {
-                    !uiState.moduleInstalled -> stringResource(R.string.module_not_installed)
-                    else -> stringResource(uiState.serviceStatusRes)
+                // The handshake gates the status text: the module cannot be judged until the
+                // shell is up, so anything earlier reports root progress rather than a verdict.
+                val bannerStatus = when (uiState.startupStage) {
+                    StartupStage.WaitingForRoot -> stringResource(R.string.status_waiting_for_root)
+                    StartupStage.RootGranted -> stringResource(R.string.root_granted)
+                    StartupStage.FetchingModule -> stringResource(R.string.status_fetching)
+                    StartupStage.RootUnavailable -> stringResource(R.string.status_root_unavailable)
+                    StartupStage.Ready ->
+                        if (!uiState.moduleInstalled) stringResource(R.string.module_not_installed)
+                        else stringResource(uiState.serviceStatusRes)
                 }
-
+                val bannerTone = when (uiState.startupStage) {
+                    StartupStage.RootGranted, StartupStage.Ready -> BannerTone.Good
+                    StartupStage.RootUnavailable -> BannerTone.Bad
+                    else -> BannerTone.Neutral
+                }
+                // The pid belongs to the daemon, so it is only meaningful once the module
+                // check has run and the service poll returned its first id.
+                val bannerPid = if (uiState.startupStage == StartupStage.Ready) uiState.servicePid else ""
 
                 val isPerformanceMode = uiState.currentProfileRes == R.string.Profile_Performance || uiState.currentProfileRes == R.string.profile_perflite
                 val showGameCard = isPerformanceMode && !uiState.runningGamePkg.isNullOrEmpty()
@@ -157,10 +172,11 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
                         ) {
                             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                                 BannerWithEasterEgg(
-                                    status = bannerStatus, pid = uiState.servicePid,
+                                    status = bannerStatus, pid = bannerPid,
                                     isBannerEnabled = uiState.isBannerEnabled,
                                     isBlurEnabled = isBlurEnabled,
-                                    modifier = Modifier.fillMaxSize()
+                                    modifier = Modifier.fillMaxSize(),
+                                    tone = bannerTone
                                 ) { }
                             }
 
@@ -222,10 +238,11 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
 
                     Column() {
                         BannerWithEasterEgg(
-                            status = bannerStatus, pid = uiState.servicePid,
+                            status = bannerStatus, pid = bannerPid,
                             isBannerEnabled = uiState.isBannerEnabled,
                             isBlurEnabled = isBlurEnabled,
-                            modifier = if (uiState.isBannerEnabled) Modifier.fillMaxWidth().aspectRatio(20 / 9f) else Modifier.fillMaxWidth().height(100.dp)
+                            modifier = if (uiState.isBannerEnabled) Modifier.fillMaxWidth().aspectRatio(20 / 9f) else Modifier.fillMaxWidth().height(100.dp),
+                            tone = bannerTone
                         ) { }
 
                         AnimatedVisibility(

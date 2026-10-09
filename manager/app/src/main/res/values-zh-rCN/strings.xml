@@ -404,6 +404,9 @@
     <string name="theme_apply_action">申请</string>
     <string name="status_checking">检查</string>
     <string name="root_status_changed">根状态已更新</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">正在应用主题...</string>
     <string name="personalization_title">个性化</string>
     <string name="personalization_desc">强调色、横幅图像和界面效果</string>

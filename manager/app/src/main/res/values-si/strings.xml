@@ -404,6 +404,9 @@
     <string name="theme_apply_action">අයදුම් කරන්න</string>
     <string name="status_checking">පරීක්ෂා කරනවා</string>
     <string name="root_status_changed">මූල තත්ත්වය යාවත්කාලීන කරන ලදී</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">තේමාව යොදමින්...</string>
     <string name="personalization_title">පුද්ගලීකරණය</string>
     <string name="personalization_desc">උච්චාරණ වර්ණය, බැනර් රූපය සහ අතුරු මුහුණත් බලපෑම්</string>

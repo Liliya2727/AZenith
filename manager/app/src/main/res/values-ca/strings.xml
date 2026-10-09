@@ -405,6 +405,9 @@
     <string name="theme_apply_action">Aplicar</string>
     <string name="status_checking">Comprovació</string>
     <string name="root_status_changed">Estat de l\'arrel actualitzat</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">S\'està aplicant el tema...</string>
     <string name="personalization_title">Personalització</string>
     <string name="personalization_desc">Color d\'accent, imatge de banner i efectes d\'interfície</string>

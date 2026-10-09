@@ -405,6 +405,9 @@
     <string name="theme_apply_action">আবেদন করুন</string>
     <string name="status_checking">চেক করা হচ্ছে</string>
     <string name="root_status_changed">রুট অবস্থা আপডেট করা হয়েছে</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">থিম প্রয়োগ করা হচ্ছে...</string>
     <string name="personalization_title">ব্যক্তিগতকরণ</string>
     <string name="personalization_desc">অ্যাকসেন্ট রঙ, ব্যানার ইমেজ এবং ইন্টারফেস প্রভাব</string>

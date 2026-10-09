@@ -404,6 +404,9 @@
     <string name="theme_apply_action">申し込む</string>
     <string name="status_checking">チェック中</string>
     <string name="root_status_changed">ルートステータスが更新されました</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">テーマを適用中…</string>
     <string name="personalization_title">パーソナライゼーション</string>
     <string name="personalization_desc">アクセントカラー、バナー画像、インターフェース効果</string>

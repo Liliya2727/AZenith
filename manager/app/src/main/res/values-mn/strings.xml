@@ -404,6 +404,9 @@
     <string name="theme_apply_action">Өргөдөл гаргах</string>
     <string name="status_checking">Шалгаж байна</string>
     <string name="root_status_changed">Root статус шинэчлэгдсэн</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">Загвар хэрэглэж байна...</string>
     <string name="personalization_title">Хувийн тохиргоо</string>
     <string name="personalization_desc">Accent color, banner image and interface effects</string>

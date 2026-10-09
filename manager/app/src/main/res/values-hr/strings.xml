@@ -404,6 +404,9 @@
     <string name="theme_apply_action">primijeniti</string>
     <string name="status_checking">Provjeravanje</string>
     <string name="root_status_changed">Root status updated</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">Applying theme…</string>
     <string name="personalization_title">Personalizacija</string>
     <string name="personalization_desc">Boja akcenta, slika natpisa i efekti sučelja</string>

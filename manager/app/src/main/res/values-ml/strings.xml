@@ -404,6 +404,9 @@
     <string name="theme_apply_action">അപേക്ഷിക്കുക</string>
     <string name="status_checking">പരിശോധിക്കുന്നു</string>
     <string name="root_status_changed">റൂട്ട് സ്റ്റാറ്റസ് അപ്ഡേറ്റ് ചെയ്തു</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">തീം പ്രയോഗിക്കുന്നു...</string>
     <string name="personalization_title">വ്യക്തിഗതമാക്കൽ</string>
     <string name="personalization_desc">ആക്സൻ്റ് കളർ, ബാനർ ഇമേജ്, ഇൻ്റർഫേസ് ഇഫക്റ്റുകൾ</string>

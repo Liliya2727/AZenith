@@ -404,6 +404,9 @@
     <string name="theme_apply_action">ପ୍ରୟୋଗ କରନ୍ତୁ |</string>
     <string name="status_checking">ଯା cking ୍ଚ</string>
     <string name="root_status_changed">ମୂଳ ସ୍ଥିତି ଅଦ୍ୟତନ ହୋଇଛି |</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">ଥିମ୍ ପ୍ରୟୋଗ…</string>
     <string name="personalization_title">ବ୍ୟକ୍ତିଗତକରଣ</string>
     <string name="personalization_desc">ଉଚ୍ଚାରଣ ରଙ୍ଗ, ବ୍ୟାନର ପ୍ରତିଛବି ଏବଂ ଇଣ୍ଟରଫେସ୍ ପ୍ରଭାବ |</string>

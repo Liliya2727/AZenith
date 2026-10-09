@@ -404,6 +404,9 @@
     <string name="theme_apply_action">Käytä</string>
     <string name="status_checking">Tarkistetaan</string>
     <string name="root_status_changed">Pääkäyttäjän tila päivitetty</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">Otetaan teemaa käyttöön…</string>
     <string name="personalization_title">Personointi</string>
     <string name="personalization_desc">Korostusvärit, bannerikuvat ja käyttöliittymätehosteet</string>

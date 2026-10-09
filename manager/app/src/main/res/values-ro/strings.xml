@@ -404,6 +404,9 @@
     <string name="theme_apply_action">Aplicați</string>
     <string name="status_checking">Verificarea</string>
     <string name="root_status_changed">Starea rădăcină a fost actualizată</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">Se aplică tema...</string>
     <string name="personalization_title">Personalizare</string>
     <string name="personalization_desc">Culoare de accent, imagine banner și efecte de interfață</string>

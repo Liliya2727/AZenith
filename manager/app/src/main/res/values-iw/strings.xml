@@ -404,6 +404,9 @@
     <string name="theme_apply_action">החל</string>
     <string name="status_checking">בודק</string>
     <string name="root_status_changed">סטטוס השורש עודכן</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">מחיל עיצוב...</string>
     <string name="personalization_title">התאמה אישית</string>
     <string name="personalization_desc">צבע מבטא, תמונת באנר ואפקטים של ממשק</string>

@@ -404,6 +404,9 @@
     <string name="theme_apply_action">Uygula</string>
     <string name="status_checking">Kontrol ediliyor</string>
     <string name="root_status_changed">Kök durumu güncellendi</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">Tema uygulanıyor…</string>
     <string name="personalization_title">Kişiselleştirme</string>
     <string name="personalization_desc">Vurgu rengi, banner görüntüsü ve arayüz efektleri</string>

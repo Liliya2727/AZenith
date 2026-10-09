@@ -404,6 +404,9 @@
     <string name="theme_apply_action">Murojaat qiling</string>
     <string name="status_checking">Tekshirish</string>
     <string name="root_status_changed">Ildiz holati yangilandi</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">Mavzu qo\'llanmoqda…</string>
     <string name="personalization_title">Shaxsiylashtirish</string>
     <string name="personalization_desc">Urg\'u rangi, banner tasviri va interfeys effektlari</string>

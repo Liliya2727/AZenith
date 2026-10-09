@@ -405,6 +405,9 @@
     <string name="theme_apply_action">ያመልክቱ</string>
     <string name="status_checking">በማጣራት ላይ</string>
     <string name="root_status_changed">የስር ሁኔታ ተዘምኗል</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">ገጽታን በመተግበር ላይ…</string>
     <string name="personalization_title">ግላዊነትን ማላበስ</string>
     <string name="personalization_desc">የአነጋገር ቀለም፣ የባነር ምስል እና የበይነገጽ ተጽዕኖዎች</string>

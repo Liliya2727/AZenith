@@ -404,6 +404,9 @@
     <string name="theme_apply_action">Aplikoni</string>
     <string name="status_checking">Duke kontrolluar</string>
     <string name="root_status_changed">Statusi i rrënjës u përditësua</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">Po aplikon temën…</string>
     <string name="personalization_title">Personalizimi</string>
     <string name="personalization_desc">Ngjyra e theksit, imazhi i banerit dhe efektet e ndërfaqes</string>

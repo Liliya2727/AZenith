@@ -24,6 +24,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,6 +36,12 @@ import zx.azenith.ui.util.PropertyUtils
 
 enum class RootStatusState { Checking, Granted, NotGranted }
 
+/** Ordered startup handshake behind the banner; the module check needs the shell, so root comes first. */
+enum class StartupStage { WaitingForRoot, RootGranted, FetchingModule, Ready, RootUnavailable }
+
+/** The transient stages finish in microseconds, so they need a floor to be readable at all. */
+private const val STARTUP_STAGE_DWELL_MS = 600L
+
 
 data class HomeUiState(
     val isBannerEnabled: Boolean = false,
@@ -42,6 +49,7 @@ data class HomeUiState(
     val autoMode: String? = null,
     val rootStatus: Boolean = false,
     val rootStatusState: RootStatusState = RootStatusState.Checking,
+    val startupStage: StartupStage = StartupStage.WaitingForRoot,
     val serviceStatusRes: Int = R.string.status_initializing,
     val servicePid: String = "",
     val currentProfileRes: Int = R.string.status_initializing,
@@ -124,15 +132,38 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun fetchInitialSystemData() {
         viewModelScope.launch(Dispatchers.IO) {
+            // One ordered handshake. requestRootAccess() blocks on the su prompt, so the
+            // module check and the property read must not run before it returns -- reading
+            // them first is what produced a bogus "module not installed" on a rooted device.
             val isRooted = RootUtils.requestRootAccess()
-            val isModuleInstalled = RootUtils.isModuleInstalled()
-            val mode = PropertyUtils.get("persist.sys.azenithconf.AIenabled")
+            delay(STARTUP_STAGE_DWELL_MS)
+
+            if (!isRooted) {
+                _uiState.value = _uiState.value.copy(
+                    rootStatus = false,
+                    rootStatusState = RootStatusState.NotGranted,
+                    moduleInstalled = false,
+                    startupStage = StartupStage.RootUnavailable
+                )
+                return@launch
+            }
 
             _uiState.value = _uiState.value.copy(
-                rootStatus = isRooted,
-                rootStatusState = if (isRooted) RootStatusState.Granted else RootStatusState.NotGranted,
+                rootStatus = true,
+                rootStatusState = RootStatusState.Granted,
+                startupStage = StartupStage.RootGranted
+            )
+            delay(STARTUP_STAGE_DWELL_MS)
+
+            _uiState.value = _uiState.value.copy(startupStage = StartupStage.FetchingModule)
+            val isModuleInstalled = RootUtils.isModuleInstalled()
+            val mode = PropertyUtils.get("persist.sys.azenithconf.AIenabled")
+            delay(STARTUP_STAGE_DWELL_MS)
+
+            _uiState.value = _uiState.value.copy(
                 moduleInstalled = isModuleInstalled,
-                autoMode = mode
+                autoMode = mode,
+                startupStage = StartupStage.Ready
             )
         }
     }

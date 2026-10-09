@@ -405,6 +405,9 @@
     <string name="theme_apply_action">Müraciət edin</string>
     <string name="status_checking">Yoxlanılır</string>
     <string name="root_status_changed">Kök statusu yeniləndi</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">Mövzu tətbiq edilir...</string>
     <string name="personalization_title">Fərdiləşdirmə</string>
     <string name="personalization_desc">Vurğu rəngi, banner şəkli və interfeys effektləri</string>

@@ -404,6 +404,9 @@
     <string name="theme_apply_action">สมัคร</string>
     <string name="status_checking">กำลังตรวจสอบ</string>
     <string name="root_status_changed">อัปเดตสถานะรูทแล้ว</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">กำลังใช้ธีม...</string>
     <string name="personalization_title">การปรับเปลี่ยนในแบบของคุณ</string>
     <string name="personalization_desc">สีเฉพาะจุด รูปภาพแบนเนอร์ และเอฟเฟกต์อินเทอร์เฟซ</string>

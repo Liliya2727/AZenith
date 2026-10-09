@@ -97,6 +97,7 @@ fun BannerWithEasterEgg(
     isBannerEnabled: Boolean,
     isBlurEnabled: Boolean = false,
     modifier: Modifier = Modifier,
+    tone: BannerTone = BannerTone.Neutral,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -168,6 +169,7 @@ fun BannerWithEasterEgg(
                     isBlurEnabled = isBlurEnabled,
                     modifier = Modifier.fillMaxSize(),
                     clickable = false,
+                    tone = tone,
                     onClick = {}
                 )
             }

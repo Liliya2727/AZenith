@@ -299,13 +299,13 @@ fun BannerCard(
     isBlurEnabled: Boolean = false,
     modifier: Modifier = Modifier,
     clickable: Boolean = true,
+    tone: BannerTone = BannerTone.Neutral,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
     val customBannerUri = remember { context.getHeaderImage() }
     val gradientAlpha = remember { context.getBannerGradientAlpha() }
-    val isAlive = status == stringResource(R.string.status_alive)
     
     val bannerHazeState = remember { HazeState() }
     // Percent-based so Pill reads as a capsule regardless of the banner's height,
@@ -314,9 +314,17 @@ fun BannerCard(
         percent = (currentPersonalization().bannerRadius * 100).toInt()
     )
 
-    val statusBgColor = if (isAlive) colorScheme.secondaryContainer else colorScheme.errorContainer
+    val statusBgColor = when (tone) {
+        BannerTone.Good -> colorScheme.secondaryContainer
+        BannerTone.Bad -> colorScheme.errorContainer
+        BannerTone.Neutral -> colorScheme.surfaceContainerHighest
+    }
 
-    val statusTextColor = if (isAlive) colorScheme.onSecondaryContainer else colorScheme.onErrorContainer
+    val statusTextColor = when (tone) {
+        BannerTone.Good -> colorScheme.onSecondaryContainer
+        BannerTone.Bad -> colorScheme.onErrorContainer
+        BannerTone.Neutral -> colorScheme.onSurfaceVariant
+    }
 
     if (isBannerEnabled) {
         Card(
@@ -383,7 +391,7 @@ fun BannerCard(
                     }
 
 
-                    if (isAlive) {
+                    if (pid.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Surface(
                             color = if (isBlurEnabled) Color.Transparent else colorScheme.secondaryContainer, 
@@ -428,7 +436,7 @@ fun BannerCard(
                 .clip(bannerShape)
                 .then(if (clickable) Modifier.clickable { onClick() } else Modifier)
                 .animateContentSize(animationSpec = spring()),
-            color = colorScheme.secondaryContainer, 
+            color = statusBgColor,
             shape = bannerShape
         ) {
             Row(
@@ -437,19 +445,23 @@ fun BannerCard(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 AnimatedContent(
-                    targetState = isAlive,
+                    targetState = tone,
                     transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
                     label = "BannerIconAnim"
-                ) { alive ->
+                ) { targetTone ->
                     Icon(
-                        imageVector = if (alive) Icons.Outlined.CheckCircle else Icons.Rounded.ErrorOutline,
-                        contentDescription = null, 
-                        tint = colorScheme.onSecondaryContainer, 
+                        imageVector = when (targetTone) {
+                            BannerTone.Good -> Icons.Outlined.CheckCircle
+                            BannerTone.Bad -> Icons.Rounded.ErrorOutline
+                            BannerTone.Neutral -> Icons.Rounded.HourglassEmpty
+                        },
+                        contentDescription = null,
+                        tint = statusTextColor,
                         modifier = Modifier.size(42.dp)
                     )
                 }
                 
-                Box(modifier = Modifier.height(42.dp).width(1.5.dp).background(colorScheme.onSecondaryContainer.copy(alpha = 0.3f)))
+                Box(modifier = Modifier.height(42.dp).width(1.5.dp).background(statusTextColor.copy(alpha = 0.3f)))
                 
                 Column(verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.Start) {
                     AnimatedContent(
@@ -457,10 +469,10 @@ fun BannerCard(
                         transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
                         label = "BannerStatusAnimNoImage"
                     ) { targetStatus ->
-                        Text(text = targetStatus, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = colorScheme.onSecondaryContainer)
+                        Text(text = targetStatus, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = statusTextColor)
                     }
 
-                    if (isAlive) {
+                    if (pid.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(2.dp))
                         AnimatedContent(
                             targetState = pid,
@@ -470,7 +482,7 @@ fun BannerCard(
                             Text(
                                 text = stringResource(R.string.pid_format, targetPid),
                                 style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium,
-                                color = colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                                color = statusTextColor.copy(alpha = 0.8f)
                             )
                         }
                     }
@@ -483,6 +495,9 @@ fun BannerCard(
 
 /** Status semantics for [InfoTile]; Neutral keeps the pre-existing highlight behaviour. */
 enum class InfoTileTone { Neutral, Good, Bad }
+
+/** Banner status semantics: Good reads as alive, Bad as a failure, Neutral as work in progress. */
+enum class BannerTone { Neutral, Good, Bad }
 
 /**
  * Granted is deliberately off-scheme: a fixed green reads as "authorised"

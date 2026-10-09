@@ -405,6 +405,9 @@
     <string name="theme_apply_action">Пријавите се</string>
     <string name="status_checking">Проверавам</string>
     <string name="root_status_changed">Роот статус је ажуриран</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">Примењује се тема…</string>
     <string name="personalization_title">Персонализација</string>
     <string name="personalization_desc">Боја акцента, слика банера и ефекти интерфејса</string>

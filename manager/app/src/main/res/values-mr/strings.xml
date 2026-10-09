@@ -404,6 +404,9 @@
     <string name="theme_apply_action">अर्ज करा</string>
     <string name="status_checking">तपासत आहे</string>
     <string name="root_status_changed">रूट स्थिती अद्यतनित केली</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">थीम लागू करत आहे...</string>
     <string name="personalization_title">वैयक्तिकरण</string>
     <string name="personalization_desc">उच्चारण रंग, बॅनर प्रतिमा आणि इंटरफेस प्रभाव</string>

@@ -404,6 +404,9 @@
     <string name="theme_apply_action">Sækja um</string>
     <string name="status_checking">Athugun</string>
     <string name="root_status_changed">Rótarstaða uppfærð</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">Notar þema...</string>
     <string name="personalization_title">Persónustilling</string>
     <string name="personalization_desc">Hreim litur, borðamynd og viðmótsáhrif</string>

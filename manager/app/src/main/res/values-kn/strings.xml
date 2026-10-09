@@ -404,6 +404,9 @@
     <string name="theme_apply_action">ಅನ್ವಯಿಸು</string>
     <string name="status_checking">ಪರಿಶೀಲಿಸಲಾಗುತ್ತಿದೆ</string>
     <string name="root_status_changed">ರೂಟ್ ಸ್ಥಿತಿಯನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">ಥೀಮ್ ಅನ್ನು ಅನ್ವಯಿಸಲಾಗುತ್ತಿದೆ...</string>
     <string name="personalization_title">ವೈಯಕ್ತೀಕರಣ</string>
     <string name="personalization_desc">ಉಚ್ಚಾರಣಾ ಬಣ್ಣ, ಬ್ಯಾನರ್ ಚಿತ್ರ ಮತ್ತು ಇಂಟರ್ಫೇಸ್ ಪರಿಣಾಮಗಳು</string>

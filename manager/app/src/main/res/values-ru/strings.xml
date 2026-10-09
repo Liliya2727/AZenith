@@ -404,6 +404,9 @@
     <string name="theme_apply_action">Применить</string>
     <string name="status_checking">Проверка</string>
     <string name="root_status_changed">Обновлен статус root</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">Применение темы…</string>
     <string name="personalization_title">Персонализация</string>
     <string name="personalization_desc">Акцентный цвет, изображение баннера и эффекты интерфейса</string>

@@ -263,6 +263,9 @@
     <string name="status_unknown">Unknown</string>
     <string name="status_checking">Checking</string>
     <string name="root_status_changed">Root status updated</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="str_20">20%</string>
     <string name="str_40">40%</string>
     <string name="str_50">50%</string>

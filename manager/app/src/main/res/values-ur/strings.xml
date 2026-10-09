@@ -404,6 +404,9 @@
     <string name="theme_apply_action">لگائیں</string>
     <string name="status_checking">چیک کر رہا ہے۔</string>
     <string name="root_status_changed">روٹ اسٹیٹس کو اپ ڈیٹ کر دیا گیا۔</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">تھیم کا اطلاق ہو رہا ہے…</string>
     <string name="personalization_title">پرسنلائزیشن</string>
     <string name="personalization_desc">لہجے کا رنگ، بینر امیج اور انٹرفیس اثرات</string>

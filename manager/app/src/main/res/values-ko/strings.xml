@@ -404,6 +404,9 @@
     <string name="theme_apply_action">적용</string>
     <string name="status_checking">확인 중</string>
     <string name="root_status_changed">루트 상태가 업데이트되었습니다.</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">테마 적용 중…</string>
     <string name="personalization_title">개인화</string>
     <string name="personalization_desc">강조 색상, 배너 이미지 및 인터페이스 효과</string>

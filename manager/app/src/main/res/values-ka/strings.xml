@@ -404,6 +404,9 @@
     <string name="theme_apply_action">მიმართეთ</string>
     <string name="status_checking">შემოწმება</string>
     <string name="root_status_changed">Root სტატუსი განახლებულია</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">მიმდინარეობს თემის გამოყენება…</string>
     <string name="personalization_title">პერსონალიზაცია</string>
     <string name="personalization_desc">აქცენტის ფერი, ბანერის გამოსახულება და ინტერფეისის ეფექტები</string>

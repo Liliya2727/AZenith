@@ -404,6 +404,9 @@
     <string name="theme_apply_action">விண்ணப்பிக்கவும்</string>
     <string name="status_checking">சரிபார்க்கிறது</string>
     <string name="root_status_changed">ரூட் நிலை புதுப்பிக்கப்பட்டது</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">தீம் பயன்படுத்துகிறது…</string>
     <string name="personalization_title">தனிப்பயனாக்கம்</string>
     <string name="personalization_desc">உச்சரிப்பு நிறம், பேனர் படம் மற்றும் இடைமுக விளைவுகள்</string>

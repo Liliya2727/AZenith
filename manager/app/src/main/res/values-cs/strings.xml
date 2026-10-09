@@ -405,6 +405,9 @@
     <string name="theme_apply_action">Použít</string>
     <string name="status_checking">Kontrola</string>
     <string name="root_status_changed">Kořenový stav aktualizován</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">Aplikování motivu…</string>
     <string name="personalization_title">Personalizace</string>
     <string name="personalization_desc">Barva zvýraznění, obrázek banneru a efekty rozhraní</string>

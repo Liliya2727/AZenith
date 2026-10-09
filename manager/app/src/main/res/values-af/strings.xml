@@ -405,6 +405,9 @@
     <string name="theme_apply_action">Doen aansoek</string>
     <string name="status_checking">Kontroleer</string>
     <string name="root_status_changed">Wortelstatus opgedateer</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">Pas tans tema toe …</string>
     <string name="personalization_title">Verpersoonliking</string>
     <string name="personalization_desc">Aksentkleur, banierbeeld en koppelvlak-effekte</string>

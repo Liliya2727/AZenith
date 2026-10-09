@@ -404,6 +404,9 @@
     <string name="theme_apply_action">Omba</string>
     <string name="status_checking">Kuangalia</string>
     <string name="root_status_changed">Hali ya mizizi imesasishwa</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">Inatumia mandhari...</string>
     <string name="personalization_title">Ubinafsishaji</string>
     <string name="personalization_desc">Rangi ya lafudhi, picha ya bendera na athari za kiolesura</string>

@@ -404,6 +404,9 @@
     <string name="theme_apply_action">Alkalmazni</string>
     <string name="status_checking">Ellenőrzés</string>
     <string name="root_status_changed">A gyökér állapota frissítve</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">Téma alkalmazása…</string>
     <string name="personalization_title">Személyre szabás</string>
     <string name="personalization_desc">Kiemelési színek, szalaghirdetések és interfész-effektusok</string>

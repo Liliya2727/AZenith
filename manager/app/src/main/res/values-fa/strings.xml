@@ -404,6 +404,9 @@
     <string name="theme_apply_action">درخواست کنید</string>
     <string name="status_checking">چک کردن</string>
     <string name="root_status_changed">وضعیت ریشه به روز شد</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">در حال اعمال طرح زمینه…</string>
     <string name="personalization_title">شخصی سازی</string>
     <string name="personalization_desc">رنگ تاکیدی، تصویر بنر و جلوه های رابط</string>

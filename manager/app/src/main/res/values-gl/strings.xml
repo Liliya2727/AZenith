@@ -404,6 +404,9 @@
     <string name="theme_apply_action">Solicitar</string>
     <string name="status_checking">Comprobación</string>
     <string name="root_status_changed">Actualizouse o estado da raíz</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">Aplicando tema...</string>
     <string name="personalization_title">Personalización</string>
     <string name="personalization_desc">Cor de acento, imaxe de banner e efectos de interface</string>

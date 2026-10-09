@@ -404,6 +404,9 @@
     <string name="theme_apply_action">आवेदन करें</string>
     <string name="status_checking">जाँच हो रही है</string>
     <string name="root_status_changed">रूट स्थिति अद्यतन की गई</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">विषय लागू किया जा रहा है...</string>
     <string name="personalization_title">वैयक्तिकरण</string>
     <string name="personalization_desc">एक्सेंट रंग, बैनर छवि और इंटरफ़ेस प्रभाव</string>

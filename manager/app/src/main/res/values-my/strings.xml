@@ -404,6 +404,9 @@
     <string name="theme_apply_action">လျှောက်ထားပါ။</string>
     <string name="status_checking">စစ်ဆေးနေပါတယ်။</string>
     <string name="root_status_changed">အမြစ်အခြေအနေ အပ်ဒိတ်လုပ်ထားသည်။</string>
+    <string name="status_fetching">Fetching…</string>
+    <string name="status_root_unavailable">Root is unavailable</string>
+    <string name="status_waiting_for_root">Waiting for Root</string>
     <string name="theme_applying">အပြင်အဆင်ကို သုံးနေသည်…</string>
     <string name="personalization_title">စိတ်ကြိုက်လုပ်ပါ။</string>
     <string name="personalization_desc">လေယူလေသိမ်းအရောင်၊ နဖူးစည်းပုံနှင့် အင်တာဖေ့စ်အကျိုးသက်ရောက်မှုများ</string>
