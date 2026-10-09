@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">แชร์บันทึกที่บีบอัดไปยังแอปอื่น</string>
     <string name="str_source_code">ซอร์สโค้ด</string>
     <string name="str_support_group">กลุ่มสนับสนุน</string>
-    <string name="str_these_settings_apply_to_all_en">การตั้งค่าข้างต้นมีผลกับแอปที่เปิดใช้งานทั้งหมดตามค่าเริ่มต้น คุณสามารถกำหนดค่าแยกสำหรับแต่ละแอปในรายการแอปได้</string>
+    <string name="str_these_settings_apply_to_all_en">การตั้งค่าด้านล่างมีผลกับแอปที่เปิดใช้งานทั้งหมดตามค่าเริ่มต้น คุณสามารถกำหนดค่าแยกสำหรับแต่ละแอปในรายการแอปได้</string>
     <string name="str_tweak_configuration_settings">การตั้งค่าการปรับแต่ง</string>
     <string name="str_unavailable">ไม่พร้อมใช้งาน</string>
     <string name="str_use_fpsgo_summary">เมื่อเปิดใช้งาน เมื่ออัตราเฟรมคงที่ จะลดความถี่อัตโนมัติเพื่อประหยัดพลังงาน ผู้ใช้ที่ต้องการประสิทธิภาพสูงสุดและยอมรับความร้อนสูงสามารถปิดได้</string>

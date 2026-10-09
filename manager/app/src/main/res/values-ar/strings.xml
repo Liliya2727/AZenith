@@ -342,7 +342,7 @@
     <string name="str_share_compressed_logs_to_other">مشاركة السجلات المضغوطة إلى تطبيقات أخرى</string>
     <string name="str_source_code">شفرة المصدر</string>
     <string name="str_support_group">مجموعة الدعم</string>
-    <string name="str_these_settings_apply_to_all_en">تنطبق الإعدادات أعلاه افتراضيًا على جميع التطبيقات المفعلة، ويمكن تكوينها بشكل فردي لكل تطبيق في قائمة التطبيقات</string>
+    <string name="str_these_settings_apply_to_all_en">تنطبق الإعدادات أدناه افتراضيًا على جميع التطبيقات المفعلة، ويمكن تكوينها بشكل فردي لكل تطبيق في قائمة التطبيقات</string>
     <string name="str_tweak_configuration_settings">إعدادات التعديل</string>
     <string name="str_unavailable">غير متاح</string>
     <string name="str_use_fpsgo_summary">عند التفعيل، يخفض التردد تلقائيًا عندما يكون معدل الإطارات مستقرًا لتوفير الطاقة؛ يمكن للمستخدمين الذين يسعون للحصول على أقصى أداء ويقبلون حرارة أعلى إيقاف تشغيله</string>

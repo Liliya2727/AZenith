@@ -342,7 +342,7 @@
     <string name="str_share_compressed_logs_to_other">Sıxılmış jurnalları digər tətbiqlərə paylaş</string>
     <string name="str_source_code">Mənbə kodu</string>
     <string name="str_support_group">Dəstək qrupu</string>
-    <string name="str_these_settings_apply_to_all_en">Yuxarıdakı parametrlər varsayılan olaraq bütün aktiv tətbiqlərə tətbiq olunur, tətbiq siyahısında hər bir tətbiq üçün ayrıca konfiqurasiya edilə bilər</string>
+    <string name="str_these_settings_apply_to_all_en">Aşağıdakı parametrlər varsayılan olaraq bütün aktiv tətbiqlərə tətbiq olunur, tətbiq siyahısında hər bir tətbiq üçün ayrıca konfiqurasiya edilə bilər</string>
     <string name="str_tweak_configuration_settings">Konfiqurasiya parametrləri</string>
     <string name="str_unavailable">Mövcud deyil</string>
     <string name="str_use_fpsgo_summary">Aktiv olduqda, kadr sürəti sabit olduqda avtomatik tezliyi azaldaraq istiliyi aşağı salır, enerjiyə qənaət edir; maksimum performans axtaran və daha yüksək istiliyə dözən istifadəçilər söndürə bilər</string>

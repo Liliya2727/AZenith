@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">Сығылған журналдарды басқа қолданбалармен бөлісу</string>
     <string name="str_source_code">Бастапқы код</string>
     <string name="str_support_group">Қолдау тобы</string>
-    <string name="str_these_settings_apply_to_all_en">Жоғарыдағы параметрлер барлық қосылған қолданбаларға әдепкі бойынша қолданылады, жеке қолданбаларды қолданбалар тізімінде жеке конфигурациялауға болады</string>
+    <string name="str_these_settings_apply_to_all_en">Төмендегі параметрлер барлық қосылған қолданбаларға әдепкі бойынша қолданылады, жеке қолданбаларды қолданбалар тізімінде жеке конфигурациялауға болады</string>
     <string name="str_tweak_configuration_settings">Конфигурация параметрлері</string>
     <string name="str_unavailable">Қолжетімсіз</string>
     <string name="str_use_fpsgo_summary">Қосылған кезде кадр жиілігі тұрақты болғанда жиілік автоматты түрде төмендетіліп, температура мен энергия тұтынуды азайтады; максималды өнімділікті қалайтын және жоғары температураға дайын пайдаланушылар өшіре алады</string>

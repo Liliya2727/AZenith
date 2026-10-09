@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">కంప్రెస్ చేసిన లాగ్‌ను ఇతర యాప్‌లకు షేర్ చేయండి</string>
     <string name="str_source_code">సోర్స్ కోడ్</string>
     <string name="str_support_group">సపోర్ట్ గ్రూప్</string>
-    <string name="str_these_settings_apply_to_all_en">పై సెట్టింగ్‌లు డిఫాల్ట్‌గా ప్రారంభించిన అన్ని యాప్‌లకు వర్తిస్తాయి, యాప్ జాబితాలో ప్రతి యాప్‌కు విడిగా కాన్ఫిగర్ చేయవచ్చు</string>
+    <string name="str_these_settings_apply_to_all_en">కింది సెట్టింగ్‌లు డిఫాల్ట్‌గా ప్రారంభించిన అన్ని యాప్‌లకు వర్తిస్తాయి, యాప్ జాబితాలో ప్రతి యాప్‌కు విడిగా కాన్ఫిగర్ చేయవచ్చు</string>
     <string name="str_tweak_configuration_settings">కాన్ఫిగరేషన్ సెట్టింగ్‌లు</string>
     <string name="str_unavailable">అందుబాటులో లేదు</string>
     <string name="str_use_fpsgo_summary">ప్రారంభించిన తర్వాత ఫ్రేమ్ రేట్ స్థిరంగా ఉన్నప్పుడు స్వయంచాలకంగా ఫ్రీక్వెన్సీని తగ్గించి, ఉష్ణోగ్రతను తగ్గించి పవర్ సేవ్ చేస్తుంది; అత్యంత పనితీరు కోరుకునే మరియు ఎక్కువ వేడిని అంగీకరించే వినియోగదారులు దీన్ని ఆఫ్ చేయవచ్చు</string>

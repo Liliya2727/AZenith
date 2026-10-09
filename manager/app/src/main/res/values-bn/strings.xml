@@ -342,7 +342,7 @@
     <string name="str_share_compressed_logs_to_other">সংকুচিত লগ অন্য অ্যাপে শেয়ার করুন</string>
     <string name="str_source_code">সোর্স কোড</string>
     <string name="str_support_group">সাপোর্ট গ্রুপ</string>
-    <string name="str_these_settings_apply_to_all_en">উপরের সেটিংস ডিফল্টভাবে সমস্ত সক্রিয় অ্যাপে প্রযোজ্য, আপনি অ্যাপ তালিকায় পৃথক অ্যাপের জন্য আলাদাভাবে কনফিগার করতে পারেন</string>
+    <string name="str_these_settings_apply_to_all_en">নিচের সেটিংস ডিফল্টভাবে সমস্ত সক্রিয় অ্যাপে প্রযোজ্য, আপনি অ্যাপ তালিকায় পৃথক অ্যাপের জন্য আলাদাভাবে কনফিগার করতে পারেন</string>
     <string name="str_tweak_configuration_settings">কনফিগারেশন সেটিংস</string>
     <string name="str_unavailable">অনুপলব্ধ</string>
     <string name="str_use_fpsgo_summary">চালু করলে ফ্রেম রেট স্থিতিশীল হলে স্বয়ংক্রিয়ভাবে ফ্রিকোয়েন্সি কমিয়ে তাপমাত্রা ও শক্তি সাশ্রয় করে; চরম পারফরম্যান্স চাইলে এবং উচ্চ তাপমাত্রা সহনীয় হলে বন্ধ করতে পারেন</string>

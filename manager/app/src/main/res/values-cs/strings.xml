@@ -342,7 +342,7 @@
     <string name="str_share_compressed_logs_to_other">Sdílet komprimované protokoly do jiných aplikací.</string>
     <string name="str_source_code">Zdrojový kód</string>
     <string name="str_support_group">Podpůrná skupina</string>
-    <string name="str_these_settings_apply_to_all_en">Výše uvedená nastavení se vztahují na všechny povolené aplikace. V seznamu aplikací můžete konfigurovat jednotlivé aplikace samostatně.</string>
+    <string name="str_these_settings_apply_to_all_en">Níže uvedená nastavení se vztahují na všechny povolené aplikace. V seznamu aplikací můžete konfigurovat jednotlivé aplikace samostatně.</string>
     <string name="str_tweak_configuration_settings">Nastavení konfigurace</string>
     <string name="str_unavailable">Nedostupné</string>
     <string name="str_use_fpsgo_summary">Po zapnutí se při stabilní snímkové frekvenci automaticky sníží frekvence pro úsporu energie. Pokud preferujete maximální výkon a akceptujete vyšší zahřívání, můžete vypnout.</string>

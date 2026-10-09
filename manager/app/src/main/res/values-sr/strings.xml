@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">Podeli komprimirane dnevnike sa drugim aplikacijama</string>
     <string name="str_source_code">Izvorni kod</string>
     <string name="str_support_group">Grupa podrške</string>
-    <string name="str_these_settings_apply_to_all_en">Gornja podešavanja se podrazumevano primenjuju na sve omogućene aplikacije; možete ih podesiti pojedinačno za svaku aplikaciju u listi aplikacija.</string>
+    <string name="str_these_settings_apply_to_all_en">Donja podešavanja se podrazumevano primenjuju na sve omogućene aplikacije; možete ih podesiti pojedinačno za svaku aplikaciju u listi aplikacija.</string>
     <string name="str_tweak_configuration_settings">Podešavanja konfiguracije</string>
     <string name="str_unavailable">Nedostupno</string>
     <string name="str_use_fpsgo_summary">Kada je uključen, automatski smanjuje frekvenciju i zagrevanje kada je frejm stabilan, štedi energiju; korisnici koji teže maksimalnim performansama i prihvataju veće zagrevanje mogu ga isključiti.</string>

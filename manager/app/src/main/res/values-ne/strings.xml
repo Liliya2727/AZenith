@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">कम्प्रेस गरिएको लग अन्य एपहरूमा साझा गर्नुहोस्</string>
     <string name="str_source_code">स्रोत कोड</string>
     <string name="str_support_group">समर्थन समूह</string>
-    <string name="str_these_settings_apply_to_all_en">माथिको सेटिङहरू पूर्वनिर्धारित रूपमा सबै सक्षम एपहरूमा लागू हुन्छन्, एप सूचीमा प्रत्येक एपको लागि अलग-अलग कन्फिगर गर्न सकिन्छ</string>
+    <string name="str_these_settings_apply_to_all_en">तलको सेटिङहरू पूर्वनिर्धारित रूपमा सबै सक्षम एपहरूमा लागू हुन्छन्, एप सूचीमा प्रत्येक एपको लागि अलग-अलग कन्फिगर गर्न सकिन्छ</string>
     <string name="str_tweak_configuration_settings">कन्फिगरेसन सेटिङहरू</string>
     <string name="str_unavailable">उपलब्ध छैन</string>
     <string name="str_use_fpsgo_summary">सक्रिय गरेपछि फ्रेम दर स्थिर हुँदा स्वचालित रूपमा फ्रिक्वेन्सी घटाएर ताप र बिजुली बचत गर्दछ; अत्यधिक प्रदर्शन खोज्ने र उच्च ताप सहन सक्ने प्रयोगकर्ताहरूले बन्द गर्न सक्छन्</string>

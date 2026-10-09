@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">Bagikan log terkompresi ke aplikasi lain</string>
     <string name="str_source_code">Kode sumber</string>
     <string name="str_support_group">Grup dukungan</string>
-    <string name="str_these_settings_apply_to_all_en">Pengaturan di atas berlaku untuk semua aplikasi yang diaktifkan secara default, dapat dikonfigurasi secara individual untuk setiap aplikasi di daftar aplikasi</string>
+    <string name="str_these_settings_apply_to_all_en">Pengaturan di bawah berlaku untuk semua aplikasi yang diaktifkan secara default, dapat dikonfigurasi secara individual untuk setiap aplikasi di daftar aplikasi</string>
     <string name="str_tweak_configuration_settings">Pengaturan konfigurasi</string>
     <string name="str_unavailable">Tidak tersedia</string>
     <string name="str_use_fpsgo_summary">Setelah diaktifkan, frekuensi diturunkan secara otomatis saat frame rate stabil, menghemat daya; pengguna yang mengejar performa ekstrim dan dapat menerima panas lebih tinggi dapat menonaktifkannya</string>

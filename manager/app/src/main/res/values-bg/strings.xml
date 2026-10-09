@@ -342,7 +342,7 @@
     <string name="str_share_compressed_logs_to_other">Споделяне на компресирани логове към други приложения</string>
     <string name="str_source_code">Изходен код</string>
     <string name="str_support_group">Група за поддръжка</string>
-    <string name="str_these_settings_apply_to_all_en">Горните настройки се прилагат по подразбиране за всички активирани приложения. Можете да конфигурирате индивидуално за всяко приложение в списъка с приложения.</string>
+    <string name="str_these_settings_apply_to_all_en">Долните настройки се прилагат по подразбиране за всички активирани приложения. Можете да конфигурирате индивидуално за всяко приложение в списъка с приложения.</string>
     <string name="str_tweak_configuration_settings">Конфигурационни настройки</string>
     <string name="str_unavailable">Недостъпен</string>
     <string name="str_use_fpsgo_summary">Когато е включено, при стабилна кадрова честота автоматично намалява честотите и температурата, спестявайки енергия. Потребителите, които търсят максимална производителност и приемат по-високо нагряване, могат да го изключат.</string>

@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">संपीड़ित लॉग को अन्य ऐप पर साझा करें</string>
     <string name="str_source_code">स्रोत कोड</string>
     <string name="str_support_group">सहायता समूह</string>
-    <string name="str_these_settings_apply_to_all_en">उपरोक्त सेटिंग्स डिफ़ॉल्ट रूप से सभी सक्षम ऐप पर लागू होती हैं, ऐप सूची में प्रत्येक ऐप के लिए अलग से कॉन्फ़िगर किया जा सकता है</string>
+    <string name="str_these_settings_apply_to_all_en">नीचे दी गई सेटिंग्स डिफ़ॉल्ट रूप से सभी सक्षम ऐप पर लागू होती हैं, ऐप सूची में प्रत्येक ऐप के लिए अलग से कॉन्फ़िगर किया जा सकता है</string>
     <string name="str_tweak_configuration_settings">कॉन्फ़िगरेशन सेटिंग्स</string>
     <string name="str_unavailable">अनुपलब्ध</string>
     <string name="str_use_fpsgo_summary">सक्षम होने पर फ्रेम दर स्थिर होने पर स्वचालित रूप से आवृत्ति कम करके गर्मी कम करें और बिजली बचाएं; अत्यधिक प्रदर्शन चाहने वाले और उच्च तापमान स्वीकार करने वाले उपयोगकर्ता इसे बंद कर सकते हैं</string>

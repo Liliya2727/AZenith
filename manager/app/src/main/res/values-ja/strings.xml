@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">圧縮ログを他のアプリと共有</string>
     <string name="str_source_code">ソースコード</string>
     <string name="str_support_group">サポートグループ</string>
-    <string name="str_these_settings_apply_to_all_en">上記の設定はデフォルトですべての有効なアプリに適用されます。アプリリストでアプリごとに個別に設定できます</string>
+    <string name="str_these_settings_apply_to_all_en">下記の設定はデフォルトですべての有効なアプリに適用されます。アプリリストでアプリごとに個別に設定できます</string>
     <string name="str_tweak_configuration_settings">設定</string>
     <string name="str_unavailable">利用不可</string>
     <string name="str_use_fpsgo_summary">有効にすると、フレームレートが安定しているときに自動的に周波数を下げて冷却・節電します。究極のパフォーマンスを追求し、高い発熱を許容するユーザーは無効にできます</string>

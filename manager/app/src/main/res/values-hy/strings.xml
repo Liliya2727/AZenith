@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">Կիսվել սեղմված լոգերով այլ հավելվածների հետ</string>
     <string name="str_source_code">Աղբյուրի կոդ</string>
     <string name="str_support_group">Աջակցման խումբ</string>
-    <string name="str_these_settings_apply_to_all_en">Վերոնշյալ կարգավորումները կիրառվում են բոլոր միացված հավելվածների համար, կարող եք առանձին-առանձին կարգավորել յուրաքանչյուր հավելվածի համար հավելվածների ցանկում</string>
+    <string name="str_these_settings_apply_to_all_en">Ստորև նշված կարգավորումները կիրառվում են բոլոր միացված հավելվածների համար, կարող եք առանձին-առանձին կարգավորել յուրաքանչյուր հավելվածի համար հավելվածների ցանկում</string>
     <string name="str_tweak_configuration_settings">Կարգաբերման կարգավորումներ</string>
     <string name="str_unavailable">Անհասանելի</string>
     <string name="str_use_fpsgo_summary">Միացնելուց հետո կադրերի կայունության դեպքում ավտոմատ իջեցնել հաճախականությունը և ջերմաստիճանը՝ խնայելով էներգիա; Ծայրահեղ կատարում ցանկացող և բարձր ջերմաստիճան ընդունող օգտատերերը կարող են անջատել</string>

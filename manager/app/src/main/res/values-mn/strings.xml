@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">Шахагдсан бүртгэлийг бусад програмууд руу хуваалцах</string>
     <string name="str_source_code">Эх код</string>
     <string name="str_support_group">Дэмжлэгийн бүлэг</string>
-    <string name="str_these_settings_apply_to_all_en">Дээрх тохиргоо нь идэвхжүүлсэн бүх програмуудад анхдагчаар хэрэгжинэ. Та програмын жагсаалтаас тус бүрд нь тохируулж болно</string>
+    <string name="str_these_settings_apply_to_all_en">Доорх тохиргоо нь идэвхжүүлсэн бүх програмуудад анхдагчаар хэрэгжинэ. Та програмын жагсаалтаас тус бүрд нь тохируулж болно</string>
     <string name="str_tweak_configuration_settings">Тохируулгын тохиргоо</string>
     <string name="str_unavailable">Боломжгүй</string>
     <string name="str_use_fpsgo_summary">Идэвхжүүлснээр фрейм хурд тогтвортой үед давтамж буурч, халалт болон эрчим хүчний зарцуулалт багасна. Хамгийн дээд гүйцэтгэл хүсч, халалтыг тэсвэрлэх хэрэглэгчид унтрааж болно</string>

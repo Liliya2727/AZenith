@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">Compartir registros comprimidos con otras aplicaciones</string>
     <string name="str_source_code">Código fuente</string>
     <string name="str_support_group">Grupo de soporte</string>
-    <string name="str_these_settings_apply_to_all_en">La configuración anterior se aplica a todas las aplicaciones habilitadas de forma predeterminada; puedes configurarlas individualmente en la lista de aplicaciones.</string>
+    <string name="str_these_settings_apply_to_all_en">La configuración siguiente se aplica a todas las aplicaciones habilitadas de forma predeterminada; puedes configurarlas individualmente en la lista de aplicaciones.</string>
     <string name="str_tweak_configuration_settings">Configuración de ajustes</string>
     <string name="str_unavailable">No disponible</string>
     <string name="str_use_fpsgo_summary">Al activarlo, cuando la tasa de fotogramas es estable, se reduce automáticamente la frecuencia y temperatura, ahorrando batería; los usuarios que busquen el máximo rendimiento y acepten mayor calentamiento pueden desactivarlo.</string>

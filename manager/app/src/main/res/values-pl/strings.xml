@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">Udostępnij skompresowane logi innym aplikacjom</string>
     <string name="str_source_code">Kod źródłowy</string>
     <string name="str_support_group">Grupa wsparcia</string>
-    <string name="str_these_settings_apply_to_all_en">Powyższe ustawienia domyślnie dotyczą wszystkich włączonych aplikacji. Możesz skonfigurować je indywidualnie dla każdej aplikacji na liście aplikacji.</string>
+    <string name="str_these_settings_apply_to_all_en">Poniższe ustawienia domyślnie dotyczą wszystkich włączonych aplikacji. Możesz skonfigurować je indywidualnie dla każdej aplikacji na liście aplikacji.</string>
     <string name="str_tweak_configuration_settings">Ustawienia konfiguracji</string>
     <string name="str_unavailable">Niedostępne</string>
     <string name="str_use_fpsgo_summary">Po włączeniu, gdy liczba klatek jest stabilna, automatycznie obniża częstotliwość i temperaturę, oszczędzając energię. Użytkownicy dążący do maksymalnej wydajności, akceptujący wyższe nagrzewanie, mogą wyłączyć.</string>

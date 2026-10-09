@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">將壓縮日誌分享至其他應用程式</string>
     <string name="str_source_code">原始碼</string>
     <string name="str_support_group">支援群組</string>
-    <string name="str_these_settings_apply_to_all_en">以上設定預設對所有已啟用應用程式生效，可在應用程式清單中為單個應用程式單獨配置</string>
+    <string name="str_these_settings_apply_to_all_en">以下設定預設對所有已啟用應用程式生效，可在應用程式清單中為單個應用程式單獨配置</string>
     <string name="str_tweak_configuration_settings">配置設定</string>
     <string name="str_unavailable">不可用</string>
     <string name="str_use_fpsgo_summary">開啟後幀率穩定時自動降頻降溫、節省電量；追求極致效能、可接受較高發熱的使用者可關閉</string>

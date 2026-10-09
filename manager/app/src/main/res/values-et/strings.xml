@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">Jaga tihendatud logisid teiste rakendustega</string>
     <string name="str_source_code">Lähtekood</string>
     <string name="str_support_group">Toegrupp</string>
-    <string name="str_these_settings_apply_to_all_en">Ülaltoodud seaded rakenduvad vaikimisi kõigile lubatud rakendustele; iga rakenduse jaoks saab seadeid eraldi muuta rakenduste loendis</string>
+    <string name="str_these_settings_apply_to_all_en">Allpool toodud seaded rakenduvad vaikimisi kõigile lubatud rakendustele; iga rakenduse jaoks saab seadeid eraldi muuta rakenduste loendis</string>
     <string name="str_tweak_configuration_settings">Seadistuse seaded</string>
     <string name="str_unavailable">Pole saadaval</string>
     <string name="str_use_fpsgo_summary">Sisselülitamisel vähendab stabiilse kaadrisageduse korral automaatselt sagedust ja säästab energiat; suutlikkuse maksimeerimiseks võib keelata, kuid siis võib tekkida rohkem soojust</string>

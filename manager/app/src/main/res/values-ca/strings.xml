@@ -342,7 +342,7 @@
     <string name="str_share_compressed_logs_to_other">Compartir registres comprimits amb altres aplicacions</string>
     <string name="str_source_code">Codi font</string>
     <string name="str_support_group">Grup de suport</string>
-    <string name="str_these_settings_apply_to_all_en">La configuració anterior s\'aplica per defecte a totes les aplicacions habilitades; es pot configurar individualment per a cada aplicació a la llista d\'aplicacions</string>
+    <string name="str_these_settings_apply_to_all_en">La configuració següent s\'aplica per defecte a totes les aplicacions habilitades; es pot configurar individualment per a cada aplicació a la llista d\'aplicacions</string>
     <string name="str_tweak_configuration_settings">Configuració d\'ajustos</string>
     <string name="str_unavailable">No disponible</string>
     <string name="str_use_fpsgo_summary">Quan està activat, redueix automàticament la freqüència i la temperatura quan la freqüència de fotogrames és estable, estalviant energia; els usuaris que busquin el màxim rendiment i acceptin una temperatura més alta poden desactivar-lo</string>

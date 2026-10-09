@@ -351,7 +351,7 @@
     <string name="str_share_compressed_logs_to_other">Share compressed logs to other apps</string>
     <string name="str_source_code">Source Code</string>
     <string name="str_support_group">Support Group</string>
-    <string name="str_these_settings_apply_to_all_en">The above settings apply to all enabled apps by default. You can configure them individually for each app in the app list.</string>
+    <string name="str_these_settings_apply_to_all_en">The below settings apply to all enabled apps by default. You can configure them individually for each app in the app list.</string>
     <string name="str_tweak_configuration_settings">Tweak Configuration Settings</string>
     <string name="str_unavailable">Unavailable</string>
     <string name="str_use_fpsgo_summary">When enabled, the frequency automatically lowers to save power when the frame rate is stable. Users who prefer maximum performance and can tolerate higher heat may disable this.</string>

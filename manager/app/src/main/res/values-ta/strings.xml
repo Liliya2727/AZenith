@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">சுருக்கப்பட்ட பதிவுகளை மற்ற பயன்பாடுகளுடன் பகிரவும்</string>
     <string name="str_source_code">மூல குறியீடு</string>
     <string name="str_support_group">ஆதரவு குழு</string>
-    <string name="str_these_settings_apply_to_all_en">மேலே உள்ள அமைப்புகள் இயக்கப்பட்ட அனைத்து பயன்பாடுகளுக்கும் இயல்புநிலையாக பொருந்தும், பயன்பாட்டு பட்டியலில் தனிப்பட்ட பயன்பாட்டிற்கு தனித்தனியாக கட்டமைக்கலாம்</string>
+    <string name="str_these_settings_apply_to_all_en">கீழே உள்ள அமைப்புகள் இயக்கப்பட்ட அனைத்து பயன்பாடுகளுக்கும் இயல்புநிலையாக பொருந்தும், பயன்பாட்டு பட்டியலில் தனிப்பட்ட பயன்பாட்டிற்கு தனித்தனியாக கட்டமைக்கலாம்</string>
     <string name="str_tweak_configuration_settings">சரிசெய்தல் கட்டமைப்பு அமைப்புகள்</string>
     <string name="str_unavailable">கிடைக்கவில்லை</string>
     <string name="str_use_fpsgo_summary">இயக்கிய பிறகு, சட்ட வீதம் நிலையானதாக இருக்கும்போது தானாக அதிர்வெண்ணைக் குறைத்து வெப்பத்தையும் மின்சாரத்தையும் சேமிக்கிறது; உச்ச செயல்திறனை விரும்பி, அதிக வெப்பத்தை ஏற்கக்கூடிய பயனர்கள் மூடலாம்</string>

@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">Siqilgan jurnallarni boshqa ilovalarga ulashish</string>
     <string name="str_source_code">Manba kodi</string>
     <string name="str_support_group">Qo‘llab-quvvatlash guruhi</string>
-    <string name="str_these_settings_apply_to_all_en">Yuqoridagi sozlamalar barcha yoqilgan ilovalarga standart tarzda qo‘llaniladi; ilovalar ro‘yxatida har bir ilova uchun alohida sozlash mumkin</string>
+    <string name="str_these_settings_apply_to_all_en">Quyidagi sozlamalar barcha yoqilgan ilovalarga standart tarzda qo‘llaniladi; ilovalar ro‘yxatida har bir ilova uchun alohida sozlash mumkin</string>
     <string name="str_tweak_configuration_settings">Konfiguratsiya sozlamalari</string>
     <string name="str_unavailable">Mavjud emas</string>
     <string name="str_use_fpsgo_summary">Yoqilganda, kadrlar tezligi barqaror bo‘lganda avtomatik chastotani pasaytirib, issiqlik va quvvat tejaydi; maksimal ishlashni istagan va yuqori issiqlikka rozi bo‘lgan foydalanuvchilar o‘chirishi mumkin</string>

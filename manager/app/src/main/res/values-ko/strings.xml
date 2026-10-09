@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">압축 로그를 다른 앱으로 공유</string>
     <string name="str_source_code">소스 코드</string>
     <string name="str_support_group">지원 그룹</string>
-    <string name="str_these_settings_apply_to_all_en">위 설정은 기본적으로 활성화된 모든 앱에 적용됩니다. 앱 목록에서 개별 앱에 대해 별도로 구성할 수 있습니다</string>
+    <string name="str_these_settings_apply_to_all_en">아래 설정은 기본적으로 활성화된 모든 앱에 적용됩니다. 앱 목록에서 개별 앱에 대해 별도로 구성할 수 있습니다</string>
     <string name="str_tweak_configuration_settings">트윅 설정</string>
     <string name="str_unavailable">사용 불가</string>
     <string name="str_use_fpsgo_summary">활성화하면 프레임 속도가 안정적일 때 자동으로 주파수를 낮추고 온도를 낮추며 전력을 절약합니다. 극한의 성능을 원하고 높은 발열을 감수할 수 있는 사용자는 비활성화할 수 있습니다</string>

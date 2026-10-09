@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">Podijeli komprimirane zapise s drugim aplikacijama</string>
     <string name="str_source_code">Izvorni kod</string>
     <string name="str_support_group">Grupa podrške</string>
-    <string name="str_these_settings_apply_to_all_en">Gornje postavke se zadano primjenjuju na sve omogućene aplikacije, a mogu se pojedinačno konfigurirati za svaku aplikaciju na popisu aplikacija</string>
+    <string name="str_these_settings_apply_to_all_en">Donje postavke se zadano primjenjuju na sve omogućene aplikacije, a mogu se pojedinačno konfigurirati za svaku aplikaciju na popisu aplikacija</string>
     <string name="str_tweak_configuration_settings">Postavke konfiguracije</string>
     <string name="str_unavailable">Nedostupno</string>
     <string name="str_use_fpsgo_summary">Kada je uključeno, automatski smanjuje frekvenciju i temperaturu kada je broj sličica stabilan, štedeći energiju; korisnici koji traže maksimalne performanse i prihvaćaju veće zagrijavanje mogu isključiti</string>

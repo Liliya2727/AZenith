@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">Chia sẻ log nén đến ứng dụng khác</string>
     <string name="str_source_code">Mã nguồn</string>
     <string name="str_support_group">Nhóm hỗ trợ</string>
-    <string name="str_these_settings_apply_to_all_en">Các cài đặt trên mặc định áp dụng cho tất cả ứng dụng đã bật, có thể cấu hình riêng cho từng ứng dụng trong danh sách ứng dụng</string>
+    <string name="str_these_settings_apply_to_all_en">Các cài đặt dưới đây mặc định áp dụng cho tất cả ứng dụng đã bật, có thể cấu hình riêng cho từng ứng dụng trong danh sách ứng dụng</string>
     <string name="str_tweak_configuration_settings">Cài đặt cấu hình</string>
     <string name="str_unavailable">Không khả dụng</string>
     <string name="str_use_fpsgo_summary">Khi bật, khi khung hình ổn định sẽ tự động giảm tần số và nhiệt độ, tiết kiệm pin; người dùng theo đuổi hiệu suất tối đa và chấp nhận nhiệt cao có thể tắt</string>

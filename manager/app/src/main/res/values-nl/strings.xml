@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">Deel gecomprimeerde logboeken met andere apps</string>
     <string name="str_source_code">Broncode</string>
     <string name="str_support_group">Ondersteuningsgroep</string>
-    <string name="str_these_settings_apply_to_all_en">Bovenstaande instellingen zijn standaard van toepassing op alle ingeschakelde apps, kan per app worden geconfigureerd in de app-lijst</string>
+    <string name="str_these_settings_apply_to_all_en">Onderstaande instellingen zijn standaard van toepassing op alle ingeschakelde apps, kan per app worden geconfigureerd in de app-lijst</string>
     <string name="str_tweak_configuration_settings">Configuratie-instellingen</string>
     <string name="str_unavailable">Niet beschikbaar</string>
     <string name="str_use_fpsgo_summary">Na inschakelen verlaagt het automatisch frequentie en temperatuur bij stabiele framerate om stroom te besparen; gebruikers die maximale prestaties willen en hogere warmte accepteren kunnen uitschakelen</string>

@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">Kongsi log mampat ke aplikasi lain</string>
     <string name="str_source_code">Kod sumber</string>
     <string name="str_support_group">Kumpulan sokongan</string>
-    <string name="str_these_settings_apply_to_all_en">Tetapan di atas digunakan secara lalai untuk semua aplikasi yang didayakan; anda boleh mengkonfigurasi secara berasingan untuk setiap aplikasi dalam senarai aplikasi</string>
+    <string name="str_these_settings_apply_to_all_en">Tetapan di bawah digunakan secara lalai untuk semua aplikasi yang didayakan; anda boleh mengkonfigurasi secara berasingan untuk setiap aplikasi dalam senarai aplikasi</string>
     <string name="str_tweak_configuration_settings">Tetapan konfigurasi</string>
     <string name="str_unavailable">Tidak tersedia</string>
     <string name="str_use_fpsgo_summary">Apabila diaktifkan, frekuensi akan diturunkan secara automatik untuk menjimatkan kuasa apabila kadar bingkai stabil; pengguna yang menginginkan prestasi maksimum dan boleh menerima pemanasan yang lebih tinggi boleh mematikannya</string>

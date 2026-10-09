@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">Кысылган журналдарды башка колдонмолорго бөлүшүү</string>
     <string name="str_source_code">Булак коду</string>
     <string name="str_support_group">Колдоо тобу</string>
-    <string name="str_these_settings_apply_to_all_en">Жогорудагы жөндөөлөр демейки боюнча бардык күйгүзүлгөн колдонмолорго таасир этет, колдонмолор тизмесинде ар бир колдонмо үчүн өзүнчө конфигурациялоого болот</string>
+    <string name="str_these_settings_apply_to_all_en">Төмөндөгү жөндөөлөр демейки боюнча бардык күйгүзүлгөн колдонмолорго таасир этет, колдонмолор тизмесинде ар бир колдонмо үчүн өзүнчө конфигурациялоого болот</string>
     <string name="str_tweak_configuration_settings">Конфигурация жөндөөлөрү</string>
     <string name="str_unavailable">Жеткиликтүү эмес</string>
     <string name="str_use_fpsgo_summary">Күйгүзүлгөндө, кадр туруктуу болгондо автоматтык түрдө жыштыкты төмөндөтүп, ысып кетүүнү азайтат жана энергияны үнөмдөйт; эң жогорку иштөөнү каалаган жана ысып кетүүгө макул болгон колдонуучулар өчүрө алат</string>

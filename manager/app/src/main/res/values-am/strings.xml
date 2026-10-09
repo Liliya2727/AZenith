@@ -342,7 +342,7 @@
     <string name="str_share_compressed_logs_to_other">የተጨመቁ ሎጎች ወደ ሌሎች መተግበሪያዎች ያጋሩ</string>
     <string name="str_source_code">ምንጭ ኮድ</string>
     <string name="str_support_group">የድጋፍ ቡድን</string>
-    <string name="str_these_settings_apply_to_all_en">ከላይ ያሉት ቅንብሮች ለሁሉም ለነቁ መተግበሪያዎች ይሠራሉ፣ በመተግበሪያ ዝርዝር ውስጥ ለእያንዳንዱ መተግበሪያ በተናጠል ማዋቀር ይችላሉ</string>
+    <string name="str_these_settings_apply_to_all_en">ከታች ያሉት ቅንብሮች ለሁሉም ለነቁ መተግበሪያዎች ይሠራሉ፣ በመተግበሪያ ዝርዝር ውስጥ ለእያንዳንዱ መተግበሪያ በተናጠል ማዋቀር ይችላሉ</string>
     <string name="str_tweak_configuration_settings">የውቅር ቅንብሮች</string>
     <string name="str_unavailable">አይገኝም</string>
     <string name="str_use_fpsgo_summary">ሲነቃ ፍሬም መጠን ሲረጋጋ በራስ-ሰር ድግግሞሽ ይቀንሳል እና ሙቀትን ይቀንሳል፣ ሃይል ይቆጥባል፤ ከፍተኛ አፈጻጸም የሚፈልጉ ተጠቃሚዎች ከፍተኛ ሙቀትን ተቀብለው ሊያጠፉት ይችላሉ</string>

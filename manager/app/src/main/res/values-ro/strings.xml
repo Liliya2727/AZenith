@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">Distribuiți jurnalele comprimate către alte aplicații</string>
     <string name="str_source_code">Cod sursă</string>
     <string name="str_support_group">Grup de suport</string>
-    <string name="str_these_settings_apply_to_all_en">Setările de mai sus se aplică implicit tuturor aplicațiilor activate. Puteți configura individual aplicațiile din listă.</string>
+    <string name="str_these_settings_apply_to_all_en">Setările de mai jos se aplică implicit tuturor aplicațiilor activate. Puteți configura individual aplicațiile din listă.</string>
     <string name="str_tweak_configuration_settings">Setări configurare</string>
     <string name="str_unavailable">Indisponibil</string>
     <string name="str_use_fpsgo_summary">Când este activat, la o rată de cadre stabilă, frecvența scade automat pentru a economisi energie. Utilizatorii care doresc performanță maximă și acceptă o încălzire mai mare pot dezactiva această opțiune.</string>

@@ -342,7 +342,7 @@
     <string name="str_share_compressed_logs_to_other">Deel saamgeperste logboeke na ander programme</string>
     <string name="str_source_code">Bronkode</string>
     <string name="str_support_group">Ondersteuningsgroep</string>
-    <string name="str_these_settings_apply_to_all_en">Bogenoemde instellings is standaard van toepassing op alle geaktiveerde programme; individuele konfigurasie kan per program in die programlys gedoen word</string>
+    <string name="str_these_settings_apply_to_all_en">Onderstaande instellings is standaard van toepassing op alle geaktiveerde programme; individuele konfigurasie kan per program in die programlys gedoen word</string>
     <string name="str_tweak_configuration_settings">Konfigurasie instellings</string>
     <string name="str_unavailable">Nie beskikbaar nie</string>
     <string name="str_use_fpsgo_summary">Na aktivering, wanneer raamtempo stabiel is, daal frekwensie outomaties om hitte en krag te bespaar; vir ekstreme prestasie en aanvaarbare hoër hitte, kan u deaktiveer</string>

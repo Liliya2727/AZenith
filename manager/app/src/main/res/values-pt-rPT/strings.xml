@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">Compartilhar registros compactados com outros aplicativos</string>
     <string name="str_source_code">Código-fonte</string>
     <string name="str_support_group">Grupo de suporte</string>
-    <string name="str_these_settings_apply_to_all_en">As configurações acima se aplicam a todos os aplicativos habilitados por padrão; você pode configurar individualmente na lista de aplicativos</string>
+    <string name="str_these_settings_apply_to_all_en">As configurações abaixo se aplicam a todos os aplicativos habilitados por padrão; você pode configurar individualmente na lista de aplicativos</string>
     <string name="str_tweak_configuration_settings">Configurações de ajuste</string>
     <string name="str_unavailable">Indisponível</string>
     <string name="str_use_fpsgo_summary">Quando ativado, reduz automaticamente a frequência e a temperatura quando a taxa de quadros está estável, economizando energia; usuários que buscam desempenho extremo e aceitam maior aquecimento podem desativar</string>

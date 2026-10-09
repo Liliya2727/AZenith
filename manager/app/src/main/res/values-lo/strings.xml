@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">ແບ່ງປັນ log ທີ່ຖືກບີບອັດໄປຍັງແອັບອື່ນ</string>
     <string name="str_source_code">ລະຫັດຕົ້ນສະບັບ</string>
     <string name="str_support_group">ກຸ່ມສະໜັບສະໜູນ</string>
-    <string name="str_these_settings_apply_to_all_en">ການຕັ້ງຄ່າຂ້າງເທິງໃຊ້ກັບທຸກແອັບທີ່ເປີດໃຊ້ງານເປັນຄ່າເລີ່ມຕົ້ນ, ສາມາດຕັ້ງຄ່າສະເພາະສຳລັບແຕ່ລະແອັບໄດ້ໃນລາຍຊື່ແອັບ</string>
+    <string name="str_these_settings_apply_to_all_en">ການຕັ້ງຄ່າຂ້າງລຸ່ມໃຊ້ກັບທຸກແອັບທີ່ເປີດໃຊ້ງານເປັນຄ່າເລີ່ມຕົ້ນ, ສາມາດຕັ້ງຄ່າສະເພາະສຳລັບແຕ່ລະແອັບໄດ້ໃນລາຍຊື່ແອັບ</string>
     <string name="str_tweak_configuration_settings">ການຕັ້ງຄ່າການປັບແຕ່ງ</string>
     <string name="str_unavailable">ບໍ່ສາມາດໃຊ້ງານໄດ້</string>
     <string name="str_use_fpsgo_summary">ເປີດໃຊ້ງານແລ້ວ, ເມື່ອ FPS ຄົງທີ່ຈະຫຼຸດຄວາມຖີ່ເພື່ອປະຢັດໄຟ; ຜູ້ທີ່ຕ້ອງການປະສິດທິພາບສູງສຸດ ແລະ ຍອມຮັບຄວາມຮ້ອນທີ່ສູງກວ່າສາມາດປິດຟັງຊັນນີ້</string>

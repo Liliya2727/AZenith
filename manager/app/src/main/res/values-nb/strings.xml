@@ -341,7 +341,7 @@
     <string name="str_share_compressed_logs_to_other">Del komprimerte logger til andre apper</string>
     <string name="str_source_code">Kildekode</string>
     <string name="str_support_group">Støttegruppe</string>
-    <string name="str_these_settings_apply_to_all_en">Innstillingene ovenfor gjelder for alle aktiverte apper som standard. Du kan konfigurere individuelle apper i applisten.</string>
+    <string name="str_these_settings_apply_to_all_en">Innstillingene nedenfor gjelder for alle aktiverte apper som standard. Du kan konfigurere individuelle apper i applisten.</string>
     <string name="str_tweak_configuration_settings">Konfigurasjonsinnstillinger</string>
     <string name="str_unavailable">Utilgjengelig</string>
     <string name="str_use_fpsgo_summary">Når aktivert, reduseres frekvensen automatisk for å spare strøm når bildefrekvensen er stabil. For maksimal ytelse og akseptabelt høyere varme, kan du deaktivere denne.</string>
