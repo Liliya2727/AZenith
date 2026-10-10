@@ -79,6 +79,8 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import java.io.File
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.component.ExpressiveDropdownItem
@@ -89,6 +91,7 @@ import zx.azenith.ui.util.getSupportedRefreshRates
 import zx.azenith.ui.util.getSupportedDownscaleFactors
 import zx.azenith.ui.util.getSupportedFpsTargets
 import zx.azenith.ui.util.DebugUtils
+import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.component.ExpressiveSliderItem
 import zx.azenith.ui.viewmodel.AppSettingsViewModel
 import zx.azenith.ui.viewmodel.ApplistViewmodel
@@ -115,6 +118,13 @@ fun AppSettingsScreen(
     var isFullModeEnabled by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         isFullModeEnabled = DebugUtils.isFullModeEnabled()
+    }
+    var bypassSupported by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        bypassSupported = withContext(Dispatchers.IO) {
+            val path = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "")
+            path != "UNSUPPORTED" && path != "NEED_SETUP"
+        }
     }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val coroutineScope = rememberCoroutineScope()
@@ -311,18 +321,20 @@ fun AppSettingsScreen(
                         ExpressiveList(
                             modifier = Modifier.padding(horizontal = 16.dp),
                             content = buildList {
-                                add {
-                                    ExpressiveDropdownItem(
-                                        icon = Icons.Rounded.Cable,
-                                        title = stringResource(R.string.bcharging),
-                                        summary = stringResource(R.string.enable_bypass_charge_desc),
-                                        items = booleanModes,
-                                        selectedIndex = getBoolIndex(displayConfig.bypass_charging),
-                                        onItemSelected = { index ->
-                                            val value = listOf("default", "true", "false")[index]
-                                            packageName?.let { viewModel.updateSetting(it, "bypass_charging", value) }
-                                        }
-                                    )
+                                if (bypassSupported) {
+                                    add {
+                                        ExpressiveDropdownItem(
+                                            icon = Icons.Rounded.Cable,
+                                            title = stringResource(R.string.bcharging),
+                                            summary = stringResource(R.string.enable_bypass_charge_desc),
+                                            items = booleanModes,
+                                            selectedIndex = getBoolIndex(displayConfig.bypass_charging),
+                                            onItemSelected = { index ->
+                                                val value = listOf("default", "true", "false")[index]
+                                                packageName?.let { viewModel.updateSetting(it, "bypass_charging", value) }
+                                            }
+                                        )
+                                    }
                                 }
                                 add {
                                     ExpressiveDropdownItem(
