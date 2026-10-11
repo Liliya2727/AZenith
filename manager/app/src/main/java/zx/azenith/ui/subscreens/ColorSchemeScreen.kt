@@ -96,8 +96,28 @@ enum class ColorPreset(
     CUSTOM(R.string.custom, -1f, -1f, -1f, -1f)
 }
 
+/**
+ * Which LazyColumn item holds each searchable row, so a search result can scroll
+ * to it. Positional: the list is built inline inside the screen and the rows
+ * carry no keys of their own.
+ */
+private val COLORS_ROW_ITEMS: Map<String, Int> = mapOf(
+    "colors.blue" to 5,
+    "colors.green" to 5,
+    "colors.presets" to 2,
+    "colors.red" to 5,
+    "colors.saturation" to 6,)
+
 @Composable
 fun ColorSchemeSettings(navController: NavController) {
+    val listState = rememberLazyListState()
+
+    // Search results land here: entry id -> the LazyColumn item
+    // holding that row.
+    val jumpPulse = listState.searchJumpTarget(
+        owns = { it.startsWith("colors.") },
+        indexOf = { id -> COLORS_ROW_ITEMS[id] }
+    )
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
@@ -184,6 +204,7 @@ fun ColorSchemeSettings(navController: NavController) {
             SkeletonPreviewTile(modifier = Modifier.padding(innerPadding))
         } else {
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize().hazePageSource(),
                 contentPadding = PaddingValues(
                     top = innerPadding.calculateTopPadding(),
@@ -228,7 +249,7 @@ fun ColorSchemeSettings(navController: NavController) {
                     }
                 }
 
-                item { PrefSectionTitle(stringResource(R.string.presets)) }
+                item { JumpRow(activeId = jumpPulse, entryId = "colors.presets", highlightShape = RoundedCornerShape(14.dp)) { PrefSectionTitle(stringResource(R.string.presets)) } }
 
                 item {
                     PresetSelectorItem(
@@ -259,46 +280,52 @@ fun ColorSchemeSettings(navController: NavController) {
                     ExpressiveList(
                         content = listOf(
                             { 
-                                ColorSliderItem(
-                                    label = stringResource(R.string.color_red),
-                                    summary = stringResource(R.string.color_red_desc),
-                                    value = redVal,
-                                    accentColor = Color(0xFFEF5350),
-                                    enabled = isCustomMode,
-                                    onValueChange = { 
-                                        redVal = it
-                                        applyRGB(redVal, greenVal, blueVal)
-                                    },
-                                    onFinish = { saveToProp() }
-                                )
+                                JumpRow(activeId = jumpPulse, entryId = "colors.red") {
+                                    ColorSliderItem(
+                                                                        label = stringResource(R.string.color_red),
+                                                                        summary = stringResource(R.string.color_red_desc),
+                                                                        value = redVal,
+                                                                        accentColor = Color(0xFFEF5350),
+                                                                        enabled = isCustomMode,
+                                                                        onValueChange = { 
+                                                                            redVal = it
+                                                                            applyRGB(redVal, greenVal, blueVal)
+                                                                        },
+                                                                        onFinish = { saveToProp() }
+                                                                    )
+                                }
                             },
                             { 
-                                ColorSliderItem(
-                                    label = stringResource(R.string.color_green),
-                                    summary = stringResource(R.string.color_green_desc),
-                                    value = greenVal,
-                                    accentColor = Color(0xFF66BB6A),
-                                    enabled = isCustomMode,
-                                    onValueChange = { 
-                                        greenVal = it
-                                        applyRGB(redVal, greenVal, blueVal)
-                                    },
-                                    onFinish = { saveToProp() }
-                                )
+                                JumpRow(activeId = jumpPulse, entryId = "colors.green") {
+                                    ColorSliderItem(
+                                                                        label = stringResource(R.string.color_green),
+                                                                        summary = stringResource(R.string.color_green_desc),
+                                                                        value = greenVal,
+                                                                        accentColor = Color(0xFF66BB6A),
+                                                                        enabled = isCustomMode,
+                                                                        onValueChange = { 
+                                                                            greenVal = it
+                                                                            applyRGB(redVal, greenVal, blueVal)
+                                                                        },
+                                                                        onFinish = { saveToProp() }
+                                                                    )
+                                }
                             },
                             { 
-                                ColorSliderItem(
-                                    label = stringResource(R.string.color_blue),
-                                    summary = stringResource(R.string.color_blue_desc),
-                                    value = blueVal,
-                                    accentColor = Color(0xFF42A5F5),
-                                    enabled = isCustomMode,
-                                    onValueChange = { 
-                                        blueVal = it
-                                        applyRGB(redVal, greenVal, blueVal)
-                                    },
-                                    onFinish = { saveToProp() }
-                                )
+                                JumpRow(activeId = jumpPulse, entryId = "colors.blue") {
+                                    ColorSliderItem(
+                                                                        label = stringResource(R.string.color_blue),
+                                                                        summary = stringResource(R.string.color_blue_desc),
+                                                                        value = blueVal,
+                                                                        accentColor = Color(0xFF42A5F5),
+                                                                        enabled = isCustomMode,
+                                                                        onValueChange = { 
+                                                                            blueVal = it
+                                                                            applyRGB(redVal, greenVal, blueVal)
+                                                                        },
+                                                                        onFinish = { saveToProp() }
+                                                                    )
+                                }
                             }
                         )
                     )
@@ -310,18 +337,20 @@ fun ColorSchemeSettings(navController: NavController) {
                     ExpressiveList(
                         content = listOf(
                             { 
-                                ColorSliderItem(
-                                    label = stringResource(R.string.color_saturation),
-                                    summary = stringResource(R.string.color_saturation_desc),
-                                    value = satVal,
-                                    accentColor = colorScheme.primary,
-                                    enabled = isCustomMode,
-                                    onValueChange = { 
-                                        satVal = it
-                                        applySat(satVal)
-                                    },
-                                    onFinish = { saveToProp() }
-                                )
+                                JumpRow(activeId = jumpPulse, entryId = "colors.saturation") {
+                                    ColorSliderItem(
+                                                                        label = stringResource(R.string.color_saturation),
+                                                                        summary = stringResource(R.string.color_saturation_desc),
+                                                                        value = satVal,
+                                                                        accentColor = colorScheme.primary,
+                                                                        enabled = isCustomMode,
+                                                                        onValueChange = { 
+                                                                            satVal = it
+                                                                            applySat(satVal)
+                                                                        },
+                                                                        onFinish = { saveToProp() }
+                                                                    )
+                                }
                             }
                         )
                     )

@@ -218,6 +218,13 @@ fun ColorPaletteScreen(navController: NavController) {
     // Collapsing keys off isScrollInProgress rather than the scroll offset because the header's
     // own height change reflows the list and would otherwise re-trigger itself immediately.
     val lazyListState = rememberLazyListState()
+
+    // Search results land here. Both LazyColumns render the same settingsItems,
+    // so an item index inside it is the item index in either list.
+    val jumpPulse = lazyListState.searchJumpTarget(
+        owns = { it.startsWith("pers.") },
+        indexOf = { id -> PERS_ROW_ITEMS[id] }
+    )
     var previewExpandedByTap by rememberSaveable { mutableStateOf(false) }
     val listScrolled by remember {
         derivedStateOf {
@@ -465,6 +472,7 @@ MockCardFrame(
                 }
 
                 LazyColumn(
+                    state = lazyListState,
                     modifier = Modifier
                         .weight(0.6f) 
                         .fillMaxHeight(),
@@ -486,6 +494,7 @@ MockCardFrame(
                         isBlurEnabled = isBlurEnabled,
                         isLandscape = true,
                         prefs = prefs,
+                        jumpPulse = jumpPulse,
                         onColorModeChange = onColorModeChange,
                         onKeyColorChange = onKeyColorChange,
                         onColorSpecChange = onColorSpecChange,
@@ -581,6 +590,7 @@ MockCardFrame(
                             customBannerUri = customBannerUri,
                             isLandscape = false,
                             prefs = prefs,
+                            jumpPulse = jumpPulse,
                             onColorModeChange = onColorModeChange,
                             onKeyColorChange = onKeyColorChange,
                             onColorSpecChange = onColorSpecChange,
@@ -633,6 +643,30 @@ private fun specLabelRes(spec: ColorEngine): Int = when (spec) {
 
 }
 
+/**
+ * Which LazyColumn item holds each searchable Personalization row. Positional:
+ * settingsItems builds the list inline and the rows carry no keys. Both
+ * LazyColumns render settingsItems as their whole content, so the index inside
+ * it is the index in either list.
+ */
+private val PERS_ROW_ITEMS: Map<String, Int> = mapOf(
+    "pers.section_colors" to 0,
+    "pers.accent_intensity" to 0,
+    "pers.roundness" to 1,
+    "pers.text_scale" to 1,
+    "pers.section_interface" to 2,
+    "pers.nav_floating" to 2,
+    "pers.nav_shape" to 2,
+    "pers.nav_spacing" to 2,
+    "pers.nav_size" to 2,
+    "pers.nav_vibrant" to 2,
+    "pers.nav_labels" to 2,
+    "pers.banner" to 2,
+    "pers.banner_shape" to 2,
+    "pers.blur" to 2,
+    "pers.scroll_animation" to 2
+)
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     currentColorMode: ColorMode,
@@ -648,6 +682,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     isBlurEnabled: Boolean,
     isLandscape: Boolean,
     prefs: android.content.SharedPreferences,
+    jumpPulse: String?,
     onColorModeChange: (ColorMode) -> Unit,
     onKeyColorChange: (Int) -> Unit,
     onColorSpecChange: (ColorEngine) -> Unit,
@@ -670,6 +705,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
             LookAndFeelSection(
                 pers = personalization,
                 onPersonalizationChange = onPersonalizationChange,
+                activeId = jumpPulse,
+                entryId = "pers.section_colors",
                 // Colour controls live in the section's Colour group so the spec
                 // picker, the accent swatches, accent intensity and contrast read as
                 // one cluster instead of being split by the section boundary.
@@ -768,11 +805,15 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
     }
 
     item {
-        SettingsGroup(titleRes = R.string.pers_shape_group, icon = Icons.Filled.RoundedCorner) {
+        SettingsGroup(
+            titleRes = R.string.pers_shape_group,
+            icon = Icons.Filled.RoundedCorner
+        ) {
             ExpressiveColumn(
                 content = buildList {
                     add {
                         CardItem {
+                            JumpRow(activeId = jumpPulse, entryId = "pers.roundness") {
                             LabeledSlider(
                                 icon = Icons.Filled.BorderAll,
                                 label = stringResource(R.string.pers_roundness),
@@ -784,10 +825,12 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                 resetDefault = CENTER,
                                 onValueChange = { onPersonalizationChange(personalization.copy(roundness = it)) }
                             )
+                            }
                         }
                     }
                     add {
                         CardItem {
+                            JumpRow(activeId = jumpPulse, entryId = "pers.text_scale") {
                             LabeledSlider(
                                 icon = Icons.Filled.FormatSize,
                                 label = stringResource(R.string.pers_text_scale),
@@ -800,6 +843,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                 valueTextOf = { "${(it * 100).toInt()}%" },
                                 onValueChange = { onPersonalizationChange(personalization.copy(textScale = it)) }
                             )
+                            }
                         }
                     }
                 }
@@ -811,74 +855,87 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
         val enter = expandVertically(animationSpec = tween(400)) + fadeIn(animationSpec = tween(400))
         val exit = shrinkVertically(animationSpec = tween(400)) + fadeOut(animationSpec = tween(400))
     
-        SettingsGroup(titleRes = R.string.str_interface, icon = Icons.Filled.AutoAwesome) {
+        SettingsGroup(
+            titleRes = R.string.str_interface,
+            icon = Icons.Filled.AutoAwesome,
+            activeId = jumpPulse,
+            entryId = "pers.section_interface"
+        ) {
             ExpressiveColumn(
                 content = buildList {
                     add {
-                        ExpressiveSwitchItem(
-                            icon = Icons.Filled.ViewAgenda,
-                            title = stringResource(R.string.pers_nav_floating),
-                            summary = stringResource(R.string.pers_navbar_summary),
-                            checked = personalization.navStyle == NavStyle.Floating,
-                            onCheckedChange = { onPersonalizationChange(personalization.copy(navStyle = if (it) NavStyle.Floating else NavStyle.Pinned)) }
-                        )
+                        JumpRow(activeId = jumpPulse, entryId = "pers.nav_floating") {
+                            ExpressiveSwitchItem(
+                                                        icon = Icons.Filled.ViewAgenda,
+                                                        title = stringResource(R.string.pers_nav_floating),
+                                                        summary = stringResource(R.string.pers_navbar_summary),
+                                                        checked = personalization.navStyle == NavStyle.Floating,
+                                                        onCheckedChange = { onPersonalizationChange(personalization.copy(navStyle = if (it) NavStyle.Floating else NavStyle.Pinned)) }
+                                                    )
+                        }
                     }
                     add {
                         CardItem {
-                            LabeledSlider(
-                                icon = Icons.Filled.HorizontalRule,
-                                label = stringResource(R.string.pers_nav_shape),
-                                value = personalization.navRadius,
-                                valueText = cornerLabel(personalization.navRadius, NAV_CENTER),
-                                valueRange = 0f..1f,
-                                steps = 0,
-                                snapTo = NAV_CENTER,
-                                resetDefault = NAV_CENTER,
-                                onValueChange = { onPersonalizationChange(personalization.copy(navRadius = it)) }
-                            )
+                            JumpRow(activeId = jumpPulse, entryId = "pers.nav_shape") {
+                                LabeledSlider(
+                                                                icon = Icons.Filled.HorizontalRule,
+                                                                label = stringResource(R.string.pers_nav_shape),
+                                                                value = personalization.navRadius,
+                                                                valueText = cornerLabel(personalization.navRadius, NAV_CENTER),
+                                                                valueRange = 0f..1f,
+                                                                steps = 0,
+                                                                snapTo = NAV_CENTER,
+                                                                resetDefault = NAV_CENTER,
+                                                                onValueChange = { onPersonalizationChange(personalization.copy(navRadius = it)) }
+                                                            )
+                            }
                         }
                     }
     
                     add {
                         CardItem {
-                            LabeledSlider(
-                                value = personalization.navSpacing,
-                                onValueChange = {
-                                    onPersonalizationChange(personalization.copy(navSpacing = it))
-                                },
-                                valueText = "${(personalization.navSpacing * 100).toInt()}%",
-                                valueRange = NAV_SPACING_MIN..NAV_SPACING_MAX,
-                                icon = Icons.Filled.HorizontalRule,
-                                label = stringResource(R.string.pers_nav_spacing),
-                                steps = 0,
-                                snapTo = 1f,
-                                resetDefault = 1f,
-                                commitOnRelease = true,
-                                valueTextOf = { "${(it * 100).toInt()}%" }
-                            )
+                            JumpRow(activeId = jumpPulse, entryId = "pers.nav_spacing") {
+                                LabeledSlider(
+                                                                value = personalization.navSpacing,
+                                                                onValueChange = {
+                                                                    onPersonalizationChange(personalization.copy(navSpacing = it))
+                                                                },
+                                                                valueText = "${(personalization.navSpacing * 100).toInt()}%",
+                                                                valueRange = NAV_SPACING_MIN..NAV_SPACING_MAX,
+                                                                icon = Icons.Filled.HorizontalRule,
+                                                                label = stringResource(R.string.pers_nav_spacing),
+                                                                steps = 0,
+                                                                snapTo = 1f,
+                                                                resetDefault = 1f,
+                                                                commitOnRelease = true,
+                                                                valueTextOf = { "${(it * 100).toInt()}%" }
+                                                            )
+                            }
                         }
                     }
 
                     add {
                         CardItem {
-                            LabeledSlider(
-                                value = personalization.navScale,
-                                onValueChange = {
-                                    onPersonalizationChange(personalization.copy(navScale = it))
-                                },
-                                valueText = "${navScalePercent(personalization.navScale)}%",
-                                valueRange = NAV_SCALE_MIN..NAV_SCALE_MAX,
-                                icon = Icons.Outlined.Straighten,
-                                label = stringResource(R.string.pers_nav_size),
-                                steps = 0,
-                                snapTo = NAV_SCALE_DEFAULT,
-                                resetDefault = NAV_SCALE_DEFAULT,
-                                // Resizing the bar on every drag frame re-lays out four
-                                // icons plus the row, which stutters; the release
-                                // applies it once.
-                                commitOnRelease = true,
-                                valueTextOf = { "${navScalePercent(it)}%" }
-                            )
+                            JumpRow(activeId = jumpPulse, entryId = "pers.nav_size") {
+                                LabeledSlider(
+                                                                value = personalization.navScale,
+                                                                onValueChange = {
+                                                                    onPersonalizationChange(personalization.copy(navScale = it))
+                                                                },
+                                                                valueText = "${navScalePercent(personalization.navScale)}%",
+                                                                valueRange = NAV_SCALE_MIN..NAV_SCALE_MAX,
+                                                                icon = Icons.Outlined.Straighten,
+                                                                label = stringResource(R.string.pers_nav_size),
+                                                                steps = 0,
+                                                                snapTo = NAV_SCALE_DEFAULT,
+                                                                resetDefault = NAV_SCALE_DEFAULT,
+                                                                // Resizing the bar on every drag frame re-lays out four
+                                                                // icons plus the row, which stutters; the release
+                                                                // applies it once.
+                                                                commitOnRelease = true,
+                                                                valueTextOf = { "${navScalePercent(it)}%" }
+                                                            )
+                            }
                         }
                     }
 
@@ -887,30 +944,33 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                         // under it is invisible at best. Blur wins and the switch
                         // turns itself off rather than refusing the change.
                         val vibrantBlocked = isBlurEnabled
-                        ExpressiveSwitchItem(
-                            icon = Icons.Outlined.Palette,
-                            title = stringResource(R.string.pers_nav_vibrant),
-                            summary = stringResource(
-                                if (vibrantBlocked) R.string.pers_nav_vibrant_summary_blur
-                                else R.string.pers_nav_vibrant_summary
-                            ),
-                            checked = personalization.vibrantNav && !vibrantBlocked,
-                            enabled = !vibrantBlocked,
-                            onDisabledClick = {
-                                coroutineScope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        context.getString(R.string.pers_nav_vibrant_blur_conflict)
-                                    )
-                                }
-                            },
-                            onCheckedChange = {
-                                onPersonalizationChange(personalization.copy(vibrantNav = it))
-                            }
-                        )
+                        JumpRow(activeId = jumpPulse, entryId = "pers.nav_vibrant") {
+                            ExpressiveSwitchItem(
+                                                        icon = Icons.Outlined.Palette,
+                                                        title = stringResource(R.string.pers_nav_vibrant),
+                                                        summary = stringResource(
+                                                            if (vibrantBlocked) R.string.pers_nav_vibrant_summary_blur
+                                                            else R.string.pers_nav_vibrant_summary
+                                                        ),
+                                                        checked = personalization.vibrantNav && !vibrantBlocked,
+                                                        enabled = !vibrantBlocked,
+                                                        onDisabledClick = {
+                                                            coroutineScope.launch {
+                                                                snackbarHostState.showSnackbar(
+                                                                    context.getString(R.string.pers_nav_vibrant_blur_conflict)
+                                                                )
+                                                            }
+                                                        },
+                                                        onCheckedChange = {
+                                                            onPersonalizationChange(personalization.copy(vibrantNav = it))
+                                                        }
+                                                    )
+                        }
                     }
 
                     add {
                         CardItem {
+                            JumpRow(activeId = jumpPulse, entryId = "pers.nav_labels") {
                             LabeledControl(Icons.Filled.Label, stringResource(R.string.pers_nav_labels))
                             ConnectedToggleRow(
                                 options = NavLabelMode.entries,
@@ -918,17 +978,20 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                 label = { stringResource(it.labelRes) },
                                 onSelect = { onPersonalizationChange(personalization.copy(navLabels = it)) }
                             )
+                            }
                         }
                     }
     
                     // Banner switch
                     add {
-                        ExpressiveSwitchItem(
-                            icon = Icons.Outlined.Image,
-                            title = stringResource(R.string.str_enable_banner),
-                            checked = isBannerEnabled,
-                            onCheckedChange = onBannerEnabledChange
-                        )
+                        JumpRow(activeId = jumpPulse, entryId = "pers.banner") {
+                            ExpressiveSwitchItem(
+                                                        icon = Icons.Outlined.Image,
+                                                        title = stringResource(R.string.str_enable_banner),
+                                                        checked = isBannerEnabled,
+                                                        onCheckedChange = onBannerEnabledChange
+                                                    )
+                        }
                     }
     
                     // Banner: pick / reset media
@@ -1040,6 +1103,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                     // Banner: corners (selalu tampil)
                     add {
                         CardItem {
+                            JumpRow(activeId = jumpPulse, entryId = "pers.banner_shape") {
                             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                                 LabeledControl(
                                     Icons.Filled.Rectangle,
@@ -1092,26 +1156,31 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                     )
                                 }
                             }
+                            }
                         }
                     }
     
                     add {
-                        ExpressiveSwitchItem(
-                            icon = Icons.Filled.BlurOn,
-                            title = stringResource(R.string.str_expressive_blur),
-                            summary = stringResource(R.string.str_expressive_blur_summary),
-                            checked = isBlurEnabled,
-                            onCheckedChange = onBlurEnabledChange
-                        )
+                        JumpRow(activeId = jumpPulse, entryId = "pers.blur") {
+                            ExpressiveSwitchItem(
+                                                        icon = Icons.Filled.BlurOn,
+                                                        title = stringResource(R.string.str_expressive_blur),
+                                                        summary = stringResource(R.string.str_expressive_blur_summary),
+                                                        checked = isBlurEnabled,
+                                                        onCheckedChange = onBlurEnabledChange
+                                                    )
+                        }
                     }
                     add {
-                        ExpressiveSwitchItem(
-                            icon = Icons.Filled.SwipeRight,
-                            title = stringResource(R.string.str_use_scroll_animation),
-                            summary = stringResource(R.string.str_use_scroll_animation_summary),
-                            checked = useScrollAnimation,
-                            onCheckedChange = onUseScrollAnimationChange
-                        )
+                        JumpRow(activeId = jumpPulse, entryId = "pers.scroll_animation") {
+                            ExpressiveSwitchItem(
+                                                        icon = Icons.Filled.SwipeRight,
+                                                        title = stringResource(R.string.str_use_scroll_animation),
+                                                        summary = stringResource(R.string.str_use_scroll_animation_summary),
+                                                        checked = useScrollAnimation,
+                                                        onCheckedChange = onUseScrollAnimationChange
+                                                    )
+                        }
                     }
                 }
             )

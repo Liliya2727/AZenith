@@ -101,6 +101,32 @@ import zx.azenith.ui.viewmodel.TweakViewModel
 import zx.azenith.ui.component.ZenithSlider
 
 
+/**
+ * Which LazyColumn item holds each searchable row, so a search result can scroll
+ * to it. Positional: the list is built inline and the rows carry no keys of their
+ * own. Sections are in here too -- a heading is a legitimate landing spot.
+ */
+private val TWEAK_ROW_ITEMS: Map<String, Int> = mapOf(
+    "tweaks.app_priority" to 4,
+    "tweaks.bypass_charge" to 7,
+    "tweaks.colors" to 9,
+    "tweaks.dnd" to 4,
+    "tweaks.fpsgo" to 2,
+    "tweaks.fstrim" to 4,
+    "tweaks.game_preload" to 4,
+    "tweaks.governors" to 4,
+    "tweaks.memory_killer" to 4,
+    "tweaks.perf_lite" to 2,
+    "tweaks.prefs" to 9,
+    "tweaks.refresh_rate" to 5,
+    "tweaks.renderer" to 5,
+    "tweaks.section_additional" to 3,
+    "tweaks.section_addons" to 8,
+    "tweaks.section_performance" to 1,
+    "tweaks.section_power_thermal" to 6,
+    "tweaks.thermalcore" to 7,
+)
+
 @Composable
 fun TweakScreen(
     navController: NavController,
@@ -115,6 +141,14 @@ fun TweakScreen(
     val settingsPrefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
     val blurOn = settingsPrefs.getBoolean("expressive_blur_ui", false)
     val scaffoldColor = ScaffoldContainerColor(MaterialTheme.colorScheme.surface)
+
+    // Search results land here: entry id -> the LazyColumn item holding that row.
+    // Item indices, not titles, because the list is built inline and the rows
+    // are only addressable by position.
+    val jumpPulse = listState.searchJumpTarget(
+        owns = { it.startsWith("tweaks.") },
+        indexOf = { id -> TWEAK_ROW_ITEMS[id] }
+    )
     var showBackupRestoreSheet by remember { mutableStateOf(false) }
     var showRendererDialog by remember { mutableStateOf(false) }
     val rendererOrigin = rememberDialogOrigin()
@@ -249,7 +283,7 @@ fun TweakScreen(
                 )
             }
 
-            item { TweaksSectionTitle(text = stringResource(R.string.section_performance)) }
+            item { JumpRow(activeId = jumpPulse, entryId = "tweaks.section_performance", highlightShape = RoundedCornerShape(14.dp)) { TweaksSectionTitle(text = stringResource(R.string.section_performance)) } }
             item {
                 var socType by remember { mutableStateOf<String?>(null) }
                 LaunchedEffect(Unit) {
@@ -261,34 +295,38 @@ fun TweakScreen(
                     ExpressiveList(
                         content = listOf(
                             {
-                                ExpressiveSwitchItem(
-                                    icon = Icons.Rounded.Speed,
-                                    title = stringResource(R.string.perf_lite_mode),
-                                    summary = stringResource(R.string.perf_lite_mode_desc),
-                                    checked = viewModel.liteState!!,
-                                    onCheckedChange = { viewModel.updateLiteMode(it) }
-                                )
+                                JumpRow(activeId = jumpPulse, entryId = "tweaks.perf_lite") {
+                                    ExpressiveSwitchItem(
+                                        icon = Icons.Rounded.Speed,
+                                        title = stringResource(R.string.perf_lite_mode),
+                                        summary = stringResource(R.string.perf_lite_mode_desc),
+                                        checked = viewModel.liteState!!,
+                                        onCheckedChange = { viewModel.updateLiteMode(it) }
+                                    )
+                                }
                             },
                             {
-                                Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
-                                    ExpressiveListItem(
-                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Speed) },
-                                        onClick = { 
-                                            if (isMediaTek) {
-                                                navController.navigate("fpsgoscreen") 
-                                            }
-                                        },
-                                        headlineContent = { Text(text = stringResource(R.string.str_fpsgo_settings)) },
-                                        supportingContent = { 
-                                            Text(
-                                                text = if (isMediaTek) 
-                                                    stringResource(R.string.str_fpsgo_desc) 
-                                                else 
-                                                    stringResource(R.string.str_fpsgo_unavailable)
-                                            ) 
-                                        },
-                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                    )
+                                JumpRow(activeId = jumpPulse, entryId = "tweaks.fpsgo") {
+                                    Box(modifier = Modifier.alpha(if (isMediaTek) 1f else 0.4f)) {
+                                        ExpressiveListItem(
+                                            leadingContent = { LeadingIcon(icon = Icons.Filled.Speed) },
+                                            onClick = { 
+                                                if (isMediaTek) {
+                                                    navController.navigate("fpsgoscreen") 
+                                                }
+                                            },
+                                            headlineContent = { Text(text = stringResource(R.string.str_fpsgo_settings)) },
+                                            supportingContent = { 
+                                                Text(
+                                                    text = if (isMediaTek) 
+                                                        stringResource(R.string.str_fpsgo_desc) 
+                                                    else 
+                                                        stringResource(R.string.str_fpsgo_unavailable)
+                                                ) 
+                                            },
+                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                        )
+                                    }
                                 }
                             }
                         )
@@ -298,7 +336,7 @@ fun TweakScreen(
                 }
             }
 
-            item { TweaksSectionTitle(stringResource(R.string.section_additionalsettings)) }
+            item { JumpRow(activeId = jumpPulse, entryId = "tweaks.section_additional", highlightShape = RoundedCornerShape(14.dp)) { TweaksSectionTitle(stringResource(R.string.section_additionalsettings)) } }
             item {
                 if (viewModel.preloadState != null && 
                     viewModel.memKillerState != null && 
@@ -308,64 +346,76 @@ fun TweakScreen(
                     ExpressiveList(
                         content = buildList {
                             add {
-                                ExpressiveSwitchItem(
-                                    icon = Icons.Rounded.RocketLaunch,
-                                    title = stringResource(R.string.game_preload),
-                                    summary = stringResource(R.string.game_preload_desc),
-                                    checked = viewModel.preloadState!!,
-                                    onCheckedChange = { viewModel.updatePreloadMode(it) }
-                                )
-                            }
-                            if (isFullModeEnabled) {
-                                add {
+                                JumpRow(activeId = jumpPulse, entryId = "tweaks.game_preload") {
                                     ExpressiveSwitchItem(
-                                        icon = Icons.Rounded.CleaningServices,
-                                        title = stringResource(R.string.memory_killer),
-                                        summary = stringResource(R.string.memory_killer_desc),
-                                        checked = viewModel.memKillerState!!,
-                                        onCheckedChange = { viewModel.updateMemoryKiller(it) }
+                                        icon = Icons.Rounded.RocketLaunch,
+                                        title = stringResource(R.string.game_preload),
+                                        summary = stringResource(R.string.game_preload_desc),
+                                        checked = viewModel.preloadState!!,
+                                        onCheckedChange = { viewModel.updatePreloadMode(it) }
                                     )
                                 }
                             }
                             if (isFullModeEnabled) {
                                 add {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Rounded.SwapVerticalCircle,
-                                        title = stringResource(R.string.app_priority_control),
-                                        summary = stringResource(R.string.app_priority_control_desc),
-                                        checked = viewModel.appPriorState!!,
-                                        onCheckedChange = { viewModel.updateAppPriority(it) }
-                                    )
+                                    JumpRow(activeId = jumpPulse, entryId = "tweaks.memory_killer") {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Rounded.CleaningServices,
+                                            title = stringResource(R.string.memory_killer),
+                                            summary = stringResource(R.string.memory_killer_desc),
+                                            checked = viewModel.memKillerState!!,
+                                            onCheckedChange = { viewModel.updateMemoryKiller(it) }
+                                        )
+                                    }
                                 }
-                            }
-                            add {
-                                ExpressiveSwitchItem(
-                                    icon = Icons.Rounded.DoNotDisturbOn,
-                                    title = stringResource(R.string.dnd_mode_gaming),
-                                    summary = stringResource(R.string.dnd_mode_gaming_desc),
-                                    checked = viewModel.dndState!!,
-                                    onCheckedChange = { viewModel.updateDndMode(it) }
-                                )
                             }
                             if (isFullModeEnabled) {
                                 add {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Outlined.ContentCut,
-                                        title = stringResource(R.string.trim_filesystem),
-                                        summary = stringResource(R.string.trim_filesystem_desc),
-                                        checked = viewModel.fstrimState!!,
-                                        onCheckedChange = { viewModel.updateFstrim(it) }
-                                    )
+                                    JumpRow(activeId = jumpPulse, entryId = "tweaks.app_priority") {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Rounded.SwapVerticalCircle,
+                                            title = stringResource(R.string.app_priority_control),
+                                            summary = stringResource(R.string.app_priority_control_desc),
+                                            checked = viewModel.appPriorState!!,
+                                            onCheckedChange = { viewModel.updateAppPriority(it) }
+                                        )
+                                    }
                                 }
                             }
                             add {
-                                ExpressiveListItem(
-                                    leadingContent = { LeadingIcon(icon = Icons.Filled.Ballot) },
-                                    onClick = { navController.navigate("governorsettings") },
-                                    headlineContent = { Text(stringResource(R.string.gov_settings)) },
-                                    supportingContent = { Text(stringResource(R.string.gov_settingsdesc)) },
-                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                )
+                                JumpRow(activeId = jumpPulse, entryId = "tweaks.dnd") {
+                                    ExpressiveSwitchItem(
+                                        icon = Icons.Rounded.DoNotDisturbOn,
+                                        title = stringResource(R.string.dnd_mode_gaming),
+                                        summary = stringResource(R.string.dnd_mode_gaming_desc),
+                                        checked = viewModel.dndState!!,
+                                        onCheckedChange = { viewModel.updateDndMode(it) }
+                                    )
+                                }
+                            }
+                            if (isFullModeEnabled) {
+                                add {
+                                    JumpRow(activeId = jumpPulse, entryId = "tweaks.fstrim") {
+                                        ExpressiveSwitchItem(
+                                            icon = Icons.Outlined.ContentCut,
+                                            title = stringResource(R.string.trim_filesystem),
+                                            summary = stringResource(R.string.trim_filesystem_desc),
+                                            checked = viewModel.fstrimState!!,
+                                            onCheckedChange = { viewModel.updateFstrim(it) }
+                                        )
+                                    }
+                                }
+                            }
+                            add {
+                                JumpRow(activeId = jumpPulse, entryId = "tweaks.governors") {
+                                    ExpressiveListItem(
+                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Ballot) },
+                                        onClick = { navController.navigate("governorsettings") },
+                                        headlineContent = { Text(stringResource(R.string.gov_settings)) },
+                                        supportingContent = { Text(stringResource(R.string.gov_settingsdesc)) },
+                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                    )
+                                }
                             }
                         }
                     )
@@ -375,37 +425,48 @@ fun TweakScreen(
             }
 
             item {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 if (viewModel.currentRefreshRate != null && viewModel.currentRenderer != null) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-     ExpressiveTile(
-         modifier = Modifier.weight(1f).then(refreshRateOrigin.trackedModifier()),
-         icon = Icons.Rounded.WebStories,
-                            label = stringResource(R.string.refreshrates),
-                            value = stringResource(R.string.refresh_rate_format, viewModel.currentRefreshRate.toString()),
-                            showArrow = isFullModeEnabled,
-                            highlight = isFullModeEnabled,
-                            isLoading = viewModel.isRefreshRateLoading
+                        JumpRow(
+                            activeId = jumpPulse,
+                            entryId = "tweaks.refresh_rate",
+                            modifier = Modifier.weight(1f).then(refreshRateOrigin.trackedModifier())
                         ) {
-                            showRefreshRateDialog = isFullModeEnabled
+                            ExpressiveTile(
+                                modifier = Modifier.fillMaxWidth(),
+                                icon = Icons.Rounded.WebStories,
+                                label = stringResource(R.string.refreshrates),
+                                value = stringResource(R.string.refresh_rate_format, viewModel.currentRefreshRate.toString()),
+                                showArrow = isFullModeEnabled,
+                                highlight = isFullModeEnabled,
+                                isLoading = viewModel.isRefreshRateLoading
+                            ) {
+                                showRefreshRateDialog = isFullModeEnabled
+                            }
                         }
 
-                        ExpressiveTile(
-                            modifier = Modifier.weight(1f).then(rendererOrigin.trackedModifier()),
-                            icon = Icons.Rounded.SettingsSuggest,
-                            label = stringResource(R.string.renderengine),
-                            value = viewModel.currentRenderer!!.let { r ->
-                                if (r.startsWith("Default")) stringResource(R.string.Renderer_Default) + r.removePrefix("Default") else r
-                            }.uppercase(),
-                            showArrow = true,
-                            highlight = true,
-                            isLoading = viewModel.isRendererLoading
+                        JumpRow(
+                            activeId = jumpPulse,
+                            entryId = "tweaks.renderer",
+                            modifier = Modifier.weight(1f).then(rendererOrigin.trackedModifier())
                         ) {
-                            showRendererDialog = true
+                            ExpressiveTile(
+                                modifier = Modifier.fillMaxWidth(),
+                                icon = Icons.Rounded.SettingsSuggest,
+                                label = stringResource(R.string.renderengine),
+                                value = viewModel.currentRenderer!!.let { r ->
+                                    if (r.startsWith("Default")) stringResource(R.string.Renderer_Default) + r.removePrefix("Default") else r
+                                }.uppercase(),
+                                showArrow = true,
+                                highlight = true,
+                                isLoading = viewModel.isRendererLoading
+                            ) {
+                                showRendererDialog = true
+                            }
                         }
                     }
                 } else {
@@ -413,28 +474,32 @@ fun TweakScreen(
                 }
             }
 
-            item { TweaksSectionTitle(text = stringResource(R.string.section_power_thermal)) }
+            item { JumpRow(activeId = jumpPulse, entryId = "tweaks.section_power_thermal", highlightShape = RoundedCornerShape(14.dp)) { TweaksSectionTitle(text = stringResource(R.string.section_power_thermal)) } }
             item {
                 if (viewModel.thermalState != null) {
                     ExpressiveList(
                         content = listOf(
                             {
-                                ExpressiveListItem(
-                                    leadingContent = { LeadingIcon(icon = Icons.Filled.Cable) },
-                                    onClick = { navController.navigate("bypasschg") },
-                                    headlineContent = { Text(stringResource(R.string.bcharging)) },
-                                    supportingContent = { Text(stringResource(R.string.bcharging_desc)) },
-                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                )
+                                JumpRow(activeId = jumpPulse, entryId = "tweaks.bypass_charge") {
+                                    ExpressiveListItem(
+                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Cable) },
+                                        onClick = { navController.navigate("bypasschg") },
+                                        headlineContent = { Text(stringResource(R.string.bcharging)) },
+                                        supportingContent = { Text(stringResource(R.string.bcharging_desc)) },
+                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                    )
+                                }
                             },
                             {
-                                ExpressiveSwitchItem(                                        
-                                    icon = Icons.Filled.ThermostatAuto,
-                                    title = stringResource(R.string.thermalcore_service),
-                                    summary = stringResource(R.string.thermalcore_service_desc),
-                                    checked = viewModel.thermalState!!,
-                                    onCheckedChange = { viewModel.updateThermalCore(it) }
-                                )
+                                JumpRow(activeId = jumpPulse, entryId = "tweaks.thermalcore") {
+                                    ExpressiveSwitchItem(
+                                        icon = Icons.Filled.ThermostatAuto,
+                                        title = stringResource(R.string.thermalcore_service),
+                                        summary = stringResource(R.string.thermalcore_service_desc),
+                                        checked = viewModel.thermalState!!,
+                                        onCheckedChange = { viewModel.updateThermalCore(it) }
+                                    )
+                                }
                             }
                         )
                     )
@@ -443,27 +508,31 @@ fun TweakScreen(
                 }
             }
 
-            item { TweaksSectionTitle(stringResource(R.string.section_addons)) }
+            item { JumpRow(activeId = jumpPulse, entryId = "tweaks.section_addons", highlightShape = RoundedCornerShape(14.dp)) { TweaksSectionTitle(stringResource(R.string.section_addons)) } }
             item {
                 ExpressiveList(
                     content = listOf(
                         {
-                            ExpressiveListItem(
-                                leadingContent = { LeadingIcon(icon = Icons.Filled.FilterBAndW) },
-                                onClick = { navController.navigate("colorscheme") },
-                                headlineContent = { Text(stringResource(R.string.color_scheme)) },
-                                supportingContent = { Text(stringResource(R.string.schemecolordesc)) },
-                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                            )
+                            JumpRow(activeId = jumpPulse, entryId = "tweaks.colors") {
+                                ExpressiveListItem(
+                                    leadingContent = { LeadingIcon(icon = Icons.Filled.FilterBAndW) },
+                                    onClick = { navController.navigate("colorscheme") },
+                                    headlineContent = { Text(stringResource(R.string.color_scheme)) },
+                                    supportingContent = { Text(stringResource(R.string.schemecolordesc)) },
+                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                )
+                            }
                         },
                         {
-                            ExpressiveListItem(
-                                leadingContent = { LeadingIcon(icon = Icons.Filled.AddToPhotos) },
-                                onClick = { navController.navigate("preferenced") },
-                                headlineContent = { Text(stringResource(R.string.prefs)) },
-                                supportingContent = { Text(stringResource(R.string.prefsdesc)) },
-                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                            )
+                            JumpRow(activeId = jumpPulse, entryId = "tweaks.prefs") {
+                                ExpressiveListItem(
+                                    leadingContent = { LeadingIcon(icon = Icons.Filled.AddToPhotos) },
+                                    onClick = { navController.navigate("preferenced") },
+                                    headlineContent = { Text(stringResource(R.string.prefs)) },
+                                    supportingContent = { Text(stringResource(R.string.prefsdesc)) },
+                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                )
+                            }
                         }
                     )
                 )

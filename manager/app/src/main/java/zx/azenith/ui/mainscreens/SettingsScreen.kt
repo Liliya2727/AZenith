@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -79,6 +80,28 @@ fun isLauncherIconEnabled(context: Context): Boolean {
     return state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
 }
 
+/**
+ * Which LazyColumn item holds each searchable row, so a search result can scroll
+ * to it. Positional: the list is built inline and the rows carry no keys of their
+ * own. Sections are in here too -- a heading is a legitimate landing spot.
+ */
+private val SETTINGS_ROW_ITEMS: Map<String, Int> = mapOf(
+    "settings.about" to 6,
+    "settings.disable_auto_mode" to 2,
+    "settings.disable_tweak" to 2,
+    "settings.profile_notifications" to 2,
+    "settings.profile_timeout" to 2,
+    "settings.restart_service" to 4,
+    "settings.save_log" to 4,
+    "settings.section_features" to 1,
+    "settings.section_others" to 3,
+    "settings.show_icon" to 4,
+    "settings.show_toast" to 2,
+    "settings.tap_haptic" to 2,
+    "settings.uninstall" to 4,
+    "settings.verbose_log" to 4,
+)
+
 @Composable
 fun SettingsScreen(
     navController: NavController,
@@ -87,6 +110,13 @@ fun SettingsScreen(
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val listState = rememberLazyListState()
+
+    // Search results land here: entry id -> the LazyColumn item
+    // holding that row.
+    val jumpPulse = listState.searchJumpTarget(
+        owns = { it.startsWith("settings.") },
+        indexOf = { id -> SETTINGS_ROW_ITEMS[id] }
+    )
     
     var showLogBottomSheet by remember { mutableStateOf(false) }
     
@@ -250,67 +280,79 @@ fun SettingsScreen(
                     )
                 }
 
-                item { SettingsSectionTitle(stringResource(R.string.section_features)) }
+                item { JumpRow(activeId = jumpPulse, entryId = "settings.section_features", highlightShape = RoundedCornerShape(14.dp)) { SettingsSectionTitle(stringResource(R.string.section_features)) } }
 
                 item {
                     if (uiState.isLoaded) {
                         ExpressiveList(
                             content = listOf(
                                 {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Filled.Vibration,
-                                        title = stringResource(R.string.tap_haptic_feedback),
-                                        checked = uiState.tapHaptic,
-                                        onCheckedChange = settingsViewModel::onTapHapticToggle
-                                    )
+                                    JumpRow(activeId = jumpPulse, entryId = "settings.tap_haptic") {
+                                        ExpressiveSwitchItem(
+                                                                                icon = Icons.Filled.Vibration,
+                                                                                title = stringResource(R.string.tap_haptic_feedback),
+                                                                                checked = uiState.tapHaptic,
+                                                                                onCheckedChange = settingsViewModel::onTapHapticToggle
+                                                                            )
+                                    }
                                 },
                                 {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Filled.Notifications,
-                                        title = stringResource(R.string.show_toast),
-                                        checked = uiState.stateToast,
-                                        onCheckedChange = settingsViewModel::setShowToast
-                                    )
+                                    JumpRow(activeId = jumpPulse, entryId = "settings.show_toast") {
+                                        ExpressiveSwitchItem(
+                                                                                icon = Icons.Filled.Notifications,
+                                                                                title = stringResource(R.string.show_toast),
+                                                                                checked = uiState.stateToast,
+                                                                                onCheckedChange = settingsViewModel::setShowToast
+                                                                            )
+                                    }
                                 },
                                 {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Filled.NotificationsActive,
-                                        title = stringResource(R.string.show_notifications),
-                                        checked = uiState.profileNotifications,
-                                        onCheckedChange = settingsViewModel::setProfileNotifications
-                                    )
+                                    JumpRow(activeId = jumpPulse, entryId = "settings.profile_notifications") {
+                                        ExpressiveSwitchItem(
+                                                                                icon = Icons.Filled.NotificationsActive,
+                                                                                title = stringResource(R.string.show_notifications),
+                                                                                checked = uiState.profileNotifications,
+                                                                                onCheckedChange = settingsViewModel::setProfileNotifications
+                                                                            )
+                                    }
                                 },
                                 {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Filled.Assistant,
-                                        title = stringResource(R.string.disable_auto_mode),
-                                        summary = stringResource(R.string.disable_auto_mode_desc),
-                                        checked = uiState.autoMode,
-                                        onCheckedChange = settingsViewModel::setAutoMode
-                                    )
+                                    JumpRow(activeId = jumpPulse, entryId = "settings.disable_auto_mode") {
+                                        ExpressiveSwitchItem(
+                                                                                icon = Icons.Filled.Assistant,
+                                                                                title = stringResource(R.string.disable_auto_mode),
+                                                                                summary = stringResource(R.string.disable_auto_mode_desc),
+                                                                                checked = uiState.autoMode,
+                                                                                onCheckedChange = settingsViewModel::setAutoMode
+                                                                            )
+                                    }
                                 },
                                 {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Filled.DeveloperBoardOff,
-                                        title = stringResource(R.string.disable_tweak),
-                                        summary = stringResource(R.string.disable_tweak_desc),
-                                        checked = uiState.disableTweak,
-                                        onCheckedChange = { isChecked ->
-                                            toggleWithRebootCheck("disable_tweak", isChecked) {
-                                                settingsViewModel.setDisableTweak(isChecked)
-                                                RebootManager.checkAgainstBaseline("disable_tweak", isChecked)
-                                            }
-                                        }
-                                    )
+                                    JumpRow(activeId = jumpPulse, entryId = "settings.disable_tweak") {
+                                        ExpressiveSwitchItem(
+                                                                                icon = Icons.Filled.DeveloperBoardOff,
+                                                                                title = stringResource(R.string.disable_tweak),
+                                                                                summary = stringResource(R.string.disable_tweak_desc),
+                                                                                checked = uiState.disableTweak,
+                                                                                onCheckedChange = { isChecked ->
+                                                                                    toggleWithRebootCheck("disable_tweak", isChecked) {
+                                                                                        settingsViewModel.setDisableTweak(isChecked)
+                                                                                        RebootManager.checkAgainstBaseline("disable_tweak", isChecked)
+                                                                                    }
+                                                                                }
+                                                                            )
+                                    }
                                 },
                                 {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Filled.Timer,
-                                        title = stringResource(R.string.profile_timeout),
-                                        summary = stringResource(R.string.profile_timeout_desc),
-                                        checked = uiState.profileTimeout,
-                                        onCheckedChange = settingsViewModel::setProfileTimeout
-                                    )
+                                    JumpRow(activeId = jumpPulse, entryId = "settings.profile_timeout") {
+                                        ExpressiveSwitchItem(
+                                                                                icon = Icons.Filled.Timer,
+                                                                                title = stringResource(R.string.profile_timeout),
+                                                                                summary = stringResource(R.string.profile_timeout_desc),
+                                                                                checked = uiState.profileTimeout,
+                                                                                onCheckedChange = settingsViewModel::setProfileTimeout
+                                                                            )
+                                    }
                                 }
                             )
                         )
@@ -319,79 +361,89 @@ fun SettingsScreen(
                     }
                 }
 
-                item { SettingsSectionTitle(stringResource(R.string.section_others)) }
+                item { JumpRow(activeId = jumpPulse, entryId = "settings.section_others", highlightShape = RoundedCornerShape(14.dp)) { SettingsSectionTitle(stringResource(R.string.section_others)) } }
                 item {
                     if (uiState.isLoaded) {
                         ExpressiveList(
                             content = listOf(
                                 {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Rounded.AddHome,
-                                        title = stringResource(R.string.show_icon),
-                                        checked = isLauncherVisible,
-                                        onCheckedChange = { isChecked ->
-                                            isLauncherVisible = isChecked
-                                            val pkg = context.packageManager
-                                            val componentName = ComponentName(context.packageName, "${context.packageName}.Launcher")
-
-                                            val newState = if (isChecked) {
-                                                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                                            } else {
-                                                PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-                                            }
-
-                                            pkg.setComponentEnabledSetting(componentName, newState, PackageManager.DONT_KILL_APP)
-                                        }
-                                    )
+                                    JumpRow(activeId = jumpPulse, entryId = "settings.show_icon") {
+                                        ExpressiveSwitchItem(
+                                                                                icon = Icons.Rounded.AddHome,
+                                                                                title = stringResource(R.string.show_icon),
+                                                                                checked = isLauncherVisible,
+                                                                                onCheckedChange = { isChecked ->
+                                                                                    isLauncherVisible = isChecked
+                                                                                    val pkg = context.packageManager
+                                                                                    val componentName = ComponentName(context.packageName, "${context.packageName}.Launcher")
+                                        
+                                                                                    val newState = if (isChecked) {
+                                                                                        PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                                                                                    } else {
+                                                                                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                                                                                    }
+                                        
+                                                                                    pkg.setComponentEnabledSetting(componentName, newState, PackageManager.DONT_KILL_APP)
+                                                                                }
+                                                                            )
+                                    }
                                 },
                                 {
-                                    ExpressiveListItem(
-                                        onClick = {
-                                            Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service --rerun").submit { result ->
-                                                if (result.isSuccess) {
-                                                    coroutineScope.launch {
-                                                        snackbarHostState.showSnackbar(restartToastText)
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        headlineContent = { Text(stringResource(R.string.restart_service)) },
-                                        supportingContent = { Text(stringResource(R.string.restart_service_desc)) },
-                                        leadingContent = { LeadingIcon(icon = Icons.Filled.RestartAlt) },
-                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                    )
+                                    JumpRow(activeId = jumpPulse, entryId = "settings.restart_service") {
+                                        ExpressiveListItem(
+                                                                                onClick = {
+                                                                                    Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service --rerun").submit { result ->
+                                                                                        if (result.isSuccess) {
+                                                                                            coroutineScope.launch {
+                                                                                                snackbarHostState.showSnackbar(restartToastText)
+                                                                                            }
+                                                                                        }
+                                                                                    }
+                                                                                },
+                                                                                headlineContent = { Text(stringResource(R.string.restart_service)) },
+                                                                                supportingContent = { Text(stringResource(R.string.restart_service_desc)) },
+                                                                                leadingContent = { LeadingIcon(icon = Icons.Filled.RestartAlt) },
+                                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                                                            )
+                                    }
                                 },
                                 {
-                                    ExpressiveListItem(
-                                        onClick = { showLogBottomSheet = true },
-                                        headlineContent = { Text(stringResource(R.string.save_log)) },
-                                        supportingContent = { Text(stringResource(R.string.save_log_desc)) },
-                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Save) },
-                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                    )
+                                    JumpRow(activeId = jumpPulse, entryId = "settings.save_log") {
+                                        ExpressiveListItem(
+                                                                                onClick = { showLogBottomSheet = true },
+                                                                                headlineContent = { Text(stringResource(R.string.save_log)) },
+                                                                                supportingContent = { Text(stringResource(R.string.save_log_desc)) },
+                                                                                leadingContent = { LeadingIcon(icon = Icons.Filled.Save) },
+                                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                                                            )
+                                    }
                                 },
                                 {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.Filled.BugReport,
-                                        title = stringResource(R.string.allow_verbose_log),
-                                        checked = uiState.debugMode,
-                                        onCheckedChange = settingsViewModel::setDebugMode
-                                    )
+                                    JumpRow(activeId = jumpPulse, entryId = "settings.verbose_log") {
+                                        ExpressiveSwitchItem(
+                                                                                icon = Icons.Filled.BugReport,
+                                                                                title = stringResource(R.string.allow_verbose_log),
+                                                                                checked = uiState.debugMode,
+                                                                                onCheckedChange = settingsViewModel::setDebugMode
+                                                                            )
+                                    }
                                 },
                                 {
-                                    ExpressiveListItem(
-                                        onClick = {
-                                            uninstallDialog.showConfirm(
-                                                title = context.getString(R.string.uninstall),
-                                                content = context.getString(R.string.uninstall_confirm_content),
-                                                confirm = context.getString(R.string.yes),
-                                                dismiss = context.getString(R.string.no)
-                                            )
-                                        },
-                                        headlineContent = { Text(stringResource(R.string.uninstall)) },
-                                        leadingContent = { LeadingIcon(icon = Icons.Filled.Delete) },
-                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                    )
+                                    JumpRow(activeId = jumpPulse, entryId = "settings.uninstall") {
+                                        ExpressiveListItem(
+                                                                                onClick = {
+                                                                                    uninstallDialog.showConfirm(
+                                                                                        title = context.getString(R.string.uninstall),
+                                                                                        content = context.getString(R.string.uninstall_confirm_content),
+                                                                                        confirm = context.getString(R.string.yes),
+                                                                                        dismiss = context.getString(R.string.no)
+                                                                                    )
+                                                                                },
+                                                                                headlineContent = { Text(stringResource(R.string.uninstall)) },
+                                                                                leadingContent = { LeadingIcon(icon = Icons.Filled.Delete) },
+                                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                                                            )
+                                    }
                                 }
                             )
                         )
@@ -404,15 +456,17 @@ fun SettingsScreen(
                 item {
                     ExpressiveList(
                         content = listOf {
-                            ExpressiveListItem(
-                                onClick = { navController.navigate("aboutscreen") }, 
-                                headlineContent = { Text(stringResource(R.string.about_azenith)) },
-                                supportingContent = {
-                                    Text(stringResource(R.string.version_format, BuildConfig.VERSION_NAME))
-                                },
-                                leadingContent = { LeadingIcon(icon = Icons.Filled.ContactPage) },
-                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                            )
+                            JumpRow(activeId = jumpPulse, entryId = "settings.about") {
+                                ExpressiveListItem(
+                                                                onClick = { navController.navigate("aboutscreen") }, 
+                                                                headlineContent = { Text(stringResource(R.string.about_azenith)) },
+                                                                supportingContent = {
+                                                                    Text(stringResource(R.string.version_format, BuildConfig.VERSION_NAME))
+                                                                },
+                                                                leadingContent = { LeadingIcon(icon = Icons.Filled.ContactPage) },
+                                                                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                                            )
+                            }
                         }
                     )
                 }

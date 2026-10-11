@@ -96,8 +96,26 @@ import zx.azenith.ui.util.saveHeaderImage
 import zx.azenith.ui.util.RootUtils
 
 
+/**
+ * Which LazyColumn item holds each searchable row, so a search result can scroll
+ * to it. Positional: the list is built inline inside the screen and the rows
+ * carry no keys of their own.
+ */
+private val BYPASS_ROW_ITEMS: Map<String, Int> = mapOf(
+    "bypass.compat" to 4,
+    "bypass.enable" to 2,
+    "bypass.threshold" to 3,)
+
 @Composable
 fun BypassChargeScreen(navController: NavController) {
+    val listState = rememberLazyListState()
+
+    // Search results land here: entry id -> the LazyColumn item
+    // holding that row.
+    val jumpPulse = listState.searchJumpTarget(
+        owns = { it.startsWith("bypass.") },
+        indexOf = { id -> BYPASS_ROW_ITEMS[id] }
+    )
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
@@ -136,6 +154,7 @@ fun BypassChargeScreen(navController: NavController) {
         containerColor = ScaffoldContainerColor(colorScheme.surface) 
     ) { innerPadding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize().hazePageSource(),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
@@ -195,22 +214,24 @@ fun BypassChargeScreen(navController: NavController) {
                 } else {
                     ExpressiveList(
                         content = listOf {
-                            ExpressiveSwitchItem(
-                                icon = Icons.Filled.BatteryChargingFull,
-                                title = stringResource(R.string.enable_bypass_charge),
-                                summary = if (isUnsupported) stringResource(R.string.bypass_not_supported)
-                                          else stringResource(R.string.enable_bypass_charge_desc),
-                                checked = bypassChgState!!,
-                                enabled = !isUnsupported,
-                                onCheckedChange = { isChecked ->
-                                    val value = if (isChecked) "1" else "0"
-                                    bypassChgState = isChecked
-                                    PropertyUtils.set("persist.sys.azenithconf.bypasschg", value)
-                                    writeScope.launch(Dispatchers.IO) {
-                                        RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasschg", "$value\n")
-                                    }
-                                }
-                            )
+                            JumpRow(activeId = jumpPulse, entryId = "bypass.enable") {
+                                ExpressiveSwitchItem(
+                                                                icon = Icons.Filled.BatteryChargingFull,
+                                                                title = stringResource(R.string.enable_bypass_charge),
+                                                                summary = if (isUnsupported) stringResource(R.string.bypass_not_supported)
+                                                                          else stringResource(R.string.enable_bypass_charge_desc),
+                                                                checked = bypassChgState!!,
+                                                                enabled = !isUnsupported,
+                                                                onCheckedChange = { isChecked ->
+                                                                    val value = if (isChecked) "1" else "0"
+                                                                    bypassChgState = isChecked
+                                                                    PropertyUtils.set("persist.sys.azenithconf.bypasschg", value)
+                                                                    writeScope.launch(Dispatchers.IO) {
+                                                                        RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasschg", "$value\n")
+                                                                    }
+                                                                }
+                                                            )
+                            }
                         }
                     )
                 }
@@ -234,6 +255,7 @@ fun BypassChargeScreen(navController: NavController) {
 
                         val cardAlpha = if (isUnsupported) 0.5f else 1f
 
+                        JumpRow(activeId = jumpPulse, entryId = "bypass.threshold") {
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -357,6 +379,7 @@ fun BypassChargeScreen(navController: NavController) {
                                 }
                             }
                         }
+                        }
                     }
                 }
             }
@@ -364,13 +387,15 @@ fun BypassChargeScreen(navController: NavController) {
             item {
                 ExpressiveList(
                     content = listOf {
-                        ExpressiveListItem(
-                            onClick = { navController.navigate("bypasschg_check") },
-                            headlineContent = { Text(stringResource(R.string.CompatibilityCheck)) },
-                            supportingContent = { Text(stringResource(R.string.CompatibilityCheck_desc)) },
-                            leadingContent = { LeadingIcon(icon = Icons.Filled.CheckCircle) },
-                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                        )
+                        JumpRow(activeId = jumpPulse, entryId = "bypass.compat") {
+                            ExpressiveListItem(
+                                                        onClick = { navController.navigate("bypasschg_check") },
+                                                        headlineContent = { Text(stringResource(R.string.CompatibilityCheck)) },
+                                                        supportingContent = { Text(stringResource(R.string.CompatibilityCheck_desc)) },
+                                                        leadingContent = { LeadingIcon(icon = Icons.Filled.CheckCircle) },
+                                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                                    )
+                        }
                     }
                 )
             }

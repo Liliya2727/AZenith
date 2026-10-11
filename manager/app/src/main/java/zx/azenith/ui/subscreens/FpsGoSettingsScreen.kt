@@ -81,11 +81,27 @@ import zx.azenith.ui.component.*
 import zx.azenith.ui.util.PropertyUtils
 
 
+/**
+ * Which LazyColumn item holds each searchable row, so a search result can scroll
+ * to it. Positional: the list is built inline inside the screen and the rows
+ * carry no keys of their own.
+ */
+private val FPSGO_ROW_ITEMS: Map<String, Int> = mapOf(
+    "fpsgo.enable" to 1,
+    "fpsgo.ged" to 3,)
+
 @Composable
 fun FpsGoSettings(navController: NavController) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val listState = rememberLazyListState()
+
+    // Search results land here: entry id -> the LazyColumn item
+    // holding that row.
+    val jumpPulse = listState.searchJumpTarget(
+        owns = { it.startsWith("fpsgo.") },
+        indexOf = { id -> FPSGO_ROW_ITEMS[id] }
+    )
     val colorScheme = MaterialTheme.colorScheme
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -150,16 +166,18 @@ fun FpsGoSettings(navController: NavController) {
                     ExpressiveList(
                         content = listOf(
                             {
-                                 ExpressiveSwitchItem(
-                                    icon = Icons.Rounded.Speed,
-                                    title = stringResource(R.string.str_use_fpsgo_title),
-                                    summary = stringResource(R.string.str_use_fpsgo_summary),
-                                    checked = fpsgostate.value == true,
-                                    onCheckedChange = { isChecked ->
-                                        fpsgostate.value = isChecked
-                                        PropertyUtils.set("persist.sys.azenithconf.usefpsgo", if (isChecked) "1" else "0")
-                                    }
-                                )
+                                 JumpRow(activeId = jumpPulse, entryId = "fpsgo.enable") {
+                                     ExpressiveSwitchItem(
+                                                                         icon = Icons.Rounded.Speed,
+                                                                         title = stringResource(R.string.str_use_fpsgo_title),
+                                                                         summary = stringResource(R.string.str_use_fpsgo_summary),
+                                                                         checked = fpsgostate.value == true,
+                                                                         onCheckedChange = { isChecked ->
+                                                                             fpsgostate.value = isChecked
+                                                                             PropertyUtils.set("persist.sys.azenithconf.usefpsgo", if (isChecked) "1" else "0")
+                                                                         }
+                                                                     )
+                                 }
                             }
                         )
                     )
@@ -175,16 +193,18 @@ fun FpsGoSettings(navController: NavController) {
                     ExpressiveList(
                         content = listOf(
                             {
-                                ExpressiveSwitchItem(
-                                    icon = Icons.Rounded.Speed,
-                                    title = stringResource(R.string.fpsgo_ged),
-                                    summary = stringResource(R.string.fpsgo_ged_desc),
-                                    checked = fpsgogedstate.value == true,
-                                    onCheckedChange = { isChecked ->
-                                        fpsgogedstate.value = isChecked
-                                        PropertyUtils.set("persist.sys.azenithconf.fpsged", if (isChecked) "1" else "0")
-                                    }
-                                )
+                                JumpRow(activeId = jumpPulse, entryId = "fpsgo.ged") {
+                                    ExpressiveSwitchItem(
+                                                                        icon = Icons.Rounded.Speed,
+                                                                        title = stringResource(R.string.fpsgo_ged),
+                                                                        summary = stringResource(R.string.fpsgo_ged_desc),
+                                                                        checked = fpsgogedstate.value == true,
+                                                                        onCheckedChange = { isChecked ->
+                                                                            fpsgogedstate.value = isChecked
+                                                                            PropertyUtils.set("persist.sys.azenithconf.fpsged", if (isChecked) "1" else "0")
+                                                                        }
+                                                                    )
+                                }
                             }
                         )
                     )

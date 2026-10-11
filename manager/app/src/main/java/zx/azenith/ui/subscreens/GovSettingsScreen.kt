@@ -84,6 +84,26 @@ import zx.azenith.ui.util.*
 import zx.azenith.ui.viewmodel.TweakViewModel
 import zx.azenith.ui.navigation.rememberScopedStoreOwner
 
+/**
+ * Which LazyColumn item holds each searchable row, so a search result can scroll
+ * to it. Positional: the list is built inline and the rows carry no keys of their
+ * own. Sections are in here too -- a heading is a legitimate landing spot.
+ */
+private val GOV_ROW_ITEMS: Map<String, Int> = mapOf(
+    "gov.cpu" to 1,
+    "gov.cpu_default" to 2,
+    "gov.cpu_performance" to 2,
+    "gov.cpu_powersave" to 2,
+    "gov.io" to 3,
+    "gov.io_balanced" to 4,
+    "gov.io_performance" to 4,
+    "gov.io_powersave" to 4,
+    "gov.mali" to 5,
+    "gov.mali_balanced" to 6,
+    "gov.mali_performance" to 6,
+    "gov.mali_powersave" to 6,
+)
+
 @Composable
 fun GovSettings(
     navController: NavController,
@@ -92,6 +112,13 @@ fun GovSettings(
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val context = LocalContext.current
     val listState = rememberLazyListState()
+
+    // Search results land here: entry id -> the LazyColumn item
+    // holding that row.
+    val jumpPulse = listState.searchJumpTarget(
+        owns = { it.startsWith("gov.") },
+        indexOf = { id -> GOV_ROW_ITEMS[id] }
+    )
     val colorScheme = MaterialTheme.colorScheme
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -143,7 +170,7 @@ fun GovSettings(
                 )
             }
 
-            item { TweaksSectionTitle(stringResource(R.string.section_CPUSettings)) }
+            item { JumpRow(activeId = jumpPulse, entryId = "gov.cpu", highlightShape = RoundedCornerShape(14.dp)) { TweaksSectionTitle(stringResource(R.string.section_CPUSettings)) } }
             item {
                 if (isReady && viewModel.defaultGovIndex != null && 
                     viewModel.powersaveGovIndex != null && 
@@ -152,34 +179,40 @@ fun GovSettings(
                     ExpressiveList(
                         content = listOf(
                             {
-                                ExpressiveDropdownItem(
-                                    icon = Icons.Outlined.Water,
-                                    title = stringResource(R.string.default_cpu_gov),
-                                    summary = stringResource(R.string.default_cpu_gov_desc),
-                                    items = viewModel.availableGovernors ?: emptyList(),
-                                    selectedIndex = viewModel.defaultGovIndex!!,
-                                    onItemSelected = { viewModel.updateDefaultGovernor(it) }
-                                )
+                                JumpRow(activeId = jumpPulse, entryId = "gov.cpu_default") {
+                                    ExpressiveDropdownItem(
+                                                                        icon = Icons.Outlined.Water,
+                                                                        title = stringResource(R.string.default_cpu_gov),
+                                                                        summary = stringResource(R.string.default_cpu_gov_desc),
+                                                                        items = viewModel.availableGovernors ?: emptyList(),
+                                                                        selectedIndex = viewModel.defaultGovIndex!!,
+                                                                        onItemSelected = { viewModel.updateDefaultGovernor(it) }
+                                                                    )
+                                }
                             },
                             {
-                                ExpressiveDropdownItem(
-                                    icon = Icons.Outlined.OfflineBolt,
-                                    title = stringResource(R.string.performance_cpu_gov),
-                                    summary = stringResource(R.string.performance_cpu_gov_desc),
-                                    items = viewModel.availableGovernors ?: emptyList(),
-                                    selectedIndex = viewModel.performanceGovIndex!!,
-                                    onItemSelected = { viewModel.updatePerformanceGovernor(it) }
-                                )
+                                JumpRow(activeId = jumpPulse, entryId = "gov.cpu_performance") {
+                                    ExpressiveDropdownItem(
+                                                                        icon = Icons.Outlined.OfflineBolt,
+                                                                        title = stringResource(R.string.performance_cpu_gov),
+                                                                        summary = stringResource(R.string.performance_cpu_gov_desc),
+                                                                        items = viewModel.availableGovernors ?: emptyList(),
+                                                                        selectedIndex = viewModel.performanceGovIndex!!,
+                                                                        onItemSelected = { viewModel.updatePerformanceGovernor(it) }
+                                                                    )
+                                }
                             },
                             {
-                                ExpressiveDropdownItem(
-                                    icon = Icons.Outlined.EnergySavingsLeaf,
-                                    title = stringResource(R.string.powersave_cpu_gov),
-                                    summary = stringResource(R.string.powersave_cpu_gov_desc),
-                                    items = viewModel.availableGovernors ?: emptyList(),
-                                    selectedIndex = viewModel.powersaveGovIndex!!,
-                                    onItemSelected = { viewModel.updatePowersaveGovernor(it) }
-                                )
+                                JumpRow(activeId = jumpPulse, entryId = "gov.cpu_powersave") {
+                                    ExpressiveDropdownItem(
+                                                                        icon = Icons.Outlined.EnergySavingsLeaf,
+                                                                        title = stringResource(R.string.powersave_cpu_gov),
+                                                                        summary = stringResource(R.string.powersave_cpu_gov_desc),
+                                                                        items = viewModel.availableGovernors ?: emptyList(),
+                                                                        selectedIndex = viewModel.powersaveGovIndex!!,
+                                                                        onItemSelected = { viewModel.updatePowersaveGovernor(it) }
+                                                                    )
+                                }
                             },
                             {
                                 FreqLimitSliderItem(
@@ -196,7 +229,7 @@ fun GovSettings(
                 }
             }
 
-            item { TweaksSectionTitle(stringResource(R.string.io_settings)) }
+            item { JumpRow(activeId = jumpPulse, entryId = "gov.io", highlightShape = RoundedCornerShape(14.dp)) { TweaksSectionTitle(stringResource(R.string.io_settings)) } }
             item {
                 if (!isReady || viewModel.availableIOSchedulers == null) {
                     SectionLoadingIndicator()
@@ -207,34 +240,40 @@ fun GovSettings(
                         ExpressiveList(
                             content = listOf(
                                 {
-                                    ExpressiveDropdownItem(
-                                        icon = Icons.Outlined.Water,
-                                        title = stringResource(R.string.balanced_io_scheduler),
-                                        summary = stringResource(R.string.balanced_io_scheduler_desc),
-                                        items = viewModel.availableIOSchedulers ?: emptyList(),
-                                        selectedIndex = viewModel.balancedIOIndex!!,
-                                        onItemSelected = { viewModel.updateBalancedIO(it) }
-                                    )
+                                    JumpRow(activeId = jumpPulse, entryId = "gov.io_balanced") {
+                                        ExpressiveDropdownItem(
+                                                                                icon = Icons.Outlined.Water,
+                                                                                title = stringResource(R.string.balanced_io_scheduler),
+                                                                                summary = stringResource(R.string.balanced_io_scheduler_desc),
+                                                                                items = viewModel.availableIOSchedulers ?: emptyList(),
+                                                                                selectedIndex = viewModel.balancedIOIndex!!,
+                                                                                onItemSelected = { viewModel.updateBalancedIO(it) }
+                                                                            )
+                                    }
                                 },
                                 {
-                                    ExpressiveDropdownItem(
-                                        icon = Icons.Outlined.OfflineBolt,
-                                        title = stringResource(R.string.performance_io_scheduler),
-                                        summary = stringResource(R.string.performance_io_scheduler_desc),
-                                        items = viewModel.availableIOSchedulers ?: emptyList(),
-                                        selectedIndex = viewModel.performanceIOIndex!!,
-                                        onItemSelected = { viewModel.updatePerformanceIO(it) }
-                                    )
+                                    JumpRow(activeId = jumpPulse, entryId = "gov.io_performance") {
+                                        ExpressiveDropdownItem(
+                                                                                icon = Icons.Outlined.OfflineBolt,
+                                                                                title = stringResource(R.string.performance_io_scheduler),
+                                                                                summary = stringResource(R.string.performance_io_scheduler_desc),
+                                                                                items = viewModel.availableIOSchedulers ?: emptyList(),
+                                                                                selectedIndex = viewModel.performanceIOIndex!!,
+                                                                                onItemSelected = { viewModel.updatePerformanceIO(it) }
+                                                                            )
+                                    }
                                 },
                                 {
-                                    ExpressiveDropdownItem(
-                                        icon = Icons.Outlined.EnergySavingsLeaf,
-                                        title = stringResource(R.string.powersave_io_scheduler),
-                                        summary = stringResource(R.string.powersave_io_scheduler_desc),
-                                        items = viewModel.availableIOSchedulers ?: emptyList(),
-                                        selectedIndex = viewModel.powersaveIOIndex!!,
-                                        onItemSelected = { viewModel.updatePowersaveIO(it) }
-                                    )
+                                    JumpRow(activeId = jumpPulse, entryId = "gov.io_powersave") {
+                                        ExpressiveDropdownItem(
+                                                                                icon = Icons.Outlined.EnergySavingsLeaf,
+                                                                                title = stringResource(R.string.powersave_io_scheduler),
+                                                                                summary = stringResource(R.string.powersave_io_scheduler_desc),
+                                                                                items = viewModel.availableIOSchedulers ?: emptyList(),
+                                                                                selectedIndex = viewModel.powersaveIOIndex!!,
+                                                                                onItemSelected = { viewModel.updatePowersaveIO(it) }
+                                                                            )
+                                    }
                                 }
                             )
                         )
@@ -248,7 +287,7 @@ fun GovSettings(
 
 
             if (viewModel.isMaliGpuAvailable == true) {
-                item { TweaksSectionTitle(text = stringResource(R.string.section_mali_gpu)) }
+                item { JumpRow(activeId = jumpPulse, entryId = "gov.mali", highlightShape = RoundedCornerShape(14.dp)) { TweaksSectionTitle(text = stringResource(R.string.section_mali_gpu)) } }
                 item {
                     if (!isReady || viewModel.availableMaliGovernors == null) {
                         SectionLoadingIndicator()
@@ -259,34 +298,40 @@ fun GovSettings(
                             ExpressiveList(
                                 content = listOf(
                                     {
-                                        ExpressiveDropdownItem(
-                                            icon = Icons.Outlined.Water,
-                                            title = stringResource(R.string.balanced_mali_gov),
-                                            summary = stringResource(R.string.balanced_mali_gov_desc),
-                                            items = viewModel.availableMaliGovernors ?: emptyList(),
-                                            selectedIndex = viewModel.balancedMaliGovIndex!!,
-                                            onItemSelected = { viewModel.updateBalancedMaliGov(it) }
-                                        )
+                                        JumpRow(activeId = jumpPulse, entryId = "gov.mali_balanced") {
+                                            ExpressiveDropdownItem(
+                                                                                        icon = Icons.Outlined.Water,
+                                                                                        title = stringResource(R.string.balanced_mali_gov),
+                                                                                        summary = stringResource(R.string.balanced_mali_gov_desc),
+                                                                                        items = viewModel.availableMaliGovernors ?: emptyList(),
+                                                                                        selectedIndex = viewModel.balancedMaliGovIndex!!,
+                                                                                        onItemSelected = { viewModel.updateBalancedMaliGov(it) }
+                                                                                    )
+                                        }
                                     },
                                     {
-                                        ExpressiveDropdownItem(
-                                            icon = Icons.Outlined.OfflineBolt,
-                                            title = stringResource(R.string.performance_mali_gov),
-                                            summary = stringResource(R.string.performance_mali_gov_desc),
-                                            items = viewModel.availableMaliGovernors ?: emptyList(),
-                                            selectedIndex = viewModel.performanceMaliGovIndex!!,
-                                            onItemSelected = { viewModel.updatePerformanceMaliGov(it) }
-                                        )
+                                        JumpRow(activeId = jumpPulse, entryId = "gov.mali_performance") {
+                                            ExpressiveDropdownItem(
+                                                                                        icon = Icons.Outlined.OfflineBolt,
+                                                                                        title = stringResource(R.string.performance_mali_gov),
+                                                                                        summary = stringResource(R.string.performance_mali_gov_desc),
+                                                                                        items = viewModel.availableMaliGovernors ?: emptyList(),
+                                                                                        selectedIndex = viewModel.performanceMaliGovIndex!!,
+                                                                                        onItemSelected = { viewModel.updatePerformanceMaliGov(it) }
+                                                                                    )
+                                        }
                                     },
                                     {
-                                        ExpressiveDropdownItem(
-                                            icon = Icons.Outlined.EnergySavingsLeaf,
-                                            title = stringResource(R.string.powersave_mali_gov),
-                                            summary = stringResource(R.string.powersave_mali_gov_desc),
-                                            items = viewModel.availableMaliGovernors ?: emptyList(),
-                                            selectedIndex = viewModel.powersaveMaliGovIndex!!,
-                                            onItemSelected = { viewModel.updatePowersaveMaliGov(it) }
-                                        )
+                                        JumpRow(activeId = jumpPulse, entryId = "gov.mali_powersave") {
+                                            ExpressiveDropdownItem(
+                                                                                        icon = Icons.Outlined.EnergySavingsLeaf,
+                                                                                        title = stringResource(R.string.powersave_mali_gov),
+                                                                                        summary = stringResource(R.string.powersave_mali_gov_desc),
+                                                                                        items = viewModel.availableMaliGovernors ?: emptyList(),
+                                                                                        selectedIndex = viewModel.powersaveMaliGovIndex!!,
+                                                                                        onItemSelected = { viewModel.updatePowersaveMaliGov(it) }
+                                                                                    )
+                                        }
                                     }
                                 )
                             )

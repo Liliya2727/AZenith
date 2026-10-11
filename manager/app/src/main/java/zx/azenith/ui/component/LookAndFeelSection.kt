@@ -38,6 +38,8 @@ import zx.azenith.ui.theme.Personalization
 fun LookAndFeelSection(
     pers: Personalization,
     onPersonalizationChange: (Personalization) -> Unit,
+    activeId: String? = null,
+    entryId: String? = null,
     modifier: Modifier = Modifier,
     colorSpecContent: (@Composable () -> Unit)? = null,
     accentSwatchContent: (@Composable () -> Unit)? = null,
@@ -50,7 +52,9 @@ fun LookAndFeelSection(
         // that name the same thing.
         SettingsGroup(
             titleRes = R.string.personalization_colors_header,
-            icon = Icons.Filled.ColorLens
+            icon = Icons.Filled.ColorLens,
+            activeId = activeId,
+            entryId = entryId
         ) {
             colorSpecContent?.invoke()
             accentSwatchContent?.invoke()
@@ -59,6 +63,7 @@ fun LookAndFeelSection(
                 content = buildList {
                     add {
                         CardItem {
+                            JumpRow(activeId = activeId, entryId = "pers.accent_intensity") {
                             LabeledSlider(
                                 icon = Icons.Filled.Tune,
                                 label = stringResource(R.string.pers_accent_intensity),
@@ -78,6 +83,7 @@ fun LookAndFeelSection(
                                     )
                                 }
                             )
+                            }
                         }
                     }
                 }

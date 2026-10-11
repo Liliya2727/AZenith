@@ -79,14 +79,23 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.topjohnwu.superuser.Shell
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import zx.azenith.R
 import zx.azenith.ui.component.ExpressiveList
 import zx.azenith.ui.component.ExpressiveListItem
+import zx.azenith.ui.component.JumpRow
 import zx.azenith.ui.component.LeadingIcon
+import zx.azenith.ui.component.SearchJump
 import zx.azenith.ui.component.ScaffoldContainerColor
 import zx.azenith.ui.component.ScaffoldContentColor
 import zx.azenith.ui.component.hazePageSource
 import zx.azenith.ui.navigation.safePopBackStack
+import zx.azenith.ui.util.DebugUtils
+import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.getChipsetVendor
+import zx.azenith.ui.viewmodel.SearchCapabilities
 import zx.azenith.ui.viewmodel.SearchEntry
 import zx.azenith.ui.viewmodel.SearchIndex
 import zx.azenith.ui.viewmodel.SearchTab
@@ -116,8 +125,26 @@ fun SearchScreen(
     val motionScheme = MaterialTheme.motionScheme
     var query by rememberSaveable { mutableStateOf("") }
 
-    val groupedEntries = remember(query, tab) {
-        SearchIndex.search(query, tab) { context.getString(it) }
+    // Probed once, on IO: getChipsetVendor reads props, full mode goes through a
+    // root shell, and the Mali check is the same helper command GovSettings uses.
+    var capabilities by remember { mutableStateOf(SearchCapabilities()) }
+    LaunchedEffect(Unit) {
+        capabilities = withContext(Dispatchers.IO) {
+            val bypassPath = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "")
+            val maliCheck = Shell.cmd(
+                "/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf checkmalipath"
+            ).exec().out.joinToString("").trim()
+            SearchCapabilities(
+                vendor = getChipsetVendor(context),
+                fullMode = DebugUtils.isFullModeEnabled(),
+                hasMaliGpu = maliCheck == "true",
+                bypassSupported = bypassPath != "UNSUPPORTED" && bypassPath != "NEED_SETUP"
+            )
+        }
+    }
+
+    val groupedEntries = remember(query, tab, capabilities) {
+        SearchIndex.search(query, tab, capabilities) { context.getString(it) }
             .groupBy { it.group }
             .toList()
             .sortedBy { it.first.ordinal }
@@ -156,6 +183,9 @@ fun SearchScreen(
 
     val openEntry: (SearchEntry) -> Unit = { entry ->
         dismissEditor()
+        // A row result has to survive the pop: the destination is still composed
+        // underneath, so it is told which row to land on before we leave.
+        SearchJump.request(entry.id)
         when (val target = entry.target) {
             // The pager page is the tab already underneath, so this one is a
             // pop, not a push.
@@ -167,7 +197,6 @@ fun SearchScreen(
                 }
                 navController.navigate(target.route)
             }
-            SearchTarget.InPlace -> Unit
         }
     }
 

@@ -86,10 +86,28 @@ import zx.azenith.ui.component.*
 import zx.azenith.ui.util.PropertyUtils
 
 
+/**
+ * Which LazyColumn item holds each searchable row, so a search result can scroll
+ * to it. Positional: the list is built inline inside the screen and the rows
+ * carry no keys of their own.
+ */
+private val ABOUT_ROW_ITEMS: Map<String, Int> = mapOf(
+    "about.collaborators" to 5,
+    "about.libraries" to 2,
+    "about.licenses" to 2,
+    "about.source" to 2,)
+
 @Composable
 fun AboutScreen(navController: NavController) {
     val context = LocalContext.current
     val listState = rememberLazyListState()
+
+    // Search results land here: entry id -> the LazyColumn item
+    // holding that row.
+    val jumpPulse = listState.searchJumpTarget(
+        owns = { it.startsWith("about.") },
+        indexOf = { id -> ABOUT_ROW_ITEMS[id] }
+    )
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
     val coroutineScope = rememberCoroutineScope()
@@ -201,37 +219,43 @@ fun AboutScreen(navController: NavController) {
                     modifier = Modifier.clip(RoundedCornerShape(26.dp)),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    OpenSourceRow(
-                        shape = RoundedCornerShape(
-                            topStart = 26.dp,
-                            topEnd = 26.dp,
-                            bottomStart = 4.dp,
-                            bottomEnd = 4.dp
-                        ),
-                        icon = Icons.Rounded.Gavel,
-                        title = stringResource(R.string.str_licenses),
-                        supporting = stringResource(R.string.str_apache_license_2),
-                        onClick = { navController.navigate("licensescreen") }
-                    )
-                    OpenSourceRow(
-                        shape = RoundedCornerShape(4.dp),
-                        icon = Icons.Rounded.LibraryBooks,
-                        title = stringResource(R.string.str_libraries_used),
-                        supporting = stringResource(R.string.str_libraries_hint),
-                        onClick = { navController.navigate("librariesscreen") }
-                    )
-                    OpenSourceRow(
-                        shape = RoundedCornerShape(
-                            topStart = 4.dp,
-                            topEnd = 4.dp,
-                            bottomStart = 26.dp,
-                            bottomEnd = 26.dp
-                        ),
-                        icon = Icons.Rounded.Code,
-                        title = stringResource(R.string.str_source_code),
-                        supporting = stringResource(R.string.str_view_the_source_code_on_github),
-                        onClick = { openLink("https://github.com/Liliya2727/AZenith") }
-                    )
+                    JumpRow(activeId = jumpPulse, entryId = "about.licenses") {
+                        OpenSourceRow(
+                                                shape = RoundedCornerShape(
+                                                    topStart = 26.dp,
+                                                    topEnd = 26.dp,
+                                                    bottomStart = 4.dp,
+                                                    bottomEnd = 4.dp
+                                                ),
+                                                icon = Icons.Rounded.Gavel,
+                                                title = stringResource(R.string.str_licenses),
+                                                supporting = stringResource(R.string.str_apache_license_2),
+                                                onClick = { navController.navigate("licensescreen") }
+                                            )
+                    }
+                    JumpRow(activeId = jumpPulse, entryId = "about.libraries") {
+                        OpenSourceRow(
+                                                shape = RoundedCornerShape(4.dp),
+                                                icon = Icons.Rounded.LibraryBooks,
+                                                title = stringResource(R.string.str_libraries_used),
+                                                supporting = stringResource(R.string.str_libraries_hint),
+                                                onClick = { navController.navigate("librariesscreen") }
+                                            )
+                    }
+                    JumpRow(activeId = jumpPulse, entryId = "about.source") {
+                        OpenSourceRow(
+                                                shape = RoundedCornerShape(
+                                                    topStart = 4.dp,
+                                                    topEnd = 4.dp,
+                                                    bottomStart = 26.dp,
+                                                    bottomEnd = 26.dp
+                                                ),
+                                                icon = Icons.Rounded.Code,
+                                                title = stringResource(R.string.str_source_code),
+                                                supporting = stringResource(R.string.str_view_the_source_code_on_github),
+                                                onClick = { openLink("https://github.com/Liliya2727/AZenith") }
+                                            )
+                    }
                 }
             }
 
@@ -284,7 +308,9 @@ fun AboutScreen(navController: NavController) {
 
 
             item { 
-                AboutSectionTitle(stringResource(R.string.str_collaborators)) 
+                JumpRow(activeId = jumpPulse, entryId = "about.collaborators", highlightShape = RoundedCornerShape(14.dp)) {
+                    AboutSectionTitle(stringResource(R.string.str_collaborators)) 
+                }
             }
             item {
                 ExpressiveList(

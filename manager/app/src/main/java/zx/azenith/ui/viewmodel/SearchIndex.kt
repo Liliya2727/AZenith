@@ -17,6 +17,10 @@
 package zx.azenith.ui.viewmodel
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.automirrored.rounded.FactCheck
+import androidx.compose.material.icons.automirrored.rounded.LibraryBooks
+import androidx.compose.material.icons.automirrored.rounded.TextSnippet
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material.icons.rounded.*
@@ -39,11 +43,41 @@ sealed interface SearchTarget {
      * entry belongs to instead of the main pager.
      */
     data class Nested(val route: String, val parent: String, val parentTitleRes: Int) : SearchTarget
+}
+
+/**
+ * A capability a row needs before it is worth offering.
+ *
+ * The screens hide or disable rows the device cannot use -- the FPSGO screen is
+ * MediaTek-only, the Mali governor list exists only when a `*.mali` devfreq node
+ * is present, and several tweaks sit behind full mode. Search reads the index
+ * directly, so without this it offers rows the app itself refuses to show.
+ */
+enum class SearchRequirement {
+    MediaTek,
+    FullMode,
+    MaliGpu,
+    BypassSupported
+}
+
+/** What this device can actually do, probed when the search screen opens. */
+data class SearchCapabilities(
+    val vendor: String = "unknown",
+    val fullMode: Boolean = false,
+    val hasMaliGpu: Boolean = false,
+    val bypassSupported: Boolean = false
+) {
     /**
-     * A value that is already on the page the row names and has no destination
-     * of its own -- device info, the root and profile tiles, backup/restore.
+     * An unknown vendor satisfies MediaTek: a probe that could not tell must not
+     * hide rows the app itself would show. The rest are booleans the app already
+     * resolves before rendering, so they gate exactly.
      */
-    data object InPlace : SearchTarget
+    fun satisfies(requirement: SearchRequirement): Boolean = when (requirement) {
+        SearchRequirement.MediaTek -> vendor == "unknown" || vendor == "mediatek"
+        SearchRequirement.FullMode -> fullMode
+        SearchRequirement.MaliGpu -> hasMaliGpu
+        SearchRequirement.BypassSupported -> bypassSupported
+    }
 }
 
 /**
@@ -60,7 +94,9 @@ data class SearchEntry(
     val icon: ImageVector,
     val group: SearchGroup,
     val target: SearchTarget,
-    val keywordsRes: List<Int> = emptyList()
+    val keywordsRes: List<Int> = emptyList(),
+    /** Absent unless the row is conditional on the device; see [SearchCapabilities]. */
+    val requires: List<SearchRequirement> = emptyList()
 )
 
 /**
@@ -73,8 +109,6 @@ data class SearchEntry(
  * Tweaks, Personalization/About only from Settings.
  */
 enum class SearchGroup(val labelRes: Int, val tab: SearchTab) {
-    Home(R.string.nav_home, SearchTab.Home),
-    Apps(R.string.nav_applist, SearchTab.Apps),
     Tweaks(R.string.nav_tweaks, SearchTab.Tweaks),
     Settings(R.string.nav_settings, SearchTab.Settings),
     Governors(R.string.gov_settings, SearchTab.Tweaks),
@@ -87,13 +121,13 @@ enum class SearchGroup(val labelRes: Int, val tab: SearchTab) {
 }
 
 /**
- * One of the four main tabs. Search is opened from a tab's top bar and only
- * offers that tab's own rows and the sub-screens hanging off it, so this is the
- * scope the search screen is composed with.
+ * A tab search can be opened from.
+ *
+ * Only Tweaks and Settings carry a search button, so those are the only scopes
+ * that exist -- Home and Apps have no entry point and listing them would offer
+ * rows no one can reach.
  */
 enum class SearchTab(val labelRes: Int) {
-    Home(R.string.nav_home),
-    Apps(R.string.nav_applist),
     Tweaks(R.string.nav_tweaks),
     Settings(R.string.nav_settings);
 
@@ -118,82 +152,6 @@ object SearchIndex {
      * order within a group.
      */
     val entries: List<SearchEntry> = listOf(
-        // --- Home ---------------------------------------------------------
-        SearchEntry(
-            id = "home.current_profile",
-            titleRes = R.string.current_profile,
-            summaryRes = R.string.profile_perflite,
-            icon = Icons.Rounded.Token,
-            group = SearchGroup.Home,
-            target = SearchTarget.Pager("home"),
-            keywordsRes = listOf(R.string.Profile_Performance, R.string.perf_lite_mode, R.string.toast_applying_profile)
-        ),
-        SearchEntry(
-            id = "home.root_access",
-            titleRes = R.string.root_access,
-            icon = Icons.Rounded.Security,
-            group = SearchGroup.Home,
-            target = SearchTarget.Pager("home"),
-            keywordsRes = listOf(R.string.root_granted, R.string.root_not_granted)
-        ),
-        SearchEntry(
-            id = "home.device_info",
-            titleRes = R.string.device_info,
-            icon = Icons.Rounded.PhoneAndroid,
-            group = SearchGroup.Home,
-            target = SearchTarget.Pager("home"),
-            keywordsRes = listOf(R.string.str_chipset, R.string.kernel_version, R.string.android_version, R.string.selinux_status)
-        ),
-        SearchEntry(
-            id = "home.support",
-            titleRes = R.string.support_us,
-            summaryRes = R.string.support_us_desc,
-            icon = Icons.Rounded.Favorite,
-            group = SearchGroup.Home,
-            target = SearchTarget.Pager("home")
-        ),
-        SearchEntry(
-            id = "home.learn_more",
-            titleRes = R.string.learn_more,
-            summaryRes = R.string.learn_more_desc,
-            icon = Icons.Rounded.Info,
-            group = SearchGroup.Home,
-            target = SearchTarget.Pager("home")
-        ),
-        SearchEntry(
-            id = "home.reboot",
-            titleRes = R.string.reboot,
-            icon = Icons.Rounded.PowerSettingsNew,
-            group = SearchGroup.Home,
-            target = SearchTarget.Pager("home"),
-            keywordsRes = listOf(R.string.dialog_reboot_required_title)
-        ),
-
-        // --- Apps ---------------------------------------------------------
-        SearchEntry(
-            id = "apps.list",
-            titleRes = R.string.applist_title,
-            icon = Icons.Rounded.Widgets,
-            group = SearchGroup.Apps,
-            target = SearchTarget.Pager("applist"),
-            keywordsRes = listOf(R.string.search_apps, R.string.str_per_app_applist_settings)
-        ),
-        SearchEntry(
-            id = "apps.filters",
-            titleRes = R.string.cd_filter,
-            icon = Icons.Rounded.FilterList,
-            group = SearchGroup.Apps,
-            target = SearchTarget.Pager("applist"),
-            keywordsRes = listOf(R.string.no_apps_match_filters)
-        ),
-        SearchEntry(
-            id = "apps.refresh",
-            titleRes = R.string.menu_refresh,
-            icon = Icons.Rounded.Refresh,
-            group = SearchGroup.Apps,
-            target = SearchTarget.Pager("applist")
-        ),
-
         // --- Tweaks -------------------------------------------------------
         SearchEntry(
             id = "tweaks.section_performance",
@@ -218,7 +176,8 @@ object SearchIndex {
             icon = Icons.Rounded.Speed,
             group = SearchGroup.Tweaks,
             target = SearchTarget.Route("fpsgoscreen"),
-            keywordsRes = listOf(R.string.str_fpsgo_unavailable)
+            keywordsRes = listOf(R.string.str_fpsgo_unavailable),
+            requires = listOf(SearchRequirement.MediaTek)
         ),
         SearchEntry(
             id = "tweaks.section_additional",
@@ -242,7 +201,8 @@ object SearchIndex {
             icon = Icons.Rounded.CleaningServices,
             group = SearchGroup.Tweaks,
             target = SearchTarget.Pager("tweaks"),
-            keywordsRes = listOf(R.string.str_tweak_configuration_settings)
+            keywordsRes = listOf(R.string.str_tweak_configuration_settings),
+            requires = listOf(SearchRequirement.FullMode)
         ),
         SearchEntry(
             id = "tweaks.app_priority",
@@ -250,7 +210,8 @@ object SearchIndex {
             summaryRes = R.string.app_priority_control_desc,
             icon = Icons.Rounded.SwapVerticalCircle,
             group = SearchGroup.Tweaks,
-            target = SearchTarget.Pager("tweaks")
+            target = SearchTarget.Pager("tweaks"),
+            requires = listOf(SearchRequirement.FullMode)
         ),
         SearchEntry(
             id = "tweaks.dnd",
@@ -266,7 +227,8 @@ object SearchIndex {
             summaryRes = R.string.trim_filesystem_desc,
             icon = Icons.Outlined.ContentCut,
             group = SearchGroup.Tweaks,
-            target = SearchTarget.Pager("tweaks")
+            target = SearchTarget.Pager("tweaks"),
+            requires = listOf(SearchRequirement.FullMode)
         ),
         SearchEntry(
             id = "tweaks.governors",
@@ -326,11 +288,11 @@ object SearchIndex {
         ),
         SearchEntry(
             id = "tweaks.backup",
-            titleRes = R.string.str_tweak_configuration_settings,
+            titleRes = R.string.str_backup_restore,
             icon = Icons.Outlined.Cloud,
             group = SearchGroup.Tweaks,
             target = SearchTarget.Pager("tweaks"),
-            keywordsRes = listOf(R.string.str_restore_configuration, R.string.str_backup_content_detected_select)
+            keywordsRes = listOf(R.string.str_tweak_configuration_settings, R.string.str_restore_configuration)
         ),
 
         // --- Settings -----------------------------------------------------
@@ -435,7 +397,7 @@ object SearchIndex {
         SearchEntry(
             id = "settings.changelog",
             titleRes = R.string.str_changelog,
-            icon = Icons.Rounded.TextSnippet,
+            icon = Icons.AutoMirrored.Rounded.TextSnippet,
             group = SearchGroup.Settings,
             target = SearchTarget.Pager("settings")
         ),
@@ -516,7 +478,8 @@ object SearchIndex {
             titleRes = R.string.section_mali_gpu,
             icon = Icons.Rounded.Memory,
             group = SearchGroup.Governors,
-            target = SearchTarget.Route("governorsettings")
+            target = SearchTarget.Route("governorsettings"),
+            requires = listOf(SearchRequirement.MaliGpu)
         ),
         SearchEntry(
             id = "gov.mali_balanced",
@@ -524,7 +487,8 @@ object SearchIndex {
             summaryRes = R.string.balanced_mali_gov_desc,
             icon = Icons.Rounded.Memory,
             group = SearchGroup.Governors,
-            target = SearchTarget.Route("governorsettings")
+            target = SearchTarget.Route("governorsettings"),
+            requires = listOf(SearchRequirement.MaliGpu)
         ),
         SearchEntry(
             id = "gov.mali_performance",
@@ -532,7 +496,8 @@ object SearchIndex {
             summaryRes = R.string.performance_mali_gov_desc,
             icon = Icons.Rounded.Memory,
             group = SearchGroup.Governors,
-            target = SearchTarget.Route("governorsettings")
+            target = SearchTarget.Route("governorsettings"),
+            requires = listOf(SearchRequirement.MaliGpu)
         ),
         SearchEntry(
             id = "gov.mali_powersave",
@@ -540,7 +505,8 @@ object SearchIndex {
             summaryRes = R.string.powersave_mali_gov_desc,
             icon = Icons.Rounded.Memory,
             group = SearchGroup.Governors,
-            target = SearchTarget.Route("governorsettings")
+            target = SearchTarget.Route("governorsettings"),
+            requires = listOf(SearchRequirement.MaliGpu)
         ),
 
         // --- Bypass charging ----------------------------------------------
@@ -550,7 +516,8 @@ object SearchIndex {
             summaryRes = R.string.enable_bypass_charge_desc,
             icon = Icons.Filled.Cable,
             group = SearchGroup.Bypass,
-            target = SearchTarget.Route("bypasschg")
+            target = SearchTarget.Route("bypasschg"),
+            requires = listOf(SearchRequirement.BypassSupported)
         ),
         SearchEntry(
             id = "bypass.threshold",
@@ -558,13 +525,14 @@ object SearchIndex {
             summaryRes = R.string.charging_threshold_desc,
             icon = Icons.Rounded.BatteryChargingFull,
             group = SearchGroup.Bypass,
-            target = SearchTarget.Route("bypasschg")
+            target = SearchTarget.Route("bypasschg"),
+            requires = listOf(SearchRequirement.BypassSupported)
         ),
         SearchEntry(
             id = "bypass.compat",
             titleRes = R.string.CompatibilityCheck,
             summaryRes = R.string.CompatibilityCheck_desc,
-            icon = Icons.Rounded.FactCheck,
+            icon = Icons.AutoMirrored.Rounded.FactCheck,
             group = SearchGroup.Bypass,
             target = SearchTarget.Route("bypasschg_check")
         ),
@@ -626,7 +594,8 @@ object SearchIndex {
             summaryRes = R.string.jit_compilation_desc,
             icon = Icons.Rounded.Tune,
             group = SearchGroup.Prefs,
-            target = SearchTarget.Route("preferenced")
+            target = SearchTarget.Route("preferenced"),
+            requires = listOf(SearchRequirement.FullMode)
         ),
         SearchEntry(
             id = "prefs.trace",
@@ -634,7 +603,8 @@ object SearchIndex {
             summaryRes = R.string.disable_trace_desc,
             icon = Icons.Rounded.Tune,
             group = SearchGroup.Prefs,
-            target = SearchTarget.Route("preferenced")
+            target = SearchTarget.Route("preferenced"),
+            requires = listOf(SearchRequirement.FullMode)
         ),
         SearchEntry(
             id = "prefs.logd",
@@ -642,7 +612,8 @@ object SearchIndex {
             summaryRes = R.string.disable_logging_desc,
             icon = Icons.Rounded.Tune,
             group = SearchGroup.Prefs,
-            target = SearchTarget.Route("preferenced")
+            target = SearchTarget.Route("preferenced"),
+            requires = listOf(SearchRequirement.FullMode)
         ),
         SearchEntry(
             id = "prefs.gpu_mali",
@@ -651,7 +622,8 @@ object SearchIndex {
             icon = Icons.Rounded.DeveloperBoard,
             group = SearchGroup.Prefs,
             target = SearchTarget.Route("preferenced"),
-            keywordsRes = listOf(R.string.str_unavailable_mediatek)
+            keywordsRes = listOf(R.string.str_unavailable_mediatek),
+            requires = listOf(SearchRequirement.MediaTek)
         ),
         SearchEntry(
             id = "prefs.thermals",
@@ -660,7 +632,8 @@ object SearchIndex {
             icon = Icons.Rounded.Thermostat,
             group = SearchGroup.Prefs,
             target = SearchTarget.Route("preferenced"),
-            keywordsRes = listOf(R.string.str_unavailable_mediatek)
+            keywordsRes = listOf(R.string.str_unavailable_mediatek),
+            requires = listOf(SearchRequirement.MediaTek, SearchRequirement.FullMode)
         ),
 
         // --- Color scheme -------------------------------------------------
@@ -786,7 +759,7 @@ object SearchIndex {
         SearchEntry(
             id = "pers.nav_labels",
             titleRes = R.string.pers_nav_labels,
-            icon = Icons.Filled.Label,
+            icon = Icons.AutoMirrored.Filled.Label,
             group = SearchGroup.Personalization,
             target = SearchTarget.Route("color_palette"),
             keywordsRes = listOf(R.string.nav_label_always, R.string.nav_label_selected, R.string.nav_label_never)
@@ -851,7 +824,7 @@ object SearchIndex {
             id = "about.libraries",
             titleRes = R.string.str_libraries_used,
             summaryRes = R.string.str_libraries_hint,
-            icon = Icons.Rounded.LibraryBooks,
+            icon = Icons.AutoMirrored.Rounded.LibraryBooks,
             group = SearchGroup.About,
             target = SearchTarget.Nested("librariesscreen", "aboutscreen", R.string.section_about)
         )
@@ -862,13 +835,23 @@ object SearchIndex {
      *
      * Empty for a blank query -- the search screen shows its hint rather than
      * the whole index, which would be a worse directory than the app itself.
+     *
+     * [capabilities] drops the rows this device cannot show. Without it search
+     * offers options the app itself refuses to render, which is worse than a
+     * missing result: the user taps through to a screen that has no such row.
      */
-    fun search(query: String, tab: SearchTab, resolve: (Int) -> String): List<SearchEntry> {
+    fun search(
+        query: String,
+        tab: SearchTab,
+        capabilities: SearchCapabilities,
+        resolve: (Int) -> String
+    ): List<SearchEntry> {
         val tokens = query.lowercase().trim().split(' ').filter { it.isNotBlank() }
         if (tokens.isEmpty()) return emptyList()
 
         return entries
             .filter { it.group.tab == tab }
+            .filter { entry -> entry.requires.all(capabilities::satisfies) }
             .mapNotNull { entry ->
                 val haystack = haystack(entry, resolve)
                 val title = resolve(entry.titleRes).lowercase()
