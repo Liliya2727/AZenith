@@ -221,6 +221,9 @@
     <string name="schemecolor">Shema boja zaslona</string>
     <string name="schemecolordesc">Podesi zasićenje boja zaslona i intenzitet RGB kanala</string>
     <string name="search_apps">Pretraži aplikacije...</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU postavke</string>
     <string name="section_about">O programu</string>
     <string name="section_additionalsettings">Dodatne postavke</string>

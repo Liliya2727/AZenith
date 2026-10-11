@@ -206,6 +206,7 @@ fun SettingsScreen(
             topBar = { 
                 SettingsScreenTopAppBar(
                     scrollBehavior = scrollBehavior,
+                    onSearchClick = { navController.navigate(SearchTab.Settings.searchRoute) },
                     onChangelogClick = { showChangelogSheet = true }
                 ) 
             },
@@ -521,6 +522,7 @@ fun SettingsSectionTitle(text: String) {
 @Composable
 fun SettingsScreenTopAppBar(
     scrollBehavior: TopAppBarScrollBehavior,
+    onSearchClick: () -> Unit,
     onChangelogClick: () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -555,6 +557,9 @@ fun SettingsScreenTopAppBar(
                 )
             },
             actions = {
+                IconButton(onClick = onSearchClick) {
+                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search))
+                }
                 IconButton(onClick = onChangelogClick) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.TextSnippet,

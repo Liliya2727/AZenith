@@ -221,6 +221,9 @@
     <string name="schemecolor">තිර වර්ණ යෝජනා ක්‍රමය</string>
     <string name="schemecolordesc">තිර වර්ණ සංතෘප්තිය සහ RGB නාලිකා තීව්‍රතාවය සකසන්න</string>
     <string name="search_apps">යෙදුම් සොයන්න...</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU සැකසුම්</string>
     <string name="section_about">පිළිබඳ</string>
     <string name="section_additionalsettings">අතිරේක සැකසුම්</string>

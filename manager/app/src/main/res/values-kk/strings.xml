@@ -221,6 +221,9 @@
     <string name="schemecolor">Экран түс схемасы</string>
     <string name="schemecolordesc">Экран түс қанықтылығы мен RGB арналарының қарқындылығын реттеу</string>
     <string name="search_apps">Қолданбаларды іздеу…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU параметрлері</string>
     <string name="section_about">Туралы</string>
     <string name="section_additionalsettings">Қосымша параметрлер</string>

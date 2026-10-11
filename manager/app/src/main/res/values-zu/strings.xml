@@ -221,6 +221,9 @@
     <string name="schemecolor">Isikimu sombala wesikrini</string>
     <string name="schemecolordesc">Lungisa ukugcwala kombala wesikrini namandla wesiteshi se-RGB</string>
     <string name="search_apps">Sesha izicelo…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">Izilungiselelo ze-CPU</string>
     <string name="section_about">Mayelana</string>
     <string name="section_additionalsettings">Izilungiselelo ezengeziwe</string>

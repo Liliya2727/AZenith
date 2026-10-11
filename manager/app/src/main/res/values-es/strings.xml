@@ -221,6 +221,9 @@
     <string name="schemecolor">Esquema de color de pantalla</string>
     <string name="schemecolordesc">Ajustar saturación de color e intensidad de los canales RGB</string>
     <string name="search_apps">Buscar aplicaciones...</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">Configuración de CPU</string>
     <string name="section_about">Acerca de</string>
     <string name="section_additionalsettings">Configuración adicional</string>

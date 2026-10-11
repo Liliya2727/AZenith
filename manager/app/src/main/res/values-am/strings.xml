@@ -222,6 +222,9 @@
     <string name="schemecolor">የስክሪን የቀለም መርሐግብር</string>
     <string name="schemecolordesc">የስክሪን ቀለም ሙሌት እና የRGB ቻናል ጥንካሬ ያስተካክሉ</string>
     <string name="search_apps">መተግበሪያዎችን ይፈልጉ…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU ቅንብሮች</string>
     <string name="section_about">ስለ</string>
     <string name="section_additionalsettings">ተጨማሪ ቅንብሮች</string>

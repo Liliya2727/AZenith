@@ -221,6 +221,9 @@
     <string name="schemecolor">គ្រោងពណ៌អេក្រង់</string>
     <string name="schemecolordesc">កែសម្រួលតិត្ថិភាពពណ៌អេក្រង់ និងអាំងតង់ស៊ីតេឆានែល RGB</string>
     <string name="search_apps">ស្វែងរកកម្មវិធី…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">ការកំណត់ CPU</string>
     <string name="section_about">អំពី</string>
     <string name="section_additionalsettings">ការកំណត់បន្ថែម</string>

@@ -221,6 +221,9 @@
     <string name="schemecolor">Ekran rang sxemasi</string>
     <string name="schemecolordesc">Ekran rang to‘yinganligi va RGB kanal intensivligini sozlash</string>
     <string name="search_apps">Ilovalarni qidirish…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU sozlamalari</string>
     <string name="section_about">Haqida</string>
     <string name="section_additionalsettings">Qo‘shimcha sozlamalar</string>

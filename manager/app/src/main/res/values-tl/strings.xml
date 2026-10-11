@@ -221,6 +221,9 @@
     <string name="schemecolor">Screen color scheme</string>
     <string name="schemecolordesc">Ayusin ang saturation ng screen at RGB channel intensity</string>
     <string name="search_apps">Maghanap ng app…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU settings</string>
     <string name="section_about">Tungkol sa</string>
     <string name="section_additionalsettings">Karagdagang setting</string>

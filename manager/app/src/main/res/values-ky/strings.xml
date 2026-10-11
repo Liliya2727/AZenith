@@ -221,6 +221,9 @@
     <string name="schemecolor">Экрандын түс схемасы</string>
     <string name="schemecolordesc">Экрандын түс каныккандыгын жана RGB канал интенсивдүүлүгүн жөндөө</string>
     <string name="search_apps">Колдонмолорду издөө…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU жөндөөлөрү</string>
     <string name="section_about">Жөнүндө</string>
     <string name="section_additionalsettings">Кошумча жөндөөлөр</string>

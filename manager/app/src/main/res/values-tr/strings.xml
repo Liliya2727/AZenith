@@ -221,6 +221,9 @@
     <string name="schemecolor">Ekran renk düzeni</string>
     <string name="schemecolordesc">Ekran renk doygunluğunu ve RGB kanal yoğunluğunu ayarlayın</string>
     <string name="search_apps">Uygulama ara…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU ayarları</string>
     <string name="section_about">Hakkında</string>
     <string name="section_additionalsettings">Ek ayarlar</string>

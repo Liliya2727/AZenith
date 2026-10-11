@@ -221,6 +221,9 @@
     <string name="schemecolor">화면 색상 구성</string>
     <string name="schemecolordesc">화면 색상 채도와 RGB 채널 강도 조정</string>
     <string name="search_apps">앱 검색...</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU 설정</string>
     <string name="section_about">정보</string>
     <string name="section_additionalsettings">추가 설정</string>

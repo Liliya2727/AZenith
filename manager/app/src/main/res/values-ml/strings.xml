@@ -221,6 +221,9 @@
     <string name="schemecolor">സ്ക്രീൻ വർണ്ണ സ്കീം</string>
     <string name="schemecolordesc">സ്ക്രീൻ വർണ്ണ സാച്ചുറേഷനും RGB ചാനൽ തീവ്രതയും ക്രമീകരിക്കുക</string>
     <string name="search_apps">ആപ്പുകൾ തിരയുക…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU ക്രമീകരണങ്ങൾ</string>
     <string name="section_about">കുറിച്ച്</string>
     <string name="section_additionalsettings">അധിക ക്രമീകരണങ്ങൾ</string>

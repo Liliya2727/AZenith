@@ -221,6 +221,9 @@
     <string name="schemecolor">Näytön väriteema</string>
     <string name="schemecolordesc">Säädä näytön värikylläisyyttä ja RGB-kanavien voimakkuutta</string>
     <string name="search_apps">Hae sovelluksia…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU-asetukset</string>
     <string name="section_about">Tietoja</string>
     <string name="section_additionalsettings">Lisäasetukset</string>

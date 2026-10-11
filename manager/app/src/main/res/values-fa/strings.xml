@@ -221,6 +221,9 @@
     <string name="schemecolor">طرح رنگ صفحه نمایش</string>
     <string name="schemecolordesc">تنظیم اشباع رنگ صفحه و شدت کانال‌های RGB</string>
     <string name="search_apps">جستجوی برنامه‌ها...</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">تنظیمات CPU</string>
     <string name="section_about">درباره</string>
     <string name="section_additionalsettings">تنظیمات اضافی</string>

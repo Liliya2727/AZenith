@@ -98,6 +98,7 @@ import zx.azenith.ui.theme.NavEdge
 import zx.azenith.ui.theme.NavLabelMode
 import zx.azenith.ui.theme.NavStyle
 import zx.azenith.ui.theme.currentPersonalization
+import zx.azenith.ui.viewmodel.SearchTab
 import androidx.compose.ui.graphics.RectangleShape
 
 
@@ -497,6 +498,30 @@ fun MainScreen(fromTileType: String? = null) {
                     composable("aboutscreen") {
                         zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
                             AboutScreen(navController)
+                        }
+                    }
+                    // One screen for every tab; the scope argument is what keeps a
+                    // Tweaks search out of Settings and the other way round.
+                    composable(
+                        route = "searchscreen/{tab}",
+                        arguments = listOf(navArgument("tab") { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
+                            SearchScreen(
+                                navController = navController,
+                                tab = SearchTab.ofRoute(backStackEntry.arguments?.getString("tab")),
+                                onOpenPagerPage = { route ->
+                                    // The tab underneath is the one search was opened
+                                    // from, so drop the search screen and scroll the
+                                    // pager the result actually lives on.
+                                    navController.popBackStack("main", inclusive = false)
+                                    val page = pagerRoutes.indexOf(route)
+                                    if (page >= 0) {
+                                        coroutineScope.launch { pagerState.animateScrollToPage(page) }
+                                        highlightRoute.value = route
+                                    }
+                                }
+                            )
                         }
                     }
                     composable("licensescreen") {

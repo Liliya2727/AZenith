@@ -221,6 +221,9 @@
     <string name="schemecolor">Skema e ngjyrave të ekranit</string>
     <string name="schemecolordesc">Rregullo ngopjen dhe intensitetin e kanaleve RGB</string>
     <string name="search_apps">Kërko aplikacione…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">Cilësimet CPU</string>
     <string name="section_about">Rreth</string>
     <string name="section_additionalsettings">Cilësime shtesë</string>

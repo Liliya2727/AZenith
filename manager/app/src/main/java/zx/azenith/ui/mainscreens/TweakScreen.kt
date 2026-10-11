@@ -96,6 +96,7 @@ import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.*
+import zx.azenith.ui.viewmodel.SearchTab
 import zx.azenith.ui.viewmodel.TweakViewModel
 import zx.azenith.ui.component.ZenithSlider
 
@@ -203,6 +204,7 @@ fun TweakScreen(
         topBar = {
             TweakScreenTopAppBar(
                 scrollBehavior = scrollBehavior,
+                onSearchClick = { navController.navigate(SearchTab.Tweaks.searchRoute) },
                 onMoreClick = { showBackupRestoreSheet = true },
                 modifier = backupOptionsOrigin.trackedModifier(),
                 onMoreModifier = backupOptionsOrigin.trackedModifier(),
@@ -826,6 +828,7 @@ fun ExpressiveTile(
 @Composable
 fun TweakScreenTopAppBar(
     scrollBehavior: TopAppBarScrollBehavior,
+    onSearchClick: () -> Unit,
     onMoreClick: () -> Unit,
     modifier: Modifier = Modifier,
     onMoreModifier: Modifier = Modifier
@@ -865,6 +868,9 @@ fun TweakScreenTopAppBar(
                 scrolledContainerColor = Color.Transparent
             ),
             actions = {
+                IconButton(onClick = onSearchClick) {
+                    Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search))
+                }
                 IconButton(onClick = onMoreClick, modifier = onMoreModifier) {
                     Icon(
                         imageVector = Icons.Outlined.Cloud,

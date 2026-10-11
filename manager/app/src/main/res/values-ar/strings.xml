@@ -222,6 +222,9 @@
     <string name="schemecolor">نظام ألوان الشاشة</string>
     <string name="schemecolordesc">ضبط تشبع ألوان الشاشة وشدة قنوات RGB</string>
     <string name="search_apps">بحث عن التطبيقات…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">إعدادات CPU</string>
     <string name="section_about">حول</string>
     <string name="section_additionalsettings">إعدادات إضافية</string>

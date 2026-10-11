@@ -222,6 +222,9 @@
     <string name="schemecolor">Σχέδιο χρωμάτων οθόνης</string>
     <string name="schemecolordesc">Ρύθμιση κορεσμού χρωμάτων οθόνης και έντασης καναλιών RGB</string>
     <string name="search_apps">Αναζήτηση εφαρμογών…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">Ρυθμίσεις CPU</string>
     <string name="section_about">Σχετικά</string>
     <string name="section_additionalsettings">Πρόσθετες ρυθμίσεις</string>

@@ -221,6 +221,9 @@
     <string name="schemecolor">Schermkleurenschema</string>
     <string name="schemecolordesc">Pas kleurverzadiging en RGB-kanaalintensiteit aan</string>
     <string name="search_apps">Apps zoeken…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU-instellingen</string>
     <string name="section_about">Over</string>
     <string name="section_additionalsettings">Extra instellingen</string>

@@ -221,6 +221,9 @@
     <string name="schemecolor">ეკრანის ფერის სქემა</string>
     <string name="schemecolordesc">ეკრანის ფერის გაჯერებისა და RGB არხების ინტენსივობის რეგულირება</string>
     <string name="search_apps">აპლიკაციების ძიება...</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU პარამეტრები</string>
     <string name="section_about">შესახებ</string>
     <string name="section_additionalsettings">დამატებითი პარამეტრები</string>

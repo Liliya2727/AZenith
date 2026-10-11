@@ -221,6 +221,9 @@
     <string name="schemecolor">Mpango wa rangi wa skrini</string>
     <string name="schemecolordesc">Rekebisha ujazo wa rangi wa skrini na nguvu za chaneli za RGB</string>
     <string name="search_apps">Tafuta programu…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">Mipangilio ya CPU</string>
     <string name="section_about">Kuhusu</string>
     <string name="section_additionalsettings">Mipangilio ya ziada</string>

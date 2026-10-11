@@ -221,6 +221,9 @@
     <string name="schemecolor">Barvna shema zaslona</string>
     <string name="schemecolordesc">Prilagodi barvno nasičenost zaslona in intenzivnost kanalov RGB</string>
     <string name="search_apps">Išči aplikacije…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">Nastavitve CPU</string>
     <string name="section_about">O programu</string>
     <string name="section_additionalsettings">Dodatne nastavitve</string>

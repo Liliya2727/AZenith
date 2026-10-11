@@ -221,6 +221,9 @@
     <string name="schemecolor">स्क्रीन रंग योजना</string>
     <string name="schemecolordesc">स्क्रीन रंग संपृक्तता आणि RGB चॅनेल तीव्रता समायोजित करा</string>
     <string name="search_apps">अ‍ॅप शोधा…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU सेटिंग्ज</string>
     <string name="section_about">बद्दल</string>
     <string name="section_additionalsettings">अतिरिक्त सेटिंग्ज</string>

@@ -221,6 +221,9 @@
     <string name="schemecolor">திரை வண்ண திட்டம்</string>
     <string name="schemecolordesc">திரை வண்ண நிறைவு மற்றும் RGB சேனல் தீவிரத்தை சரிசெய்யவும்</string>
     <string name="search_apps">பயன்பாடுகளைத் தேடுங்கள்…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU அமைப்புகள்</string>
     <string name="section_about">பற்றி</string>
     <string name="section_additionalsettings">கூடுதல் அமைப்புகள்</string>

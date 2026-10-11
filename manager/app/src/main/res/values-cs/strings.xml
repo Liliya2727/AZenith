@@ -222,6 +222,9 @@
     <string name="schemecolor">Barevné schéma obrazovky</string>
     <string name="schemecolordesc">Nastavit sytost barev a intenzitu kanálů RGB.</string>
     <string name="search_apps">Hledat aplikace…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">Nastavení CPU</string>
     <string name="section_about">O aplikaci</string>
     <string name="section_additionalsettings">Další nastavení</string>

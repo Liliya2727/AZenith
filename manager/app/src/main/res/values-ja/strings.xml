@@ -221,6 +221,9 @@
     <string name="schemecolor">画面の配色</string>
     <string name="schemecolordesc">画面の彩度とRGBチャンネル強度を調整</string>
     <string name="search_apps">アプリを検索…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU設定</string>
     <string name="section_about">について</string>
     <string name="section_additionalsettings">追加設定</string>

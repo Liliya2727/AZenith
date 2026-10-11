@@ -221,6 +221,9 @@
     <string name="schemecolor">Дэлгэцийн өнгөний схем</string>
     <string name="schemecolordesc">Дэлгэцийн өнгөний ханалт болон RGB сувгийн эрчмийг тохируулах</string>
     <string name="search_apps">Програм хайх…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU тохиргоо</string>
     <string name="section_about">Тухай</string>
     <string name="section_additionalsettings">Нэмэлт тохиргоо</string>

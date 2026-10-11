@@ -221,6 +221,9 @@
     <string name="schemecolor">Ekrano spalvų schema</string>
     <string name="schemecolordesc">Koreguoti ekrano spalvų sotumą ir RGB kanalų intensyvumą</string>
     <string name="search_apps">Ieškoti programų…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU nustatymai</string>
     <string name="section_about">Apie</string>
     <string name="section_additionalsettings">Papildomi nustatymai</string>

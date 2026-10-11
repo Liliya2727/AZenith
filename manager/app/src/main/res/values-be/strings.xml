@@ -222,6 +222,9 @@
     <string name="schemecolor">Каляровая схема экрана</string>
     <string name="schemecolordesc">Наладзіць каляровую насычанасць экрана і інтэнсіўнасць RGB каналаў</string>
     <string name="search_apps">Шукаць прыкладанні…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">Настройкі CPU</string>
     <string name="section_about">Пра праграму</string>
     <string name="section_additionalsettings">Дадатковыя настройкі</string>

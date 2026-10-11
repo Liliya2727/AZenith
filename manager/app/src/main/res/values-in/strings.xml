@@ -221,6 +221,9 @@
     <string name="schemecolor">Skema warna layar</string>
     <string name="schemecolordesc">Sesuaikan saturasi warna layar dan intensitas saluran RGB</string>
     <string name="search_apps">Cari aplikasi…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">Pengaturan CPU</string>
     <string name="section_about">Tentang</string>
     <string name="section_additionalsettings">Pengaturan tambahan</string>

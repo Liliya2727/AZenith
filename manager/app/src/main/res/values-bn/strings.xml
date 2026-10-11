@@ -222,6 +222,9 @@
     <string name="schemecolor">স্ক্রিন রঙ স্কিম</string>
     <string name="schemecolordesc">স্ক্রিন রঙ স্যাচুরেশন ও RGB চ্যানেল তীব্রতা সামঞ্জস্য করুন</string>
     <string name="search_apps">অ্যাপ অনুসন্ধান করুন…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU সেটিংস</string>
     <string name="section_about">সম্পর্কে</string>
     <string name="section_additionalsettings">অতিরিক্ত সেটিংস</string>

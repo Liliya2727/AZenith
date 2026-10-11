@@ -222,6 +222,9 @@
     <string name="schemecolor">Skærmfarveskema</string>
     <string name="schemecolordesc">Juster skærmens farvemætning og RGB-kanalintensitet</string>
     <string name="search_apps">Søg apps…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU-indstillinger</string>
     <string name="section_about">Om</string>
     <string name="section_additionalsettings">Yderligere indstillinger</string>

@@ -221,6 +221,9 @@
     <string name="schemecolor">Skjermens fargevalg</string>
     <string name="schemecolordesc">Juster skjermens fargemetning og RGB-kanalstyrke</string>
     <string name="search_apps">Søk i apper…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU-innstillinger</string>
     <string name="section_about">Om</string>
     <string name="section_additionalsettings">Tilleggsinnstillinger</string>

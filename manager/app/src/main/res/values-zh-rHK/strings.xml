@@ -221,6 +221,9 @@
     <string name="schemecolor">螢幕配色方案</string>
     <string name="schemecolordesc">調整螢幕色彩飽和度與 RGB 通道強度</string>
     <string name="search_apps">搜尋應用程式…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU 設定</string>
     <string name="section_about">關於</string>
     <string name="section_additionalsettings">附加設定</string>

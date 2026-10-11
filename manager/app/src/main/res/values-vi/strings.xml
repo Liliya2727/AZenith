@@ -221,6 +221,9 @@
     <string name="schemecolor">Bảng màu màn hình</string>
     <string name="schemecolordesc">Điều chỉnh độ bão hòa màu màn hình và cường độ kênh RGB</string>
     <string name="search_apps">Tìm kiếm ứng dụng…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">Cài đặt CPU</string>
     <string name="section_about">Giới thiệu</string>
     <string name="section_additionalsettings">Cài đặt bổ sung</string>

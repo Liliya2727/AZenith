@@ -221,6 +221,9 @@
     <string name="schemecolor">اسکرین رنگ سکیم</string>
     <string name="schemecolordesc">اسکرین کی رنگین سنترپتی اور RGB چینل کی شدت کو ایڈجسٹ کریں</string>
     <string name="search_apps">ایپس تلاش کریں...</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU ترتیبات</string>
     <string name="section_about">تعارف</string>
     <string name="section_additionalsettings">اضافی ترتیبات</string>

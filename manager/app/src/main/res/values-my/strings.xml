@@ -221,6 +221,9 @@
     <string name="schemecolor">မျက်နှာပြင်အရောင်အစီအစဉ်</string>
     <string name="schemecolordesc">မျက်နှာပြင်အရောင်ပြည့်ဝမှုနှင့် RGB ချန်နယ်အားကို ချိန်ညှိပါ</string>
     <string name="search_apps">အက်ပ်ရှာဖွေပါ…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU ဆက်တင်များ</string>
     <string name="section_about">အကြောင်း</string>
     <string name="section_additionalsettings">ထပ်ဆောင်းဆက်တင်များ</string>

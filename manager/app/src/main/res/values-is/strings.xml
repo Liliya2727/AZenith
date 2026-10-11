@@ -221,6 +221,9 @@
     <string name="schemecolor">Skjálitakerfi</string>
     <string name="schemecolordesc">Stilla litmettun skjás og styrk RGB rása</string>
     <string name="search_apps">Leita að forritum…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU stillingar</string>
     <string name="section_about">Um</string>
     <string name="section_additionalsettings">Viðbótarstillingar</string>

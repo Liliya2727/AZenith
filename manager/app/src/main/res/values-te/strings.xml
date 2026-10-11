@@ -221,6 +221,9 @@
     <string name="schemecolor">స్క్రీన్ రంగు పథకం</string>
     <string name="schemecolordesc">స్క్రీన్ రంగు సంతృప్తత మరియు RGB ఛానల్ తీవ్రతను సర్దుబాటు చేయండి</string>
     <string name="search_apps">యాప్‌లను శోధించండి…</string>
+    <string name="search_empty_state">Type to search</string>
+    <string name="search_in_tab">Search %1$s</string>
+    <string name="search_no_results">No results</string>
     <string name="section_CPUSettings">CPU సెట్టింగ్‌లు</string>
     <string name="section_about">గురించి</string>
     <string name="section_additionalsettings">అదనపు సెట్టింగ్‌లు</string>
