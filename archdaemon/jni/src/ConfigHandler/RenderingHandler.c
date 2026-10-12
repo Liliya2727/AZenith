@@ -49,11 +49,11 @@ bool apply_smart_renderer(const char* target_type, char* saved_ref, char* saved_
         strncpy(saved_sys, current_sys_renderer, PROP_VALUE_MAX - 1);
 
     if (strcmp(current_renderer, target_type) != 0) {
-        log_zenith(LOG_INFO, "RenderHandler: Renderer mismatch! Current: %s | Target: %s. Switching...",
-                   current_renderer, target_type);
+        log_info("render", "renderer changed from=%s to=%s", current_renderer, target_type);
         systemv("sys.azenith-utilityconf setrender %s", target_type);
         __system_property_set("persist.sys.azenithconf.renderer", target_type);
         return true; 
     }
+    log_debug("render", "renderer already matches value=%s", current_renderer);
     return false;
 }

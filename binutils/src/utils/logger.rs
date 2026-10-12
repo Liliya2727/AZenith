@@ -25,6 +25,11 @@ pub const LOG_FILE:     &str = "/data/adb/.config/AZenith/debug/AZenith.log";
 pub const VERBOSE_FILE: &str = "/data/adb/.config/AZenith/debug/AZenithVerbose.log";
 const     LOG_DIR:      &str = "/data/adb/.config/AZenith/debug";
 
+/// Rotate once a file crosses this size, keeping LOG_KEEP_FILES generations
+/// (<file>.1 .. <file>.N). Mirrors the C daemon's rotation policy.
+const LOG_MAX_BYTES: u64 = 512 * 1024;
+const LOG_KEEP_FILES: usize = 2;
+
 const ANDROID_LOG_DEBUG: i32 = 3;
 const ANDROID_LOG_INFO:  i32 = 4;
 const ANDROID_LOG_WARN:  i32 = 5;
@@ -59,61 +64,77 @@ fn ensure_dir() {
     let _ = fs::create_dir_all(LOG_DIR);
 }
 
+/// Shift <path> -> <path>.1 -> <path>.2 once it exceeds LOG_MAX_BYTES. On any
+/// failure we just keep appending; logging must never crash the utility.
+fn rotate_if_needed(path: &str) {
+    let Ok(meta) = fs::metadata(path) else { return };
+    if meta.len() < LOG_MAX_BYTES {
+        return;
+    }
+
+    for i in (1..=LOG_KEEP_FILES).rev() {
+        let src = if i == 1 { path.to_string() } else { format!("{}.{}", path, i - 1) };
+        let dst = format!("{}.{}", path, i);
+
+        let _ = fs::remove_file(&dst);
+        let _ = fs::rename(&src, &dst);
+    }
+}
+
 fn append(path: &str, line: &str) {
+    rotate_if_needed(path);
     if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(path) {
         let _ = f.write_all(line.as_bytes());
     }
 }
 
-fn fmt_line(level: &str, tag: &str, message: &str) -> String {
-    let short_level = match level {
-        "INFO" => "I",
-        "DEBUG" => "D",
-        "WARN" => "W",
-        "ERROR" => "E",
-        _ => level,
-    };
-    format!("{} {} {}: {}\n", timestamp(), short_level, tag, message)
+fn fmt_line(level: &str, component: &str, message: &str) -> String {
+    format!("{} {} [{}] {}\n", timestamp(), level, component, message)
 }
 
-pub fn write_log(tag: &str, message: &str) {
+pub fn write_log(component: &str, message: &str) {
     ensure_dir();
-    append(LOG_FILE, &fmt_line("INFO", tag, message));
-    android_log(ANDROID_LOG_INFO, tag, message);
+    append(LOG_FILE, &fmt_line("INFO", component, message));
+    android_log(ANDROID_LOG_INFO, component, message);
 }
 
-pub fn write_verbose(tag: &str, message: &str) {
+pub fn write_verbose(component: &str, message: &str) {
     ensure_dir();
-    append(VERBOSE_FILE, &fmt_line("DEBUG", tag, message));
-    android_log(ANDROID_LOG_DEBUG, tag, message);
+    append(VERBOSE_FILE, &fmt_line("DEBUG", component, message));
+    android_log(ANDROID_LOG_DEBUG, component, message);
 }
 
-pub fn write_warn(tag: &str, message: &str) {
+pub fn write_warn(component: &str, message: &str) {
     ensure_dir();
-    append(LOG_FILE, &fmt_line("WARN", tag, message));
-    android_log(ANDROID_LOG_WARN, tag, message);
+    append(LOG_FILE, &fmt_line("WARN", component, message));
+    android_log(ANDROID_LOG_WARN, component, message);
 }
 
-pub fn write_error(tag: &str, message: &str) {
+pub fn write_error(component: &str, message: &str) {
     ensure_dir();
-    append(LOG_FILE, &fmt_line("ERROR", tag, message));
-    android_log(ANDROID_LOG_ERROR, tag, message);
+    append(LOG_FILE, &fmt_line("ERROR", component, message));
+    android_log(ANDROID_LOG_ERROR, component, message);
 }
 
-pub fn log_info(message: &str) {
-    write_log("AZenith_Utility", message);
+/// A significant, low-frequency event (start/stop/profile change/config reload).
+pub fn log_info(component: &str, message: &str) {
+    write_log(component, message);
 }
 
-pub fn verbose(message: &str) {
+/// DEBUG detail for an external component. Only emitted when debug mode is on;
+/// routed to the verbose log so the main log stays readable.
+pub fn log_debug(component: &str, message: &str) {
     if get_debugmode() {
-        write_verbose("AZenith_Utility", message);
+        write_verbose(component, message);
     }
 }
 
-pub fn log_warn(message: &str) {
-    write_warn("AZenith_Utility", message);
+/// An oddity the caller recovered from; execution continues.
+pub fn log_warn(component: &str, message: &str) {
+    write_warn(component, message);
 }
 
-pub fn log_error(message: &str) {
-    write_error("AZenith_Utility", message);
+/// An operation failed and needs attention. Include path/value/error context.
+pub fn log_error(component: &str, message: &str) {
+    write_error(component, message);
 }

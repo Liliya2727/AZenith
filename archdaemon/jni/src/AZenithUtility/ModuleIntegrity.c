@@ -31,7 +31,7 @@ void is_kanged(void) {
     return;
 
 doorprize:
-    log_zenith(LOG_FATAL, "Module modified by 3rd party, exiting.");
+    log_fatal("integrity", "module modified by 3rd party path=%s", MODULE_PROP);
     notify("Daemon Error", "Trying to rename me?", true, 0);
     __system_property_set("persist.sys.azenith.service", "");
     __system_property_set("persist.sys.azenith.state", "stopped");
@@ -49,7 +49,7 @@ void check_module_version(void) {
     int ret = systemv("grep -q '^version=%s$' %s", DAEMON_VERSION, MODULE_PROP);
 
     if (ret != 0) [[clang::unlikely]] {
-        log_zenith(LOG_FATAL, "AZenith version mismatch with daemon version! please reinstall the module!");
+        log_fatal("integrity", "version mismatch expected=%s path=%s", DAEMON_VERSION, MODULE_PROP);
         notify("Daemon Error", "AZenith version mismatch, please reinstall!", true, 0);
         __system_property_set("persist.sys.azenith.service", "");
         __system_property_set("persist.sys.azenith.state", "stopped");

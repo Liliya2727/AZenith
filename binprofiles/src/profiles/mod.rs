@@ -54,9 +54,9 @@ pub fn performance_profile() {
     }
 
     if !lite_mode {
-        log_info("Set CPU freq to max available Frequencies");
+        log_info("cpu", "set freq mode=max_available");
     } else {
-        log_info("Set CPU freq to normal Frequencies");
+        log_info("cpu", "set freq mode=normal");
     }
 
     write_lock("80", "/proc/sys/vm/vfs_cache_pressure");
@@ -125,7 +125,7 @@ pub fn performance_profile() {
         }
     }
 
-    log_verbose("Performance Profile Applied Successfully!");
+    log_info("profiles", "performance profile applied");
 }
 
 pub fn balanced_profile() {
@@ -167,9 +167,9 @@ pub fn balanced_profile() {
     }
 
     if getprop("persist.sys.azenithconf.freqoffset") == "Disabled" {
-        log_info("Set CPU freq to normal Frequencies");
+        log_info("cpu", "set freq mode=normal");
     } else {
-        log_info("Set CPU freq to normal selected Frequencies");
+        log_info("cpu", "set freq mode=normal_selected");
     }
 
     write_lock("120", "/proc/sys/vm/vfs_cache_pressure");
@@ -231,7 +231,7 @@ pub fn balanced_profile() {
         _ => {}
     }
 
-    log_verbose("Balanced Profile applied successfully!");
+    log_info("profiles", "balanced profile applied");
 }
 
 pub fn eco_mode() {
@@ -269,7 +269,7 @@ pub fn eco_mode() {
     } else {
         setfreq();
     }
-    log_info("Set CPU freq to low Frequencies");
+    log_info("cpu", "set freq mode=low");
 
     write_lock("120", "/proc/sys/vm/vfs_cache_pressure");
     write_lock("Y", "/sys/module/workqueue/parameters/power_efficient");
@@ -314,7 +314,7 @@ pub fn eco_mode() {
         _ => {}
     }
 
-    log_verbose("ECO Mode applied successfully!");
+    log_info("profiles", "eco profile applied");
 }
 
 pub fn initialize() {
@@ -427,6 +427,6 @@ pub fn initialize() {
     
     // Final Sync & Logs
     let _ = Command::new("sync").status();
-    log_verbose("Initializing Complete");
-    log_info("Initializing Complete");
+    log_debug("profiles", "init phase complete");
+    log_info("profiles", "initializing complete");
 }

@@ -49,7 +49,7 @@ bool apply_resolution_target(DaemonContext* ctx, const char* pkg,
         return false;
 
     if (ctx->resolution_applied) {
-        log_zenith(LOG_INFO, "ResolutionChanger: Already applied for %s, skipping.", pkg);
+        log_debug("resolution", "already applied pkg=%s, skipping", pkg);
         return false;
     }
 
@@ -69,7 +69,8 @@ bool apply_resolution_target(DaemonContext* ctx, const char* pkg,
         systemv(cmd);
         ctx->resolution_applied = true;
         ctx->used_legacy_fallback = false;
-        log_zenith(LOG_INFO, "ResolutionChanger: Applied '%s' (Android %d)", cmd, sdk);
+        log_info("resolution", "applied pkg=%s api=%d downscale=%s fps=%s",
+                 pkg, sdk, IS_DEFAULT(downscale) ? "-" : downscale, IS_DEFAULT(fps) ? "-" : fps);
         return true;
     }
 
@@ -86,7 +87,8 @@ bool apply_resolution_target(DaemonContext* ctx, const char* pkg,
 
     ctx->resolution_applied = true;
     ctx->used_legacy_fallback = true;
-    log_zenith(LOG_INFO, "ResolutionChanger: Applied via device_config [%s] (Android %d)", config, sdk);
+    log_info("resolution", "applied pkg=%s api=%d mode=legacy downscale=%s fps=%s",
+             pkg, sdk, IS_DEFAULT(downscale) ? "-" : downscale, IS_DEFAULT(fps) ? "-" : fps);
     return true;
 }
 
@@ -104,6 +106,6 @@ void restore_resolution_target(DaemonContext* ctx, const char* pkg) {
         systemv("cmd game reset --mode 2 %s", pkg);
     }
 
-    log_zenith(LOG_INFO, "ResolutionChanger: Reset intervention for %s", pkg);
+    log_info("resolution", "reset pkg=%s legacy=%d", pkg, ctx->used_legacy_fallback ? 1 : 0);
     ctx->resolution_applied = false;
 }

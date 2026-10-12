@@ -24,7 +24,7 @@
 void save_daemon_state(DaemonContext* ctx) {
     FILE* fp = fopen(DAEMON_STATE_FILE, "w");
     if (!fp) {
-        log_zenith(LOG_ERROR, "Failed to open state file for writing");
+        log_error("state", "state file open failed path=%s errno=%d", DAEMON_STATE_FILE, errno);
         return;
     }
 
@@ -36,7 +36,9 @@ void save_daemon_state(DaemonContext* ctx) {
     fprintf(fp, "cur_mode=%d\n", ctx->cur_mode);
 
     fclose(fp);
-    log_zenith(LOG_INFO, "Daemon state saved for recovery");
+    log_debug("state", "state saved renderer=%s sys_renderer=%s refresh=%d zen=%d mode=%s",
+              ctx->saved_renderer, ctx->saved_sys_renderer, ctx->saved_refresh_rate,
+              ctx->saved_zen_mode, profile_mode_name(ctx->cur_mode));
 }
 
 /**
@@ -76,5 +78,6 @@ void restore_daemon_state(DaemonContext* ctx) {
 
     fclose(fp);
     systemv("rm -rf /data/adb/.config/AZenith/daemon_state");
-    log_zenith(LOG_INFO, "Restored daemon state from previous session, will reconcile on next profile checkup");
+    log_info("state", "state restored renderer=%s refresh=%d mode=%s",
+             ctx->saved_renderer, ctx->saved_refresh_rate, profile_mode_name(ctx->cur_mode));
 }

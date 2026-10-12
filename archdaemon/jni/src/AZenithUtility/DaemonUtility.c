@@ -132,10 +132,10 @@ char* timern(void) {
 [[noreturn]] void sighandler(const int signal) {
     switch (signal) {
     case SIGTERM:
-        log_zenith(LOG_INFO, "Received SIGTERM, exiting.");
+        log_info("daemon", "shutdown signal=SIGTERM");
         break;
     case SIGINT:
-        log_zenith(LOG_INFO, "Received SIGINT, exiting.");
+        log_info("daemon", "shutdown signal=SIGINT");
         break;
     }
 
@@ -158,7 +158,7 @@ void toast(const char* message) {
                            message);
 
         if (exit != 0) [[clang::unlikely]] {
-            log_zenith(LOG_WARN, "Unable to send toast broadcast: %s", message);
+            log_warn("notify", "toast broadcast failed message=%s", message);
         }
     }
 }
@@ -179,7 +179,7 @@ void checkstate(void) {
     }
     return;
 killsvc:
-    log_zenith(LOG_FATAL, "Service killed by checkstate().");
+    log_fatal("daemon", "service killed reason=state_empty_or_stopped");
     __system_property_set("persist.sys.azenith.service", "");
     __system_property_set("persist.sys.azenith.state", "stopped");
     exit(EXIT_FAILURE);
@@ -215,15 +215,15 @@ void runthermalcore(void) {
         FILE* fp = popen("pidof sys.azenith-rianixiathermalcore", "r");
         if (fp == NULL) {
             perror("pidof failed");
-            log_zenith(LOG_INFO, "Failed to run Thermalcore service");
+            log_warn("thermal", "thermalcore spawn failed resource=pidof");
             return;
         }
         char pid_str[32] = {0};
         if (fgets(pid_str, sizeof(pid_str), fp) != NULL) {
             int pid = atoi(pid_str);
-            log_zenith(LOG_INFO, "Starting Thermalcore Service with pid %d", pid);
+            log_info("thermal", "thermalcore started pid=%d", pid);
         } else {
-            log_zenith(LOG_INFO, "Thermalcore Service started but PID not found");
+            log_warn("thermal", "thermalcore started but pid not found");
         }
 
         pclose(fp);
@@ -278,7 +278,7 @@ void extract_string_value(char* dest, const char* key_pos, size_t max_len) {
  * @param pkg Target package name to restart.
  */
 void restart_target_app(const char* pkg) {
-    log_zenith(LOG_INFO, "RestartHandler: Restarting %s to apply pending changes...", pkg);
+    log_info("daemon", "restarting app pkg=%s reason=pending_changes", pkg);
     is_restarting_renderer = true; // reuse existing flag, guards inotify/pid logic during respawn
     systemv("am force-stop %s && am start -n $(cmd package resolve-activity --brief %s | tail -n 1)",
             pkg, pkg);
@@ -296,7 +296,7 @@ void restart_target_app(const char* pkg) {
 void update_module_description(pid_t pid) {
     FILE *fp = fopen(MODULE_PROP, "r");
     if (!fp) {
-        log_zenith(LOG_ERROR, "Failed to open module.prop for description update");
+        log_error("daemon", "module.prop open failed path=%s errno=%d (%s)", MODULE_PROP, errno, strerror(errno));
         return;
     }
 
@@ -314,7 +314,7 @@ void update_module_description(pid_t pid) {
 
     fp = fopen(MODULE_PROP, "w");
     if (!fp) {
-        log_zenith(LOG_ERROR, "Failed to write module.prop for description");
+        log_error("daemon", "module.prop write failed path=%s errno=%d (%s)", MODULE_PROP, errno, strerror(errno));
         return;
     }
 

@@ -29,13 +29,13 @@ void verify_system_integrity(void) {
 
     if (is_file_empty("/system/bin/dumpsys") == 1) {
         fprintf(stderr, "\033[31mFATAL ERROR:\033[0m /system/bin/dumpsys was tampered by kill logger module.\n");
-        log_zenith(LOG_FATAL, "/system/bin/dumpsys was tampered by kill logger module");
+        log_fatal("startup", "dumpsys tampered path=/system/bin/dumpsys");
         notify("Daemon Error", "Please remove your stupid kill logger module.", false, 0);
         exit(EXIT_FAILURE);
     }
     if (access(GAMELIST, F_OK) != 0) {
         fprintf(stderr, "\033[31mFATAL ERROR:\033[0m Unable to access Gamelist, either has been removed or moved.\n");
-        log_zenith(LOG_FATAL, "Critical file not found (%s)", GAMELIST);
+        log_fatal("startup", "critical file missing path=%s", GAMELIST);
         exit(EXIT_FAILURE);
     }
     is_kanged();
@@ -47,24 +47,24 @@ void verify_system_integrity(void) {
  * @param ctx Pointer to the DaemonContext structure.
  */
 void wait_for_java_companion(DaemonContext* ctx) {
-    log_zenith(LOG_INFO, "Waiting for Java companion daemon to initialize...");
+    log_info("startup", "waiting for java companion");
     int java_check_retries = 0;
     const int MAX_JAVA_RETRIES = 120;
 
     while (!is_java_lock_held(ctx->java_lock_path)) {
         if (++java_check_retries > MAX_JAVA_RETRIES) {
-            log_zenith(LOG_FATAL, "Java companion daemon absent after %d checks, exiting", MAX_JAVA_RETRIES);
+            log_fatal("startup", "java companion absent retries=%d", MAX_JAVA_RETRIES);
             notify("Daemon Error", "Java companion daemon crashed or failed to start.", false, 0);
             __system_property_set("persist.sys.azenith.service", "");
             __system_property_set("persist.sys.azenith.state", "stopped");
             exit(EXIT_FAILURE);
         }
         if (java_check_retries <= 1) {
-            log_zenith(LOG_WARN, "Java companion daemon lock not held, waiting...");
+            log_warn("startup", "java companion lock not held retry=%d", java_check_retries);
         }
         sleep(1);
     }
-    log_zenith(LOG_INFO, "Java companion daemon detected. Proceeding.");
+    log_info("startup", "java companion detected");
 }
 
 /**

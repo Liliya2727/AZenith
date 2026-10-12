@@ -42,10 +42,10 @@ int handle_profile(int argc, char** argv) {
     const char* profile = argv[2];
 
     if (!strcmp(profile, "0")) {
-        log_zenith(LOG_WARN, "WARN: Cannot Apply Profile 0 (Initialize)");
+        log_warn("cli", "profile apply rejected number=0 reason=initialize-only");
         printf("WARN: Cannot Apply Profile 0 (Initialize)\n");
     } else if (!strcmp(profile, "1")) {
-        log_zenith(LOG_INFO, "Applying Performance Profile via execute");
+        log_info("cli", "profile apply requested profile=performance source=cli");
         char lite_prop[PROP_VALUE_MAX] = {0};
         __system_property_get("persist.sys.azenithconf.cpulimit", lite_prop);
         if (strcmp(lite_prop, "1") == 0) {
@@ -57,12 +57,12 @@ int handle_profile(int argc, char** argv) {
         notify("Performance Profile", "System is now at Powerful state", false, 0);
         printf("Applying Performance Profile\n");
     } else if (!strcmp(profile, "2")) {
-        log_zenith(LOG_INFO, "Applying Balanced Profile via execute");
+        log_info("cli", "profile apply requested profile=balanced source=cli");
         run_profiler(BALANCED_PROFILE);
         notify("Balanced Profile", "System is now at Optimal state", false, 0);
         printf("Applying Balanced Profile\n");
     } else if (!strcmp(profile, "3")) {
-        log_zenith(LOG_INFO, "Applying Eco Mode via execute");
+        log_info("cli", "profile apply requested profile=eco source=cli");
         run_profiler(ECO_MODE);
         notify("ECO Mode", "System is now at Endurance state", false, 0);
         printf("Applying Eco Mode\n");
@@ -110,7 +110,7 @@ int handle_log(int argc, char** argv) {
         remaining -= written;
     }
 
-    external_log(level, tag, message);
+    external_log(level, tag, "%s", message);
     return 0;
 }
 
@@ -150,7 +150,7 @@ int handle_verboselog(int argc, char** argv) {
         remaining -= written;
     }
 
-    external_vlog(level, tag, message);
+    external_vlog(level, tag, "%s", message);
     return 0;
 }
 
@@ -186,9 +186,10 @@ int require_daemon_running(void) {
  * app broadcast reset.
  */
 void clearlogs(void) {
-    systemv("rm -f /data/adb/.config/AZenith/debug/AZenith.log");
-    systemv("rm -f /data/adb/.config/AZenith/debug/AZenithVerbose.log");
-    systemv("rm -f /data/adb/.config/AZenith/preload/AZenithPR.log");
+    systemv("rm -f /data/adb/.config/AZenith/debug/AZenith.log*");
+    systemv("rm -f /data/adb/.config/AZenith/debug/AZenithVerbose.log*");
+    systemv("rm -f /data/adb/.config/AZenith/preload/AZenithPR.log*");
+    log_info("cli", "cleared all log files and rotated generations");
     systemv("su -c \"am broadcast -a zx.azenith.ACTION_MANAGE -n "
             "zx.azenith/.receiver.ZenithReceiver --ez clearall true >/dev/null "
             "2>&1\"");
@@ -202,7 +203,7 @@ void clearlogs(void) {
  */
 int restart_service(void) {
     if (daemon(0, 0)) {
-        log_zenith(LOG_FATAL, "Unable to daemonize service");
+        log_fatal("restart", "daemonize failed errno=%d", errno);
         return 1;
     }
     system("/data/adb/modules/AZenith/system/bin/sys.azenith-utilityconf restartservice");

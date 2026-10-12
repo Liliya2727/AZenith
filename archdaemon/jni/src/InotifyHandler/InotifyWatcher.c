@@ -57,9 +57,9 @@ static void handle_background_apps_event(DaemonContext* ctx) {
 
     if (pids_changed) {
         if (new_count > 0) {
-            log_zenith(LOG_INFO, "InotifyHandler: Tracking %d PID(s) for %s", new_count, active_app_name ? active_app_name : gamestart);
+            log_info("inotify", "tracking pids count=%d game=%s", new_count, active_app_name ? active_app_name : gamestart);
         } else {
-            log_zenith(LOG_INFO, "InotifyHandler: Game %s PIDs updated. Found %d active processes.", active_app_name ? active_app_name : gamestart,
+            log_info("inotify", "game pids updated game=%s count=%d", active_app_name ? active_app_name : gamestart,
                        new_count);
         }
 
@@ -78,10 +78,10 @@ static void handle_background_apps_event(DaemonContext* ctx) {
 
         if (new_count == 0) {
             if (strcmp(current_system_cache.focused_app, gamestart) == 0 || is_restarting_renderer) {
-                log_zenith(LOG_INFO, "InotifyHandler: Game %s PIDs dropped (Restarting). Waiting to respawn...",
+                log_info("inotify", "game pids dropped reason=restarting game=%s",
                            active_app_name ? active_app_name : gamestart);
             } else {
-                log_zenith(LOG_INFO, "InotifyHandler: Game %s completely closed. Exiting performance mode...",
+                log_info("inotify", "game closed action=exit_performance game=%s",
                            active_app_name ? active_app_name : gamestart);
                 restore_resolution_target(ctx, gamestart);
                 free(gamestart);
@@ -182,7 +182,7 @@ bool process_inotify_events(int inotify_fd, DaemonContext* ctx, int timeout_ms) 
                                 if (fgets(ai_state, sizeof(ai_state), fp_ai)) {
                                     trim_newline(ai_state);
                                     if (ctx->is_initialize_complete && strcmp(ctx->prev_ai_state, ai_state) != 0) {
-                                        log_zenith(LOG_INFO, "InotifyHandler: Dynamic profile toggled, Reapplying Balanced Profiles");
+                                        log_info("inotify", "dynamic profile toggled action=reapply_balanced");
                                         ctx->cur_mode = PERFCOMMON;
                                         apply_balanced_profile(ctx);
                                         strcpy(ctx->prev_ai_state, ai_state);
@@ -203,17 +203,17 @@ bool process_inotify_events(int inotify_fd, DaemonContext* ctx, int timeout_ms) 
                                 fclose(fp_ai);
                             }
                         } else if (strcmp(event->name, "update") == 0) {
-                            log_zenith(LOG_INFO, "InotifyHandler: Module update detected, exiting.");
+                            log_info("inotify", "module update detected action=exit");
                             notify("Module Update", "Please reboot your device to complete module update.", false, 0);
                             __system_property_set("persist.sys.azenith.service", "");
                             __system_property_set("persist.sys.azenith.state", "stopped");
                             return true;
                         } else if (strcmp(event->name, "remove") == 0) {
-                            log_zenith(LOG_INFO, "InotifyHandler: Module is removed, exiting.");
+                            log_info("inotify", "module removed action=exit");
                             notify("Module Removed", "Please reboot your device to complete module uninstallation.", false, 0);
                             return true;
                         } else if (strcmp(event->name, "module.prop") == 0) {
-                            log_zenith(LOG_INFO, "InotifyHandler: module.prop modified...");
+                            log_info("inotify", "module.prop modified");
                             is_kanged();
                             check_module_version();
                         } else if (strcmp(event->name, "reboot") == 0) {
@@ -225,7 +225,7 @@ bool process_inotify_events(int inotify_fd, DaemonContext* ctx, int timeout_ms) 
                             if (fp) {
                                 if (fgets(ctx->config_freqoffset, sizeof(ctx->config_freqoffset), fp)) {
                                     trim_newline(ctx->config_freqoffset);
-                                    log_zenith(LOG_INFO, "InotifyHandler: freqoffset updated to [%s]", ctx->config_freqoffset);
+                                    log_info("inotify", "freqoffset updated value=%s", ctx->config_freqoffset);
                                 }
                                 fclose(fp);
                             }
@@ -291,12 +291,12 @@ void handle_dynamic_bypass(DaemonContext* ctx) {
                     if (read_current_ma() > 50) {
                         enable_bypass();
                         if (!ctx->bypass_applied) {
-                            log_zenith(LOG_INFO, "InotifyHandler: Bypass Enabled: Battery (%d%%) >= Threshold (%d%%)", current_battery, threshold);
+                            log_info("bypass", "bypass enabled battery=%d threshold=%d", current_battery, threshold);
                             ctx->bypass_applied = true;
                         }
                     }
                 } else if (ctx->bypass_applied) {
-                    log_zenith(LOG_INFO, "InotifyHandler: Bypass Disabled: Battery (%d%%) dropped below threshold (%d%%)", current_battery, threshold);
+                    log_info("bypass", "bypass disabled battery=%d threshold=%d", current_battery, threshold);
                     disable_bypass();
                     ctx->bypass_applied = false;
                 }

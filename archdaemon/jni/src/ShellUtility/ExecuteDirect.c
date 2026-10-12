@@ -40,7 +40,7 @@ char* execute_direct(const char* path, const char* arg0, ...) {
 
     int pipefd[2];
     if (pipe(pipefd) == -1) [[clang::unlikely]] {
-        log_zenith(LOG_ERROR, "pipe failed in execute_direct()");
+        log_error("shell", "execute_direct pipe failed errno=%d (%s)", errno, strerror(errno));
         return NULL;
     }
 
@@ -48,7 +48,7 @@ char* execute_direct(const char* path, const char* arg0, ...) {
     if (pid == -1) [[clang::unlikely]] {
         close(pipefd[0]);
         close(pipefd[1]);
-        log_zenith(LOG_ERROR, "fork failed in execute_direct()");
+        log_error("shell", "execute_direct fork failed errno=%d (%s)", errno, strerror(errno));
         return NULL;
     }
 

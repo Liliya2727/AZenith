@@ -32,7 +32,7 @@ int check_bypass_compatibility() {
     
     if (!is_charging()) {
         printf("\033[33m[!] WARNING:\033[0m Charger not detected. Plug in first!\n");
-        log_zenith(LOG_WARN, "Connect charger to check compatibility");
+        log_warn("bypass", "compatibility check aborted reason=charger_disconnected");
         return -1;
     }
 
@@ -65,7 +65,7 @@ int check_bypass_compatibility() {
             printf("\n\033[1;32m[SUCCESS]\033[0m Found working node: \033[1m%s\033[0m\n", bypass_list[i].name);
             printf("\033[32m[INFO]\033[0m Process finished. %d nodes skipped.\n", skipped_count);
 
-            log_zenith(LOG_INFO, "Compatible path found: %s. Skipped: %d", bypass_list[i].name, skipped_count);
+            log_info("bypass", "compatible node found name=%s skipped=%d", bypass_list[i].name, skipped_count);
 
             return 0;
         } else {

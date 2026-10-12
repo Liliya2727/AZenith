@@ -22,6 +22,26 @@ bool (*get_screenstate)(SystemStateCache*) = get_screenstate_normal;
 bool (*get_low_power_state)(SystemStateCache*) = get_low_power_state_normal;
 
 /**
+ * @brief Human-readable name for a ProfileMode, used in transition logs.
+ * @param mode ProfileMode value.
+ * @return Static string, never NULL.
+ */
+const char* profile_mode_name(int mode) {
+    switch (mode) {
+    case PERFORMANCE_PROFILE:
+        return "performance";
+    case BALANCED_PROFILE:
+        return "balanced";
+    case ECO_MODE:
+        return "eco";
+    case PERFCOMMON:
+        return "common";
+    default:
+        return "unknown";
+    }
+}
+
+/**
  * @brief Retrieves the current screen wakefulness state from cache.
  * @param cache Pointer to the system state cache.
  * @return true if screen was awake, false otherwise.

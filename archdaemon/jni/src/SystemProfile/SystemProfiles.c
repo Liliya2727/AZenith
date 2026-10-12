@@ -35,11 +35,13 @@ void* async_preload_worker(void* arg) {
 void apply_performance_profile(DaemonContext* ctx) {
     toast("Applying Performance Profile");
 
+    ProfileMode prev_mode = ctx->cur_mode;
     ctx->cur_mode = PERFORMANCE_PROFILE;
     ctx->need_profile_checkup = false;
 
     notify("Performance Profile", "Running at %s", false, 0, active_app_name ? active_app_name : gamestart);
-    log_zenith(LOG_INFO, "Applying performance profile for %s", active_app_name ? active_app_name : gamestart);
+    log_info("profile", "profile changed from=%s to=performance app=%s pkg=%s",
+             profile_mode_name(prev_mode), active_app_name ? active_app_name : "unknown", gamestart ? gamestart : "unknown");
 
     if (IS_TRUE(opts.perf_lite_mode)) {
         __system_property_set("persist.sys.azenithconf.litemode", "1");
@@ -103,12 +105,12 @@ void apply_performance_profile(DaemonContext* ctx) {
             pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
             if (pthread_create(&preload_thread, &attr, async_preload_worker, p_args) != 0) {
-                log_zenith(LOG_ERROR, "Failed to spawn async preload thread");
+                log_error("preload", "worker thread spawn failed pkg=%s errno=%d", gamestart, errno);
                 free(p_args);
             }
             pthread_attr_destroy(&attr);
         } else {
-            log_zenith(LOG_ERROR, "Failed to allocate memory for preload arguments");
+            log_error("preload", "arg alloc failed pkg=%s errno=%d", gamestart, errno);
         }
     }
     
@@ -126,11 +128,12 @@ void apply_eco_profile(DaemonContext* ctx) {
 
     toast("Applying Eco Mode");
 
+    ProfileMode prev_mode = ctx->cur_mode;
     ctx->cur_mode = ECO_MODE;
     ctx->need_profile_checkup = false;
 
     notify("ECO Mode", "System is now at Endurance state", false, 0);
-    log_zenith(LOG_INFO, "Applying ECO Mode");
+    log_info("profile", "profile changed from=%s to=eco reason=low_power", profile_mode_name(prev_mode));
 
     if (ctx->saved_refresh_rate > 0) {
         apply_dynamic_refresh_rate(ctx->saved_refresh_rate);
@@ -153,7 +156,7 @@ void apply_eco_profile(DaemonContext* ctx) {
             strcpy(current_now, "default");
 
         if (strcmp(current_now, ctx->saved_renderer) != 0) {
-            log_zenith(LOG_INFO, "Restoring original system renderer: %s", ctx->saved_renderer);
+            log_info("render", "renderer restored value=%s", ctx->saved_renderer);
             if (strcmp(ctx->saved_renderer, "default") == 0) {
                 systemv("sys.azenith-utilityconf setrender default");
                 __system_property_set("persist.sys.azenithconf.renderer", "default");
@@ -182,11 +185,13 @@ void apply_balanced_profile(DaemonContext* ctx) {
 
     toast("Applying Balanced Profile");
 
+    ProfileMode prev_mode = ctx->cur_mode;
     ctx->cur_mode = BALANCED_PROFILE;
     ctx->need_profile_checkup = false;
 
     notify("Balanced Profile", "System is now at Optimal state", false, 0);
-    log_zenith(LOG_INFO, "Applying balanced profile");
+    log_info("profile", "profile changed from=%s to=balanced reason=%s",
+             profile_mode_name(prev_mode), ctx->is_initialize_complete ? "idle" : "startup");
 
     if (ctx->saved_refresh_rate > 0) {
         apply_dynamic_refresh_rate(ctx->saved_refresh_rate);
@@ -209,7 +214,7 @@ void apply_balanced_profile(DaemonContext* ctx) {
             strcpy(current_now, "default");
 
         if (strcmp(current_now, ctx->saved_renderer) != 0) {
-            log_zenith(LOG_INFO, "Restoring original system renderer: %s", ctx->saved_renderer);
+            log_info("render", "renderer restored value=%s", ctx->saved_renderer);
             if (strcmp(ctx->saved_renderer, "default") == 0) {
                 systemv("sys.azenith-utilityconf setrender default");
                 __system_property_set("persist.sys.azenithconf.renderer", "default");

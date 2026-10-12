@@ -111,9 +111,9 @@ static void read_prop_cb(void *cookie, const char *name, const char *value, uint
     if (pending->count < MAX_PENDING_DELETE) {
         strlcpy(pending->names[pending->count], name, MAX_PROP_NAME_BUF);
         pending->count++;
-        log_zenith(LOG_WARN, "PropValidator: flagged stale prop -> %s", name);
+        log_warn("prop", "stale prop flagged name=%s", name);
     } else {
-        log_zenith(LOG_WARN, "PropValidator: buffer full, skip %s", name);
+        log_warn("prop", "buffer full skipping prop name=%s", name);
     }
 }
 
@@ -138,16 +138,16 @@ void validateprop(void) {
     __system_property_foreach(foreach_prop_cb, &pending);
 
     if (pending.count == 0) {
-        log_zenith(LOG_INFO, "PropValidator: no unused prop found, continue...");
+        log_info("prop", "no stale props found");
         return;
     }
 
-    log_zenith(LOG_INFO, "PropValidator: Found %d unused prop cleaning...", pending.count);
+    log_info("prop", "cleaning stale props count=%d", pending.count);
 
     for (int i = 0; i < pending.count; i++) {
         char cmd[MAX_PROP_NAME_BUF + 32];
         snprintf(cmd, sizeof(cmd), "resetprop -p --delete %s", pending.names[i]);
-        log_zenith(LOG_WARN, "PropValidator: delete -> %s", pending.names[i]);
+        log_warn("prop", "deleting stale prop name=%s", pending.names[i]);
         systemv(cmd);
     }
 }

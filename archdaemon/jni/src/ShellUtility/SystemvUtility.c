@@ -30,7 +30,7 @@ int systemv(const char* format, ...) {
 
     pid_t pid = fork();
     if (pid == -1) [[clang::unlikely]] {
-        log_zenith(LOG_ERROR, "fork failed in systemv()");
+        log_error("shell", "fork failed errno=%d (%s)", errno, strerror(errno));
         return -1;
     }
 

@@ -37,11 +37,12 @@
 #include <sys/inotify.h>
 #include <pthread.h>
 #include <poll.h>
+#include <limits.h>
 
 #define TASK_INTERVAL_SEC (12 * 60 * 60)
 #define LOOP_INTERVAL_MS 1000
 #define LOOP_INTERVAL_SEC 1
-#define MAX_DATA_LENGTH 1024
+#define MAX_DATA_LENGTH 2048
 #define MAX_COMMAND_LENGTH 600
 #define MAX_OUTPUT_LENGTH 256
 #define MAX_PATH_LENGTH 256
@@ -58,6 +59,12 @@
 #define LOG_FILE "/data/adb/.config/AZenith/debug/AZenith.log"
 #define LOG_VFILE "/data/adb/.config/AZenith/debug/AZenithVerbose.log"
 #define LOG_FILE_PRELOAD "/data/adb/.config/AZenith/preload/AZenithPR.log"
+
+/* Log rotation: rotate once a file crosses LOG_MAX_BYTES, keeping
+ * LOG_KEEP_FILES older generations (<file>.1 .. <file>.N). */
+#define LOG_MAX_BYTES (512 * 1024)
+#define LOG_KEEP_FILES 2
+
 #define PROFILE_MODE "/data/adb/.config/AZenith/API/current_profile"
 #define PROFILE_MODE_APP "/data/data/zx.azenith/API/current_profile"
 #define GAME_INFO "/data/adb/.config/AZenith/API/gameinfo"
@@ -94,7 +101,7 @@
     func_call; \
     clock_gettime(CLOCK_MONOTONIC, &end); \
     double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; \
-    log_zenith(LOG_INFO, "%s executed for %.4f seconds", mode_name, elapsed); \
+    log_info("profile", "profile applied name=%s elapsed=%.4fs", mode_name, elapsed); \
 } while(0)
 
 typedef struct {
@@ -273,9 +280,13 @@ int is_file_empty(const char *filename);
 bool is_java_lock_held(const char* lock_path);
 
 // system
-void log_preload(LogLevel level, const char* message, ...);
-void log_verbose(LogLevel level, const char* message, ...);
-void log_zenith(LogLevel level, const char* message, ...);
+void log_write(LogLevel level, const char* component, const char* message, ...);
+void log_debug(const char* component, const char* message, ...);
+void log_info(const char* component, const char* message, ...);
+void log_warn(const char* component, const char* message, ...);
+void log_error(const char* component, const char* message, ...);
+void log_fatal(const char* component, const char* message, ...);
+void log_preload(const char* component, const char* message, ...);
 void external_log(LogLevel level, const char* tag, const char* message, ...);
 void external_vlog(LogLevel level, const char* tag, const char* message, ...);
 
@@ -300,6 +311,7 @@ extern bool (*get_low_power_state)(SystemStateCache*);
 char* get_gamestart(GameConfig* options, SystemStateCache* cache);
 bool get_screenstate_normal(SystemStateCache* cache);
 bool get_low_power_state_normal(SystemStateCache* cache);
+const char* profile_mode_name(int mode);
 void run_profiler(const int profile);
 void read_app_status(SystemStateCache* cache);
 void extract_string_value(char* dest, const char* start, size_t max_len);

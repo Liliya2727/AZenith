@@ -24,27 +24,44 @@ pub fn resetprop(key: &str, val: &str) {
     };
 
     if let Err(e) = status {
-        log_info(&format!("Failed to resetprop '{}': {}", key, e));
+        log_error("prop", &format!("resetprop failed key={} err={}", key, e));
     }
 }
 
 pub fn setprop(key: &str, val: &str) {
     if let Err(e) = Command::new("setprop").arg(key).arg(val).status() {
-        log_info(&format!("Failed to setprop '{}' to '{}': {}", key, val, e));
+        log_error("prop", &format!("setprop failed key={} value={} err={}", key, val, e));
     }
 }
 
-pub fn log_verbose(message: &str) {
+/// DEBUG detail for an external component. Only emitted when debug mode is on;
+/// routed to the verbose log so the main log stays readable.
+pub fn log_debug(component: &str, message: &str) {
     if get_debugmode() {
         let _ = Command::new("sys.azenith-service")
-            .args(["--verboselog", "AZLog", "0", message])
+            .args(["--verboselog", component, "0", message])
             .status();
     }
 }
 
-pub fn log_info(message: &str) {
+/// A significant, low-frequency event (start/stop/profile change/config reload).
+pub fn log_info(component: &str, message: &str) {
     let _ = Command::new("sys.azenith-service")
-        .args(["--log", "AZenith_Profiler", "1", message])
+        .args(["--log", component, "1", message])
+        .status();
+}
+
+/// An oddity the caller recovered from; execution continues.
+pub fn log_warn(component: &str, message: &str) {
+    let _ = Command::new("sys.azenith-service")
+        .args(["--log", component, "2", message])
+        .status();
+}
+
+/// An operation failed and needs attention. Include path/value/error context.
+pub fn log_error(component: &str, message: &str) {
+    let _ = Command::new("sys.azenith-service")
+        .args(["--log", component, "3", message])
         .status();
 }
 
@@ -69,12 +86,12 @@ pub fn write_unlock_core(value: &str, path_str: &str, lock: bool) {
     let val_with_newline = format!("{}\n", value);
     
     if fs::write(path, val_with_newline).is_err() {
-        log_verbose(&format!("Cannot write to /{} (permission denied)", pathname));
+        log_warn("prop", &format!("write failed path=/{} reason=permission_denied", pathname));
         if lock { chmod(path_str, 0o444); }
         return;
     }
 
-    log_verbose(&format!("Set /{} to {}", pathname, value));
+    log_debug("prop", &format!("set path=/{} value={}", pathname, value));
     if lock { chmod(path_str, 0o444); }
 }
 
@@ -95,7 +112,7 @@ pub fn systemv(command: &str) -> i32 {
     {
         Ok(status) => status.code().unwrap_or(-1),
         Err(e) => {
-            log_info(&format!("systemv failed for '{}': {}", command, e));
+            log_error("shell", &format!("systemv failed command={} err={}", command, e));
             -1
         }
     }
@@ -247,13 +264,13 @@ pub fn setfreqppm() {
                 write_lock(&format!("{} {}", cluster, new_maxfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
                 write_lock(&format!("{} {}", cluster, new_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
 
-                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_maxfreq, new_minfreq));
+                log_debug("cpu", &format!("set policy={} maxfreq={} minfreq={}", policy_name, new_maxfreq, new_minfreq));
             } else {
 
                 write_unlock(&format!("{} {}", cluster, new_maxfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
                 write_unlock(&format!("{} {}", cluster, cpu_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
 
-                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_maxfreq, cpu_minfreq));
+                log_debug("cpu", &format!("set policy={} maxfreq={} minfreq={}", policy_name, new_maxfreq, cpu_minfreq));
             }
             cluster += 1;
         }
@@ -289,13 +306,13 @@ pub fn setfreq() {
                 write_lock(&new_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
                 write_lock(&new_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
 
-                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_maxfreq, new_minfreq));
+                log_debug("cpu", &format!("set policy={} maxfreq={} minfreq={}", policy_name, new_maxfreq, new_minfreq));
             } else {
 
                 write_unlock(&new_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
                 write_unlock(&cpu_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
 
-                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_maxfreq, cpu_minfreq));
+                log_debug("cpu", &format!("set policy={} maxfreq={} minfreq={}", policy_name, new_maxfreq, cpu_minfreq));
 
                 if let Ok(sc_paths) = glob("/sys/devices/system/cpu/cpufreq/policy*/scaling_*_freq") {
                     for sp in sc_paths.flatten() {
@@ -334,12 +351,12 @@ pub fn setgamefreqppm() {
                 write_lock(&format!("{} {}", cluster, new_midfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
                 write_lock(&format!("{} {}", cluster, cpu_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
 
-                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
+                log_debug("cpu", &format!("set policy={} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
             } else {
                 write_lock(&format!("{} {}", cluster, cpu_maxfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");             
                 write_lock(&format!("{} {}", cluster, cpu_maxfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
 
-                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, cpu_maxfreq, new_midfreq));
+                log_debug("cpu", &format!("set policy={} maxfreq={} minfreq={}", policy_name, cpu_maxfreq, new_midfreq));
             }
             cluster += 1;
         }
@@ -373,12 +390,12 @@ pub fn setgamefreq() {
                 write_unlock(&new_midfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
                 write_unlock(&cpu_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
 
-                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
+                log_debug("cpu", &format!("set policy={} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
             } else {
                 write_unlock(&cpu_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
                 write_unlock(&cpu_maxfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
 
-                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, cpu_maxfreq, new_midfreq));
+                log_debug("cpu", &format!("set policy={} maxfreq={} minfreq={}", policy_name, cpu_maxfreq, new_midfreq));
 
             }
         }
@@ -484,7 +501,7 @@ pub fn dsetgamefreqppm() {
                 write_unlock(&format!("{} {}", cluster, new_midfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
                 write_unlock(&format!("{} {}", cluster, cpu_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
 
-                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
+                log_debug("cpu", &format!("set policy={} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
             } else {
                 applyppmnfreqsets(&format!("{} {}", cluster, new_midfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
             }
@@ -518,7 +535,7 @@ pub fn dsetgamefreq() {
                 write_unlock(&new_midfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
                 write_unlock(&cpu_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
 
-                log_info(&format!("Set {} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
+                log_debug("cpu", &format!("set policy={} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
             } else {
                 applyppmnfreqsets(&cpu_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
                 applyppmnfreqsets(&new_midfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
@@ -622,11 +639,11 @@ pub fn clear_background_apps() {
                 .args(["force-stop", &pkg])
                 .status();
 
-            log_verbose(&format!("Stopped app: {}", pkg));
+            log_debug("apps", &format!("stopped app pkg={}", pkg));
         }
     }
 
-    log_info("Cleared background apps");
+    log_info("apps", "cleared background apps");
 }
 
 pub fn get_mtk_gpu_max_freq() -> Option<u64> {
@@ -661,11 +678,11 @@ pub fn init_cpu_governor() {
     let powersave_gov = "powersave";
 
     setprop_cmd("persist.sys.azenith.default_cpu_gov", &default_gov);
-    log_info(&format!("Default CPU governor detected: {}", default_gov));
+    log_info("cpu", &format!("default governor detected gov={}", default_gov));
 
     // Handle fallback if default is 'performance'
     if default_gov == "performance" && getprop("persist.sys.azenith.custom_default_cpu_gov").is_empty() {
-        log_info("Default governor is 'performance'");
+        log_info("cpu", "default governor is performance, searching fallback");
         let avail_govs = fs::read_to_string(format!("{}/scaling_available_governors", cpu_path)).unwrap_or_default();
         let fallbacks = [
             "scx", "schedhorizon", "walt", "sched_pixel", "sugov_ext", "uag",
@@ -677,7 +694,7 @@ pub fn init_cpu_governor() {
             if avail_govs.contains(gov) {
                 setprop_cmd("persist.sys.azenith.default_cpu_gov", gov);
                 default_gov = gov.to_string();
-                log_info(&format!("Fallback governor to: {}", gov));
+                log_info("cpu", &format!("fallback governor gov={}", gov));
                 break;
             }
         }
@@ -689,7 +706,7 @@ pub fn init_cpu_governor() {
         default_gov = custom_gov;
     }
     
-    log_info(&format!("Using CPU governor: {}", default_gov));
+    log_info("cpu", &format!("using governor gov={}", default_gov));
     setgov(&default_gov);
 
     // Set fallback props
@@ -700,7 +717,7 @@ pub fn init_cpu_governor() {
         setprop_cmd("persist.sys.azenith.custom_performance_cpu_gov", &performance_gov);
     }
     
-    log_info("Parsing CPU Governor complete");
+    log_info("cpu", "governor init complete");
 }
 
 pub fn init_io_scheduler() {
@@ -709,13 +726,13 @@ pub fn init_io_scheduler() {
         let p = format!("/sys/block/{}/queue", dev);
         if Path::new(&format!("{}/scheduler", p)).exists() {
             io_path = p;
-            log_info(&format!("Detected valid block device: {}", dev));
+            log_info("io", &format!("block device detected dev={}", dev));
             break;
         }
     }
 
     if io_path.is_empty() {
-        log_info("No valid block device with scheduler found");
+        log_warn("io", "no block device with scheduler found");
         std::process::exit(1);
     }
 
@@ -732,7 +749,7 @@ pub fn init_io_scheduler() {
     }
 
     setprop_cmd("persist.sys.azenith.default_balanced_IO", &default_io);
-    log_info(&format!("Default IO Scheduler detected: {}", default_io));
+    log_info("io", &format!("default scheduler detected sched={}", default_io));
 
     // Apply custom IO if set
     let custom_io = getprop("persist.sys.azenith.custom_default_balanced_IO");
@@ -740,7 +757,7 @@ pub fn init_io_scheduler() {
         default_io = custom_io;
     }
     
-    log_info(&format!("Using IO Scheduler: {}", default_io));
+    log_info("io", &format!("using scheduler sched={}", default_io));
     sets_io(&default_io);
 
     // Set fallback props
@@ -751,7 +768,7 @@ pub fn init_io_scheduler() {
         setprop_cmd("persist.sys.azenith.custom_performance_IO", &default_io);
     }
     
-    log_info("Parsing IO Scheduler complete");
+    log_info("io", "io scheduler init complete");
 }
 
 pub fn init_maligpu_governor() {
@@ -761,7 +778,7 @@ pub fn init_maligpu_governor() {
         for path in paths.flatten() {
             if let Some(p_str) = path.to_str() {
                 gpu_path = p_str.to_string();
-                log_info(&format!("Detected Mali GPU path: {}", gpu_path));
+                log_info("gpu", &format!("mali path detected path={}", gpu_path));
                 break;
             }
         }
@@ -780,14 +797,14 @@ pub fn init_maligpu_governor() {
         .to_string();
 
     setprop_cmd("persist.sys.azenith.default_maligpu_gov", &default_maligpu_gov);
-    log_info(&format!("Default Mali GPU governor detected: {}", default_maligpu_gov));
+    log_info("gpu", &format!("default governor detected gov={}", default_maligpu_gov));
 
     let custom_maligpu_gov = getprop("persist.sys.azenith.custom_default_maligpu_gov");
     if !custom_maligpu_gov.is_empty() {
         default_maligpu_gov = custom_maligpu_gov;
     }
 
-    log_info(&format!("Using Mali GPU governor: {}", default_maligpu_gov));
+    log_info("gpu", &format!("using governor gov={}", default_maligpu_gov));
     write_lock(&default_maligpu_gov, &gov_file);
 
     if getprop("persist.sys.azenith.custom_powersave_maligpu_gov").is_empty() {
@@ -797,7 +814,7 @@ pub fn init_maligpu_governor() {
         setprop_cmd("persist.sys.azenith.custom_performance_maligpu_gov", &default_maligpu_gov);
     }
 
-    log_info("Parsing Mali GPU Governor complete");
+    log_info("gpu", "mali governor init complete");
 }
 
 pub fn sets_mali_gov(gov: &str) {
@@ -819,11 +836,11 @@ pub fn is_tweak_disabled() -> bool {
 
 pub fn apply_custom_governor_io(perf_gov: &str, perf_io: &str, mali_gov: &str) {
     setgov(perf_gov);
-    log_info(&format!("Applying governor to : {}", perf_gov));
+    log_info("cpu", &format!("applying governor gov={}", perf_gov));
     
     if !perf_io.is_empty() {
         sets_io(perf_io);
-        log_info(&format!("Applying I/O scheduler to : {}", perf_io));
+        log_info("io", &format!("applying scheduler sched={}", perf_io));
     }
     
     if !mali_gov.is_empty() {
@@ -839,7 +856,7 @@ pub fn setrender(renderer: &str) {
         setprop("debug.skia.threaded_mode", "");
         resetprop("ro.hwui.use_vulkan", ""); 
         
-        log_info("Resetting all renderers to system default");
+        log_info("renderer", "resetting renderers to default");
         return;
     }
 
@@ -882,17 +899,17 @@ pub fn setrender(renderer: &str) {
             }
         }
     }
-    log_info(&format!("Successfully applied renderer: {}", renderer));
+    log_info("renderer", &format!("renderer applied renderer={}", renderer));
 }
 
 pub fn init_renderer() {
     let renderer = getprop("persist.sys.azenithconf.renderer");
     
     if renderer.is_empty() || renderer.eq_ignore_ascii_case("default") {
-        log_info("Renderer setting is default, skipping renderer setup");
+        log_info("renderer", "renderer is default, skipping setup");
         return;
     }
     
-    log_info(&format!("Applying renderer: {}", renderer));
+    log_info("renderer", &format!("applying renderer renderer={}", renderer));
     setrender(&renderer);
 }

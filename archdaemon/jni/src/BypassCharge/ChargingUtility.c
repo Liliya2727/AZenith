@@ -88,11 +88,12 @@ void disable_bypass() {
 
     for (int i = 0; i < total_nodes; i++) {
         if (strcmp(bypass_list[i].name, path_key) == 0) {
-            echo_to_file(bypass_list[i].path, bypass_list[i].off_val, 0);
-            log_zenith(LOG_INFO, "Bypass Charging Disabled");
+            int res = echo_to_file(bypass_list[i].path, bypass_list[i].off_val, 0);
+            log_info("bypass", "bypass disabled node=%s path=%s result=%d", path_key, bypass_list[i].path, res);
             return;
         }
     }
+    log_warn("bypass", "disable requested but node=%s not in table", path_key);
 }
 
 /**

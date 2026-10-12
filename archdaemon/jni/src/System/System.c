@@ -20,7 +20,7 @@ int main_daemon(void) {
     verify_system_integrity();
 
     if (daemon(0, 0)) {
-        log_zenith(LOG_FATAL, "Unable to daemonize service");
+        log_fatal("daemon", "daemonize failed errno=%d", errno);
         __system_property_set("persist.sys.azenith.service", "");
         __system_property_set("persist.sys.azenith.state", "stopped");
         return 1;
@@ -35,7 +35,7 @@ int main_daemon(void) {
     wait_for_java_companion(&ctx);
 
     if (pipe(java_lock_pipe) != 0) {
-        log_zenith(LOG_ERROR, "Failed to create java lock pipe");
+        log_error("daemon", "java lock pipe create failed errno=%d", errno);
     } else {
         pthread_t lock_thread;
         pthread_attr_t attr;
@@ -45,13 +45,13 @@ int main_daemon(void) {
         pthread_attr_destroy(&attr);
     }
 
-    log_zenith(LOG_INFO, "Reading initial applist status...");
+    log_debug("apploader", "reading initial app status cache");
     read_app_status(&current_system_cache);
     reload_gamelist_cache(&ctx);
-    log_zenith(LOG_INFO, "Successfully reading applist");
+    log_info("apploader", "gamelist cache primed count=%d", g_game_cache_count);
 
     // Initiate PID
-    log_zenith(LOG_INFO, "Daemon started as PID %d", getpid());
+    log_info("daemon", "daemon started pid=%d", getpid());
     __system_property_set("persist.sys.rianixia.learning_enabled", "true");
     __system_property_set("persist.sys.azenith.state", "running");
     notify("Initializing...", "Starting AZenith service...", false, 0);
@@ -70,9 +70,9 @@ int main_daemon(void) {
     is_kanged();
     check_module_version();
     validateprop();
-    log_zenith(LOG_INFO, "Module Integrity Passed");
+    log_debug("integrity", "module integrity passed");
 
-    log_zenith(LOG_INFO, "Daemon is Ready!");
+    log_info("daemon", "daemon ready pid=%d mode=%s", getpid(), profile_mode_name(ctx.cur_mode));
     ctx.need_profile_checkup = true;
     bool need_loop = true;
     runthermalcore();
@@ -106,8 +106,13 @@ int main_daemon(void) {
         bool should_exit = process_inotify_events(inotify_fd, &ctx, poll_timeout);
         need_loop = false;
 
+        log_debug("daemon", "tick focused=%s screen=%d mode=%s game=%s need_checkup=%d",
+                  current_system_cache.focused_app[0] ? current_system_cache.focused_app : "-",
+                  ctx.prev_screen_state, profile_mode_name(ctx.cur_mode),
+                  gamestart ? gamestart : "-", ctx.need_profile_checkup);
+
         if (java_daemon_died) {
-            log_zenith(LOG_FATAL, "Java daemon lock released, companion daemon exited, stopping daemon");
+            log_fatal("daemon", "java companion lock released, stopping daemon");
             notify("Daemon Error", "Java companion daemon crashed. Stopping AZenith.", false, 0);
             __system_property_set("persist.sys.azenith.service", "");
             __system_property_set("persist.sys.azenith.state", "stopped");
@@ -151,7 +156,7 @@ int main_daemon(void) {
                         free(active_app_name);
                     gamestart = current_focused_game;
                     active_app_name = strdup(current_system_cache.app_name);
-                    log_zenith(LOG_INFO, "New game detected: %s", active_app_name ? active_app_name : gamestart);
+                    log_info("profile", "game detected pkg=%s name=%s", gamestart, active_app_name ? active_app_name : "unknown");
                     game_pid_count = 0;
                     ctx.pid_retries = 0;
                     ctx.has_applied_renderer = false;
@@ -164,15 +169,18 @@ int main_daemon(void) {
 
         int effective_screen_state = real_screen_state;
         if (real_screen_state != ctx.prev_screen_state) {
+            log_info("power", "screen state changed from=%s to=%s",
+                     ctx.prev_screen_state == 1 ? "on" : (ctx.prev_screen_state == 0 ? "off" : "unknown"),
+                     real_screen_state ? "on" : "off");
             if (real_screen_state == 0) {
                 if (ctx.cur_mode == PERFORMANCE_PROFILE) {
                     ctx.screen_off_timer = time(NULL);
                     ctx.grace_period_active = true;
-                    log_zenith(LOG_INFO, "Screen OFF Event: Grace period started (10s)...");
+                    log_info("power", "grace period started timeout=10s keep_mode=%s", profile_mode_name(ctx.cur_mode));
                 }
             } else {
                 if (ctx.grace_period_active) {
-                    log_zenith(LOG_INFO, "Screen ON Event: Grace period aborted. Keeping Performance.");
+                    log_info("power", "grace period aborted action=keep_performance");
                     ctx.grace_period_active = false;
                 }
                 ctx.screen_off_timer = 0;
@@ -184,7 +192,7 @@ int main_daemon(void) {
             if (difftime(time(NULL), ctx.screen_off_timer) < 10.0)
                 effective_screen_state = 1;
             else {
-                log_zenith(LOG_INFO, "Grace period expired. Dropping Performance Profile.");
+                log_info("power", "grace period expired action=drop_performance");
                 ctx.grace_period_active = false;
                 ctx.screen_off_timer = 0;
                 effective_screen_state = 0;
@@ -203,10 +211,10 @@ int main_daemon(void) {
                     if (!ctx.fg_away_active) {
                         ctx.fg_away_timer = time(NULL);
                         ctx.fg_away_active = true;
-                        
+                        log_debug("profile", "game left foreground pkg=%s action=grace_start timeout=30s", gamestart);
                     } else if (difftime(time(NULL), ctx.fg_away_timer) >= 30.0) {
-                        log_zenith(LOG_INFO, "Apps %s lost in foreground too long. Dropping to Balanced.",
-                                   active_app_name ? active_app_name : gamestart);
+                        log_info("profile", "foreground grace expired pkg=%s action=drop_to_balanced",
+                                 active_app_name ? active_app_name : gamestart);
                         ctx.fg_away_active = false;
                         ctx.fg_away_timer = 0;
                         restore_resolution_target(&ctx, gamestart);
@@ -276,14 +284,14 @@ int main_daemon(void) {
                 if (game_pid_count == 0) {
                     if (ctx.pid_retries < 5) {
                         ctx.pid_retries++;
-                        log_zenith(LOG_WARN, "Waiting for %s to spawn (Retry %d/5)...", active_app_name ? active_app_name : gamestart,
-                                   ctx.pid_retries);
+                        log_warn("profile", "game pkg=%s not spawned yet retry=%d/5",
+                                 active_app_name ? active_app_name : gamestart, ctx.pid_retries);
                         usleep(200000);
                         need_loop = true;
                         continue;
                     } else {
-                        log_zenith(LOG_ERROR, "Unable to fetch any PIDs for %s after 5 retries. Dropping.",
-                                   active_app_name ? active_app_name : gamestart);
+                        log_error("profile", "no pid found pkg=%s after retries=5 action=drop",
+                                  active_app_name ? active_app_name : gamestart);
                         free(gamestart);
                         gamestart = NULL;
                         if (active_app_name) {

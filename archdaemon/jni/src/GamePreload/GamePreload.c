@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,7 +28,7 @@ void GamePreload(const char* package) {
     sleep(5);
 
     if (!package || package[0] == '\0') {
-        log_zenith(LOG_WARN, "Package is null or empty");
+        log_warn("preload", "package empty, skipping");
         return;
     }
 
@@ -38,7 +38,7 @@ void GamePreload(const char* package) {
 
     FILE* apk = popen(cmd_apk, "r");
     if (!apk || !fgets(apk_path, sizeof(apk_path), apk)) {
-        log_zenith(LOG_WARN, "Failed to get APK path for %s", package);
+        log_warn("preload", "apk path lookup failed pkg=%s", package);
         if (apk)
             pclose(apk);
         return;
@@ -49,7 +49,7 @@ void GamePreload(const char* package) {
 
     char* last_slash = strrchr(apk_path, '/');
     if (!last_slash) {
-        log_zenith(LOG_WARN, "Failed to determine APK folder from path: %s", apk_path);
+        log_warn("preload", "apk folder resolve failed path=%s", apk_path);
         return;
     }
     *last_slash = '\0';
@@ -84,12 +84,12 @@ void GamePreload(const char* package) {
 
     FILE* fp = popen(preload_cmd, "r");
     if (!fp) {
-        log_zenith(LOG_WARN, "Failed to run preloadbin for %s", package);
+        log_warn("preload", "preloadbin spawn failed pkg=%s", package);
         return;
     }
 
-    log_zenith(LOG_INFO, "GamePreload: Preloading game %s %s", target_type, package);
-    log_preload(LOG_INFO, "GamePreload: Preloading %s %s with budget %s", target_type, target_path, budget);
+    log_debug("preload", "start pkg=%s type=%s budget=%s", package, target_type, budget);
+    log_preload("preload", "start pkg=%s type=%s path=%s budget=%s", package, target_type, target_path, budget);
 
     char line[1024];
     int total_pages = 0;
@@ -108,10 +108,9 @@ void GamePreload(const char* package) {
                 strncpy(total_size, size, sizeof(total_size) - 1);
                 total_size[sizeof(total_size) - 1] = '\0';
 
-                log_zenith(LOG_DEBUG, "GamePreload: Preloading complete: %d memory pages touched", pages);
-                log_zenith(LOG_DEBUG, "GamePreload: Total memory used for preloaded libraries: %s", size);
+                log_debug("preload", "chunk touched pages=%d size=%s", pages, size);
             } else {
-                log_zenith(LOG_WARN, "GamePreload: Failed to parse Touched Pages");
+                log_warn("preload", "touched-pages parse failed line=%s", line);
             }
             continue;
         }
@@ -120,12 +119,13 @@ void GamePreload(const char* package) {
         if (ext) {
             if (strcmp(ext, ".so") == 0 || strcmp(ext, ".apk") == 0 || strcmp(ext, ".dm") == 0 || strcmp(ext, ".odex") == 0 ||
                 strcmp(ext, ".vdex") == 0 || strcmp(ext, ".art") == 0) {
-                log_preload(LOG_DEBUG, "Touched: %s", line);
+                log_preload("preload", "touched file=%s", line);
             }
         }
     }
 
-    log_preload(LOG_INFO, "GamePreload: Game %s preloaded success: total %d pages touched (~%s)", package, total_pages, total_size);
+    log_preload("preload", "done pkg=%s pages=%d size=%s", package, total_pages, total_size);
+    log_debug("preload", "done pkg=%s pages=%d size=%s", package, total_pages, total_size);
 
     pclose(fp);
 }

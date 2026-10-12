@@ -31,7 +31,7 @@ char* execute_command(const char* format, ...) {
 
     int pipefd[2];
     if (pipe(pipefd) == -1) [[clang::unlikely]] {
-        log_zenith(LOG_ERROR, "pipe failed in execute_command()");
+        log_error("shell", "execute_command pipe failed errno=%d (%s)", errno, strerror(errno));
         return NULL;
     }
 
@@ -39,7 +39,7 @@ char* execute_command(const char* format, ...) {
     if (pid == -1) [[clang::unlikely]] {
         close(pipefd[0]);
         close(pipefd[1]);
-        log_zenith(LOG_ERROR, "fork failed in execute_command()");
+        log_error("shell", "execute_command fork failed errno=%d (%s)", errno, strerror(errno));
         return NULL;
     }
 

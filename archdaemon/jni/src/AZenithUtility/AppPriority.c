@@ -22,8 +22,8 @@
  */
 void set_priority(const pid_t pid) {
     if (setpriority(PRIO_PROCESS, pid, -20) == -1)
-        log_zenith(LOG_ERROR, "Unable to set nice priority for %d", pid);
+        log_error("priority", "setpriority failed pid=%d errno=%d (%s)", pid, errno, strerror(errno));
 
     if (syscall(SYS_ioprio_set, 1, pid, (1 << 13) | 0) == -1)
-        log_zenith(LOG_ERROR, "Unable to set IO priority for %d", pid);
+        log_error("priority", "ioprio_set failed pid=%d errno=%d (%s)", pid, errno, strerror(errno));
 }

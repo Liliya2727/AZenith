@@ -50,7 +50,7 @@ int get_current_refresh_rate(void) {
 int get_max_refresh_rate(void) {
     FILE* fp = fopen(APP_MONITOR_FILE, "r");
     if (!fp) {
-        log_zenith(LOG_WARN, "RefreshRateHandler: App monitor file not found, defaulting max refresh rate to 60Hz");
+        log_warn("refresh", "app monitor file missing path=%s default_max=%dHz", APP_MONITOR_FILE, 60);
         return 60;
     }
 
@@ -79,10 +79,10 @@ void apply_dynamic_refresh_rate(int target_rr) {
     int final_rr = target_rr;
 
     if (final_rr > max_hw) {
-        log_zenith(LOG_WARN, "RefreshRateHandler: Requested %dHz exceeds hardware max %dHz. Capping to max.", target_rr, max_hw);
+        log_warn("refresh", "requested %dHz exceeds hardware max %dHz, capping", target_rr, max_hw);
         final_rr = max_hw;
     }
 
-    log_zenith(LOG_INFO, "RefreshRateHandler: Set refresh rates to %dHz", final_rr);
+    log_info("refresh", "refresh rate changed target=%dHz applied=%dHz max=%dHz", target_rr, final_rr, max_hw);
     systemv("sys.azenith-utilityconf setrefreshrates %d", final_rr);
 }
