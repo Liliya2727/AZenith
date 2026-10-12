@@ -32,7 +32,6 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -227,23 +226,22 @@ fun ColorPaletteScreen(navController: NavController) {
         indexOf = { id -> PERS_ROW_ITEMS[id] }
     )
     var previewExpandedByTap by rememberSaveable { mutableStateOf(false) }
-    val listScrolled by remember {
-        derivedStateOf {
-            lazyListState.firstVisibleItemIndex > 0 ||
-                lazyListState.firstVisibleItemScrollOffset > 8
+    // Latched, not "is the list at the top": re-expanding on the way back up changed the
+    // preview's height in the middle of a flick and reflowed the list under the finger, so the
+    // top rows slid away just as they were reached. The handle and the card still re-open it.
+    var previewMoved by rememberSaveable { mutableStateOf(false) }
+    // canScrollBackward, not the raw offset: it is false at the very top and only turns true once
+    // the head has actually ridden up. The offset counts the list's own content padding, so
+    // `> 8` read as "scrolled" before anything had moved and opened the screen already shrunk.
+    val listScrolled by remember(lazyListState) {
+        derivedStateOf { lazyListState.isScrollInProgress || lazyListState.canScrollBackward }
+    }
+    LaunchedEffect(listScrolled) {
+        if (listScrolled) {
+            previewMoved = true
+            previewExpandedByTap = false
         }
     }
-    val listSettling by remember { derivedStateOf { lazyListState.isScrollInProgress } }
-    LaunchedEffect(listSettling) {
-        if (listSettling) previewExpandedByTap = false
-    }
-
-    val previewTransition = updateTransition(
-        targetState = if (previewExpandedByTap || !listScrolled) PreviewSize.Expanded else PreviewSize.Collapsed,
-        label = "previewSize"
-    )
-    // One transition drives both the header height and the card's internal detail, so the
-    // collapse reads as the same object getting smaller rather than two separate animations.
 
 
     val cropLauncher = rememberLauncherForActivityResult(
@@ -541,7 +539,7 @@ MockCardFrame(
             // underneath it; the list's own offset is what collapses it.
             Column(modifier = Modifier.fillMaxSize()) {
                 PinnedPreviewHeader(
-                    expanded = previewExpandedByTap || !listScrolled,
+                    expanded = previewExpandedByTap || !previewMoved,
                     // Only the tapped-open state zooms to the banner. At rest the full home
                     // screen is what you want to see, so it stays unzoomed.
                     personalization = personalization,
@@ -974,13 +972,17 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                     add {
                         CardItem {
                             JumpRow(activeId = jumpPulse, entryId = "pers.nav_labels") {
-                            LabeledControl(Icons.Filled.Label, stringResource(R.string.pers_nav_labels))
-                            ConnectedToggleRow(
-                                options = NavLabelMode.entries,
-                                selected = personalization.navLabels,
-                                label = { stringResource(it.labelRes) },
-                                onSelect = { onPersonalizationChange(personalization.copy(navLabels = it)) }
-                            )
+                                // One child, stacked: JumpRow's content is a Box, so a second
+                                // child would sit on top of the first instead of under it.
+                                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    LabeledControl(Icons.Filled.Label, stringResource(R.string.pers_nav_labels))
+                                    ConnectedToggleRow(
+                                        options = NavLabelMode.entries,
+                                        selected = personalization.navLabels,
+                                        label = { stringResource(it.labelRes) },
+                                        onSelect = { onPersonalizationChange(personalization.copy(navLabels = it)) }
+                                    )
+                                }
                             }
                         }
                     }
@@ -1190,9 +1192,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
         }
     }
 }
-
-/** Two sizes the mock preview can be pinned at; [PreviewSize.Expanded] is the readable one. */
-private enum class PreviewSize { Expanded, Collapsed }
 
 private val MOCK_W = 190.dp
 private val MOCK_H = 396.dp
