@@ -46,6 +46,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
@@ -72,6 +73,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import zx.azenith.NavItem
+import zx.azenith.ui.component.NAV_DOCK_CLEARANCE
 import androidx.core.content.FileProvider
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -97,7 +100,6 @@ import zx.azenith.ui.mainscreens.*
 import zx.azenith.ui.subscreens.*
 import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.util.*
-import zx.azenith.ui.theme.NavEdge
 import zx.azenith.ui.theme.NavLabelMode
 import zx.azenith.ui.theme.NavStyle
 import zx.azenith.ui.theme.currentPersonalization
@@ -600,77 +602,124 @@ fun MainScreen(fromTileType: String? = null) {
                     label = "NavBarVisibilityProgress"
                 )
 
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        // Slide only, never alpha: a translucent layer is skipped by the haze
-                        // source capture, so animating opacity silently drops the blur.
-                        .graphicsLayer {
-                            translationY = size.height * (1f - navBarVisibilityProgressState.value)
-                        }
-                ) {
-                    BottomNavBar(
-                        items = navItems,
-                        selectedRoute = currentRoute ?: "home",
-                        pagerState = pagerState,
-                        isBlurEnabled = isBlurEnabled,
-                        hazeState = hazeState,
-                        navStyle = currentPersonalization().navStyle,
-                        navShape = currentPersonalization().navRadius,
-                                        navLabels = currentPersonalization().navLabels,
-                        // The blur owns the bar's colour, so the tint is off
-                        // whenever it is on regardless of what the pref still says.
-                        vibrantNav = currentPersonalization().vibrantNav && !isBlurEnabled,
-                        navScale = currentPersonalization().navScale,
-                        navSpacing = currentPersonalization().navSpacing,
-                        modifier = Modifier.align(Alignment.BottomCenter),
-                        onItemSelected = { route ->
-                            val targetIndex = pagerRoutes.indexOf(route)
-                            if (isOnMainPager) {
-                                if (pagerState.currentPage != targetIndex) {
-                                    coroutineScope.launch {
-                                        // Instrumentation only -- these traces are
-                                        // read with `adb shell atrace` / Perfetto on a
-                                        // device, so no timing is asserted here.
-                                        // The section brackets the whole scroll so its
-                                        // duration is the tab-switch cost.
-                                        Trace.beginSection("AZenith:tabScrollTo")
-                                        try {
-                                            // One call for every distance. A jump of two
-                                            // or three scrolls straight through the
-                                            // pages in between at the same rate, which
-                                            // reads as one continuous slide instead of
-                                            // the hard cut scrollToPage produced.
-                                            pagerState.animateScrollToPage(
-                                                targetIndex,
-                                                animationSpec = androidx.compose.animation.core.tween(
-                                                    durationMillis = if (Math.abs(targetIndex - pagerState.currentPage) > 1) 320 else 500,
-                                                    easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
-                                                )
-                                            )
-                                        } finally {
-                                            Trace.endSection()
-                                        }
-                                    }
-                                }
-                            } else {
-                                navController.navigate("main") {
-                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                                coroutineScope.launch {
-                                    pagerState.scrollToPage(targetIndex)
+                // One selection handler for both shells: the bar in portrait and the
+                // dock in landscape are the same navigation, laid out differently.
+                val onNavSelected: (String) -> Unit = { route ->
+                    val targetIndex = pagerRoutes.indexOf(route)
+                    if (isOnMainPager) {
+                        if (pagerState.currentPage != targetIndex) {
+                            coroutineScope.launch {
+                                // Instrumentation only -- these traces are
+                                // read with `adb shell atrace` / Perfetto on a
+                                // device, so no timing is asserted here.
+                                // The section brackets the whole scroll so its
+                                // duration is the tab-switch cost.
+                                Trace.beginSection("AZenith:tabScrollTo")
+                                try {
+                                    // One call for every distance. A jump of two
+                                    // or three scrolls straight through the
+                                    // pages in between at the same rate, which
+                                    // reads as one continuous slide instead of
+                                    // the hard cut scrollToPage produced.
+                                    pagerState.animateScrollToPage(
+                                        targetIndex,
+                                        animationSpec = androidx.compose.animation.core.tween(
+                                            durationMillis = if (Math.abs(targetIndex - pagerState.currentPage) > 1) 320 else 500,
+                                            easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+                                        )
+                                    )
+                                } finally {
+                                    Trace.endSection()
                                 }
                             }
-                            highlightRoute.value = route
                         }
-                    )
+                    } else {
+                        navController.navigate("main") {
+                            popUpTo(navController.graph.startDestinationId) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                        coroutineScope.launch {
+                            pagerState.scrollToPage(targetIndex)
+                        }
+                    }
+                    highlightRoute.value = route
+                }
+
+                if (isLandscape) {
+                    // A panel beside the page rather than the bar rotated onto its
+                    // side: every destination keeps its name, and the page narrows
+                    // instead of being covered.
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .fillMaxHeight()
+                            // Slide only, never alpha: a translucent layer is skipped
+                            // by the haze source capture, so animating opacity would
+                            // silently drop the blur.
+                            .graphicsLayer {
+                                translationX = size.width * (1f - navBarVisibilityProgressState.value)
+                            }
+                    ) {
+                        // The dock draws itself over the end edge; the strip it needs
+                        // is reserved by the pages' own end clearance, which animates
+                        // off the same state the panel's width does. Nothing to lay
+                        // out here beyond the panel, or the page would be inset twice.
+                        zx.azenith.ui.component.NavDock(
+                            items = navItems,
+                            selectedRoute = currentRoute ?: "home",
+                            onItemSelected = onNavSelected,
+                            // The dock carries a single search entry point, so it has
+                            // to pick a scope without a tab to read it from: the page
+                            // it sits beside, and Tweaks otherwise.
+                            searchRoute = when (currentRoute) {
+                                "settings" -> SearchTab.Settings.searchRoute
+                                else -> SearchTab.Tweaks.searchRoute
+                            },
+                            onSearch = { route -> navController.navigate(route) },
+                            blurring = isBlurEnabled,
+                            accentPanel = currentPersonalization().vibrantNav && !isBlurEnabled,
+                            scale = currentPersonalization().navScale,
+                            spacing = currentPersonalization().navSpacing,
+                            cornerFraction = currentPersonalization().navRadius,
+                            labels = currentPersonalization().navLabels != NavLabelMode.Never,
+                            hazeState = hazeState
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            // Slide only, never alpha (see the dock above).
+                            .graphicsLayer {
+                                translationY = size.height * (1f - navBarVisibilityProgressState.value)
+                            }
+                    ) {
+                        BottomNavBar(
+                            items = navItems,
+                            selectedRoute = currentRoute ?: "home",
+                            pagerState = pagerState,
+                            isBlurEnabled = isBlurEnabled,
+                            hazeState = hazeState,
+                            navStyle = currentPersonalization().navStyle,
+                            navShape = currentPersonalization().navRadius,
+                            navLabels = currentPersonalization().navLabels,
+                            // The blur owns the bar's colour, so the tint is off
+                            // whenever it is on regardless of what the pref still says.
+                            vibrantNav = currentPersonalization().vibrantNav && !isBlurEnabled,
+                            navScale = currentPersonalization().navScale,
+                            navSpacing = currentPersonalization().navSpacing,
+                            modifier = Modifier.align(Alignment.BottomCenter),
+                            onItemSelected = onNavSelected
+                        )
+                    }
                 }
                 
                 val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                if (navBarHeight > 32.dp) {
+                // The scrim fades page content into a bar along the bottom edge; with the
+                // dock there is nothing at the bottom to fade into.
+                if (!isLandscape && navBarHeight > 32.dp) {
                     val colorScheme = MaterialTheme.colorScheme
                     val bottomScrimGradient = remember(colorScheme) {
                         Brush.verticalGradient(
@@ -700,7 +749,13 @@ fun MainScreen(fromTileType: String? = null) {
                     exit = scaleOut(animationSpec = tween(200, easing = FastOutLinearInEasing)) + fadeOut(),
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(end = 24.dp, bottom = 116.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())
+                        .padding(
+                            // Clear of the dock in landscape; there is no bar under it
+                            // there, so it can sit down near the corner instead.
+                            end = 24.dp + (if (isLandscape) NAV_DOCK_CLEARANCE else 0.dp),
+                            bottom = (if (isLandscape) 32.dp else 116.dp) +
+                                WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                        )
                 ) {
                     ExtendedFloatingActionButton(
                         onClick = {
@@ -758,9 +813,6 @@ fun BottomNavBar(
     navSpacing: Float = 1f,
     navShape: Float = 0.5f,
     navLabels: NavLabelMode = NavLabelMode.SelectedOnly,
-    // Carried as data so the landscape rail is an added enum value rather than a
-    // second host composable; only Bottom is laid out today.
-    navEdge: NavEdge = NavEdge.Bottom,
     // The Personalization preview draws this bar inside a card the user taps to
     // expand, so a live tab eats the tap meant for the card and the mock cannot
     // be zoomed. Off there: the pill keeps its look and drops its click handling.
@@ -843,6 +895,7 @@ fun BottomNavBar(
 
     Box(
         modifier = modifier
+            // The bar is a full-width strip; it hugs its own content vertically.
             .fillMaxWidth()
             .then(insetPadding)
             // Pinned is edge to edge; the other two keep the floating margin,
@@ -897,9 +950,9 @@ fun BottomNavBar(
             // page, so it needs no drop shadow; the others keep theirs to lift off.
             shadowElevation = if (isBlurEnabled || pinned) 0.dp else 8.dp
         ) {
-            // One list of items, built once and placed by [navEdge]. Bottom lays
-            // them out in a row under the finger; Start/End stack the identical
-            // pills down a vertical rail for landscape.
+            // One list of items, built once; the bar lays them out in a row under
+            // the finger. Landscape is [zx.azenith.ui.component.NavDock] instead,
+            // which is a different item shape rather than this row stacked.
             val navItemsContent: @Composable (Modifier) -> Unit = { pillModifier ->
                 items.forEachIndexed { index, item ->
                     // A continuous 0..1 "how selected is this tab" value rather
@@ -937,8 +990,7 @@ fun BottomNavBar(
                 }
             }
 
-            when (navEdge) {
-                NavEdge.Bottom -> Row(
+            Row(
                     modifier = Modifier
                         // Matches the surface: the inline bar shrinks with its
                         // content, the others divide the full width. The floating
@@ -977,20 +1029,6 @@ fun BottomNavBar(
                     navItemsContent(
                         if (pinnedProgress > 0.01f) Modifier.weight(pinnedProgress) else Modifier
                     )
-                }
-
-                // Landscape rail. Not reachable from the UI yet; laid out here so
-                // adding the preference is a one-line change at the call site.
-                NavEdge.Start, NavEdge.End -> Column(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .padding(
-                            horizontal = if (pinned) 0.dp else 12.dp,
-                            vertical = if (pinned) 0.dp else 10.dp
-                        ),
-                    verticalArrangement = Arrangement.spacedBy(if (pinned) 0.dp else 12.dp, Alignment.CenterVertically),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) { navItemsContent(Modifier) }
             }
         }
     }
@@ -1152,11 +1190,11 @@ private fun NavPill(
                 .background(bgColor)
                 .gamepadFocusOutline(shape = shape)
                 .focusProperties {
-                    // Up off the bar returns to the page instead of searching, which
-                    // cannot cross from the bar into the pager's page.
+                    // The bar is the last stop on its own edge, and the search cannot
+                    // cross from it into the pager's page, so the way out is explicit:
+                    // Up, which is the direction the page is in from here.
                     if (interactive) {
-                        up = zx.azenith.ui.component.GamepadFocusNav.pageEntry
-                            ?: androidx.compose.ui.focus.FocusRequester.Default
+                        up = GamepadFocusNav.pageEntry ?: FocusRequester.Default
                     }
                 }
                 .then(
@@ -1208,11 +1246,9 @@ private fun NavPill(
                 .background(bgColor)
                 .gamepadFocusOutline(shape = shape)
                 .focusProperties {
-                    // Up off the bar returns to the page instead of searching, which
-                    // cannot cross from the bar into the pager's page.
+                    // Same escape as the stacked pill above: up, into the page.
                     if (interactive) {
-                        up = zx.azenith.ui.component.GamepadFocusNav.pageEntry
-                            ?: androidx.compose.ui.focus.FocusRequester.Default
+                        up = GamepadFocusNav.pageEntry ?: FocusRequester.Default
                     }
                 }
                 .then(

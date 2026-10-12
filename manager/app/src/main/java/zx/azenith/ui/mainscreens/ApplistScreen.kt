@@ -173,8 +173,8 @@ fun ApplistScreen(navController: NavController) {
             val listContentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
                 start = 16.dp,
-                end = 16.dp,
-                bottom = 110.dp + navBottomPadding
+                end = 16.dp + navBarEndClearance(),
+                bottom = navBarBottomClearance(navBottomPadding)
             )
 
                 AnimatedVisibility(

@@ -120,8 +120,11 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
             modifier = Modifier.fillMaxSize().hazePageSource(),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
-                start = 16.dp, end = 16.dp,
-                bottom = 110.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                start = 16.dp,
+                end = 16.dp + navBarEndClearance(),
+                bottom = navBarBottomClearance(
+                    WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                )
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {

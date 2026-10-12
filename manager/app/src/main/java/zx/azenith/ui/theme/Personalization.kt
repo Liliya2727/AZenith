@@ -450,10 +450,9 @@ private const val NAV_CENTER_RADIUS = NAV_CENTER
 /**
  * Which edge the bar is docked to when the screen is landscape.
  *
- * Only [Bottom] is reachable today; the bar is hardwired to the bottom edge and
- * its reveal animation translates on Y. Carrying the choice as data rather than
- * branching on `Configuration.orientation` at the call site means the vertical
- * rail is an added enum value and a layout branch, not a new plumbing path.
+ * Unused: landscape is [zx.azenith.ui.component.NavDock], which is a different
+ * item layout rather than this bar stacked. Kept because both edges are still a
+ * meaningful axis for the bar's own layout and nothing else depends on it.
  */
 enum class NavEdge { Bottom, Start, End }
 
