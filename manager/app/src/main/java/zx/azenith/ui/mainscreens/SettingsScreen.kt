@@ -234,11 +234,28 @@ fun SettingsScreen(
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             topBar = { 
-                SettingsScreenTopAppBar(
-                    scrollBehavior = scrollBehavior,
-                    onSearchClick = { navController.navigate(SearchTab.Settings.searchRoute) },
-                    onChangelogClick = { showChangelogSheet = true }
-                ) 
+                // Landscape drops the bar: the dock names the page and carries both actions.
+                if (!isLandscapeNav()) {
+                    SettingsScreenTopAppBar(
+                        scrollBehavior = scrollBehavior,
+                        onSearchClick = { navController.navigate(SearchTab.Settings.searchRoute) },
+                        onChangelogClick = { showChangelogSheet = true }
+                    ) 
+                }
+                PublishNavDockActions(
+                    listOf(
+                        NavDockAction(
+                            icon = Icons.Default.Search,
+                            contentDescription = stringResource(R.string.cd_search),
+                            onClick = { navController.navigate(SearchTab.Settings.searchRoute) }
+                        ),
+                        NavDockAction(
+                            icon = Icons.AutoMirrored.Rounded.TextSnippet,
+                            contentDescription = stringResource(R.string.cd_changelog),
+                            onClick = { showChangelogSheet = true }
+                        )
+                    )
+                )
             },
             snackbarHost = { 
                 SnackbarHost(
@@ -256,7 +273,7 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxSize().hazePageSource(),
                 contentPadding = PaddingValues(
                     top = innerPadding.calculateTopPadding(),
-                    start = 16.dp,
+                    start = 16.dp + safeAreaStartInset(),
                     end = 16.dp + navBarEndClearance(),
                     bottom = navBarBottomClearance(
                         WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()

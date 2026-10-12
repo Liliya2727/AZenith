@@ -99,9 +99,22 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            HomeTopAppBar(
-                scrollBehavior = scrollBehavior,
-                onRebootClick = { showRebootSheet = true }
+            // Landscape drops the bar: the dock names the page and carries the reboot
+            // action at its bottom, and the height goes to the page.
+            if (!isLandscapeNav()) {
+                HomeTopAppBar(
+                    scrollBehavior = scrollBehavior,
+                    onRebootClick = { showRebootSheet = true }
+                )
+            }
+            PublishNavDockActions(
+                listOf(
+                    NavDockAction(
+                        icon = Icons.Rounded.PowerSettingsNew,
+                        contentDescription = stringResource(R.string.reboot),
+                        onClick = { showRebootSheet = true }
+                    )
+                )
             )
         },
         snackbarHost = {
@@ -120,7 +133,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
             modifier = Modifier.fillMaxSize().hazePageSource(),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
-                start = 16.dp,
+                start = 16.dp + safeAreaStartInset(),
                 end = 16.dp + navBarEndClearance(),
                 bottom = navBarBottomClearance(
                     WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()

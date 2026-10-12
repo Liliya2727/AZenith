@@ -236,12 +236,29 @@ fun TweakScreen(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TweakScreenTopAppBar(
-                scrollBehavior = scrollBehavior,
-                onSearchClick = { navController.navigate(SearchTab.Tweaks.searchRoute) },
-                onMoreClick = { showBackupRestoreSheet = true },
-                modifier = backupOptionsOrigin.trackedModifier(),
-                onMoreModifier = backupOptionsOrigin.trackedModifier(),
+            // Landscape drops the bar: the dock names the page and carries both actions.
+            if (!isLandscapeNav()) {
+                TweakScreenTopAppBar(
+                    scrollBehavior = scrollBehavior,
+                    onSearchClick = { navController.navigate(SearchTab.Tweaks.searchRoute) },
+                    onMoreClick = { showBackupRestoreSheet = true },
+                    modifier = backupOptionsOrigin.trackedModifier(),
+                    onMoreModifier = backupOptionsOrigin.trackedModifier(),
+                )
+            }
+            PublishNavDockActions(
+                listOf(
+                    NavDockAction(
+                        icon = Icons.Default.Search,
+                        contentDescription = stringResource(R.string.cd_search),
+                        onClick = { navController.navigate(SearchTab.Tweaks.searchRoute) }
+                    ),
+                    NavDockAction(
+                        icon = Icons.Outlined.Cloud,
+                        contentDescription = stringResource(R.string.cd_menu),
+                        onClick = { showBackupRestoreSheet = true }
+                    )
+                )
             )
         },
         snackbarHost = {
@@ -261,7 +278,7 @@ fun TweakScreen(
             modifier = Modifier.fillMaxSize().hazePageSource(),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
-                start = 16.dp,
+                start = 16.dp + safeAreaStartInset(),
                 end = 16.dp + navBarEndClearance(),
                 bottom = navBarBottomClearance(
                     WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()

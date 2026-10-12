@@ -472,10 +472,10 @@ fun MainScreen(fromTileType: String? = null) {
                                     .focusProperties { canFocus = page == pagerState.currentPage }
                             ) {
                                 when (pagerRoutes[page]) {
-                                    "home" -> HomeScreen()
-                                    "applist" -> ApplistScreen(navController)
-                                    "tweaks" -> TweakScreen(navController)
-                                    "settings" -> SettingsScreen(navController)
+                                    "home" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) { HomeScreen() }
+                                    "applist" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) { ApplistScreen(navController) }
+                                    "tweaks" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) { TweakScreen(navController) }
+                                    "settings" -> zx.azenith.ui.component.CurrentPagerPage(page == pagerState.currentPage) { SettingsScreen(navController) }
                                 }
                             }
                             
@@ -668,15 +668,14 @@ fun MainScreen(fromTileType: String? = null) {
                         zx.azenith.ui.component.NavDock(
                             items = navItems,
                             selectedRoute = currentRoute ?: "home",
+                            // The dock is the only thing naming the page once landscape
+                            // drops the top app bar, so it names the page rather than
+                            // the app.
+                            title = stringResource(
+                                navItems.firstOrNull { it.route == currentRoute }?.labelRes
+                                    ?: R.string.app_name
+                            ),
                             onItemSelected = onNavSelected,
-                            // The dock carries a single search entry point, so it has
-                            // to pick a scope without a tab to read it from: the page
-                            // it sits beside, and Tweaks otherwise.
-                            searchRoute = when (currentRoute) {
-                                "settings" -> SearchTab.Settings.searchRoute
-                                else -> SearchTab.Tweaks.searchRoute
-                            },
-                            onSearch = { route -> navController.navigate(route) },
                             blurring = isBlurEnabled,
                             accentPanel = currentPersonalization().vibrantNav && !isBlurEnabled,
                             scale = currentPersonalization().navScale,

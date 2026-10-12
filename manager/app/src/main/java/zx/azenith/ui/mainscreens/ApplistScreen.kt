@@ -137,19 +137,47 @@ fun ApplistScreen(navController: NavController) {
     
     Scaffold(
         topBar = {
-            ApplistTopAppBar(
-                scrollBehavior,
-                isSearchMode = isSearchMode,
-                onSearchModeChange = { 
-                    isSearchMode = it 
-                    if (!it) viewModel.clearSearch() 
-                },
-                searchQuery = viewModel.searchTextFieldValue,
-                onSearchChange = { viewModel.updateSearch(it) },
-                onOpenFilters = { showFilterSheet = true },
-                activeFilterCount = viewModel.activeFilterCount,
-                onRefresh = { viewModel.loadApps(context, forceRefresh = true) },
-                focusRequester = focusRequester
+            // Landscape drops the bar unless the app search field is up, which only the
+            // bar can host; the dock carries the rest of the page's actions.
+            if (!isLandscapeNav() || isSearchMode) {
+                ApplistTopAppBar(
+                    scrollBehavior,
+                    isSearchMode = isSearchMode,
+                    onSearchModeChange = { 
+                        isSearchMode = it 
+                        if (!it) viewModel.clearSearch() 
+                    },
+                    searchQuery = viewModel.searchTextFieldValue,
+                    onSearchChange = { viewModel.updateSearch(it) },
+                    onOpenFilters = { showFilterSheet = true },
+                    activeFilterCount = viewModel.activeFilterCount,
+                    onRefresh = { viewModel.loadApps(context, forceRefresh = true) },
+                    focusRequester = focusRequester
+                )
+            }
+            PublishNavDockActions(
+                listOf(
+                    NavDockAction(
+                        icon = Icons.Default.FilterList,
+                        contentDescription = stringResource(R.string.cd_filter),
+                        onClick = { showFilterSheet = true },
+                        badgeCount = viewModel.activeFilterCount,
+                        highlighted = viewModel.activeFilterCount > 0
+                    ),
+                    NavDockAction(
+                        icon = Icons.Default.Search,
+                        contentDescription = stringResource(R.string.cd_search),
+                        onClick = { isSearchMode = true }
+                    ),
+                    NavDockAction(
+                        icon = Icons.Default.Refresh,
+                        contentDescription = stringResource(R.string.menu_refresh),
+                        onClick = {
+                            AppIconCache.clear()
+                            viewModel.loadApps(context, forceRefresh = true)
+                        }
+                    )
+                )
             )
         }
     ) { innerPadding ->
@@ -172,7 +200,7 @@ fun ApplistScreen(navController: NavController) {
             val navBottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
             val listContentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
-                start = 16.dp,
+                start = 16.dp + safeAreaStartInset(),
                 end = 16.dp + navBarEndClearance(),
                 bottom = navBarBottomClearance(navBottomPadding)
             )
