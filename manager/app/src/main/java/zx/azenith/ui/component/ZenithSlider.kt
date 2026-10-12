@@ -124,7 +124,7 @@ internal fun ZenithSlider(
                 }
                 onValueChange(raw)
             },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().gamepadFocusOutline(register = true),
             enabled = enabled,
             valueRange = valueRange,
             steps = steps,

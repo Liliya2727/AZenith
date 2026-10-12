@@ -92,6 +92,7 @@ fun LicensesScreen(navController: NavController) {
             modifier = Modifier
                 .fillMaxSize()
                 .hazePageSource()
+                .gamepadScreenEntry()
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState())

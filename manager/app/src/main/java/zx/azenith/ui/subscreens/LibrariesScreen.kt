@@ -66,6 +66,7 @@ fun LibrariesScreen(navController: NavController) {
             modifier = Modifier
                 .fillMaxSize()
                 .hazePageSource()
+                .gamepadScreenEntry()
                 .padding(top = innerPadding.calculateTopPadding())
         ) {
             if (libraries == null) {

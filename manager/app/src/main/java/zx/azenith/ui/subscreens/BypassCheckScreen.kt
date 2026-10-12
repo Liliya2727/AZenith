@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -237,7 +238,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
         }
     ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().hazePageSource(),
+            modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
                 start = 16.dp,
@@ -560,7 +561,7 @@ fun BypassChgCheckTopAppBar(
                 ) 
             },
             navigationIcon = {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = onBack, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
             },       

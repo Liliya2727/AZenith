@@ -611,10 +611,16 @@ fun SettingsScreenTopAppBar(
                 )
             },
             actions = {
-                IconButton(onClick = onSearchClick) {
+                IconButton(
+                    onClick = onSearchClick,
+                    modifier = Modifier.gamepadFocusOutline(shape = CircleShape)
+                ) {
                     Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search))
                 }
-                IconButton(onClick = onChangelogClick) {
+                IconButton(
+                    onClick = onChangelogClick,
+                    modifier = Modifier.gamepadFocusOutline(shape = CircleShape)
+                ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.TextSnippet,
                         contentDescription = stringResource(R.string.cd_changelog)

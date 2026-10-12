@@ -150,7 +150,7 @@ fun ExpressiveList(
                         .clip(shape)
                         .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp), shape)
                 ) {
-                    itemContent()
+                    ProvideRowShape(shape) { itemContent() }
                 }
             }
         }
@@ -206,7 +206,7 @@ fun <T> ExpressiveLazyList(
                         .clip(shape)
                         .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))
                 ) {
-                    itemContent(item)
+                    ProvideRowShape(shape) { itemContent(item) }
                 }
             }
         }
@@ -228,6 +228,7 @@ fun ExpressiveListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .gamepadFocusOutline(register = true)
             .let {
                 if (onClick != null || onLongClick != null) {
                     it.combinedClickable(onClick = onClick ?: {}, onLongClick = onLongClick)
@@ -292,6 +293,7 @@ fun ExpressiveListItemHighlight(
         modifier = Modifier
             .fillMaxWidth()
             .background(containerColor) 
+            .gamepadFocusOutline(register = true)
             .let {
                 if (onClick != null || onLongClick != null) {
                     it.combinedClickable(onClick = onClick ?: {}, onLongClick = onLongClick)
@@ -355,6 +357,7 @@ fun ExpressiveInfoCard(
         modifier = Modifier
             .fillMaxWidth()
             .background(containerColor) 
+            .gamepadFocusOutline(register = true)
             .let {
                 if (onClick != null || onLongClick != null) {
                     it.combinedClickable(onClick = onClick ?: {}, onLongClick = onLongClick)
@@ -676,7 +679,7 @@ fun ExpressiveColumn(
                         .clip(shape)
                         .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp), shape)
                 ) {
-                    itemContent()
+                    ProvideRowShape(shape) { itemContent() }
                 }
             }
         }

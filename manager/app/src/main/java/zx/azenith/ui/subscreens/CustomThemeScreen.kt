@@ -57,6 +57,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -475,7 +476,8 @@ MockCardFrame(
                     state = lazyListState,
                     modifier = Modifier
                         .weight(0.6f) 
-                        .fillMaxHeight(),
+                        .fillMaxHeight()
+                        .gamepadScreenEntry(),
                     contentPadding = PaddingValues(
                         top = innerPadding.calculateTopPadding() + 8.dp, 
                         bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -570,7 +572,8 @@ MockCardFrame(
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxWidth()
-                                .hazePageSource(),
+                                .hazePageSource()
+                                .gamepadScreenEntry(),
                             state = lazyListState,
                             contentPadding = PaddingValues(
                                 top = 4.dp,
@@ -1219,6 +1222,9 @@ private fun SheetHandle(onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            // A drag handle is a touch affordance; the mock card below is the d-pad stop that
+            // expands the preview.
+            .focusProperties { canFocus = false }
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -1360,6 +1366,7 @@ private fun PinnedPreviewHeader(
                     .align(Alignment.Center)
                     .width(frameWidth)
                     .fillMaxHeight()
+                    .gamepadFocusOutline(shape = scaledShape, register = true)
                     .clickable(onClick = onToggle)
             ) {
                 MockScreen(

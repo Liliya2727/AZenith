@@ -132,7 +132,7 @@ fun AboutScreen(navController: NavController) {
     ) { innerPadding ->
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize().hazePageSource(),
+            modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
                 start = 16.dp,
@@ -410,6 +410,7 @@ private fun OpenSourceRow(
             .fillMaxWidth()
             .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp), shape)
+            .gamepadFocusOutline(shape = shape, register = true)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -492,7 +493,7 @@ fun AboutTopAppBar(
                 )
             },
             navigationIcon = {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = onBack, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
             },       

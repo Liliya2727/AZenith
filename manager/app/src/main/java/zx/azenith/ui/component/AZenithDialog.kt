@@ -40,8 +40,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -95,6 +99,8 @@ fun AZenithDialog(
     var rootSize by remember { mutableStateOf(IntSize.Zero) }
     var cardSize by remember { mutableStateOf(IntSize.Zero) }
 
+    val dialogRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+
     val cardOrigin = if (rootSize == IntSize.Zero || cardSize == IntSize.Zero) {
         origin
     } else {
@@ -106,10 +112,32 @@ fun AZenithDialog(
 
     val containerColor = spec.containerColor ?: MaterialTheme.colorScheme.surfaceContainerHigh
 
+    var wasVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(visible) {
+        if (visible) {
+            wasVisible = true
+            dialogRequester.requestFocus()
+        } else if (wasVisible) {
+            // The dialog's focused node is disposed along with it and nothing re-seeds focus,
+            // so without this the d-pad has nothing to move from once a dialog closes.
+            wasVisible = false
+            kotlinx.coroutines.delay(150)
+            GamepadFocusNav.restoreFocus()
+        }
+    }
     Box(
         modifier = modifier
             .fillMaxSize()
             .onGloballyPositioned { rootSize = it.size }
+            .focusRequester(dialogRequester)
+            .focusGroup()
+            .gamepadKeyWatch()
+            .focusProperties {
+                // A dialog is modal: while it is up a d-pad may not walk out to the
+                // screen behind. canFocus cannot express this — a deactivated node is
+                // searched into, not pruned — so the exit is cancelled outright.
+                if (visible) onExit = { cancelFocusChange() }
+            }
     ) {
         BackHandler(enabled = visible, onBack = { if (spec.dismissible) onDismiss() })
 
@@ -122,6 +150,9 @@ fun AZenithDialog(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.42f))
+                    // Tapping the scrim dismisses, but it must not be a d-pad stop:
+                    // it covers the screen, so focus would land on the dim layer.
+                    .focusProperties { canFocus = false }
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -161,6 +192,8 @@ fun AZenithDialog(
                         .background(
                             if (isBlurEnabled) Color.Transparent else containerColor
                         )
+                        // The card swallows taps; it is not itself a d-pad stop.
+                        .focusProperties { canFocus = false }
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,

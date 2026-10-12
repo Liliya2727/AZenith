@@ -226,7 +226,7 @@ fun AppSettingsScreen(
             containerColor = ScaffoldContainerColor(colorScheme.surface)
         ) { innerPadding ->
             LazyColumn(
-                modifier = Modifier.fillMaxSize().hazePageSource(),
+                modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
             contentPadding = PaddingValues(
                 top = innerPadding.calculateTopPadding(),
                 bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()

@@ -73,6 +73,7 @@ import kotlinx.coroutines.withContext
 import zx.azenith.R
 import zx.azenith.ui.component.ExpressiveList
 import zx.azenith.ui.component.ExpressiveSwitchItem
+import zx.azenith.ui.component.gamepadScreenEntry
 import zx.azenith.ui.component.SkeletonSettingsList
 import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.util.PropertyUtils
@@ -442,7 +443,8 @@ fun GetStartedScreen(navController: NavController, onCompleted: () -> Unit = {})
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 32.dp),
+                        .padding(horizontal = 32.dp)
+                        .gamepadScreenEntry(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {

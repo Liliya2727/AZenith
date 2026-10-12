@@ -90,6 +90,7 @@ import zx.azenith.ui.component.LeadingIcon
 import zx.azenith.ui.component.SearchJump
 import zx.azenith.ui.component.ScaffoldContainerColor
 import zx.azenith.ui.component.ScaffoldContentColor
+import zx.azenith.ui.component.gamepadScreenEntry
 import zx.azenith.ui.component.hazePageSource
 import zx.azenith.ui.navigation.safePopBackStack
 import zx.azenith.ui.util.DebugUtils
@@ -315,7 +316,7 @@ fun SearchScreen(
                 )
 
                 SearchPhase.Results -> LazyColumn(
-                    modifier = Modifier.fillMaxSize().hazePageSource(),
+                    modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
                     contentPadding = PaddingValues(
                         top = innerPadding.calculateTopPadding(),
                         start = 16.dp,

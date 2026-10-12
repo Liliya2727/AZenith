@@ -73,6 +73,7 @@ import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import zx.azenith.R
+import kotlinx.coroutines.delay
 import zx.azenith.ui.component.*
 import zx.azenith.ui.component.AppIconImage
 import zx.azenith.ui.viewmodel.ApplistViewmodel
@@ -335,13 +336,13 @@ fun ApplistTopAppBar(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = { onSearchModeChange(false) }) {
+                        IconButton(onClick = { onSearchModeChange(false) }, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.cd_back))
                         }
                     },
                     actions = {
                         if (searchQuery.text.isNotEmpty()) {
-                            IconButton(onClick = { onSearchChange(TextFieldValue("")) }) {
+                            IconButton(onClick = { onSearchChange(TextFieldValue("")) }, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
                                 Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.cd_clear))
                             }
                         }
@@ -383,7 +384,7 @@ fun ApplistTopAppBar(
                         }
                     },
                     actions = {
-                        IconButton(onClick = onOpenFilters) {
+                        IconButton(onClick = onOpenFilters, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
                             BadgedBox(
                                 badge = {
                                     AnimatedContent(
@@ -414,13 +415,24 @@ fun ApplistTopAppBar(
                                 )
                             }
                         }
-                        IconButton(onClick = { onSearchModeChange(true) }) {
+                        IconButton(onClick = { onSearchModeChange(true) }, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
                             Icon(Icons.Default.Search, stringResource(R.string.cd_search))
                         }
-                        IconButton(onClick = { menuExpanded = true }) {
+                        IconButton(onClick = { menuExpanded = true }, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
                             Icon(Icons.Default.MoreVert, stringResource(R.string.cd_menu))
                         }
-                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false },
+                            modifier = Modifier.gamepadKeyWatch()
+                        ) {
+                            val itemRequester = remember { androidx.compose.ui.focus.FocusRequester() }
+                            LaunchedEffect(menuExpanded) {
+                                if (menuExpanded) {
+                                    delay(80)
+                                    itemRequester.requestFocus()
+                                }
+                            }
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.menu_refresh)) },
                                 onClick = {
@@ -428,6 +440,9 @@ fun ApplistTopAppBar(
                                     onRefresh()
                                     menuExpanded = false
                                 },
+                                modifier = Modifier
+                                    .focusRequester(itemRequester)
+                                    .gamepadFocusOutline(),
                                 leadingIcon = { Icon(Icons.Default.Refresh, null) }
                             )
                         }

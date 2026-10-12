@@ -45,6 +45,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.alpha
@@ -376,9 +379,7 @@ fun MainScreen(fromTileType: String? = null) {
                     showExitConfirm = true
                 }
             }
-            Box(
-                modifier = Modifier.fillMaxSize()
-            ) {
+            GamepadFocusRoot(modifier = Modifier.fillMaxSize()) {
                 NavHost(
                     navController = navController,
                     // Penentuan start destination dinamis
@@ -428,6 +429,16 @@ fun MainScreen(fromTileType: String? = null) {
                             ) { page ->
                             val pageOffset = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
                             val absOffset = kotlin.math.abs(pageOffset)
+
+                            // One entry point per page: the bar jumps to the page on
+                            // screen so a d-pad can leave the bottom bar.
+                            val pageEntry = remember(page) { androidx.compose.ui.focus.FocusRequester() }
+                            LaunchedEffect(page, pagerState.currentPage) {
+                                if (page == pagerState.currentPage) {
+                                    zx.azenith.ui.component.GamepadFocusNav.publishPageEntry(pageEntry)
+                                    zx.azenith.ui.component.GamepadFocusNav.publishLastEntry(pageEntry)
+                                }
+                            }
                             
                             val pageModifier = if (!useScrollAnimation) {
                                 Modifier.graphicsLayer {
@@ -446,7 +457,17 @@ fun MainScreen(fromTileType: String? = null) {
                             }
 
                             Box(
-                                modifier = pageModifier.fillMaxSize()
+                                modifier = pageModifier
+                                    .fillMaxSize()
+                                    // The d-pad entry point into this page, published to the
+                                    // bottom bar while this page is the one on screen.
+                                    .focusRequester(pageEntry)
+                                    .focusGroup()
+                                    // Only the page on screen may be reached by d-pad search:
+                                    // the pager keeps all four pages composed, so without this
+                                    // the search sees four candidate subtrees at the same
+                                    // geometry and cannot pick one.
+                                    .focusProperties { canFocus = page == pagerState.currentPage }
                             ) {
                                 when (pagerRoutes[page]) {
                                     "home" -> HomeScreen()
@@ -1129,6 +1150,15 @@ private fun NavPill(
                 .defaultMinSize(minWidth = 48.dp * sizeScale)
                 .clip(shape)
                 .background(bgColor)
+                .gamepadFocusOutline(shape = shape)
+                .focusProperties {
+                    // Up off the bar returns to the page instead of searching, which
+                    // cannot cross from the bar into the pager's page.
+                    if (interactive) {
+                        up = zx.azenith.ui.component.GamepadFocusNav.pageEntry
+                            ?: androidx.compose.ui.focus.FocusRequester.Default
+                    }
+                }
                 .then(
                     if (interactive) Modifier.clickable(
                         interactionSource = interactionSource,
@@ -1176,6 +1206,15 @@ private fun NavPill(
                 .defaultMinSize(minWidth = 48.dp * sizeScale)
                 .clip(shape)
                 .background(bgColor)
+                .gamepadFocusOutline(shape = shape)
+                .focusProperties {
+                    // Up off the bar returns to the page instead of searching, which
+                    // cannot cross from the bar into the pager's page.
+                    if (interactive) {
+                        up = zx.azenith.ui.component.GamepadFocusNav.pageEntry
+                            ?: androidx.compose.ui.focus.FocusRequester.Default
+                    }
+                }
                 .then(
                     if (interactive) Modifier.clickable(
                         interactionSource = interactionSource,

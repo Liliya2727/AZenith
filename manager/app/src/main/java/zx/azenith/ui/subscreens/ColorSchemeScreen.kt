@@ -205,7 +205,7 @@ fun ColorSchemeSettings(navController: NavController) {
         } else {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize().hazePageSource(),
+                modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
                 contentPadding = PaddingValues(
                     top = innerPadding.calculateTopPadding(),
                     start = 16.dp,
@@ -540,7 +540,7 @@ fun ColorSchemeTopAppBar(
                 ) 
             },
             navigationIcon = {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = onBack, modifier = Modifier.gamepadFocusOutline(shape = CircleShape)) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                 }
             },       

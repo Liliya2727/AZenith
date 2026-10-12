@@ -227,6 +227,7 @@ private fun AZenithSheet(
                 .fillMaxWidth()
                 .clip(shape)
                 .sheetSurface(isBlurEnabled, hazeState, sheetSurface)
+                .gamepadKeyWatch()
                 .tapHaptic()
                 .navigationBarsPadding()
         ) {
@@ -455,6 +456,7 @@ private fun SheetRow(
                     else -> Color.Transparent
                 }
             )
+            .gamepadFocusOutline(shape = rowShape(first && paintsGroupFill, last && paintsGroupFill))
             .clickable(enabled = item.enabled, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,

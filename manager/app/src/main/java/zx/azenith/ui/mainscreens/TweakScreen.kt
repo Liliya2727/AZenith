@@ -937,10 +937,16 @@ fun TweakScreenTopAppBar(
                 scrolledContainerColor = Color.Transparent
             ),
             actions = {
-                IconButton(onClick = onSearchClick) {
+                IconButton(
+                    onClick = onSearchClick,
+                    modifier = Modifier.gamepadFocusOutline(shape = CircleShape)
+                ) {
                     Icon(Icons.Default.Search, contentDescription = stringResource(R.string.cd_search))
                 }
-                IconButton(onClick = onMoreClick, modifier = onMoreModifier) {
+                IconButton(
+                    onClick = onMoreClick,
+                    modifier = onMoreModifier.gamepadFocusOutline(shape = CircleShape)
+                ) {
                     Icon(
                         imageVector = Icons.Outlined.Cloud,
                         contentDescription = stringResource(R.string.cd_menu)
