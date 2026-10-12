@@ -38,7 +38,6 @@ import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -47,6 +46,7 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -82,7 +82,6 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -296,7 +295,7 @@ fun NavDock(
                 modifier = Modifier
                     .fillMaxSize()
                     .innerEdgeHairline(scheme.outlineVariant.copy(alpha = 0.6f))
-                    .navigationBarsPadding()
+                    .windowInsetsPadding(safeInsets)
                     .gamepadFocusOutline(shape = RoundedCornerShape(0.dp))
                     .focusProperties {
                         if (interactive) {
@@ -312,13 +311,13 @@ fun NavDock(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.ChevronLeft,
-                    // [cd_menu] rather than a new string: it is already translated in
-                    // all 84 locales and reads the same to a screen reader.
+                DockIconButton(
+                    icon = Icons.Rounded.ChevronLeft,
                     contentDescription = stringResource(R.string.cd_menu),
                     tint = scheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
+                    interactive = interactive,
+                    scale = scale,
+                    onClick = { NavDockState.expanded = true }
                 )
             }
             return@Box
@@ -335,8 +334,11 @@ fun NavDock(
                     bottom = NAV_DOCK_BOTTOM_PAD * scale
                 )
         ) {
-            // The header is the app's own name and the way back out: one tap
-            // hands the panel's width to the page.
+            // M3 separates a navigation surface's headline from its destinations with
+            // type and space rather than a rule, so the header is a name block: the
+            // eyebrow is the app, the headline is the page, because landscape has no app
+            // bar left to say where you are. The collapse control is a real icon button
+            // wearing M3's state layer instead of a bare glyph sitting in a tappable row.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -349,43 +351,39 @@ fun NavDock(
                             onClick = { NavDockState.expanded = false }
                         ) else Modifier
                     )
-                    .padding(horizontal = 4.dp),
+                    .padding(start = 8.dp, end = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    // The page on screen, not the app: with the top app bar gone in
-                    // landscape this is the only thing that names where you are.
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = scheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleMedium,
                         color = scheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Text(
-                        text = stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = scheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
                 }
-                Icon(
-                    // Points out of the panel, which is the direction the width
-                    // goes when it is collapsed. Decorative: the header row itself
-                    // is the tap target and the collapse is announced by its state.
-                    imageVector = Icons.Rounded.ChevronRight,
-                    contentDescription = null,
-                    tint = scheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    modifier = Modifier.size(18.dp)
+                DockIconButton(
+                    // Points out of the panel, which is the direction the width goes
+                    // when it collapses.
+                    icon = Icons.Rounded.ChevronRight,
+                    contentDescription = stringResource(R.string.cd_menu),
+                    tint = scheme.onSurfaceVariant,
+                    interactive = interactive,
+                    scale = scale,
+                    onClick = { NavDockState.expanded = false }
                 )
             }
-
-            HorizontalDivider(
-                color = scheme.outlineVariant.copy(alpha = 0.5f),
-                thickness = 1.dp
-            )
 
             // Destinations scroll so a long list or a large font still reaches every
             // row; the actions below stay put, because they are the page's controls
@@ -393,7 +391,8 @@ fun NavDock(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(rememberScrollState())
+                    .padding(top = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(rowGap)
             ) {
                 // The travelling selection pill. Drawn inside the scrolling column so it
@@ -546,9 +545,9 @@ private fun DockActionButton(
     Box(
         modifier = modifier
             .height(NAV_DOCK_ACTION_HEIGHT * scale)
-            .clip(shape)
+            .clip(RoundedCornerShape(percent = 50))
             .background(background)
-            .gamepadFocusOutline(shape = shape)
+            .gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
             .focusProperties {
                 if (interactive) {
                     val pageEntry = GamepadFocusNav.pageEntry ?: FocusRequester.Default
@@ -573,7 +572,7 @@ private fun DockActionButton(
                     imageVector = action.icon,
                     contentDescription = action.contentDescription,
                     tint = tint,
-                    modifier = Modifier.size(20.dp * scale)
+                    modifier = Modifier.size(24.dp * scale)
                 )
             }
         } else {
@@ -581,9 +580,59 @@ private fun DockActionButton(
                 imageVector = action.icon,
                 contentDescription = action.contentDescription,
                 tint = tint,
-                modifier = Modifier.size(20.dp * scale)
+                modifier = Modifier.size(24.dp * scale)
             )
         }
+    }
+}
+
+/**
+ * An icon-only control wearing M3's icon-button state layer.
+ *
+ * The state layer is what makes an icon read as pressable: a bare glyph in a tappable
+ * row has no hover, focus or press feedback of its own, which is why the header's
+ * chevron looked like decoration rather than the way out of the panel.
+ */
+@Composable
+private fun DockIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    tint: Color,
+    interactive: Boolean,
+    scale: Float,
+    shape: Shape = CircleShape,
+    onClick: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val focused by interactionSource.collectIsFocusedAsState()
+    val layer by animateColorAsState(
+        targetValue = if (focused || pressed) tint.copy(alpha = 0.12f) else Color.Transparent,
+        animationSpec = MotionScheme.expressive().defaultEffectsSpec(),
+        label = "dockIconButtonLayer"
+    )
+
+    Box(
+        modifier = Modifier
+            .size(NAV_DOCK_ICON_BUTTON_SIZE * scale)
+            .clip(shape)
+            .background(layer)
+            .gamepadFocusOutline(shape = shape)
+            .then(
+                if (interactive) Modifier.clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick
+                ) else Modifier
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(24.dp * scale)
+        )
     }
 }
 
@@ -633,8 +682,11 @@ private fun DockRow(
         modifier = Modifier
             .fillMaxWidth()
             .height((if (compact) NAV_DOCK_ROW_HEIGHT_COMPACT else NAV_DOCK_ROW_HEIGHT) * scale)
-            .background(background)
-            .gamepadFocusOutline(shape = RoundedCornerShape(percent = 25))
+            // The row's own feedback is shaped like the selection pill, not a rectangle:
+            // a focus or press tint with different corners lands on the pill visibly
+            // mismatched.
+            .background(background, RoundedCornerShape(percent = 50))
+            .gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
             .focusProperties {
                 if (interactive) {
                     // A dock's up/down belong to its own rows; the way out is
@@ -653,21 +705,20 @@ private fun DockRow(
             )
             .padding(horizontal = NAV_DOCK_ROW_PAD * scale),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp * scale)
+        horizontalArrangement = Arrangement.spacedBy(12.dp * scale)
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = contentColor,
-            // Under the bar's 24 dp: here the icon sits beside its label rather
-            // than above it, and a full-size one crowds the row.
-            modifier = Modifier.size(20.dp * scale)
+            modifier = Modifier.size(24.dp * scale)
         )
         if (!compact) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                // M3's navigation label role, at its own weight: bodyMedium plus a
+                // manual SemiBold was inventing a type style the system already has.
+                style = MaterialTheme.typography.labelLarge,
                 color = contentColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -710,14 +761,20 @@ val NAV_DOCK_HANDLE_WIDTH = 40.dp
  */
 val NAV_DOCK_CLEARANCE = NAV_DOCK_WIDTH + 24.dp
 
-private val NAV_DOCK_SIDE_PAD = 8.dp
-private val NAV_DOCK_VERTICAL_PAD = 14.dp
+/**
+ * Panel metrics, on M3's 8 dp spacing grid: margins, tile sizes and the row rhythm stay
+ * related to each other instead of drifting, and the panel can be scaled and still read
+ * as a navigation surface.
+ */
+private val NAV_DOCK_SIDE_PAD = 12.dp
+private val NAV_DOCK_VERTICAL_PAD = 8.dp
 private val NAV_DOCK_ROW_GAP = 2.dp
-private val NAV_DOCK_HEADER_HEIGHT = 44.dp
-private val NAV_DOCK_ROW_HEIGHT = 52.dp
-private val NAV_DOCK_ROW_HEIGHT_COMPACT = 44.dp
-private val NAV_DOCK_ROW_PAD = 8.dp
-private val NAV_DOCK_ACTION_HEIGHT = 44.dp
+private val NAV_DOCK_HEADER_HEIGHT = 56.dp
+private val NAV_DOCK_ROW_HEIGHT = 56.dp
+private val NAV_DOCK_ROW_HEIGHT_COMPACT = 48.dp
+private val NAV_DOCK_ROW_PAD = 12.dp
+private val NAV_DOCK_ICON_BUTTON_SIZE = 48.dp
+private val NAV_DOCK_ACTION_HEIGHT = 48.dp
 
 /**
  * Bottom margin the panel keeps below its own content, on top of the navigation bar
