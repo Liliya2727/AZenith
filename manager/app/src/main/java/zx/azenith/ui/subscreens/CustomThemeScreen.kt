@@ -1040,62 +1040,72 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                     }
                                 }
                             }
-                        }
-                    }
 
-                    if (isBannerEnabled) {
-                        add {
-                            CardItem {
-                                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                                    LabeledControl(
-                                        Icons.Filled.Contrast,
-                                        stringResource(R.string.str_adjust_gradient)
-                                    )
+                            AnimatedVisibility(visible = isBannerEnabled, enter = enter, exit = exit) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                                        .padding(top = 2.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(middleShape)
+                                            .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))
+                                            .padding(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        LabeledControl(
+                                            Icons.Filled.Contrast,
+                                            stringResource(R.string.str_adjust_gradient)
+                                        )
 
-                                    Column {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = stringResource(R.string.str_gradient_opacity),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
+                                        Column {
                                             Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
                                             ) {
                                                 Text(
-                                                    text = stringResource(R.string.str_bannergradientalpha_100_toint, (bannerGradientAlpha * 100).toInt()),
-                                                    style = MaterialTheme.typography.labelLarge,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.primary
+                                                    text = stringResource(R.string.str_gradient_opacity),
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
-                                                IconButton(
-                                                    onClick = { onBannerGradientAlphaChange(0.5f) },
-                                                    modifier = Modifier.size(28.dp)
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                                                 ) {
-                                                    Icon(
-                                                        Icons.Filled.Restore,
-                                                        contentDescription = stringResource(R.string.reset),
-                                                        modifier = Modifier.size(18.dp),
-                                                        tint = MaterialTheme.colorScheme.primary
+                                                    Text(
+                                                        text = stringResource(R.string.str_bannergradientalpha_100_toint, (bannerGradientAlpha * 100).toInt()),
+                                                        style = MaterialTheme.typography.labelLarge,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.primary
                                                     )
+                                                    IconButton(
+                                                        onClick = { onBannerGradientAlphaChange(0.5f) },
+                                                        modifier = Modifier.size(28.dp)
+                                                    ) {
+                                                        Icon(
+                                                            Icons.Filled.Restore,
+                                                            contentDescription = stringResource(R.string.reset),
+                                                            modifier = Modifier.size(18.dp),
+                                                            tint = MaterialTheme.colorScheme.primary
+                                                        )
+                                                    }
                                                 }
                                             }
+                                            ZenithSlider(
+                                                value = bannerGradientAlpha,
+                                                onValueChange = { newValue ->
+                                                    val snapped = if (newValue in 0.47f..0.53f) 0.5f else newValue
+                                                    onBannerGradientAlphaChange(snapped)
+                                                },
+                                                onValueChangeFinished = {},
+                                                valueRange = 0f..1f,
+                                                modifier = Modifier.fillMaxWidth().height(40.dp)
+                                            )
                                         }
-                                        ZenithSlider(
-                                            value = bannerGradientAlpha,
-                                            onValueChange = { newValue ->
-                                                val snapped = if (newValue in 0.47f..0.53f) 0.5f else newValue
-                                                onBannerGradientAlphaChange(snapped)
-                                            },
-                                            onValueChangeFinished = {},
-                                            valueRange = 0f..1f,
-                                            modifier = Modifier.fillMaxWidth().height(40.dp)
-                                        )
                                     }
                                 }
                             }
