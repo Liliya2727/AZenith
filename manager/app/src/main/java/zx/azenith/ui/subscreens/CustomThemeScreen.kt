@@ -987,24 +987,22 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                         }
                     }
     
-                    // Banner switch
                     add {
-                        JumpRow(activeId = jumpPulse, entryId = "pers.banner") {
-                            ExpressiveSwitchItem(
-                                                        icon = Icons.Outlined.Image,
-                                                        title = stringResource(R.string.str_enable_banner),
-                                                        checked = isBannerEnabled,
-                                                        onCheckedChange = onBannerEnabledChange
-                                                    )
-                        }
-                    }
-    
-                    // Banner: pick / reset media
-                    add {
-                        AnimatedVisibility(visible = isBannerEnabled, enter = enter, exit = exit) {
-                            CardItem {
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            JumpRow(activeId = jumpPulse, entryId = "pers.banner") {
+                                ExpressiveSwitchItem(
+                                    icon = Icons.Outlined.Image,
+                                    title = stringResource(R.string.str_enable_banner),
+                                    checked = isBannerEnabled,
+                                    onCheckedChange = onBannerEnabledChange
+                                )
+                            }
+
+                            AnimatedVisibility(visible = isBannerEnabled, enter = enter, exit = exit) {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
                                     horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
                                 ) {
                                     OutlinedButton(
@@ -1020,7 +1018,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                                         Spacer(Modifier.width(8.dp))
                                         Text(stringResource(R.string.str_pick_media), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
-    
+
                                     OutlinedButton(
                                         onClick = {
                                             context.clearHeaderImage()
@@ -1044,17 +1042,16 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsItems(
                             }
                         }
                     }
-    
-                    // Banner: gradient opacity
-                    add {
-                        AnimatedVisibility(visible = isBannerEnabled, enter = enter, exit = exit) {
+
+                    if (isBannerEnabled) {
+                        add {
                             CardItem {
                                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                                     LabeledControl(
                                         Icons.Filled.Contrast,
                                         stringResource(R.string.str_adjust_gradient)
                                     )
-    
+
                                     Column {
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
