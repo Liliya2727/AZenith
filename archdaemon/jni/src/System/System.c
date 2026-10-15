@@ -52,7 +52,8 @@ int main_daemon(void) {
 
     // Initiate PID
     log_info("daemon", "daemon started pid=%d", getpid());
-    __system_property_set("persist.sys.rianixia.learning_enabled", "true");
+    __system_property_set("persist.sys.rynx.learning_enabled", "true");
+    __system_property_set("persist.sys.rynx.thermalcore-bigdata.path", "/data/adb/.config/AZenith/debug");
     __system_property_set("persist.sys.azenith.state", "running");
     notify("Initializing...", "Starting AZenith service...", false, 0);
     setspid();

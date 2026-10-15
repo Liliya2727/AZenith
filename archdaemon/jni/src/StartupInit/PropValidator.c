@@ -57,7 +57,6 @@ const char* VALID_AZENITH_PROPS[] = {
     "persist.sys.azenithconf.logd",
     "persist.sys.azenithconf.malisched",
     "persist.sys.azenithconf.preloadbudget",
-    "persist.sys.azenithconf.renderer",
     "persist.sys.azenithconf.schedtunes",
     "persist.sys.azenithconf.schemeconfig",
     "persist.sys.azenithconf.showtoast",
@@ -86,6 +85,34 @@ typedef struct {
     char names[MAX_PENDING_DELETE][MAX_PROP_NAME_BUF];
     int  count;
 } StalePropList;
+
+/* Legacy props from older versions that sit outside the azenith prefix */
+static const char* LEGACY_STALE_PROPS[] = {
+    "persist.sys.rianixia.learning_enabled",
+    "persist.sys.rianixia.thermalcore-bigdata.path",
+};
+static const size_t LEGACY_STALE_PROPS_COUNT =
+    sizeof(LEGACY_STALE_PROPS) / sizeof(LEGACY_STALE_PROPS[0]);
+
+/**
+ * @brief Queue legacy props that still exist in the property area for deletion.
+ */
+static void collect_legacy_stale(StalePropList *pending) {
+    for (size_t i = 0; i < LEGACY_STALE_PROPS_COUNT; i++) {
+        const char *name = LEGACY_STALE_PROPS[i];
+
+        if (__system_property_find(name) == NULL)
+            continue;
+
+        if (pending->count < MAX_PENDING_DELETE) {
+            strlcpy(pending->names[pending->count], name, MAX_PROP_NAME_BUF);
+            pending->count++;
+            log_warn("prop", "legacy stale prop flagged name=%s", name);
+        } else {
+            log_warn("prop", "buffer full skipping legacy prop name=%s", name);
+        }
+    }
+}
 
 /**
  * @brief Callback invoked by __system_property_read_callback for each property.
@@ -136,6 +163,7 @@ void validateprop(void) {
     StalePropList pending = { .count = 0 };
 
     __system_property_foreach(foreach_prop_cb, &pending);
+    collect_legacy_stale(&pending);
 
     if (pending.count == 0) {
         log_info("prop", "no stale props found");
