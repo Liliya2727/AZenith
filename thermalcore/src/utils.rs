@@ -44,6 +44,14 @@ pub fn get_system_property(key: &str, default: &str) -> String {
     default.to_string()
 }
 
+pub fn get_wall_time() -> u64 {
+    use std::time::{ SystemTime, UNIX_EPOCH };
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| (d.as_millis() / 1000) as u64)
+        .unwrap_or(0)
+}
+
 pub fn get_data_path() -> PathBuf {
     let path_str = get_system_property(PROP_BIGDATA_PATH, "");
 
@@ -55,11 +63,31 @@ pub fn get_data_path() -> PathBuf {
 
     if let Err(e) = fs::create_dir_all(&path) {
         eprintln!("Failed to create data dir {:?}: {}. Falling back.", path, e);
-        let fallback_path = PathBuf::from("/data/local/tmp/rianixia_thermal_data");
+        let fallback_path = PathBuf::from("/data/local/tmp/rynx_thermal_data");
         if fs::create_dir_all(&fallback_path).is_ok() {
             return fallback_path;
         }
         return PathBuf::from(DEFAULT_DATA_PATH);
+    }
+
+    // One-time brand migration: if the new dir has no learning.dat yet, copy
+    // one over from a legacy rianixia dir so history isn't lost on upgrade.
+    let new_dat = path.join(LEARNING_DATA_FILENAME);
+    if !new_dat.exists() {
+        for legacy in LEGACY_DATA_PATHS {
+            let legacy_dat = PathBuf::from(legacy).join(LEARNING_DATA_FILENAME);
+            if legacy_dat.exists() {
+                match fs::copy(&legacy_dat, &new_dat) {
+                    Ok(_) => {
+                        eprintln!("Migrated learning data from {}", legacy);
+                        break;
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to migrate learning data from {}: {}", legacy, e);
+                    }
+                }
+            }
+        }
     }
 
     path

@@ -43,6 +43,21 @@ impl PidController {
 
         let error = (current_temp - target_temp) as f32;
 
+        // Deadband: when we're at or below the target (idle/cool), force
+        // full release and clear all PID state so throttle can never stick.
+        // This is the key fix for the "throttles forever at 20-36C" bug.
+        if current_temp <= target_temp {
+            self.reset();
+            return 0.0;
+        }
+
+        // Hysteresis: below the target plus a small margin, also release.
+        if error.abs() < PID_DEADBAND_RAW {
+            self.integral = 0.0;
+            self.prev_error = 0.0;
+            return 0.0;
+        }
+
         let p_term = self.kp * error;
 
         self.integral += error * dt_seconds;

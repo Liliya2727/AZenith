@@ -3,7 +3,7 @@ use std::io::{ self, Read };
 use std::path::PathBuf;
 use std::collections::VecDeque;
 use serde::{ Deserialize, Serialize };
-use bincode::{ config, serde::decode_from_slice, serde::encode_to_vec };
+use postcard::{ from_bytes, to_allocvec };
 
 use super::android_ffi::Logger;
 use super::constants::*;
@@ -63,8 +63,7 @@ impl ThermalAI {
         if let Ok(mut file) = File::open(&file_path) {
             let mut bytes = Vec::new();
             if file.read_to_end(&mut bytes).is_ok() {
-                let config = config::standard();
-                if let Ok((mut data, _)) = decode_from_slice::<ThermalAI, _>(&bytes, config) {
+                if let Ok(mut data) = from_bytes::<ThermalAI>(&bytes) {
                     data.data_path = base_path;
                     return (data, false);
                 }
@@ -74,8 +73,7 @@ impl ThermalAI {
     }
 
     pub fn save(&self) -> io::Result<()> {
-        let config = config::standard();
-        let bytes = encode_to_vec(self, config).map_err(|e|
+        let bytes = to_allocvec(self).map_err(|e|
             io::Error::new(io::ErrorKind::Other, e.to_string())
         )?;
 

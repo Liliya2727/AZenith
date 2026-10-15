@@ -3,7 +3,7 @@ use std::io;
 use std::path::{ Path, PathBuf };
 use std::time::Duration;
 use super::android_ffi::Logger;
-use super::constants::SMOOTHING_ALPHA;
+use super::constants::{ SMOOTHING_ALPHA, COOLING_FLOOR };
 
 // ============================================================================
 // COOLING DEVICES
@@ -15,6 +15,9 @@ pub struct CoolingDevice {
     pub device_type: String,
     pub max_state: i32,
     pub current_blended_intensity: f32,
+    /// Soft-safe actuators (thermal-devfreq / cpu_adaptive / gpu / vcore).
+    /// These cooperate with the MTK HAL rather than racing per-core actors.
+    pub is_soft: bool,
 }
 
 impl CoolingDevice {
@@ -47,6 +50,14 @@ impl CoolingDevice {
             "devfreq",
             "vcore",
             "thermal-cpufreq",
+            // Generic / non-MTK fallbacks (mainline cpufreq cooling, Qualcomm
+            // BCL). "cpufreq"/"Processor" is the standard Linux CPU throttle.
+            "processor",
+            "cpufreq",
+            "bcl_perf",
+            "bcl_virtual",
+            "freq_qos",
+            "freq-qos",
         ];
         let unacceptable_sub_strings = [
             "backlight",
@@ -63,6 +74,26 @@ impl CoolingDevice {
         if !(is_acceptable && !is_unacceptable) {
             return None;
         }
+
+        // Soft-safe: a device that gently limits frequency/voltage without
+        // hotplugging individual cores or racing the vendor HAL. Bare "cpuNN"
+        // actors on MTK are per-core hotplug/freq switches controlled by the
+        // stock stack, so we treat ONLY the coordinated knobs as soft.
+        let soft_markers = [
+            "cpu_adaptive",
+            "thermal-devfreq",
+            "gpu",
+            "vcore",
+            "thermal-cpufreq",
+            "devfreq",
+            // Generic soft-safe knobs: standard kernel CPU freq limiter and
+            // Qualcomm BCL are sanctioned throttle points, not hotplug races.
+            "cpufreq",
+            "processor",
+            "bcl_perf",
+            "bcl_virtual",
+        ];
+        let is_soft = soft_markers.iter().any(|m| lower.contains(m));
 
         let initial_intensity = fs
             ::read_to_string(path.join("cur_state"))
@@ -84,10 +115,20 @@ impl CoolingDevice {
             device_type,
             max_state,
             current_blended_intensity: initial_intensity,
+            is_soft,
         })
     }
 
     pub fn apply_intensity(&mut self, target_intensity: f32, logger: &Logger) -> io::Result<()> {
+        // Hard floor: negligible requests always map to full release. This
+        // guarantees the device returns to cur_state=0 at idle even if the
+        // controller output is slightly non-zero.
+        let target_intensity = if target_intensity < COOLING_FLOOR {
+            0.0
+        } else {
+            target_intensity
+        };
+
         let diff = target_intensity - self.current_blended_intensity;
         self.current_blended_intensity += diff * SMOOTHING_ALPHA;
 

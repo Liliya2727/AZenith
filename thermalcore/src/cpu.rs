@@ -104,6 +104,19 @@ pub struct CpuFeatures {
     pub load_variance: f32,
 }
 
+/// Aggregate + per-core snapshot from a single `/proc/stat` sample.
+/// Unlike [`CpuFeatures`], this carries the per-core busy fractions so a
+/// 1 Hz dataset collector can log every core without re-reading procfs.
+#[derive(Debug, Clone, Default)]
+pub struct CpuSnapshot {
+    pub cpu_load: f32,
+    pub core_load_max: f32,
+    pub load_variance: f32,
+    /// `(core id, busy fraction 0.0..1.0)`, e.g. `("cpu0", 0.42)`,
+    /// sorted by core index. Empty until the first successful sample.
+    pub per_core: Vec<(String, f32)>,
+}
+
 // ============================================================================
 // CPU MONITOR
 // ============================================================================
@@ -135,23 +148,67 @@ impl CpuMonitor {
         }
     }
 
+    /// Full per-core snapshot for 1 Hz dataset logging. Reuses the same
+    /// `/proc/stat` read and delta math as [`Self::get_features`], but also
+    /// returns every accepted per-core busy fraction for raw storage.
+    pub fn get_snapshot(&mut self, logger: &Logger) -> CpuSnapshot {
+        let content = match self.refresh_snapshot(logger) {
+            Some(c) => c,
+            None => {
+                return CpuSnapshot {
+                    cpu_load: self.last_features.cpu_load,
+                    core_load_max: self.last_features.core_load_max,
+                    load_variance: self.last_features.load_variance,
+                    per_core: Vec::new(),
+                };
+            }
+        };
+
+        let mut features = match self.aggregate_from(&content) {
+            Ok(f) => {
+                self.last_features = f;
+                f
+            }
+            Err(_) => self.last_features,
+        };
+
+        let mut per_core: Vec<(String, f32)> = content
+            .lines()
+            .filter(|line| {
+                line.starts_with("cpu") &&
+                    !line.starts_with("cpu ") &&
+                    !line.starts_with("intr")
+            })
+            .filter_map(|line| {
+                let core_id = line.split_whitespace().next()?.to_string();
+                let stat = ProcStatValues::from_line(line)?;
+                let last = self.core_delta_states.entry(core_id.clone()).or_default();
+                let (load, state) = Self::calculate_load(&stat, last);
+                *last = state;
+                Some((core_id, load))
+            })
+            .collect();
+        per_core.sort_by(|a, b| a.0.cmp(&b.0));
+
+        if !per_core.is_empty() {
+            features.core_load_max = per_core
+                .iter()
+                .map(|(_, load)| *load)
+                .fold(features.core_load_max, f32::max);
+        }
+
+        CpuSnapshot {
+            cpu_load: features.cpu_load,
+            core_load_max: features.core_load_max,
+            load_variance: features.load_variance,
+            per_core,
+        }
+    }
+
     pub fn get_features(&mut self, logger: &Logger) -> CpuFeatures {
-        let now = get_monotonic_time();
-        if now.saturating_sub(self.last_sample_time) < 1 {
+        if self.refresh_and_parse(logger).is_err() {
             return self.last_features;
         }
-        self.last_sample_time = now;
-
-        match self.read_and_parse_stats(logger) {
-            Ok(features) => {
-                self.last_features = features;
-            }
-            Err(e) => {
-                logger.debug(&format!("Failed to parse /proc/stat: {}", e));
-                self.proc_stat_file = File::open("/proc/stat").ok();
-            }
-        }
-
         self.last_features
     }
 
@@ -200,8 +257,93 @@ impl CpuMonitor {
         variance.sqrt()
     }
 
-    fn read_and_parse_stats(&mut self, logger: &Logger) -> Result<CpuFeatures, &'static str> {
-        let content = self.read_proc_stat_file(logger)?;
+    fn refresh_and_parse(&mut self, logger: &Logger) -> Result<CpuFeatures, &'static str> {
+        let now = get_monotonic_time();
+        if now.saturating_sub(self.last_sample_time) < 1 {
+            return Err("Throttled: sample interval not elapsed");
+        }
+        self.last_sample_time = now;
+        match self.read_and_parse_stats(logger) {
+            Ok(features) => {
+                self.last_features = features;
+                Ok(features)
+            }
+            Err(e) => {
+                logger.debug(&format!("Failed to parse /proc/stat: {}", e));
+                self.proc_stat_file = File::open("/proc/stat").ok();
+                self.read_buffer.clear();
+                Err(e)
+            }
+        }
+    }
+
+    /// Same 1 s throttle as [`Self::get_features`]; returns the raw
+    /// `/proc/stat` bytes on success without touching derived features.
+    fn refresh_snapshot(&mut self, logger: &Logger) -> Option<String> {
+        let now = get_monotonic_time();
+        if now.saturating_sub(self.last_sample_time) < 1 {
+            return None;
+        }
+        self.last_sample_time = now;
+        match self.read_proc_stat_file(logger) {
+            Ok(_) => Some(self.read_buffer.clone()),
+            Err(e) => {
+                logger.debug(&format!("Failed to parse /proc/stat: {}", e));
+                self.proc_stat_file = File::open("/proc/stat").ok();
+                self.read_buffer.clear();
+                None
+            }
+        }
+    }
+
+    /// Aggregate `cpu ` line + variance history, without the per-core walk.
+    /// Used by [`Self::get_snapshot`] so the collector can keep the existing
+    /// delta math while storing every per-core fraction itself.
+    fn aggregate_from(&mut self, content: &str) -> Result<CpuFeatures, &'static str> {
+        let mut agg_load = 0.0;
+        let mut found_agg = false;
+
+        for line in content.lines() {
+            if line.starts_with("cpu ") {
+                if let Some(current_stat) = ProcStatValues::from_line(line) {
+                    let (load, new_state) = Self::calculate_load(
+                        &current_stat,
+                        &self.agg_delta_state
+                    );
+                    self.agg_delta_state = new_state;
+                    agg_load = load;
+                    found_agg = true;
+                }
+                break;
+            // "/proc/stat" header lines before the aggregate ("btime", …)
+            // carry no counters; lines after its first line start are the
+            // per-core rows, handled by get_snapshot's own walk.
+            } else if !line.is_empty() && !line.starts_with("cpu") {
+                continue;
+            }
+        }
+
+        if !found_agg {
+            return Err("Could not find aggregate 'cpu ' line");
+        }
+
+        if self.load_history.len() >= CPU_LOAD_WINDOW {
+            self.load_history.pop_front();
+        }
+        self.load_history.push_back(agg_load);
+
+        Ok(CpuFeatures {
+            cpu_load: agg_load,
+            core_load_max: 0.0,
+            load_variance: self.calculate_variance(),
+        })
+    }
+
+    /// Full `/proc/stat` parse (aggregate + per-core) for the daemon's
+    /// control tick. [`Self::get_snapshot`] instead uses [`Self::aggregate_from`]
+    /// plus its own per-core walk so the collector can keep the raw fractions.
+    fn read_and_parse_stats(&mut self, _logger: &Logger) -> Result<CpuFeatures, &'static str> {
+        let content = self.read_proc_stat_file(_logger)?;
 
         let mut agg_load = 0.0;
         let mut max_core_load = 0.0;

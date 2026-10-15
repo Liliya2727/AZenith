@@ -1,18 +1,16 @@
 [package]
-name = "rianixia-thermalcore"
+name = "rynx-thermalcore"
 version = "2.0.0"
 edition = "2024"
 authors = ["rianixia"]
 
 [dependencies]
-nix = { version = "0.30", features = ["poll", "time"] }
-inotify = "0.11.0"
+nix = { version = "0.31", features = ["poll", "time"] }
+inotify = { version = "0.11", default-features = false }
 serde = { version = "1.0", features = ["derive"] }
-bincode = { version = "2.0.1", features = ["serde"] }
-signal-hook = "0.3"
-chrono = { version = "0.4", features = ["serde"] }
-sysinfo = "0.37.2"
-serde_json = "1.0"
+postcard = { version = "1.1", default-features = false, features = ["use-std"] }
+signal-hook = "0.4"
+serde_json = { version = "1.0", optional = true }
 
 [profile.release]
 opt-level = 3
@@ -21,9 +19,15 @@ codegen-units = 1
 strip = true
 
 [features]
-simulator = []
+simulator = ["dep:serde_json"]
+collector = ["dep:serde_json"]
 
 [[bin]]
 name = "rianixia-thermalcore"
 path = "src/main.rs"
+
+[[bin]]
+name = "thermal-collector"
+path = "src/bin/thermal-collector.rs"
+required-features = ["collector"]
 

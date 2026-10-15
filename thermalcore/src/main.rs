@@ -1,5 +1,5 @@
 use std::sync::{ atomic::{ AtomicBool }, Arc };
-use rianixia_thermalcore::monitor::ThermalMonitor;
+use rynx_thermalcore::monitor::ThermalMonitor;
 
 fn main() {
     #[cfg(feature = "simulator")]
@@ -10,7 +10,7 @@ fn main() {
                 eprintln!("Usage: {} --simulate <trace_file.json>", args[0]);
                 std::process::exit(1);
             }
-            match rianixia_thermalcore::simulator::ThermalSimulator::new(&args[2]) {
+            match rynx_thermalcore::simulator::ThermalSimulator::new(&args[2]) {
                 Ok(mut sim) => {
                     sim.run_simulation();
                     return;
@@ -55,7 +55,7 @@ fn main() {
         std::process::exit(1);
     }
 
-    monitor.logger.info("Rianixia Thermal Core shutting down.");
+    monitor.logger.info("Rynx Thermal Core shutting down.");
 
     // monitor.user_pattern_tracker.finalize_session();
 

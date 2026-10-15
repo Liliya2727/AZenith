@@ -43,7 +43,10 @@ impl ThermalZone {
     pub fn read_temp(&mut self) -> Option<i32> {
         if let Ok(temp_str) = fs::read_to_string(self.path.join("temp")) {
             if let Ok(temp) = temp_str.trim().parse::<i32>() {
-                if temp > 200000 {
+                // MTK returns 0xFFFF... (~-127000) as a "sensor absent/invalid"
+                // sentinel. Reject anything non-physical so zombie zones never
+                // drag down the fused max or poison the predictor's gradient.
+                if temp > 200000 || temp <= 0 {
                     return None;
                 }
                 self.last_temp = Some(temp);
@@ -70,7 +73,17 @@ impl ThermalFusion {
             .enumerate()
             .filter_map(|(i, z)| {
                 let lower = z.zone_type.to_lowercase();
-                if lower.contains("cpu") || lower.contains("soc") || lower.contains("gpu") {
+                // MTK: "mtktscpu"/"soc"/"gpu". Generic: "tsens","coretemp",
+                // "x86_pkg_temp","cpu-thermal","package-thermal".
+                if lower.contains("cpu")
+                    || lower.contains("soc")
+                    || lower.contains("gpu")
+                    || lower.contains("tsens")
+                    || lower.contains("coretemp")
+                    || lower.contains("pkg_temp")
+                    || lower.contains("cpu-thermal")
+                    || lower.contains("package-thermal")
+                {
                     Some(i)
                 } else {
                     None
@@ -110,7 +123,10 @@ impl ThermalFusion {
 
     pub fn correlate_with_battery(&mut self, battery_temp: i32, logger: &Logger) -> (bool, f32) {
         if let Some(cpu_max) = self.get_max_cpu_temp() {
-            let internal_temp = cpu_max;
+            // zone temps are millidegrees; battery_temp passed in is
+            // deci-degrees (battery/temp). Express both in deci-degrees so the
+            // gradient matches the threshold/log units used below.
+            let internal_temp = cpu_max / 100;
             let batt_temp = battery_temp;
             let gradient = (internal_temp - batt_temp) as f32;
 
