@@ -423,7 +423,7 @@ object SearchIndex {
             summaryRes = R.string.gamespace_desc,
             icon = Icons.Rounded.RocketLaunch,
             group = SearchGroup.Settings,
-            target = SearchTarget.Route("gamespacescreen"),
+            target = SearchTarget.Route("experimentalscreen"),
             keywordsRes = listOf(R.string.section_gamespace, R.string.gamespace_enter)
         ),
         SearchEntry(
@@ -432,7 +432,7 @@ object SearchIndex {
             summaryRes = R.string.gamespace_enable_desc,
             icon = Icons.Rounded.SportsEsports,
             group = SearchGroup.Settings,
-            target = SearchTarget.Route("gamespacescreen"),
+            target = SearchTarget.Route("experimentalscreen"),
             keywordsRes = listOf(R.string.section_gamespace, R.string.gamespace_inside)
         ),
 

@@ -77,7 +77,7 @@ import kotlinx.coroutines.launch
 import zx.azenith.R
 
 /** Length of the Game Space boot sequence. The rail's clock runs exactly this long. */
-const val GAME_SPACE_INTRO_MS = 5000
+const val GAME_SPACE_INTRO_MS = 3000
 
 /** The four stages the shell walks through, in the order the rail reports them. */
 private val BOOT_STAGES = listOf(
@@ -87,8 +87,13 @@ private val BOOT_STAGES = listOf(
     R.string.gamespace_boot_ready,
 )
 
+// When each entrance step lands, as a fraction of the clock: mark, wordmark, hairline, stage
+// label, then the rail's last step. Fractions instead of fixed ms so the sequence keeps its
+// shape whenever the length changes.
+private val STAGE_AT = listOf(0.016f, 0.088f, 0.212f, 0.392f, 0.832f)
+
 /**
- * The boot intro: one clock owns the 5 s and the handoff, a separate stagger walks the layers in,
+ * The boot intro: one clock owns the walk and the handoff, a separate stagger walks the layers in,
  * and every layer moves on the theme's [MaterialTheme.motionScheme] — spatial specs for anything
  * that travels, effects specs for alpha — rather than hand-rolled tweens.
  *
@@ -110,18 +115,13 @@ fun ZXGameSpaceIntro(onFinished: () -> Unit) {
         }
     }
 
-    // Entrance stagger: mark, wordmark, hairline, shell label, then the rail's last step.
     LaunchedEffect(Unit) {
-        delay(80)
-        stage = 1
-        delay(360)
-        stage = 2
-        delay(620)
-        stage = 3
-        delay(900)
-        stage = 4
-        delay(2200)
-        stage = 5
+        var elapsed = 0f
+        STAGE_AT.forEachIndexed { index, at ->
+            delay(((at - elapsed) * GAME_SPACE_INTRO_MS).toLong())
+            stage = index + 1
+            elapsed = at
+        }
     }
 
     LaunchedEffect(Unit) {

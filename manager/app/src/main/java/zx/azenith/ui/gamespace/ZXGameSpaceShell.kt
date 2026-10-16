@@ -46,8 +46,8 @@ import zx.azenith.ui.viewmodel.ApplistViewmodel
  * Game Space in one place: the boot intro hands off to the hub, and both sit on the same scheme
  * surface the manager fades through, so there is no seam between the two.
  *
- * The install side of the mode (the manager fading black and starting this) lives in
- * `ZXGameSpaceScreen`; this composable only owns the shell itself.
+ * The install side of the mode (the manager covering the screen and starting this) lives in
+ * `ui/subscreens/ExperimentalScreen.kt`; this composable only owns the shell itself.
  */
 @Composable
 fun ZXGameSpaceShell(onExit: () -> Unit) {
