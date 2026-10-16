@@ -31,7 +31,7 @@ import zx.azenith.ui.theme.AZenithTheme
  * Hosts Game Space. Separate from [zx.azenith.MainActivity] because the shell needs a landscape,
  * immersive window that the rest of the manager must never inherit.
  */
-class GameSpaceActivity : ComponentActivity() {
+class ZXGameSpaceActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,7 +50,7 @@ class GameSpaceActivity : ComponentActivity() {
             // The shell is a dark room by design: it sits behind a fade-to-black and must not
             // inherit the manager's light scheme.
             AZenithTheme(darkOverride = true) {
-                GameSpaceShell(onExit = { finish() })
+                ZXGameSpaceShell(onExit = { finish() })
             }
         }
     }

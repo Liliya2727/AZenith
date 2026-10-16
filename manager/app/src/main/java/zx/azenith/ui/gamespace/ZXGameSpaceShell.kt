@@ -48,10 +48,10 @@ import zx.azenith.ui.viewmodel.ApplistViewmodel
  * backdrop the manager fades through, so there is no seam between the two.
  *
  * The install side of the mode (the manager fading black and starting this) lives in
- * `GameSpaceScreen`; this composable only owns the shell itself.
+ * `ZXGameSpaceScreen`; this composable only owns the shell itself.
  */
 @Composable
-fun GameSpaceShell(onExit: () -> Unit) {
+fun ZXGameSpaceShell(onExit: () -> Unit) {
     val context = LocalContext.current
     val motion = MaterialTheme.motionScheme
     val applist: ApplistViewmodel = viewModel()
@@ -66,10 +66,25 @@ fun GameSpaceShell(onExit: () -> Unit) {
     // The list is a companion-level snapshot state, so it re-reads itself when the load lands.
     val installed = ApplistViewmodel.apps
     val games = remember(installed) {
-        installed.filter { it.isRecommended }.sortedBy { it.label.lowercase() }
+        installed
+            .filter { it.isRecommended || it.isEnabledInConfig }
+            .sortedWith(
+                compareByDescending<ApplistViewmodel.AppInfo> { it.isEnabledInConfig }
+                    .thenBy { it.label.lowercase() }
+            )
+    }
+    val userApps = remember(installed) {
+        installed
+            .filter { !it.isSystem }
+            .sortedWith(
+                compareByDescending<ApplistViewmodel.AppInfo> { it.isEnabledInConfig }
+                    .thenByDescending { it.isRecommended }
+                    .thenBy { it.label.lowercase() }
+            )
     }
 
     val profileRes by RootUtils.observeProfileRes().collectAsState(initial = R.string.status_unknown)
+    val profileValue by RootUtils.observeProfileValue().collectAsState(initial = "")
     val profile = stringResource(profileRes)
 
     LaunchedEffect(hubVisible) {
@@ -90,15 +105,22 @@ fun GameSpaceShell(onExit: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         if (hubVisible) {
             Box(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = hubFade.value }) {
-                GameSpaceHub(
+                ZXGameSpaceHub(
                     profile = profile,
+                    profileValue = profileValue,
                     games = games,
+                    allApps = userApps,
+                    onApplyProfile = { id ->
+                        com.topjohnwu.superuser.Shell.cmd(
+                            "/data/adb/modules/AZenith/system/bin/sys.azenith-service -p $id"
+                        ).submit()
+                    },
                     onLaunch = { app -> launchGame(context, app.packageName) },
                     onExit = { leaving = true }
                 )
             }
         } else {
-            GameSpaceIntro(onFinished = { hubVisible = true })
+            ZXGameSpaceIntro(onFinished = { hubVisible = true })
         }
 
         Box(

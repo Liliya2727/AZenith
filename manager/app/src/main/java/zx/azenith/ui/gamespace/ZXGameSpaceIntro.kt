@@ -96,7 +96,7 @@ private val BOOT_STAGES = listOf(
  * fire once whichever path gets there first.
  */
 @Composable
-fun GameSpaceIntro(onFinished: () -> Unit) {
+fun ZXGameSpaceIntro(onFinished: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val scope = rememberCoroutineScope()
     val clock = remember { Animatable(0f) }

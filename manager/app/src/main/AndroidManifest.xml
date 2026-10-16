@@ -77,7 +77,7 @@
         <!-- Forced landscape and its own immersive window: the shell must not inherit, or hand
              back, anything from the manager's portrait layout. -->
         <activity
-            android:name=".ui.gamespace.GameSpaceActivity"
+            android:name=".ui.gamespace.ZXGameSpaceActivity"
             android:exported="false"
             android:launchMode="singleTask"
             android:screenOrientation="sensorLandscape"

@@ -89,6 +89,8 @@ object GamepadInput {
         KeyEvent.KEYCODE_BUTTON_B,
         KeyEvent.KEYCODE_BUTTON_X,
         KeyEvent.KEYCODE_BUTTON_Y,
+        KeyEvent.KEYCODE_BUTTON_L1,
+        KeyEvent.KEYCODE_BUTTON_R1,
         KeyEvent.KEYCODE_BUTTON_START,
         KeyEvent.KEYCODE_BUTTON_SELECT
     )

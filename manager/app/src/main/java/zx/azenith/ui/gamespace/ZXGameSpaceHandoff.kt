@@ -66,7 +66,7 @@ private var handoffDone = false
  * mode again hands off again.
  */
 @Composable
-fun GameSpaceHandoff(armed: Boolean, modifier: Modifier = Modifier) {
+fun ZXGameSpaceHandoff(armed: Boolean, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val motion = MaterialTheme.motionScheme
     val fade = remember { Animatable(0f) }
@@ -82,7 +82,7 @@ fun GameSpaceHandoff(armed: Boolean, modifier: Modifier = Modifier) {
         // Let the screen the user just landed on compose before it goes dark under them.
         delay(240)
         fade.animateTo(1f, motion.defaultEffectsSpec())
-        context.startActivity(Intent(context, GameSpaceActivity::class.java))
+        context.startActivity(Intent(context, ZXGameSpaceActivity::class.java))
         // Slower than the launch itself, so a late shell leaves the manager fading back in rather
         // than cutting to it behind the transition.
         delay(320)

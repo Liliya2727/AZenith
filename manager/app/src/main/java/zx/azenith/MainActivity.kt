@@ -98,7 +98,7 @@ import kotlinx.coroutines.withContext
 import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.gamespace.GAME_SPACE_MODE_KEY
-import zx.azenith.ui.gamespace.GameSpaceHandoff
+import zx.azenith.ui.gamespace.ZXGameSpaceHandoff
 import zx.azenith.ui.mainscreens.*
 import zx.azenith.ui.subscreens.*
 import zx.azenith.ui.theme.AZenithTheme
@@ -158,7 +158,7 @@ class MainActivity : ComponentActivity() {
 
                 Box(modifier = Modifier.fillMaxSize()) {
                     MainScreen(fromTileType)
-                    GameSpaceHandoff(armed = gameSpaceOn)
+                    ZXGameSpaceHandoff(armed = gameSpaceOn)
                 }
             }
         }
@@ -556,7 +556,7 @@ fun MainScreen(fromTileType: String? = null) {
                     }
                     composable("gamespacescreen") {
                         zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
-                            GameSpaceScreen(navController)
+                            ZXGameSpaceScreen(navController)
                         }
                     }
                     // One screen for every tab; the scope argument is what keeps a

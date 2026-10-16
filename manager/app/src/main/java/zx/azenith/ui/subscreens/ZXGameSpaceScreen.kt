@@ -76,7 +76,7 @@ import zx.azenith.ui.component.LeadingIcon
 import zx.azenith.ui.component.ScaffoldContainerColor
 import zx.azenith.ui.component.ScaffoldContentColor
 import zx.azenith.ui.component.gamepadScreenEntry
-import zx.azenith.ui.gamespace.GameSpaceActivity
+import zx.azenith.ui.gamespace.ZXGameSpaceActivity
 import zx.azenith.ui.gamespace.isGameSpaceEnabled
 import zx.azenith.ui.gamespace.setGameSpaceEnabled
 import zx.azenith.ui.navigation.safePopBackStack
@@ -88,7 +88,7 @@ import zx.azenith.ui.navigation.safePopBackStack
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun GameSpaceScreen(navController: NavController) {
+fun ZXGameSpaceScreen(navController: NavController) {
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val scheme = MaterialTheme.colorScheme
@@ -102,7 +102,7 @@ fun GameSpaceScreen(navController: NavController) {
     LaunchedEffect(entering) {
         if (!entering) return@LaunchedEffect
         fade.animateTo(1f, motion.defaultEffectsSpec())
-        context.startActivity(Intent(context, GameSpaceActivity::class.java))
+        context.startActivity(Intent(context, ZXGameSpaceActivity::class.java))
         delay(320)
         fade.animateTo(0f, motion.defaultEffectsSpec())
         entering = false
@@ -130,7 +130,7 @@ fun GameSpaceScreen(navController: NavController) {
                 ),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                item { GameSpaceHeader() }
+                item { ZXGameSpaceHeader() }
 
                 item {
                     ExpressiveList(
@@ -213,7 +213,7 @@ fun GameSpaceScreen(navController: NavController) {
 }
 
 @Composable
-private fun GameSpaceHeader() {
+private fun ZXGameSpaceHeader() {
     val scheme = MaterialTheme.colorScheme
 
     Surface(
