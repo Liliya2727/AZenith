@@ -23,13 +23,61 @@
  * load.
  * @return 0 if compatible node found, 1 if no node matches, -1 if charger is disconnected.
  */
-int check_bypass_compatibility() {
+static int test_single_node(const BypassNode* node) {
     setvbuf(stdout, NULL, _IONBF, 0);
-    
+
+    if (!node) {
+        printf("\033[31m[ERROR]\033[0m Invalid bypass node.\n");
+        return 1;
+    }
+
+    printf("\n\033[36m[Bypass Charge Test - Single Node]\033[0m Initializing...\n");
+
+    sleep(2);
+
+    if (!is_charging()) {
+        printf("\033[33m[!] WARNING:\033[0m Charger not detected. Plug in first!\n");
+        log_warn("bypass", "single node test aborted reason=charger_disconnected");
+        return -1;
+    }
+
+    if (access(node->path, F_OK) != 0) {
+        printf("\033[31m[ERROR]\033[0m Node path not found: %s\n", node->path);
+        return 2;
+    }
+
+    printf("\n\033[1;32m[+]\033[0m Testing Node: \033[1;37m%s\033[0m\n", node->name);
+    printf("    Path: %s\n", node->path);
+
+    echo_to_file(node->path, node->on_val, 0);
+
+    int last_ma = 9999;
+    for (int sec = 1; sec <= 10; sec++) {
+        sleep(1);
+        last_ma = read_current_ma();
+        printf("    Checking current (%ds/10s): \033[33m%d mA\033[0m\n", sec, last_ma);
+    }
+
+    echo_to_file(node->path, node->off_val, 0);
+
+    if (last_ma < 50) {
+        printf("\n\033[1;32m[SUCCESS]\033[0m Node is compatible: \033[1m%s\033[0m (Last: %d mA)\n", node->name, last_ma);
+        log_info("bypass", "single node test success name=%s last_ma=%d", node->name, last_ma);
+        return 0;
+    } else {
+        printf("\n\033[31m[FAILED]\033[0m Node not compatible: %s (Last: %d mA)\n", node->name, last_ma);
+        log_warn("bypass", "single node test failed name=%s last_ma=%d", node->name, last_ma);
+        return 1;
+    }
+}
+
+int check_bypass_compatibility(void) {
+    setvbuf(stdout, NULL, _IONBF, 0);
+
     printf("\n\033[36m[Bypass Charge Compatibility Check]\033[0m Initializing...\n");
-    
+
     sleep(5);
-    
+
     if (!is_charging()) {
         printf("\033[33m[!] WARNING:\033[0m Charger not detected. Plug in first!\n");
         log_warn("bypass", "compatibility check aborted reason=charger_disconnected");
@@ -85,6 +133,24 @@ int check_bypass_compatibility() {
     systemv("echo 0 > %s/bypasschg", BYPASSCHG_CONFIG);
     systemv("echo 20 > %s/bypasschgthreshold", BYPASSCHG_CONFIG);
     return 1;
+}
+
+int test_bypass_node_by_name(const char* name) {
+    if (!name || name[0] == '\0') {
+        printf("\033[31m[ERROR]\033[0m No bypass node name provided.\n");
+        return 1;
+    }
+
+    int total_nodes = bypass_list_size;
+    for (int i = 0; i < total_nodes; i++) {
+        if (strcmp(bypass_list[i].name, name) == 0) {
+            return test_single_node(&bypass_list[i]);
+        }
+    }
+
+    printf("\033[31m[ERROR]\033[0m Bypass node not found: %s\n", name);
+    printf("\033[33m[INFO]\033[0m Use --bypasspathlist to see available nodes.\n");
+    return 2;
 }
 
 /**

@@ -9,6 +9,7 @@ int read_current_ma(void);
 void disable_bypass(void);
 int enable_bypass(void);
 int check_bypass_compatibility(void);
+int test_bypass_node_by_name(const char* name);
 void print_bypass_path_list(void);
 
 #endif

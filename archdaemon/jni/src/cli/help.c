@@ -44,6 +44,8 @@ void print_help(void) {
            "     -actv, --appactivity      Open AZenith App Main Activity\n"
            "\n"
            "     -cbc,  --checkbypasschg   Check bypass charge compatibility\n"
+           "     -tb,   --testbypass <NODE> Test specific bypass node for 10 seconds\n"
+           "                                (or --testbypass --path=NODE_NAME)\n"
            "\n"
            "     -bpl,  --bypasspathlist   Show all embedded bypass charging paths\n"
            "\n"
