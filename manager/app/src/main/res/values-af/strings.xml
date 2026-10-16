@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">Aktiveer omleiding kragtoevoer onder prestasieprofiel</string>
     <string name="err_failed_load_changelog">Kon nie veranderingslogboek laai nie</string>
     <string name="err_invalid_backup">Rugsteun lêer is ongeldig of beskadig (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">Vingerafdruk</string>
     <string name="fpsgo_ged">FPSGO en GED parameters</string>
     <string name="fpsgo_ged_desc">Pas FPSGO en GED parameter optimaliserings toe</string>
@@ -232,6 +235,7 @@
     <string name="section_current_status">Huidige status</string>
     <string name="section_diagnostics">Diagnostiek</string>
     <string name="section_display_render_settings">Vertoon en weergawe</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">Funksies</string>
     <string name="section_mali_gpu">Mali GPU instellings</string>
     <string name="section_others">Ander</string>

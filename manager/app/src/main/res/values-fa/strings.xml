@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">فعال کردن تغذیه بای‌پس در پیکربندی عملکرد</string>
     <string name="err_failed_load_changelog">بارگیری تاریخچه تغییرات ناموفق بود</string>
     <string name="err_invalid_backup">فایل پشتیبان نامعتبر یا خراب است (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">اثر انگشت</string>
     <string name="fpsgo_ged">پارامترهای FPSGO و GED</string>
     <string name="fpsgo_ged_desc">اعمال مقادیر بهینه پارامترهای FPSGO و GED</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">وضعیت فعلی</string>
     <string name="section_diagnostics">تشخیص</string>
     <string name="section_display_render_settings">نمایش و رندر</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">ویژگی‌ها</string>
     <string name="section_mali_gpu">تنظیمات Mali GPU</string>
     <string name="section_others">سایر</string>

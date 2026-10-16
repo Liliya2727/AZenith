@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">Включить байпасное питание в профиле производительности</string>
     <string name="err_failed_load_changelog">Не удалось загрузить список изменений</string>
     <string name="err_invalid_backup">Файл резервной копии недействителен или повреждён (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">Отпечаток</string>
     <string name="fpsgo_ged">Параметры FPSGO и GED</string>
     <string name="fpsgo_ged_desc">Применить оптимальные значения параметров FPSGO и GED</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">Текущее состояние</string>
     <string name="section_diagnostics">Диагностика</string>
     <string name="section_display_render_settings">Экран и рендеринг</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">Функции</string>
     <string name="section_mali_gpu">Настройки Mali GPU</string>
     <string name="section_others">Прочее</string>

@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">Уключыць абыходны зарад у профілі прадукцыйнасці</string>
     <string name="err_failed_load_changelog">Не атрымалася загрузіць чэйнджлаг</string>
     <string name="err_invalid_backup">Няправільны або пашкоджаны файл рэзервовай копіі (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">Адбітак пальца</string>
     <string name="fpsgo_ged">Параметры FPSGO і GED</string>
     <string name="fpsgo_ged_desc">Прымяніць аптымізаваныя значэнні FPSGO і GED</string>
@@ -232,6 +235,7 @@
     <string name="section_current_status">Бягучы стан</string>
     <string name="section_diagnostics">Дыягностыка</string>
     <string name="section_display_render_settings">Дысплей і рэндэрынг</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">Функцыі</string>
     <string name="section_mali_gpu">Настройкі Mali GPU</string>
     <string name="section_others">Іншае</string>

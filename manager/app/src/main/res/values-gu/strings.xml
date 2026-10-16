@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">પ્રદર્શન રૂપરેખાંકન યોજના હેઠળ બાયપાસ પાવર સક્ષમ કરો</string>
     <string name="err_failed_load_changelog">ચેન્જલોગ લોડ કરવામાં નિષ્ફળ</string>
     <string name="err_invalid_backup">બેકઅપ ફાઇલ અમાન્ય અથવા ક્ષતિગ્રસ્ત છે (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">ફિંગરપ્રિન્ટ</string>
     <string name="fpsgo_ged">FPSGO અને GED પરિમાણો</string>
     <string name="fpsgo_ged_desc">FPSGO અને GED પરિમાણ ઑપ્ટિમાઇઝેશન મૂલ્યો લાગુ કરો</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">વર્તમાન સ્થિતિ</string>
     <string name="section_diagnostics">નિદાન</string>
     <string name="section_display_render_settings">ડિસ્પ્લે અને રેન્ડરિંગ</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">ફીચર્સ</string>
     <string name="section_mali_gpu">Mali GPU સેટિંગ્સ</string>
     <string name="section_others">અન્ય</string>

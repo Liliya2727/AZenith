@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">Paganahin ang bypass charging sa ilalim ng performance profile</string>
     <string name="err_failed_load_changelog">Nabigo ang pag-load ng changelog</string>
     <string name="err_invalid_backup">Hindi valid o sira ang backup file (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">Fingerprint</string>
     <string name="fpsgo_ged">FPSGO at GED parameter</string>
     <string name="fpsgo_ged_desc">Ilapat ang optimized values ng FPSGO at GED parameter</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">Kasalukuyang status</string>
     <string name="section_diagnostics">Diagnosis</string>
     <string name="section_display_render_settings">Display at rendering</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">Mga feature</string>
     <string name="section_mali_gpu">Mali GPU settings</string>
     <string name="section_others">Iba pa</string>

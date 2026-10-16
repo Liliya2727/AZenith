@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">කාර්ය සාධන වින්‍යාසය යටතේ බයිපාස් බල සැපයුම සක්‍රිය කරන්න</string>
     <string name="err_failed_load_changelog">වෙනස්කම් ලොගය පැටවීම අසමත් විය</string>
     <string name="err_invalid_backup">උපස්ථ ගොනුව වලංගු නැත හෝ හානි වී ඇත (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">ඇඟිලි සලකුණ</string>
     <string name="fpsgo_ged">FPSGO සහ GED පරාමිතීන්</string>
     <string name="fpsgo_ged_desc">FPSGO සහ GED පරාමිතීන්හි ප්‍රශස්ත අගයන් යොදන්න</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">වත්මන් තත්වය</string>
     <string name="section_diagnostics">රෝග විනිශ්චය</string>
     <string name="section_display_render_settings">සංදර්ශකය සහ ප්‍රතිදානය</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">විශේෂාංග</string>
     <string name="section_mali_gpu">Mali GPU සැකසුම්</string>
     <string name="section_others">වෙනත්</string>

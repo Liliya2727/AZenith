@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">เปิดบายพาสการจ่ายไฟภายใต้โปรไฟล์ประสิทธิภาพ</string>
     <string name="err_failed_load_changelog">โหลดบันทึกการเปลี่ยนแปลงล้มเหลว</string>
     <string name="err_invalid_backup">ไฟล์สำรองไม่ถูกต้องหรือเสียหาย (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">ลายนิ้วมือ</string>
     <string name="fpsgo_ged">พารามิเตอร์ FPSGO และ GED</string>
     <string name="fpsgo_ged_desc">ใช้ค่าที่เหมาะสมที่สุดของพารามิเตอร์ FPSGO และ GED</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">สถานะปัจจุบัน</string>
     <string name="section_diagnostics">การวินิจฉัย</string>
     <string name="section_display_render_settings">การแสดงผลและการเรนเดอร์</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">คุณสมบัติ</string>
     <string name="section_mali_gpu">การตั้งค่า GPU Mali</string>
     <string name="section_others">อื่นๆ</string>

@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">Aktivizo furnizimin anashkalues në planin e performancës</string>
     <string name="err_failed_load_changelog">Ngarkimi i regjistrit të ndryshimeve dështoi</string>
     <string name="err_invalid_backup">Skedari rezervë është i pavlefshëm ose i dëmtuar (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">Gjurmë gishti</string>
     <string name="fpsgo_ged">Parametrat FPSGO dhe GED</string>
     <string name="fpsgo_ged_desc">Apliko vlerat e optimizuara të FPSGO dhe GED</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">Statusi aktual</string>
     <string name="section_diagnostics">Diagnostikimi</string>
     <string name="section_display_render_settings">Ekrani dhe renderimi</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">Funksionet</string>
     <string name="section_mali_gpu">Cilësimet Mali GPU</string>
     <string name="section_others">Të tjera</string>

@@ -409,6 +409,14 @@ object SearchIndex {
             target = SearchTarget.Route("aboutscreen"),
             keywordsRes = listOf(R.string.section_about, R.string.cd_github, R.string.cd_telegram)
         ),
+        SearchEntry(
+            id = "settings.experimental",
+            titleRes = R.string.section_experimental,
+            summaryRes = R.string.experimental_menu_desc,
+            icon = Icons.Rounded.Science,
+            group = SearchGroup.Settings,
+            target = SearchTarget.Route("experimentalscreen")
+        ),
 
         // --- Governors ----------------------------------------------------
         SearchEntry(

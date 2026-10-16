@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">प्रदर्शन कॉन्फ़िगरेशन योजना के तहत बायपास चार्जिंग सक्षम करें</string>
     <string name="err_failed_load_changelog">बदलाव लॉग लोड करने में विफल</string>
     <string name="err_invalid_backup">बैकअप फ़ाइल अमान्य या क्षतिग्रस्त है (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">फिंगरप्रिंट</string>
     <string name="fpsgo_ged">FPSGO और GED पैरामीटर</string>
     <string name="fpsgo_ged_desc">FPSGO और GED पैरामीटर ऑप्टिमाइज़ेशन मान लागू करें</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">वर्तमान स्थिति</string>
     <string name="section_diagnostics">निदान</string>
     <string name="section_display_render_settings">डिस्प्ले और रेंडरिंग</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">फीचर्स</string>
     <string name="section_mali_gpu">Mali GPU सेटिंग्स</string>
     <string name="section_others">अन्य</string>

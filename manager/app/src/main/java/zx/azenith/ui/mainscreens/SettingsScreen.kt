@@ -89,6 +89,7 @@ private val SETTINGS_ROW_ITEMS: Map<String, Int> = mapOf(
     "settings.about" to 6,
     "settings.disable_auto_mode" to 2,
     "settings.disable_tweak" to 2,
+    "settings.experimental" to 3,
     "settings.profile_notifications" to 2,
     "settings.profile_timeout" to 2,
     "settings.restart_service" to 4,
@@ -445,6 +446,17 @@ fun SettingsScreen(
                                                                                 checked = uiState.debugMode,
                                                                                 onCheckedChange = settingsViewModel::setDebugMode
                                                                             )
+                                    }
+                                },
+                                {
+                                    JumpRow(activeId = jumpPulse, entryId = "settings.experimental") {
+                                        ExpressiveListItem(
+                                            onClick = { navController.navigate("experimentalscreen") },
+                                            headlineContent = { Text(stringResource(R.string.section_experimental)) },
+                                            supportingContent = { Text(stringResource(R.string.experimental_menu_desc)) },
+                                            leadingContent = { LeadingIcon(icon = Icons.Rounded.Science) },
+                                            trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                        )
                                     }
                                 },
                                 {

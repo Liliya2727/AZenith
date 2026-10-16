@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">Ενεργοποίηση παράκαμψης φόρτισης υπό σχήμα απόδοσης</string>
     <string name="err_failed_load_changelog">Αποτυχία φόρτωσης αρχείου αλλαγών</string>
     <string name="err_invalid_backup">Το αρχείο αντιγράφου ασφαλείας είναι άκυρο ή κατεστραμμένο (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">Δακτυλικό αποτύπωμα</string>
     <string name="fpsgo_ged">Παράμετροι FPSGO και GED</string>
     <string name="fpsgo_ged_desc">Εφαρμογή βελτιστοποιημένων παραμέτρων FPSGO και GED</string>
@@ -232,6 +235,7 @@
     <string name="section_current_status">Τρέχουσα κατάσταση</string>
     <string name="section_diagnostics">Διαγνωστικά</string>
     <string name="section_display_render_settings">Οθόνη και απόδοση</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">Λειτουργίες</string>
     <string name="section_mali_gpu">Ρυθμίσεις Mali GPU</string>
     <string name="section_others">Άλλα</string>

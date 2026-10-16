@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">Errendimendu-profila aktibatuta, gaitu alboko elikadura</string>
     <string name="err_failed_load_changelog">Huts egin du aldaketa-egunkaria kargatzeak</string>
     <string name="err_invalid_backup">Segurtasun-kopia fitxategia baliogabea edo hondatuta (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">Hatz-marka</string>
     <string name="fpsgo_ged">FPSGO eta GED parametroak</string>
     <string name="fpsgo_ged_desc">Aplikatu FPSGO eta GED parametro optimizatuak</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">Uneko egoera</string>
     <string name="section_diagnostics">Diagnostikoa</string>
     <string name="section_display_render_settings">Pantaila eta renderatzea</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">Funtzioak</string>
     <string name="section_mali_gpu">Mali GPU ezarpenak</string>
     <string name="section_others">Besteak</string>

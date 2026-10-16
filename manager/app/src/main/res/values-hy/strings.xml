@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">Կատարման պրոֆիլի տակ միացնել շրջանցող սնուցումը</string>
     <string name="err_failed_load_changelog">Ձախողվեց փոփոխությունների մատյանի բեռնումը</string>
     <string name="err_invalid_backup">Պահուստային ֆայլն անվավեր է կամ վնասված (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">Մատնահետք</string>
     <string name="fpsgo_ged">FPSGO և GED պարամետրեր</string>
     <string name="fpsgo_ged_desc">Կիրառել FPSGO և GED պարամետրերի օպտիմիզացված արժեքները</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">Ընթացիկ կարգավիճակ</string>
     <string name="section_diagnostics">Ախտորոշում</string>
     <string name="section_display_render_settings">Ցուցադրում և ցուցադրում</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">Գործառույթներ</string>
     <string name="section_mali_gpu">Mali GPU կարգավորումներ</string>
     <string name="section_others">Այլ</string>

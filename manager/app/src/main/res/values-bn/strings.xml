@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">পারফরম্যান্স কনফিগারেশন স্কিমে বাইপাস চার্জিং সক্রিয় করুন</string>
     <string name="err_failed_load_changelog">পরিবর্তন লগ লোড করতে ব্যর্থ</string>
     <string name="err_invalid_backup">ব্যাকআপ ফাইল অবৈধ বা ক্ষতিগ্রস্ত (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">ফিঙ্গারপ্রিন্ট</string>
     <string name="fpsgo_ged">FPSGO ও GED প্যারামিটার</string>
     <string name="fpsgo_ged_desc">FPSGO এবং GED প্যারামিটার অপ্টিমাইজেশন মান প্রয়োগ করুন</string>
@@ -232,6 +235,7 @@
     <string name="section_current_status">বর্তমান অবস্থা</string>
     <string name="section_diagnostics">ডায়াগনস্টিক</string>
     <string name="section_display_render_settings">ডিসপ্লে ও রেন্ডারিং</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">বৈশিষ্ট্য</string>
     <string name="section_mali_gpu">Mali GPU সেটিংস</string>
     <string name="section_others">অন্যান্য</string>

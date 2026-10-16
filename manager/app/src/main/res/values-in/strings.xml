@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">Aktifkan bypass pengisian daya di bawah profil performa</string>
     <string name="err_failed_load_changelog">Gagal memuat log perubahan</string>
     <string name="err_invalid_backup">File cadangan tidak valid atau rusak (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">Sidik jari</string>
     <string name="fpsgo_ged">Parameter FPSGO dan GED</string>
     <string name="fpsgo_ged_desc">Terapkan nilai optimasi parameter FPSGO dan GED</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">Status saat ini</string>
     <string name="section_diagnostics">Diagnostik</string>
     <string name="section_display_render_settings">Tampilan dan rendering</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">Fitur</string>
     <string name="section_mali_gpu">Pengaturan GPU Mali</string>
     <string name="section_others">Lainnya</string>

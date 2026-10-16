@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">성능 프로필에서 바이패스 충전 활성화</string>
     <string name="err_failed_load_changelog">변경 로그 로드 실패</string>
     <string name="err_invalid_backup">백업 파일이 유효하지 않거나 손상되었습니다(.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">지문</string>
     <string name="fpsgo_ged">FPSGO 및 GED 매개변수</string>
     <string name="fpsgo_ged_desc">FPSGO 및 GED 매개변수 최적값 적용</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">현재 상태</string>
     <string name="section_diagnostics">진단</string>
     <string name="section_display_render_settings">디스플레이 및 렌더링</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">기능</string>
     <string name="section_mali_gpu">Mali GPU 설정</string>
     <string name="section_others">기타</string>

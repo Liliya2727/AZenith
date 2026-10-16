@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">Povolit bypass nabíjení v režimu výkonu</string>
     <string name="err_failed_load_changelog">Načtení protokolu změn selhalo</string>
     <string name="err_invalid_backup">Zálohovací soubor je neplatný nebo poškozený (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">Otisak</string>
     <string name="fpsgo_ged">FPSGO a parametry GED</string>
     <string name="fpsgo_ged_desc">Použít optimalizované hodnoty FPSGO a GED.</string>
@@ -232,6 +235,7 @@
     <string name="section_current_status">Aktuální stav</string>
     <string name="section_diagnostics">Diagnostika</string>
     <string name="section_display_render_settings">Zobrazení a vykreslování</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">Funkce</string>
     <string name="section_mali_gpu">Nastavení Mali GPU</string>
     <string name="section_others">Ostatní</string>

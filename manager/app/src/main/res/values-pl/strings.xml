@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">Włącz zasilanie bypass w profilu wydajnościowym</string>
     <string name="err_failed_load_changelog">Nie udało się załadować dziennika zmian</string>
     <string name="err_invalid_backup">Plik kopii zapasowej jest nieprawidłowy lub uszkodzony (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">Odcisk palca</string>
     <string name="fpsgo_ged">Parametry FPSGO i GED</string>
     <string name="fpsgo_ged_desc">Zastosuj zoptymalizowane wartości parametrów FPSGO i GED</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">Obecny stan</string>
     <string name="section_diagnostics">Diagnostyka</string>
     <string name="section_display_render_settings">Wyświetlanie i renderowanie</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">Funkcje</string>
     <string name="section_mali_gpu">Ustawienia GPU Mali</string>
     <string name="section_others">Inne</string>

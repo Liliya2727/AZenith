@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">ಕಾರ್ಯಕ್ಷಮತೆ ಸಂರಚನೆಯ ಅಡಿಯಲ್ಲಿ ಬೈಪಾಸ್ ಚಾರ್ಜಿಂಗ್ ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ</string>
     <string name="err_failed_load_changelog">ಚೇಂಜ್‌ಲಾಗ್ ಲೋಡ್ ಮಾಡಲು ವಿಫಲವಾಗಿದೆ</string>
     <string name="err_invalid_backup">ಬ್ಯಾಕಪ್ ಫೈಲ್ ಅಮಾನ್ಯ ಅಥವಾ ಹಾನಿಗೊಳಗಾಗಿದೆ (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">ಫಿಂಗರ್‌ಪ್ರಿಂಟ್</string>
     <string name="fpsgo_ged">FPSGO ಮತ್ತು GED ಪ್ಯಾರಾಮೀಟರ್‌ಗಳು</string>
     <string name="fpsgo_ged_desc">FPSGO ಮತ್ತು GED ಪ್ಯಾರಾಮೀಟರ್ ಆಪ್ಟಿಮೈಸೇಶನ್ ಮೌಲ್ಯಗಳನ್ನು ಅನ್ವಯಿಸಿ</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">ಪ್ರಸ್ತುತ ಸ್ಥಿತಿ</string>
     <string name="section_diagnostics">ರೋಗನಿರ್ಣಯ</string>
     <string name="section_display_render_settings">ಪ್ರದರ್ಶನ ಮತ್ತು ರೆಂಡರಿಂಗ್</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">ವೈಶಿಷ್ಟ್ಯಗಳು</string>
     <string name="section_mali_gpu">Mali GPU ಸೆಟ್ಟಿಂಗ್ಗಳು</string>
     <string name="section_others">ಇತರೆ</string>

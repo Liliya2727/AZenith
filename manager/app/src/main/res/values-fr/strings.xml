@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">Active l\'alimentation de dérivation sous le profil performance</string>
     <string name="err_failed_load_changelog">Échec du chargement du journal des modifications</string>
     <string name="err_invalid_backup">Fichier de sauvegarde invalide ou corrompu (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">Empreinte</string>
     <string name="fpsgo_ged">Paramètres FPSGO et GED</string>
     <string name="fpsgo_ged_desc">Applique les valeurs d\'optimisation des paramètres FPSGO et GED</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">Statut actuel</string>
     <string name="section_diagnostics">Diagnostics</string>
     <string name="section_display_render_settings">Affichage et rendu</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">Fonctionnalités</string>
     <string name="section_mali_gpu">Paramètres Mali GPU</string>
     <string name="section_others">Autres</string>

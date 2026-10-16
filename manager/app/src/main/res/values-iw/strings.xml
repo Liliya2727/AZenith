@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">הפעלת טעינת מעקף תחת תצורת ביצועים</string>
     <string name="err_failed_load_changelog">טעינת יומן השינויים נכשלה</string>
     <string name="err_invalid_backup">קובץ גיבוי לא חוקי או פגום (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">טביעת אצבע</string>
     <string name="fpsgo_ged">פרמטרי FPSGO ו-GED</string>
     <string name="fpsgo_ged_desc">החל ערכי אופטימיזציה של FPSGO ו-GED</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">מצב נוכחי</string>
     <string name="section_diagnostics">אבחון</string>
     <string name="section_display_render_settings">תצוגה ורינדור</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">תכונות</string>
     <string name="section_mali_gpu">הגדרות Mali GPU</string>
     <string name="section_others">אחר</string>

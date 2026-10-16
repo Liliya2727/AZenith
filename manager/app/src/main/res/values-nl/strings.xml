@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">Schakel bypass-laden in onder prestatieprofiel</string>
     <string name="err_failed_load_changelog">Laden van wijzigingslog mislukt</string>
     <string name="err_invalid_backup">Back-upbestand is ongeldig of beschadigd (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">Vingerafdruk</string>
     <string name="fpsgo_ged">FPSGO- en GED-parameters</string>
     <string name="fpsgo_ged_desc">Optimalisatiewaarden voor FPSGO- en GED-parameters toepassen</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">Huidige status</string>
     <string name="section_diagnostics">Diagnose</string>
     <string name="section_display_render_settings">Weergave en rendering</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">Functies</string>
     <string name="section_mali_gpu">Mali GPU-instellingen</string>
     <string name="section_others">Overig</string>

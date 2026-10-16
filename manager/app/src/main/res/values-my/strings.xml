@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">စွမ်းဆောင်ရည်ပြင်ဆင်မှုအစီအစဉ်အောက်တွင် ဘေးထွက်အားသွင်းခြင်းကို ဖွင့်ပါ</string>
     <string name="err_failed_load_changelog">ပြောင်းလဲမှုမှတ်တမ်းကို တင်ရန် မအောင်မြင်ပါ</string>
     <string name="err_invalid_backup">အရန်ဖိုင်သည် မမှန်ကန်ပါ သို့မဟုတ် ပျက်စီးနေပါသည် (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">လက်ဗွေ</string>
     <string name="fpsgo_ged">FPSGO နှင့် GED ပါရာမီတာများ</string>
     <string name="fpsgo_ged_desc">FPSGO နှင့် GED ပါရာမီတာအကောင်းဆုံးတန်ဖိုးများကို အသုံးချပါ</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">လက်ရှိအခြေအနေ</string>
     <string name="section_diagnostics">ရောဂါရှာဖွေခြင်း</string>
     <string name="section_display_render_settings">မျက်နှာပြင်နှင့် ပုံဖော်ခြင်း</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">အင်္ဂါရပ်များ</string>
     <string name="section_mali_gpu">Mali GPU ဆက်တင်များ</string>
     <string name="section_others">အခြားအရာများ</string>

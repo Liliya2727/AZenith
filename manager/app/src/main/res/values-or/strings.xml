@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">କାର୍ଯ୍ୟଦକ୍ଷତା ବିନ୍ୟାସରେ ବାଇପାସ୍ ଚାର୍ଜିଂ ସକ୍ଷମ କରନ୍ତୁ</string>
     <string name="err_failed_load_changelog">ପରିବର୍ତ୍ତନ ଲଗ୍ ଲୋଡ୍ କରିବାରେ ବିଫଳ</string>
     <string name="err_invalid_backup">ବ୍ୟାକଅପ୍ ଫାଇଲ୍ ଅବୈଧ କିମ୍ବା ଦୂଷିତ (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">ଫିଙ୍ଗରପ୍ରିଣ୍ଟ</string>
     <string name="fpsgo_ged">FPSGO ଏବଂ GED ପାରାମିଟର</string>
     <string name="fpsgo_ged_desc">FPSGO ଏବଂ GED ପାରାମିଟର ଅପ୍ଟିମାଇଜ୍ ମାନ ପ୍ରୟୋଗ କରନ୍ତୁ</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">ବର୍ତ୍ତମାନର ସ୍ଥିତି</string>
     <string name="section_diagnostics">ଡାଇଗ୍ନୋସିସ୍</string>
     <string name="section_display_render_settings">ପ୍ରଦର୍ଶନ ଏବଂ ରେଣ୍ଡରିଂ</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">ଫଙ୍କସନ୍</string>
     <string name="section_mali_gpu">Mali GPU ସେଟିଂ</string>
     <string name="section_others">ଅନ୍ୟାନ୍ୟ</string>

@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">Активиране на байпас захранване при профил на производителност</string>
     <string name="err_failed_load_changelog">Неуспешно зареждане на списъка с промени</string>
     <string name="err_invalid_backup">Резервният файл е невалиден или повреден (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">Отпечатък</string>
     <string name="fpsgo_ged">Параметри FPSGO и GED</string>
     <string name="fpsgo_ged_desc">Прилагане на оптимизирани стойности за FPSGO и GED параметри</string>
@@ -232,6 +235,7 @@
     <string name="section_current_status">Текущо състояние</string>
     <string name="section_diagnostics">Диагностика</string>
     <string name="section_display_render_settings">Дисплей и рендериране</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">Функции</string>
     <string name="section_mali_gpu">Mali GPU настройки</string>
     <string name="section_others">Други</string>

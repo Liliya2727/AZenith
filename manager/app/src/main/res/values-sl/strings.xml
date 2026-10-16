@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">Omogoči bypass polnjenje v profilu zmogljivosti</string>
     <string name="err_failed_load_changelog">Nalaganje dnevnika sprememb ni uspelo</string>
     <string name="err_invalid_backup">Varnostna kopija je neveljavna ali poškodovana (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">Prstni odtis</string>
     <string name="fpsgo_ged">Parametri FPSGO in GED</string>
     <string name="fpsgo_ged_desc">Uporabi optimizirane vrednosti parametrov FPSGO in GED</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">Trenutno stanje</string>
     <string name="section_diagnostics">Diagnostika</string>
     <string name="section_display_render_settings">Zaslon in upodabljanje</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">Funkcije</string>
     <string name="section_mali_gpu">Nastavitve Mali GPU</string>
     <string name="section_others">Drugo</string>

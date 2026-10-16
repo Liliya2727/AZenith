@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">പ്രകടന പ്രൊഫൈലിൽ ബൈപാസ് ചാർജിംഗ് പ്രവർത്തനക്ഷമമാക്കുക</string>
     <string name="err_failed_load_changelog">മാറ്റ രേഖ ലോഡ് ചെയ്യുന്നതിൽ പരാജയം</string>
     <string name="err_invalid_backup">ബാക്കപ്പ് ഫയൽ അസാധുവാണ് അല്ലെങ്കിൽ കേടായിരിക്കുന്നു (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">ഫിംഗർപ്രിന്റ്</string>
     <string name="fpsgo_ged">FPSGO, GED പാരാമീറ്ററുകൾ</string>
     <string name="fpsgo_ged_desc">FPSGO, GED പാരാമീറ്റർ ഒപ്റ്റിമൈസേഷൻ മൂല്യങ്ങൾ പ്രയോഗിക്കുക</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">നിലവിലെ നില</string>
     <string name="section_diagnostics">ഡയഗ്നോസ്റ്റിക്സ്</string>
     <string name="section_display_render_settings">ഡിസ്പ്ലേയും റെൻഡറിംഗും</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">ഫീച്ചറുകൾ</string>
     <string name="section_mali_gpu">Mali GPU ക്രമീകരണങ്ങൾ</string>
     <string name="section_others">മറ്റുള്ളവ</string>

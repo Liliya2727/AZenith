@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">შემოვლებითი კვების ჩართვა შესრულების კონფიგურაციის ქვეშ</string>
     <string name="err_failed_load_changelog">ცვლილებების ჟურნალის ჩატვირთვა ვერ მოხერხდა</string>
     <string name="err_invalid_backup">სარეზერვო ფაილი არასწორია ან დაზიანებულია (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">თითის ანაბეჭდი</string>
     <string name="fpsgo_ged">FPSGO და GED პარამეტრები</string>
     <string name="fpsgo_ged_desc">FPSGO და GED პარამეტრების ოპტიმიზაციის მნიშვნელობების გამოყენება</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">მიმდინარე სტატუსი</string>
     <string name="section_diagnostics">დიაგნოსტიკა</string>
     <string name="section_display_render_settings">ჩვენება და რენდერი</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">ფუნქციები</string>
     <string name="section_mali_gpu">Mali GPU პარამეტრები</string>
     <string name="section_others">სხვა</string>

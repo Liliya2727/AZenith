@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">Veiktspējas profilā iespējot apvada uzlādi</string>
     <string name="err_failed_load_changelog">Neizdevās ielādēt izmaiņu žurnālu</string>
     <string name="err_invalid_backup">Dublējuma fails ir nederīgs vai bojāts (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">Pirkstu nospiedums</string>
     <string name="fpsgo_ged">FPSGO un GED parametri</string>
     <string name="fpsgo_ged_desc">Lietot FPSGO un GED parametru optimizācijas vērtības</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">Pašreizējais statuss</string>
     <string name="section_diagnostics">Diagnostika</string>
     <string name="section_display_render_settings">Displejs un renderēšana</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">Funkcijas</string>
     <string name="section_mali_gpu">Mali GPU iestatījumi</string>
     <string name="section_others">Citi</string>

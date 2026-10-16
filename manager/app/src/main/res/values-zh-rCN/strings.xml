@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">性能配置方案下启用旁路供电</string>
     <string name="err_failed_load_changelog">加载更新日志失败</string>
     <string name="err_invalid_backup">备份文件无效或已损坏 (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">指纹</string>
     <string name="fpsgo_ged">FPSGO 与 GED 参数</string>
     <string name="fpsgo_ged_desc">应用 FPSGO 和 GED 参数优化值</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">当前状态</string>
     <string name="section_diagnostics">诊断</string>
     <string name="section_display_render_settings">显示与渲染</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">功能</string>
     <string name="section_mali_gpu">Mali GPU 设置</string>
     <string name="section_others">其他</string>

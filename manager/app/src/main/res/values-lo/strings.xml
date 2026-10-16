@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">ເປີດໃຊ້ງານ By-pass charging ພາຍໃຕ້ໂປຣໄຟລ໌ປະສິດທິພາບ</string>
     <string name="err_failed_load_changelog">ໂຫຼດບັນທຶກການອັບເດດລົ້ມເຫຼວ</string>
     <string name="err_invalid_backup">ໄຟລ໌ສຳຮອງບໍ່ຖືກຕ້ອງ ຫຼື ເສຍຫາຍ (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">ລາຍນິ້ວມື</string>
     <string name="fpsgo_ged">ຕົວກຳນົດ FPSGO ແລະ GED</string>
     <string name="fpsgo_ged_desc">ນຳໃຊ້ຄ່າທີ່ດີທີ່ສຸດຂອງ FPSGO ແລະ GED</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">ສະຖານະປັດຈຸບັນ</string>
     <string name="section_diagnostics">ການວິນິດໄສ</string>
     <string name="section_display_render_settings">ການສະແດງຜົນ ແລະ Render</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">ຟັງຊັນ</string>
     <string name="section_mali_gpu">ການຕັ້ງຄ່າ Mali GPU</string>
     <string name="section_others">ອື່ນໆ</string>

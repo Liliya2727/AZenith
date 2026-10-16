@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">Teljesítményprofil esetén bypass töltés engedélyezése</string>
     <string name="err_failed_load_changelog">A változásnapló betöltése sikertelen</string>
     <string name="err_invalid_backup">A biztonsági mentés fájl érvénytelen vagy sérült (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">Ujjlenyomat</string>
     <string name="fpsgo_ged">FPSGO és GED paraméterek</string>
     <string name="fpsgo_ged_desc">FPSGO és GED paraméterek optimalizált értékeinek alkalmazása</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">Jelenlegi állapot</string>
     <string name="section_diagnostics">Diagnosztika</string>
     <string name="section_display_render_settings">Megjelenítés és renderelés</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">Funkciók</string>
     <string name="section_mali_gpu">Mali GPU beállítások</string>
     <string name="section_others">Egyéb</string>

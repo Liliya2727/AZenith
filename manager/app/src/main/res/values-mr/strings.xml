@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">कार्यक्षमता योजनेखाली बायपास पॉवर सक्षम करा</string>
     <string name="err_failed_load_changelog">बदल लॉग लोड करण्यात अयशस्वी</string>
     <string name="err_invalid_backup">बॅकअप फाइल अवैध किंवा खराब आहे (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">फिंगरप्रिंट</string>
     <string name="fpsgo_ged">FPSGO आणि GED पॅरामीटर्स</string>
     <string name="fpsgo_ged_desc">FPSGO आणि GED पॅरामीटर ऑप्टिमायझेशन मूल्ये लागू करा</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">सध्याची स्थिती</string>
     <string name="section_diagnostics">निदान</string>
     <string name="section_display_render_settings">प्रदर्शन आणि रेंडरिंग</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">कार्ये</string>
     <string name="section_mali_gpu">Mali GPU सेटिंग्ज</string>
     <string name="section_others">इतर</string>

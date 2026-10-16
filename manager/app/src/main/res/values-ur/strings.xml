@@ -106,6 +106,9 @@
     <string name="enable_bypass_charge_desc">پرفارمنس کنفیگریشن پروفائل میں بائی پاس چارجنگ فعال کریں</string>
     <string name="err_failed_load_changelog">تغییرات لاگ لوڈ کرنے میں ناکامی</string>
     <string name="err_invalid_backup">بیک اپ فائل غلط یا خراب ہے (.zx)</string>
+    <string name="experimental_empty_desc">Experimental features show up here as they are ready for testing.</string>
+    <string name="experimental_empty_title">No experiments yet</string>
+    <string name="experimental_menu_desc">Try preview features that are still in development</string>
     <string name="fingerprint">فنگر پرنٹ</string>
     <string name="fpsgo_ged">FPSGO اور GED پیرامیٹرز</string>
     <string name="fpsgo_ged_desc">FPSGO اور GED پیرامیٹرز کی بہترین اقدار لاگو کریں</string>
@@ -231,6 +234,7 @@
     <string name="section_current_status">موجودہ حالت</string>
     <string name="section_diagnostics">تشخیص</string>
     <string name="section_display_render_settings">ڈسپلے اور رینڈرنگ</string>
+    <string name="section_experimental">Experimental</string>
     <string name="section_features">فیچرز</string>
     <string name="section_mali_gpu">Mali GPU ترتیبات</string>
     <string name="section_others">دیگر</string>

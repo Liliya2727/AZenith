@@ -523,6 +523,11 @@ fun MainScreen(fromTileType: String? = null) {
                             AboutScreen(navController)
                         }
                     }
+                    composable("experimentalscreen") {
+                        zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
+                            ExperimentalScreen(navController)
+                        }
+                    }
                     // One screen for every tab; the scope argument is what keeps a
                     // Tweaks search out of Settings and the other way round.
                     composable(
