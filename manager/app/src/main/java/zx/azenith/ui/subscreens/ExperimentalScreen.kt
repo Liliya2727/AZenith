@@ -38,6 +38,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.RocketLaunch
 import androidx.compose.material.icons.rounded.Science
+import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -48,6 +49,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -63,23 +68,36 @@ import zx.azenith.ui.component.LeadingIcon
 import zx.azenith.ui.component.ScaffoldContainerColor
 import zx.azenith.ui.component.ScaffoldContentColor
 import zx.azenith.ui.component.gamepadScreenEntry
+import zx.azenith.ui.gamespace.ZXGameSpaceEntry
 import zx.azenith.ui.navigation.safePopBackStack
+
+/** What a row does when it is tapped: push a manager route, or hand the display to the shell. */
+private sealed interface ExperimentalAction {
+    data class Open(val route: String) : ExperimentalAction
+    data object EnterGameSpace : ExperimentalAction
+}
 
 /** One row on the experimental screen; the list length is what decides empty vs populated. */
 private data class ExperimentalFeature(
     val icon: ImageVector,
     val titleRes: Int,
     val summaryRes: Int,
-    val route: String
+    val action: ExperimentalAction
 )
 
-// Game Space leads it: a whole second app surface, preview only until the control centre lands.
+// Game Space leads it: the row is the way in, and its switches sit one row below.
 private val EXPERIMENTAL_FEATURES: List<ExperimentalFeature> = listOf(
     ExperimentalFeature(
         icon = Icons.Rounded.RocketLaunch,
         titleRes = R.string.gamespace_mode_name,
         summaryRes = R.string.gamespace_desc,
-        route = "gamespacescreen"
+        action = ExperimentalAction.EnterGameSpace
+    ),
+    ExperimentalFeature(
+        icon = Icons.Rounded.SportsEsports,
+        titleRes = R.string.gamespace_enable,
+        summaryRes = R.string.gamespace_enable_desc,
+        action = ExperimentalAction.Open("gamespacescreen")
     )
 )
 
@@ -87,53 +105,64 @@ private val EXPERIMENTAL_FEATURES: List<ExperimentalFeature> = listOf(
 fun ExperimentalScreen(navController: NavController) {
     val listState = rememberLazyListState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+    var enteringGameSpace by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            AboutTopAppBar(
-                title = stringResource(R.string.section_experimental),
-                onBack = { navController.safePopBackStack() },
-                scrollBehavior = scrollBehavior
-            )
-        },
-        contentColor = ScaffoldContentColor(),
-        containerColor = ScaffoldContainerColor(MaterialTheme.colorScheme.surface)
-    ) { innerPadding ->
-        if (EXPERIMENTAL_FEATURES.isEmpty()) {
-            ExperimentalEmptyState(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .gamepadScreenEntry()
-            )
-        } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize().gamepadScreenEntry(),
-                contentPadding = PaddingValues(
-                    top = innerPadding.calculateTopPadding() + 8.dp,
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                AboutTopAppBar(
+                    title = stringResource(R.string.section_experimental),
+                    onBack = { navController.safePopBackStack() },
+                    scrollBehavior = scrollBehavior
                 )
-            ) {
-                item {
-                    ExpressiveList(
-                        content = EXPERIMENTAL_FEATURES.map { feature ->
-                            {
-                                ExpressiveListItem(
-                                    onClick = { navController.navigate(feature.route) },
-                                    headlineContent = { Text(stringResource(feature.titleRes)) },
-                                    supportingContent = { Text(stringResource(feature.summaryRes)) },
-                                    leadingContent = { LeadingIcon(icon = feature.icon) },
-                                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
-                                )
-                            }
-                        }
+            },
+            contentColor = ScaffoldContentColor(),
+            containerColor = ScaffoldContainerColor(MaterialTheme.colorScheme.surface)
+        ) { innerPadding ->
+            if (EXPERIMENTAL_FEATURES.isEmpty()) {
+                ExperimentalEmptyState(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .gamepadScreenEntry()
+                )
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize().gamepadScreenEntry(),
+                    contentPadding = PaddingValues(
+                        top = innerPadding.calculateTopPadding() + 8.dp,
+                        start = 16.dp,
+                        end = 16.dp,
+                        bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
                     )
+                ) {
+                    item {
+                        ExpressiveList(
+                            content = EXPERIMENTAL_FEATURES.map { feature ->
+                                {
+                                    ExpressiveListItem(
+                                        onClick = {
+                                            when (val action = feature.action) {
+                                                is ExperimentalAction.Open -> navController.navigate(action.route)
+                                                ExperimentalAction.EnterGameSpace -> enteringGameSpace = true
+                                            }
+                                        },
+                                        headlineContent = { Text(stringResource(feature.titleRes)) },
+                                        supportingContent = { Text(stringResource(feature.summaryRes)) },
+                                        leadingContent = { LeadingIcon(icon = feature.icon) },
+                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                    )
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
+
+        // Last in the Box, so the cover lands over the screen the row was tapped on.
+        ZXGameSpaceEntry(armed = enteringGameSpace, onLifted = { enteringGameSpace = false })
     }
 }
 

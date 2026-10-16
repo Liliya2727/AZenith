@@ -16,10 +16,7 @@
 
 package zx.azenith.ui.subscreens
 
-import android.content.Intent
-import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,7 +47,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,16 +54,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import kotlinx.coroutines.delay
 import zx.azenith.R
 import zx.azenith.ui.component.ExpressiveList
 import zx.azenith.ui.component.ExpressiveListItem
@@ -76,7 +69,7 @@ import zx.azenith.ui.component.LeadingIcon
 import zx.azenith.ui.component.ScaffoldContainerColor
 import zx.azenith.ui.component.ScaffoldContentColor
 import zx.azenith.ui.component.gamepadScreenEntry
-import zx.azenith.ui.gamespace.ZXGameSpaceActivity
+import zx.azenith.ui.gamespace.ZXGameSpaceEntry
 import zx.azenith.ui.gamespace.isGameSpaceEnabled
 import zx.azenith.ui.gamespace.setGameSpaceEnabled
 import zx.azenith.ui.navigation.safePopBackStack
@@ -92,21 +85,9 @@ fun ZXGameSpaceScreen(navController: NavController) {
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val scheme = MaterialTheme.colorScheme
-    val motion = MaterialTheme.motionScheme
 
     var modeOn by remember { mutableStateOf(isGameSpaceEnabled(context)) }
     var entering by remember { mutableStateOf(false) }
-    val fade = remember { Animatable(0f) }
-
-    // Manual entry: the same black-out the mode does on start, minus the mode.
-    LaunchedEffect(entering) {
-        if (!entering) return@LaunchedEffect
-        fade.animateTo(1f, motion.defaultEffectsSpec())
-        context.startActivity(Intent(context, ZXGameSpaceActivity::class.java))
-        delay(320)
-        fade.animateTo(0f, motion.defaultEffectsSpec())
-        entering = false
-    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
@@ -203,12 +184,8 @@ fun ZXGameSpaceScreen(navController: NavController) {
             }
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-                .graphicsLayer { alpha = fade.value }
-        )
+        // Manual entry: the same cover the mode handoff uses, fired by the row above.
+        ZXGameSpaceEntry(armed = entering, onLifted = { entering = false })
     }
 }
 

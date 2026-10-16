@@ -61,31 +61,39 @@ private var handoffDone = false
  * The way into Game Space. Sits at the window root so the fade covers whichever screen the user is
  * standing on, and lifts once the shell has the display.
  *
- * [armed] is the mode switch itself, read live: turning it off re-arms the handoff, so enabling the
- * mode again hands off again.
+ * [auto] is the difference between the two callers: the mode handoff walks in once per process and
+ * gives the screen behind it a frame to compose first, while a tap fires every time and covers
+ * straight away. [onLifted] lets a manual entry clear its trigger so the row can be tapped again.
  */
 @Composable
-fun ZXGameSpaceHandoff(armed: Boolean, modifier: Modifier = Modifier) {
+private fun GameSpaceFade(
+    armed: Boolean,
+    auto: Boolean,
+    onLifted: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     val motion = MaterialTheme.motionScheme
     val fade = remember { Animatable(0f) }
 
     LaunchedEffect(armed) {
         if (!armed) {
-            handoffDone = false
+            if (auto) handoffDone = false
             return@LaunchedEffect
         }
-        if (handoffDone) return@LaunchedEffect
-        handoffDone = true
-
-        // Let the screen the user just landed on compose before it fades under them.
-        delay(240)
+        if (auto) {
+            if (handoffDone) return@LaunchedEffect
+            handoffDone = true
+            // Let the screen the user just landed on compose before it fades under them.
+            delay(240)
+        }
         fade.animateTo(1f, motion.defaultEffectsSpec())
         context.startActivity(Intent(context, ZXGameSpaceActivity::class.java))
         // Slower than the launch itself, so a late shell leaves the manager fading back in rather
         // than cutting to it behind the transition.
         delay(320)
         fade.animateTo(0f, motion.defaultEffectsSpec())
+        onLifted()
     }
 
     // graphicsLayer first: an alpha layer only covers what is drawn after it in the chain.
@@ -95,4 +103,24 @@ fun ZXGameSpaceHandoff(armed: Boolean, modifier: Modifier = Modifier) {
             .graphicsLayer { alpha = fade.value }
             .background(MaterialTheme.colorScheme.surface)
     )
+}
+
+/**
+ * The mode handoff, composed at the manager's window root.
+ *
+ * [armed] is the mode switch itself, read live: turning it off re-arms the handoff, so enabling the
+ * mode again hands off again.
+ */
+@Composable
+fun ZXGameSpaceHandoff(armed: Boolean, modifier: Modifier = Modifier) {
+    GameSpaceFade(armed = armed, auto = true, modifier = modifier)
+}
+
+/**
+ * Manual entry, for a row that opens the shell without waiting for a mode change. Compose it last
+ * in whichever Box holds the screen, and clear [onLifted] on the caller's trigger state.
+ */
+@Composable
+fun ZXGameSpaceEntry(armed: Boolean, onLifted: () -> Unit, modifier: Modifier = Modifier) {
+    GameSpaceFade(armed = armed, auto = false, onLifted = onLifted, modifier = modifier)
 }
