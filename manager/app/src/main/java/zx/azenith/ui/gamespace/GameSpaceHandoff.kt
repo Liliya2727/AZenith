@@ -1,0 +1,99 @@
+/*
+ * Copyright (C) 2026-2027 Zexshia
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+
+package zx.azenith.ui.gamespace
+
+import android.content.Context
+import android.content.Intent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.delay
+
+/** The `settings` preferences file the manager's own switches live in. */
+private const val GAME_SPACE_PREFS = "settings"
+
+/** Key behind the Game Space mode switch; the same file the theme and UI switches use. */
+const val GAME_SPACE_MODE_KEY = "game_space_mode"
+
+/** True when the shell should take over as soon as AZenith is on screen. */
+fun isGameSpaceEnabled(context: Context): Boolean =
+    context.getSharedPreferences(GAME_SPACE_PREFS, Context.MODE_PRIVATE)
+        .getBoolean(GAME_SPACE_MODE_KEY, false)
+
+fun setGameSpaceEnabled(context: Context, enabled: Boolean) {
+    context.getSharedPreferences(GAME_SPACE_PREFS, Context.MODE_PRIVATE)
+        .edit()
+        .putBoolean(GAME_SPACE_MODE_KEY, enabled)
+        .apply()
+}
+
+// One handoff per process: an activity recreated while the mode is on (rotation, process reuse)
+// must not push the shell back in front of the user.
+private var handoffDone = false
+
+/**
+ * The way into Game Space. Sits at the window root so the fade covers whichever screen the user is
+ * standing on, and lifts once the shell has the display.
+ *
+ * [armed] is the mode switch itself, read live: turning it off re-arms the handoff, so enabling the
+ * mode again hands off again.
+ */
+@Composable
+fun GameSpaceHandoff(armed: Boolean, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val motion = MaterialTheme.motionScheme
+    val fade = remember { Animatable(0f) }
+
+    LaunchedEffect(armed) {
+        if (!armed) {
+            handoffDone = false
+            return@LaunchedEffect
+        }
+        if (handoffDone) return@LaunchedEffect
+        handoffDone = true
+
+        // Let the screen the user just landed on compose before it goes dark under them.
+        delay(240)
+        fade.animateTo(1f, motion.defaultEffectsSpec())
+        context.startActivity(Intent(context, GameSpaceActivity::class.java))
+        // Slower than the launch itself, so a late shell leaves the manager fading back in rather
+        // than cutting to it behind the transition.
+        delay(320)
+        fade.animateTo(0f, motion.defaultEffectsSpec())
+    }
+
+    // graphicsLayer first: an alpha layer only covers what is drawn after it in the chain.
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .graphicsLayer { alpha = fade.value }
+            .background(Color.Black)
+    )
+}

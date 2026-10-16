@@ -417,6 +417,24 @@ object SearchIndex {
             group = SearchGroup.Settings,
             target = SearchTarget.Route("experimentalscreen")
         ),
+        SearchEntry(
+            id = "settings.gamespace",
+            titleRes = R.string.gamespace_mode_name,
+            summaryRes = R.string.gamespace_desc,
+            icon = Icons.Rounded.RocketLaunch,
+            group = SearchGroup.Settings,
+            target = SearchTarget.Route("gamespacescreen"),
+            keywordsRes = listOf(R.string.section_gamespace, R.string.gamespace_enter)
+        ),
+        SearchEntry(
+            id = "settings.gamespace_mode",
+            titleRes = R.string.gamespace_enable,
+            summaryRes = R.string.gamespace_enable_desc,
+            icon = Icons.Rounded.SportsEsports,
+            group = SearchGroup.Settings,
+            target = SearchTarget.Route("gamespacescreen"),
+            keywordsRes = listOf(R.string.section_gamespace, R.string.gamespace_inside)
+        ),
 
         // --- Governors ----------------------------------------------------
         SearchEntry(

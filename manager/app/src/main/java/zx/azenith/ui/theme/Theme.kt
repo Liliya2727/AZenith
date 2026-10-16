@@ -188,6 +188,7 @@ object ThemeController {
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AZenithTheme(
+    darkOverride: Boolean? = null,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -209,7 +210,7 @@ fun AZenithTheme(
     val density = LocalDensity.current
 
     val systemDarkTheme = isSystemInDarkTheme()
-    val darkTheme = themeState.colorMode.getDarkThemeValue(systemDarkTheme)
+    val darkTheme = darkOverride ?: themeState.colorMode.getDarkThemeValue(systemDarkTheme)
     val amoledMode = themeState.colorMode == ColorMode.DARKAMOLED
     val isDynamic = themeState.keyColor == 0
     val colorSpec = themeState.colorSpec.librarySpec

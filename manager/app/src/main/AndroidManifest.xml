@@ -73,6 +73,16 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
             </intent-filter>
         </activity>
+
+        <!-- Forced landscape and its own immersive window: the shell must not inherit, or hand
+             back, anything from the manager's portrait layout. -->
+        <activity
+            android:name=".ui.gamespace.GameSpaceActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:screenOrientation="sensorLandscape"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
+            android:theme="@style/Theme.AZenith" />
         
         <receiver android:name=".receiver.ZenithReceiver" android:exported="true">
             <intent-filter>

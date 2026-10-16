@@ -69,6 +69,8 @@ import kotlinx.coroutines.withContext
 import zx.azenith.BuildConfig
 import zx.azenith.R
 import zx.azenith.ui.component.*
+import zx.azenith.ui.gamespace.isGameSpaceEnabled
+import zx.azenith.ui.gamespace.setGameSpaceEnabled
 import zx.azenith.ui.util.*
 import zx.azenith.ui.viewmodel.*
 
@@ -90,6 +92,8 @@ private val SETTINGS_ROW_ITEMS: Map<String, Int> = mapOf(
     "settings.disable_auto_mode" to 2,
     "settings.disable_tweak" to 2,
     "settings.experimental" to 3,
+    "settings.gamespace" to 3,
+    "settings.gamespace_mode" to 3,
     "settings.profile_notifications" to 2,
     "settings.profile_timeout" to 2,
     "settings.restart_service" to 4,
@@ -120,6 +124,7 @@ fun SettingsScreen(
     )
     
     var showLogBottomSheet by remember { mutableStateOf(false) }
+    var gameSpaceMode by remember { mutableStateOf(isGameSpaceEnabled(context)) }
     
     val restartToastText = stringResource(R.string.toast_restarting_service)
     
@@ -379,6 +384,39 @@ fun SettingsScreen(
                     } else {
                         SkeletonSettingsList(rowCount = 3)
                     }
+                }
+
+                item { JumpRow(activeId = jumpPulse, entryId = "settings.section_gamespace", highlightShape = RoundedCornerShape(14.dp)) { SettingsSectionTitle(stringResource(R.string.section_gamespace)) } }
+                item {
+                    ExpressiveList(
+                        content = listOf(
+                            {
+                                JumpRow(activeId = jumpPulse, entryId = "settings.gamespace_mode") {
+                                    ExpressiveSwitchItem(
+                                        icon = Icons.Rounded.SportsEsports,
+                                        title = stringResource(R.string.gamespace_enable),
+                                        summary = stringResource(R.string.gamespace_enable_desc),
+                                        checked = gameSpaceMode,
+                                        onCheckedChange = { isChecked ->
+                                            gameSpaceMode = isChecked
+                                            setGameSpaceEnabled(context, isChecked)
+                                        }
+                                    )
+                                }
+                            },
+                            {
+                                JumpRow(activeId = jumpPulse, entryId = "settings.gamespace") {
+                                    ExpressiveListItem(
+                                        onClick = { navController.navigate("gamespacescreen") },
+                                        headlineContent = { Text(stringResource(R.string.gamespace_mode_name)) },
+                                        supportingContent = { Text(stringResource(R.string.gamespace_desc)) },
+                                        leadingContent = { LeadingIcon(icon = Icons.Rounded.RocketLaunch) },
+                                        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null) }
+                                    )
+                                }
+                            }
+                        )
+                    )
                 }
 
                 item { JumpRow(activeId = jumpPulse, entryId = "settings.section_others", highlightShape = RoundedCornerShape(14.dp)) { SettingsSectionTitle(stringResource(R.string.section_others)) } }

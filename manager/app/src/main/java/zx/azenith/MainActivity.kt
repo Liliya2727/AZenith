@@ -20,6 +20,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -96,6 +97,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zx.azenith.R
 import zx.azenith.ui.component.*
+import zx.azenith.ui.gamespace.GAME_SPACE_MODE_KEY
+import zx.azenith.ui.gamespace.GameSpaceHandoff
 import zx.azenith.ui.mainscreens.*
 import zx.azenith.ui.subscreens.*
 import zx.azenith.ui.theme.AZenithTheme
@@ -133,7 +136,30 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             AZenithTheme {
-                MainScreen(fromTileType)
+                val context = LocalContext.current
+                val settings = remember {
+                    context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                }
+                var gameSpaceOn by remember {
+                    mutableStateOf(settings.getBoolean(GAME_SPACE_MODE_KEY, false))
+                }
+
+                // Watched rather than read once: flipping the switch in Settings is what hands off,
+                // so the value has to arrive while the manager is already on screen.
+                DisposableEffect(settings) {
+                    val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+                        if (key == GAME_SPACE_MODE_KEY) {
+                            gameSpaceOn = prefs.getBoolean(GAME_SPACE_MODE_KEY, false)
+                        }
+                    }
+                    settings.registerOnSharedPreferenceChangeListener(listener)
+                    onDispose { settings.unregisterOnSharedPreferenceChangeListener(listener) }
+                }
+
+                Box(modifier = Modifier.fillMaxSize()) {
+                    MainScreen(fromTileType)
+                    GameSpaceHandoff(armed = gameSpaceOn)
+                }
             }
         }
     }
@@ -526,6 +552,11 @@ fun MainScreen(fromTileType: String? = null) {
                     composable("experimentalscreen") {
                         zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
                             ExperimentalScreen(navController)
+                        }
+                    }
+                    composable("gamespacescreen") {
+                        zx.azenith.ui.component.ScreenWrapper(navController = navController, animatedVisibilityScope = this) {
+                            GameSpaceScreen(navController)
                         }
                     }
                     // One screen for every tab; the scope argument is what keeps a
