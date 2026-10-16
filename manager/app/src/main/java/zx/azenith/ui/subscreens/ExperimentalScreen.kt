@@ -36,6 +36,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.RocketLaunch
 import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -68,11 +69,19 @@ import zx.azenith.ui.navigation.safePopBackStack
 private data class ExperimentalFeature(
     val icon: ImageVector,
     val titleRes: Int,
-    val summaryRes: Int
+    val summaryRes: Int,
+    val route: String
 )
 
-// Empty until the first experimental feature ships -- the screen is built around this case.
-private val EXPERIMENTAL_FEATURES: List<ExperimentalFeature> = emptyList()
+// Game Space leads it: a whole second app surface, preview only until the control centre lands.
+private val EXPERIMENTAL_FEATURES: List<ExperimentalFeature> = listOf(
+    ExperimentalFeature(
+        icon = Icons.Rounded.RocketLaunch,
+        titleRes = R.string.gamespace_mode_name,
+        summaryRes = R.string.gamespace_desc,
+        route = "gamespacescreen"
+    )
+)
 
 @Composable
 fun ExperimentalScreen(navController: NavController) {
@@ -113,7 +122,7 @@ fun ExperimentalScreen(navController: NavController) {
                         content = EXPERIMENTAL_FEATURES.map { feature ->
                             {
                                 ExpressiveListItem(
-                                    onClick = {},
+                                    onClick = { navController.navigate(feature.route) },
                                     headlineContent = { Text(stringResource(feature.titleRes)) },
                                     supportingContent = { Text(stringResource(feature.summaryRes)) },
                                     leadingContent = { LeadingIcon(icon = feature.icon) },
