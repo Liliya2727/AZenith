@@ -16,16 +16,25 @@
 
 package zx.azenith.ui.gamespace
 
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import zx.azenith.ui.theme.AZenithTheme
+import zx.azenith.ui.theme.ColorMode
+import zx.azenith.ui.theme.ThemeController
 
 /**
  * Hosts Game Space. Separate from [zx.azenith.MainActivity] because the shell needs a landscape,
@@ -36,9 +45,9 @@ class ZXGameSpaceActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // The stage paints its own black, so give the window the same colour instead of the themed
-        // background — otherwise every recomposition of the intro blinks the theme through it.
-        window.setBackgroundDrawable(ColorDrawable(Color.BLACK))
+        // The window background shows through until the first Compose frame, so it follows the same
+        // scheme the shell wears rather than a fixed colour — a hardcoded one flashes against it.
+        window.setBackgroundDrawable(ColorDrawable(windowSurface()))
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {
@@ -47,11 +56,27 @@ class ZXGameSpaceActivity : ComponentActivity() {
         }
 
         setContent {
-            // The shell is a dark room by design: it sits behind a fade-to-black and must not
-            // inherit the manager's light scheme.
-            AZenithTheme(darkOverride = true) {
+            // Material You straight through: the shell reads the same dynamic palette as the
+            // manager, in whichever mode the system is in, so there is no branded dark room.
+            AZenithTheme {
                 ZXGameSpaceShell(onExit = { finish() })
             }
         }
+    }
+
+    /** The surface [AZenithTheme] resolves to for the saved prefs, so the window agrees with it. */
+    private fun windowSurface(): Int {
+        val settings = ThemeController.getAppSettings(this)
+        if (settings.colorMode == ColorMode.DARKAMOLED) return Color.BLACK
+
+        val systemDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+            Configuration.UI_MODE_NIGHT_YES
+        val dark = settings.colorMode.getDarkThemeValue(systemDark)
+        val scheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (dark) dynamicDarkColorScheme(this) else dynamicLightColorScheme(this)
+        } else {
+            if (dark) darkColorScheme() else lightColorScheme()
+        }
+        return scheme.surface.toArgb()
     }
 }

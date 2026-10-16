@@ -132,7 +132,7 @@ fun ZXGameSpaceIntro(onFinished: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(scheme.surfaceContainerLowest)
+            .background(scheme.surface)
             .pointerInput(Unit) {
                 detectTapGestures {
                     scope.launch { runCatching { clock.snapTo(1f) } }
@@ -163,7 +163,8 @@ fun ZXGameSpaceIntro(onFinished: () -> Unit) {
 }
 
 /**
- * Accent wash under the mark.
+ * Accent wash under the mark. Container roles rather than the accents themselves, so the wash stays
+ * a tonal tint of the wallpaper palette instead of an accent field over the surface.
  *
  * One pulse drives both gradients — a second clock at a different period reads as the stage
  * shaking rather than breathing. Both reads sit in the draw phase, so the wash repaints without
@@ -193,8 +194,8 @@ private fun StageGlow(stage: Int) {
                 drawRect(
                     Brush.radialGradient(
                         colors = listOf(
-                            scheme.primary.copy(alpha = 0.34f * p),
-                            scheme.tertiary.copy(alpha = 0.16f * p),
+                            scheme.primaryContainer.copy(alpha = 0.55f * p),
+                            scheme.tertiaryContainer.copy(alpha = 0.30f * p),
                             Color.Transparent
                         )
                     )
@@ -203,7 +204,7 @@ private fun StageGlow(stage: Int) {
                     Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            scheme.surfaceContainerLowest.copy(alpha = 0.85f * enter.value)
+                            scheme.surface.copy(alpha = 0.85f * enter.value)
                         )
                     )
                 )
@@ -366,7 +367,7 @@ private fun BootRail(clock: Animatable<Float, AnimationVector1D>, step: Int) {
                 .weight(1f)
                 .height(3.dp)
                 .clip(CircleShape)
-                .background(scheme.onSurface.copy(alpha = 0.12f))
+                .background(scheme.surfaceContainerHighest)
         ) {
             Box(
                 Modifier

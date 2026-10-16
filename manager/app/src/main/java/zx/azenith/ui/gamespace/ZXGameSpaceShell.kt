@@ -34,7 +34,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -44,8 +43,8 @@ import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.viewmodel.ApplistViewmodel
 
 /**
- * Game Space in one place: the boot intro hands off to the hub, and both sit on the same black
- * backdrop the manager fades through, so there is no seam between the two.
+ * Game Space in one place: the boot intro hands off to the hub, and both sit on the same scheme
+ * surface the manager fades through, so there is no seam between the two.
  *
  * The install side of the mode (the manager fading black and starting this) lives in
  * `ZXGameSpaceScreen`; this composable only owns the shell itself.
@@ -102,7 +101,7 @@ fun ZXGameSpaceShell(onExit: () -> Unit) {
         if (hubVisible) leaving = true else hubVisible = true
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
         if (hubVisible) {
             Box(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = hubFade.value }) {
                 ZXGameSpaceHub(
@@ -127,7 +126,7 @@ fun ZXGameSpaceShell(onExit: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer { alpha = exitFade.value }
-                .background(Color.Black)
+                .background(MaterialTheme.colorScheme.surface)
         )
     }
 }

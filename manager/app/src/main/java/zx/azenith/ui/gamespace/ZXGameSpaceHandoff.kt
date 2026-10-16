@@ -31,7 +31,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.delay
@@ -79,7 +78,7 @@ fun ZXGameSpaceHandoff(armed: Boolean, modifier: Modifier = Modifier) {
         if (handoffDone) return@LaunchedEffect
         handoffDone = true
 
-        // Let the screen the user just landed on compose before it goes dark under them.
+        // Let the screen the user just landed on compose before it fades under them.
         delay(240)
         fade.animateTo(1f, motion.defaultEffectsSpec())
         context.startActivity(Intent(context, ZXGameSpaceActivity::class.java))
@@ -94,6 +93,6 @@ fun ZXGameSpaceHandoff(armed: Boolean, modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxSize()
             .graphicsLayer { alpha = fade.value }
-            .background(Color.Black)
+            .background(MaterialTheme.colorScheme.surface)
     )
 }
