@@ -584,10 +584,17 @@ fun ZXGameSpaceHub(
     var homeExpanded by remember { mutableStateOf(false) }
     var libraryExpanded by remember { mutableStateOf(false) }
 
-    val ribbonEntries = remember(games) {
+    val enabledApps = remember(games, allApps) {
+        (games + allApps)
+            .distinctBy { it.packageName }
+            .filter { it.isEnabledInConfig }
+            .sortedBy { it.label.lowercase() }
+    }
+
+    val ribbonEntries = remember(enabledApps) {
         buildList {
             add(RibbonEntry.Welcome)
-            games.forEach { add(RibbonEntry.Game(it)) }
+            enabledApps.forEach { add(RibbonEntry.Game(it)) }
             add(RibbonEntry.Library)
         }
     }
@@ -763,7 +770,7 @@ fun ZXGameSpaceHub(
                                     when (entry) {
                                         is RibbonEntry.Game -> onLaunch(entry.app)
                                         RibbonEntry.Welcome -> {
-                                            games.firstOrNull()?.let { selectedRibbonIndex = 1 }
+                                            enabledApps.firstOrNull()?.let { selectedRibbonIndex = 1 }
                                         }
                                         RibbonEntry.Library -> {
                                             selectedRibbonIndex = ribbonEntries.lastIndex
@@ -828,8 +835,8 @@ fun ZXGameSpaceHub(
                                     onExpandedChange = { homeExpanded = it },
                                     profile = profile,
                                     profileValue = profileValue,
-                                    games = games,
-                                    allAppsCount = allApps.size.coerceAtLeast(games.size),
+                                    games = enabledApps,
+                                    allAppsCount = allApps.size.coerceAtLeast(enabledApps.size),
                                     refreshHz = refreshHz,
                                     deviceName = deviceName,
                                     chipsetName = chipsetName,
