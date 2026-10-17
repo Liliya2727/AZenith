@@ -712,11 +712,102 @@ internal fun SettingsTweaksPane(
     }
 }
 
+private data class SwatchTones(
+    val primary: Color,
+    val primaryContainer: Color,
+    val onPrimary: Color,
+    val onPrimaryContainer: Color,
+    val secondaryContainer: Color,
+    val tertiaryContainer: Color
+)
+
+private val SWATCH_TONES_CACHE = java.util.concurrent.ConcurrentHashMap<Long, SwatchTones>()
+
+private fun colorToHsl(color: Color): FloatArray {
+    val r = color.red
+    val g = color.green
+    val b = color.blue
+    val max = maxOf(r, maxOf(g, b))
+    val min = minOf(r, minOf(g, b))
+    val d = max - min
+    var h = 0f
+    val l = (max + min) / 2f
+    val s = if (max == min) 0f else if (l > 0.5f) d / (2f - max - min) else d / (max + min)
+    if (max != min) {
+        h = when (max) {
+            r -> (g - b) / d + (if (g < b) 6f else 0f)
+            g -> (b - r) / d + 2f
+            else -> (r - g) / d + 4f
+        } * 60f
+    }
+    return floatArrayOf(h, s, l)
+}
+
+private fun hslToColor(h: Float, s: Float, l: Float, alpha: Float = 1f): Color {
+    val normalizedH = ((h % 360f) + 360f) % 360f
+    val c = (1f - kotlin.math.abs(2f * l - 1f)) * s
+    val x = c * (1f - kotlin.math.abs((normalizedH / 60f) % 2f - 1f))
+    val m = l - c / 2f
+    val (rPrime, gPrime, bPrime) = when ((normalizedH / 60f).toInt()) {
+        0 -> Triple(c, x, 0f)
+        1 -> Triple(x, c, 0f)
+        2 -> Triple(0f, c, x)
+        3 -> Triple(0f, x, c)
+        4 -> Triple(x, 0f, c)
+        else -> Triple(c, 0f, x)
+    }
+    return Color(
+        red = (rPrime + m).coerceIn(0f, 1f),
+        green = (gPrime + m).coerceIn(0f, 1f),
+        blue = (bPrime + m).coerceIn(0f, 1f),
+        alpha = alpha
+    )
+}
+
+private fun computeSwatchTones(seedColor: Color, isDark: Boolean): SwatchTones {
+    val cacheKey = (seedColor.value.toLong() shl 1) or (if (isDark) 1L else 0L)
+    return SWATCH_TONES_CACHE.getOrPut(cacheKey) {
+        val hsl = colorToHsl(seedColor)
+        val h = hsl[0]
+        val s = hsl[1]
+        val l = hsl[2]
+        val primary = seedColor
+        val primaryContainer = if (isDark) {
+            hslToColor(h, (s * 0.65f).coerceIn(0.2f, 0.75f), 0.22f)
+        } else {
+            hslToColor(h, (s * 0.70f).coerceIn(0.2f, 0.75f), 0.88f)
+        }
+        val onPrimaryContainer = if (isDark) {
+            hslToColor(h, (s * 0.75f).coerceIn(0.3f, 0.85f), 0.88f)
+        } else {
+            hslToColor(h, (s * 0.85f).coerceIn(0.3f, 0.85f), 0.16f)
+        }
+        val secondaryContainer = if (isDark) {
+            hslToColor(h, (s * 0.35f).coerceIn(0.12f, 0.45f), 0.28f)
+        } else {
+            hslToColor(h, (s * 0.35f).coerceIn(0.12f, 0.45f), 0.84f)
+        }
+        val tertiaryContainer = if (isDark) {
+            hslToColor((h + 60f) % 360f, (s * 0.45f).coerceIn(0.15f, 0.55f), 0.30f)
+        } else {
+            hslToColor((h + 60f) % 360f, (s * 0.45f).coerceIn(0.15f, 0.55f), 0.84f)
+        }
+        val onPrimary = if (l > 0.6f) Color.Black else Color.White
+        SwatchTones(
+            primary = primary,
+            primaryContainer = primaryContainer,
+            onPrimary = onPrimary,
+            onPrimaryContainer = onPrimaryContainer,
+            secondaryContainer = secondaryContainer,
+            tertiaryContainer = tertiaryContainer
+        )
+    }
+}
+
 @Composable
 internal fun SettingsAppearancePane() {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
-    val motion = MaterialTheme.motionScheme
     val scrollState = rememberScrollState()
     val systemDark = isSystemInDarkTheme()
 
@@ -755,23 +846,15 @@ internal fun SettingsAppearancePane() {
     var sidePanelSensitivity by remember {
         mutableIntStateOf(prefs.getInt("gamespace_sidepanel_sensitivity", 65).coerceIn(20, 100))
     }
-    var sliderSensitivity by remember(sidePanelSensitivity) {
-        mutableIntStateOf(sidePanelSensitivity)
-    }
     var colorModeValue by remember { mutableIntStateOf(prefs.getInt("color_mode", ColorMode.SYSTEM.value)) }
     var keyColorValue by remember { mutableIntStateOf(prefs.getInt("key_color", 0)) }
     var appScalePercent by remember {
         mutableIntStateOf(prefs.getInt("gamespace_app_scale", 85).coerceIn(60, 150))
     }
-    var sliderScalePercent by remember(appScalePercent) {
-        mutableIntStateOf(appScalePercent)
-    }
     var wallpaperDimmingIntensity by remember {
         mutableIntStateOf(prefs.getInt("gamespace_wallpaper_dimming_intensity", 75).coerceIn(15, 100))
     }
-    var sliderDimmingIntensity by remember(wallpaperDimmingIntensity) {
-        mutableIntStateOf(wallpaperDimmingIntensity)
-    }
+
     DisposableEffect(prefs) {
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             when (key) {
@@ -782,28 +865,32 @@ internal fun SettingsAppearancePane() {
                     sidePanelSide = prefs.getString("gamespace_sidepanel_side", "left") ?: "left"
                 }
                 "gamespace_sidepanel_sensitivity" -> {
-                    val updated = prefs.getInt("gamespace_sidepanel_sensitivity", 65).coerceIn(20, 100)
-                    sidePanelSensitivity = updated
-                    sliderSensitivity = updated
+                    sidePanelSensitivity = prefs.getInt("gamespace_sidepanel_sensitivity", 65).coerceIn(20, 100)
                 }
                 "gamespace_wallpaper_dimming_intensity" -> {
-                    val updated = prefs.getInt("gamespace_wallpaper_dimming_intensity", 75).coerceIn(15, 100)
-                    wallpaperDimmingIntensity = updated
-                    sliderDimmingIntensity = updated
+                    wallpaperDimmingIntensity = prefs.getInt("gamespace_wallpaper_dimming_intensity", 75).coerceIn(15, 100)
+                }
+                "color_mode" -> {
+                    colorModeValue = prefs.getInt("color_mode", ColorMode.SYSTEM.value)
+                }
+                "key_color" -> {
+                    keyColorValue = prefs.getInt("key_color", 0)
+                }
+                "gamespace_app_scale" -> {
+                    appScalePercent = prefs.getInt("gamespace_app_scale", 85).coerceIn(60, 150)
                 }
             }
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)
         onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
-    val currentColorSpec = remember {
-        ColorEngine.fromPersisted(prefs.getString("color_spec", null))
-    }
 
-    val isDarkPreview = when (ColorMode.fromValue(colorModeValue)) {
-        ColorMode.LIGHT -> false
-        ColorMode.DARK, ColorMode.DARKAMOLED -> true
-        ColorMode.SYSTEM -> systemDark
+    val isDarkPreview = remember(colorModeValue, systemDark) {
+        when (ColorMode.fromValue(colorModeValue)) {
+            ColorMode.LIGHT -> false
+            ColorMode.DARK, ColorMode.DARKAMOLED -> true
+            ColorMode.SYSTEM -> systemDark
+        }
     }
 
     val followMonet = keyColorValue == 0
@@ -828,433 +915,546 @@ internal fun SettingsAppearancePane() {
             )
         }
 
-        // 0. Customize Side Panel (Bento layout alignment)
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = scheme.surfaceContainerHigh,
-            modifier = Modifier.fillMaxWidth()
+        CustomizeSidePanelSection(
+            sidePanelSide = sidePanelSide,
+            initialSensitivity = sidePanelSensitivity,
+            onSideChanged = {
+                sidePanelSide = it
+                prefs.edit().putString("gamespace_sidepanel_side", it).apply()
+            },
+            onSensitivityCommitted = {
+                sidePanelSensitivity = it
+                prefs.edit().putInt("gamespace_sidepanel_sensitivity", it).apply()
+            }
+        )
+
+        HomeWallpaperSection(
+            customWallpaperUri = customWallpaperUri,
+            initialDimming = wallpaperDimmingIntensity,
+            colorModeValue = colorModeValue,
+            onChooseWallpaper = {
+                imagePicker.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+                )
+            },
+            onResetWallpaper = {
+                context.clearHeaderImage()
+                customWallpaperUri = null
+            },
+            onDimmingCommitted = {
+                wallpaperDimmingIntensity = it
+                prefs.edit().putInt("gamespace_wallpaper_dimming_intensity", it).apply()
+            }
+        )
+
+        ThemeModeSection(
+            colorModeValue = colorModeValue,
+            onModeSelected = {
+                colorModeValue = it
+                prefs.edit().putInt("color_mode", it).apply()
+            }
+        )
+
+        AppScaleSection(
+            initialScale = appScalePercent,
+            onScaleCommitted = {
+                appScalePercent = it
+                prefs.edit().putInt("gamespace_app_scale", it).apply()
+            }
+        )
+
+        PaletteSection(
+            followMonet = followMonet,
+            keyColorValue = keyColorValue,
+            isDarkPreview = isDarkPreview,
+            onFollowMonet = {
+                keyColorValue = 0
+                prefs.edit().putInt("key_color", 0).apply()
+            },
+            onSelectPreset = { colorInt ->
+                keyColorValue = colorInt
+                prefs.edit().putInt("key_color", colorInt).apply()
+            }
+        )
+    }
+}
+
+@Composable
+private fun CustomizeSidePanelSection(
+    sidePanelSide: String,
+    initialSensitivity: Int,
+    onSideChanged: (String) -> Unit,
+    onSensitivityCommitted: (Int) -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    var sliderSensitivity by remember(initialSensitivity) { mutableIntStateOf(initialSensitivity) }
+
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = scheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = scheme.primaryContainer,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Rounded.GridView,
+                                contentDescription = null,
+                                tint = scheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    Column {
+                        Text(
+                            text = "Customize Side Panel",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onSurface
+                        )
+                        Text(
+                            text = "Floating pull-out bar pinned to screen edge when launching an app",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = scheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Max),
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Left Column: Pinned Edge Position
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(24.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = scheme.primaryContainer,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Rounded.GridView,
-                                    contentDescription = null,
-                                    tint = scheme.onPrimaryContainer,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                        Text(
+                            text = "Pinned Edge Position",
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onSurface
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        val sideOptions = listOf(
+                            "left" to "Left Side",
+                            "right" to "Right Side"
+                        )
+                        sideOptions.forEach { (sideKey, title) ->
+                            val selected = sidePanelSide == sideKey
+                            val cornerPercent by animateIntAsState(
+                                targetValue = if (selected) 28 else 18,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioLowBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                ),
+                                label = "SidePanelEdgeCorner"
+                            )
+                            val cardShape = RoundedCornerShape(percent = cornerPercent)
+                            Surface(
+                                shape = cardShape,
+                                color = if (selected) scheme.primaryContainer else scheme.surfaceContainerHighest,
+                                contentColor = if (selected) scheme.onPrimaryContainer else scheme.onSurface,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .gamepadFocusOutline(shape = cardShape, register = true)
+                                    .clip(cardShape)
+                                    .clickable { onSideChanged(sideKey) }
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(12.dp),
+                                    verticalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = scheme.surfaceContainerLow,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(40.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(horizontal = 6.dp, vertical = 6.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(
+                                                        if (sideKey == "left") Alignment.CenterStart
+                                                        else Alignment.CenterEnd
+                                                    )
+                                                    .width(5.dp)
+                                                    .height(24.dp)
+                                                    .clip(CircleShape)
+                                                    .background(
+                                                        if (selected) scheme.primary else scheme.onSurfaceVariant
+                                                    )
+                                            )
+                                            Icon(
+                                                imageVector = if (sideKey == "left") {
+                                                    Icons.Rounded.ChevronRight
+                                                } else {
+                                                    Icons.AutoMirrored.Rounded.ArrowBack
+                                                },
+                                                contentDescription = null,
+                                                tint = if (selected) scheme.primary else scheme.onSurfaceVariant,
+                                                modifier = Modifier
+                                                    .align(
+                                                        if (sideKey == "left") Alignment.CenterStart
+                                                        else Alignment.CenterEnd
+                                                    )
+                                                    .padding(
+                                                        start = if (sideKey == "left") 8.dp else 0.dp,
+                                                        end = if (sideKey == "right") 8.dp else 0.dp
+                                                    )
+                                                    .size(16.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Text(
+                                        text = title,
+                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                        maxLines = 1
+                                    )
+                                }
                             }
-                        }
-                        Column {
-                            Text(
-                                text = "Customize Side Panel",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                color = scheme.onSurface
-                            )
-                            Text(
-                                text = "Floating pull-out bar pinned to screen edge when launching an app",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = scheme.onSurfaceVariant
-                            )
                         }
                     }
                 }
 
-                Row(
+                // Right Column: Swipe-In Sensitivity
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(IntrinsicSize.Max),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Left Column: Pinned Edge Position
-                    Column(
+                    Row(
                         modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                            .fillMaxWidth()
+                            .height(24.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(24.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Pinned Edge Position",
-                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                color = scheme.onSurface
-                            )
-                        }
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            val sideOptions = listOf(
-                                "left" to "Left Side",
-                                "right" to "Right Side"
-                            )
-                            sideOptions.forEach { (sideKey, title) ->
-                                val selected = sidePanelSide == sideKey
-                                val cornerPercent by animateIntAsState(
-                                    targetValue = if (selected) 28 else 18,
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioLowBouncy,
-                                        stiffness = Spring.StiffnessMediumLow
-                                    ),
-                                    label = "SidePanelEdgeCorner"
-                                )
-                                val cardShape = RoundedCornerShape(percent = cornerPercent)
-                                Surface(
-                                    shape = cardShape,
-                                    color = if (selected) scheme.primaryContainer else scheme.surfaceContainerHighest,
-                                    contentColor = if (selected) scheme.onPrimaryContainer else scheme.onSurface,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight()
-                                        .gamepadFocusOutline(shape = cardShape, register = true)
-                                        .clip(cardShape)
-                                        .clickable {
-                                            sidePanelSide = sideKey
-                                            prefs.edit().putString("gamespace_sidepanel_side", sideKey).apply()
-                                        }
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(12.dp),
-                                        verticalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Surface(
-                                            shape = RoundedCornerShape(10.dp),
-                                            color = scheme.surfaceContainerLow,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(40.dp)
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .padding(horizontal = 6.dp, vertical = 6.dp)
-                                            ) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .align(
-                                                            if (sideKey == "left") Alignment.CenterStart
-                                                            else Alignment.CenterEnd
-                                                        )
-                                                        .width(5.dp)
-                                                        .height(24.dp)
-                                                        .clip(CircleShape)
-                                                        .background(
-                                                            if (selected) scheme.primary else scheme.onSurfaceVariant
-                                                        )
-                                                )
-                                                Icon(
-                                                    imageVector = if (sideKey == "left") {
-                                                        Icons.Rounded.ChevronRight
-                                                    } else {
-                                                        Icons.AutoMirrored.Rounded.ArrowBack
-                                                    },
-                                                    contentDescription = null,
-                                                    tint = if (selected) scheme.primary else scheme.onSurfaceVariant,
-                                                    modifier = Modifier
-                                                        .align(
-                                                            if (sideKey == "left") Alignment.CenterStart
-                                                            else Alignment.CenterEnd
-                                                        )
-                                                        .padding(
-                                                            start = if (sideKey == "left") 8.dp else 0.dp,
-                                                            end = if (sideKey == "right") 8.dp else 0.dp
-                                                        )
-                                                        .size(16.dp)
-                                                )
-                                            }
-                                        }
-
-                                        Text(
-                                            text = title,
-                                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                            maxLines = 1
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        Text(
+                            text = "Swipe-In Sensitivity",
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onSurface
+                        )
+                        Text(
+                            text = "${sliderSensitivity}%",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.primary
+                        )
                     }
 
-                    // Right Column: Swipe-In Sensitivity
-                    Column(
+                    Surface(
+                        shape = RoundedCornerShape(18.dp),
+                        color = scheme.surfaceContainerHighest,
                         modifier = Modifier
+                            .fillMaxWidth()
                             .weight(1f)
-                            .fillMaxHeight(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Row(
+                        Column(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(24.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                .fillMaxSize()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(
-                                text = "Swipe-In Sensitivity",
-                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                color = scheme.onSurface
-                            )
-                            Text(
-                                text = "${sliderSensitivity}%",
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = scheme.primary
-                            )
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(18.dp),
-                            color = scheme.surfaceContainerHighest,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(12.dp),
-                                verticalArrangement = Arrangement.SpaceBetween
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    val presets = listOf(
-                                        "Less Sensitive" to 35,
-                                        "Balanced" to 65,
-                                        "More Sensitive" to 90
+                                val presets = listOf(
+                                    "Less Sensitive" to 35,
+                                    "Balanced" to 65,
+                                    "More Sensitive" to 90
+                                )
+                                presets.forEach { (label, targetVal) ->
+                                    val selected = when (targetVal) {
+                                        35 -> sliderSensitivity <= 45
+                                        90 -> sliderSensitivity >= 80
+                                        else -> sliderSensitivity in 46..79
+                                    }
+                                    val pillRadius by animateIntAsState(
+                                        targetValue = if (selected) 50 else 26,
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioLowBouncy,
+                                            stiffness = Spring.StiffnessMediumLow
+                                        ),
+                                        label = "SensPresetRadius"
                                     )
-                                    presets.forEach { (label, targetVal) ->
-                                        val selected = when (targetVal) {
-                                            35 -> sliderSensitivity <= 45
-                                            90 -> sliderSensitivity >= 80
-                                            else -> sliderSensitivity in 46..79
-                                        }
-                                        val pillRadius by animateIntAsState(
-                                            targetValue = if (selected) 50 else 26,
-                                            animationSpec = spring(
-                                                dampingRatio = Spring.DampingRatioLowBouncy,
-                                                stiffness = Spring.StiffnessMediumLow
-                                            ),
-                                            label = "SensPresetRadius"
-                                        )
-                                        val pillShape = RoundedCornerShape(percent = pillRadius)
-                                        Surface(
-                                            shape = pillShape,
-                                            color = if (selected) scheme.primary else scheme.surfaceContainerLow,
-                                            contentColor = if (selected) scheme.onPrimary else scheme.onSurface,
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .gamepadFocusOutline(shape = pillShape, register = true)
-                                                .clip(pillShape)
-                                                .clickable {
-                                                    sliderSensitivity = targetVal
-                                                    sidePanelSensitivity = targetVal
-                                                    prefs.edit().putInt("gamespace_sidepanel_sensitivity", targetVal).apply()
-                                                }
-                                        ) {
-                                            Box(
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text(
-                                                    text = label,
-                                                    style = MaterialTheme.typography.labelSmall.copy(
-                                                        fontWeight = FontWeight.Bold
-                                                    ),
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
+                                    val pillShape = RoundedCornerShape(percent = pillRadius)
+                                    Surface(
+                                        shape = pillShape,
+                                        color = if (selected) scheme.primary else scheme.surfaceContainerLow,
+                                        contentColor = if (selected) scheme.onPrimary else scheme.onSurface,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .gamepadFocusOutline(shape = pillShape, register = true)
+                                            .clip(pillShape)
+                                            .clickable {
+                                                sliderSensitivity = targetVal
+                                                onSensitivityCommitted(targetVal)
                                             }
+                                    ) {
+                                        Box(
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontWeight = FontWeight.Bold
+                                                ),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
                                         }
                                     }
                                 }
-
-                                ZenithSlider(
-                                    value = sliderSensitivity.toFloat(),
-                                    onValueChange = { raw ->
-                                        val snapped = ((raw / 5f).roundToInt() * 5).coerceIn(20, 100)
-                                        if (snapped != sliderSensitivity) {
-                                            sliderSensitivity = snapped
-                                        }
-                                    },
-                                    onValueChangeFinished = {
-                                        if (sliderSensitivity != sidePanelSensitivity) {
-                                            sidePanelSensitivity = sliderSensitivity
-                                            prefs.edit().putInt("gamespace_sidepanel_sensitivity", sliderSensitivity).apply()
-                                        }
-                                    },
-                                    valueRange = 20f..100f,
-                                    steps = 15,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(28.dp)
-                                )
                             }
+
+                            ZenithSlider(
+                                value = sliderSensitivity.toFloat(),
+                                onValueChange = { raw ->
+                                    val snapped = ((raw / 5f).roundToInt() * 5).coerceIn(20, 100)
+                                    if (snapped != sliderSensitivity) {
+                                        sliderSensitivity = snapped
+                                    }
+                                },
+                                onValueChangeFinished = {
+                                    onSensitivityCommitted(sliderSensitivity)
+                                },
+                                valueRange = 20f..100f,
+                                steps = 15,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(28.dp)
+                            )
                         }
                     }
                 }
             }
         }
+    }
+}
 
-        // 1. Home Wallpaper (Stage & Hub Wallpaper Customization)
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = scheme.surfaceContainerHigh,
-            modifier = Modifier.fillMaxWidth()
+@Composable
+private fun HomeWallpaperSection(
+    customWallpaperUri: String?,
+    initialDimming: Int,
+    colorModeValue: Int,
+    onChooseWallpaper: () -> Unit,
+    onResetWallpaper: () -> Unit,
+    onDimmingCommitted: (Int) -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    val motion = MaterialTheme.motionScheme
+    var sliderDimming by remember(initialDimming) { mutableIntStateOf(initialDimming) }
+
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = scheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = scheme.primaryContainer,
+                        modifier = Modifier.size(40.dp)
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = scheme.primaryContainer,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Wallpaper,
-                                    contentDescription = null,
-                                    tint = scheme.onPrimaryContainer,
-                                    modifier = Modifier.size(20.dp)
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Rounded.Wallpaper,
+                                contentDescription = null,
+                                tint = scheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    Column {
+                        Text(
+                            text = "Home Wallpaper",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onSurface
+                        )
+                        Text(
+                            text = "Customize stage and hub background wallpaper",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = scheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Visual Preview Box
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = scheme.surfaceContainerLowest,
+                    modifier = Modifier
+                        .weight(0.48f)
+                        .height(110.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        if (customWallpaperUri != null) {
+                            MediaBannerRenderer(
+                                uriString = customWallpaperUri,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Image(
+                                painter = painterResource(R.drawable.banner_bg),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                        val previewDimScale = (sliderDimming / 75f).coerceIn(0.15f, 1.45f)
+                        val isAmoled = colorModeValue == ColorMode.DARKAMOLED.value
+                        val previewBaseDim = if (isAmoled) Color.Black else scheme.surfaceContainerLowest
+
+                        // GameSpace horizontal gradient dimming
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.horizontalGradient(
+                                        colorStops = arrayOf(
+                                            0.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.88f else 0.85f) * previewDimScale).coerceIn(0f, 0.98f)),
+                                            0.35f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.84f else 0.80f) * previewDimScale).coerceIn(0f, 0.98f)),
+                                            0.68f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.44f else 0.38f) * previewDimScale).coerceIn(0f, 0.98f)),
+                                            1.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.22f else 0.18f) * previewDimScale).coerceIn(0f, 0.98f))
+                                        )
+                                    )
                                 )
-                            }
-                        }
-                        Column {
-                            Text(
-                                text = "Home Wallpaper",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                color = scheme.onSurface
-                            )
-                            Text(
-                                text = "Customize stage and hub background wallpaper",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = scheme.onSurfaceVariant
-                            )
-                        }
+                        )
+                        // GameSpace vertical vignette
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        colorStops = arrayOf(
+                                            0.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.32f else 0.28f) * previewDimScale).coerceIn(0f, 0.98f)),
+                                            0.45f to Color.Transparent,
+                                            1.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.48f else 0.42f) * previewDimScale).coerceIn(0f, 0.98f))
+                                        )
+                                    )
+                                )
+                        )
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                // Action Buttons Column (Symmetrical 110.dp matching the preview height)
+                Column(
+                    modifier = Modifier
+                        .weight(0.52f)
+                        .height(110.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Visual Preview Box
+                    val chooseShape = RoundedCornerShape(16.dp)
                     Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = scheme.surfaceContainerLowest,
+                        shape = chooseShape,
+                        color = scheme.primary,
+                        contentColor = scheme.onPrimary,
                         modifier = Modifier
-                            .weight(0.48f)
-                            .height(110.dp)
-                            .clip(RoundedCornerShape(16.dp))
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .gamepadFocusOutline(shape = chooseShape, register = true)
+                            .clip(chooseShape)
+                            .clickable(onClick = onChooseWallpaper)
                     ) {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            if (customWallpaperUri != null) {
-                                MediaBannerRenderer(
-                                    uriString = customWallpaperUri,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            } else {
-                                Image(
-                                    painter = painterResource(R.drawable.banner_bg),
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-                            val previewDimScale = (sliderDimmingIntensity / 75f).coerceIn(0.15f, 1.45f)
-                            val isAmoled = colorModeValue == ColorMode.DARKAMOLED.value
-                            val previewBaseDim = if (isAmoled) Color.Black else scheme.surfaceContainerLowest
-
-                            // GameSpace horizontal gradient dimming
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.horizontalGradient(
-                                            colorStops = arrayOf(
-                                                0.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.88f else 0.85f) * previewDimScale).coerceIn(0f, 0.98f)),
-                                                0.35f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.84f else 0.80f) * previewDimScale).coerceIn(0f, 0.98f)),
-                                                0.68f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.44f else 0.38f) * previewDimScale).coerceIn(0f, 0.98f)),
-                                                1.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.22f else 0.18f) * previewDimScale).coerceIn(0f, 0.98f))
-                                            )
-                                        )
-                                    )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Image,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
                             )
-                            // GameSpace vertical vignette
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            colorStops = arrayOf(
-                                                0.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.32f else 0.28f) * previewDimScale).coerceIn(0f, 0.98f)),
-                                                0.45f to Color.Transparent,
-                                                1.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.48f else 0.42f) * previewDimScale).coerceIn(0f, 0.98f))
-                                            )
-                                        )
-                                    )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = if (customWallpaperUri != null) "Change Wallpaper" else "Choose Wallpaper",
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                maxLines = 1
                             )
                         }
                     }
 
-                    // Action Buttons Column (Symmetrical 110.dp matching the preview height)
-                    Column(
-                        modifier = Modifier
-                            .weight(0.52f)
-                            .height(110.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    AnimatedVisibility(
+                        visible = customWallpaperUri != null,
+                        enter = fadeIn(motion.defaultEffectsSpec()) + expandVertically(motion.defaultSpatialSpec()),
+                        exit = fadeOut(motion.defaultEffectsSpec()) + shrinkVertically(motion.defaultSpatialSpec())
                     ) {
-                        val chooseShape = RoundedCornerShape(16.dp)
+                        val resetShape = RoundedCornerShape(16.dp)
                         Surface(
-                            shape = chooseShape,
-                            color = scheme.primary,
-                            contentColor = scheme.onPrimary,
+                            shape = resetShape,
+                            color = scheme.surfaceContainerHighest,
+                            contentColor = scheme.error,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .weight(1f)
-                                .gamepadFocusOutline(shape = chooseShape, register = true)
-                                .clip(chooseShape)
-                                .clickable {
-                                    imagePicker.launch(
-                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-                                    )
-                                }
+                                .height(48.dp)
+                                .gamepadFocusOutline(shape = resetShape, register = true)
+                                .clip(resetShape)
+                                .clickable(onClick = onResetWallpaper)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -1264,487 +1464,450 @@ internal fun SettingsAppearancePane() {
                                 horizontalArrangement = Arrangement.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Rounded.Image,
+                                    imageVector = Icons.Rounded.Refresh,
                                     contentDescription = null,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(16.dp),
+                                    tint = scheme.error
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    text = if (customWallpaperUri != null) "Change Wallpaper" else "Choose Wallpaper",
-                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                    text = "Reset to Default",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.error,
                                     maxLines = 1
                                 )
                             }
                         }
-
-                        AnimatedVisibility(
-                            visible = customWallpaperUri != null,
-                            enter = fadeIn(motion.defaultEffectsSpec()) + expandVertically(motion.defaultSpatialSpec()),
-                            exit = fadeOut(motion.defaultEffectsSpec()) + shrinkVertically(motion.defaultSpatialSpec())
-                        ) {
-                            val resetShape = RoundedCornerShape(16.dp)
-                            Surface(
-                                shape = resetShape,
-                                color = scheme.surfaceContainerHighest,
-                                contentColor = scheme.error,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp)
-                                    .gamepadFocusOutline(shape = resetShape, register = true)
-                                    .clip(resetShape)
-                                    .clickable {
-                                        context.clearHeaderImage()
-                                        customWallpaperUri = null
-                                    }
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(horizontal = 14.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Refresh,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp),
-                                        tint = scheme.error
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        text = "Reset to Default",
-                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                        color = scheme.error,
-                                        maxLines = 1
-                                    )
-                                }
-                            }
-                        }
                     }
-                }
-
-                // Dimming Intensity Slider
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "Dimming Intensity",
-                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                color = scheme.onSurface
-                            )
-                            Text(
-                                text = "Adjust wallpaper gradient dimming opacity",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = scheme.onSurfaceVariant
-                            )
-                        }
-                        Text(
-                            text = "$sliderDimmingIntensity%",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = scheme.primary
-                        )
-                    }
-
-                    ZenithSlider(
-                        value = sliderDimmingIntensity.toFloat(),
-                        onValueChange = { raw ->
-                            val snapped = ((raw / 5f).roundToInt() * 5).coerceIn(15, 100)
-                            if (snapped != sliderDimmingIntensity) {
-                                sliderDimmingIntensity = snapped
-                            }
-                        },
-                        onValueChangeFinished = {
-                            if (sliderDimmingIntensity != wallpaperDimmingIntensity) {
-                                wallpaperDimmingIntensity = sliderDimmingIntensity
-                                prefs.edit().putInt("gamespace_wallpaper_dimming_intensity", sliderDimmingIntensity).apply()
-                            }
-                        },
-                        valueRange = 15f..100f,
-                        steps = 16,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(28.dp)
-                    )
                 }
             }
-        }
 
-        // 2. Theme Mode (Auto / Light / Dark / AMOLED)
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = scheme.surfaceContainerHigh,
-            modifier = Modifier.fillMaxWidth()
-        ) {
+            // Dimming Intensity Slider
             Column(
-                modifier = Modifier.padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
                         Text(
-                            text = "Theme Mode",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            text = "Dimming Intensity",
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                             color = scheme.onSurface
                         )
                         Text(
-                            text = if (colorModeValue == ColorMode.DARKAMOLED.value) {
-                                "AMOLED mode draws pure black backgrounds where possible"
-                            } else {
-                                "Auto, Light, and Dark follow Monet dynamic surface tones"
-                            },
+                            text = "Adjust wallpaper gradient dimming opacity",
                             style = MaterialTheme.typography.bodySmall,
                             color = scheme.onSurfaceVariant
                         )
                     }
-                    Surface(
-                        shape = CircleShape,
-                        color = scheme.primaryContainer
-                    ) {
-                        Text(
-                            text = when (ColorMode.fromValue(colorModeValue)) {
-                                ColorMode.SYSTEM -> "Auto"
-                                ColorMode.LIGHT -> "Light"
-                                ColorMode.DARK -> "Dark"
-                                ColorMode.DARKAMOLED -> "AMOLED"
-                            },
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            color = scheme.onPrimaryContainer,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
-                        )
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    val modes = listOf(
-                        Triple("Auto", ColorMode.SYSTEM.value, Icons.Rounded.BrightnessAuto),
-                        Triple("Light", ColorMode.LIGHT.value, Icons.Rounded.LightMode),
-                        Triple("Dark", ColorMode.DARK.value, Icons.Rounded.DarkMode),
-                        Triple("AMOLED", ColorMode.DARKAMOLED.value, Icons.Rounded.Android)
+                    Text(
+                        text = "$sliderDimming%",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.primary
                     )
-                    modes.forEach { (name, value, icon) ->
-                        val selected = colorModeValue == value
-                        val pillRadius by animateIntAsState(
-                            targetValue = if (selected) 50 else 28,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioLowBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            ),
-                            label = "ThemeModePillRadius"
-                        )
-                        val shape = RoundedCornerShape(percent = pillRadius)
-                        Surface(
-                            shape = shape,
-                            color = if (selected) scheme.primary else scheme.surfaceContainerHighest,
-                            contentColor = if (selected) scheme.onPrimary else scheme.onSurface,
-                            modifier = Modifier
-                                .weight(1f)
-                                .gamepadFocusOutline(shape = shape, register = true)
-                                .clip(shape)
-                                .clickable {
-                                    colorModeValue = value
-                                    prefs.edit().putInt("color_mode", value).apply()
-                                }
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    imageVector = icon,
-                                    contentDescription = null,
-                                    tint = if (selected) scheme.onPrimary else scheme.primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = name,
-                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                    maxLines = 1
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // 3. App Scale (60% .. 150%, step 5%, default 85%, applies on finger lift)
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = scheme.surfaceContainerHigh,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier.padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = scheme.secondaryContainer,
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Rounded.ZoomIn,
-                                    contentDescription = null,
-                                    tint = scheme.onSecondaryContainer,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                        Column {
-                            Text(
-                                text = "App Scale",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                color = scheme.onSurface
-                            )
-                            Text(
-                                text = "60% downscale to 150% upscale",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = scheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        val stepBtnShape = RoundedCornerShape(12.dp)
-                        Surface(
-                            shape = stepBtnShape,
-                            color = scheme.surfaceContainerHighest,
-                            contentColor = scheme.onSurface,
-                            modifier = Modifier
-                                .size(34.dp)
-                                .gamepadFocusOutline(shape = stepBtnShape, register = true)
-                                .clip(stepBtnShape)
-                                .clickable(enabled = appScalePercent > 60) {
-                                    val next = (appScalePercent - 5).coerceIn(60, 150)
-                                    appScalePercent = next
-                                    sliderScalePercent = next
-                                    prefs.edit().putInt("gamespace_app_scale", next).apply()
-                                }
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Remove,
-                                    contentDescription = "Decrease scale",
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-
-                        Surface(
-                            shape = CircleShape,
-                            color = if (sliderScalePercent == 85) scheme.primaryContainer else scheme.primary,
-                            contentColor = if (sliderScalePercent == 85) scheme.onPrimaryContainer else scheme.onPrimary,
-                            modifier = Modifier
-                                .gamepadFocusOutline(shape = CircleShape, register = true)
-                                .clip(CircleShape)
-                                .clickable {
-                                    appScalePercent = 85
-                                    sliderScalePercent = 85
-                                    prefs.edit().putInt("gamespace_app_scale", 85).apply()
-                                }
-                        ) {
-                            Text(
-                                text = "${sliderScalePercent}%",
-                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.ExtraBold),
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                            )
-                        }
-
-                        Surface(
-                            shape = stepBtnShape,
-                            color = scheme.surfaceContainerHighest,
-                            contentColor = scheme.onSurface,
-                            modifier = Modifier
-                                .size(34.dp)
-                                .gamepadFocusOutline(shape = stepBtnShape, register = true)
-                                .clip(stepBtnShape)
-                                .clickable(enabled = appScalePercent < 150) {
-                                    val next = (appScalePercent + 5).coerceIn(60, 150)
-                                    appScalePercent = next
-                                    sliderScalePercent = next
-                                    prefs.edit().putInt("gamespace_app_scale", next).apply()
-                                }
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Add,
-                                    contentDescription = "Increase scale",
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    }
                 }
 
                 ZenithSlider(
-                    value = sliderScalePercent.toFloat(),
+                    value = sliderDimming.toFloat(),
                     onValueChange = { raw ->
-                        val snapped = ((raw / 5f).roundToInt() * 5).coerceIn(60, 150)
-                        sliderScalePercent = snapped
-                    },
-                    onValueChangeFinished = {
-                        if (sliderScalePercent != appScalePercent) {
-                            appScalePercent = sliderScalePercent
-                            prefs.edit().putInt("gamespace_app_scale", sliderScalePercent).apply()
+                        val snapped = ((raw / 5f).roundToInt() * 5).coerceIn(15, 100)
+                        if (snapped != sliderDimming) {
+                            sliderDimming = snapped
                         }
                     },
-                    valueRange = 60f..150f,
-                    steps = 17,
+                    onValueChangeFinished = {
+                        onDimmingCommitted(sliderDimming)
+                    },
+                    valueRange = 15f..100f,
+                    steps = 16,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(28.dp)
                 )
             }
         }
+    }
+}
 
-        // 4. App Theme Palette (Follow Monet vs Existing Preset Seed Colors)
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = scheme.surfaceContainerHigh,
-            modifier = Modifier.fillMaxWidth()
+@Composable
+private fun ThemeModeSection(
+    colorModeValue: Int,
+    onModeSelected: (Int) -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = scheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "Theme Mode",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.onSurface
+                    )
+                    Text(
+                        text = if (colorModeValue == ColorMode.DARKAMOLED.value) {
+                            "AMOLED mode draws pure black backgrounds where possible"
+                        } else {
+                            "Auto, Light, and Dark follow Monet dynamic surface tones"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant
+                    )
+                }
+                Surface(
+                    shape = CircleShape,
+                    color = scheme.primaryContainer
+                ) {
+                    Text(
+                        text = when (ColorMode.fromValue(colorModeValue)) {
+                            ColorMode.SYSTEM -> "Auto"
+                            ColorMode.LIGHT -> "Light"
+                            ColorMode.DARK -> "Dark"
+                            ColorMode.DARKAMOLED -> "AMOLED"
+                        },
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                val modes = listOf(
+                    Triple("Auto", ColorMode.SYSTEM.value, Icons.Rounded.BrightnessAuto),
+                    Triple("Light", ColorMode.LIGHT.value, Icons.Rounded.LightMode),
+                    Triple("Dark", ColorMode.DARK.value, Icons.Rounded.DarkMode),
+                    Triple("AMOLED", ColorMode.DARKAMOLED.value, Icons.Rounded.Android)
+                )
+                modes.forEach { (name, value, icon) ->
+                    val selected = colorModeValue == value
+                    val pillRadius by animateIntAsState(
+                        targetValue = if (selected) 50 else 28,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioLowBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        ),
+                        label = "ThemeModePillRadius"
+                    )
+                    val shape = RoundedCornerShape(percent = pillRadius)
+                    Surface(
+                        shape = shape,
+                        color = if (selected) scheme.primary else scheme.surfaceContainerHighest,
+                        contentColor = if (selected) scheme.onPrimary else scheme.onSurface,
+                        modifier = Modifier
+                            .weight(1f)
+                            .gamepadFocusOutline(shape = shape, register = true)
+                            .clip(shape)
+                            .clickable { onModeSelected(value) }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = if (selected) scheme.onPrimary else scheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = name,
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppScaleSection(
+    initialScale: Int,
+    onScaleCommitted: (Int) -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    var sliderScalePercent by remember(initialScale) { mutableIntStateOf(initialScale) }
+
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = scheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = scheme.secondaryContainer,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Rounded.ZoomIn,
+                                contentDescription = null,
+                                tint = scheme.onSecondaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    Column {
                         Text(
-                            text = "App Theme Palette",
+                            text = "App Scale",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = scheme.onSurface
                         )
                         Text(
-                            text = if (followMonet) {
-                                "Following system Monet dynamic wallpaper palette"
-                            } else {
-                                val presetLabel = GAMESPACE_PRESET_KEY_COLORS.firstOrNull { it.first == keyColorValue }?.second ?: "Custom"
-                                "Using $presetLabel preset color seed from Personalization"
-                            },
+                            text = "60% downscale to 150% upscale",
                             style = MaterialTheme.typography.bodySmall,
                             color = scheme.onSurfaceVariant
                         )
                     }
+                }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val monetPillShape = RoundedCornerShape(percent = if (followMonet) 50 else 28)
-                        Surface(
-                            shape = monetPillShape,
-                            color = if (followMonet) scheme.primary else scheme.surfaceContainerHighest,
-                            contentColor = if (followMonet) scheme.onPrimary else scheme.onSurface,
-                            modifier = Modifier
-                                .gamepadFocusOutline(shape = monetPillShape, register = true)
-                                .clip(monetPillShape)
-                                .clickable {
-                                    keyColorValue = 0
-                                    prefs.edit().putInt("key_color", 0).apply()
-                                }
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.AutoAwesome,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = "Follow Monet",
-                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
-                                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    val stepBtnShape = RoundedCornerShape(12.dp)
+                    Surface(
+                        shape = stepBtnShape,
+                        color = scheme.surfaceContainerHighest,
+                        contentColor = scheme.onSurface,
+                        modifier = Modifier
+                            .size(34.dp)
+                            .gamepadFocusOutline(shape = stepBtnShape, register = true)
+                            .clip(stepBtnShape)
+                            .clickable(enabled = sliderScalePercent > 60) {
+                                val next = (sliderScalePercent - 5).coerceIn(60, 150)
+                                sliderScalePercent = next
+                                onScaleCommitted(next)
                             }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Rounded.Remove,
+                                contentDescription = "Decrease scale",
+                                modifier = Modifier.size(16.dp)
+                            )
                         }
+                    }
 
-                        val presetPillShape = RoundedCornerShape(percent = if (!followMonet) 50 else 28)
-                        Surface(
-                            shape = presetPillShape,
-                            color = if (!followMonet) scheme.primary else scheme.surfaceContainerHighest,
-                            contentColor = if (!followMonet) scheme.onPrimary else scheme.onSurface,
-                            modifier = Modifier
-                                .gamepadFocusOutline(shape = presetPillShape, register = true)
-                                .clip(presetPillShape)
-                                .clickable {
-                                    if (keyColorValue == 0) {
-                                        val firstPreset = GAMESPACE_PRESET_KEY_COLORS.first().first
-                                        keyColorValue = firstPreset
-                                        prefs.edit().putInt("key_color", firstPreset).apply()
-                                    }
-                                }
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Check,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = "Preset Color",
-                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
-                                )
+                    Surface(
+                        shape = CircleShape,
+                        color = if (sliderScalePercent == 85) scheme.primaryContainer else scheme.primary,
+                        contentColor = if (sliderScalePercent == 85) scheme.onPrimaryContainer else scheme.onPrimary,
+                        modifier = Modifier
+                            .gamepadFocusOutline(shape = CircleShape, register = true)
+                            .clip(CircleShape)
+                            .clickable {
+                                sliderScalePercent = 85
+                                onScaleCommitted(85)
                             }
+                    ) {
+                        Text(
+                            text = "${sliderScalePercent}%",
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.ExtraBold),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
+
+                    Surface(
+                        shape = stepBtnShape,
+                        color = scheme.surfaceContainerHighest,
+                        contentColor = scheme.onSurface,
+                        modifier = Modifier
+                            .size(34.dp)
+                            .gamepadFocusOutline(shape = stepBtnShape, register = true)
+                            .clip(stepBtnShape)
+                            .clickable(enabled = sliderScalePercent < 150) {
+                                val next = (sliderScalePercent + 5).coerceIn(60, 150)
+                                sliderScalePercent = next
+                                onScaleCommitted(next)
+                            }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Rounded.Add,
+                                contentDescription = "Increase scale",
+                                modifier = Modifier.size(16.dp)
+                            )
                         }
                     }
                 }
+            }
 
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(
-                        items = GAMESPACE_PRESET_KEY_COLORS,
-                        key = { it.first }
-                    ) { (colorInt, name) ->
-                        GameSpacePaletteSwatch(
-                            seedColor = Color(colorInt),
-                            label = name,
-                            selected = keyColorValue == colorInt,
-                            isDark = isDarkPreview,
-                            colorSpec = currentColorSpec,
-                            onClick = {
-                                keyColorValue = colorInt
-                                prefs.edit().putInt("key_color", colorInt).apply()
-                            }
-                        )
+            ZenithSlider(
+                value = sliderScalePercent.toFloat(),
+                onValueChange = { raw ->
+                    val snapped = ((raw / 5f).roundToInt() * 5).coerceIn(60, 150)
+                    sliderScalePercent = snapped
+                },
+                onValueChangeFinished = {
+                    onScaleCommitted(sliderScalePercent)
+                },
+                valueRange = 60f..150f,
+                steps = 17,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(28.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun PaletteSection(
+    followMonet: Boolean,
+    keyColorValue: Int,
+    isDarkPreview: Boolean,
+    onFollowMonet: () -> Unit,
+    onSelectPreset: (Int) -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = scheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "App Theme Palette",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.onSurface
+                    )
+                    Text(
+                        text = if (followMonet) {
+                            "Following system Monet dynamic wallpaper palette"
+                        } else {
+                            val presetLabel = GAMESPACE_PRESET_KEY_COLORS.firstOrNull { it.first == keyColorValue }?.second ?: "Custom"
+                            "Using $presetLabel preset color seed from Personalization"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val monetPillShape = RoundedCornerShape(percent = if (followMonet) 50 else 28)
+                    Surface(
+                        shape = monetPillShape,
+                        color = if (followMonet) scheme.primary else scheme.surfaceContainerHighest,
+                        contentColor = if (followMonet) scheme.onPrimary else scheme.onSurface,
+                        modifier = Modifier
+                            .gamepadFocusOutline(shape = monetPillShape, register = true)
+                            .clip(monetPillShape)
+                            .clickable(onClick = onFollowMonet)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.AutoAwesome,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Follow Monet",
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                            )
+                        }
                     }
+
+                    val presetPillShape = RoundedCornerShape(percent = if (!followMonet) 50 else 28)
+                    Surface(
+                        shape = presetPillShape,
+                        color = if (!followMonet) scheme.primary else scheme.surfaceContainerHighest,
+                        contentColor = if (!followMonet) scheme.onPrimary else scheme.onSurface,
+                        modifier = Modifier
+                            .gamepadFocusOutline(shape = presetPillShape, register = true)
+                            .clip(presetPillShape)
+                            .clickable {
+                                if (keyColorValue == 0) {
+                                    val firstPreset = GAMESPACE_PRESET_KEY_COLORS.first().first
+                                    onSelectPreset(firstPreset)
+                                }
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Preset Color",
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                            )
+                        }
+                    }
+                }
+            }
+
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(
+                    items = GAMESPACE_PRESET_KEY_COLORS,
+                    key = { it.first }
+                ) { (colorInt, name) ->
+                    GameSpacePaletteSwatch(
+                        seedColor = Color(colorInt),
+                        label = name,
+                        selected = keyColorValue == colorInt,
+                        isDark = isDarkPreview,
+                        onClick = { onSelectPreset(colorInt) }
+                    )
                 }
             }
         }
@@ -1757,35 +1920,11 @@ internal fun GameSpacePaletteSwatch(
     label: String,
     selected: Boolean,
     isDark: Boolean,
-    colorSpec: ColorEngine,
     onClick: () -> Unit
 ) {
-    val context = LocalContext.current
-
-    val swatchScheme = if (seedColor == Color.Unspecified) {
-        val baseScheme = when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
-                if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            else ->
-                if (isDark) darkColorScheme() else expressiveLightColorScheme()
-        }
-        rememberDynamicColorScheme(
-            seedColor = baseScheme.primary,
-            isDark = isDark,
-            specVersion = colorSpec.librarySpec,
-            primary = baseScheme.primary,
-            secondary = baseScheme.secondary,
-            tertiary = baseScheme.tertiary,
-            neutral = baseScheme.surface,
-            neutralVariant = baseScheme.surfaceVariant,
-            error = baseScheme.error
-        )
-    } else {
-        rememberDynamicColorScheme(
-            seedColor = seedColor,
-            isDark = isDark,
-            specVersion = colorSpec.librarySpec
-        )
+    val currentScheme = MaterialTheme.colorScheme
+    val tones = remember(seedColor, isDark) {
+        computeSwatchTones(seedColor, isDark)
     }
 
     val cornerPercent by animateIntAsState(
@@ -1800,7 +1939,7 @@ internal fun GameSpacePaletteSwatch(
 
     Surface(
         shape = shape,
-        color = if (selected) swatchScheme.primaryContainer else swatchScheme.surfaceContainerHighest,
+        color = if (selected) tones.primaryContainer else currentScheme.surfaceContainerHighest,
         modifier = Modifier
             .width(84.dp)
             .gamepadFocusOutline(shape = shape, register = true)
@@ -1818,19 +1957,19 @@ internal fun GameSpacePaletteSwatch(
             ) {
                 Canvas(modifier = Modifier.size(46.dp)) {
                     drawArc(
-                        color = swatchScheme.primary,
+                        color = tones.primary,
                         startAngle = 180f,
                         sweepAngle = 180f,
                         useCenter = true
                     )
                     drawArc(
-                        color = swatchScheme.tertiaryContainer,
+                        color = tones.tertiaryContainer,
                         startAngle = 0f,
                         sweepAngle = 90f,
                         useCenter = true
                     )
                     drawArc(
-                        color = swatchScheme.secondaryContainer,
+                        color = tones.secondaryContainer,
                         startAngle = 90f,
                         sweepAngle = 90f,
                         useCenter = true
@@ -1840,14 +1979,14 @@ internal fun GameSpacePaletteSwatch(
                 if (selected) {
                     Surface(
                         shape = CircleShape,
-                        color = swatchScheme.primary,
+                        color = tones.primary,
                         modifier = Modifier.size(24.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Rounded.Check,
                                 contentDescription = null,
-                                tint = swatchScheme.onPrimary,
+                                tint = tones.onPrimary,
                                 modifier = Modifier.size(15.dp)
                             )
                         }
@@ -1857,7 +1996,7 @@ internal fun GameSpacePaletteSwatch(
                         modifier = Modifier
                             .size(16.dp)
                             .clip(CircleShape)
-                            .background(swatchScheme.primary)
+                            .background(tones.primary)
                     )
                 }
             }
@@ -1867,7 +2006,7 @@ internal fun GameSpacePaletteSwatch(
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold
                 ),
-                color = if (selected) swatchScheme.onPrimaryContainer else swatchScheme.onSurfaceVariant,
+                color = if (selected) tones.onPrimaryContainer else currentScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
