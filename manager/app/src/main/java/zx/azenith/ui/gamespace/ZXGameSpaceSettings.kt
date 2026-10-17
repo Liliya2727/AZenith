@@ -83,6 +83,7 @@ import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
+import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.Gavel
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.HourglassEmpty
@@ -712,97 +713,7 @@ internal fun SettingsTweaksPane(
     }
 }
 
-private data class SwatchTones(
-    val primary: Color,
-    val primaryContainer: Color,
-    val onPrimary: Color,
-    val onPrimaryContainer: Color,
-    val secondaryContainer: Color,
-    val tertiaryContainer: Color
-)
 
-private val SWATCH_TONES_CACHE = java.util.concurrent.ConcurrentHashMap<Long, SwatchTones>()
-
-private fun colorToHsl(color: Color): FloatArray {
-    val r = color.red
-    val g = color.green
-    val b = color.blue
-    val max = maxOf(r, maxOf(g, b))
-    val min = minOf(r, minOf(g, b))
-    val d = max - min
-    var h = 0f
-    val l = (max + min) / 2f
-    val s = if (max == min) 0f else if (l > 0.5f) d / (2f - max - min) else d / (max + min)
-    if (max != min) {
-        h = when (max) {
-            r -> (g - b) / d + (if (g < b) 6f else 0f)
-            g -> (b - r) / d + 2f
-            else -> (r - g) / d + 4f
-        } * 60f
-    }
-    return floatArrayOf(h, s, l)
-}
-
-private fun hslToColor(h: Float, s: Float, l: Float, alpha: Float = 1f): Color {
-    val normalizedH = ((h % 360f) + 360f) % 360f
-    val c = (1f - kotlin.math.abs(2f * l - 1f)) * s
-    val x = c * (1f - kotlin.math.abs((normalizedH / 60f) % 2f - 1f))
-    val m = l - c / 2f
-    val (rPrime, gPrime, bPrime) = when ((normalizedH / 60f).toInt()) {
-        0 -> Triple(c, x, 0f)
-        1 -> Triple(x, c, 0f)
-        2 -> Triple(0f, c, x)
-        3 -> Triple(0f, x, c)
-        4 -> Triple(x, 0f, c)
-        else -> Triple(c, 0f, x)
-    }
-    return Color(
-        red = (rPrime + m).coerceIn(0f, 1f),
-        green = (gPrime + m).coerceIn(0f, 1f),
-        blue = (bPrime + m).coerceIn(0f, 1f),
-        alpha = alpha
-    )
-}
-
-private fun computeSwatchTones(seedColor: Color, isDark: Boolean): SwatchTones {
-    val cacheKey = (seedColor.value.toLong() shl 1) or (if (isDark) 1L else 0L)
-    return SWATCH_TONES_CACHE.getOrPut(cacheKey) {
-        val hsl = colorToHsl(seedColor)
-        val h = hsl[0]
-        val s = hsl[1]
-        val l = hsl[2]
-        val primary = seedColor
-        val primaryContainer = if (isDark) {
-            hslToColor(h, (s * 0.65f).coerceIn(0.2f, 0.75f), 0.22f)
-        } else {
-            hslToColor(h, (s * 0.70f).coerceIn(0.2f, 0.75f), 0.88f)
-        }
-        val onPrimaryContainer = if (isDark) {
-            hslToColor(h, (s * 0.75f).coerceIn(0.3f, 0.85f), 0.88f)
-        } else {
-            hslToColor(h, (s * 0.85f).coerceIn(0.3f, 0.85f), 0.16f)
-        }
-        val secondaryContainer = if (isDark) {
-            hslToColor(h, (s * 0.35f).coerceIn(0.12f, 0.45f), 0.28f)
-        } else {
-            hslToColor(h, (s * 0.35f).coerceIn(0.12f, 0.45f), 0.84f)
-        }
-        val tertiaryContainer = if (isDark) {
-            hslToColor((h + 60f) % 360f, (s * 0.45f).coerceIn(0.15f, 0.55f), 0.30f)
-        } else {
-            hslToColor((h + 60f) % 360f, (s * 0.45f).coerceIn(0.15f, 0.55f), 0.84f)
-        }
-        val onPrimary = if (l > 0.6f) Color.Black else Color.White
-        SwatchTones(
-            primary = primary,
-            primaryContainer = primaryContainer,
-            onPrimary = onPrimary,
-            onPrimaryContainer = onPrimaryContainer,
-            secondaryContainer = secondaryContainer,
-            tertiaryContainer = tertiaryContainer
-        )
-    }
-}
 
 @Composable
 internal fun SettingsAppearancePane() {
@@ -855,6 +766,10 @@ internal fun SettingsAppearancePane() {
         mutableIntStateOf(prefs.getInt("gamespace_wallpaper_dimming_intensity", 75).coerceIn(15, 100))
     }
 
+    var colorSpec by remember {
+        mutableStateOf(ColorEngine.fromPersisted(prefs.getString("color_spec", null)))
+    }
+
     DisposableEffect(prefs) {
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             when (key) {
@@ -872,6 +787,9 @@ internal fun SettingsAppearancePane() {
                 }
                 "color_mode" -> {
                     colorModeValue = prefs.getInt("color_mode", ColorMode.SYSTEM.value)
+                }
+                "color_spec" -> {
+                    colorSpec = ColorEngine.fromPersisted(prefs.getString("color_spec", null))
                 }
                 "key_color" -> {
                     keyColorValue = prefs.getInt("key_color", 0)
@@ -967,6 +885,7 @@ internal fun SettingsAppearancePane() {
             followMonet = followMonet,
             keyColorValue = keyColorValue,
             isDarkPreview = isDarkPreview,
+            colorSpec = colorSpec,
             onFollowMonet = {
                 keyColorValue = 0
                 prefs.edit().putInt("key_color", 0).apply()
@@ -1794,10 +1713,22 @@ private fun PaletteSection(
     followMonet: Boolean,
     keyColorValue: Int,
     isDarkPreview: Boolean,
+    colorSpec: ColorEngine = ColorEngine.Default,
     onFollowMonet: () -> Unit,
     onSelectPreset: (Int) -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
+    val initialVisibleCount = 6
+    val isSelectionInOverflow = remember(keyColorValue) {
+        GAMESPACE_PRESET_KEY_COLORS.drop(initialVisibleCount).any { it.first == keyColorValue }
+    }
+    var showAllPresets by remember { mutableStateOf(isSelectionInOverflow) }
+    val effectiveShowAll = showAllPresets || isSelectionInOverflow
+    val displayedPresets = if (effectiveShowAll) {
+        GAMESPACE_PRESET_KEY_COLORS
+    } else {
+        GAMESPACE_PRESET_KEY_COLORS.take(initialVisibleCount)
+    }
 
     Surface(
         shape = RoundedCornerShape(24.dp),
@@ -1898,7 +1829,7 @@ private fun PaletteSection(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(
-                    items = GAMESPACE_PRESET_KEY_COLORS,
+                    items = displayedPresets,
                     key = { it.first }
                 ) { (colorInt, name) ->
                     GameSpacePaletteSwatch(
@@ -1906,8 +1837,99 @@ private fun PaletteSection(
                         label = name,
                         selected = keyColorValue == colorInt,
                         isDark = isDarkPreview,
+                        colorSpec = colorSpec,
                         onClick = { onSelectPreset(colorInt) }
                     )
+                }
+
+                if (!effectiveShowAll) {
+                    item(key = "load_more_presets") {
+                        val shape = RoundedCornerShape(percent = 24)
+                        Surface(
+                            shape = shape,
+                            color = scheme.surfaceContainerHighest,
+                            modifier = Modifier
+                                .width(84.dp)
+                                .height(112.dp)
+                                .gamepadFocusOutline(shape = shape, register = true)
+                                .clip(shape)
+                                .clickable { showAllPresets = true }
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 8.dp, vertical = 12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = scheme.primaryContainer,
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Add,
+                                            contentDescription = "Load more presets",
+                                            tint = scheme.onPrimaryContainer,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "+${GAMESPACE_PRESET_KEY_COLORS.size - initialVisibleCount} More",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.onSurface,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
+                } else if (!isSelectionInOverflow) {
+                    item(key = "show_less_presets") {
+                        val shape = RoundedCornerShape(percent = 24)
+                        Surface(
+                            shape = shape,
+                            color = scheme.surfaceContainerHighest,
+                            modifier = Modifier
+                                .width(84.dp)
+                                .height(112.dp)
+                                .gamepadFocusOutline(shape = shape, register = true)
+                                .clip(shape)
+                                .clickable { showAllPresets = false }
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 8.dp, vertical = 12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = scheme.surfaceContainerHigh,
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.ExpandLess,
+                                            contentDescription = "Show less presets",
+                                            tint = scheme.onSurfaceVariant,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Show Less",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.onSurfaceVariant,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -1920,12 +1942,15 @@ internal fun GameSpacePaletteSwatch(
     label: String,
     selected: Boolean,
     isDark: Boolean,
+    colorSpec: ColorEngine = ColorEngine.Default,
     onClick: () -> Unit
 ) {
     val currentScheme = MaterialTheme.colorScheme
-    val tones = remember(seedColor, isDark) {
-        computeSwatchTones(seedColor, isDark)
-    }
+    val swatchScheme = rememberDynamicColorScheme(
+        seedColor = seedColor,
+        isDark = isDark,
+        specVersion = colorSpec.librarySpec
+    )
 
     val cornerPercent by animateIntAsState(
         targetValue = if (selected) 36 else 24,
@@ -1939,7 +1964,7 @@ internal fun GameSpacePaletteSwatch(
 
     Surface(
         shape = shape,
-        color = if (selected) tones.primaryContainer else currentScheme.surfaceContainerHighest,
+        color = if (selected) swatchScheme.primaryContainer else currentScheme.surfaceContainerHighest,
         modifier = Modifier
             .width(84.dp)
             .gamepadFocusOutline(shape = shape, register = true)
@@ -1957,19 +1982,19 @@ internal fun GameSpacePaletteSwatch(
             ) {
                 Canvas(modifier = Modifier.size(46.dp)) {
                     drawArc(
-                        color = tones.primary,
+                        color = swatchScheme.primary,
                         startAngle = 180f,
                         sweepAngle = 180f,
                         useCenter = true
                     )
                     drawArc(
-                        color = tones.tertiaryContainer,
+                        color = swatchScheme.tertiaryContainer,
                         startAngle = 0f,
                         sweepAngle = 90f,
                         useCenter = true
                     )
                     drawArc(
-                        color = tones.secondaryContainer,
+                        color = swatchScheme.secondaryContainer,
                         startAngle = 90f,
                         sweepAngle = 90f,
                         useCenter = true
@@ -1979,14 +2004,14 @@ internal fun GameSpacePaletteSwatch(
                 if (selected) {
                     Surface(
                         shape = CircleShape,
-                        color = tones.primary,
+                        color = swatchScheme.primary,
                         modifier = Modifier.size(24.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Rounded.Check,
                                 contentDescription = null,
-                                tint = tones.onPrimary,
+                                tint = swatchScheme.onPrimary,
                                 modifier = Modifier.size(15.dp)
                             )
                         }
@@ -1996,7 +2021,7 @@ internal fun GameSpacePaletteSwatch(
                         modifier = Modifier
                             .size(16.dp)
                             .clip(CircleShape)
-                            .background(tones.primary)
+                            .background(swatchScheme.primary)
                     )
                 }
             }
@@ -2006,7 +2031,7 @@ internal fun GameSpacePaletteSwatch(
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold
                 ),
-                color = if (selected) tones.onPrimaryContainer else currentScheme.onSurfaceVariant,
+                color = if (selected) swatchScheme.onPrimaryContainer else currentScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
