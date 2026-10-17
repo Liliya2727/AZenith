@@ -874,11 +874,16 @@ private fun ZXGameSpaceQuickSettingsOverlay(
     }
 
     // Connectivity state sampling
-    val activeNet = connectivityManager?.activeNetwork
-    val caps = connectivityManager?.getNetworkCapabilities(activeNet)
-    val isWifi = caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
-    val isCellular = caps?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true
-    val isNetConnected = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+    val (isWifi, isCellular, isNetConnected) = remember(connectivityManager) {
+        runCatching {
+            val activeNet = connectivityManager?.activeNetwork
+            val caps = connectivityManager?.getNetworkCapabilities(activeNet)
+            val wifi = caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+            val cellular = caps?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true
+            val connected = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+            Triple(wifi, cellular, connected)
+        }.getOrDefault(Triple(false, false, false))
+    }
 
     // Bluetooth state
     val isBtEnabled = runCatching { bluetoothManager?.adapter?.isEnabled == true }.getOrDefault(false)
