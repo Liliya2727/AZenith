@@ -20,6 +20,7 @@ package zx.azenith.ui.gamespace
 
 import android.content.Context
 import android.content.Intent
+import zx.azenith.ui.theme.ColorMode
 import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -41,6 +42,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -948,9 +951,9 @@ internal fun ZXGameSpaceWallpaperOverlay(
             mutableIntStateOf(if (isHome) context.getHomeWallpaperBlur() else context.getGameWallpaperBlur(pkg))
         }
 
+        val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
         val systemDim = remember {
-            context.getSharedPreferences("settings", Context.MODE_PRIVATE)
-                .getInt("gamespace_wallpaper_dimming_intensity", 75)
+            prefs.getInt("gamespace_wallpaper_dimming_intensity", 75)
         }
 
         val imagePicker = rememberLauncherForActivityResult(
@@ -1024,16 +1027,22 @@ internal fun ZXGameSpaceWallpaperOverlay(
                         color = scheme.surfaceContainerLow.copy(alpha = 0.90f),
                         contentColor = scheme.onSurface,
                         modifier = Modifier
-                            .width(264.dp)
+                            .width(272.dp)
                             .fillMaxHeight()
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(18.dp),
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f, fill = false)
+                                    .verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically,
@@ -1060,13 +1069,13 @@ internal fun ZXGameSpaceWallpaperOverlay(
 
                                 // App / Home Identity card
                                 Surface(
-                                    shape = RoundedCornerShape(20.dp),
+                                    shape = RoundedCornerShape(18.dp),
                                     color = scheme.surfaceContainerHigh,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Column(
-                                        modifier = Modifier.padding(14.dp),
-                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
@@ -1184,7 +1193,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                             }
                                     ) {
                                         Row(
-                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                                         ) {
@@ -1253,7 +1262,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                         }
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
@@ -1295,18 +1304,19 @@ internal fun ZXGameSpaceWallpaperOverlay(
 
                             // Bottom Quick Actions: Launch & System Info (only for apps)
                             if (!isHome) {
+                                Spacer(Modifier.height(10.dp))
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    val launchShape = RoundedCornerShape(16.dp)
+                                    val launchShape = RoundedCornerShape(14.dp)
                                     Surface(
                                         shape = launchShape,
                                         color = scheme.primary,
                                         contentColor = scheme.onPrimary,
                                         modifier = Modifier
                                             .weight(1f)
-                                            .height(44.dp)
+                                            .height(42.dp)
                                             .gamepadFocusOutline(shape = launchShape, register = true)
                                             .clip(launchShape)
                                             .clickable {
@@ -1337,13 +1347,13 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                         }
                                     }
 
-                                    val infoShape = RoundedCornerShape(16.dp)
+                                    val infoShape = RoundedCornerShape(14.dp)
                                     Surface(
                                         shape = infoShape,
                                         color = scheme.secondaryContainer,
                                         contentColor = scheme.onSecondaryContainer,
                                         modifier = Modifier
-                                            .size(44.dp)
+                                            .size(42.dp)
                                             .gamepadFocusOutline(shape = infoShape, register = true)
                                             .clip(infoShape)
                                             .clickable {
@@ -1513,7 +1523,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                                 }
                                                             }
 
-                                                            val isAmoled = scheme.surfaceContainerLowest == Color.Black
+                                                            val isAmoled = prefs.getInt("color_mode", ColorMode.SYSTEM.value) == ColorMode.DARKAMOLED.value
                                                             val previewBaseDim = if (isAmoled) Color.Black else scheme.surfaceContainerLowest
                                                             val effectiveDim = if (isHome) wallpaperDim else if (wallpaperDim >= 0) wallpaperDim else systemDim
                                                             val previewDimScale = (effectiveDim / 75f).coerceIn(0.15f, 1.45f)
