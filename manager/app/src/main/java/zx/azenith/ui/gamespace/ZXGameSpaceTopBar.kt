@@ -74,6 +74,7 @@ import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Thermostat
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -131,7 +132,7 @@ private const val SEARCH_RESULT_CAP = 6
 internal fun ZXGameSpaceTopBar(
     selectedCategory: TopCategory,
     clock: String,
-    battery: Pair<Int, Boolean>,
+    battery: BatteryState,
     isHomeLogoGone: Boolean = false,
     onSelectCategory: (TopCategory) -> Unit,
     searchOpen: Boolean = false,
@@ -553,8 +554,8 @@ internal fun ZXGameSpaceTopBar(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        val isCharging = battery.second
-                        val isLow = battery.first <= 20
+                        val isCharging = battery.isCharging
+                        val isLow = battery.level <= 20
                         val batteryColor = when {
                             isCharging -> scheme.primary
                             isLow -> scheme.error
@@ -571,12 +572,46 @@ internal fun ZXGameSpaceTopBar(
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
-                            text = "${battery.first}%",
+                            text = "${battery.level}%",
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontWeight = FontWeight.Bold
                             ),
                             color = batteryColor
                         )
+                    }
+
+                    val tempC = battery.temperatureC
+                    if (tempC != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(3.5.dp)
+                                .clip(CircleShape)
+                                .background(scheme.outlineVariant.copy(alpha = 0.7f))
+                        )
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            val tempColor = when {
+                                tempC >= 45f -> scheme.error
+                                tempC >= 39f -> Color(0xFFFF9800)
+                                else -> scheme.onSurfaceVariant
+                            }
+                            Icon(
+                                imageVector = Icons.Rounded.Thermostat,
+                                contentDescription = "Battery Temperature",
+                                tint = tempColor,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Text(
+                                text = "${tempC.roundToInt()}°C",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = tempColor
+                            )
+                        }
                     }
                 }
             }

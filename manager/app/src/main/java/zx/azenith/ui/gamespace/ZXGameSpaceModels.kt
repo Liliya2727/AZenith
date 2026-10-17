@@ -19,6 +19,9 @@ package zx.azenith.ui.gamespace
 import android.app.ActivityManager
 import android.bluetooth.BluetoothManager
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import java.io.File
 import android.hardware.input.InputManager
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
@@ -529,26 +532,74 @@ internal fun rememberClock(): String {
     return remember(now) { now.format(DateTimeFormatter.ofPattern("HH:mm")) }
 }
 
+data class BatteryState(
+    val level: Int,
+    val isCharging: Boolean,
+    val temperatureC: Float? = null
+) {
+    val first: Int get() = level
+    val second: Boolean get() = isCharging
+}
+
 @Composable
-internal fun rememberBatteryState(): Pair<Int, Boolean> {
+internal fun rememberBatteryState(): BatteryState {
     val context = LocalContext.current
     var state by remember { mutableStateOf(readBattery(context)) }
     LaunchedEffect(Unit) {
         while (true) {
             state = readBattery(context)
-            delay(30_000)
+            delay(10_000)
         }
     }
     return state
 }
 
-internal fun readBattery(context: Context): Pair<Int, Boolean> {
-    val manager = context.getSystemService(BatteryManager::class.java) ?: return 0 to false
-    val level = manager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-    val status = manager.getIntProperty(BatteryManager.BATTERY_PROPERTY_STATUS)
-    val charging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
-        status == BatteryManager.BATTERY_STATUS_FULL
-    return level to charging
+internal fun readBattery(context: Context): BatteryState {
+    var level = 0
+    var charging = false
+    var tempC: Float? = null
+
+    try {
+        val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        if (intent != null) {
+            val rawLevel = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+            if (rawLevel >= 0 && scale > 0) {
+                level = (rawLevel * 100) / scale
+            }
+            val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+            charging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                status == BatteryManager.BATTERY_STATUS_FULL
+            val rawTemp = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
+            if (rawTemp != Int.MIN_VALUE && rawTemp > -500 && rawTemp < 1500) {
+                tempC = rawTemp / 10f
+            }
+        }
+    } catch (_: Exception) {}
+
+    if (level <= 0) {
+        val manager = context.getSystemService(BatteryManager::class.java)
+        if (manager != null) {
+            level = manager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY).coerceIn(0, 100)
+            val status = manager.getIntProperty(BatteryManager.BATTERY_PROPERTY_STATUS)
+            charging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                status == BatteryManager.BATTERY_STATUS_FULL
+        }
+    }
+
+    if (tempC == null) {
+        try {
+            val sysfs = File("/sys/class/power_supply/battery/temp")
+            if (sysfs.canRead()) {
+                val raw = sysfs.readText().trim().toIntOrNull()
+                if (raw != null) {
+                    tempC = if (raw > 1000) raw / 1000f else raw / 10f
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
+    return BatteryState(level = level, isCharging = charging, temperatureC = tempC)
 }
 
 @Composable

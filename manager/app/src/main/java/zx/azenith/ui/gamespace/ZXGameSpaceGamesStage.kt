@@ -1936,7 +1936,7 @@ internal fun TrophyStatColumn(
 
 @Composable
 internal fun HardwareRingsBentoCard(
-    battery: Pair<Int, Boolean>,
+    battery: BatteryState,
     ramState: Pair<Float, String>,
     refreshHz: Int,
     onClick: () -> Unit,
