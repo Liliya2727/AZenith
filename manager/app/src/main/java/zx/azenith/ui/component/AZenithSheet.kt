@@ -204,7 +204,7 @@ private fun AZenithSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = Color.Transparent,
-        scrimColor = Color.Black.copy(alpha = 0.42f),
+        scrimColor = if (scheme.surfaceContainerLowest == Color.Black) Color.Black.copy(alpha = 0.5f) else scheme.scrim.copy(alpha = 0.32f),
         shape = shape,
         dragHandle = null,
         // The sheet is its own dialog window, so its system-bar appearance is

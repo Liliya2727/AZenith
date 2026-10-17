@@ -381,7 +381,7 @@ fun BypassChargeCheckScreen(navController: NavController) {
                                     .heightIn(max = 280.dp)
                                     .nestedScroll(blockParentScroll), 
                                 shape = RoundedCornerShape(26.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F141C))
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                             ) {
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     SelectionContainer {

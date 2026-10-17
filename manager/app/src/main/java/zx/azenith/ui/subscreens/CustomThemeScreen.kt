@@ -1794,10 +1794,12 @@ private fun MockBlurDialog(
     if (scrimAlpha == 0f && cardAlpha == 0f) return
 
     Box(modifier) {
+        val amoled = MaterialTheme.colorScheme.surfaceContainerLowest == Color.Black
+        val scrimCol = if (amoled) Color.Black else MaterialTheme.colorScheme.scrim
         Box(
             Modifier
                 .matchParentSize()
-                .background(Color.Black.copy(alpha = scrimAlpha))
+                .background(scrimCol.copy(alpha = scrimAlpha))
         )
         Surface(
             modifier = Modifier

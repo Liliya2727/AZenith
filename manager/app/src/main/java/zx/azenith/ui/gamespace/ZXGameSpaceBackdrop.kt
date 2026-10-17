@@ -62,6 +62,7 @@ import zx.azenith.ui.component.AppIconCache
 import zx.azenith.ui.component.MediaBannerRenderer
 import zx.azenith.ui.util.getGameWallpaperMode
 import zx.azenith.ui.util.getGameWallpaperUri
+import zx.azenith.ui.theme.ColorMode
 import zx.azenith.ui.util.getHeaderImage
 
 /**
@@ -72,9 +73,9 @@ import zx.azenith.ui.util.getHeaderImage
 internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
-    val isAmoled = scheme.surfaceContainerLowest == Color.Black
-
     val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    val isAmoled = remember { prefs.getInt("color_mode", ColorMode.SYSTEM.value) == ColorMode.DARKAMOLED.value }
+
     var customWallpaperUri by remember { mutableStateOf(context.getHeaderImage()) }
     var gameWallpaperTrigger by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     var dimmingIntensity by remember {

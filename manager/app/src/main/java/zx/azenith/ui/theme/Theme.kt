@@ -252,7 +252,21 @@ fun AZenithTheme(
             surfaceContainerLow = Color(0xFF0A0A0A)
         )
     } else {
-        rawColorScheme
+        // Enforce true Material 3 tonal dark surfaces: NEVER pitch black unless AMOLED mode is explicitly enabled
+        if (darkTheme && (rawColorScheme.surfaceContainerLowest == Color.Black || rawColorScheme.surface == Color.Black || rawColorScheme.background == Color.Black)) {
+            val safeSurface = if (rawColorScheme.surface == Color.Black) Color(0xFF141218) else rawColorScheme.surface
+            val safeLowest = if (rawColorScheme.surfaceContainerLowest == Color.Black) Color(0xFF0F0D13) else rawColorScheme.surfaceContainerLowest
+            val safeBackground = if (rawColorScheme.background == Color.Black) safeSurface else rawColorScheme.background
+            val safeDim = if (rawColorScheme.surfaceDim == Color.Black) safeSurface else rawColorScheme.surfaceDim
+            rawColorScheme.copy(
+                background = safeBackground,
+                surface = safeSurface,
+                surfaceDim = safeDim,
+                surfaceContainerLowest = safeLowest
+            )
+        } else {
+            rawColorScheme
+        }
     }
 
     val view = androidx.compose.ui.platform.LocalView.current

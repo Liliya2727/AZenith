@@ -205,11 +205,13 @@ fun ScreenWrapper(
         content()
 
         // Dim Layer Overlay
+        val amoled = MaterialTheme.colorScheme.surfaceContainerLowest == Color.Black
+        val dimColor = if (amoled) Color.Black else MaterialTheme.colorScheme.scrim
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer { alpha = animatedDimAlpha }
-                .background(Color.Black)
+                .background(dimColor)
         )
     }
 }

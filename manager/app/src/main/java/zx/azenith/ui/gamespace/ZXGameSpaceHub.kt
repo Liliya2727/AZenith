@@ -18,6 +18,7 @@ package zx.azenith.ui.gamespace
 
 import android.content.Context
 import android.view.KeyEvent
+import zx.azenith.ui.theme.ColorMode
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -273,7 +274,7 @@ fun ZXGameSpaceHub(
             )
         }
 
-        val isAmoled = scheme.surfaceContainerLowest == Color.Black
+        val isAmoled = remember { prefs.getInt("color_mode", ColorMode.SYSTEM.value) == ColorMode.DARKAMOLED.value }
         val isHomescreenScrolled = category == TopCategory.Games && activeEntry == RibbonEntry.Welcome && (homeExpanded || welcomeScroll.value > 10)
         val isLibrary = category == TopCategory.Games && (activeEntry == RibbonEntry.Library || libraryExpanded)
         val isSettings = category == TopCategory.Settings

@@ -146,10 +146,12 @@ fun AZenithDialog(
             enter = if (dialogsAnimated) Motion.scrimEnter() else EnterTransition.None,
             exit = if (dialogsAnimated) Motion.scrimExit() else ExitTransition.None
         ) {
+            val amoled = MaterialTheme.colorScheme.surfaceContainerLowest == Color.Black
+            val scrimColor = if (amoled) Color.Black.copy(alpha = 0.5f) else MaterialTheme.colorScheme.scrim.copy(alpha = 0.32f)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.42f))
+                    .background(scrimColor)
                     // Tapping the scrim dismisses, but it must not be a d-pad stop:
                     // it covers the screen, so focus would land on the dim layer.
                     .focusProperties { canFocus = false }
