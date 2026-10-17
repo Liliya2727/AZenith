@@ -78,17 +78,21 @@ import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.CleaningServices
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
+import androidx.compose.material.icons.rounded.Gavel
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.HourglassEmpty
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.LibraryBooks
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.RestartAlt
@@ -104,10 +108,14 @@ import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material.icons.rounded.WebStories
 import androidx.compose.material.icons.rounded.ZoomIn
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -143,9 +151,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
+import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
+import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.blur.HazeBlurStyle
@@ -1873,12 +1885,15 @@ internal fun SettingsAboutPane(
     val scheme = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
 
+    var showLicensesDialog by remember { mutableStateOf(false) }
+    var showLibrariesDialog by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
             .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Column {
             Text(
@@ -1887,161 +1902,527 @@ internal fun SettingsAboutPane(
                 color = scheme.onSurface
             )
             Text(
-                text = "Project information, architecture specifications, and community links",
+                text = "Project information, credits, open-source licenses, and community links",
                 style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant.copy(alpha = 0.8f)
             )
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        // 1. Hero App Info & Community Links Bento Card
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Surface(
-                shape = RoundedCornerShape(22.dp),
-                color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        Image(
-                            painter = rememberDrawablePainter(
-                                context.applicationInfo.loadIcon(context.packageManager)
-                            ),
-                            contentDescription = stringResource(R.string.app_name),
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(scheme.primaryContainer)
-                        )
+                    Image(
+                        painter = rememberDrawablePainter(
+                            context.applicationInfo.loadIcon(context.packageManager)
+                        ),
+                        contentDescription = stringResource(R.string.app_name),
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(scheme.surfaceVariant)
+                    )
 
-                        Column {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.app_name),
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Black),
+                            color = scheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = stringResource(R.string.str_version_buildconfig_version_na, BuildConfig.VERSION_NAME),
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                            color = scheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (deviceName.isNotBlank() || chipsetName.isNotBlank()) {
                             Text(
-                                text = stringResource(R.string.app_name),
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black),
-                                color = scheme.onSurface
-                            )
-                            Text(
-                                text = stringResource(R.string.str_version_buildconfig_version_na, BuildConfig.VERSION_NAME),
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                                color = scheme.primary
-                            )
-                            Text(
-                                text = "$deviceName · $chipsetName",
+                                text = listOf(deviceName, chipsetName).filter { it.isNotBlank() }.joinToString(" · "),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = scheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                color = scheme.onSurfaceVariant.copy(alpha = 0.85f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    val btnShape = RoundedCornerShape(16.dp)
+                    Surface(
+                        shape = btnShape,
+                        color = scheme.primaryContainer,
+                        contentColor = scheme.onPrimaryContainer,
+                        modifier = Modifier
+                            .weight(1f)
+                            .gamepadFocusOutline(shape = btnShape, register = true)
+                            .clip(btnShape)
+                            .clickable { uriHandler.openUri("https://t.me/ArchHavenDisc") }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_telegram),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.str_support_group),
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
 
-                    HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
+                    Surface(
+                        shape = btnShape,
+                        color = scheme.surfaceContainerHighest,
+                        contentColor = scheme.onSurface,
+                        modifier = Modifier
+                            .weight(1f)
+                            .gamepadFocusOutline(shape = btnShape, register = true)
+                            .clip(btnShape)
+                            .clickable { uriHandler.openUri("https://t.me/ZeshArch") }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_telegram),
+                                contentDescription = null,
+                                tint = scheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.str_update_channel),
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Open Source Section
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                text = stringResource(R.string.str_open_source).uppercase(),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.2.sp
+                ),
+                color = scheme.primary,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+
+            SettingsActionCard(
+                icon = Icons.Rounded.Gavel,
+                title = stringResource(R.string.str_licenses),
+                summary = stringResource(R.string.str_apache_license_2),
+                trailingBadge = "Apache 2.0",
+                onClick = { showLicensesDialog = true }
+            )
+
+            SettingsActionCard(
+                icon = Icons.Rounded.LibraryBooks,
+                title = stringResource(R.string.str_libraries_used),
+                summary = stringResource(R.string.str_libraries_hint),
+                onClick = { showLibrariesDialog = true }
+            )
+
+            SettingsActionCard(
+                icon = Icons.Rounded.Code,
+                title = stringResource(R.string.str_source_code),
+                summary = stringResource(R.string.str_view_the_source_code_on_github),
+                onClick = { uriHandler.openUri("https://github.com/Liliya2727/AZenith") }
+            )
+        }
+
+        // 3. Maintainer Section
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                text = stringResource(R.string.str_maintainer).uppercase(),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.2.sp
+                ),
+                color = scheme.primary,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+
+            DeveloperCreditCard(
+                avatarRes = R.drawable.avatar_liliya,
+                name = stringResource(R.string.str_liliya),
+                role = stringResource(R.string.str_creator_maintainer),
+                githubUrl = "https://github.com/Liliya2727",
+                telegramUrl = "https://t.me/Zexshia",
+                onOpenUrl = { uriHandler.openUri(it) }
+            )
+        }
+
+        // 4. Collaborators Section
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                text = stringResource(R.string.str_collaborators).uppercase(),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.2.sp
+                ),
+                color = scheme.primary,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+
+            DeveloperCreditCard(
+                avatarRes = R.drawable.avatar_xia,
+                name = stringResource(R.string.str_rianixia),
+                role = stringResource(R.string.str_co_maintainer),
+                githubUrl = "https://github.com/ryanistr",
+                telegramUrl = "https://t.me/rianixia",
+                onOpenUrl = { uriHandler.openUri(it) }
+            )
+
+            DeveloperCreditCard(
+                avatarRes = R.drawable.avatar_kanao,
+                name = stringResource(R.string.str_kanaochar),
+                role = stringResource(R.string.str_co_maintainer),
+                githubUrl = "https://github.com/kanaodnd",
+                telegramUrl = "https://t.me/kanaochar",
+                onOpenUrl = { uriHandler.openUri(it) }
+            )
+        }
+    }
+
+    if (showLicensesDialog) {
+        Dialog(
+            onDismissRequest = { showLicensesDialog = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = scheme.surfaceContainerHigh,
+                contentColor = scheme.onSurface,
+                modifier = Modifier
+                    .fillMaxWidth(0.72f)
+                    .padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(22.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = scheme.primaryContainer,
+                                contentColor = scheme.onPrimaryContainer,
+                                modifier = Modifier.size(46.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Gavel,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    text = stringResource(R.string.str_apache_license_2),
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.onSurface
+                                )
+                                Text(
+                                    text = stringResource(R.string.str_license_copyright),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = scheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        IconButton(onClick = { showLicensesDialog = false }) {
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                contentDescription = null,
+                                tint = scheme.onSurfaceVariant
+                            )
+                        }
+                    }
 
                     Text(
-                        text = "COMMUNITY & CODE",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.2.sp
-                        ),
-                        color = scheme.primary
+                        text = stringResource(R.string.str_project_license_desc),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = scheme.onSurfaceVariant
                     )
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        SettingsActionCard(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Rounded.Code,
-                            title = "GitHub",
-                            summary = "Source repository",
-                            onClick = { uriHandler.openUri("https://github.com/Liliya2727/AZenith") }
-                        )
-                        SettingsActionCard(
-                            modifier = Modifier.weight(1f),
-                            icon = Icons.Rounded.Share,
-                            title = "Telegram",
-                            summary = "Discussion group",
-                            onClick = { uriHandler.openUri("https://t.me/ArchHavenDisc") }
-                        )
+                        FilledTonalButton(
+                            onClick = { uriHandler.openUri("https://www.apache.org/licenses/LICENSE-2.0") },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.OpenInNew,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.str_view_full_license),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = { uriHandler.openUri("https://github.com/Liliya2727/AZenith/blob/main/LICENSE") },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_github),
+                                contentDescription = stringResource(R.string.cd_github),
+                                modifier = Modifier.size(18.dp),
+                                tint = scheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.str_view_on_github),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
+
+                    SettingsActionCard(
+                        icon = Icons.Rounded.LibraryBooks,
+                        title = stringResource(R.string.str_libraries_used),
+                        summary = stringResource(R.string.str_libraries_hint),
+                        onClick = {
+                            showLicensesDialog = false
+                            showLibrariesDialog = true
+                        }
+                    )
                 }
             }
+        }
+    }
 
+    if (showLibrariesDialog) {
+        val libraries by produceLibraries(R.raw.aboutlibraries)
+        Dialog(
+            onDismissRequest = { showLibrariesDialog = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
             Surface(
-                shape = RoundedCornerShape(22.dp),
-                color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                shape = RoundedCornerShape(28.dp),
+                color = scheme.surfaceContainerHigh,
+                contentColor = scheme.onSurface,
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
+                    .fillMaxWidth(0.84f)
+                    .fillMaxHeight(0.86f)
             ) {
-                Column(
-                    modifier = Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.str_maintainer).uppercase(),
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.2.sp
-                        ),
-                        color = scheme.primary
-                    )
-
+                Column(modifier = Modifier.fillMaxSize()) {
                     Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Image(
-                            painter = painterResource(R.drawable.avatar_liliya),
-                            contentDescription = stringResource(R.string.str_liliya),
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.str_liliya),
-                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                color = scheme.onSurface
-                            )
-                            Text(
-                                text = stringResource(R.string.str_creator_maintainer),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = scheme.onSurfaceVariant
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = scheme.primaryContainer,
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.LibraryBooks,
+                                        contentDescription = null,
+                                        tint = scheme.onPrimaryContainer,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.str_libraries_used),
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.onSurface
+                                )
+                                Text(
+                                    text = stringResource(R.string.str_libraries_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = scheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        IconButton(onClick = { showLibrariesDialog = false }) {
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                contentDescription = null,
+                                tint = scheme.onSurfaceVariant
                             )
                         }
                     }
 
                     HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
 
-                    Text(
-                        text = stringResource(R.string.str_open_source).uppercase(),
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.2.sp
-                        ),
-                        color = scheme.primary
-                    )
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        if (libraries == null) {
+                            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                        } else {
+                            LibrariesContainer(
+                                libraries = libraries,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = stringResource(R.string.str_licenses) + " · Apache 2.0",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = scheme.onSurface
+@Composable
+private fun DeveloperCreditCard(
+    avatarRes: Int,
+    name: String,
+    role: String,
+    githubUrl: String,
+    telegramUrl: String,
+    onOpenUrl: (String) -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(20.dp)
+
+    Surface(
+        shape = shape,
+        color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+        contentColor = scheme.onSurface,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Image(
+                painter = painterResource(avatarRes),
+                contentDescription = name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+            )
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = role,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val iconBtnShape = RoundedCornerShape(12.dp)
+                Surface(
+                    shape = iconBtnShape,
+                    color = scheme.surfaceContainerHighest,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .gamepadFocusOutline(shape = iconBtnShape, register = true)
+                        .clip(iconBtnShape)
+                        .clickable { onOpenUrl(githubUrl) }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_github),
+                            contentDescription = stringResource(R.string.cd_github),
+                            modifier = Modifier.size(22.dp),
+                            tint = scheme.primary
                         )
-                        Text(
-                            text = "Built with Material 3 Expressive, Android NDK, Kotlin Coroutines & Jetpack Compose",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = scheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    }
+                }
+
+                Surface(
+                    shape = iconBtnShape,
+                    color = scheme.surfaceContainerHighest,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .gamepadFocusOutline(shape = iconBtnShape, register = true)
+                        .clip(iconBtnShape)
+                        .clickable { onOpenUrl(telegramUrl) }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_telegram),
+                            contentDescription = stringResource(R.string.cd_telegram),
+                            modifier = Modifier.size(20.dp),
+                            tint = scheme.primary
                         )
                     }
                 }

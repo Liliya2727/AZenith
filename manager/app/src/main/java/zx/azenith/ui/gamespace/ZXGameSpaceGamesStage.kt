@@ -69,6 +69,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.Android
 import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronRight
@@ -76,11 +77,13 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.EnergySavingsLeaf
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Memory
+import androidx.compose.material.icons.rounded.OfflineBolt
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
@@ -93,6 +96,7 @@ import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Token
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.VerifiedUser
+import androidx.compose.material.icons.rounded.Water
 import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -168,11 +172,16 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 import zx.azenith.R
+import zx.azenith.ui.component.AZenithSheet
 import zx.azenith.ui.component.AppIconImage
 import zx.azenith.ui.component.MediaBannerRenderer
+import zx.azenith.ui.component.SheetItem
+import zx.azenith.ui.component.SheetRowStyle
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.component.gamepadScreenEntry
+import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.RootUtils
+import zx.azenith.ui.viewmodel.AutoModeBus
 import zx.azenith.ui.viewmodel.ApplistViewmodel
 import zx.azenith.ui.util.getHeaderImage
 
@@ -755,6 +764,29 @@ internal fun WelcomeHubStage(
     val service by RootUtils.observeServiceStatusRes()
         .collectAsState(initial = R.string.status_initializing to "")
 
+    var autoMode by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            autoMode = PropertyUtils.get("persist.sys.azenithconf.AIenabled")
+        }
+    }
+    LaunchedEffect(Unit) {
+        RootUtils.observeAutoMode().collect { mode ->
+            autoMode = mode
+        }
+    }
+    LaunchedEffect(Unit) {
+        AutoModeBus.changes.collect { mode ->
+            autoMode = mode
+        }
+    }
+
+    val isManualMode = autoMode == "0"
+    var showProfileSheet by remember { mutableStateOf(false) }
+    LaunchedEffect(isManualMode) {
+        if (!isManualMode) showProfileSheet = false
+    }
+
     val rootValue = when (rootGranted) {
         true -> stringResource(R.string.root_granted)
         false -> stringResource(R.string.root_not_granted)
@@ -766,7 +798,11 @@ internal fun WelcomeHubStage(
         else -> stringResource(R.string.status_checking)
     }
     val suspended = stringResource(R.string.status_suspended)
-    val pidValue = service.second.ifBlank { suspended }
+    val pidBadge = if (service.second.isNotBlank()) {
+        stringResource(R.string.pid_format, service.second)
+    } else {
+        suspended
+    }
 
     val topRoom by animateDpAsState(
         targetValue = if (expanded) 64.dp else 142.dp,
@@ -809,13 +845,25 @@ internal fun WelcomeHubStage(
                 )
             }
 
-            // Row 1: Core System & Performance Status (4 balanced cards across the width)
+            // Row 1: Core System & Performance Status (3 balanced square/bento widgets)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Max),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // 1. Combined Module Status & Service PID Widget
+                HubInfoTile(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    icon = Icons.Rounded.Memory,
+                    label = stringResource(R.string.gamespace_info_module),
+                    value = moduleValue,
+                    container = if (moduleInstalled == false) scheme.errorContainer else scheme.secondaryContainer,
+                    onContainer = if (moduleInstalled == false) scheme.onErrorContainer else scheme.onSecondaryContainer,
+                    pillText = pidBadge
+                )
+
+                // 2. Root Access Widget
                 HubInfoTile(
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                     icon = if (rootGranted == true) Icons.Rounded.VerifiedUser else Icons.Rounded.Security,
@@ -824,22 +872,8 @@ internal fun WelcomeHubStage(
                     container = if (rootGranted == false) scheme.errorContainer else scheme.primaryContainer,
                     onContainer = if (rootGranted == false) scheme.onErrorContainer else scheme.onPrimaryContainer
                 )
-                HubInfoTile(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    icon = Icons.Rounded.Memory,
-                    label = stringResource(R.string.gamespace_info_module),
-                    value = moduleValue,
-                    container = if (moduleInstalled == false) scheme.errorContainer else scheme.secondaryContainer,
-                    onContainer = if (moduleInstalled == false) scheme.onErrorContainer else scheme.onSecondaryContainer
-                )
-                HubInfoTile(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    icon = Icons.Rounded.Tune,
-                    label = stringResource(R.string.gamespace_info_pid),
-                    value = pidValue,
-                    container = scheme.tertiaryContainer,
-                    onContainer = scheme.onTertiaryContainer
-                )
+
+                // 3. Current Profile Widget (shows '>' indicator and opens sheet only in manual mode)
                 HubInfoTile(
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                     icon = Icons.Rounded.Token,
@@ -847,41 +881,38 @@ internal fun WelcomeHubStage(
                     value = profile,
                     container = scheme.surfaceContainerHigh,
                     onContainer = scheme.onSurface,
-                    badgeText = "CYCLE PROFILE",
-                    onClick = {
-                        val next = when (profileValue) {
-                            "1" -> "2"
-                            "2" -> "3"
-                            else -> "1"
-                        }
-                        onApplyProfile(next)
-                    }
+                    showArrow = isManualMode,
+                    onClick = if (isManualMode) {
+                        { showProfileSheet = true }
+                    } else null
                 )
             }
 
             Spacer(Modifier.height(12.dp))
 
-            // Row 2: Landscape Bento Deck (2-column balanced layout)
+            // Row 2: Landscape Bento Deck (Symmetrical 50/50 2-column layout)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Max),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Column 1: Hardware & System Architecture Deck (55% width)
+                // Column 1: Hardware & System Architecture Deck (50% width)
                 HardwareSpecsBentoCard(
-                    modifier = Modifier.weight(1.1f).fillMaxHeight(),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     deviceName = deviceName,
                     chipsetName = chipsetName,
                     refreshHz = refreshHz,
                     onOpenSettings = onOpenSettings
                 )
 
-                // Column 2: Gaming Library & Quick Action Deck (45% width)
+                // Column 2: Gaming Library & Quick Action Deck (50% width)
                 GamingLibraryBentoCard(
-                    modifier = Modifier.weight(0.9f).fillMaxHeight(),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     gamesCount = games.size,
                     allAppsCount = allAppsCount,
+                    profile = profile,
+                    isManualMode = isManualMode,
                     onOpenLibrary = onOpenLibrary
                 )
             }
@@ -918,6 +949,39 @@ internal fun WelcomeHubStage(
             Spacer(Modifier.height(16.dp))
         }
     }
+
+    val profileOptions = listOf(
+        Triple("1", R.string.Profile_Performance, Icons.Rounded.OfflineBolt),
+        Triple("2", R.string.Profile_Balanced, Icons.Rounded.Water),
+        Triple("3", R.string.Profile_ECO_mode, Icons.Rounded.EnergySavingsLeaf)
+    )
+    val profileSummaries = listOf(
+        "Maximum CPU/GPU clock frequencies and low-latency governor",
+        "Adaptive daily performance and thermal efficiency",
+        "Power-saving frequency cap for extended battery life"
+    )
+
+    AZenithSheet(
+        show = showProfileSheet,
+        onDismiss = { showProfileSheet = false },
+        title = stringResource(R.string.Profile_Select),
+        subtitle = stringResource(R.string.current_profile),
+        style = SheetRowStyle.SingleSelect,
+        items = profileOptions.mapIndexed { idx, (value, titleRes, icon) ->
+            SheetItem(
+                label = stringResource(titleRes),
+                summary = profileSummaries[idx],
+                icon = icon,
+                selected = profileValue == value || (value == "2" && profileValue.isBlank())
+            )
+        },
+        onItemClick = { index ->
+            if (index in profileOptions.indices) {
+                onApplyProfile(profileOptions[index].first)
+            }
+            showProfileSheet = false
+        }
+    )
 }
 
 /** The wordmark at rest: hero size while the sheet is whole. */
@@ -1008,6 +1072,7 @@ internal fun HardwareSpecsBentoCard(
     Surface(
         modifier = modifier
             .gamepadFocusOutline(shape = shape, register = true)
+            .clip(shape)
             .clickable(onClick = onOpenSettings),
         shape = shape,
         color = scheme.surfaceContainerHigh
@@ -1147,6 +1212,8 @@ internal fun GamingLibraryBentoCard(
     modifier: Modifier = Modifier,
     gamesCount: Int,
     allAppsCount: Int,
+    profile: String,
+    isManualMode: Boolean,
     onOpenLibrary: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -1155,13 +1222,14 @@ internal fun GamingLibraryBentoCard(
     Surface(
         modifier = modifier
             .gamepadFocusOutline(shape = shape, register = true)
+            .clip(shape)
             .clickable(onClick = onOpenLibrary),
         shape = shape,
         color = scheme.surfaceContainerHigh
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -1189,88 +1257,54 @@ internal fun GamingLibraryBentoCard(
                         letterSpacing = 0.8.sp
                     )
                     Text(
-                        text = "$gamesCount ${stringResource(R.string.gamespace_info_games).lowercase()}",
+                        text = "$gamesCount ${stringResource(R.string.gamespace_info_games).lowercase()} \u00b7 $allAppsCount ${stringResource(R.string.gamespace_info_apps).lowercase()}",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                         color = scheme.onSurface,
-                        maxLines = 1
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
+                Icon(
+                    imageVector = Icons.Rounded.ChevronRight,
+                    contentDescription = null,
+                    tint = scheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(22.dp)
+                )
             }
-
-            Spacer(Modifier.height(10.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Surface(
+                SpecPill(
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(14.dp),
-                    color = scheme.surfaceContainerHighest
-                ) {
-                    Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
-                        Text(
-                            text = stringResource(R.string.gamespace_info_games).uppercase(),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = scheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
-                        Text(
-                            text = "$gamesCount Tuned",
-                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                            color = scheme.onSurface
-                        )
-                    }
-                }
-                Surface(
+                    icon = Icons.Rounded.SportsEsports,
+                    label = stringResource(R.string.gamespace_info_games),
+                    value = "$gamesCount Tuned"
+                )
+                SpecPill(
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(14.dp),
-                    color = scheme.surfaceContainerHighest
-                ) {
-                    Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
-                        Text(
-                            text = stringResource(R.string.gamespace_info_apps).uppercase(),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = scheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
-                        Text(
-                            text = "$allAppsCount Apps",
-                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                            color = scheme.onSurface
-                        )
-                    }
-                }
+                    icon = Icons.Rounded.Apps,
+                    label = stringResource(R.string.gamespace_info_apps),
+                    value = "$allAppsCount Apps"
+                )
             }
-
-            Spacer(Modifier.height(10.dp))
-
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = scheme.primaryContainer,
-                modifier = Modifier.fillMaxWidth()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = stringResource(R.string.gamespace_library_title),
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = scheme.onPrimaryContainer
-                    )
-                    Icon(
-                        imageVector = Icons.Rounded.ChevronRight,
-                        contentDescription = null,
-                        tint = scheme.onPrimaryContainer,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
+                SpecPill(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Rounded.Token,
+                    label = stringResource(R.string.current_profile),
+                    value = profile
+                )
+                SpecPill(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Rounded.AutoAwesome,
+                    label = "GOVERNANCE",
+                    value = if (isManualMode) "Manual" else "Auto Mode"
+                )
             }
         }
     }
@@ -1284,13 +1318,15 @@ internal fun HubInfoTile(
     value: String,
     container: Color,
     onContainer: Color,
-    badgeText: String? = null,
+    pillText: String? = null,
+    showArrow: Boolean = false,
     onClick: (() -> Unit)? = null
 ) {
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(24.dp)
     Surface(
         modifier = modifier
             .gamepadFocusOutline(shape = shape, register = onClick != null)
+            .clip(shape)
             .then(
                 if (onClick != null) Modifier.clickable(onClick = onClick)
                 else Modifier
@@ -1299,45 +1335,78 @@ internal fun HubInfoTile(
         color = container
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = onContainer,
-                    modifier = Modifier.size(18.dp)
-                )
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = onContainer.copy(alpha = 0.14f),
+                    modifier = Modifier.size(38.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = onContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                if (pillText != null) {
+                    Surface(
+                        shape = CircleShape,
+                        color = onContainer.copy(alpha = 0.14f)
+                    ) {
+                        Text(
+                            text = pillText,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.4.sp
+                            ),
+                            color = onContainer,
+                            maxLines = 1,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                } else if (showArrow) {
+                    Icon(
+                        imageVector = Icons.Rounded.ChevronRight,
+                        contentDescription = null,
+                        tint = onContainer.copy(alpha = 0.7f),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = onContainer.copy(alpha = 0.75f),
+                    text = label.uppercase(),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.8.sp
+                    ),
+                    color = onContainer.copy(alpha = 0.72f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-            }
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                color = onContainer,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            if (badgeText != null) {
                 Text(
-                    text = badgeText,
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
+                    text = value,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold
                     ),
-                    color = onContainer.copy(alpha = 0.7f),
-                    maxLines = 1
+                    color = onContainer,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -1354,24 +1423,25 @@ internal fun HubLinkTile(
     onContainer: Color,
     onClick: () -> Unit
 ) {
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(24.dp)
 
     Surface(
         modifier = modifier
             .gamepadFocusOutline(shape = shape, register = true)
+            .clip(shape)
             .clickable(onClick = onClick),
         shape = shape,
         color = container
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Surface(
-                shape = CircleShape,
-                color = onContainer.copy(alpha = 0.12f),
-                modifier = Modifier.size(36.dp)
+                shape = RoundedCornerShape(12.dp),
+                color = onContainer.copy(alpha = 0.14f),
+                modifier = Modifier.size(38.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
