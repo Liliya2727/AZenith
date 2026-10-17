@@ -361,7 +361,7 @@ private fun BentoMorphLayout(
 ) {
     val density = LocalDensity.current
     val gapPx = with(density) { BENTO_GAP.roundToPx() }
-    val compactHPx = with(density) { 72.dp.roundToPx() }
+    val compactHPx = with(density) { 58.dp.roundToPx() }
     val heroH1Px = with(density) { 184.dp.roundToPx() }
     val row2H1Px = with(density) { 176.dp.roundToPx() }
     val row3H1Px = with(density) { 88.dp.roundToPx() }
@@ -402,7 +402,8 @@ private fun BentoMorphLayout(
         val rootX = lerpInt(2 * (compactItemW + gapPx), heroW1 + gapPx, p)
         val rootY = lerpInt(0, statusH1 + gapPx, p)
 
-        val totalHeight = lerpInt(compactHPx, totalDeckH1, p)
+        val deckStretchPx = (overshoot.coerceAtLeast(0f) * with(density) { 24.dp.toPx() }).roundToInt()
+        val totalHeight = lerpInt(compactHPx, totalDeckH1, p) + deckStretchPx
 
         val profilePlaceable = measurables.getOrNull(0)?.measure(
             Constraints.fixed(profileW.coerceAtLeast(0), profileH.coerceAtLeast(0))
@@ -427,33 +428,32 @@ private fun BentoMorphLayout(
             measurables[6].measure(Constraints.fixed(otherHalfW1.coerceAtLeast(0), row3H1Px.coerceAtLeast(0)))
         } else null
 
-        val bounceDipPx = with(density) { 16.dp.toPx() }
+        val bounceDipPx = with(density) { 26.dp.toPx() }
         val bounceOffsetY = overshoot * bounceDipPx
-        val bounceScaleY = 1f + overshoot * 0.25f
-        val bounceScaleX = 1f - overshoot * 0.12f
+        val bounceScale = 1f + overshoot * 0.45f
 
         layout(totalWidth, totalHeight) {
             profilePlaceable?.placeRelativeWithLayer(0, 0) {
                 translationY = bounceOffsetY
-                scaleX = bounceScaleX
-                scaleY = bounceScaleY
+                scaleX = bounceScale
+                scaleY = bounceScale
             }
             modulePlaceable?.placeRelativeWithLayer(moduleX, 0) {
                 translationY = bounceOffsetY * 0.90f
-                scaleX = bounceScaleX
-                scaleY = bounceScaleY
+                scaleX = bounceScale
+                scaleY = bounceScale
             }
             rootPlaceable?.placeRelativeWithLayer(rootX, rootY) {
                 translationY = bounceOffsetY * 0.82f
-                scaleX = bounceScaleX
-                scaleY = bounceScaleY
+                scaleX = bounceScale
+                scaleY = bounceScale
             }
 
             if (p > 0.001f) {
                 val row2Alpha = ((p - 0.15f) / 0.85f).coerceIn(0f, 1f)
-                val row2Scale = 0.90f + 0.10f * p
+                val row2Scale = (0.90f + 0.10f * p) * (1f + overshoot * 0.35f)
                 val row2Y = lerpInt(compactHPx, row2Y1, p)
-                val row2BounceY = bounceOffsetY * 0.70f
+                val row2BounceY = bounceOffsetY * 0.80f
 
                 libPlaceable?.placeRelativeWithLayer(0, row2Y) {
                     alpha = row2Alpha
@@ -469,9 +469,9 @@ private fun BentoMorphLayout(
                 }
 
                 val row3Alpha = ((p - 0.32f) / 0.68f).coerceIn(0f, 1f)
-                val row3Scale = 0.90f + 0.10f * p
+                val row3Scale = (0.90f + 0.10f * p) * (1f + overshoot * 0.25f)
                 val row3Y = lerpInt(compactHPx, row3Y1, p)
-                val row3BounceY = bounceOffsetY * 0.60f
+                val row3BounceY = bounceOffsetY * 0.70f
 
                 suppPlaceable?.placeRelativeWithLayer(0, row3Y) {
                     alpha = row3Alpha
@@ -633,13 +633,13 @@ private fun MorphedProfileTile(
     }
 
     val p = progress.coerceIn(0f, 1f)
-    val badgeSize = lerp(48.dp, 100.dp, p)
-    val glyphSize = lerp(24.dp, 44.dp, p)
-    val restCorner = lerp(24.dp, 36.dp, p)
-    val engagedCorner = lerp(14.dp, 20.dp, p)
-    val padH = lerp(14.dp, 20.dp, p)
-    val padV = lerp(10.dp, 16.dp, p)
-    val gap = lerp(12.dp, 18.dp, p)
+    val badgeSize = lerp(38.dp, 100.dp, p)
+    val glyphSize = lerp(20.dp, 44.dp, p)
+    val restCorner = lerp(18.dp, 36.dp, p)
+    val engagedCorner = lerp(12.dp, 20.dp, p)
+    val padH = lerp(12.dp, 20.dp, p)
+    val padV = lerp(8.dp, 16.dp, p)
+    val gap = lerp(10.dp, 18.dp, p)
 
     val effectiveClick = if (p < 0.35f) {
         if (isManualMode && onClick != null) onClick else onExpandClick
@@ -810,12 +810,12 @@ private fun MorphedStatusTile(
     val motion = MaterialTheme.motionScheme
     val effects = motion.defaultEffectsSpec<Float>()
     val p = progress.coerceIn(0f, 1f)
-
-    val badgeSize = lerp(48.dp, 52.dp, p)
-    val restCorner = lerp(24.dp, 28.dp, p)
-    val engagedCorner = lerp(14.dp, 36.dp, p)
-    val padH = lerp(14.dp, 16.dp, p)
-    val padV = 10.dp
+    val badgeSize = lerp(38.dp, 52.dp, p)
+    val restCorner = lerp(18.dp, 28.dp, p)
+    val engagedCorner = lerp(12.dp, 36.dp, p)
+    val padH = lerp(12.dp, 16.dp, p)
+    val padV = lerp(8.dp, 10.dp, p)
+    val gap = lerp(10.dp, 14.dp, p)
 
     BentoTile(
         order = order,
@@ -831,7 +831,7 @@ private fun MorphedStatusTile(
                 .fillMaxSize()
                 .padding(horizontal = padH, vertical = padV),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(lerp(12.dp, 14.dp, p))
+            horizontalArrangement = Arrangement.spacedBy(gap)
         ) {
             MorphBadge(
                 shape = shape,
@@ -841,7 +841,12 @@ private fun MorphedStatusTile(
                 engaged = engaged,
                 spin = spin
             ) {
-                Icon(imageVector = icon, contentDescription = null, tint = onBadge, modifier = Modifier.size(24.dp))
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = onBadge,
+                    modifier = Modifier.size(lerp(20.dp, 24.dp, p))
+                )
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -885,7 +890,7 @@ private fun MorphedStatusTile(
                     modifier = Modifier
                         .clip(CircleShape)
                         .background(badgeColor)
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                        .padding(horizontal = lerp(6.dp, 8.dp, p), vertical = lerp(2.dp, 3.dp, p))
                 )
             }
         }

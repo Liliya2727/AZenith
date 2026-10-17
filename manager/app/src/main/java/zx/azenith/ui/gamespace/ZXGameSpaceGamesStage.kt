@@ -746,35 +746,39 @@ internal fun WelcomeHubStage(
     val scope = rememberCoroutineScope()
     val expandedNow = rememberUpdatedState(expanded)
     val notifyExpanded = rememberUpdatedState(onExpandedChange)
-    var stageHold by remember { mutableStateOf(false) }
+    var dragExpandDistance by remember { mutableStateOf(0f) }
+    val density = LocalDensity.current
+    val expandThresholdPx = with(density) { 36.dp.toPx() }
+
+    LaunchedEffect(expanded) {
+        if (!expanded && scroll.value != 0) {
+            scroll.scrollTo(0)
+        }
+    }
 
     val stageGate = remember(scroll) {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 val fromDrag = source == NestedScrollSource.UserInput
-                if (stageHold && fromDrag && available.y < 0f) return available
-                if (!expandedNow.value && available.y < 0f) {
-                    val projected = scroll.value - available.y
-                    if (projected >= HOME_EXPAND_AT) {
-                        if (fromDrag) stageHold = true
-                        notifyExpanded.value(true)
-                        scope.launch { runCatching { scroll.animateScrollTo(0) } }
+                if (!expandedNow.value) {
+                    if (fromDrag && available.y < 0f) {
+                        dragExpandDistance = (dragExpandDistance - available.y).coerceAtLeast(0f)
+                        if (dragExpandDistance >= expandThresholdPx) {
+                            notifyExpanded.value(true)
+                            dragExpandDistance = 0f
+                        }
                         return Offset(0f, available.y)
                     }
+                    if (fromDrag && available.y > 0f && dragExpandDistance > 0f) {
+                        dragExpandDistance = (dragExpandDistance - available.y).coerceAtLeast(0f)
+                        return Offset(0f, available.y)
+                    }
+                    return Offset.Zero
                 }
                 if (expandedNow.value && fromDrag && available.y > 0f && scroll.value <= 0) {
-                    stageHold = false
                     notifyExpanded.value(false)
+                    dragExpandDistance = 0f
                     return Offset(0f, available.y)
-                }
-                return Offset.Zero
-            }
-
-            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-                if (!expandedNow.value && scroll.value >= HOME_EXPAND_AT) {
-                    stageHold = true
-                    notifyExpanded.value(true)
-                    scope.launch { runCatching { scroll.animateScrollTo(0) } }
                 }
                 return Offset.Zero
             }
@@ -850,8 +854,11 @@ internal fun WelcomeHubStage(
     }
 
     val topRoom by animateDpAsState(
-        targetValue = if (expanded) 64.dp else 142.dp,
-        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec<androidx.compose.ui.unit.Dp>(),
+        targetValue = if (expanded) 12.dp else 76.dp,
+        animationSpec = spring(
+            dampingRatio = 0.52f,
+            stiffness = 240f
+        ),
         label = "WelcomeTopRoom"
     )
 
@@ -862,8 +869,11 @@ internal fun WelcomeHubStage(
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
-                        awaitPointerEvent(PointerEventPass.Initial).changes.forEach { change ->
-                            if (change.changedToDown()) stageHold = false
+                        val event = awaitPointerEvent(PointerEventPass.Final)
+                        if (event.changes.all { !it.pressed }) {
+                            if (!expandedNow.value) {
+                                dragExpandDistance = 0f
+                            }
                         }
                     }
                 }
@@ -891,13 +901,13 @@ internal fun WelcomeHubStage(
                 )
             }
 
-            val ramp = (scroll.value / HOME_EXPAND_AT.toFloat()).coerceIn(0f, 1f)
-            val targetProgress = if (expanded) 1f else ramp
+            val dragRamp = (dragExpandDistance / expandThresholdPx).coerceIn(0f, 1f)
+            val targetProgress = if (expanded) 1f else dragRamp
             val expandProgress by animateFloatAsState(
                 targetValue = targetProgress,
                 animationSpec = spring(
-                    dampingRatio = 0.68f,
-                    stiffness = 300f
+                    dampingRatio = 0.52f,
+                    stiffness = 240f
                 ),
                 label = "BentoMorphProgress"
             )
@@ -905,7 +915,6 @@ internal fun WelcomeHubStage(
             HubBentoGrid(
                 expandProgress = expandProgress,
                 onExpandRequest = {
-                    stageHold = true
                     notifyExpanded.value(true)
                 },
                 moduleInstalled = moduleInstalled,
@@ -931,9 +940,8 @@ internal fun WelcomeHubStage(
                 onLearnMore = { uriHandler.openUri("https://github.com/Liliya2727/AZenith") }
             )
 
-            // Runway for upward drag so scroll triggers expansion.
-            val runwayHeight = lerp(140.dp, 16.dp, expandProgress)
-            Spacer(Modifier.height(runwayHeight))
+            val bottomSpacer = lerp(16.dp, 32.dp, expandProgress.coerceIn(0f, 1f))
+            Spacer(Modifier.height(bottomSpacer))
         }
     }
 
@@ -989,35 +997,37 @@ internal fun HomeWordmark(
     val scheme = MaterialTheme.colorScheme
     val hold by animateFloatAsState(
         targetValue = if (held) 1f else 0f,
-        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>(),
+        animationSpec = spring(
+            dampingRatio = 0.52f,
+            stiffness = 240f
+        ),
         label = "HomeWordmarkHold"
     )
 
     Column(
         modifier = Modifier
-            .padding(start = 24.dp, bottom = 12.dp)
+            .padding(start = 24.dp, bottom = 4.dp)
             .graphicsLayer {
-                val ramp = (scroll.value / HOME_EXPAND_AT.toFloat()).coerceIn(0f, 1f)
-                val progress = maxOf(ramp, hold)
-                alpha = (1f - progress * 1.25f).coerceIn(0f, 1f)
-                val scale = 1f - 0.35f * progress
+                val progress = hold.coerceIn(0f, 1f)
+                alpha = (1f - progress * 1.35f).coerceIn(0f, 1f)
+                val scale = 1f - 0.25f * progress
                 scaleX = scale
                 scaleY = scale
-                translationY = -progress * 28f
+                translationY = -progress * 20f
                 transformOrigin = TransformOrigin(0f, 1f)
             }
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
                 text = text,
                 style = MaterialTheme.typography.displayLarge.copy(
-                    fontSize = 72.sp,
-                    lineHeight = 74.sp,
+                    fontSize = 44.sp,
+                    lineHeight = 46.sp,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = (-1.5).sp
+                    letterSpacing = (-1.0).sp
                 ),
                 color = scheme.onSurface,
                 maxLines = 1
@@ -1025,16 +1035,16 @@ internal fun HomeWordmark(
             Surface(
                 shape = CircleShape,
                 color = scheme.primaryContainer,
-                modifier = Modifier.padding(top = 10.dp)
+                modifier = Modifier.padding(top = 2.dp)
             ) {
                 Text(
                     text = "GAME SPACE",
-                    style = MaterialTheme.typography.labelMedium.copy(
+                    style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp
+                        letterSpacing = 1.0.sp
                     ),
                     color = scheme.onPrimaryContainer,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                 )
             }
             val penShape = CircleShape
@@ -1043,8 +1053,8 @@ internal fun HomeWordmark(
                 color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
                 contentColor = scheme.onSurfaceVariant,
                 modifier = Modifier
-                    .padding(top = 10.dp)
-                    .size(32.dp)
+                    .padding(top = 2.dp)
+                    .size(28.dp)
                     .gamepadFocusOutline(shape = penShape, register = true)
                     .clip(penShape)
                     .clickable(onClick = onOpenHomeWallpaper)
@@ -1053,14 +1063,14 @@ internal fun HomeWordmark(
                     Icon(
                         imageVector = Icons.Rounded.Edit,
                         contentDescription = "Edit Home Wallpaper",
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                 }
             }
         }
         Text(
             text = "$deviceName \u00b7 $chipsetName",
-            style = MaterialTheme.typography.labelLarge.copy(
+            style = MaterialTheme.typography.labelMedium.copy(
                 fontWeight = FontWeight.Medium
             ),
             color = scheme.onSurfaceVariant.copy(alpha = 0.82f),
