@@ -44,6 +44,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -2748,23 +2749,26 @@ private fun ZXGameSpaceTileRibbon(
 ) {
     val scheme = MaterialTheme.colorScheme
     val density = LocalDensity.current
-    var selectedRightEdgePx by remember { mutableStateOf(0f) }
-    var ribbonWidthPx by remember { mutableStateOf(0f) }
-    var dragOffsetPx by remember { mutableFloatStateOf(0f) }
+    val scope = rememberCoroutineScope()
     val itemPitchPx = with(density) { 62.dp.toPx() }
+    val expandedRightBasePx = with(density) { (88.dp + 12.dp).toPx() }
 
-    // Target scroll offset:
-    // For indices 0, 1, 2: scroll offset is 0dp.
-    // For index >= 2: target anchors index at slot 3 (124dp), offset = (index - 2) * 62dp.
-    val targetScrollDp = if (selectedIndex <= 2) 0.dp else ((selectedIndex - 2) * 62).dp
-    val animatedScrollDp by animateDpAsState(
-        targetValue = targetScrollDp,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        ),
-        label = "CarouselScroll"
-    )
+    val carouselPos = remember { Animatable(selectedIndex.toFloat()) }
+    var isDragging by remember { mutableStateOf(false) }
+    val currentSelectedIndex by rememberUpdatedState(selectedIndex)
+    val currentOnSelect by rememberUpdatedState(onSelect)
+
+    LaunchedEffect(selectedIndex, isDragging) {
+        if (!isDragging) {
+            carouselPos.animateTo(
+                targetValue = selectedIndex.toFloat(),
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+            )
+        }
+    }
 
     val activeEntry = entries.getOrElse(selectedIndex) { RibbonEntry.Welcome }
 
@@ -2772,36 +2776,49 @@ private fun ZXGameSpaceTileRibbon(
         modifier = Modifier
             .fillMaxWidth()
             .height(92.dp)
-            .onGloballyPositioned { ribbonWidthPx = it.size.width.toFloat() }
-            .pointerInput(entries.size, selectedIndex) {
+            .pointerInput(entries.size) {
                 detectHorizontalDragGestures(
-                    onDragStart = { dragOffsetPx = 0f },
-                    onDragEnd = {
-                        val steps = (-dragOffsetPx / itemPitchPx).roundToInt()
-                        if (steps != 0) {
-                            val next = (selectedIndex + steps).coerceIn(0, entries.lastIndex)
-                            if (next != selectedIndex) {
-                                onSelect(next)
-                            }
-                        }
-                        dragOffsetPx = 0f
+                    onDragStart = {
+                        isDragging = true
                     },
-                    onDragCancel = { dragOffsetPx = 0f },
-                    onHorizontalDrag = { _, dragAmount ->
-                        dragOffsetPx += dragAmount
-                        val steps = (-dragOffsetPx / itemPitchPx).roundToInt()
-                        if (kotlin.math.abs(steps) >= 1) {
-                            val next = (selectedIndex + steps).coerceIn(0, entries.lastIndex)
-                            if (next != selectedIndex) {
-                                onSelect(next)
-                                dragOffsetPx += steps * itemPitchPx
-                            }
+                    onDragEnd = {
+                        isDragging = false
+                        val maxIdx = entries.lastIndex.coerceAtLeast(0)
+                        val target = carouselPos.value.roundToInt().coerceIn(0, maxIdx)
+                        if (target != currentSelectedIndex) {
+                            currentOnSelect(target)
+                        }
+                        scope.launch {
+                            carouselPos.animateTo(
+                                targetValue = target.toFloat(),
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioLowBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            )
+                        }
+                    },
+                    onDragCancel = {
+                        isDragging = false
+                    },
+                    onHorizontalDrag = { change, dragAmount ->
+                        change.consume()
+                        val maxIdx = entries.lastIndex.coerceAtLeast(0)
+                        val nextPos = (carouselPos.value - (dragAmount / itemPitchPx))
+                            .coerceIn(0f, maxIdx.toFloat())
+                        scope.launch {
+                            carouselPos.snapTo(nextPos)
+                        }
+                        val nearest = nextPos.roundToInt().coerceIn(0, maxIdx)
+                        if (nearest != currentSelectedIndex) {
+                            currentOnSelect(nearest)
                         }
                     }
                 )
             }
     ) {
-        val totalOffsetPx = -with(density) { animatedScrollDp.toPx() } + dragOffsetPx
+        val scrollItems = (carouselPos.value - 2f).coerceAtLeast(0f)
+        val totalOffsetPx = -scrollItems * itemPitchPx
 
         Row(
             modifier = Modifier
@@ -2824,24 +2841,14 @@ private fun ZXGameSpaceTileRibbon(
                         } else {
                             onSelect(index)
                         }
-                    },
-                    modifier = if (isSelected) {
-                        Modifier.onGloballyPositioned { coords ->
-                            selectedRightEdgePx = coords.positionInParent().x + coords.size.width
-                        }
-                    } else {
-                        Modifier
                     }
                 )
             }
         }
 
-        // Adjacent label sits just right of the expanded tile's lower edge.
-        val labelOffsetPx = remember(selectedRightEdgePx, ribbonWidthPx, density) {
-            val gapPx = with(density) { 12.dp.toPx() }
-            val maxPx = (ribbonWidthPx - with(density) { 220.dp.toPx() }).coerceAtLeast(0f)
-            (selectedRightEdgePx + gapPx).coerceIn(0f, maxPx).roundToInt()
-        }
+        // Adjacent label sits just right of the expanded tile's lower edge and stays anchored at slot 3.
+        val visualSlot = carouselPos.value.coerceIn(0f, 2f)
+        val labelOffsetPx = ((visualSlot * itemPitchPx) + expandedRightBasePx).roundToInt()
 
         Row(
             modifier = Modifier
