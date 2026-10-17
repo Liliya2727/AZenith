@@ -751,6 +751,12 @@ internal fun SettingsAppearancePane() {
     var sliderScalePercent by remember(appScalePercent) {
         mutableIntStateOf(appScalePercent)
     }
+    var wallpaperDimmingIntensity by remember {
+        mutableIntStateOf(prefs.getInt("gamespace_wallpaper_dimming_intensity", 75).coerceIn(15, 100))
+    }
+    var sliderDimmingIntensity by remember(wallpaperDimmingIntensity) {
+        mutableIntStateOf(wallpaperDimmingIntensity)
+    }
     DisposableEffect(prefs) {
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             when (key) {
@@ -764,6 +770,11 @@ internal fun SettingsAppearancePane() {
                     val updated = prefs.getInt("gamespace_sidepanel_sensitivity", 65).coerceIn(20, 100)
                     sidePanelSensitivity = updated
                     sliderSensitivity = updated
+                }
+                "gamespace_wallpaper_dimming_intensity" -> {
+                    val updated = prefs.getInt("gamespace_wallpaper_dimming_intensity", 75).coerceIn(15, 100)
+                    wallpaperDimmingIntensity = updated
+                    sliderDimmingIntensity = updated
                 }
             }
         }
@@ -1171,13 +1182,46 @@ internal fun SettingsAppearancePane() {
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
+                            val previewDimScale = (sliderDimmingIntensity / 75f).coerceIn(0.15f, 1.45f)
+                            val isAmoled = colorModeValue == ColorMode.DARKAMOLED.value
+                            val previewBaseDim = if (isAmoled) Color.Black else scheme.surfaceContainerLowest
+
+                            // GameSpace horizontal gradient dimming
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            colorStops = arrayOf(
+                                                0.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.88f else 0.85f) * previewDimScale).coerceIn(0f, 0.98f)),
+                                                0.35f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.84f else 0.80f) * previewDimScale).coerceIn(0f, 0.98f)),
+                                                0.68f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.44f else 0.38f) * previewDimScale).coerceIn(0f, 0.98f)),
+                                                1.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.22f else 0.18f) * previewDimScale).coerceIn(0f, 0.98f))
+                                            )
+                                        )
+                                    )
+                            )
+                            // GameSpace vertical vignette
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            colorStops = arrayOf(
+                                                0.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.32f else 0.28f) * previewDimScale).coerceIn(0f, 0.98f)),
+                                                0.45f to Color.Transparent,
+                                                1.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.48f else 0.42f) * previewDimScale).coerceIn(0f, 0.98f))
+                                            )
+                                        )
+                                    )
+                            )
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .align(Alignment.BottomCenter)
                                     .background(
                                         Brush.verticalGradient(
-                                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.70f))
+                                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f))
                                         )
                                     )
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
@@ -1267,6 +1311,57 @@ internal fun SettingsAppearancePane() {
                             }
                         }
                     }
+                }
+
+                // Dimming Intensity Slider
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Dimming Intensity",
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                color = scheme.onSurface
+                            )
+                            Text(
+                                text = "Adjust wallpaper gradient dimming opacity",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.onSurfaceVariant
+                            )
+                        }
+                        Text(
+                            text = "$sliderDimmingIntensity%",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.primary
+                        )
+                    }
+
+                    ZenithSlider(
+                        value = sliderDimmingIntensity.toFloat(),
+                        onValueChange = { raw ->
+                            val snapped = ((raw / 5f).roundToInt() * 5).coerceIn(15, 100)
+                            if (snapped != sliderDimmingIntensity) {
+                                sliderDimmingIntensity = snapped
+                            }
+                        },
+                        onValueChangeFinished = {
+                            if (sliderDimmingIntensity != wallpaperDimmingIntensity) {
+                                wallpaperDimmingIntensity = sliderDimmingIntensity
+                                prefs.edit().putInt("gamespace_wallpaper_dimming_intensity", sliderDimmingIntensity).apply()
+                            }
+                        },
+                        valueRange = 15f..100f,
+                        steps = 16,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(28.dp)
+                    )
                 }
             }
         }

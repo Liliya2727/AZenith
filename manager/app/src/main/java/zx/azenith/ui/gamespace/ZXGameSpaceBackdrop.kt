@@ -74,10 +74,15 @@ internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
 
     val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
     var customWallpaperUri by remember { mutableStateOf(context.getHeaderImage()) }
+    var dimmingIntensity by remember {
+        androidx.compose.runtime.mutableIntStateOf(prefs.getInt("gamespace_wallpaper_dimming_intensity", 75))
+    }
     DisposableEffect(prefs) {
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == "header_image_uri") {
                 customWallpaperUri = context.getHeaderImage()
+            } else if (key == "gamespace_wallpaper_dimming_intensity") {
+                dimmingIntensity = prefs.getInt("gamespace_wallpaper_dimming_intensity", 75)
             }
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)
@@ -171,6 +176,7 @@ internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
 
             val baseDimColor = if (isAmoled) Color.Black else scheme.surfaceContainerLowest
             val isHomescreen = current == RibbonEntry.Welcome
+            val dimScale = (dimmingIntensity / 75f).coerceIn(0.15f, 1.45f)
 
             // Left-to-right dimming gradient: on homescreen, the far left 35% is more opaque
             // for navigation contrast, smoothly transitioning towards the right to subtle transparency (not fully transparent).
@@ -181,18 +187,18 @@ internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
                         if (isHomescreen) {
                             Brush.horizontalGradient(
                                 colorStops = arrayOf(
-                                    0.00f to baseDimColor.copy(alpha = if (isAmoled) 0.88f else 0.85f),
-                                    0.35f to baseDimColor.copy(alpha = if (isAmoled) 0.84f else 0.80f),
-                                    0.68f to baseDimColor.copy(alpha = if (isAmoled) 0.44f else 0.38f),
-                                    1.00f to baseDimColor.copy(alpha = if (isAmoled) 0.22f else 0.18f)
+                                    0.00f to baseDimColor.copy(alpha = ((if (isAmoled) 0.88f else 0.85f) * dimScale).coerceIn(0f, 0.98f)),
+                                    0.35f to baseDimColor.copy(alpha = ((if (isAmoled) 0.84f else 0.80f) * dimScale).coerceIn(0f, 0.98f)),
+                                    0.68f to baseDimColor.copy(alpha = ((if (isAmoled) 0.44f else 0.38f) * dimScale).coerceIn(0f, 0.98f)),
+                                    1.00f to baseDimColor.copy(alpha = ((if (isAmoled) 0.22f else 0.18f) * dimScale).coerceIn(0f, 0.98f))
                                 )
                             )
                         } else {
                             Brush.horizontalGradient(
                                 colorStops = arrayOf(
-                                    0.00f to baseDimColor.copy(alpha = if (isAmoled) 0.78f else 0.75f),
-                                    0.45f to baseDimColor.copy(alpha = if (isAmoled) 0.35f else 0.30f),
-                                    1.00f to baseDimColor.copy(alpha = if (isAmoled) 0.16f else 0.12f)
+                                    0.00f to baseDimColor.copy(alpha = ((if (isAmoled) 0.78f else 0.75f) * dimScale).coerceIn(0f, 0.98f)),
+                                    0.45f to baseDimColor.copy(alpha = ((if (isAmoled) 0.35f else 0.30f) * dimScale).coerceIn(0f, 0.98f)),
+                                    1.00f to baseDimColor.copy(alpha = ((if (isAmoled) 0.16f else 0.12f) * dimScale).coerceIn(0f, 0.98f))
                                 )
                             )
                         }
@@ -204,9 +210,9 @@ internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
                     .background(
                         Brush.verticalGradient(
                             colorStops = arrayOf(
-                                0.00f to baseDimColor.copy(alpha = if (isAmoled) 0.32f else 0.28f),
+                                0.00f to baseDimColor.copy(alpha = ((if (isAmoled) 0.32f else 0.28f) * dimScale).coerceIn(0f, 0.98f)),
                                 0.45f to Color.Transparent,
-                                1.00f to baseDimColor.copy(alpha = if (isAmoled) 0.48f else 0.42f)
+                                1.00f to baseDimColor.copy(alpha = ((if (isAmoled) 0.48f else 0.42f) * dimScale).coerceIn(0f, 0.98f))
                             )
                         )
                     )
