@@ -23,6 +23,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
@@ -189,6 +193,7 @@ internal fun ZXGameSpaceTileRibbon(
     focusRequester: FocusRequester? = null
 ) {
     val scheme = MaterialTheme.colorScheme
+    val motion = MaterialTheme.motionScheme
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
@@ -301,6 +306,37 @@ internal fun ZXGameSpaceTileRibbon(
                         }
                     }
                 )
+            }
+
+            val isAtLastSlide = selectedIndex == entries.lastIndex
+            AnimatedVisibility(
+                visible = isAtLastSlide,
+                enter = fadeIn(motion.defaultEffectsSpec()) + expandHorizontally(motion.defaultSpatialSpec()),
+                exit = fadeOut(motion.defaultEffectsSpec()) + shrinkHorizontally(motion.defaultSpatialSpec())
+            ) {
+                val wrapShape = RoundedCornerShape(16.dp)
+                Surface(
+                    shape = wrapShape,
+                    color = scheme.surfaceContainerHighest,
+                    contentColor = scheme.primary,
+                    modifier = Modifier
+                        .size(width = 54.dp, height = 54.dp)
+                        .gamepadFocusOutline(shape = wrapShape, register = true)
+                        .clip(wrapShape)
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onSelect(0)
+                        }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Rounded.ChevronRight,
+                            contentDescription = "Back to Start",
+                            tint = scheme.primary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
             }
         }
 
