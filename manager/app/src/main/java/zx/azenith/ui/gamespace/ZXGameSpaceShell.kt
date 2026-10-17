@@ -20,6 +20,10 @@ package zx.azenith.ui.gamespace
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,12 +36,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.viewmodel.ApplistViewmodel
@@ -57,10 +63,12 @@ fun ZXGameSpaceShell(
     val context = LocalContext.current
     val motion = MaterialTheme.motionScheme
     val applist: ApplistViewmodel = viewModel()
+    val scope = rememberCoroutineScope()
 
-    var hubVisible by remember { mutableStateOf(false) }
+    var introActive by remember { mutableStateOf(true) }
     var leaving by remember { mutableStateOf(false) }
     val hubFade = remember { Animatable(0f) }
+    val hubScale = remember { Animatable(0.95f) }
     val exitFade = remember { Animatable(0f) }
 
     LaunchedEffect(Unit) { applist.loadApps(context) }
@@ -89,10 +97,6 @@ fun ZXGameSpaceShell(
     val profileValue by RootUtils.observeProfileValue().collectAsState(initial = "")
     val profile = stringResource(profileRes)
 
-    LaunchedEffect(hubVisible) {
-        if (hubVisible) hubFade.animateTo(1f, motion.defaultEffectsSpec())
-    }
-
     LaunchedEffect(leaving) {
         if (!leaving) return@LaunchedEffect
         exitFade.animateTo(1f, motion.defaultEffectsSpec())
@@ -101,29 +105,73 @@ fun ZXGameSpaceShell(
 
     // Back skips the intro, then backs out of the shell.
     BackHandler {
-        if (hubVisible) leaving = true else hubVisible = true
+        if (introActive) {
+            introActive = false
+            scope.launch {
+                hubFade.snapTo(1f)
+                hubScale.snapTo(1f)
+            }
+        } else {
+            leaving = true
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
-        if (hubVisible) {
-            Box(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = hubFade.value }) {
-                ZXGameSpaceHub(
-                    profile = profile,
-                    profileValue = profileValue,
-                    games = games,
-                    allApps = userApps,
-                    onApplyProfile = { id ->
-                        com.topjohnwu.superuser.Shell.cmd(
-                            "/data/adb/modules/AZenith/system/bin/sys.azenith-service -p $id"
-                        ).submit()
-                    },
-                    onLaunch = { app -> launchGame(context, app.packageName) },
-                    onExit = { leaving = true },
-                    onExitApp = onExitApp
-                )
-            }
-        } else {
-            ZXGameSpaceIntro(onFinished = { hubVisible = true })
+        // The Hub sits underneath, smoothly scaling and fading into view as the Intro blooms and dissolves.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    alpha = hubFade.value
+                    scaleX = hubScale.value
+                    scaleY = hubScale.value
+                }
+        ) {
+            ZXGameSpaceHub(
+                profile = profile,
+                profileValue = profileValue,
+                games = games,
+                allApps = userApps,
+                onApplyProfile = { id ->
+                    com.topjohnwu.superuser.Shell.cmd(
+                        "/data/adb/modules/AZenith/system/bin/sys.azenith-service -p $id"
+                    ).submit()
+                },
+                onLaunch = { app -> launchGame(context, app.packageName) },
+                onExit = { leaving = true },
+                onExitApp = onExitApp
+            )
+        }
+
+        if (introActive) {
+            ZXGameSpaceIntro(
+                onTransitionStart = {
+                    scope.launch {
+                        launch {
+                            hubFade.animateTo(
+                                targetValue = 1f,
+                                animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing)
+                            )
+                        }
+                        launch {
+                            hubScale.animateTo(
+                                targetValue = 1f,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioLowBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            )
+                        }
+                    }
+                },
+                onFinished = {
+                    introActive = false
+                    scope.launch {
+                        hubFade.snapTo(1f)
+                        hubScale.snapTo(1f)
+                    }
+                }
+            )
         }
 
         Box(

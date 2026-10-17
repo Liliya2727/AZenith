@@ -896,11 +896,8 @@ internal fun WelcomeHubStage(
                     icon = Icons.Rounded.Memory,
                     label = stringResource(R.string.gamespace_info_module),
                     value = moduleValue,
-                    container = scheme.surfaceContainerHigh,
-                    onContainer = scheme.onSurface,
-                    iconContainer = if (isModuleAlive) scheme.primaryContainer else if (moduleInstalled == false) scheme.errorContainer else scheme.surfaceContainerHighest,
-                    iconTint = if (isModuleAlive) scheme.primary else if (moduleInstalled == false) scheme.error else scheme.outline,
-                    isLive = isModuleAlive,
+                    container = if (moduleInstalled == false) scheme.errorContainer else scheme.secondaryContainer,
+                    onContainer = if (moduleInstalled == false) scheme.onErrorContainer else scheme.onSecondaryContainer,
                     pillText = if (isModuleAlive && service.second.isNotBlank()) service.second else null
                 )
 
@@ -911,28 +908,18 @@ internal fun WelcomeHubStage(
                     icon = if (isRootOk) Icons.Rounded.VerifiedUser else Icons.Rounded.Security,
                     label = stringResource(R.string.root_access),
                     value = rootValue,
-                    container = scheme.surfaceContainerHigh,
-                    onContainer = scheme.onSurface,
-                    iconContainer = if (isRootOk) scheme.secondaryContainer else if (rootGranted == false) scheme.errorContainer else scheme.surfaceContainerHighest,
-                    iconTint = if (isRootOk) scheme.secondary else if (rootGranted == false) scheme.error else scheme.outline
+                    container = if (rootGranted == false) scheme.errorContainer else scheme.primaryContainer,
+                    onContainer = if (rootGranted == false) scheme.onErrorContainer else scheme.onPrimaryContainer
                 )
 
                 // 3. Current Profile Widget (shows '>' indicator and opens sheet only in manual mode)
-                val profileIcon = when (profileValue) {
-                    "1" -> Icons.Rounded.OfflineBolt
-                    "2" -> Icons.Rounded.Water
-                    "3" -> Icons.Rounded.EnergySavingsLeaf
-                    else -> Icons.Rounded.Speed
-                }
                 HubInfoTile(
                     modifier = Modifier.weight(1f).fillMaxHeight(),
-                    icon = profileIcon,
+                    icon = Icons.Rounded.Token,
                     label = stringResource(R.string.current_profile),
                     value = profile,
                     container = scheme.surfaceContainerHigh,
                     onContainer = scheme.onSurface,
-                    iconContainer = scheme.tertiaryContainer,
-                    iconTint = scheme.tertiary,
                     isLoading = isProfileApplying,
                     showArrow = isManualMode,
                     onClick = if (isManualMode && !isProfileApplying) {
@@ -1397,76 +1384,43 @@ internal fun HubInfoTile(
     value: String,
     container: Color,
     onContainer: Color,
-    iconContainer: Color = container,
-    iconTint: Color = onContainer,
-    isLive: Boolean = false,
-    liveColor: Color = Color(0xFF4CAF50),
     isLoading: Boolean = false,
     pillText: String? = null,
     showArrow: Boolean = false,
     onClick: (() -> Unit)? = null
 ) {
     val shape = RoundedCornerShape(24.dp)
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed && onClick != null) 0.96f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "HubTileScale"
-    )
-
     Surface(
         modifier = modifier
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .clip(shape)
             .gamepadFocusOutline(shape = shape, register = onClick != null)
+            .clip(shape)
             .then(
                 if (onClick != null) {
                     Modifier.clickable(
-                        interactionSource = interactionSource,
+                        interactionSource = remember { MutableInteractionSource() },
                         indication = ripple(),
                         onClick = onClick
                     )
                 } else Modifier
             ),
         shape = shape,
-        color = container,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+        color = container
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 14.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = iconContainer,
-                border = BorderStroke(1.dp, iconTint.copy(alpha = 0.20f)),
-                modifier = Modifier.size(46.dp)
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = iconTint,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
+        Box(modifier = Modifier.fillMaxSize()) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = onContainer.copy(alpha = 0.12f),
+                modifier = Modifier
+                    .size(96.dp)
+                    .align(Alignment.CenterStart)
+                    .offset(x = (-8).dp)
+            )
 
             Column(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(start = 78.dp, end = 16.dp, top = 16.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
@@ -1475,22 +1429,22 @@ internal fun HubInfoTile(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.8.sp
                     ),
-                    color = onContainer.copy(alpha = 0.65f),
+                    color = onContainer.copy(alpha = 0.72f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(Modifier.height(3.dp))
+                Spacer(Modifier.height(4.dp))
 
-                if (isLoading) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (isLoading) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(14.dp),
+                            modifier = Modifier.size(16.dp),
                             strokeWidth = 2.dp,
-                            color = iconTint
+                            color = onContainer
                         )
                         Text(
                             text = "Applying...",
@@ -1501,44 +1455,7 @@ internal fun HubInfoTile(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                    }
-                } else {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        if (isLive) {
-                            val infiniteTransition = rememberInfiniteTransition(label = "LiveBeacon")
-                            val beaconScale by infiniteTransition.animateFloat(
-                                initialValue = 0.8f,
-                                targetValue = 1.25f,
-                                animationSpec = infiniteRepeatable(
-                                    animation = tween(1200, easing = FastOutSlowInEasing),
-                                    repeatMode = RepeatMode.Reverse
-                                ),
-                                label = "beaconScale"
-                            )
-                            val beaconAlpha by infiniteTransition.animateFloat(
-                                initialValue = 0.45f,
-                                targetValue = 1.0f,
-                                animationSpec = infiniteRepeatable(
-                                    animation = tween(1200, easing = FastOutSlowInEasing),
-                                    repeatMode = RepeatMode.Reverse
-                                ),
-                                label = "beaconAlpha"
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .size(7.dp)
-                                    .graphicsLayer {
-                                        scaleX = beaconScale
-                                        scaleY = beaconScale
-                                        alpha = beaconAlpha
-                                    }
-                                    .background(liveColor, CircleShape)
-                            )
-                        }
-
+                    } else {
                         AnimatedContent(
                             targetState = value,
                             transitionSpec = {
@@ -1561,7 +1478,7 @@ internal fun HubInfoTile(
                         if (!pillText.isNullOrBlank()) {
                             Surface(
                                 shape = CircleShape,
-                                color = onContainer.copy(alpha = 0.12f)
+                                color = onContainer.copy(alpha = 0.16f)
                             ) {
                                 Text(
                                     text = pillText,
@@ -1571,27 +1488,19 @@ internal fun HubInfoTile(
                                     ),
                                     color = onContainer,
                                     maxLines = 1,
-                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                 )
                             }
                         }
-                    }
-                }
-            }
 
-            if (showArrow && !isLoading) {
-                Surface(
-                    shape = CircleShape,
-                    color = onContainer.copy(alpha = 0.08f),
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Rounded.ChevronRight,
-                            contentDescription = null,
-                            tint = onContainer.copy(alpha = 0.70f),
-                            modifier = Modifier.size(16.dp)
-                        )
+                        if (showArrow) {
+                            Icon(
+                                imageVector = Icons.Rounded.ChevronRight,
+                                contentDescription = null,
+                                tint = onContainer.copy(alpha = 0.75f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }
