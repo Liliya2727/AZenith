@@ -22,18 +22,34 @@ import android.view.KeyEvent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.PickVisualMediaRequest
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ripple
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
@@ -787,6 +803,25 @@ internal fun WelcomeHubStage(
         if (!isManualMode) showProfileSheet = false
     }
 
+    var pendingProfileValue by remember { mutableStateOf<String?>(null) }
+    var isProfileApplying by remember { mutableStateOf(false) }
+
+    LaunchedEffect(profileValue) {
+        if (pendingProfileValue != null && profileValue == pendingProfileValue) {
+            kotlinx.coroutines.delay(180)
+            isProfileApplying = false
+            pendingProfileValue = null
+        }
+    }
+
+    LaunchedEffect(isProfileApplying) {
+        if (isProfileApplying) {
+            kotlinx.coroutines.delay(4000)
+            isProfileApplying = false
+            pendingProfileValue = null
+        }
+    }
+
     val rootValue = when (rootGranted) {
         true -> stringResource(R.string.root_granted)
         false -> stringResource(R.string.root_not_granted)
@@ -853,36 +888,52 @@ internal fun WelcomeHubStage(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // 1. Combined Module Status & Service PID Widget
+                val isModuleAlive = moduleInstalled == true && (service.first == R.string.status_alive || service.second.isNotBlank())
                 HubInfoTile(
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                     icon = Icons.Rounded.Memory,
                     label = stringResource(R.string.gamespace_info_module),
                     value = moduleValue,
-                    container = if (moduleInstalled == false) scheme.errorContainer else scheme.secondaryContainer,
-                    onContainer = if (moduleInstalled == false) scheme.onErrorContainer else scheme.onSecondaryContainer,
-                    pillText = if (moduleInstalled == true && service.second.isNotBlank()) service.second else null
+                    container = scheme.surfaceContainerHigh,
+                    onContainer = scheme.onSurface,
+                    iconContainer = if (isModuleAlive) scheme.primaryContainer else if (moduleInstalled == false) scheme.errorContainer else scheme.surfaceContainerHighest,
+                    iconTint = if (isModuleAlive) scheme.primary else if (moduleInstalled == false) scheme.error else scheme.outline,
+                    isLive = isModuleAlive,
+                    pillText = if (isModuleAlive && service.second.isNotBlank()) service.second else null
                 )
 
                 // 2. Root Access Widget
+                val isRootOk = rootGranted == true
                 HubInfoTile(
                     modifier = Modifier.weight(1f).fillMaxHeight(),
-                    icon = if (rootGranted == true) Icons.Rounded.VerifiedUser else Icons.Rounded.Security,
+                    icon = if (isRootOk) Icons.Rounded.VerifiedUser else Icons.Rounded.Security,
                     label = stringResource(R.string.root_access),
                     value = rootValue,
-                    container = if (rootGranted == false) scheme.errorContainer else scheme.primaryContainer,
-                    onContainer = if (rootGranted == false) scheme.onErrorContainer else scheme.onPrimaryContainer
+                    container = scheme.surfaceContainerHigh,
+                    onContainer = scheme.onSurface,
+                    iconContainer = if (isRootOk) scheme.secondaryContainer else if (rootGranted == false) scheme.errorContainer else scheme.surfaceContainerHighest,
+                    iconTint = if (isRootOk) scheme.secondary else if (rootGranted == false) scheme.error else scheme.outline
                 )
 
                 // 3. Current Profile Widget (shows '>' indicator and opens sheet only in manual mode)
+                val profileIcon = when (profileValue) {
+                    "1" -> Icons.Rounded.OfflineBolt
+                    "2" -> Icons.Rounded.Water
+                    "3" -> Icons.Rounded.EnergySavingsLeaf
+                    else -> Icons.Rounded.Speed
+                }
                 HubInfoTile(
                     modifier = Modifier.weight(1f).fillMaxHeight(),
-                    icon = Icons.Rounded.Token,
+                    icon = profileIcon,
                     label = stringResource(R.string.current_profile),
                     value = profile,
                     container = scheme.surfaceContainerHigh,
                     onContainer = scheme.onSurface,
+                    iconContainer = scheme.tertiaryContainer,
+                    iconTint = scheme.tertiary,
+                    isLoading = isProfileApplying,
                     showArrow = isManualMode,
-                    onClick = if (isManualMode) {
+                    onClick = if (isManualMode && !isProfileApplying) {
                         { showProfileSheet = true }
                     } else null
                 )
@@ -977,7 +1028,12 @@ internal fun WelcomeHubStage(
         },
         onItemClick = { index ->
             if (index in profileOptions.indices) {
-                onApplyProfile(profileOptions[index].first)
+                val target = profileOptions[index].first
+                if (target != profileValue) {
+                    pendingProfileValue = target
+                    isProfileApplying = true
+                }
+                onApplyProfile(target)
             }
             showProfileSheet = false
         }
@@ -1318,37 +1374,76 @@ internal fun HubInfoTile(
     value: String,
     container: Color,
     onContainer: Color,
+    iconContainer: Color = container,
+    iconTint: Color = onContainer,
+    isLive: Boolean = false,
+    liveColor: Color = Color(0xFF4CAF50),
+    isLoading: Boolean = false,
     pillText: String? = null,
     showArrow: Boolean = false,
     onClick: (() -> Unit)? = null
 ) {
     val shape = RoundedCornerShape(24.dp)
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed && onClick != null) 0.96f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "HubTileScale"
+    )
+
     Surface(
         modifier = modifier
-            .gamepadFocusOutline(shape = shape, register = onClick != null)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .clip(shape)
+            .gamepadFocusOutline(shape = shape, register = onClick != null)
             .then(
-                if (onClick != null) Modifier.clickable(onClick = onClick)
-                else Modifier
+                if (onClick != null) {
+                    Modifier.clickable(
+                        interactionSource = interactionSource,
+                        indication = ripple(),
+                        onClick = onClick
+                    )
+                } else Modifier
             ),
         shape = shape,
-        color = container
+        color = container,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = onContainer.copy(alpha = 0.12f),
-                modifier = Modifier
-                    .size(96.dp)
-                    .align(Alignment.CenterStart)
-                    .offset(x = (-8).dp)
-            )
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 14.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = iconContainer,
+                border = BorderStroke(1.dp, iconTint.copy(alpha = 0.20f)),
+                modifier = Modifier.size(46.dp)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
 
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(start = 78.dp, end = 16.dp, top = 16.dp, bottom = 16.dp),
+                modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
@@ -1357,51 +1452,122 @@ internal fun HubInfoTile(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.8.sp
                     ),
-                    color = onContainer.copy(alpha = 0.72f),
+                    color = onContainer.copy(alpha = 0.65f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(3.dp))
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = value,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = onContainer,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                if (isLoading) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(14.dp),
+                            strokeWidth = 2.dp,
+                            color = iconTint
+                        )
+                        Text(
+                            text = "Applying...",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = onContainer.copy(alpha = 0.85f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                } else {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        if (isLive) {
+                            val infiniteTransition = rememberInfiniteTransition(label = "LiveBeacon")
+                            val beaconScale by infiniteTransition.animateFloat(
+                                initialValue = 0.8f,
+                                targetValue = 1.25f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(1200, easing = FastOutSlowInEasing),
+                                    repeatMode = RepeatMode.Reverse
+                                ),
+                                label = "beaconScale"
+                            )
+                            val beaconAlpha by infiniteTransition.animateFloat(
+                                initialValue = 0.45f,
+                                targetValue = 1.0f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(1200, easing = FastOutSlowInEasing),
+                                    repeatMode = RepeatMode.Reverse
+                                ),
+                                label = "beaconAlpha"
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .graphicsLayer {
+                                        scaleX = beaconScale
+                                        scaleY = beaconScale
+                                        alpha = beaconAlpha
+                                    }
+                                    .background(liveColor, CircleShape)
+                            )
+                        }
 
-                    if (!pillText.isNullOrBlank()) {
-                        Surface(
-                            shape = CircleShape,
-                            color = onContainer.copy(alpha = 0.16f)
-                        ) {
+                        AnimatedContent(
+                            targetState = value,
+                            transitionSpec = {
+                                (slideInVertically { height -> height / 2 } + fadeIn(tween(220)))
+                                    .togetherWith(slideOutVertically { height -> -height / 2 } + fadeOut(tween(180)))
+                            },
+                            label = "TileValueTransition"
+                        ) { targetValue ->
                             Text(
-                                text = pillText,
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 0.4.sp
+                                text = targetValue,
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold
                                 ),
                                 color = onContainer,
                                 maxLines = 1,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
-                    }
 
-                    if (showArrow) {
+                        if (!pillText.isNullOrBlank()) {
+                            Surface(
+                                shape = CircleShape,
+                                color = onContainer.copy(alpha = 0.12f)
+                            ) {
+                                Text(
+                                    text = pillText,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.4.sp
+                                    ),
+                                    color = onContainer,
+                                    maxLines = 1,
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (showArrow && !isLoading) {
+                Surface(
+                    shape = CircleShape,
+                    color = onContainer.copy(alpha = 0.08f),
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Rounded.ChevronRight,
                             contentDescription = null,
-                            tint = onContainer.copy(alpha = 0.75f),
-                            modifier = Modifier.size(20.dp)
+                            tint = onContainer.copy(alpha = 0.70f),
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
