@@ -76,6 +76,17 @@ int main(int argc, char* argv[]) {
         return handle_verboselog(argc, argv);
     if (IS_CMD(cmd, "--checkbypasschg", "-cbc"))
         return check_bypass_compatibility();
+    if (IS_CMD(cmd, "--testbypass", "-tb")) {
+        if (argc < 3) {
+            fprintf(stderr, "\033[31mERROR:\033[0m Missing node name. Use: --testbypass <NODE_NAME> or --testbypass --path=<NODE_NAME>\n");
+            return 1;
+        }
+        const char* name = argv[2];
+        if (strncmp(name, "--path=", 7) == 0) {
+            name += 7;
+        }
+        return test_bypass_node_by_name(name);
+    }
 
     fprintf(stderr, "\033[31mERROR:\033[0m Unknown command: %s\n", cmd);
     return 1;

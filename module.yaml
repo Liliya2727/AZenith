@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/KernelSU-Modules/tools/main/schemas/module.schema.json
+schemaVersion: 1
+id: AZenith
+name: AZenith火
+summary: A Dynamic Performance Module to tweak gaming experience while keeping user preferences
+description: README.md
+license: Apache-2.0
+homepage: https://github.com/Liliya2727/AZenith
+support: https://t.me/ArchHavenDisc
+tags: [performance, tools]
+icon: logo.jpg
+metamodule: false
+authors:
+  - name: Liliya
+    url: https://github.com/Liliya2727
+  - name: Xia
+    url: https://github.com/ryanistr
+  - name: Kanao
+    url: https://github.com/kanaodnd
+compatibility:
+  androidMinApi: 29
+  architectures: [arm64-v8a, armeabi-v7a]
+release:
+  assetPattern: AZenith-*.zip
