@@ -1,154 +1,98 @@
-use crate::utils::*; use std::fs; use std::path::Path;
+//! MediaTek-specific tweaks.
+//!
+//! All three profiles deliberately share the same step order:
+//!
+//! 1. `apply_ppm_policy_status`
+//! 2. FPSGO
+//! 3. GED KPI
+//! 4. DRAM boost
+//! 5. `cpufreq` cci/power mode
+//! 6. `apply_gpu_opp_limit`
+//! 7. EAS
+//! 8. `apply_gpu_power_limited`
+//! 9. syslimiter + battery OC protect
+//! 10. EARA thermal
+//! 11. `apply_dvfsrc`
+//! 12. `apply_mali_power_policy`
 
-pub fn mediatek_balance() {
-    if Path::new("/proc/ppm/policy_status").exists() {
-        let content = fs::read_to_string("/proc/ppm/policy_status").unwrap_or_default();
-        for line in content.lines() {
-            let is_target_1 = line.contains("FORCE_LIMIT") || line.contains("PWR_THRO") || line.contains("THERMAL") || line.contains("USER_LIMIT");
-            let is_target_2 = line.contains("SYS_BOOST");
-            if is_target_1 || is_target_2 {
-                if let Some(idx_str) = line.split('[').nth(1).and_then(|s| s.split(']').next()) {
-                    if is_target_1 {
-                        write_lock(&format!("{} 1", idx_str), "/proc/ppm/policy_status");
-                    }
-                    if is_target_2 {
-                        write_lock(&format!("{} 0", idx_str), "/proc/ppm/policy_status");
-                    }
-                }
-            }
+use crate::utils::*;
+use std::fs;
+use std::path::Path;
+
+/// PPM policies that act as frequency limiters.
+const PPM_LIMIT_POLICIES: [&str; 4] = ["FORCE_LIMIT", "PWR_THRO", "THERMAL", "USER_LIMIT"];
+
+/// Knobs that ignore GPU power/thermal limits.
+const GPU_POWER_LIMITED_KNOBS: [&str; 5] = [
+    "ignore_batt_oc",
+    "ignore_batt_percent",
+    "ignore_low_batt",
+    "ignore_thermal_protect",
+    "ignore_pbm_limited",
+];
+
+/// `1` = limits enforced (balanced/eco), `0` = limits lifted (performance).
+/// `SYS_BOOST` takes the opposite value.
+fn apply_ppm_policy_status(limit: &str, sys_boost: &str) {
+    if !Path::new("/proc/ppm/policy_status").exists() {
+        return;
+    }
+
+    let content = fs::read_to_string("/proc/ppm/policy_status").unwrap_or_default();
+    for line in content.lines() {
+        let is_limit = PPM_LIMIT_POLICIES.iter().any(|policy| line.contains(policy));
+        let is_sys_boost = line.contains("SYS_BOOST");
+
+        if !is_limit && !is_sys_boost {
+            continue;
         }
-    }
-    
-    // ppm_fix_freq("-1"); 
-    
-    write_lock("2", "/sys/kernel/fpsgo/common/force_onoff");
-    write_lock("1", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
-    
-    write_lock("0", "/sys/devices/platform/boot_dramboost/dramboost/dramboost");
 
-    write_lock("0", "/proc/cpufreq/cpufreq_cci_mode");
-    write_lock("1", "/proc/cpufreq/cpufreq_power_mode");
+        let Some(idx_str) = line.split('[').nth(1).and_then(|s| s.split(']').next()) else {
+            continue;
+        };
 
-    if Path::new("/proc/gpufreq").exists() {
-        write_lock("0", "/proc/gpufreq/gpufreq_opp_freq");
-    } else if Path::new("/proc/gpufreqv2").exists() {
-        write_lock("-1", "/proc/gpufreqv2/fix_target_opp_index");
-    }
-
-    write_lock("1", "/sys/devices/system/cpu/eas/enable");
-
-    if Path::new("/proc/gpufreq/gpufreq_power_limited").exists() {
-        let settings = [
-            "ignore_batt_oc", "ignore_batt_percent", "ignore_low_batt",
-            "ignore_thermal_protect", "ignore_pbm_limited"
-        ];
-        for setting in settings {
-            write_lock(&format!("{} 0", setting), "/proc/gpufreq/gpufreq_power_limited");
+        if is_limit {
+            write_lock(&format!("{} {}", idx_str, limit), "/proc/ppm/policy_status");
         }
-    }
-    
-
-    write_lock("0", "/proc/perfmgr/syslimiter/syslimiter_force_disable");
-    write_lock("stop 0", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
-    write_lock("1", "/sys/kernel/eara_thermal/enable");
-
-    write_lock("-1", "/sys/kernel/helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp");
-    write_lock("userspace", "/sys/class/devfreq/mtk-dvfsrc-devfreq/governor");
-    
-        // 1. Eksekusi statis untuk path /sys/kernel dan /sys/class (karena ini symlink global, tidak berubah)
-    write_lock("-1", "/sys/kernel/helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp");
-    write_lock("userspace", "/sys/class/devfreq/mtk-dvfsrc-devfreq/governor");
-
-    if let Ok(paths) = glob::glob("/sys/devices/platform/*.dvfsrc") {
-        for path in paths.flatten() {
-            if let Some(p_str) = path.to_str() {
-                write_lock("-1", &format!("{}/helio-dvfsrc/dvfsrc_req_ddr_opp", p_str));
-            }
-        }
-    }
-
-    if let Ok(paths) = glob::glob("/sys/devices/platform/soc/*.dvfsrc") {
-        for path in paths.flatten() {
-            if let Some(p_str) = path.to_str() {
-                write_lock("userspace", &format!("{}/mtk-dvfsrc-devfreq/devfreq/mtk-dvfsrc-devfreq/governor", p_str));
-            }
-        }
-    }
-    
-
-    if let Ok(mut paths) = glob::glob("/sys/devices/platform/*.mali") {
-        if let Some(Ok(path)) = paths.next() {
-            write_lock("coarse_demand", &format!("{}/power_policy", path.display()));
+        if is_sys_boost {
+            write_lock(&format!("{} {}", idx_str, sys_boost), "/proc/ppm/policy_status");
         }
     }
 }
 
-pub fn mediatek_performance() {
-    if Path::new("/proc/ppm/policy_status").exists() {
-        let content = fs::read_to_string("/proc/ppm/policy_status").unwrap_or_default();
-        for line in content.lines() {
-            let is_target_1 = line.contains("FORCE_LIMIT") || line.contains("PWR_THRO") || line.contains("THERMAL") || line.contains("USER_LIMIT");
-            let is_target_2 = line.contains("SYS_BOOST");
-            if is_target_1 || is_target_2 {
-                if let Some(idx_str) = line.split('[').nth(1).and_then(|s| s.split(']').next()) {
-                    if is_target_1 {
-                        write_lock(&format!("{} 0", idx_str), "/proc/ppm/policy_status");
-                    }
-                    if is_target_2 {
-                        write_lock(&format!("{} 1", idx_str), "/proc/ppm/policy_status");
-                    }
-                }
-            }
-        }
-    }
-
-    
-    // ppm_fix_freq("0"); 
-
-    let use_fpsgo = getprop("persist.sys.azenithconf.usefpsgo");
-    if use_fpsgo == "0" {
-        write_lock("0", "/sys/kernel/fpsgo/common/force_onoff");
-    }
-    
-    write_lock("0", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
-    
-    write_lock("1", "/sys/devices/platform/boot_dramboost/dramboost/dramboost");
-
-    write_lock("1", "/proc/cpufreq/cpufreq_cci_mode");
-    write_lock("3", "/proc/cpufreq/cpufreq_power_mode");
-
+/// GPU OPP: `/proc/gpufreq` (legacy) or `/proc/gpufreqv2` (newer).
+/// `max_freq` `None` means the `gpufreq_opp_freq` node is intentionally skipped.
+fn apply_gpu_opp_limit(max_freq: Option<u64>, fix_index: &str) {
     if Path::new("/proc/gpufreq").exists() {
-        if let Some(freq) = get_mtk_gpu_max_freq() {
+        if let Some(freq) = max_freq {
             write_lock(&freq.to_string(), "/proc/gpufreq/gpufreq_opp_freq");
         }
     } else if Path::new("/proc/gpufreqv2").exists() {
-        write_lock("0", "/proc/gpufreqv2/fix_target_opp_index");
+        write_lock(fix_index, "/proc/gpufreqv2/fix_target_opp_index");
+    }
+}
+
+/// `1` = ignore limits (performance), `0` = respect limits (balanced/eco).
+fn apply_gpu_power_limited(value: &str) {
+    if !Path::new("/proc/gpufreq/gpufreq_power_limited").exists() {
+        return;
     }
 
-    write_lock("0", "/sys/devices/system/cpu/eas/enable");
-
-    if Path::new("/proc/gpufreq/gpufreq_power_limited").exists() {
-        let settings = [
-            "ignore_batt_oc", "ignore_batt_percent", "ignore_low_batt",
-            "ignore_thermal_protect", "ignore_pbm_limited"
-        ];
-        for setting in settings {
-            write_lock(&format!("{} 1", setting), "/proc/gpufreq/gpufreq_power_limited");
-        }
+    for knob in GPU_POWER_LIMITED_KNOBS {
+        write_lock(&format!("{} {}", knob, value), "/proc/gpufreq/gpufreq_power_limited");
     }
+}
 
-    write_lock("0", "/proc/perfmgr/syslimiter/syslimiter_force_disable");
-    write_lock("stop 1", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
-    
-    write_lock("0", "/sys/kernel/eara_thermal/enable");
+/// dvfsrc (Vcore + DDR): `force_opp` for the hard-limit node, `req_opp` for the
+/// DDR request, `governor` for both dvfsrc devfreq nodes.
+fn apply_dvfsrc(force_opp: &str, req_opp: &str, governor: &str) {
+    write_lock(force_opp, "/sys/kernel/helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp");
+    write_lock(governor, "/sys/class/devfreq/mtk-dvfsrc-devfreq/governor");
 
-    write_lock("0", "/sys/kernel/helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp");
-    write_lock("performance", "/sys/class/devfreq/mtk-dvfsrc-devfreq/governor");
-    
     if let Ok(paths) = glob::glob("/sys/devices/platform/*.dvfsrc") {
         for path in paths.flatten() {
             if let Some(p_str) = path.to_str() {
-                write_lock("0", &format!("{}/helio-dvfsrc/dvfsrc_req_ddr_opp", p_str));
+                write_lock(req_opp, &format!("{}/helio-dvfsrc/dvfsrc_req_ddr_opp", p_str));
             }
         }
     }
@@ -156,79 +100,74 @@ pub fn mediatek_performance() {
     if let Ok(paths) = glob::glob("/sys/devices/platform/soc/*.dvfsrc") {
         for path in paths.flatten() {
             if let Some(p_str) = path.to_str() {
-                write_lock("performance", &format!("{}/mtk-dvfsrc-devfreq/devfreq/mtk-dvfsrc-devfreq/governor", p_str));
+                write_lock(
+                    governor,
+                    &format!("{}/mtk-dvfsrc-devfreq/devfreq/mtk-dvfsrc-devfreq/governor", p_str),
+                );
             }
-        }
-    }
-
-    if let Ok(mut paths) = glob::glob("/sys/devices/platform/*.mali") {
-        if let Some(Ok(path)) = paths.next() {
-            write_lock("always_on", &format!("{}/power_policy", path.display()));
         }
     }
 }
 
-pub fn mediatek_powersave() {
-    if Path::new("/proc/ppm/policy_status").exists() {
-        let content = fs::read_to_string("/proc/ppm/policy_status").unwrap_or_default();
-        for line in content.lines() {
-            let is_target_1 = line.contains("FORCE_LIMIT") || line.contains("PWR_THRO") || line.contains("THERMAL") || line.contains("USER_LIMIT");
-            let is_target_2 = line.contains("SYS_BOOST");
-            if is_target_1 || is_target_2 {
-                if let Some(idx_str) = line.split('[').nth(1).and_then(|s| s.split(']').next()) {
-                    if is_target_1 {
-                        write_lock(&format!("{} 1", idx_str), "/proc/ppm/policy_status");
-                    }
-                    if is_target_2 {
-                        write_lock(&format!("{} 0", idx_str), "/proc/ppm/policy_status");
-                    }
-                }
-            }
-        }
-    }
-    
-    // ppm_fix_freq("-1"); 
-    write_lock("0", "/sys/devices/platform/boot_dramboost/dramboost/dramboost");
-    write_lock("2", "/sys/kernel/fpsgo/common/force_onoff");
-    write_lock("1", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
-    
-    write_lock("1", "/sys/kernel/eara_thermal/enable");
-
-    write_lock("-1", "/sys/kernel/helio-dvfsrc/dvfsrc_force_vcore_dvfs_opp");
-    write_lock("powersave", "/sys/class/devfreq/mtk-dvfsrc-devfreq/governor");
-    
-    if let Ok(paths) = glob::glob("/sys/devices/platform/*.dvfsrc") {
-        for path in paths.flatten() {
-            if let Some(p_str) = path.to_str() {
-                write_lock("-1", &format!("{}/helio-dvfsrc/dvfsrc_req_ddr_opp", p_str));
-            }
-        }
-    }
-
-    if let Ok(paths) = glob::glob("/sys/devices/platform/soc/*.dvfsrc") {
-        for path in paths.flatten() {
-            if let Some(p_str) = path.to_str() {
-                write_lock("powersave", &format!("{}/mtk-dvfsrc-devfreq/devfreq/mtk-dvfsrc-devfreq/governor", p_str));
-            }
-        }
-    }
-
-    if Path::new("/proc/gpufreq/gpufreq_power_limited").exists() {
-        let settings = [
-            "ignore_batt_oc", "ignore_batt_percent", "ignore_low_batt",
-            "ignore_thermal_protect", "ignore_pbm_limited"
-        ];
-        for setting in settings {
-            write_lock(&format!("{} 0", setting), "/proc/gpufreq/gpufreq_power_limited");
-        }
-    }
-
-    write_lock("0", "/proc/perfmgr/syslimiter/syslimiter_force_disable");
-    write_lock("stop 0", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
-
+/// Only the first GPU that is found gets touched.
+fn apply_mali_power_policy(policy: &str) {
     if let Ok(mut paths) = glob::glob("/sys/devices/platform/*.mali") {
         if let Some(Ok(path)) = paths.next() {
-            write_lock("coarse_demand", &format!("{}/power_policy", path.display()));
+            write_lock(policy, &format!("{}/power_policy", path.display()));
         }
     }
+}
+
+pub fn mediatek_balance() {
+    apply_ppm_policy_status("1", "0");
+    write_lock("2", "/sys/kernel/fpsgo/common/force_onoff");
+    write_lock("1", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
+    write_lock("0", "/sys/devices/platform/boot_dramboost/dramboost/dramboost");
+    write_lock("0", "/proc/cpufreq/cpufreq_cci_mode");
+    write_lock("1", "/proc/cpufreq/cpufreq_power_mode");
+    apply_gpu_opp_limit(Some(0), "-1");
+    write_lock("1", "/sys/devices/system/cpu/eas/enable");
+    apply_gpu_power_limited("0");
+    write_lock("0", "/proc/perfmgr/syslimiter/syslimiter_force_disable");
+    write_lock("stop 0", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
+    write_lock("1", "/sys/kernel/eara_thermal/enable");
+    apply_dvfsrc("-1", "-1", "userspace");
+    apply_mali_power_policy("coarse_demand");
+}
+
+pub fn mediatek_performance() {
+    apply_ppm_policy_status("0", "1");
+
+    // FPSGO is only turned off when the user disables it via `usefpsgo`.
+    if getprop("persist.sys.azenithconf.usefpsgo") == "0" {
+        write_lock("0", "/sys/kernel/fpsgo/common/force_onoff");
+    }
+
+    write_lock("0", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
+    write_lock("1", "/sys/devices/platform/boot_dramboost/dramboost/dramboost");
+    write_lock("1", "/proc/cpufreq/cpufreq_cci_mode");
+    write_lock("3", "/proc/cpufreq/cpufreq_power_mode");
+    apply_gpu_opp_limit(get_mtk_gpu_max_freq(), "0");
+    write_lock("0", "/sys/devices/system/cpu/eas/enable");
+    apply_gpu_power_limited("1");
+    write_lock("0", "/proc/perfmgr/syslimiter/syslimiter_force_disable");
+    write_lock("stop 1", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
+    write_lock("0", "/sys/kernel/eara_thermal/enable");
+    apply_dvfsrc("0", "0", "performance");
+    apply_mali_power_policy("always_on");
+}
+
+pub fn mediatek_powersave() {
+    // Same order as the other two profiles; cci/power mode, GPU OPP and EAS
+    // are intentionally left untouched by the power-saving profile.
+    apply_ppm_policy_status("1", "0");
+    write_lock("2", "/sys/kernel/fpsgo/common/force_onoff");
+    write_lock("1", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
+    write_lock("0", "/sys/devices/platform/boot_dramboost/dramboost/dramboost");
+    apply_gpu_power_limited("0");
+    write_lock("0", "/proc/perfmgr/syslimiter/syslimiter_force_disable");
+    write_lock("stop 0", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
+    write_lock("1", "/sys/kernel/eara_thermal/enable");
+    apply_dvfsrc("-1", "-1", "powersave");
+    apply_mali_power_policy("coarse_demand");
 }
