@@ -256,6 +256,7 @@ fun ZXGameSpaceHub(
             isSettings -> 1f
             isLibrary -> 1f
             isOverlayOpen -> 1f
+            searchOpen -> 1f
             isHomescreenScrolled -> {
                 if (homeExpanded) 1f else (welcomeScroll.value.toFloat() / 180f).coerceIn(0f, 1f)
             }
@@ -333,7 +334,11 @@ fun ZXGameSpaceHub(
                 clock = clock,
                 battery = battery,
                 isScrolled = isScrolled,
-                onSelectCategory = { category = it },
+                onSelectCategory = {
+                    searchOpen = false
+                    searchQuery = ""
+                    category = it
+                },
                 searchOpen = searchOpen,
                 searchQuery = searchQuery,
                 onSearchQueryChange = { searchQuery = it },
@@ -346,9 +351,13 @@ fun ZXGameSpaceHub(
                     searchOpen = true
                 },
                 onSettingsClick = {
+                    searchOpen = false
+                    searchQuery = ""
                     category = if (category == TopCategory.Settings) TopCategory.Games else TopCategory.Settings
                 },
                 onAvatarClick = {
+                    searchOpen = false
+                    searchQuery = ""
                     val nextProfile = when (profileValue) {
                         "1" -> "2"
                         "2" -> "3"
@@ -356,8 +365,16 @@ fun ZXGameSpaceHub(
                     }
                     onApplyProfile(nextProfile)
                 },
-                onStatusClick = { quickSettingsOpen = !quickSettingsOpen },
-                onExit = { exitPrompt = true }
+                onStatusClick = {
+                    searchOpen = false
+                    searchQuery = ""
+                    quickSettingsOpen = !quickSettingsOpen
+                },
+                onExit = {
+                    searchOpen = false
+                    searchQuery = ""
+                    exitPrompt = true
+                }
             )
 
             Spacer(Modifier.height(6.dp))
@@ -518,6 +535,10 @@ fun ZXGameSpaceHub(
                 // Search Overlay
                 ZXGameSpaceSearchOverlay(
                     visible = searchOpen,
+                    onClose = {
+                        searchOpen = false
+                        searchQuery = ""
+                    },
                     modifier = Modifier.fillMaxSize()
                 ) {
                     ZXGameSpaceSearchPane(

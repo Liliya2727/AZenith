@@ -61,8 +61,11 @@ import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.BatteryStd
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -199,7 +202,10 @@ internal fun ZXGameSpaceTopBar(
                                     }
                                 }
                                 .gamepadFocusOutline(shape = shape, register = true)
-                                .clickable { onSelectCategory(tab) }
+                                .clickable {
+                                    if (searchOpen) onSearchClose()
+                                    onSelectCategory(tab)
+                                }
                         ) {
                             Text(
                                 text = stringResource(tab.labelRes),
@@ -235,7 +241,7 @@ internal fun ZXGameSpaceTopBar(
                 targetValue = if (searchOpen) {
                     scheme.surfaceContainerHighest
                 } else {
-                    scheme.surfaceContainerHigh.copy(alpha = 0.85f)
+                    scheme.surfaceContainerHigh
                 },
                 animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
                 label = "SearchBarBg"
@@ -364,18 +370,24 @@ internal fun ZXGameSpaceTopBar(
                 icon = Icons.Rounded.PowerSettingsNew,
                 contentDescription = stringResource(R.string.gamespace_exit_title),
                 tint = scheme.error,
-                onClick = onExit
+                onClick = {
+                    if (searchOpen) onSearchClose()
+                    onExit()
+                }
             )
 
             // Material 3 Expressive Unified System Status Capsule (Clock & Battery)
             Surface(
                 shape = CircleShape,
-                color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                color = scheme.surfaceContainerHigh,
                 modifier = Modifier
                     .height(38.dp)
                     .clip(CircleShape)
                     .gamepadFocusOutline(shape = CircleShape, register = true)
-                    .clickable(onClick = onStatusClick)
+                    .clickable {
+                        if (searchOpen) onSearchClose()
+                        onStatusClick()
+                    }
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
@@ -443,7 +455,7 @@ internal fun TopBarIconButton(
     val scheme = MaterialTheme.colorScheme
     Surface(
         shape = CircleShape,
-        color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+        color = scheme.surfaceContainerHigh,
         contentColor = tint,
         modifier = Modifier
             .size(38.dp)
@@ -656,10 +668,12 @@ internal fun ZXGameSpaceExitDialog(
 @Composable
 internal fun ZXGameSpaceSearchOverlay(
     visible: Boolean,
+    onClose: () -> Unit = {},
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
     val motion = MaterialTheme.motionScheme
+    val scheme = MaterialTheme.colorScheme
 
     AnimatedVisibility(
         visible = visible,
@@ -691,7 +705,16 @@ internal fun ZXGameSpaceSearchOverlay(
             )
         ) + fadeOut(animationSpec = motion.defaultEffectsSpec())
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(scheme.scrim.copy(alpha = 0.38f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onClose
+                )
+        ) {
             content()
         }
     }
@@ -709,6 +732,8 @@ internal fun ZXGameSpaceSearchPane(
     val scheme = MaterialTheme.colorScheme
     val context = LocalContext.current
     var scopeFilter by remember { mutableStateOf(SearchScopeFilter.All) }
+    var showAllApps by remember(query, scopeFilter) { mutableStateOf(false) }
+    var showAllSettings by remember(query, scopeFilter) { mutableStateOf(false) }
 
     val resolvedSettings = remember(context) {
         SETTINGS_SEARCH_ITEMS.map { item ->
@@ -754,12 +779,31 @@ internal fun ZXGameSpaceSearchPane(
         if (scopeFilter == SearchScopeFilter.Games || scopeFilter == SearchScopeFilter.Tuned) {
             emptyList()
         } else if (query.isBlank()) {
-            resolvedSettings.take(SEARCH_RESULT_CAP)
+            resolvedSettings
         } else {
             resolvedSettings.filter {
                 it.title.contains(query, ignoreCase = true) ||
                     it.summary.contains(query, ignoreCase = true)
             }
+        }
+    }
+
+    val initialAppLimit = 4
+    val initialSettingLimit = 4
+
+    val displayedApps = remember(matchedApps, showAllApps, query) {
+        if (query.isBlank() && !showAllApps) {
+            matchedApps.take(initialAppLimit)
+        } else {
+            matchedApps
+        }
+    }
+
+    val displayedSettings = remember(matchedSettings, showAllSettings, query) {
+        if (query.isBlank() && !showAllSettings) {
+            matchedSettings.take(initialSettingLimit)
+        } else {
+            matchedSettings
         }
     }
 
@@ -813,12 +857,7 @@ internal fun ZXGameSpaceSearchPane(
                                 labelColor = scheme.onSurfaceVariant,
                                 selectedLabelColor = scheme.onPrimaryContainer
                             ),
-                            border = FilterChipDefaults.filterChipBorder(
-                                enabled = true,
-                                selected = selected,
-                                borderColor = scheme.outlineVariant.copy(alpha = 0.35f),
-                                selectedBorderColor = scheme.primary.copy(alpha = 0.5f)
-                            )
+                            border = null
                         )
                     }
                 }
@@ -847,31 +886,84 @@ internal fun ZXGameSpaceSearchPane(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
-                // Section 1: Matching Games / Apps
-                if (matchedApps.isNotEmpty()) {
+                // Empty search query state
+                if (query.isNotBlank() && matchedApps.isEmpty() && matchedSettings.isEmpty()) {
+                    item(key = "empty_search_state") {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 40.dp)
+                                .animateItem(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = scheme.surfaceContainerLow,
+                                modifier = Modifier.size(56.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.SearchOff,
+                                        contentDescription = null,
+                                        tint = scheme.onSurfaceVariant,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = stringResource(R.string.gamespace_search_empty),
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = scheme.onSurface
+                            )
+                            Text(
+                                text = "\"$query\"",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = scheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                // Section 1: Games / Apps
+                if (displayedApps.isNotEmpty()) {
                     item(key = "header_apps") {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 4.dp),
+                                .padding(horizontal = 4.dp)
+                                .animateItem(),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Apps & Games (${matchedApps.size})",
+                                text = if (query.isBlank()) "Recent & Tuned Apps" else "Apps & Games (${matchedApps.size})",
                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                 color = scheme.primary
                             )
+                            if (query.isBlank() && matchedApps.size > initialAppLimit) {
+                                Text(
+                                    text = if (showAllApps) "Showing all ${matchedApps.size}" else "Showing $initialAppLimit of ${matchedApps.size}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = scheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
 
-                    val appChunks = matchedApps.chunked(2)
-                    items(appChunks, key = { chunk -> chunk.joinToString { it.packageName } }) { rowApps ->
+                    val appChunks = displayedApps.chunked(2)
+                    items(appChunks, key = { chunk -> "apps_" + chunk.joinToString { it.packageName } }) { rowApps ->
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .animateItem(
+                                    fadeInSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
+                                    fadeOutSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
+                                    placementSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+                                ),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             rowApps.forEach { app ->
@@ -909,7 +1001,7 @@ internal fun ZXGameSpaceSearchPane(
                                             Text(
                                                 text = if (app.isEnabledInConfig) "Tuned by AZenith" else app.packageName,
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = if (app.isEnabledInConfig) scheme.primary else scheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                                color = if (app.isEnabledInConfig) scheme.primary else scheme.onSurfaceVariant,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
@@ -940,30 +1032,82 @@ internal fun ZXGameSpaceSearchPane(
                             }
                         }
                     }
+
+                    // Show all / Show less toggle button for Apps when query is blank
+                    if (query.isBlank() && matchedApps.size > initialAppLimit) {
+                        item(key = "toggle_show_all_apps") {
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = scheme.surfaceContainerLow,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(42.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .clickable { showAllApps = !showAllApps }
+                                    .animateItem(
+                                        placementSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+                                    )
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = if (showAllApps) stringResource(R.string.gamespace_show_less)
+                                               else "${stringResource(R.string.gamespace_show_all)} (${matchedApps.size})",
+                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                        color = scheme.primary
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Icon(
+                                        imageVector = if (showAllApps) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                                        contentDescription = null,
+                                        tint = scheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
-                // Section 2: Matching Settings & Tweak Shortcuts
-                if (matchedSettings.isNotEmpty()) {
+                // Section 2: Settings & Tweak Shortcuts
+                if (displayedSettings.isNotEmpty()) {
                     item(key = "header_settings") {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 4.dp),
+                                .padding(horizontal = 4.dp)
+                                .animateItem(),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Settings & Tweaks (${matchedSettings.size})",
+                                text = if (query.isBlank()) "Quick Settings & Tweaks" else "Settings & Tweaks (${matchedSettings.size})",
                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                 color = scheme.secondary
                             )
+                            if (query.isBlank() && matchedSettings.size > initialSettingLimit) {
+                                Text(
+                                    text = if (showAllSettings) "Showing all ${matchedSettings.size}" else "Showing $initialSettingLimit of ${matchedSettings.size}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = scheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
 
-                    val settingChunks = matchedSettings.chunked(2)
-                    items(settingChunks, key = { chunk -> chunk.joinToString { it.title } }) { rowSettings ->
+                    val settingChunks = displayedSettings.chunked(2)
+                    items(settingChunks, key = { chunk -> "settings_" + chunk.joinToString { it.title } }) { rowSettings ->
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .animateItem(
+                                    fadeInSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
+                                    fadeOutSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
+                                    placementSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+                                ),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             rowSettings.forEach { setting ->
@@ -1013,7 +1157,7 @@ internal fun ZXGameSpaceSearchPane(
                                                 Text(
                                                     text = setting.summary,
                                                     style = MaterialTheme.typography.labelSmall,
-                                                    color = scheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                                    color = scheme.onSurfaceVariant,
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis
                                                 )
@@ -1035,6 +1179,44 @@ internal fun ZXGameSpaceSearchPane(
                             }
                             if (rowSettings.size == 1) {
                                 Spacer(Modifier.weight(1f))
+                            }
+                        }
+                    }
+
+                    // Show all / Show less toggle button for Settings when query is blank
+                    if (query.isBlank() && matchedSettings.size > initialSettingLimit) {
+                        item(key = "toggle_show_all_settings") {
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = scheme.surfaceContainerLow,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(42.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .clickable { showAllSettings = !showAllSettings }
+                                    .animateItem(
+                                        placementSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+                                    )
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = if (showAllSettings) stringResource(R.string.gamespace_show_less)
+                                               else "${stringResource(R.string.gamespace_show_all)} (${matchedSettings.size})",
+                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                        color = scheme.secondary
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Icon(
+                                        imageVector = if (showAllSettings) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                                        contentDescription = null,
+                                        tint = scheme.secondary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
                         }
                     }

@@ -175,6 +175,7 @@
     <string name="gamespace_search_empty">No apps match that</string>
     <string name="gamespace_search_close">Close search</string>
     <string name="gamespace_show_all">Show all</string>
+    <string name="gamespace_show_less">Show less</string>
     <string name="gamespace_welcome">Home</string>
     <string name="gamespace_settings_general">General</string>
     <string name="quick_settings_title">Quick Controls</string>

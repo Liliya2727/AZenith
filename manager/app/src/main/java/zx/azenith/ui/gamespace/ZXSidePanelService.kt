@@ -138,19 +138,28 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             private set
 
         fun show(context: Context, packageName: String? = null, appLabel: String? = null) {
-            val intent = Intent(context, ZXSidePanelService::class.java).apply {
-                action = ACTION_SHOW
-                packageName?.let { putExtra(EXTRA_PACKAGE_NAME, it) }
-                appLabel?.let { putExtra(EXTRA_APP_LABEL, it) }
+            try {
+                val intent = Intent(context, ZXSidePanelService::class.java).apply {
+                    action = ACTION_SHOW
+                    packageName?.let { putExtra(EXTRA_PACKAGE_NAME, it) }
+                    appLabel?.let { putExtra(EXTRA_APP_LABEL, it) }
+                }
+                context.startService(intent)
+            } catch (e: Exception) {
+                android.util.Log.e("ZXSidePanelService", "Failed to start service", e)
             }
-            context.startService(intent)
         }
 
         fun hide(context: Context) {
-            val intent = Intent(context, ZXSidePanelService::class.java).apply {
-                action = ACTION_HIDE
+            if (!isServiceActive) return
+            try {
+                val intent = Intent(context, ZXSidePanelService::class.java).apply {
+                    action = ACTION_HIDE
+                }
+                context.startService(intent)
+            } catch (e: Exception) {
+                android.util.Log.e("ZXSidePanelService", "Failed to hide service", e)
             }
-            context.startService(intent)
         }
     }
 
