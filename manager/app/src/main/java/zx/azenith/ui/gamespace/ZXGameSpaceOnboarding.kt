@@ -48,8 +48,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Check
@@ -161,10 +163,10 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
     ) {
         val insets = WindowInsets.displayCutout.asPaddingValues()
         val layoutDirection = LocalLayoutDirection.current
-        val startPad = maxOf(32.dp, insets.calculateStartPadding(layoutDirection))
-        val endPad = maxOf(32.dp, insets.calculateEndPadding(layoutDirection))
-        val topPad = maxOf(20.dp, insets.calculateTopPadding())
-        val bottomPad = maxOf(20.dp, insets.calculateBottomPadding())
+        val startPad = maxOf(24.dp, insets.calculateStartPadding(layoutDirection))
+        val endPad = maxOf(24.dp, insets.calculateEndPadding(layoutDirection))
+        val topPad = maxOf(10.dp, insets.calculateTopPadding())
+        val bottomPad = maxOf(10.dp, insets.calculateBottomPadding())
 
         CompositionLocalProvider(
             LocalContentColor provides scheme.onSurface
@@ -189,10 +191,10 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                 contentAlignment = Alignment.Center
             ) {
                 Surface(
-                    shape = RoundedCornerShape(28.dp),
+                    shape = RoundedCornerShape(24.dp),
                     color = scheme.surfaceContainerLow,
                     modifier = Modifier
-                        .widthIn(max = 680.dp)
+                        .widthIn(max = 640.dp)
                         .fillMaxWidth()
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
@@ -201,8 +203,10 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                         )
                 ) {
                     Column(
-                        modifier = Modifier.padding(22.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        modifier = Modifier
+                            .padding(horizontal = 18.dp, vertical = 12.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         // Header
                         Row(
@@ -212,23 +216,23 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
                                 if (pendingApp != null) {
-                                    AppIconImage(app = pendingApp, size = 48.dp)
+                                    AppIconImage(app = pendingApp, size = 36.dp)
                                 } else {
                                     Surface(
-                                        shape = RoundedCornerShape(16.dp),
+                                        shape = RoundedCornerShape(12.dp),
                                         color = scheme.primaryContainer,
-                                        modifier = Modifier.size(48.dp)
+                                        modifier = Modifier.size(36.dp)
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
                                             Icon(
                                                 imageVector = Icons.Rounded.GridView,
                                                 contentDescription = null,
                                                 tint = scheme.onPrimaryContainer,
-                                                modifier = Modifier.size(24.dp)
+                                                modifier = Modifier.size(20.dp)
                                             )
                                         }
                                     }
@@ -236,20 +240,20 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                                 Column {
                                     Text(
                                         text = "Configure In-Game Side Panel",
-                                        style = MaterialTheme.typography.titleLarge.copy(
+                                        style = MaterialTheme.typography.titleMedium.copy(
                                             fontWeight = FontWeight.ExtraBold
                                         ),
                                         color = scheme.onSurface
                                     )
                                     Text(
                                         text = if (pendingApp != null) {
-                                            "Launching ${pendingApp.label} · Choose where to pin the floating Game Panel bar and its swipe-in sensitivity"
+                                            "Launching ${pendingApp.label} · Pin position & swipe sensitivity"
                                         } else {
-                                            "Choose where to pin the floating Game Panel pull-out bar and how sensitive it responds to edge swipes"
+                                            "Choose floating Game Panel position & swipe sensitivity"
                                         },
                                         style = MaterialTheme.typography.bodySmall,
                                         color = scheme.onSurfaceVariant,
-                                        maxLines = 2,
+                                        maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
                                 }
@@ -265,16 +269,16 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                         // 1. Left Side vs Right Side Selection
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             val sideChoices = listOf(
-                                Triple("left", "Left Side", "Pin floating pull-out bar to the left screen edge"),
-                                Triple("right", "Right Side", "Pin floating pull-out bar to the right screen edge")
+                                "left" to "Left Side",
+                                "right" to "Right Side"
                             )
-                            sideChoices.forEach { (key, title, desc) ->
+                            sideChoices.forEach { (key, title) ->
                                 val selected = selectedSide == key
                                 val cornerPercent by animateIntAsState(
-                                    targetValue = if (selected) 26 else 18,
+                                    targetValue = if (selected) 24 else 18,
                                     animationSpec = spring(
                                         dampingRatio = Spring.DampingRatioLowBouncy,
                                         stiffness = Spring.StiffnessMediumLow
@@ -293,21 +297,21 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                                         .clickable { selectedSide = key }
                                 ) {
                                     Column(
-                                        modifier = Modifier.padding(14.dp),
-                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
                                         // Visual landscape frame showing pinned floating bar & pull-out gesture
                                         Surface(
-                                            shape = RoundedCornerShape(14.dp),
+                                            shape = RoundedCornerShape(10.dp),
                                             color = scheme.surfaceContainerLowest,
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .height(58.dp)
+                                                .height(42.dp)
                                         ) {
                                             Box(
                                                 modifier = Modifier
                                                     .fillMaxSize()
-                                                    .padding(horizontal = 8.dp, vertical = 8.dp)
+                                                    .padding(horizontal = 8.dp, vertical = 6.dp)
                                             ) {
                                                 Box(
                                                     modifier = Modifier
@@ -315,8 +319,8 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                                                             if (key == "left") Alignment.CenterStart
                                                             else Alignment.CenterEnd
                                                         )
-                                                        .width(6.dp)
-                                                        .height(34.dp)
+                                                        .width(5.dp)
+                                                        .height(26.dp)
                                                         .clip(CircleShape)
                                                         .background(
                                                             if (selected) scheme.primary else scheme.onSurfaceVariant
@@ -329,8 +333,8 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                                                             else Alignment.CenterEnd
                                                         )
                                                         .padding(
-                                                            start = if (key == "left") 14.dp else 0.dp,
-                                                            end = if (key == "right") 14.dp else 0.dp
+                                                            start = if (key == "left") 10.dp else 0.dp,
+                                                            end = if (key == "right") 10.dp else 0.dp
                                                         ),
                                                     verticalAlignment = Alignment.CenterVertically,
                                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -340,11 +344,11 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                                                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                                                             contentDescription = null,
                                                             tint = if (selected) scheme.primary else scheme.onSurfaceVariant,
-                                                            modifier = Modifier.size(18.dp)
+                                                            modifier = Modifier.size(16.dp)
                                                         )
                                                     }
                                                     Surface(
-                                                        shape = RoundedCornerShape(8.dp),
+                                                        shape = RoundedCornerShape(6.dp),
                                                         color = if (selected) {
                                                             scheme.secondaryContainer
                                                         } else {
@@ -361,7 +365,7 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                                                             } else {
                                                                 scheme.onSurfaceVariant
                                                             },
-                                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                                         )
                                                     }
                                                     if (key == "left") {
@@ -369,7 +373,7 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                                                             imageVector = Icons.Rounded.ChevronRight,
                                                             contentDescription = null,
                                                             tint = if (selected) scheme.primary else scheme.onSurfaceVariant,
-                                                            modifier = Modifier.size(18.dp)
+                                                            modifier = Modifier.size(16.dp)
                                                         )
                                                     }
                                                 }
@@ -381,37 +385,24 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    text = title,
-                                                    style = MaterialTheme.typography.titleSmall.copy(
-                                                        fontWeight = FontWeight.Bold
-                                                    )
+                                            Text(
+                                                text = title,
+                                                style = MaterialTheme.typography.titleSmall.copy(
+                                                    fontWeight = FontWeight.Bold
                                                 )
-                                                Text(
-                                                    text = desc,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = if (selected) {
-                                                        scheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                                    } else {
-                                                        scheme.onSurfaceVariant
-                                                    },
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
+                                            )
                                             if (selected) {
                                                 Surface(
                                                     shape = CircleShape,
                                                     color = scheme.primary,
-                                                    modifier = Modifier.size(24.dp)
+                                                    modifier = Modifier.size(20.dp)
                                                 ) {
                                                     Box(contentAlignment = Alignment.Center) {
                                                         Icon(
                                                             imageVector = Icons.Rounded.Check,
                                                             contentDescription = null,
                                                             tint = scheme.onPrimary,
-                                                            modifier = Modifier.size(15.dp)
+                                                            modifier = Modifier.size(13.dp)
                                                         )
                                                     }
                                                 }
@@ -424,13 +415,13 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
 
                         // 2. Swipe-In Sensitivity Section
                         Surface(
-                            shape = RoundedCornerShape(22.dp),
+                            shape = RoundedCornerShape(18.dp),
                             color = scheme.surfaceContainerHigh,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(
-                                modifier = Modifier.padding(14.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -454,7 +445,7 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                                             },
                                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                             color = scheme.onSecondaryContainer,
-                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                         )
                                     }
                                 }
@@ -475,7 +466,7 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                                             else -> sliderSensitivity in 46..79
                                         }
                                         val pillRadius by animateIntAsState(
-                                            targetValue = if (selected) 50 else 28,
+                                            targetValue = if (selected) 50 else 24,
                                             animationSpec = spring(
                                                 dampingRatio = Spring.DampingRatioLowBouncy,
                                                 stiffness = Spring.StiffnessMediumLow
@@ -491,18 +482,18 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                                                 .weight(1f)
                                                 .gamepadFocusOutline(shape = pillShape, register = true)
                                                 .clip(pillShape)
-                                            .clickable {
-                                                sliderSensitivity = targetVal
-                                                committedSensitivity = targetVal
-                                            }
+                                                .clickable {
+                                                    sliderSensitivity = targetVal
+                                                    committedSensitivity = targetVal
+                                                }
                                         ) {
                                             Box(
-                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Text(
                                                     text = label,
-                                                    style = MaterialTheme.typography.labelMedium.copy(
+                                                    style = MaterialTheme.typography.labelSmall.copy(
                                                         fontWeight = FontWeight.Bold
                                                     ),
                                                     maxLines = 1
@@ -527,7 +518,7 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                                     steps = 15,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(28.dp)
+                                        .height(24.dp)
                                 )
                             }
                         }
@@ -535,10 +526,10 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                         // 3. Action Buttons
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            val cancelShape = RoundedCornerShape(18.dp)
+                            val cancelShape = RoundedCornerShape(16.dp)
                             Surface(
                                 shape = cancelShape,
                                 color = scheme.surfaceContainerHigh,
@@ -550,7 +541,7 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                                     .clickable(onClick = onDismiss)
                             ) {
                                 Box(
-                                    modifier = Modifier.padding(vertical = 13.dp),
+                                    modifier = Modifier.padding(vertical = 10.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
@@ -580,7 +571,7 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                                     }
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(vertical = 13.dp, horizontal = 18.dp),
+                                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 16.dp),
                                     horizontalArrangement = Arrangement.Center,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -593,7 +584,7 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
                                         contentDescription = null,
                                         modifier = Modifier.size(18.dp)
                                     )
-                                    Spacer(Modifier.width(8.dp))
+                                    Spacer(Modifier.width(6.dp))
                                     Text(
                                         text = if (pendingApp != null) {
                                             "Save & Launch ${pendingApp.label}"
