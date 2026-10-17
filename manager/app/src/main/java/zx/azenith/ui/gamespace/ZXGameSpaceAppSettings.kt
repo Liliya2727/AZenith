@@ -22,17 +22,24 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,19 +64,26 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.Android
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Cable
+import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
+import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Layers
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.RocketLaunch
 import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.SwapVerticalCircle
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material.icons.rounded.WebStories
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -86,12 +100,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -105,21 +124,31 @@ import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.blur.material3.Material3
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zx.azenith.R
 import zx.azenith.ui.component.AppIconImage
 import zx.azenith.ui.component.ExpressiveDropdownItem
 import zx.azenith.ui.component.ExpressiveList
+import zx.azenith.ui.component.ExpressiveListItem
 import zx.azenith.ui.component.ExpressiveSliderItem
+import zx.azenith.ui.component.LeadingIcon
+import zx.azenith.ui.component.MediaBannerRenderer
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.subscreens.getAppDetails
 import zx.azenith.ui.subscreens.isGameCategory
 import zx.azenith.ui.util.AppConfig
 import zx.azenith.ui.util.DebugUtils
 import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.getGameWallpaperMode
+import zx.azenith.ui.util.getGameWallpaperUri
+import zx.azenith.ui.util.getHeaderImage
 import zx.azenith.ui.util.getSupportedDownscaleFactors
 import zx.azenith.ui.util.getSupportedFpsTargets
 import zx.azenith.ui.util.getSupportedRefreshRates
+import zx.azenith.ui.util.saveMediaDirectly
+import zx.azenith.ui.util.setGameWallpaperMode
+import zx.azenith.ui.util.setGameWallpaperUri
 import zx.azenith.ui.viewmodel.AppSettingsViewModel
 import zx.azenith.ui.viewmodel.ApplistViewmodel
 
@@ -826,3 +855,743 @@ internal fun ZXGameSpaceAppSettingsOverlay(
         }
     }
 }
+
+/**
+ * Game Space Wallpaper Personalization Sheet: slides up from below with Material 3 bouncy expressive
+ * physics over a Haze-blurred backdrop, styled natively in the two-pane Game Space layout matching
+ * [ZXGameSpaceAppSettingsOverlay].
+ */
+@Composable
+internal fun ZXGameSpaceWallpaperOverlay(
+    visible: Boolean,
+    packageName: String?,
+    allApps: List<ApplistViewmodel.AppInfo>,
+    hazeState: HazeState,
+    onLaunch: (ApplistViewmodel.AppInfo) -> Unit,
+    onClose: () -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val scheme = MaterialTheme.colorScheme
+    val motion = MaterialTheme.motionScheme
+
+    var activePkg by remember { mutableStateOf(packageName) }
+    if (packageName != null) {
+        activePkg = packageName
+    }
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInVertically(
+            initialOffsetY = { fullHeight -> fullHeight },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
+        exit = slideOutVertically(
+            targetOffsetY = { fullHeight -> fullHeight },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMedium
+            )
+        ) + fadeOut(animationSpec = motion.defaultEffectsSpec()),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        val pkg = activePkg ?: return@AnimatedVisibility
+        val resolvedApp = remember(pkg, allApps) {
+            allApps.find { it.packageName == pkg }
+        }
+        val appDetails = remember(pkg) { getAppDetails(context, pkg) }
+        var selectedMode by remember(pkg) { mutableStateOf(context.getGameWallpaperMode(pkg)) }
+        var customUri by remember(pkg) { mutableStateOf(context.getGameWallpaperUri(pkg)) }
+        val homeWallpaperUri = remember(pkg) { context.getHeaderImage() }
+
+        val imagePicker = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.PickVisualMedia()
+        ) { uri: Uri? ->
+            uri?.let { sourceUri ->
+                scope.launch(Dispatchers.IO) {
+                    val mimeType = context.contentResolver.getType(sourceUri) ?: ""
+                    val isVideo = mimeType.startsWith("video/")
+                    val extension = when {
+                        isVideo -> "mp4"
+                        mimeType == "image/gif" -> "gif"
+                        mimeType == "image/png" -> "png"
+                        mimeType == "image/webp" -> "webp"
+                        else -> "jpg"
+                    }
+                    val savedUri = context.saveMediaDirectly(sourceUri, extension)
+                    if (savedUri != null) {
+                        context.setGameWallpaperUri(pkg, savedUri)
+                        context.setGameWallpaperMode(pkg, "custom")
+                        withContext(Dispatchers.Main) {
+                            customUri = savedUri
+                            selectedMode = "custom"
+                        }
+                    }
+                }
+            }
+        }
+
+        val insets = WindowInsets.displayCutout.asPaddingValues()
+        val layoutDirection = LocalLayoutDirection.current
+        val startPad = maxOf(24.dp, insets.calculateStartPadding(layoutDirection))
+        val endPad = maxOf(24.dp, insets.calculateEndPadding(layoutDirection))
+        val topPad = maxOf(18.dp, insets.calculateTopPadding())
+        val bottomPad = 0.dp
+
+        val isOverrideActive = selectedMode != "default"
+        val modeBadgeText = when (selectedMode) {
+            "custom" -> "Custom Media"
+            "follow_home" -> "Home Sync"
+            else -> "Default Art"
+        }
+
+        CompositionLocalProvider(
+            LocalContentColor provides scheme.onSurface
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .hazeBlur(
+                        input = HazeInput.Sources(hazeState),
+                        style = HazeBlurStyle.Material3(
+                            containerColor = scheme.surfaceContainerLowest.copy(alpha = 0.62f)
+                        ) {
+                            blurRadius(28.dp)
+                        }
+                    )
+                    .padding(start = startPad, end = endPad, top = topPad, bottom = bottomPad)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Left GameSpace Identity Sidebar
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = scheme.surfaceContainerLow.copy(alpha = 0.90f),
+                        contentColor = scheme.onSurface,
+                        modifier = Modifier
+                            .width(264.dp)
+                            .fillMaxHeight()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(18.dp),
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        TopBarIconButton(
+                                            icon = Icons.Rounded.KeyboardArrowDown,
+                                            contentDescription = stringResource(R.string.cd_back),
+                                            onClick = onClose
+                                        )
+                                        Text(
+                                            text = "Game Wallpaper",
+                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                fontWeight = FontWeight.ExtraBold
+                                            ),
+                                            color = scheme.onSurface
+                                        )
+                                    }
+                                }
+
+                                // App identity card
+                                Surface(
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = scheme.surfaceContainerHigh,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(14.dp),
+                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            if (resolvedApp != null) {
+                                                AppIconImage(app = resolvedApp, size = 48.dp)
+                                            } else {
+                                                Surface(
+                                                    shape = RoundedCornerShape(14.dp),
+                                                    color = scheme.primaryContainer,
+                                                    modifier = Modifier.size(48.dp)
+                                                ) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Icon(
+                                                            imageVector = Icons.Rounded.Android,
+                                                            contentDescription = null,
+                                                            tint = scheme.onPrimaryContainer
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = resolvedApp?.label ?: appDetails.first,
+                                                    style = MaterialTheme.typography.titleSmall.copy(
+                                                        fontWeight = FontWeight.Bold
+                                                    ),
+                                                    color = scheme.onSurface,
+                                                    maxLines = 2,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Text(
+                                                    text = pkg,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = scheme.onSurfaceVariant,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Surface(
+                                                shape = CircleShape,
+                                                color = scheme.secondaryContainer,
+                                                contentColor = scheme.onSecondaryContainer
+                                            ) {
+                                                Text(
+                                                    text = "v${appDetails.third}",
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        fontWeight = FontWeight.Bold
+                                                    ),
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                                                )
+                                            }
+                                            Surface(
+                                                shape = CircleShape,
+                                                color = if (isOverrideActive) scheme.primaryContainer else scheme.surfaceContainerHighest,
+                                                contentColor = if (isOverrideActive) scheme.onPrimaryContainer else scheme.onSurfaceVariant
+                                            ) {
+                                                Text(
+                                                    text = modeBadgeText,
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        fontWeight = FontWeight.Bold
+                                                    ),
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Custom Stage Switch Card (matching App Settings Master Switch Card)
+                                val masterShape = RoundedCornerShape(18.dp)
+                                Surface(
+                                    shape = masterShape,
+                                    color = if (isOverrideActive) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                                    contentColor = if (isOverrideActive) scheme.onPrimaryContainer else scheme.onSurface,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .gamepadFocusOutline(shape = masterShape, register = true)
+                                        .clip(masterShape)
+                                        .clickable {
+                                            val nextMode = if (isOverrideActive) {
+                                                "default"
+                                            } else if (customUri != null) {
+                                                "custom"
+                                            } else {
+                                                "follow_home"
+                                            }
+                                            selectedMode = nextMode
+                                            context.setGameWallpaperMode(pkg, nextMode)
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Palette,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = "Custom Stage",
+                                                style = MaterialTheme.typography.labelLarge.copy(
+                                                    fontWeight = FontWeight.Bold
+                                                ),
+                                                maxLines = 1
+                                            )
+                                            Text(
+                                                text = when (selectedMode) {
+                                                    "custom" -> "Custom artwork active"
+                                                    "follow_home" -> "Synced with Home tab"
+                                                    else -> "Default game icon art"
+                                                },
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = if (isOverrideActive) {
+                                                    scheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                                } else {
+                                                    scheme.onSurfaceVariant
+                                                },
+                                                maxLines = 1
+                                            )
+                                        }
+                                        Switch(
+                                            checked = isOverrideActive,
+                                            onCheckedChange = { isChecked ->
+                                                val nextMode = if (isChecked) {
+                                                    if (customUri != null) "custom" else "follow_home"
+                                                } else {
+                                                    "default"
+                                                }
+                                                selectedMode = nextMode
+                                                context.setGameWallpaperMode(pkg, nextMode)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Bottom Quick Actions: Launch & System Info
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                val launchShape = RoundedCornerShape(16.dp)
+                                Surface(
+                                    shape = launchShape,
+                                    color = scheme.primary,
+                                    contentColor = scheme.onPrimary,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(44.dp)
+                                        .gamepadFocusOutline(shape = launchShape, register = true)
+                                        .clip(launchShape)
+                                        .clickable {
+                                            if (resolvedApp != null) {
+                                                onLaunch(resolvedApp)
+                                            } else {
+                                                launchGame(context, pkg)
+                                            }
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxSize(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.PlayArrow,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(
+                                            text = stringResource(R.string.gamespace_play_game),
+                                            style = MaterialTheme.typography.labelLarge.copy(
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        )
+                                    }
+                                }
+
+                                val infoShape = RoundedCornerShape(16.dp)
+                                Surface(
+                                    shape = infoShape,
+                                    color = scheme.secondaryContainer,
+                                    contentColor = scheme.onSecondaryContainer,
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .gamepadFocusOutline(shape = infoShape, register = true)
+                                        .clip(infoShape)
+                                        .clickable {
+                                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                                data = Uri.parse("package:$pkg")
+                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            }
+                                            runCatching { context.startActivity(intent) }
+                                        }
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Info,
+                                            contentDescription = stringResource(R.string.str_app_info),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Right GameSpace Wallpaper Stage
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = scheme.surfaceContainerLow.copy(alpha = 0.85f),
+                        contentColor = scheme.onSurface,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            item {
+                                Text(
+                                    text = "WALLPAPER SOURCE",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 1.2.sp
+                                    ),
+                                    color = scheme.primary
+                                )
+                            }
+                            item {
+                                val isDefault = selectedMode == "default"
+                                val isFollowHome = selectedMode == "follow_home"
+                                val isCustom = selectedMode == "custom"
+
+                                ExpressiveList(
+                                    content = listOf(
+                                        {
+                                            ExpressiveListItem(
+                                                onClick = {
+                                                    selectedMode = "default"
+                                                    context.setGameWallpaperMode(pkg, "default")
+                                                },
+                                                leadingContent = {
+                                                    LeadingIcon(
+                                                        icon = Icons.Rounded.SportsEsports,
+                                                        contentDescription = "Default Game Art"
+                                                    )
+                                                },
+                                                headlineContent = {
+                                                    Text(text = "Default Game Art")
+                                                },
+                                                supportingContent = {
+                                                    Text(text = "Dynamic atmospheric background with game icon")
+                                                },
+                                                trailingContent = {
+                                                    Text(
+                                                        text = if (isDefault) "Active" else "Default",
+                                                        color = if (isDefault) scheme.primary else scheme.onSurfaceVariant,
+                                                        fontWeight = if (isDefault) FontWeight.Bold else FontWeight.Normal
+                                                    )
+                                                }
+                                            )
+                                        },
+                                        {
+                                            ExpressiveListItem(
+                                                onClick = {
+                                                    selectedMode = "follow_home"
+                                                    context.setGameWallpaperMode(pkg, "follow_home")
+                                                },
+                                                leadingContent = {
+                                                    LeadingIcon(
+                                                        icon = Icons.Rounded.Sync,
+                                                        contentDescription = "Follow Home Wallpaper"
+                                                    )
+                                                },
+                                                headlineContent = {
+                                                    Text(text = "Follow Home Wallpaper")
+                                                },
+                                                supportingContent = {
+                                                    Text(text = "Match the background wallpaper set on the Home tab")
+                                                },
+                                                trailingContent = {
+                                                    Text(
+                                                        text = if (isFollowHome) "Active" else "Off",
+                                                        color = if (isFollowHome) scheme.primary else scheme.onSurfaceVariant,
+                                                        fontWeight = if (isFollowHome) FontWeight.Bold else FontWeight.Normal
+                                                    )
+                                                }
+                                            )
+                                        },
+                                        {
+                                            ExpressiveListItem(
+                                                onClick = {
+                                                    if (customUri != null) {
+                                                        selectedMode = "custom"
+                                                        context.setGameWallpaperMode(pkg, "custom")
+                                                    } else {
+                                                        imagePicker.launch(
+                                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+                                                        )
+                                                    }
+                                                },
+                                                leadingContent = {
+                                                    LeadingIcon(
+                                                        icon = Icons.Rounded.Wallpaper,
+                                                        contentDescription = "Custom Wallpaper"
+                                                    )
+                                                },
+                                                headlineContent = {
+                                                    Text(text = "Custom Wallpaper")
+                                                },
+                                                supportingContent = {
+                                                    Text(
+                                                        text = if (customUri != null) {
+                                                            "Personalized photo, GIF, or video"
+                                                        } else {
+                                                            "Choose an image or video for this game"
+                                                        }
+                                                    )
+                                                },
+                                                trailingContent = {
+                                                    Text(
+                                                        text = when {
+                                                            isCustom -> "Active"
+                                                            customUri != null -> "Ready"
+                                                            else -> "Browse"
+                                                        },
+                                                        color = if (isCustom) scheme.primary else scheme.onSurfaceVariant,
+                                                        fontWeight = if (isCustom) FontWeight.Bold else FontWeight.Normal
+                                                    )
+                                                }
+                                            )
+                                        }
+                                    )
+                                )
+                            }
+
+                            item {
+                                Text(
+                                    text = "CUSTOM MEDIA & PREVIEW",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 1.2.sp
+                                    ),
+                                    color = scheme.primary,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
+                            }
+
+                            item {
+                                ExpressiveList(
+                                    content = listOf {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(16.dp),
+                                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                            ) {
+                                                LeadingIcon(
+                                                    icon = Icons.Rounded.AddPhotoAlternate,
+                                                    contentDescription = null
+                                                )
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = "Stage Media Artwork",
+                                                        style = MaterialTheme.typography.titleMedium.copy(
+                                                            fontWeight = FontWeight.Bold
+                                                        ),
+                                                        color = scheme.onSurface
+                                                    )
+                                                    Text(
+                                                        text = if (customUri != null) {
+                                                            "Custom wallpaper media configured for this game"
+                                                        } else {
+                                                            "Select an image, GIF, or video from your device"
+                                                        },
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = scheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                // Visual Preview Box (110.dp height matching symmetrical action buttons)
+                                                Surface(
+                                                    shape = RoundedCornerShape(16.dp),
+                                                    color = scheme.surfaceContainerLowest,
+                                                    modifier = Modifier
+                                                        .weight(0.48f)
+                                                        .height(110.dp)
+                                                        .clip(RoundedCornerShape(16.dp))
+                                                ) {
+                                                    Box(modifier = Modifier.fillMaxSize()) {
+                                                        val effectivePreviewUri = when {
+                                                            selectedMode == "custom" && customUri != null -> customUri
+                                                            selectedMode == "follow_home" -> homeWallpaperUri
+                                                            customUri != null -> customUri
+                                                            else -> null
+                                                        }
+                                                        if (effectivePreviewUri != null) {
+                                                            MediaBannerRenderer(
+                                                                uriString = effectivePreviewUri,
+                                                                modifier = Modifier.fillMaxSize()
+                                                            )
+                                                        } else if (selectedMode == "follow_home") {
+                                                            Image(
+                                                                painter = painterResource(R.drawable.banner_bg),
+                                                                contentDescription = null,
+                                                                contentScale = ContentScale.Crop,
+                                                                modifier = Modifier.fillMaxSize()
+                                                            )
+                                                        } else {
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .fillMaxSize()
+                                                                    .background(
+                                                                        Brush.radialGradient(
+                                                                            colors = listOf(
+                                                                                scheme.primaryContainer.copy(alpha = 0.45f),
+                                                                                scheme.surfaceContainerLowest
+                                                                            )
+                                                                        )
+                                                                    ),
+                                                                contentAlignment = Alignment.Center
+                                                            ) {
+                                                                if (resolvedApp != null) {
+                                                                    AppIconImage(app = resolvedApp, size = 54.dp)
+                                                                }
+                                                            }
+                                                        }
+
+                                                        val isAmoled = scheme.surfaceContainerLowest == Color.Black
+                                                        val previewBaseDim = if (isAmoled) Color.Black else scheme.surfaceContainerLowest
+
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .fillMaxSize()
+                                                                .background(
+                                                                    Brush.horizontalGradient(
+                                                                        colorStops = arrayOf(
+                                                                            0.00f to previewBaseDim.copy(alpha = 0.80f),
+                                                                            0.45f to previewBaseDim.copy(alpha = 0.55f),
+                                                                            1.00f to previewBaseDim.copy(alpha = 0.20f)
+                                                                        )
+                                                                    )
+                                                                )
+                                                        )
+                                                    }
+                                                }
+
+                                                // Symmetrical 110.dp Action Buttons Column
+                                                Column(
+                                                    modifier = Modifier
+                                                        .weight(0.52f)
+                                                        .height(110.dp),
+                                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    val chooseShape = RoundedCornerShape(16.dp)
+                                                    Surface(
+                                                        shape = chooseShape,
+                                                        color = scheme.primary,
+                                                        contentColor = scheme.onPrimary,
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .weight(1f)
+                                                            .gamepadFocusOutline(shape = chooseShape, register = true)
+                                                            .clip(chooseShape)
+                                                            .clickable {
+                                                                imagePicker.launch(
+                                                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+                                                                )
+                                                            }
+                                                    ) {
+                                                        Row(
+                                                            modifier = Modifier
+                                                                .fillMaxSize()
+                                                                .padding(horizontal = 14.dp),
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.Center
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Rounded.Image,
+                                                                contentDescription = null,
+                                                                modifier = Modifier.size(20.dp)
+                                                            )
+                                                            Spacer(Modifier.width(8.dp))
+                                                            Text(
+                                                                text = if (customUri != null) "Change Wallpaper" else "Choose Wallpaper",
+                                                                style = MaterialTheme.typography.labelLarge.copy(
+                                                                    fontWeight = FontWeight.Bold
+                                                                ),
+                                                                maxLines = 1
+                                                            )
+                                                        }
+                                                    }
+
+                                                    AnimatedVisibility(
+                                                        visible = customUri != null,
+                                                        enter = fadeIn(motion.defaultEffectsSpec()) + expandVertically(motion.defaultSpatialSpec()),
+                                                        exit = fadeOut(motion.defaultEffectsSpec()) + shrinkVertically(motion.defaultSpatialSpec())
+                                                    ) {
+                                                        val resetShape = RoundedCornerShape(16.dp)
+                                                        Surface(
+                                                            shape = resetShape,
+                                                            color = scheme.surfaceContainerHighest,
+                                                            contentColor = scheme.error,
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .height(48.dp)
+                                                                .gamepadFocusOutline(shape = resetShape, register = true)
+                                                                .clip(resetShape)
+                                                                .clickable {
+                                                                    context.setGameWallpaperUri(pkg, null)
+                                                                    customUri = null
+                                                                    selectedMode = "default"
+                                                                    context.setGameWallpaperMode(pkg, "default")
+                                                                }
+                                                        ) {
+                                                            Row(
+                                                                modifier = Modifier
+                                                                    .fillMaxSize()
+                                                                    .padding(horizontal = 14.dp),
+                                                                verticalAlignment = Alignment.CenterVertically,
+                                                                horizontalArrangement = Arrangement.Center
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = Icons.Rounded.DeleteOutline,
+                                                                    contentDescription = null,
+                                                                    modifier = Modifier.size(20.dp)
+                                                                )
+                                                                Spacer(Modifier.width(8.dp))
+                                                                Text(
+                                                                    text = "Reset Wallpaper",
+                                                                    style = MaterialTheme.typography.labelLarge.copy(
+                                                                        fontWeight = FontWeight.Bold
+                                                                    ),
+                                                                    maxLines = 1
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

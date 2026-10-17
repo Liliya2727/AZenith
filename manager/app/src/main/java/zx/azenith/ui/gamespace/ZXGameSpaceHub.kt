@@ -147,6 +147,7 @@ fun ZXGameSpaceHub(
     var selectedRibbonIndex by remember { mutableIntStateOf(0) }
     var exitPrompt by remember { mutableStateOf(false) }
     var tuningPkg by remember { mutableStateOf<String?>(null) }
+    var wallpaperPkg by remember { mutableStateOf<String?>(null) }
     var searchOpen by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var quickSettingsOpen by remember { mutableStateOf(false) }
@@ -270,7 +271,7 @@ fun ZXGameSpaceHub(
         val isHomescreenScrolled = category == TopCategory.Games && activeEntry == RibbonEntry.Welcome && (homeExpanded || welcomeScroll.value > 10)
         val isLibrary = category == TopCategory.Games && (activeEntry == RibbonEntry.Library || libraryExpanded)
         val isSettings = category == TopCategory.Settings
-        val isOverlayOpen = tuningPkg != null || sidePanelPromptOpen
+        val isOverlayOpen = tuningPkg != null || wallpaperPkg != null || sidePanelPromptOpen
 
         val targetBlurAlpha = when {
             isSettings -> 1f
@@ -586,7 +587,8 @@ fun ZXGameSpaceHub(
                                             is RibbonEntry.Game -> GameHeroStage(
                                                 app = entry.app,
                                                 onLaunch = { requestAppLaunch(entry.app) },
-                                                onOpenAppSettings = { tuningPkg = entry.app.packageName }
+                                                onOpenAppSettings = { tuningPkg = entry.app.packageName },
+                                                onOpenWallpaperSettings = { wallpaperPkg = entry.app.packageName }
                                             )
 
                                             RibbonEntry.Library -> LibraryGridStage(
@@ -652,7 +654,7 @@ fun ZXGameSpaceHub(
             }
 
             BackHandler(
-                enabled = sidePanelPromptOpen || tuningPkg != null || quickSettingsOpen ||
+                enabled = sidePanelPromptOpen || tuningPkg != null || wallpaperPkg != null || quickSettingsOpen ||
                     category == TopCategory.Settings || searchOpen || homeExpanded || libraryExpanded
             ) {
                 if (sidePanelPromptOpen) {
@@ -660,6 +662,8 @@ fun ZXGameSpaceHub(
                     pendingLaunchApp = null
                 } else if (tuningPkg != null) {
                     tuningPkg = null
+                } else if (wallpaperPkg != null) {
+                    wallpaperPkg = null
                 } else if (quickSettingsOpen) {
                     quickSettingsOpen = false
                 } else if (category == TopCategory.Settings) {
@@ -704,6 +708,15 @@ fun ZXGameSpaceHub(
             hazeState = overlayHazeState,
             onLaunch = requestAppLaunch,
             onClose = { tuningPkg = null }
+        )
+
+        ZXGameSpaceWallpaperOverlay(
+            visible = wallpaperPkg != null,
+            packageName = wallpaperPkg,
+            allApps = allApps,
+            hazeState = overlayHazeState,
+            onLaunch = requestAppLaunch,
+            onClose = { wallpaperPkg = null }
         )
 
         ZXGameSpaceSidePanelOnboardingOverlay(
