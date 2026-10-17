@@ -158,12 +158,14 @@ pub fn mediatek_performance() {
 }
 
 pub fn mediatek_powersave() {
-    // Same order as the other two profiles; cci/power mode, GPU OPP and EAS
-    // are intentionally left untouched by the power-saving profile.
     apply_ppm_policy_status("1", "0");
     write_lock("2", "/sys/kernel/fpsgo/common/force_onoff");
     write_lock("1", "/sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled");
     write_lock("0", "/sys/devices/platform/boot_dramboost/dramboost/dramboost");
+    write_lock("0", "/proc/cpufreq/cpufreq_cci_mode");
+    write_lock("1", "/proc/cpufreq/cpufreq_power_mode");
+    apply_gpu_opp_limit(Some(0), "-1");
+    write_lock("1", "/sys/devices/system/cpu/eas/enable");
     apply_gpu_power_limited("0");
     write_lock("0", "/proc/perfmgr/syslimiter/syslimiter_force_disable");
     write_lock("stop 0", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
