@@ -87,6 +87,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -95,6 +100,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -541,12 +548,12 @@ fun ZXGameSpaceHub(
 
     val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
     var appScalePercent by remember {
-        mutableIntStateOf(prefs.getInt("gamespace_app_scale", 100).coerceIn(70, 150))
+        mutableIntStateOf(prefs.getInt("gamespace_app_scale", 85).coerceIn(60, 150))
     }
     DisposableEffect(prefs) {
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == "gamespace_app_scale") {
-                appScalePercent = prefs.getInt("gamespace_app_scale", 100).coerceIn(70, 150)
+                appScalePercent = prefs.getInt("gamespace_app_scale", 85).coerceIn(60, 150)
             }
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)
@@ -616,7 +623,7 @@ fun ZXGameSpaceHub(
     val chipsetName = remember(context) { getChipsetName(context) }
     val hazeState = remember { HazeState() }
     val baseDensity = LocalDensity.current
-    val scaleFactor = appScalePercent.coerceIn(70, 150) / 100f
+    val scaleFactor = appScalePercent.coerceIn(60, 150) / 100f
 
     CompositionLocalProvider(
         LocalDensity provides Density(
@@ -704,10 +711,44 @@ fun ZXGameSpaceHub(
             )
         }
 
+        val isSettingsOrSearchActive = category == TopCategory.Settings || searchOpen
+        val overlayBlurAlpha by animateFloatAsState(
+            targetValue = if (isSettingsOrSearchActive) 1f else 0f,
+            animationSpec = motion.defaultEffectsSpec(),
+            label = "OverlayBlurAlpha"
+        )
+        if (overlayBlurAlpha > 0.001f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = overlayBlurAlpha }
+                    .hazeBlur(
+                        input = HazeInput.Sources(hazeState),
+                        style = HazeBlurStyle.Material3(
+                            containerColor = scheme.surfaceContainerLowest.copy(alpha = 0.60f)
+                        ) {
+                            blurRadius(28.dp)
+                        }
+                    )
+            )
+        }
+
+        val cutoutInsets = WindowInsets.displayCutout.asPaddingValues()
+        val layoutDirection = LocalLayoutDirection.current
+        val startSafePad = maxOf(32.dp, cutoutInsets.calculateStartPadding(layoutDirection))
+        val endSafePad = maxOf(32.dp, cutoutInsets.calculateEndPadding(layoutDirection))
+        val topSafePad = maxOf(14.dp, cutoutInsets.calculateTopPadding())
+        val bottomSafePad = maxOf(14.dp, cutoutInsets.calculateBottomPadding())
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 32.dp, vertical = 14.dp)
+                .padding(
+                    start = startSafePad,
+                    end = endSafePad,
+                    top = topSafePad,
+                    bottom = bottomSafePad
+                )
         ) {
             ZXGameSpaceTopBar(
                 selectedCategory = category,
@@ -868,7 +909,6 @@ fun ZXGameSpaceHub(
                 // Search Overlay
                 ZXGameSpaceSearchOverlay(
                     visible = searchOpen,
-                    hazeState = hazeState,
                     modifier = Modifier.fillMaxSize()
                 ) {
                     ZXGameSpaceSearchPane(
@@ -892,7 +932,6 @@ fun ZXGameSpaceHub(
                 // Settings Stage - Expressive Bouncy slide in from right overlay
                 ZXGameSpaceSettingsOverlay(
                     visible = category == TopCategory.Settings,
-                    hazeState = hazeState,
                     modifier = Modifier.fillMaxSize()
                 ) {
                     ZXGameSpaceSettingsStage(
@@ -904,10 +943,6 @@ fun ZXGameSpaceHub(
                         deviceName = deviceName,
                         chipsetName = chipsetName,
                         onApplyProfile = onApplyProfile,
-                        onPreviewSidePanelPrompt = {
-                            pendingLaunchApp = null
-                            sidePanelPromptOpen = true
-                        },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -981,7 +1016,10 @@ fun ZXGameSpaceHub(
                 sidePanelPromptOpen = false
                 pendingLaunchApp = null
                 if (appToLaunch != null) {
-                    onLaunch(appToLaunch)
+                    scope.launch {
+                        delay(240)
+                        onLaunch(appToLaunch)
+                    }
                 }
             }
         )
@@ -1764,12 +1802,10 @@ private fun rememberQuickInputDevices(
 @Composable
 private fun ZXGameSpaceSettingsOverlay(
     visible: Boolean,
-    hazeState: HazeState,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
     val motion = MaterialTheme.motionScheme
-    val scheme = MaterialTheme.colorScheme
     AnimatedVisibility(
         visible = visible,
         enter = slideInHorizontally(
@@ -1788,18 +1824,7 @@ private fun ZXGameSpaceSettingsOverlay(
         ) + fadeOut(animationSpec = motion.defaultEffectsSpec()),
         modifier = modifier
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .hazeBlur(
-                    input = HazeInput.Sources(hazeState),
-                    style = HazeBlurStyle.Material3(
-                        containerColor = scheme.surfaceContainerLowest.copy(alpha = 0.55f)
-                    ) {
-                        blurRadius(28.dp)
-                    }
-                )
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
             content()
         }
     }
@@ -1808,12 +1833,10 @@ private fun ZXGameSpaceSettingsOverlay(
 @Composable
 private fun ZXGameSpaceSearchOverlay(
     visible: Boolean,
-    hazeState: HazeState,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
     val motion = MaterialTheme.motionScheme
-    val scheme = MaterialTheme.colorScheme
 
     AnimatedVisibility(
         visible = visible,
@@ -1845,18 +1868,7 @@ private fun ZXGameSpaceSearchOverlay(
             )
         ) + fadeOut(animationSpec = motion.defaultEffectsSpec())
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .hazeBlur(
-                    input = HazeInput.Sources(hazeState),
-                    style = HazeBlurStyle.Material3(
-                        containerColor = scheme.surfaceContainerLowest.copy(alpha = 0.62f)
-                    ) {
-                        blurRadius(28.dp)
-                    }
-                )
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
             content()
         }
     }
@@ -2350,31 +2362,42 @@ private fun ZXGameSpaceAppSettingsOverlay(
             else -> 0
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .hazeBlur(
-                    input = HazeInput.Sources(hazeState),
-                    style = HazeBlurStyle.Material3(
-                        containerColor = scheme.surfaceContainerLowest.copy(alpha = 0.62f)
-                    ) {
-                        blurRadius(28.dp)
-                    }
-                )
-                .padding(horizontal = 24.dp, vertical = 18.dp)
+        val insets = WindowInsets.displayCutout.asPaddingValues()
+        val layoutDirection = LocalLayoutDirection.current
+        val startPad = maxOf(24.dp, insets.calculateStartPadding(layoutDirection))
+        val endPad = maxOf(24.dp, insets.calculateEndPadding(layoutDirection))
+        val topPad = maxOf(18.dp, insets.calculateTopPadding())
+        val bottomPad = maxOf(18.dp, insets.calculateBottomPadding())
+
+        CompositionLocalProvider(
+            LocalContentColor provides scheme.onSurface
         ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .hazeBlur(
+                        input = HazeInput.Sources(hazeState),
+                        style = HazeBlurStyle.Material3(
+                            containerColor = scheme.surfaceContainerLowest.copy(alpha = 0.62f)
+                        ) {
+                            blurRadius(28.dp)
+                        }
+                    )
+                    .padding(start = startPad, end = endPad, top = topPad, bottom = bottomPad)
             ) {
-                // Left GameSpace Identity Sidebar
-                Surface(
-                    shape = RoundedCornerShape(24.dp),
-                    color = scheme.surfaceContainerLow.copy(alpha = 0.90f),
-                    modifier = Modifier
-                        .width(264.dp)
-                        .fillMaxHeight()
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    // Left GameSpace Identity Sidebar
+                    Surface(
+                        shape = RoundedCornerShape(24.dp),
+                        color = scheme.surfaceContainerLow.copy(alpha = 0.90f),
+                        contentColor = scheme.onSurface,
+                        modifier = Modifier
+                            .width(264.dp)
+                            .fillMaxHeight()
+                    ) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -2633,6 +2656,7 @@ private fun ZXGameSpaceAppSettingsOverlay(
                 Surface(
                     shape = RoundedCornerShape(24.dp),
                     color = scheme.surfaceContainerLow.copy(alpha = 0.85f),
+                    contentColor = scheme.onSurface,
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
@@ -2925,6 +2949,7 @@ private fun ZXGameSpaceAppSettingsOverlay(
             }
         }
     }
+}
 }
 
 /**
@@ -5859,7 +5884,6 @@ private fun ZXGameSpaceSettingsStage(
     deviceName: String = "",
     chipsetName: String = "",
     onApplyProfile: (String) -> Unit = {},
-    onPreviewSidePanelPrompt: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -6008,9 +6032,7 @@ private fun ZXGameSpaceSettingsStage(
                         refreshHz = refreshHz,
                         onApplyProfile = onApplyProfile
                     )
-                    SettingsSidebarTab.Appearance -> SettingsAppearancePane(
-                        onPreviewSidePanelPrompt = onPreviewSidePanelPrompt
-                    )
+                    SettingsSidebarTab.Appearance -> SettingsAppearancePane()
                     SettingsSidebarTab.About -> SettingsAboutPane(
                         deviceName = deviceName,
                         chipsetName = chipsetName
@@ -6393,9 +6415,7 @@ private val GAMESPACE_PRESET_KEY_COLORS = listOf(
 )
 
 @Composable
-private fun SettingsAppearancePane(
-    onPreviewSidePanelPrompt: () -> Unit = {}
-) {
+private fun SettingsAppearancePane() {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
@@ -6414,7 +6434,7 @@ private fun SettingsAppearancePane(
     var colorModeValue by remember { mutableIntStateOf(prefs.getInt("color_mode", ColorMode.SYSTEM.value)) }
     var keyColorValue by remember { mutableIntStateOf(prefs.getInt("key_color", 0)) }
     var appScalePercent by remember {
-        mutableIntStateOf(prefs.getInt("gamespace_app_scale", 100).coerceIn(70, 150))
+        mutableIntStateOf(prefs.getInt("gamespace_app_scale", 85).coerceIn(60, 150))
     }
     var sliderScalePercent by remember(appScalePercent) {
         mutableIntStateOf(appScalePercent)
@@ -6518,33 +6538,6 @@ private fun SettingsAppearancePane(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        val promptBtnShape = RoundedCornerShape(12.dp)
-                        Surface(
-                            shape = promptBtnShape,
-                            color = scheme.secondaryContainer,
-                            contentColor = scheme.onSecondaryContainer,
-                            modifier = Modifier
-                                .gamepadFocusOutline(shape = promptBtnShape, register = true)
-                                .clip(promptBtnShape)
-                                .clickable(onClick = onPreviewSidePanelPrompt)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Tune,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(15.dp)
-                                )
-                                Text(
-                                    text = "First-Launch Overlay",
-                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                                )
-                            }
-                        }
-
                         Surface(
                             shape = CircleShape,
                             color = scheme.primaryContainer
@@ -6940,7 +6933,7 @@ private fun SettingsAppearancePane(
                                 color = scheme.onSurface
                             )
                             Text(
-                                text = "70% downscale to 150% upscale (5% steps, applies on release)",
+                                text = "60% downscale to 150% upscale",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = scheme.onSurfaceVariant
                             )
@@ -6960,8 +6953,8 @@ private fun SettingsAppearancePane(
                                 .size(34.dp)
                                 .gamepadFocusOutline(shape = stepBtnShape, register = true)
                                 .clip(stepBtnShape)
-                                .clickable(enabled = appScalePercent > 70) {
-                                    val next = (appScalePercent - 5).coerceIn(70, 150)
+                                .clickable(enabled = appScalePercent > 60) {
+                                    val next = (appScalePercent - 5).coerceIn(60, 150)
                                     appScalePercent = next
                                     sliderScalePercent = next
                                     prefs.edit().putInt("gamespace_app_scale", next).apply()
@@ -6978,15 +6971,15 @@ private fun SettingsAppearancePane(
 
                         Surface(
                             shape = CircleShape,
-                            color = if (sliderScalePercent == 100) scheme.primaryContainer else scheme.primary,
-                            contentColor = if (sliderScalePercent == 100) scheme.onPrimaryContainer else scheme.onPrimary,
+                            color = if (sliderScalePercent == 85) scheme.primaryContainer else scheme.primary,
+                            contentColor = if (sliderScalePercent == 85) scheme.onPrimaryContainer else scheme.onPrimary,
                             modifier = Modifier
                                 .gamepadFocusOutline(shape = CircleShape, register = true)
                                 .clip(CircleShape)
                                 .clickable {
-                                    appScalePercent = 100
-                                    sliderScalePercent = 100
-                                    prefs.edit().putInt("gamespace_app_scale", 100).apply()
+                                    appScalePercent = 85
+                                    sliderScalePercent = 85
+                                    prefs.edit().putInt("gamespace_app_scale", 85).apply()
                                 }
                         ) {
                             Text(
@@ -7005,7 +6998,7 @@ private fun SettingsAppearancePane(
                                 .gamepadFocusOutline(shape = stepBtnShape, register = true)
                                 .clip(stepBtnShape)
                                 .clickable(enabled = appScalePercent < 150) {
-                                    val next = (appScalePercent + 5).coerceIn(70, 150)
+                                    val next = (appScalePercent + 5).coerceIn(60, 150)
                                     appScalePercent = next
                                     sliderScalePercent = next
                                     prefs.edit().putInt("gamespace_app_scale", next).apply()
@@ -7025,7 +7018,7 @@ private fun SettingsAppearancePane(
                 ZenithSlider(
                     value = sliderScalePercent.toFloat(),
                     onValueChange = { raw ->
-                        val snapped = ((raw / 5f).roundToInt() * 5).coerceIn(70, 150)
+                        val snapped = ((raw / 5f).roundToInt() * 5).coerceIn(60, 150)
                         sliderScalePercent = snapped
                     },
                     onValueChangeFinished = {
@@ -7034,8 +7027,8 @@ private fun SettingsAppearancePane(
                             prefs.edit().putInt("gamespace_app_scale", sliderScalePercent).apply()
                         }
                     },
-                    valueRange = 70f..150f,
-                    steps = 15,
+                    valueRange = 60f..150f,
+                    steps = 17,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(28.dp)
@@ -7333,6 +7326,7 @@ private fun ZXGameSpaceSidePanelOnboardingOverlay(
     var sliderSensitivity by remember(committedSensitivity) {
         mutableIntStateOf(committedSensitivity)
     }
+    var isConfirmed by remember(visible) { mutableStateOf(false) }
 
     AnimatedVisibility(
         visible = visible,
@@ -7349,40 +7343,60 @@ private fun ZXGameSpaceSidePanelOnboardingOverlay(
                 stiffness = Spring.StiffnessMediumLow
             )
         ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
-        exit = slideOutVertically(
-            targetOffsetY = { fullHeight -> fullHeight / 4 },
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessMedium
-            )
-        ) + scaleOut(
-            targetScale = 0.95f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessMedium
-            )
-        ) + fadeOut(animationSpec = motion.defaultEffectsSpec()),
+        exit = if (isConfirmed) {
+            slideOutHorizontally(
+                targetOffsetX = { fullWidth -> if (selectedSide == "left") -fullWidth else fullWidth },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+            ) + fadeOut(animationSpec = motion.defaultEffectsSpec())
+        } else {
+            slideOutVertically(
+                targetOffsetY = { fullHeight -> fullHeight / 4 },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            ) + scaleOut(
+                targetScale = 0.95f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            ) + fadeOut(animationSpec = motion.defaultEffectsSpec())
+        },
         modifier = Modifier.fillMaxSize()
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .hazeBlur(
-                    input = HazeInput.Sources(hazeState),
-                    style = HazeBlurStyle.Material3(
-                        containerColor = scheme.surfaceContainerLowest.copy(alpha = 0.72f)
-                    ) {
-                        blurRadius(28.dp)
-                    }
-                )
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onDismiss
-                )
-                .padding(horizontal = 32.dp, vertical = 20.dp),
-            contentAlignment = Alignment.Center
+        val insets = WindowInsets.displayCutout.asPaddingValues()
+        val layoutDirection = LocalLayoutDirection.current
+        val startPad = maxOf(32.dp, insets.calculateStartPadding(layoutDirection))
+        val endPad = maxOf(32.dp, insets.calculateEndPadding(layoutDirection))
+        val topPad = maxOf(20.dp, insets.calculateTopPadding())
+        val bottomPad = maxOf(20.dp, insets.calculateBottomPadding())
+
+        CompositionLocalProvider(
+            LocalContentColor provides scheme.onSurface
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .hazeBlur(
+                        input = HazeInput.Sources(hazeState),
+                        style = HazeBlurStyle.Material3(
+                            containerColor = scheme.surfaceContainerLowest.copy(alpha = 0.72f)
+                        ) {
+                            blurRadius(28.dp)
+                        }
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onDismiss
+                    )
+                    .padding(start = startPad, end = endPad, top = topPad, bottom = bottomPad),
+                contentAlignment = Alignment.Center
+            ) {
             Surface(
                 shape = RoundedCornerShape(28.dp),
                 color = scheme.surfaceContainerLow,
@@ -7765,6 +7779,7 @@ private fun ZXGameSpaceSidePanelOnboardingOverlay(
                                 .gamepadFocusOutline(shape = confirmShape, register = true)
                                 .clip(confirmShape)
                                 .clickable {
+                                    isConfirmed = true
                                     prefs.edit()
                                         .putString("gamespace_sidepanel_side", selectedSide)
                                         .putInt("gamespace_sidepanel_sensitivity", sliderSensitivity)
@@ -7805,6 +7820,7 @@ private fun ZXGameSpaceSidePanelOnboardingOverlay(
             }
         }
     }
+}
 }
 
 @Composable

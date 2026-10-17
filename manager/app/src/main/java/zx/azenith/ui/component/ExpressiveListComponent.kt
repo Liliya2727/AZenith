@@ -206,7 +206,11 @@ fun <T> ExpressiveLazyList(
                         .clip(shape)
                         .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))
                 ) {
-                    ProvideRowShape(shape) { itemContent(item) }
+                    CompositionLocalProvider(
+                        LocalContentColor provides MaterialTheme.colorScheme.onSurface
+                    ) {
+                        ProvideRowShape(shape) { itemContent(item) }
+                    }
                 }
             }
         }
