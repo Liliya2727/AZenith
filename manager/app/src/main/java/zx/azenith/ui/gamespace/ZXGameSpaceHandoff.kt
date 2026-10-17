@@ -18,8 +18,10 @@
 
 package zx.azenith.ui.gamespace
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -53,9 +55,27 @@ fun setGameSpaceEnabled(context: Context, enabled: Boolean) {
         .apply()
 }
 
-// One handoff per process: an activity recreated while the mode is on (rotation, process reuse)
+// One handoff per session: an activity recreated while the mode is on (rotation, process reuse)
 // must not push the shell back in front of the user.
 private var handoffDone = false
+
+fun isHandoffDone(): Boolean = handoffDone
+
+fun setHandoffDone(done: Boolean) {
+    handoffDone = done
+}
+
+fun launchGameSpaceDirectly(activity: Activity) {
+    handoffDone = true
+    val intent = Intent(activity, ZXGameSpaceActivity::class.java)
+    activity.startActivity(intent)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        activity.overrideActivityTransition(Activity.OVERRIDE_TRANSITION_OPEN, 0, 0)
+    } else {
+        @Suppress("DEPRECATION")
+        activity.overridePendingTransition(0, 0)
+    }
+}
 
 /**
  * The way into Game Space. Sits at the window root so the fade covers whichever screen the user is
@@ -84,8 +104,6 @@ private fun GameSpaceFade(
         if (auto) {
             if (handoffDone) return@LaunchedEffect
             handoffDone = true
-            // Let the screen the user just landed on compose before it fades under them.
-            delay(240)
         }
         fade.animateTo(1f, motion.defaultEffectsSpec())
         context.startActivity(Intent(context, ZXGameSpaceActivity::class.java))

@@ -99,6 +99,10 @@ import zx.azenith.R
 import zx.azenith.ui.component.*
 import zx.azenith.ui.gamespace.GAME_SPACE_MODE_KEY
 import zx.azenith.ui.gamespace.ZXGameSpaceHandoff
+import zx.azenith.ui.gamespace.isGameSpaceEnabled
+import zx.azenith.ui.gamespace.isHandoffDone
+import zx.azenith.ui.gamespace.setHandoffDone
+import zx.azenith.ui.gamespace.launchGameSpaceDirectly
 import zx.azenith.ui.mainscreens.*
 import zx.azenith.ui.subscreens.*
 import zx.azenith.ui.theme.AZenithTheme
@@ -111,12 +115,18 @@ import androidx.compose.ui.graphics.RectangleShape
 
 
 class MainActivity : ComponentActivity() {
+    private var isStandingByForGameSpace by mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
+        }
+
+        if (savedInstanceState != null) {
+            isStandingByForGameSpace = savedInstanceState.getBoolean("is_standing_by_gamespace", false)
         }
         
         val fromTileType = if (intent.action == "android.service.quicksettings.action.QS_TILE_PREFERENCES") {
@@ -133,6 +143,12 @@ class MainActivity : ComponentActivity() {
                 else -> null
             }
         } else null
+
+        val shouldAutoLaunchGameSpace = isGameSpaceEnabled(this) && fromTileType == null && !isHandoffDone()
+        if (shouldAutoLaunchGameSpace) {
+            isStandingByForGameSpace = true
+            launchGameSpaceDirectly(this)
+        }
 
         setContent {
             AZenithTheme {
@@ -156,11 +172,48 @@ class MainActivity : ComponentActivity() {
                     onDispose { settings.unregisterOnSharedPreferenceChangeListener(listener) }
                 }
 
-                Box(modifier = Modifier.fillMaxSize()) {
-                    MainScreen(fromTileType)
-                    ZXGameSpaceHandoff(armed = gameSpaceOn)
+                if (!isStandingByForGameSpace) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        MainScreen(fromTileType)
+                        ZXGameSpaceHandoff(armed = gameSpaceOn)
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.surface)
+                    )
                 }
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (isStandingByForGameSpace) {
+            isStandingByForGameSpace = false
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val fromTile = intent.action == "android.service.quicksettings.action.QS_TILE_PREFERENCES"
+        if (!fromTile && isGameSpaceEnabled(this)) {
+            isStandingByForGameSpace = true
+            launchGameSpaceDirectly(this)
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean("is_standing_by_gamespace", isStandingByForGameSpace)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (isFinishing) {
+            setHandoffDone(false)
         }
     }
 }
