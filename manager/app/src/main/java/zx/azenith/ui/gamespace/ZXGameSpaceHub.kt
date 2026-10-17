@@ -144,6 +144,12 @@ fun ZXGameSpaceHub(
     val ribbonFocusRequester = remember { FocusRequester() }
     var category by rememberSaveable { mutableStateOf(TopCategory.Games) }
     var selectedSettingsTab by rememberSaveable { mutableStateOf(SettingsSidebarTab.General) }
+
+    LaunchedEffect(category) {
+        if (category != TopCategory.Settings) {
+            selectedSettingsTab = SettingsSidebarTab.General
+        }
+    }
     var selectedRibbonIndex by remember { mutableIntStateOf(0) }
     var exitPrompt by remember { mutableStateOf(false) }
     var tuningPkg by remember { mutableStateOf<String?>(null) }
@@ -361,6 +367,9 @@ fun ZXGameSpaceHub(
                 onSelectCategory = {
                     searchOpen = false
                     searchQuery = ""
+                    if (it != TopCategory.Settings) {
+                        selectedSettingsTab = SettingsSidebarTab.General
+                    }
                     category = it
                 },
                 searchOpen = searchOpen,
@@ -377,7 +386,13 @@ fun ZXGameSpaceHub(
                 onSettingsClick = {
                     searchOpen = false
                     searchQuery = ""
-                    category = if (category == TopCategory.Settings) TopCategory.Games else TopCategory.Settings
+                    if (category == TopCategory.Settings) {
+                        selectedSettingsTab = SettingsSidebarTab.General
+                        category = TopCategory.Games
+                    } else {
+                        selectedSettingsTab = SettingsSidebarTab.General
+                        category = TopCategory.Settings
+                    }
                 },
                 onAvatarClick = {
                     searchOpen = false
@@ -667,6 +682,7 @@ fun ZXGameSpaceHub(
                 } else if (quickSettingsOpen) {
                     quickSettingsOpen = false
                 } else if (category == TopCategory.Settings) {
+                    selectedSettingsTab = SettingsSidebarTab.General
                     category = TopCategory.Games
                 } else if (searchOpen) {
                     searchOpen = false
