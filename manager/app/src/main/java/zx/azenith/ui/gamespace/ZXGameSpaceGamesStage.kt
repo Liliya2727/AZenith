@@ -2215,17 +2215,17 @@ internal fun GameHeroStage(
                     }
                 }
 
-                val playButtonShape = RoundedCornerShape(28.dp)
+                val playButtonShape = RoundedCornerShape(22.dp)
 
-                // Enlarged expressive colorful Play button (50% larger with rounded corner square shape)
+                // Expressive colorful Play button with rounded corner square shape (reduced by 25%)
                 Surface(
                     shape = playButtonShape,
                     color = scheme.primary,
                     contentColor = scheme.onPrimary,
                     tonalElevation = 6.dp,
-                    shadowElevation = 10.dp,
+                    shadowElevation = 8.dp,
                     modifier = Modifier
-                        .height(108.dp)
+                        .height(81.dp)
                         .graphicsLayer {
                             scaleX = playScale
                             scaleY = playScale
@@ -2238,18 +2238,18 @@ internal fun GameHeroStage(
                     Row(
                         modifier = Modifier
                             .fillMaxHeight()
-                            .padding(horizontal = 42.dp),
+                            .padding(horizontal = 32.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.PlayArrow,
                             contentDescription = null,
-                            modifier = Modifier.size(46.dp)
+                            modifier = Modifier.size(36.dp)
                         )
                         Text(
                             text = "Play",
-                            style = MaterialTheme.typography.headlineMedium.copy(
+                            style = MaterialTheme.typography.titleLarge.copy(
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = 0.5.sp
                             )
