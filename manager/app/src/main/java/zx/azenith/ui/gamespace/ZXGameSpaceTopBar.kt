@@ -24,10 +24,12 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -90,6 +92,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
@@ -673,42 +676,30 @@ internal fun ZXGameSpaceSearchOverlay(
     content: @Composable () -> Unit
 ) {
     val motion = MaterialTheme.motionScheme
-    val scheme = MaterialTheme.colorScheme
 
     AnimatedVisibility(
         visible = visible,
         modifier = modifier,
-        enter = slideInVertically(
-            initialOffsetY = { fullHeight -> -fullHeight / 6 },
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioLowBouncy,
-                stiffness = Spring.StiffnessMediumLow
-            )
+        enter = expandVertically(
+            expandFrom = Alignment.Top,
+            animationSpec = motion.defaultSpatialSpec()
         ) + scaleIn(
-            initialScale = 0.94f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioLowBouncy,
-                stiffness = Spring.StiffnessMediumLow
-            )
+            initialScale = 0.90f,
+            transformOrigin = TransformOrigin(0.85f, 0f),
+            animationSpec = motion.defaultSpatialSpec()
         ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
-        exit = slideOutVertically(
-            targetOffsetY = { fullHeight -> -fullHeight / 8 },
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessMedium
-            )
+        exit = shrinkVertically(
+            shrinkTowards = Alignment.Top,
+            animationSpec = motion.fastSpatialSpec()
         ) + scaleOut(
-            targetScale = 0.96f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessMedium
-            )
-        ) + fadeOut(animationSpec = motion.defaultEffectsSpec())
+            targetScale = 0.92f,
+            transformOrigin = TransformOrigin(0.85f, 0f),
+            animationSpec = motion.fastSpatialSpec()
+        ) + fadeOut(animationSpec = motion.fastEffectsSpec())
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(scheme.scrim.copy(alpha = 0.38f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -730,6 +721,7 @@ internal fun ZXGameSpaceSearchPane(
     onClose: () -> Unit = {}
 ) {
     val scheme = MaterialTheme.colorScheme
+    val motion = MaterialTheme.motionScheme
     val context = LocalContext.current
     var scopeFilter by remember { mutableStateOf(SearchScopeFilter.All) }
     var showAllApps by remember(query, scopeFilter) { mutableStateOf(false) }
@@ -809,12 +801,12 @@ internal fun ZXGameSpaceSearchPane(
 
     Surface(
         shape = RoundedCornerShape(28.dp),
-        color = scheme.surfaceContainerHigh,
-        shadowElevation = 24.dp,
-        tonalElevation = 6.dp,
+        color = scheme.surfaceContainer,
+        shadowElevation = 8.dp,
+        tonalElevation = 4.dp,
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 10.dp, bottom = 16.dp)
+            .padding(top = 4.dp, bottom = 10.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -824,8 +816,8 @@ internal fun ZXGameSpaceSearchPane(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Header with Scope Filter Pills and Close Button
             Row(
@@ -852,10 +844,10 @@ internal fun ZXGameSpaceSearchPane(
                             },
                             shape = CircleShape,
                             colors = FilterChipDefaults.filterChipColors(
-                                containerColor = scheme.surfaceContainerLow,
-                                selectedContainerColor = scheme.primaryContainer,
+                                containerColor = scheme.surfaceContainerHigh,
+                                selectedContainerColor = scheme.secondaryContainer,
                                 labelColor = scheme.onSurfaceVariant,
-                                selectedLabelColor = scheme.onPrimaryContainer
+                                selectedLabelColor = scheme.onSecondaryContainer
                             ),
                             border = null
                         )
@@ -896,13 +888,17 @@ internal fun ZXGameSpaceSearchPane(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 40.dp)
-                                .animateItem(),
+                                .animateItem(
+                                    fadeInSpec = motion.defaultEffectsSpec(),
+                                    fadeOutSpec = motion.fastEffectsSpec(),
+                                    placementSpec = motion.defaultSpatialSpec()
+                                ),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Surface(
                                 shape = CircleShape,
-                                color = scheme.surfaceContainerLow,
+                                color = scheme.surfaceContainerHigh,
                                 modifier = Modifier.size(56.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
@@ -935,7 +931,11 @@ internal fun ZXGameSpaceSearchPane(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 4.dp)
-                                .animateItem(),
+                                .animateItem(
+                                    fadeInSpec = motion.defaultEffectsSpec(),
+                                    fadeOutSpec = motion.fastEffectsSpec(),
+                                    placementSpec = motion.defaultSpatialSpec()
+                                ),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -960,9 +960,9 @@ internal fun ZXGameSpaceSearchPane(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .animateItem(
-                                    fadeInSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
-                                    fadeOutSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
-                                    placementSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+                                    fadeInSpec = motion.defaultEffectsSpec(),
+                                    fadeOutSpec = motion.fastEffectsSpec(),
+                                    placementSpec = motion.defaultSpatialSpec()
                                 ),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
@@ -970,7 +970,7 @@ internal fun ZXGameSpaceSearchPane(
                                 val shape = RoundedCornerShape(18.dp)
                                 Surface(
                                     shape = shape,
-                                    color = scheme.surfaceContainerLowest,
+                                    color = scheme.surfaceContainerHigh,
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(72.dp)
@@ -1009,7 +1009,7 @@ internal fun ZXGameSpaceSearchPane(
 
                                         Surface(
                                             shape = CircleShape,
-                                            color = scheme.surfaceContainerHigh,
+                                            color = scheme.surfaceContainerHighest,
                                             modifier = Modifier
                                                 .size(34.dp)
                                                 .clip(CircleShape)
@@ -1038,14 +1038,16 @@ internal fun ZXGameSpaceSearchPane(
                         item(key = "toggle_show_all_apps") {
                             Surface(
                                 shape = RoundedCornerShape(16.dp),
-                                color = scheme.surfaceContainerLow,
+                                color = scheme.surfaceContainerHigh,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(42.dp)
                                     .clip(RoundedCornerShape(16.dp))
                                     .clickable { showAllApps = !showAllApps }
                                     .animateItem(
-                                        placementSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+                                        fadeInSpec = motion.defaultEffectsSpec(),
+                                        fadeOutSpec = motion.fastEffectsSpec(),
+                                        placementSpec = motion.defaultSpatialSpec()
                                     )
                             ) {
                                 Row(
@@ -1079,7 +1081,11 @@ internal fun ZXGameSpaceSearchPane(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 4.dp)
-                                .animateItem(),
+                                .animateItem(
+                                    fadeInSpec = motion.defaultEffectsSpec(),
+                                    fadeOutSpec = motion.fastEffectsSpec(),
+                                    placementSpec = motion.defaultSpatialSpec()
+                                ),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -1104,9 +1110,9 @@ internal fun ZXGameSpaceSearchPane(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .animateItem(
-                                    fadeInSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
-                                    fadeOutSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
-                                    placementSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+                                    fadeInSpec = motion.defaultEffectsSpec(),
+                                    fadeOutSpec = motion.fastEffectsSpec(),
+                                    placementSpec = motion.defaultSpatialSpec()
                                 ),
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
@@ -1114,7 +1120,7 @@ internal fun ZXGameSpaceSearchPane(
                                 val shape = RoundedCornerShape(18.dp)
                                 Surface(
                                     shape = shape,
-                                    color = scheme.surfaceContainerLowest,
+                                    color = scheme.surfaceContainerHigh,
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(68.dp)
@@ -1188,14 +1194,16 @@ internal fun ZXGameSpaceSearchPane(
                         item(key = "toggle_show_all_settings") {
                             Surface(
                                 shape = RoundedCornerShape(16.dp),
-                                color = scheme.surfaceContainerLow,
+                                color = scheme.surfaceContainerHigh,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(42.dp)
                                     .clip(RoundedCornerShape(16.dp))
                                     .clickable { showAllSettings = !showAllSettings }
                                     .animateItem(
-                                        placementSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+                                        fadeInSpec = motion.defaultEffectsSpec(),
+                                        fadeOutSpec = motion.fastEffectsSpec(),
+                                        placementSpec = motion.defaultSpatialSpec()
                                     )
                             ) {
                                 Row(
