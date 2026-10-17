@@ -2215,39 +2215,41 @@ internal fun GameHeroStage(
                     }
                 }
 
-                // Enlarged expressive colorful Play button
+                val playButtonShape = RoundedCornerShape(28.dp)
+
+                // Enlarged expressive colorful Play button (50% larger with rounded corner square shape)
                 Surface(
-                    shape = CircleShape,
+                    shape = playButtonShape,
                     color = scheme.primary,
                     contentColor = scheme.onPrimary,
                     tonalElevation = 6.dp,
-                    shadowElevation = 8.dp,
+                    shadowElevation = 10.dp,
                     modifier = Modifier
-                        .height(72.dp)
+                        .height(108.dp)
                         .graphicsLayer {
                             scaleX = playScale
                             scaleY = playScale
                         }
                         .onFocusChanged { playFocused = it.isFocused }
-                        .gamepadFocusOutline(shape = CircleShape, width = 3.dp)
-                        .clip(CircleShape)
+                        .gamepadFocusOutline(shape = playButtonShape, width = 3.dp)
+                        .clip(playButtonShape)
                         .clickable(onClick = onLaunch)
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxHeight()
-                            .padding(horizontal = 34.dp),
+                            .padding(horizontal = 42.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.PlayArrow,
                             contentDescription = null,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(46.dp)
                         )
                         Text(
                             text = "Play",
-                            style = MaterialTheme.typography.titleLarge.copy(
+                            style = MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = 0.5.sp
                             )
