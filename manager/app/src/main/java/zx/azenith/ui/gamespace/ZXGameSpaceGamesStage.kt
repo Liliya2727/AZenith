@@ -891,19 +891,39 @@ internal fun WelcomeHubStage(
                 )
             }
 
+            val settleBounce = remember { Animatable(0f) }
+            var settleDirection by remember { mutableStateOf(1f) }
+
             val ramp = (scroll.value / HOME_EXPAND_AT.toFloat()).coerceIn(0f, 1f)
             val targetProgress = if (expanded) 1f else ramp
             val expandProgress by animateFloatAsState(
                 targetValue = targetProgress,
                 animationSpec = spring(
-                    dampingRatio = 0.82f,
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
                     stiffness = Spring.StiffnessMediumLow
                 ),
-                label = "BentoMorphProgress"
+                label = "BentoMorphProgress",
+                finishedListener = { finalValue ->
+                    if (finalValue >= 0.99f || finalValue <= 0.01f) {
+                        settleDirection = if (finalValue >= 0.99f) 1f else -1f
+                        scope.launch {
+                            settleBounce.snapTo(1f)
+                            settleBounce.animateTo(
+                                targetValue = 0f,
+                                animationSpec = spring(
+                                    dampingRatio = 0.42f,
+                                    stiffness = 260f
+                                )
+                            )
+                        }
+                    }
+                }
             )
 
             HubBentoGrid(
                 expandProgress = expandProgress,
+                settleBounce = settleBounce.value,
+                settleDirection = settleDirection,
                 onExpandRequest = {
                     stageHold = true
                     notifyExpanded.value(true)

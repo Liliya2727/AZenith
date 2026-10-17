@@ -356,6 +356,8 @@ private fun lerpInt(a: Int, b: Int, t: Float): Int = (a + (b - a) * t).roundToIn
 @Composable
 private fun BentoMorphLayout(
     progress: Float,
+    settleBounce: Float = 0f,
+    settleDirection: Float = 1f,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
@@ -372,6 +374,7 @@ private fun BentoMorphLayout(
     ) { measurables, constraints ->
         val totalWidth = constraints.maxWidth
         val p = progress.coerceIn(0f, 1f)
+        val overshoot = if (progress > 1f) (progress - 1f) else if (progress < 0f) progress else 0f
 
         val compactItemW = (totalWidth - 2 * gapPx) / 3
 
@@ -426,38 +429,79 @@ private fun BentoMorphLayout(
             measurables[6].measure(Constraints.fixed(otherHalfW1.coerceAtLeast(0), row3H1Px.coerceAtLeast(0)))
         } else null
 
+        val b = settleBounce
+        val dir = settleDirection
+        val dipPx = with(density) { 8.dp.toPx() }
+        val reboundCompactPx = with(density) { 6.dp.toPx() }
+        val overshootPx = with(density) { 20.dp.toPx() }
+
+        val b0 = b
+        val offsetY0 = overshoot * overshootPx + (if (dir > 0f) b0 * dipPx else -b0 * reboundCompactPx)
+        val scaleY0 = 1f + overshoot * 0.45f + (if (dir > 0f) b0 * 0.035f else -b0 * 0.035f)
+        val scaleX0 = 1f - overshoot * 0.20f + (if (dir > 0f) -b0 * 0.020f else b0 * 0.025f)
+
+        val b1 = b * 0.94f
+        val offsetY1 = overshoot * (overshootPx * 0.9f) + (if (dir > 0f) b1 * dipPx else -b1 * reboundCompactPx)
+        val scaleY1 = 1f + overshoot * 0.40f + (if (dir > 0f) b1 * 0.032f else -b1 * 0.032f)
+        val scaleX1 = 1f - overshoot * 0.18f + (if (dir > 0f) -b1 * 0.018f else b1 * 0.022f)
+
+        val b2 = b * 0.88f
+        val offsetY2 = overshoot * (overshootPx * 0.85f) + (if (dir > 0f) b2 * dipPx else -b2 * reboundCompactPx)
+        val scaleY2 = 1f + overshoot * 0.40f + (if (dir > 0f) b2 * 0.032f else -b2 * 0.032f)
+        val scaleX2 = 1f - overshoot * 0.18f + (if (dir > 0f) -b2 * 0.018f else b2 * 0.022f)
+
         layout(totalWidth, totalHeight) {
-            profilePlaceable?.placeRelative(0, 0)
-            modulePlaceable?.placeRelative(moduleX, 0)
-            rootPlaceable?.placeRelative(rootX, rootY)
+            profilePlaceable?.placeRelativeWithLayer(0, 0) {
+                translationY = offsetY0
+                scaleX = scaleX0
+                scaleY = scaleY0
+            }
+            modulePlaceable?.placeRelativeWithLayer(moduleX, 0) {
+                translationY = offsetY1
+                scaleX = scaleX1
+                scaleY = scaleY1
+            }
+            rootPlaceable?.placeRelativeWithLayer(rootX, rootY) {
+                translationY = offsetY2
+                scaleX = scaleX2
+                scaleY = scaleY2
+            }
 
             if (p > 0.001f) {
                 val row2Alpha = ((p - 0.15f) / 0.85f).coerceIn(0f, 1f)
-                val row2Scale = 0.90f + 0.10f * p
+                val bRow2 = b * 0.82f
+                val row2Scale = (0.90f + 0.10f * p) * (1f + bRow2 * 0.028f)
                 val row2Y = lerpInt(compactHPx, row2Y1, p)
+                val row2BounceY = overshoot * (overshootPx * 0.75f) + bRow2 * dipPx
 
                 libPlaceable?.placeRelativeWithLayer(0, row2Y) {
                     alpha = row2Alpha
+                    translationY = row2BounceY
                     scaleX = row2Scale
                     scaleY = row2Scale
                 }
                 devPlaceable?.placeRelativeWithLayer(libW1 + gapPx, row2Y) {
                     alpha = row2Alpha
+                    translationY = row2BounceY
                     scaleX = row2Scale
                     scaleY = row2Scale
                 }
 
                 val row3Alpha = ((p - 0.32f) / 0.68f).coerceIn(0f, 1f)
-                val row3Scale = 0.90f + 0.10f * p
+                val bRow3 = b * 0.72f
+                val row3Scale = (0.90f + 0.10f * p) * (1f + bRow3 * 0.024f)
                 val row3Y = lerpInt(compactHPx, row3Y1, p)
+                val row3BounceY = overshoot * (overshootPx * 0.65f) + bRow3 * dipPx
 
                 suppPlaceable?.placeRelativeWithLayer(0, row3Y) {
                     alpha = row3Alpha
+                    translationY = row3BounceY
                     scaleX = row3Scale
                     scaleY = row3Scale
                 }
                 docPlaceable?.placeRelativeWithLayer(halfW1 + gapPx, row3Y) {
                     alpha = row3Alpha
+                    translationY = row3BounceY
                     scaleX = row3Scale
                     scaleY = row3Scale
                 }
@@ -470,6 +514,8 @@ private fun BentoMorphLayout(
 @Composable
 internal fun HubBentoGrid(
     expandProgress: Float,
+    settleBounce: Float = 0f,
+    settleDirection: Float = 1f,
     onExpandRequest: () -> Unit,
     moduleInstalled: Boolean?,
     moduleValue: String,
@@ -496,6 +542,8 @@ internal fun HubBentoGrid(
 
     BentoMorphLayout(
         progress = expandProgress,
+        settleBounce = settleBounce,
+        settleDirection = settleDirection,
         modifier = modifier.fillMaxWidth()
     ) {
         MorphedProfileTile(
