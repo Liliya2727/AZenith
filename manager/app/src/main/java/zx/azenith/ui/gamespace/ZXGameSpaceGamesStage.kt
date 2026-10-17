@@ -292,7 +292,9 @@ internal fun ZXGameSpaceTileRibbon(
                     selected = isSelected,
                     onFocus = { onSelect(index) },
                     onClick = {
-                        if (isSelected) {
+                        if (item is RibbonEntry.WrapToFirst) {
+                            onSelect(0)
+                        } else if (isSelected) {
                             onActivate(item)
                         } else {
                             onSelect(index)
@@ -333,6 +335,17 @@ internal fun ZXGameSpaceTileRibbon(
                 RibbonEntry.Library -> {
                     Text(
                         text = stringResource(R.string.gamespace_library_title),
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Normal
+                        ),
+                        color = scheme.onSurface,
+                        maxLines = 1
+                    )
+                }
+
+                RibbonEntry.WrapToFirst -> {
+                    Text(
+                        text = "Back to Start",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Normal
                         ),
@@ -389,6 +402,7 @@ internal fun ZXGameSpaceRibbonTile(
                 RibbonEntry.Welcome -> WelcomeGlyphTileContent(selectedFraction = selectionFraction)
                 is RibbonEntry.Game -> GameTileContent(app = entry.app, selectedFraction = selectionFraction)
                 RibbonEntry.Library -> LibraryTileContent(selectedFraction = selectionFraction)
+                RibbonEntry.WrapToFirst -> WrapToFirstTileContent(selectedFraction = selectionFraction)
             }
         }
     }
@@ -488,6 +502,149 @@ internal fun LibraryTileContent(selectedFraction: Float = 0f) {
             tint = scheme.onSurface,
             modifier = Modifier.size(iconSize)
         )
+    }
+}
+
+@Composable
+internal fun WrapToFirstTileContent(selectedFraction: Float = 0f) {
+    val scheme = MaterialTheme.colorScheme
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        scheme.surfaceContainerHighest,
+                        scheme.surfaceContainerLow
+                    )
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        val iconSize = lerp(26.dp, 38.dp, selectedFraction)
+        Icon(
+            imageVector = Icons.Rounded.ChevronRight,
+            contentDescription = "Back to Start",
+            tint = if (selectedFraction > 0.5f) scheme.primary else scheme.onSurface,
+            modifier = Modifier.size(iconSize)
+        )
+    }
+}
+
+/**
+ * Terminal wrap-around stage that returns the user directly to the home screen.
+ */
+@Composable
+internal fun WrapToFirstStage(
+    onReturnToFirst: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scheme = MaterialTheme.colorScheme
+    val motion = MaterialTheme.motionScheme
+
+    var buttonFocused by remember { mutableStateOf(false) }
+    val buttonScale by animateFloatAsState(
+        targetValue = if (buttonFocused) 1.05f else 1f,
+        animationSpec = motion.defaultSpatialSpec(),
+        label = "ReturnBtnScale"
+    )
+
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Bottom
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(bottom = 12.dp),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 16.dp),
+                verticalArrangement = Arrangement.Bottom
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = scheme.primaryContainer,
+                        modifier = Modifier.size(56.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Rounded.ChevronRight,
+                                contentDescription = null,
+                                tint = scheme.onPrimaryContainer,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                    }
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Back to Start",
+                            style = MaterialTheme.typography.headlineLarge.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 0.5.sp
+                            ),
+                            color = scheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "Jump back to the first home page",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Medium
+                            ),
+                            color = scheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            Surface(
+                shape = CircleShape,
+                color = scheme.primary,
+                contentColor = scheme.onPrimary,
+                modifier = Modifier
+                    .height(56.dp)
+                    .graphicsLayer {
+                        scaleX = buttonScale
+                        scaleY = buttonScale
+                    }
+                    .onFocusChanged { buttonFocused = it.isFocused }
+                    .gamepadFocusOutline(shape = CircleShape, width = 2.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onReturnToFirst)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 26.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.ChevronRight,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = "Home",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 0.5.sp
+                        )
+                    )
+                }
+            }
+        }
     }
 }
 

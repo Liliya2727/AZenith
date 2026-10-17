@@ -32,6 +32,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -52,6 +53,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,11 +65,14 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -159,6 +164,7 @@ fun ZXGameSpaceHub(
             add(RibbonEntry.Welcome)
             enabledApps.forEach { add(RibbonEntry.Game(it)) }
             add(RibbonEntry.Library)
+            add(RibbonEntry.WrapToFirst)
         }
     }
 
@@ -431,7 +437,10 @@ fun ZXGameSpaceHub(
                                                         enabledApps.firstOrNull()?.let { selectedRibbonIndex = 1 }
                                                     }
                                                     RibbonEntry.Library -> {
-                                                        selectedRibbonIndex = ribbonEntries.lastIndex
+                                                        selectedRibbonIndex = ribbonEntries.indexOf(RibbonEntry.Library)
+                                                    }
+                                                    RibbonEntry.WrapToFirst -> {
+                                                        selectedRibbonIndex = 0
                                                     }
                                                 }
                                             },
@@ -442,13 +451,66 @@ fun ZXGameSpaceHub(
                                     }
                                 }
 
-                                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                                val canSwipeStage = !searchOpen && !homeExpanded && !libraryExpanded
+                                var accumulatedDragX by remember { mutableFloatStateOf(0f) }
+                                var hasSwipedInCurrentGesture by remember { mutableStateOf(false) }
+                                val haptic = LocalHapticFeedback.current
+                                val density = LocalDensity.current
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxWidth()
+                                        .then(
+                                            if (canSwipeStage) {
+                                                Modifier.pointerInput(safeIndex, ribbonEntries.size) {
+                                                    detectHorizontalDragGestures(
+                                                        onDragStart = {
+                                                            accumulatedDragX = 0f
+                                                            hasSwipedInCurrentGesture = false
+                                                        },
+                                                        onDragEnd = {
+                                                            accumulatedDragX = 0f
+                                                            hasSwipedInCurrentGesture = false
+                                                        },
+                                                        onDragCancel = {
+                                                            accumulatedDragX = 0f
+                                                            hasSwipedInCurrentGesture = false
+                                                        },
+                                                        onHorizontalDrag = { change, dragAmount ->
+                                                            if (!hasSwipedInCurrentGesture) {
+                                                                accumulatedDragX += dragAmount
+                                                                val thresholdPx = with(density) { 32.dp.toPx() }
+                                                                if (accumulatedDragX <= -thresholdPx) {
+                                                                    change.consume()
+                                                                    hasSwipedInCurrentGesture = true
+                                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                    if (safeIndex < ribbonEntries.lastIndex) {
+                                                                        selectedRibbonIndex = safeIndex + 1
+                                                                    } else {
+                                                                        selectedRibbonIndex = 0
+                                                                    }
+                                                                } else if (accumulatedDragX >= thresholdPx) {
+                                                                    change.consume()
+                                                                    hasSwipedInCurrentGesture = true
+                                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                    if (safeIndex > 0) {
+                                                                        selectedRibbonIndex = safeIndex - 1
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            } else Modifier
+                                        )
+                                ) {
                                     AnimatedContent(
                                         targetState = activeEntry,
                                         transitionSpec = {
                                             val fromIndex = ribbonEntries.indexOf(initialState)
                                             val toIndex = ribbonEntries.indexOf(targetState)
-                                            val movingForward = toIndex >= fromIndex
+                                            val movingForward = (toIndex >= fromIndex) || (fromIndex == ribbonEntries.lastIndex && toIndex == 0)
 
                                             val slideInOffset = { size: Int ->
                                                 if (movingForward) (size * 0.18f).roundToInt()
@@ -506,7 +568,7 @@ fun ZXGameSpaceHub(
                                                     if (idx >= 0) selectedRibbonIndex = idx else requestAppLaunch(game)
                                                 },
                                                 onLaunchGame = requestAppLaunch,
-                                                onOpenLibrary = { selectedRibbonIndex = ribbonEntries.lastIndex }
+                                                onOpenLibrary = { selectedRibbonIndex = ribbonEntries.indexOf(RibbonEntry.Library) }
                                             )
 
                                             is RibbonEntry.Game -> GameHeroStage(
@@ -523,6 +585,10 @@ fun ZXGameSpaceHub(
                                                 onExpandedChange = { libraryExpanded = it },
                                                 onClose = { selectedRibbonIndex = 0 },
                                                 onNavigateUp = { ribbonFocusRequester.requestFocus() }
+                                            )
+
+                                            RibbonEntry.WrapToFirst -> WrapToFirstStage(
+                                                onReturnToFirst = { selectedRibbonIndex = 0 }
                                             )
                                         }
                                     }

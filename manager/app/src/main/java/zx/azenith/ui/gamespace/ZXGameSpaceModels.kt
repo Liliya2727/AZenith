@@ -93,6 +93,10 @@ internal sealed interface RibbonEntry {
     data object Library : RibbonEntry {
         override val key: String = "__library__"
     }
+
+    data object WrapToFirst : RibbonEntry {
+        override val key: String = "__wrap_to_first__"
+    }
 }
 
 internal enum class SettingsSidebarTab(
