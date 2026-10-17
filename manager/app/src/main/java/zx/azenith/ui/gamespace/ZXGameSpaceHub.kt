@@ -181,7 +181,8 @@ fun ZXGameSpaceHub(
     }
     val deviceName = remember(context) { getRealDeviceName(context) }
     val chipsetName = remember(context) { getChipsetName(context) }
-    val hazeState = remember { HazeState() }
+    val overlayHazeState = remember { HazeState() }
+    val backdropHazeState = remember { HazeState() }
     val baseDensity = LocalDensity.current
     val scaleFactor = appScalePercent.coerceIn(60, 150) / 100f
 
@@ -237,7 +238,8 @@ fun ZXGameSpaceHub(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .hazeSource(hazeState)
+                .hazeSource(backdropHazeState)
+                .hazeSource(overlayHazeState)
         ) {
             ZXGameSpaceStageBackdrop(
                 entry = activeEntry
@@ -248,10 +250,12 @@ fun ZXGameSpaceHub(
         val isHomescreenScrolled = category == TopCategory.Games && activeEntry == RibbonEntry.Welcome && (homeExpanded || welcomeScroll.value > 10)
         val isLibrary = category == TopCategory.Games && (activeEntry == RibbonEntry.Library || libraryExpanded)
         val isSettings = category == TopCategory.Settings
+        val isOverlayOpen = tuningPkg != null || sidePanelPromptOpen
 
         val targetBlurAlpha = when {
             isSettings -> 1f
             isLibrary -> 1f
+            isOverlayOpen -> 1f
             isHomescreenScrolled -> {
                 if (homeExpanded) 1f else (welcomeScroll.value.toFloat() / 180f).coerceIn(0f, 1f)
             }
@@ -270,7 +274,7 @@ fun ZXGameSpaceHub(
                     .fillMaxSize()
                     .graphicsLayer { alpha = backdropBlurAlpha }
                     .hazeBlur(
-                        input = HazeInput.Sources(hazeState),
+                        input = HazeInput.Sources(backdropHazeState),
                         style = HazeBlurStyle.Material3(
                             containerColor = scheme.surfaceContainerLowest.copy(alpha = if (isAmoled) 0.60f else 0.52f)
                         ) {
@@ -378,7 +382,7 @@ fun ZXGameSpaceHub(
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .hazeSource(hazeState)
+                                    .hazeSource(overlayHazeState)
                             ) {
                                 AnimatedVisibility(
                                     visible = !searchOpen && !homeExpanded && !libraryExpanded,
@@ -585,7 +589,7 @@ fun ZXGameSpaceHub(
             visible = tuningPkg != null,
             packageName = tuningPkg,
             allApps = allApps,
-            hazeState = hazeState,
+            hazeState = overlayHazeState,
             onLaunch = requestAppLaunch,
             onClose = { tuningPkg = null }
         )
@@ -593,7 +597,7 @@ fun ZXGameSpaceHub(
         ZXGameSpaceSidePanelOnboardingOverlay(
             visible = sidePanelPromptOpen,
             pendingApp = pendingLaunchApp,
-            hazeState = hazeState,
+            hazeState = overlayHazeState,
             onDismiss = {
                 sidePanelPromptOpen = false
                 pendingLaunchApp = null

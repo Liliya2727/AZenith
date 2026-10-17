@@ -30,7 +30,6 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -492,7 +491,6 @@ internal fun ZXGameSpaceExitDialog(
             color = scheme.surfaceContainerHigh,
             tonalElevation = 8.dp,
             shadowElevation = 24.dp,
-            border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.35f)),
             modifier = Modifier
                 .widthIn(min = 460.dp, max = 520.dp)
                 .padding(20.dp)
@@ -540,7 +538,6 @@ internal fun ZXGameSpaceExitDialog(
                     Surface(
                         shape = RoundedCornerShape(20.dp),
                         color = scheme.surfaceContainerHighest,
-                        border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.3f)),
                         modifier = Modifier
                             .weight(1f)
                             .height(130.dp)
@@ -589,8 +586,7 @@ internal fun ZXGameSpaceExitDialog(
                     // Option 2: Quit AZenith Completely
                     Surface(
                         shape = RoundedCornerShape(20.dp),
-                        color = scheme.errorContainer.copy(alpha = 0.35f),
-                        border = BorderStroke(1.dp, scheme.error.copy(alpha = 0.3f)),
+                        color = scheme.errorContainer,
                         modifier = Modifier
                             .weight(1f)
                             .height(130.dp)
@@ -769,10 +765,9 @@ internal fun ZXGameSpaceSearchPane(
 
     Surface(
         shape = RoundedCornerShape(28.dp),
-        color = scheme.surfaceContainerHigh.copy(alpha = 0.94f),
+        color = scheme.surfaceContainerHigh,
         shadowElevation = 24.dp,
         tonalElevation = 6.dp,
-        border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.25f)),
         modifier = Modifier
             .fillMaxSize()
             .padding(top = 10.dp, bottom = 16.dp)

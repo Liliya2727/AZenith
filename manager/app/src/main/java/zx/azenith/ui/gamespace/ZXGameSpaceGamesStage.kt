@@ -685,7 +685,7 @@ internal fun WelcomeHubStage(
                     icon = Icons.Rounded.Favorite,
                     label = stringResource(R.string.support_us),
                     description = stringResource(R.string.support_us_desc),
-                    container = scheme.secondaryContainer.copy(alpha = 0.85f),
+                    container = scheme.secondaryContainer,
                     onContainer = scheme.onSecondaryContainer,
                     onClick = { uriHandler.openUri("https://t.me/ZeshArch") }
                 )
@@ -694,7 +694,7 @@ internal fun WelcomeHubStage(
                     icon = Icons.Rounded.Info,
                     label = stringResource(R.string.learn_more),
                     description = stringResource(R.string.learn_more_desc),
-                    container = scheme.tertiaryContainer.copy(alpha = 0.85f),
+                    container = scheme.tertiaryContainer,
                     onContainer = scheme.onTertiaryContainer,
                     onClick = { uriHandler.openUri("https://github.com/Liliya2727/AZenith") }
                 )
@@ -795,7 +795,7 @@ internal fun HardwareSpecsBentoCard(
             .gamepadFocusOutline(shape = shape, register = true)
             .clickable(onClick = onOpenSettings),
         shape = shape,
-        color = scheme.surfaceContainerHigh.copy(alpha = 0.82f)
+        color = scheme.surfaceContainerHigh
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
@@ -891,7 +891,7 @@ internal fun SpecPill(
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(14.dp),
-        color = scheme.surfaceContainerHighest.copy(alpha = 0.7f)
+        color = scheme.surfaceContainerHighest
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
@@ -942,7 +942,7 @@ internal fun GamingLibraryBentoCard(
             .gamepadFocusOutline(shape = shape, register = true)
             .clickable(onClick = onOpenLibrary),
         shape = shape,
-        color = scheme.surfaceContainerHigh.copy(alpha = 0.82f)
+        color = scheme.surfaceContainerHigh
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
@@ -991,7 +991,7 @@ internal fun GamingLibraryBentoCard(
                 Surface(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(14.dp),
-                    color = scheme.surfaceContainerHighest.copy(alpha = 0.7f)
+                    color = scheme.surfaceContainerHighest
                 ) {
                     Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
                         Text(
@@ -1012,7 +1012,7 @@ internal fun GamingLibraryBentoCard(
                 Surface(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(14.dp),
-                    color = scheme.surfaceContainerHighest.copy(alpha = 0.7f)
+                    color = scheme.surfaceContainerHighest
                 ) {
                     Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
                         Text(
@@ -1036,7 +1036,7 @@ internal fun GamingLibraryBentoCard(
 
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = scheme.primary.copy(alpha = 0.14f),
+                color = scheme.primaryContainer,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -1047,12 +1047,12 @@ internal fun GamingLibraryBentoCard(
                     Text(
                         text = stringResource(R.string.gamespace_library_title),
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = scheme.primary
+                        color = scheme.onPrimaryContainer
                     )
                     Icon(
                         imageVector = Icons.Rounded.ChevronRight,
                         contentDescription = null,
-                        tint = scheme.primary,
+                        tint = scheme.onPrimaryContainer,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -1207,7 +1207,7 @@ internal fun ActiveProfilesBentoCard(
 
     Surface(
         shape = shape,
-        color = scheme.surfaceContainerHigh.copy(alpha = 0.88f),
+        color = scheme.surfaceContainerHigh,
         modifier = modifier
             .gamepadFocusOutline(shape = shape)
             .clip(shape)
@@ -1281,7 +1281,6 @@ internal fun ActiveProfilesBentoCard(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .border(1.dp, scheme.outlineVariant, CircleShape)
                 )
             }
 
@@ -1418,7 +1417,7 @@ internal fun PerfThermalBentoCard(
 
     Surface(
         shape = shape,
-        color = scheme.surfaceContainerHigh.copy(alpha = 0.88f),
+        color = scheme.surfaceContainerHigh,
         modifier = modifier
             .gamepadFocusOutline(shape = shape)
             .clip(shape)
@@ -1468,7 +1467,6 @@ internal fun PerfThermalBentoCard(
                 modifier = Modifier
                     .size(44.dp)
                     .graphicsLayer { rotationZ = -14f }
-                    .border(2.dp, scheme.primary.copy(alpha = 0.6f), CircleShape)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
@@ -1508,7 +1506,7 @@ internal fun OptimizationTrophiesBentoCard(
 
     Surface(
         shape = shape,
-        color = scheme.surfaceContainerHigh.copy(alpha = 0.88f),
+        color = scheme.surfaceContainerHigh,
         modifier = modifier
             .gamepadFocusOutline(shape = shape)
             .clip(shape)
@@ -1664,7 +1662,7 @@ internal fun HardwareRingsBentoCard(
 
     Surface(
         shape = shape,
-        color = scheme.surfaceContainerHigh.copy(alpha = 0.88f),
+        color = scheme.surfaceContainerHigh,
         modifier = modifier
             .gamepadFocusOutline(shape = shape)
             .clip(shape)
@@ -1893,7 +1891,7 @@ internal fun GameHeroStage(
                             if (versionName != null) {
                                 Surface(
                                     shape = CircleShape,
-                                    color = scheme.secondaryContainer.copy(alpha = 0.85f),
+                                    color = scheme.secondaryContainer,
                                     contentColor = scheme.onSecondaryContainer
                                 ) {
                                     Text(
@@ -1924,7 +1922,7 @@ internal fun GameHeroStage(
                 targetValue = if (gearFocused) {
                     scheme.secondaryContainer
                 } else {
-                    scheme.surfaceContainerHighest.copy(alpha = 0.82f)
+                    scheme.surfaceContainerHighest
                 },
                 animationSpec = colorSpec,
                 label = "GearBtnBg"
@@ -1955,7 +1953,7 @@ internal fun GameHeroStage(
                 targetValue = if (playFocused) {
                     scheme.primaryContainer
                 } else {
-                    scheme.surfaceContainerHighest.copy(alpha = 0.88f)
+                    scheme.surfaceContainerHighest
                 },
                 animationSpec = colorSpec,
                 label = "PlayBtnBg"
@@ -2107,7 +2105,7 @@ internal fun LibraryGridStage(
                     val shape = MaterialTheme.shapes.medium
                     Surface(
                         shape = shape,
-                        color = scheme.surfaceContainerHigh.copy(alpha = 0.88f),
+                        color = scheme.surfaceContainerHigh,
                         modifier = Modifier
                             .height(64.dp)
                             .gamepadFocusOutline(shape = shape)
