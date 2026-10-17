@@ -41,6 +41,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -86,6 +87,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -144,6 +146,11 @@ internal fun ZXGameSpaceTopBar(
     onExit: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
+    val density = LocalDensity.current
+
+    var tabsWidthPx by remember { mutableFloatStateOf(0f) }
+    var cachedLogoWidthPx by remember { mutableFloatStateOf(0f) }
+    var cachedCapsuleWidthPx by remember { mutableFloatStateOf(0f) }
 
     var searchMorphedBack by remember { mutableStateOf(!searchOpen) }
 
@@ -177,41 +184,61 @@ internal fun ZXGameSpaceTopBar(
         label = "SearchBarBg"
     )
 
-    val showLogo = isHomeLogoGone && !searchOpen && (searchMorphedBack || searchWidth <= 38.5.dp)
-
-    Row(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 48.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .heightIn(min = 48.dp)
     ) {
-        // Left Segment: Category Navigation Tabs & Scrolled Wordmark
+        val totalBarWidthDp = maxWidth
+        val tabsWidthDp = if (tabsWidthPx > 0f) with(density) { tabsWidthPx.toDp() } else 168.dp
+        val logoWidthDp = if (cachedLogoWidthPx > 0f) with(density) { cachedLogoWidthPx.toDp() } else 144.dp
+        val capsuleWidthDp = if (cachedCapsuleWidthPx > 0f) with(density) { cachedCapsuleWidthPx.toDp() } else 132.dp
+
+        val leftSegmentFullWidthDp = tabsWidthDp + 12.dp + logoWidthDp
+        val rightSegmentExpandedWidthDp = 268.dp + 8.dp + 38.dp + 8.dp + capsuleWidthDp
+        val totalNeededWidthDp = leftSegmentFullWidthDp + 20.dp + rightSegmentExpandedWidthDp
+        val wouldOverlap = totalBarWidthDp < totalNeededWidthDp
+
+        val shouldCollapseForSearch = wouldOverlap && (searchOpen || (!searchMorphedBack && searchWidth > 38.5.dp))
+        val showLogo = isHomeLogoGone && !shouldCollapseForSearch
+
         Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val density = LocalDensity.current
-            var tabBounds by remember { mutableStateOf(mapOf<TopCategory, Pair<Float, Float>>()) }
-            val currentBounds = tabBounds[selectedCategory] ?: (0f to 0f)
+            // Left Segment: Category Navigation Tabs & Scrolled Wordmark
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                var tabBounds by remember { mutableStateOf(mapOf<TopCategory, Pair<Float, Float>>()) }
+                val currentBounds = tabBounds[selectedCategory] ?: (0f to 0f)
 
-            val animatedPillX by animateFloatAsState(
-                targetValue = currentBounds.first,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                ),
-                label = "TopBarPillX"
-            )
-            val animatedPillWidth by animateFloatAsState(
-                targetValue = currentBounds.second,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                ),
-                label = "TopBarPillWidth"
-            )
+                val animatedPillX by animateFloatAsState(
+                    targetValue = currentBounds.first,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    ),
+                    label = "TopBarPillX"
+                )
+                val animatedPillWidth by animateFloatAsState(
+                    targetValue = currentBounds.second,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    ),
+                    label = "TopBarPillWidth"
+                )
 
-            Box(contentAlignment = Alignment.CenterStart) {
+                Box(
+                    contentAlignment = Alignment.CenterStart,
+                    modifier = Modifier.onGloballyPositioned { coords ->
+                        if (coords.size.width > 0) tabsWidthPx = coords.size.width.toFloat()
+                    }
+                ) {
                 if (animatedPillWidth > 0f) {
                     Surface(
                         shape = RoundedCornerShape(14.dp),
@@ -297,6 +324,9 @@ internal fun ZXGameSpaceTopBar(
             ) {
                 Row(
                     modifier = Modifier
+                        .onGloballyPositioned { coords ->
+                            if (coords.size.width > 0) cachedLogoWidthPx = coords.size.width.toFloat()
+                        }
                         .clip(RoundedCornerShape(12.dp))
                         .then(
                             if (onLogoClick != null) {
@@ -487,6 +517,9 @@ internal fun ZXGameSpaceTopBar(
                 shape = CircleShape,
                 color = scheme.surfaceContainerHigh,
                 modifier = Modifier
+                    .onGloballyPositioned { coords ->
+                        if (coords.size.width > 0) cachedCapsuleWidthPx = coords.size.width.toFloat()
+                    }
                     .height(38.dp)
                     .clip(CircleShape)
                     .gamepadFocusOutline(shape = CircleShape, register = true)
@@ -549,6 +582,7 @@ internal fun ZXGameSpaceTopBar(
             }
         }
     }
+}
 }
 
 @Composable
