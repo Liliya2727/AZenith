@@ -178,6 +178,7 @@ fun ZXGameSpaceHub(
             add(RibbonEntry.Welcome)
             enabledApps.forEach { add(RibbonEntry.Game(it)) }
             add(RibbonEntry.Library)
+            add(RibbonEntry.WrapToFirst)
         }
     }
 
@@ -453,7 +454,7 @@ fun ZXGameSpaceHub(
                                                         selectedRibbonIndex = ribbonEntries.indexOf(RibbonEntry.Library)
                                                     }
                                                     RibbonEntry.WrapToFirst -> {
-                                                        selectedRibbonIndex = 0
+                                                        selectedRibbonIndex = ribbonEntries.indexOf(RibbonEntry.WrapToFirst)
                                                     }
                                                 }
                                             },
@@ -500,8 +501,6 @@ fun ZXGameSpaceHub(
                                                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                                     if (safeIndex < ribbonEntries.lastIndex) {
                                                                         selectedRibbonIndex = safeIndex + 1
-                                                                    } else {
-                                                                        selectedRibbonIndex = 0
                                                                     }
                                                                 } else if (accumulatedDragX >= thresholdPx) {
                                                                     change.consume()
@@ -603,52 +602,6 @@ fun ZXGameSpaceHub(
                                             RibbonEntry.WrapToFirst -> WrapToFirstStage(
                                                 onReturnToFirst = { selectedRibbonIndex = 0 }
                                             )
-                                        }
-                                    }
-
-                                    val isAtLastSlide = safeIndex == ribbonEntries.lastIndex
-                                    androidx.compose.animation.AnimatedVisibility(
-                                        visible = isAtLastSlide && canSwipeStage,
-                                        modifier = Modifier
-                                            .align(Alignment.CenterEnd)
-                                            .padding(end = 24.dp),
-                                        enter = fadeIn(motion.defaultEffectsSpec()) + slideInHorizontally(motion.defaultSpatialSpec()) { it / 2 },
-                                        exit = fadeOut(motion.defaultEffectsSpec()) + slideOutHorizontally(motion.defaultSpatialSpec()) { it / 2 }
-                                    ) {
-                                        val pillShape = RoundedCornerShape(24.dp)
-                                        Surface(
-                                            shape = pillShape,
-                                            color = scheme.primaryContainer,
-                                            contentColor = scheme.onPrimaryContainer,
-                                            tonalElevation = 6.dp,
-                                            shadowElevation = 8.dp,
-                                            modifier = Modifier
-                                                .gamepadFocusOutline(shape = pillShape, register = true)
-                                                .clip(pillShape)
-                                                .clickable {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                    selectedRibbonIndex = 0
-                                                }
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                            ) {
-                                                Text(
-                                                    text = "Back to Start",
-                                                    style = MaterialTheme.typography.labelLarge.copy(
-                                                        fontWeight = FontWeight.Bold
-                                                    ),
-                                                    color = scheme.onPrimaryContainer
-                                                )
-                                                Icon(
-                                                    imageVector = Icons.Rounded.ChevronRight,
-                                                    contentDescription = "Back to Start",
-                                                    tint = scheme.onPrimaryContainer,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                            }
                                         }
                                     }
                                 }

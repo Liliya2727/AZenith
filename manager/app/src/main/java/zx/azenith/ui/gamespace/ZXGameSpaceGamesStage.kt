@@ -78,6 +78,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Palette
@@ -297,46 +298,13 @@ internal fun ZXGameSpaceTileRibbon(
                     selected = isSelected,
                     onFocus = { onSelect(index) },
                     onClick = {
-                        if (item is RibbonEntry.WrapToFirst) {
-                            onSelect(0)
-                        } else if (isSelected) {
+                        if (isSelected) {
                             onActivate(item)
                         } else {
                             onSelect(index)
                         }
                     }
                 )
-            }
-
-            val isAtLastSlide = selectedIndex == entries.lastIndex
-            AnimatedVisibility(
-                visible = isAtLastSlide,
-                enter = fadeIn(motion.defaultEffectsSpec()) + expandHorizontally(motion.defaultSpatialSpec()),
-                exit = fadeOut(motion.defaultEffectsSpec()) + shrinkHorizontally(motion.defaultSpatialSpec())
-            ) {
-                val wrapShape = RoundedCornerShape(16.dp)
-                Surface(
-                    shape = wrapShape,
-                    color = scheme.surfaceContainerHighest,
-                    contentColor = scheme.primary,
-                    modifier = Modifier
-                        .size(width = 54.dp, height = 54.dp)
-                        .gamepadFocusOutline(shape = wrapShape, register = true)
-                        .clip(wrapShape)
-                        .clickable {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onSelect(0)
-                        }
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Rounded.ChevronRight,
-                            contentDescription = "Back to Start",
-                            tint = scheme.primary,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                }
             }
         }
 
@@ -650,31 +618,33 @@ internal fun WrapToFirstStage(
                 shape = CircleShape,
                 color = scheme.primary,
                 contentColor = scheme.onPrimary,
+                tonalElevation = 6.dp,
+                shadowElevation = 8.dp,
                 modifier = Modifier
-                    .height(56.dp)
+                    .height(64.dp)
                     .graphicsLayer {
                         scaleX = buttonScale
                         scaleY = buttonScale
                     }
                     .onFocusChanged { buttonFocused = it.isFocused }
-                    .gamepadFocusOutline(shape = CircleShape, width = 2.dp)
+                    .gamepadFocusOutline(shape = CircleShape, width = 3.dp)
                     .clip(CircleShape)
                     .clickable(onClick = onReturnToFirst)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 26.dp),
+                    modifier = Modifier.padding(horizontal = 30.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.ChevronRight,
+                        imageVector = Icons.Rounded.Home,
                         contentDescription = null,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(28.dp)
                     )
                     Text(
-                        text = "Home",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.ExtraBold,
+                        text = "Back to Start",
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Black,
                             letterSpacing = 0.5.sp
                         )
                     )
