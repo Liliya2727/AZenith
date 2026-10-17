@@ -2050,35 +2050,30 @@ internal fun LibraryGridStage(
                         false
                     }
                 },
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             ExpressiveFilterChip(
                 selected = !showAllApps,
                 label = "${stringResource(R.string.gamespace_tab_games)} (${games.size})",
+                leadingIcon = Icons.Rounded.SportsEsports,
                 onClick = { showAllApps = false }
             )
             ExpressiveFilterChip(
                 selected = showAllApps,
                 label = "${stringResource(R.string.gamespace_all_apps)} (${allApps.size})",
+                leadingIcon = Icons.Rounded.Apps,
                 onClick = { showAllApps = true }
             )
             ExpressiveFilterChip(
                 selected = onlyEnabled,
                 label = stringResource(R.string.gamespace_tuned),
+                leadingIcon = Icons.Rounded.Tune,
                 onClick = { onlyEnabled = !onlyEnabled }
-            )
-
-            Spacer(Modifier.weight(1f))
-
-            TopBarIconButton(
-                icon = Icons.Rounded.Close,
-                contentDescription = stringResource(R.string.gamespace_library_close),
-                onClick = onClose
             )
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(10.dp))
 
         if (displayed.isEmpty()) {
             EmptyPane(
@@ -2088,21 +2083,24 @@ internal fun LibraryGridStage(
                 modifier = Modifier.weight(1f).fillMaxWidth()
             )
         } else {
+            val motion = MaterialTheme.motionScheme
             LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 148.dp),
+                columns = GridCells.Adaptive(minSize = 180.dp),
                 state = gridState,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(bottom = 8.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(top = 4.dp, bottom = 12.dp)
             ) {
                 items(displayed, key = { it.packageName }) { app ->
-                    val shape = MaterialTheme.shapes.medium
+                    val shape = RoundedCornerShape(20.dp)
                     Surface(
                         shape = shape,
                         color = scheme.surfaceContainerHigh,
                         modifier = Modifier
-                            .height(64.dp)
+                            .fillMaxWidth()
+                            .height(74.dp)
+                            .animateItem(placementSpec = motion.defaultSpatialSpec())
                             .gamepadFocusOutline(shape = shape)
                             .clip(shape)
                             .clickable { onOpenSettings(app) }
@@ -2110,30 +2108,87 @@ internal fun LibraryGridStage(
                         Row(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            AppIconImage(app = app, size = 40.dp)
-                            Spacer(Modifier.width(10.dp))
-                            Column(modifier = Modifier.weight(1f)) {
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = scheme.surfaceContainerLow,
+                                modifier = Modifier.size(50.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    AppIconImage(app = app, size = 42.dp)
+                                }
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.Center
+                            ) {
                                 Text(
                                     text = app.label,
-                                    style = MaterialTheme.typography.labelLarge.copy(
-                                        fontWeight = FontWeight.SemiBold
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold
                                     ),
                                     color = scheme.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
-                                Text(
-                                    text = stringResource(
-                                        if (app.isEnabledInConfig) R.string.gamespace_tuned
-                                        else R.string.gamespace_untuned
-                                    ),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (app.isEnabledInConfig) scheme.primary else scheme.onSurfaceVariant,
-                                    maxLines = 1
-                                )
+                                Spacer(Modifier.height(3.dp))
+                                if (app.isEnabledInConfig) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = scheme.primary.copy(alpha = 0.14f)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(6.dp)
+                                                    .clip(CircleShape)
+                                                    .background(scheme.primary)
+                                            )
+                                            Text(
+                                                text = stringResource(R.string.gamespace_tuned),
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontWeight = FontWeight.Bold
+                                                ),
+                                                color = scheme.primary
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    Text(
+                                        text = stringResource(R.string.gamespace_untuned),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = scheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                            Surface(
+                                shape = CircleShape,
+                                color = scheme.surfaceContainerHighest.copy(alpha = 0.6f),
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.ChevronRight,
+                                        contentDescription = null,
+                                        tint = scheme.onSurfaceVariant,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -2147,6 +2202,7 @@ internal fun LibraryGridStage(
 internal fun ExpressiveFilterChip(
     selected: Boolean,
     label: String,
+    leadingIcon: ImageVector? = null,
     onClick: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -2155,39 +2211,52 @@ internal fun ExpressiveFilterChip(
     val spatialSpec = motion.defaultSpatialSpec<androidx.compose.ui.unit.IntSize>()
 
     val container by animateColorAsState(
-        targetValue = if (selected) scheme.secondaryContainer else Color.Transparent,
+        targetValue = if (selected) scheme.primaryContainer else scheme.surfaceContainerHigh,
         animationSpec = colorSpec,
         label = "ChipContainer"
     )
     val content by animateColorAsState(
-        targetValue = if (selected) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
+        targetValue = if (selected) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
         animationSpec = colorSpec,
         label = "ChipContent"
     )
+    val shape = RoundedCornerShape(14.dp)
 
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(label) },
-        trailingIcon = {
+    Surface(
+        shape = shape,
+        color = container,
+        contentColor = content,
+        modifier = Modifier
+            .animateContentSize(spatialSpec)
+            .gamepadFocusOutline(shape = shape)
+            .clip(shape)
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            if (leadingIcon != null) {
+                Icon(
+                    imageVector = leadingIcon,
+                    contentDescription = null,
+                    modifier = Modifier.size(17.dp)
+                )
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                )
+            )
             AnimatedVisibility(visible = selected) {
                 Icon(
                     imageVector = Icons.Rounded.Check,
                     contentDescription = null,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(15.dp)
                 )
             }
-        },
-        colors = FilterChipDefaults.filterChipColors(
-            containerColor = container,
-            selectedContainerColor = container,
-            labelColor = content,
-            selectedLabelColor = content,
-            iconColor = content,
-            selectedTrailingIconColor = content
-        ),
-        modifier = Modifier
-            .animateContentSize(spatialSpec)
-            .gamepadFocusOutline(shape = MaterialTheme.shapes.small)
-    )
+        }
+    }
 }
