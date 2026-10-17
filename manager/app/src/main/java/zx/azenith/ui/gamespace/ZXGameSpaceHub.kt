@@ -22,14 +22,22 @@ import android.app.Activity
 import android.app.ActivityManager
 import android.bluetooth.BluetoothManager
 import android.content.Context
+import android.hardware.input.InputManager
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.net.ConnectivityManager
+import android.net.LinkProperties
+import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.wifi.WifiInfo
+import android.net.wifi.WifiManager
 import android.os.BatteryManager
+import android.os.Build
 import android.provider.Settings
+import android.telephony.TelephonyManager
 import android.view.InputDevice
 import android.view.KeyEvent
-import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -65,6 +73,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -133,15 +142,18 @@ import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PowerSettingsNew
+import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.RocketLaunch
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.SettingsEthernet
 import androidx.compose.material.icons.rounded.SettingsSuggest
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SignalCellularAlt
 import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.material.icons.rounded.TouchApp
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SportsEsports
@@ -157,6 +169,7 @@ import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material.icons.rounded.WifiOff
 import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
@@ -165,8 +178,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -175,6 +186,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.produceState
@@ -249,8 +261,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.topjohnwu.superuser.Shell
+import java.net.Inet4Address
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -262,6 +276,8 @@ import zx.azenith.ui.component.AppIconCache
 import zx.azenith.ui.component.ScreenWrapper
 import zx.azenith.ui.component.AppIconImage
 import zx.azenith.ui.component.GamepadFocusRoot
+import zx.azenith.ui.component.GamepadInput
+import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.component.gamepadKeyWatch
 import zx.azenith.ui.component.gamepadScreenEntry
@@ -854,9 +870,10 @@ fun ZXGameSpaceHub(
 }
 
 /**
- * Expressive floating Quick Settings panel overlaying the screen on the right side.
- * Allows instant monitoring of Network, Bluetooth, Controller/Remote connection states,
- * and quick adjustments for media volume and display brightness without leaving or distorting Game Space.
+ * Quick settings sheet anchored to the right edge on solid Material 3 surfaces.
+ *
+ * Network, Bluetooth audio and input devices come from framework callbacks rather than a single
+ * read, so the panel stays accurate for as long as it is open.
  */
 @Composable
 private fun ZXGameSpaceQuickSettingsOverlay(
@@ -868,6 +885,7 @@ private fun ZXGameSpaceQuickSettingsOverlay(
     val context = LocalContext.current
     val audioManager = remember(context) { context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager }
     val connectivityManager = remember(context) { context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager }
+    val inputManager = remember(context) { context.getSystemService(Context.INPUT_SERVICE) as? InputManager }
     val bluetoothManager = remember(context) { context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager }
 
     // Volume control state
@@ -891,50 +909,13 @@ private fun ZXGameSpaceQuickSettingsOverlay(
         mutableFloatStateOf(currentBrightness.coerceIn(0.02f, 1f))
     }
 
-    // Connectivity state sampling
-    val (isWifi, isCellular, isNetConnected) = remember(connectivityManager) {
-        runCatching {
-            val activeNet = connectivityManager?.activeNetwork
-            val caps = connectivityManager?.getNetworkCapabilities(activeNet)
-            val wifi = caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
-            val cellular = caps?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true
-            val connected = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
-            Triple(wifi, cellular, connected)
-        }.getOrDefault(Triple(false, false, false))
+    // Live framework observers
+    val network = rememberQuickNetworkState(connectivityManager, visible)
+    val bluetoothEndpoints = rememberQuickBluetoothEndpoints(audioManager, visible)
+    val inputDevices = rememberQuickInputDevices(inputManager, visible)
+    val isBtOn = remember(bluetoothEndpoints, visible) {
+        bluetoothEndpoints.isNotEmpty() || runCatching { bluetoothManager?.adapter?.isEnabled == true }.getOrDefault(false)
     }
-
-    // Bluetooth state
-    val isBtEnabled = runCatching { bluetoothManager?.adapter?.isEnabled == true }.getOrDefault(false)
-    val isBtConnected = runCatching {
-        if (isBtEnabled) {
-            val adapter = bluetoothManager?.adapter
-            adapter?.getProfileConnectionState(android.bluetooth.BluetoothProfile.HEADSET) == android.bluetooth.BluetoothProfile.STATE_CONNECTED ||
-            adapter?.getProfileConnectionState(android.bluetooth.BluetoothProfile.A2DP) == android.bluetooth.BluetoothProfile.STATE_CONNECTED
-        } else false
-    }.getOrDefault(false)
-
-    // Controller / Remote detection
-    val inputStatus = remember {
-        val deviceIds = InputDevice.getDeviceIds()
-        var foundGamepad: String? = null
-        var foundTvRemote: String? = null
-        for (id in deviceIds) {
-            val dev = InputDevice.getDevice(id) ?: continue
-            if (dev.isVirtual) continue
-            val sources = dev.sources
-            val isGamepad = (sources and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD ||
-                            (sources and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK
-            val isDpad = (sources and InputDevice.SOURCE_DPAD) == InputDevice.SOURCE_DPAD
-            if (isGamepad) {
-                foundGamepad = dev.name
-                break
-            } else if (isDpad) {
-                foundTvRemote = dev.name
-            }
-        }
-        Triple(foundGamepad != null, foundTvRemote != null, foundGamepad ?: foundTvRemote)
-    }
-    val (hasGamepad, hasTvRemote, controllerName) = inputStatus
 
     // Scrim overlay - dismiss on click outside
     AnimatedVisibility(
@@ -981,10 +962,7 @@ private fun ZXGameSpaceQuickSettingsOverlay(
         ) {
             Surface(
                 shape = RoundedCornerShape(28.dp),
-                color = scheme.surfaceContainerHigh,
-                tonalElevation = 6.dp,
-                shadowElevation = 16.dp,
-                border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.35f)),
+                color = scheme.surfaceContainerLow,
                 modifier = Modifier
                     .width(360.dp)
                     .fillMaxHeight()
@@ -996,11 +974,13 @@ private fun ZXGameSpaceQuickSettingsOverlay(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(20.dp)
+                        .padding(horizontal = 16.dp, vertical = 16.dp)
                 ) {
-                    // Header Row
+                    // Header (No separator line, pure spacing)
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -1022,20 +1002,12 @@ private fun ZXGameSpaceQuickSettingsOverlay(
                                     )
                                 }
                             }
-                            Column {
-                                Text(
-                                    text = stringResource(R.string.quick_settings_title),
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = scheme.onSurface
-                                )
-                                Text(
-                                    text = stringResource(R.string.quick_settings_subtitle),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = scheme.onSurfaceVariant
-                                )
-                            }
+                            Text(
+                                text = stringResource(R.string.quick_settings_title),
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                color = scheme.onSurface
+                            )
                         }
-
                         IconButton(
                             onClick = onClose,
                             modifier = Modifier
@@ -1051,206 +1023,122 @@ private fun ZXGameSpaceQuickSettingsOverlay(
                         }
                     }
 
-                    Spacer(Modifier.height(14.dp))
-                    HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.25f))
-                    Spacer(Modifier.height(14.dp))
-
-                    // Scrollable sections
+                    // Bento Widgets Scrollable Container
                     Column(
                         modifier = Modifier
                             .weight(1f)
                             .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        // Section: Connectivity
-                        Text(
-                            text = stringResource(R.string.quick_settings_section_connectivity),
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            ),
-                            color = scheme.primary
+                        // Bento Row 1: Network & Bluetooth (Side-by-side equal width)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            // Network Bento Card
+                            val netCategory = when {
+                                !network.online -> stringResource(R.string.quick_settings_network)
+                                network.transport == NetworkCapabilities.TRANSPORT_WIFI -> stringResource(R.string.quick_settings_net_wifi)
+                                network.transport == NetworkCapabilities.TRANSPORT_CELLULAR -> stringResource(R.string.quick_settings_net_cellular)
+                                network.transport == NetworkCapabilities.TRANSPORT_ETHERNET -> stringResource(R.string.quick_settings_net_ethernet)
+                                else -> stringResource(R.string.quick_settings_network)
+                            }
+                            val netHeadline = when {
+                                !network.online -> stringResource(R.string.quick_settings_offline)
+                                network.transport == NetworkCapabilities.TRANSPORT_WIFI -> network.wifiSsid ?: stringResource(R.string.quick_settings_value_verified)
+                                network.transport == NetworkCapabilities.TRANSPORT_CELLULAR -> network.carrierName ?: stringResource(R.string.quick_settings_value_verified)
+                                else -> stringResource(R.string.quick_settings_value_verified)
+                            }
+                            BentoStatCard(
+                                icon = when {
+                                    !network.online -> Icons.Rounded.WifiOff
+                                    network.transport == NetworkCapabilities.TRANSPORT_WIFI -> Icons.Rounded.Wifi
+                                    network.transport == NetworkCapabilities.TRANSPORT_CELLULAR -> Icons.Rounded.SignalCellularAlt
+                                    network.transport == NetworkCapabilities.TRANSPORT_ETHERNET -> Icons.Rounded.SettingsEthernet
+                                    else -> Icons.Rounded.Public
+                                },
+                                iconContainerColor = if (network.online) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                                iconTint = if (network.online) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
+                                category = netCategory,
+                                headline = netHeadline,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            // Bluetooth Bento Card
+                            val btDevice = bluetoothEndpoints.firstOrNull()?.name
+                            val btHeadline = when {
+                                bluetoothEndpoints.isNotEmpty() -> btDevice ?: stringResource(R.string.quick_settings_value_active)
+                                isBtOn -> stringResource(R.string.quick_settings_value_active)
+                                else -> stringResource(R.string.quick_settings_value_none)
+                            }
+                            BentoStatCard(
+                                icon = when {
+                                    bluetoothEndpoints.isNotEmpty() -> Icons.Rounded.BluetoothConnected
+                                    isBtOn -> Icons.Rounded.Bluetooth
+                                    else -> Icons.Rounded.BluetoothDisabled
+                                },
+                                iconContainerColor = if (bluetoothEndpoints.isNotEmpty()) scheme.tertiaryContainer else if (isBtOn) scheme.surfaceContainerHigh else scheme.surfaceContainer,
+                                iconTint = if (bluetoothEndpoints.isNotEmpty()) scheme.onTertiaryContainer else scheme.onSurfaceVariant,
+                                category = stringResource(R.string.quick_settings_bluetooth),
+                                headline = btHeadline,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        // Bento Row 2: Input Mode Hero Bento Card (Touch vs Gamepad dynamic detection)
+                        val connectedGamepad = inputDevices.firstOrNull {
+                            it.kind == QuickInputKind.GAMEPAD || it.kind == QuickInputKind.JOYSTICK || it.kind == QuickInputKind.REMOTE
+                        }
+                        val isGamepadActive = GamepadInput.dpadMode || (connectedGamepad != null && GamepadInput.active)
+                        BentoInputHeroCard(
+                            isGamepad = isGamepadActive,
+                            controllerName = connectedGamepad?.name?.takeIf { it.isNotBlank() },
+                            modifier = Modifier.fillMaxWidth()
                         )
 
-                        // 1. Internet / Network Card
-                        QuickSettingTile(
+                        // Bento Row 3: Media Volume Slider Bento Card
+                        BentoSliderCard(
                             icon = when {
-                                isWifi -> Icons.Rounded.Wifi
-                                isCellular -> Icons.Rounded.SignalCellularAlt
-                                else -> Icons.Rounded.WifiOff
+                                volFraction <= 0.01f -> Icons.AutoMirrored.Rounded.VolumeMute
+                                volFraction < 0.5f -> Icons.AutoMirrored.Rounded.VolumeDown
+                                else -> Icons.AutoMirrored.Rounded.VolumeUp
                             },
-                            iconTint = if (isNetConnected) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
-                            iconContainerColor = if (isNetConnected) scheme.primaryContainer else scheme.surfaceContainerLow,
-                            title = stringResource(R.string.quick_settings_network),
-                            subtitle = when {
-                                isWifi -> stringResource(R.string.quick_settings_wifi_connected)
-                                isCellular -> stringResource(R.string.quick_settings_cellular_connected)
-                                isNetConnected -> stringResource(R.string.quick_settings_online)
-                                else -> stringResource(R.string.quick_settings_offline)
+                            title = stringResource(R.string.quick_settings_volume),
+                            valuePercent = (volFraction * 100).roundToInt(),
+                            accent = scheme.primary,
+                            value = volFraction,
+                            onValueChange = { newFraction ->
+                                volFraction = newFraction
+                                audioManager?.setStreamVolume(
+                                    AudioManager.STREAM_MUSIC,
+                                    (newFraction * maxVol).roundToInt(),
+                                    0
+                                )
                             },
-                            badge = if (isNetConnected) "ONLINE" else "OFFLINE",
-                            badgeContainerColor = if (isNetConnected) scheme.primaryContainer else scheme.surfaceContainerLow,
-                            badgeContentColor = if (isNetConnected) scheme.onPrimaryContainer else scheme.onSurfaceVariant
-                        )
-
-                        // 2. Bluetooth Card
-                        QuickSettingTile(
-                            icon = if (isBtConnected) Icons.Rounded.BluetoothConnected else if (isBtEnabled) Icons.Rounded.Bluetooth else Icons.Rounded.BluetoothDisabled,
-                            iconTint = if (isBtConnected) scheme.onSecondaryContainer else if (isBtEnabled) scheme.onSurface else scheme.onSurfaceVariant,
-                            iconContainerColor = if (isBtConnected) scheme.secondaryContainer else scheme.surfaceContainerLow,
-                            title = stringResource(R.string.quick_settings_bluetooth),
-                            subtitle = if (isBtConnected) stringResource(R.string.quick_settings_bt_connected) else if (isBtEnabled) stringResource(R.string.quick_settings_bt_ready) else stringResource(R.string.quick_settings_disabled),
-                            badge = if (isBtConnected) "CONNECTED" else if (isBtEnabled) "ON" else "OFF",
-                            badgeContainerColor = if (isBtConnected) scheme.secondaryContainer else scheme.surfaceContainerLow,
-                            badgeContentColor = if (isBtConnected) scheme.onSecondaryContainer else scheme.onSurfaceVariant
-                        )
-
-                        // 3. Controller / TV Remote Card
-                        QuickSettingTile(
-                            icon = if (hasGamepad) Icons.Rounded.SportsEsports else if (hasTvRemote) Icons.Rounded.Tv else Icons.Rounded.Smartphone,
-                            iconTint = if (hasGamepad || hasTvRemote) scheme.onTertiaryContainer else scheme.onSurfaceVariant,
-                            iconContainerColor = if (hasGamepad || hasTvRemote) scheme.tertiaryContainer else scheme.surfaceContainerLow,
-                            title = if (hasGamepad) stringResource(R.string.quick_settings_gamepad) else if (hasTvRemote) stringResource(R.string.quick_settings_tv_remote) else stringResource(R.string.quick_settings_input_device),
-                            subtitle = controllerName ?: if (hasGamepad) stringResource(R.string.quick_settings_gamepad_ready) else if (hasTvRemote) stringResource(R.string.quick_settings_tv_remote_ready) else stringResource(R.string.quick_settings_touch_internal),
-                            badge = if (hasGamepad || hasTvRemote) "ACTIVE" else "STANDBY",
-                            badgeContainerColor = if (hasGamepad || hasTvRemote) scheme.tertiaryContainer else scheme.surfaceContainerLow,
-                            badgeContentColor = if (hasGamepad || hasTvRemote) scheme.onTertiaryContainer else scheme.onSurfaceVariant
-                        )
-
-                        Spacer(Modifier.height(4.dp))
-
-                        // Section: Sliders / Hardware Controls
-                        Text(
-                            text = stringResource(R.string.quick_settings_section_controls),
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            ),
-                            color = scheme.primary
-                        )
-
-                        // Media Volume Card
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = scheme.surfaceContainerHighest,
-                            border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.35f)),
                             modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = when {
-                                                volFraction <= 0.01f -> Icons.AutoMirrored.Rounded.VolumeMute
-                                                volFraction < 0.5f -> Icons.AutoMirrored.Rounded.VolumeDown
-                                                else -> Icons.AutoMirrored.Rounded.VolumeUp
-                                            },
-                                            contentDescription = null,
-                                            tint = scheme.primary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.quick_settings_volume),
-                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                                            color = scheme.onSurface
-                                        )
-                                    }
-                                    Text(
-                                        text = "${(volFraction * 100).roundToInt()}%",
-                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                        color = scheme.primary
-                                    )
-                                }
-                                Slider(
-                                    value = volFraction,
-                                    onValueChange = { newFraction ->
-                                        volFraction = newFraction
-                                        val targetVol = (newFraction * maxVol).roundToInt()
-                                        audioManager?.setStreamVolume(AudioManager.STREAM_MUSIC, targetVol, 0)
-                                    },
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = scheme.primary,
-                                        activeTrackColor = scheme.primary,
-                                        inactiveTrackColor = scheme.surfaceContainerHigh
-                                    ),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .gamepadFocusOutline(shape = RoundedCornerShape(12.dp), register = true)
-                                )
-                            }
-                        }
+                        )
 
-                        // Display Brightness Card
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = scheme.surfaceContainerHighest,
-                            border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.35f)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = when {
-                                                brightnessFraction < 0.33f -> Icons.Rounded.BrightnessLow
-                                                brightnessFraction < 0.66f -> Icons.Rounded.BrightnessMedium
-                                                else -> Icons.Rounded.BrightnessHigh
-                                            },
-                                            contentDescription = null,
-                                            tint = scheme.tertiary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.quick_settings_brightness),
-                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                                            color = scheme.onSurface
-                                        )
-                                    }
-                                    Text(
-                                        text = "${(brightnessFraction * 100).roundToInt()}%",
-                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                        color = scheme.tertiary
-                                    )
+                        // Bento Row 4: Display Brightness Slider Bento Card
+                        BentoSliderCard(
+                            icon = when {
+                                brightnessFraction < 0.33f -> Icons.Rounded.BrightnessLow
+                                brightnessFraction < 0.66f -> Icons.Rounded.BrightnessMedium
+                                else -> Icons.Rounded.BrightnessHigh
+                            },
+                            title = stringResource(R.string.quick_settings_brightness),
+                            valuePercent = (brightnessFraction * 100).roundToInt(),
+                            accent = scheme.tertiary,
+                            value = brightnessFraction,
+                            onValueChange = { newFraction ->
+                                brightnessFraction = newFraction
+                                activity?.window?.let { window ->
+                                    val attributes = window.attributes
+                                    attributes.screenBrightness = newFraction.coerceIn(0.01f, 1f)
+                                    window.attributes = attributes
                                 }
-                                Slider(
-                                    value = brightnessFraction,
-                                    onValueChange = { newFraction ->
-                                        brightnessFraction = newFraction
-                                        activity?.let { act ->
-                                            val lp = act.window.attributes
-                                            lp.screenBrightness = newFraction.coerceIn(0.01f, 1f)
-                                            act.window.attributes = lp
-                                        }
-                                    },
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = scheme.tertiary,
-                                        activeTrackColor = scheme.tertiary,
-                                        inactiveTrackColor = scheme.surfaceContainerHigh
-                                    ),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .gamepadFocusOutline(shape = RoundedCornerShape(12.dp), register = true)
-                                )
-                            }
-                        }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }
@@ -1258,35 +1146,34 @@ private fun ZXGameSpaceQuickSettingsOverlay(
     }
 }
 
+/**
+ * Pure Material 3 Bento Stat Card.
+ * Compact, borderless filled surface with prominent icon container, category label, and headline status.
+ */
 @Composable
-private fun QuickSettingTile(
+private fun BentoStatCard(
     icon: ImageVector,
-    iconTint: Color,
     iconContainerColor: Color,
-    title: String,
-    subtitle: String,
-    badge: String,
-    badgeContainerColor: Color,
-    badgeContentColor: Color
+    iconTint: Color,
+    category: String,
+    headline: String,
+    modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         color = scheme.surfaceContainerHighest,
-        border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.35f)),
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(14.dp)
         ) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = iconContainerColor,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(38.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
@@ -1298,38 +1185,460 @@ private fun QuickSettingTile(
                 }
             }
 
+            Spacer(Modifier.height(10.dp))
+
+            Text(
+                text = category,
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+                color = scheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(Modifier.height(2.dp))
+
+            Text(
+                text = headline,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = scheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/**
+ * Pure Material 3 Input Mode Hero Bento Card.
+ * Expressively morphs between Touch Screen and Gamepad modes upon user input or controller detection.
+ */
+@Composable
+private fun BentoInputHeroCard(
+    isGamepad: Boolean,
+    controllerName: String?,
+    modifier: Modifier = Modifier
+) {
+    val scheme = MaterialTheme.colorScheme
+    val motion = MaterialTheme.motionScheme
+
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = scheme.surfaceContainerHighest,
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = if (isGamepad) scheme.secondaryContainer else scheme.surfaceContainerHigh,
+                modifier = Modifier.size(44.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    AnimatedContent(
+                        targetState = isGamepad,
+                        transitionSpec = {
+                            (fadeIn(animationSpec = motion.defaultEffectsSpec()) +
+                                scaleIn(animationSpec = motion.defaultSpatialSpec(), initialScale = 0.8f))
+                                .togetherWith(
+                                    fadeOut(animationSpec = motion.defaultEffectsSpec()) +
+                                        scaleOut(animationSpec = motion.defaultSpatialSpec(), targetScale = 0.8f)
+                                )
+                        },
+                        label = "InputHeroIcon"
+                    ) { gamepadActive ->
+                        Icon(
+                            imageVector = if (gamepadActive) Icons.Rounded.SportsEsports else Icons.Rounded.TouchApp,
+                            contentDescription = null,
+                            tint = if (gamepadActive) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                    color = scheme.onSurface
+                    text = stringResource(R.string.quick_settings_input_devices),
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                    color = scheme.onSurfaceVariant
                 )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = scheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Spacer(Modifier.height(2.dp))
+                AnimatedContent(
+                    targetState = isGamepad to controllerName,
+                    transitionSpec = {
+                        fadeIn(animationSpec = motion.defaultEffectsSpec())
+                            .togetherWith(fadeOut(animationSpec = motion.defaultEffectsSpec()))
+                    },
+                    label = "InputHeroTitle"
+                ) { (gamepadActive, name) ->
+                    Text(
+                        text = if (gamepadActive) (name ?: stringResource(R.string.quick_settings_gamepad)) else stringResource(R.string.quick_settings_input_touchscreen),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
 
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = badgeContainerColor,
-                modifier = Modifier.padding(start = 4.dp)
+                color = if (isGamepad) scheme.secondaryContainer else scheme.surfaceContainerHigh
             ) {
-                Text(
-                    text = badge,
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 10.sp
-                    ),
-                    color = badgeContentColor,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
+                AnimatedContent(
+                    targetState = isGamepad,
+                    transitionSpec = {
+                        fadeIn(animationSpec = motion.defaultEffectsSpec())
+                            .togetherWith(fadeOut(animationSpec = motion.defaultEffectsSpec()))
+                    },
+                    label = "InputHeroBadge"
+                ) { gamepadActive ->
+                    Text(
+                        text = if (gamepadActive) "GAMEPAD" else "TOUCH",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp,
+                            letterSpacing = 0.8.sp
+                        ),
+                        color = if (gamepadActive) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+                    )
+                }
             }
         }
     }
+}
+
+/**
+ * Pure Material 3 Slider Bento Card.
+ * Borderless filled container with real-time value percentage and haptic ZenithSlider.
+ */
+@Composable
+private fun BentoSliderCard(
+    icon: ImageVector,
+    title: String,
+    valuePercent: Int,
+    accent: Color,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scheme = MaterialTheme.colorScheme
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = scheme.surfaceContainerHighest,
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = scheme.onSurface
+                    )
+                }
+                Text(
+                    text = "$valuePercent%",
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    color = accent
+                )
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            ZenithSlider(
+                value = value,
+                onValueChange = onValueChange,
+                onValueChangeFinished = {},
+                accent = accent,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+/** Default-network snapshot; [TRANSPORT_NONE] and nulls mean "not reported". */
+private data class QuickNetworkState(
+    val online: Boolean = false,
+    val transport: Int = TRANSPORT_NONE,
+    val validated: Boolean = false,
+    val wifiSsid: String? = null,
+    val carrierName: String? = null,
+)
+
+/** `NetworkCapabilities.TRANSPORT_UNKNOWN` is hidden, so the absent case is spelled locally. */
+private const val TRANSPORT_NONE = -1
+
+/**
+ * Tracks the default network through [ConnectivityManager.registerDefaultNetworkCallback],
+ * resolving live connection state, Wi-Fi SSID, and carrier name.
+ */
+@Composable
+private fun rememberQuickNetworkState(
+    connectivityManager: ConnectivityManager?,
+    enabled: Boolean
+): QuickNetworkState {
+    val context = LocalContext.current
+    var state by remember(connectivityManager) { mutableStateOf(QuickNetworkState()) }
+    DisposableEffect(connectivityManager, enabled) {
+        val manager = connectivityManager
+        if (manager == null || !enabled) {
+            onDispose { }
+        } else {
+            var capabilities: NetworkCapabilities? = null
+            var link: LinkProperties? = null
+            fun publish() {
+                state = runCatching { quickNetworkState(context, capabilities, link) }
+                    .getOrDefault(QuickNetworkState())
+            }
+            val callback = object : ConnectivityManager.NetworkCallback() {
+                override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+                    capabilities = networkCapabilities
+                    publish()
+                }
+
+                override fun onLinkPropertiesChanged(network: Network, linkProperties: LinkProperties) {
+                    link = linkProperties
+                    publish()
+                }
+
+                override fun onLost(network: Network) {
+                    capabilities = null
+                    link = null
+                    publish()
+                }
+            }
+            runCatching { manager.registerDefaultNetworkCallback(callback) }
+            runCatching {
+                capabilities = manager.getNetworkCapabilities(manager.activeNetwork)
+                link = manager.getLinkProperties(manager.activeNetwork)
+            }
+            publish()
+            onDispose { runCatching { manager.unregisterNetworkCallback(callback) } }
+        }
+    }
+    return state
+}
+
+private fun quickNetworkState(
+    context: Context,
+    capabilities: NetworkCapabilities?,
+    link: LinkProperties?
+): QuickNetworkState {
+    if (capabilities == null) return QuickNetworkState()
+    val transport = when {
+        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> NetworkCapabilities.TRANSPORT_WIFI
+        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> NetworkCapabilities.TRANSPORT_CELLULAR
+        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> NetworkCapabilities.TRANSPORT_ETHERNET
+        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH) -> NetworkCapabilities.TRANSPORT_BLUETOOTH
+        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN) -> NetworkCapabilities.TRANSPORT_VPN
+        else -> TRANSPORT_NONE
+    }
+    val wifiSsid = if (transport == NetworkCapabilities.TRANSPORT_WIFI) {
+        runCatching {
+            var ssid: String? = null
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val wifiInfo = capabilities.transportInfo as? WifiInfo
+                ssid = wifiInfo?.ssid
+            }
+            if (ssid == null || ssid == "<unknown ssid>") {
+                val wm = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+                ssid = wm?.connectionInfo?.ssid
+            }
+            ssid?.takeIf { it.isNotBlank() && it != "<unknown ssid>" }?.removeSurrounding("\"")
+        }.getOrNull()
+    } else null
+
+    val carrierName = if (transport == NetworkCapabilities.TRANSPORT_CELLULAR) {
+        runCatching {
+            val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+            tm?.networkOperatorName?.takeIf { it.isNotBlank() } ?: tm?.simOperatorName?.takeIf { it.isNotBlank() }
+        }.getOrNull()
+    } else null
+
+    return QuickNetworkState(
+        online = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET),
+        transport = transport,
+        validated = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED),
+        wifiSsid = wifiSsid,
+        carrierName = carrierName
+    )
+}
+
+/** Bluetooth audio endpoints, the only Bluetooth state readable without BLUETOOTH_CONNECT. */
+private enum class QuickBluetoothKind {
+    A2DP, SCO, LE_HEADSET, LE_SPEAKER, LE_HEARING_AID, LE_BROADCAST, OTHER
+}
+
+private data class QuickBluetoothEndpoint(val name: String, val kind: QuickBluetoothKind)
+
+private fun QuickBluetoothKind.labelRes(): Int = when (this) {
+    QuickBluetoothKind.A2DP -> R.string.quick_settings_bt_a2dp
+    QuickBluetoothKind.SCO -> R.string.quick_settings_bt_sco
+    QuickBluetoothKind.LE_HEADSET -> R.string.quick_settings_bt_le_headset
+    QuickBluetoothKind.LE_SPEAKER -> R.string.quick_settings_bt_le_speaker
+    QuickBluetoothKind.LE_HEARING_AID -> R.string.quick_settings_bt_le_hearing_aid
+    QuickBluetoothKind.LE_BROADCAST -> R.string.quick_settings_bt_le_broadcast
+    QuickBluetoothKind.OTHER -> R.string.quick_settings_bt_unknown
+}
+
+private fun quickBluetoothKind(type: Int): QuickBluetoothKind = when (type) {
+    AudioDeviceInfo.TYPE_BLUETOOTH_A2DP -> QuickBluetoothKind.A2DP
+    AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> QuickBluetoothKind.SCO
+    AudioDeviceInfo.TYPE_BLE_HEADSET -> QuickBluetoothKind.LE_HEADSET
+    AudioDeviceInfo.TYPE_BLE_SPEAKER -> QuickBluetoothKind.LE_SPEAKER
+    AudioDeviceInfo.TYPE_BLE_HEARING_AID -> QuickBluetoothKind.LE_HEARING_AID
+    AudioDeviceInfo.TYPE_BLE_BROADCAST -> QuickBluetoothKind.LE_BROADCAST
+    else -> QuickBluetoothKind.OTHER
+}
+
+private val QUICK_BLUETOOTH_KINDS = setOf(
+    QuickBluetoothKind.A2DP,
+    QuickBluetoothKind.SCO,
+    QuickBluetoothKind.LE_HEADSET,
+    QuickBluetoothKind.LE_SPEAKER,
+    QuickBluetoothKind.LE_HEARING_AID,
+    QuickBluetoothKind.LE_BROADCAST,
+)
+
+/**
+ * Tracks routed Bluetooth audio through [AudioManager.registerAudioDeviceCallback]. Routing is
+ * what actually changes while a headset connects or disconnects, so this is the live source.
+ */
+@Composable
+private fun rememberQuickBluetoothEndpoints(
+    audioManager: AudioManager?,
+    enabled: Boolean
+): List<QuickBluetoothEndpoint> {
+    var endpoints by remember(audioManager) { mutableStateOf(emptyList<QuickBluetoothEndpoint>()) }
+    DisposableEffect(audioManager, enabled) {
+        val manager = audioManager
+        if (manager == null || !enabled) {
+            onDispose { }
+        } else {
+            fun refresh() {
+                endpoints = runCatching {
+                    manager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+                        .map { QuickBluetoothEndpoint(it.productName.toString(), quickBluetoothKind(it.type)) }
+                        .filter { it.kind in QUICK_BLUETOOTH_KINDS }
+                        .distinctBy { it.name to it.kind }
+                }.getOrDefault(emptyList())
+            }
+            val callback = object : AudioDeviceCallback() {
+                override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) = refresh()
+                override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) = refresh()
+            }
+            runCatching { manager.registerAudioDeviceCallback(callback, null) }
+            refresh()
+            onDispose { runCatching { manager.unregisterAudioDeviceCallback(callback) } }
+        }
+    }
+    return endpoints
+}
+
+private enum class QuickInputKind {
+    GAMEPAD, JOYSTICK, TOUCHSCREEN, TOUCHPAD, MOUSE, STYLUS, ROTARY, REMOTE, KEYBOARD, TRACKBALL, OTHER
+}
+
+private data class QuickInputDevice(
+    val id: Int,
+    val name: String,
+    val kind: QuickInputKind,
+)
+
+private fun QuickInputKind.labelRes(): Int = when (this) {
+    QuickInputKind.GAMEPAD -> R.string.quick_settings_gamepad
+    QuickInputKind.JOYSTICK -> R.string.quick_settings_input_joystick
+    QuickInputKind.TOUCHSCREEN -> R.string.quick_settings_input_touchscreen
+    QuickInputKind.TOUCHPAD -> R.string.quick_settings_input_touchpad
+    QuickInputKind.MOUSE -> R.string.quick_settings_input_mouse
+    QuickInputKind.STYLUS -> R.string.quick_settings_input_stylus
+    QuickInputKind.ROTARY -> R.string.quick_settings_input_rotary
+    QuickInputKind.REMOTE -> R.string.quick_settings_tv_remote
+    QuickInputKind.KEYBOARD -> R.string.quick_settings_input_keyboard
+    QuickInputKind.TRACKBALL -> R.string.quick_settings_input_trackball
+    QuickInputKind.OTHER -> R.string.quick_settings_input_other
+}
+
+/** Named from the sources a device reports; gamepad is tested first because it also claims joystick. */
+private fun quickInputKind(sources: Int): QuickInputKind = when {
+    sources and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD -> QuickInputKind.GAMEPAD
+    sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK -> QuickInputKind.JOYSTICK
+    sources and InputDevice.SOURCE_TOUCHSCREEN == InputDevice.SOURCE_TOUCHSCREEN -> QuickInputKind.TOUCHSCREEN
+    sources and InputDevice.SOURCE_TOUCHPAD == InputDevice.SOURCE_TOUCHPAD -> QuickInputKind.TOUCHPAD
+    sources and InputDevice.SOURCE_STYLUS == InputDevice.SOURCE_STYLUS -> QuickInputKind.STYLUS
+    sources and InputDevice.SOURCE_MOUSE == InputDevice.SOURCE_MOUSE -> QuickInputKind.MOUSE
+    sources and InputDevice.SOURCE_ROTARY_ENCODER == InputDevice.SOURCE_ROTARY_ENCODER -> QuickInputKind.ROTARY
+    sources and InputDevice.SOURCE_DPAD == InputDevice.SOURCE_DPAD -> QuickInputKind.REMOTE
+    sources and InputDevice.SOURCE_KEYBOARD == InputDevice.SOURCE_KEYBOARD -> QuickInputKind.KEYBOARD
+    sources and InputDevice.SOURCE_TRACKBALL == InputDevice.SOURCE_TRACKBALL -> QuickInputKind.TRACKBALL
+    else -> QuickInputKind.OTHER
+}
+
+/**
+ * Tracks every attached input device through [InputManager.registerInputDeviceListener], so a
+ * controller or remote plugged in mid-session shows up without reopening the sheet.
+ */
+@Composable
+private fun rememberQuickInputDevices(
+    inputManager: InputManager?,
+    enabled: Boolean
+): List<QuickInputDevice> {
+    var devices by remember(inputManager) { mutableStateOf(emptyList<QuickInputDevice>()) }
+    DisposableEffect(inputManager, enabled) {
+        val manager = inputManager
+        if (manager == null || !enabled) {
+            onDispose { }
+        } else {
+            fun refresh() {
+                devices = runCatching {
+                    // int[] has no mapNotNull overload, only on Iterable.
+                    manager.inputDeviceIds.toList()
+                        .mapNotNull { id -> InputDevice.getDevice(id)?.takeIf { !it.isVirtual } }
+                        .map { device ->
+                            QuickInputDevice(
+                                id = device.id,
+                                name = device.name.orEmpty(),
+                                kind = quickInputKind(device.sources),
+                            )
+                        }
+                        .sortedWith(compareBy({ it.kind.ordinal }, { it.name }))
+                }.getOrDefault(emptyList())
+            }
+            val listener = object : InputManager.InputDeviceListener {
+                override fun onInputDeviceAdded(deviceId: Int) = refresh()
+                override fun onInputDeviceChanged(deviceId: Int) = refresh()
+                override fun onInputDeviceRemoved(deviceId: Int) = refresh()
+            }
+            runCatching { manager.registerInputDeviceListener(listener, null) }
+            refresh()
+            onDispose { runCatching { manager.unregisterInputDeviceListener(listener) } }
+        }
+    }
+    return devices
 }
 
 @Composable
