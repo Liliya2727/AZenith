@@ -115,3 +115,35 @@ fun Context.setBannerGradientAlpha(alpha: Float) {
         .putFloat(KEY_BANNER_GRADIENT_ALPHA, alpha)
         .apply()
 }
+
+fun Context.getGameWallpaperMode(packageName: String): String {
+    return getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .getString("game_wallpaper_mode_$packageName", "default") ?: "default"
+}
+
+fun Context.setGameWallpaperMode(packageName: String, mode: String) {
+    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .edit()
+        .putString("game_wallpaper_mode_$packageName", mode)
+        .apply()
+}
+
+fun Context.getGameWallpaperUri(packageName: String): String? {
+    return getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .getString("game_wallpaper_uri_$packageName", null)
+}
+
+fun Context.setGameWallpaperUri(packageName: String, uri: String?) {
+    val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    val oldUri = prefs.getString("game_wallpaper_uri_$packageName", null)
+    if (oldUri != null && oldUri != uri) {
+        deleteOldBannerFile(oldUri)
+    }
+    val editor = prefs.edit()
+    if (uri != null) {
+        editor.putString("game_wallpaper_uri_$packageName", uri)
+    } else {
+        editor.remove("game_wallpaper_uri_$packageName")
+    }
+    editor.apply()
+}

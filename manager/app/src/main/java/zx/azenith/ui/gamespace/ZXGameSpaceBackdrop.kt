@@ -60,6 +60,8 @@ import androidx.compose.ui.unit.sp
 import zx.azenith.R
 import zx.azenith.ui.component.AppIconCache
 import zx.azenith.ui.component.MediaBannerRenderer
+import zx.azenith.ui.util.getGameWallpaperMode
+import zx.azenith.ui.util.getGameWallpaperUri
 import zx.azenith.ui.util.getHeaderImage
 
 /**
@@ -74,6 +76,7 @@ internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
 
     val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
     var customWallpaperUri by remember { mutableStateOf(context.getHeaderImage()) }
+    var gameWallpaperTrigger by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     var dimmingIntensity by remember {
         androidx.compose.runtime.mutableIntStateOf(prefs.getInt("gamespace_wallpaper_dimming_intensity", 75))
     }
@@ -83,6 +86,8 @@ internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
                 customWallpaperUri = context.getHeaderImage()
             } else if (key == "gamespace_wallpaper_dimming_intensity") {
                 dimmingIntensity = prefs.getInt("gamespace_wallpaper_dimming_intensity", 75)
+            } else if (key?.startsWith("game_wallpaper_") == true) {
+                gameWallpaperTrigger++
             }
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)
@@ -97,42 +102,28 @@ internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
         Box(modifier = Modifier.fillMaxSize().background(scheme.surfaceContainerLowest)) {
             when (current) {
                 is RibbonEntry.Game -> {
-                    val bitmap = AppIconCache.get(current.app.packageName)
-                    if (bitmap != null) {
-                        Image(
-                            bitmap = bitmap,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(0.75f)
-                                .align(Alignment.CenterEnd)
-                                .blur(36.dp, BlurredEdgeTreatment.Unbounded)
-                                .alpha(if (isAmoled) 0.50f else 0.65f)
-                        )
-                        Image(
-                            bitmap = bitmap,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(340.dp)
-                                .align(Alignment.CenterEnd)
-                                .offset(x = (-64).dp, y = (-12).dp)
-                                .clip(MaterialTheme.shapes.extraLarge)
-                                .alpha(if (isAmoled) 0.60f else 0.72f)
-                        )
-                    } else if (customWallpaperUri != null) {
+                    val _trigger = gameWallpaperTrigger
+                    val pkg = current.app.packageName
+                    val mode = context.getGameWallpaperMode(pkg)
+                    val customGameUri = context.getGameWallpaperUri(pkg)
+                    val effectiveUri = when (mode) {
+                        "follow_home" -> customWallpaperUri
+                        "custom" -> customGameUri ?: customWallpaperUri
+                        else -> null
+                    }
+
+                    if (effectiveUri != null) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .alpha(if (isAmoled) 0.60f else 0.75f)
                         ) {
                             MediaBannerRenderer(
-                                uriString = customWallpaperUri,
+                                uriString = effectiveUri,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
-                    } else {
+                    } else if (mode == "follow_home") {
                         Image(
                             painter = painterResource(R.drawable.banner_bg),
                             contentDescription = null,
@@ -141,6 +132,52 @@ internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
                                 .fillMaxSize()
                                 .alpha(if (isAmoled) 0.45f else 0.60f)
                         )
+                    } else {
+                        val bitmap = AppIconCache.get(current.app.packageName)
+                        if (bitmap != null) {
+                            Image(
+                                bitmap = bitmap,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .fillMaxWidth(0.75f)
+                                    .align(Alignment.CenterEnd)
+                                    .blur(36.dp, BlurredEdgeTreatment.Unbounded)
+                                    .alpha(if (isAmoled) 0.50f else 0.65f)
+                            )
+                            Image(
+                                bitmap = bitmap,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(340.dp)
+                                    .align(Alignment.CenterEnd)
+                                    .offset(x = (-64).dp, y = (-12).dp)
+                                    .clip(MaterialTheme.shapes.extraLarge)
+                                    .alpha(if (isAmoled) 0.60f else 0.72f)
+                            )
+                        } else if (customWallpaperUri != null) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .alpha(if (isAmoled) 0.60f else 0.75f)
+                            ) {
+                                MediaBannerRenderer(
+                                    uriString = customWallpaperUri,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        } else {
+                            Image(
+                                painter = painterResource(R.drawable.banner_bg),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .alpha(if (isAmoled) 0.45f else 0.60f)
+                            )
+                        }
                     }
                 }
 
