@@ -596,7 +596,8 @@ fun ZXGameSpaceHub(
                                                     if (idx >= 0) selectedRibbonIndex = idx else requestAppLaunch(game)
                                                 },
                                                 onLaunchGame = requestAppLaunch,
-                                                onOpenLibrary = { selectedRibbonIndex = ribbonEntries.indexOf(RibbonEntry.Library) }
+                                                onOpenLibrary = { selectedRibbonIndex = ribbonEntries.indexOf(RibbonEntry.Library) },
+                                                onOpenHomeWallpaper = { wallpaperPkg = "home" }
                                             )
 
                                             is RibbonEntry.Game -> GameHeroStage(

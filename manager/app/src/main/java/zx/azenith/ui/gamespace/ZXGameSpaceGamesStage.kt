@@ -737,7 +737,8 @@ internal fun WelcomeHubStage(
     onOpenSettings: () -> Unit,
     onSelectGame: (ApplistViewmodel.AppInfo) -> Unit,
     onLaunchGame: (ApplistViewmodel.AppInfo) -> Unit,
-    onOpenLibrary: () -> Unit = {}
+    onOpenLibrary: () -> Unit = {},
+    onOpenHomeWallpaper: () -> Unit = {}
 ) {
     val uriHandler = LocalUriHandler.current
     val scheme = MaterialTheme.colorScheme
@@ -876,7 +877,8 @@ internal fun WelcomeHubStage(
                     held = expanded,
                     text = wordmark,
                     deviceName = deviceName,
-                    chipsetName = chipsetName
+                    chipsetName = chipsetName,
+                    onOpenHomeWallpaper = onOpenHomeWallpaper
                 )
             }
 
@@ -1047,7 +1049,8 @@ internal fun HomeWordmark(
     held: Boolean,
     text: String,
     deviceName: String,
-    chipsetName: String
+    chipsetName: String,
+    onOpenHomeWallpaper: () -> Unit = {}
 ) {
     val scheme = MaterialTheme.colorScheme
     val hold by animateFloatAsState(
@@ -1099,6 +1102,26 @@ internal fun HomeWordmark(
                     color = scheme.onPrimaryContainer,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                 )
+            }
+            val penShape = CircleShape
+            Surface(
+                shape = penShape,
+                color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                contentColor = scheme.onSurfaceVariant,
+                modifier = Modifier
+                    .padding(top = 10.dp)
+                    .size(32.dp)
+                    .gamepadFocusOutline(shape = penShape, register = true)
+                    .clip(penShape)
+                    .clickable(onClick = onOpenHomeWallpaper)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.Edit,
+                        contentDescription = "Edit Home Wallpaper",
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
         }
         Text(

@@ -86,7 +86,7 @@ internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
                 customWallpaperUri = context.getHeaderImage()
             } else if (key == "gamespace_wallpaper_dimming_intensity") {
                 dimmingIntensity = prefs.getInt("gamespace_wallpaper_dimming_intensity", 75)
-            } else if (key?.startsWith("game_wallpaper_") == true) {
+            } else if (key == "gamespace_wallpaper_blur" || key == "gamespace_wallpaper_enabled" || key == "enable_banner_image" || key?.startsWith("game_wallpaper_") == true) {
                 gameWallpaperTrigger++
             }
         }
@@ -100,68 +100,119 @@ internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
         label = "ZXGameSpaceBackdropCrossfade"
     ) { current ->
         Box(modifier = Modifier.fillMaxSize().background(scheme.surfaceContainerLowest)) {
-            when (current) {
-                is RibbonEntry.Game -> {
-                    val _trigger = gameWallpaperTrigger
-                    val pkg = current.app.packageName
-                    val mode = context.getGameWallpaperMode(pkg)
-                    val customGameUri = context.getGameWallpaperUri(pkg)
-                    val effectiveUri = when (mode) {
-                        "follow_home" -> customWallpaperUri
-                        "custom" -> customGameUri ?: customWallpaperUri
-                        else -> null
-                    }
+            val _trigger = gameWallpaperTrigger
+            val isHomescreen = current == RibbonEntry.Welcome
 
-                    if (effectiveUri != null) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .alpha(if (isAmoled) 0.60f else 0.75f)
-                        ) {
-                            MediaBannerRenderer(
-                                uriString = effectiveUri,
-                                modifier = Modifier.fillMaxSize()
-                            )
+            val (isWallpaperEnabled, effectiveDim, effectiveBlur) = when (current) {
+                is RibbonEntry.Game -> {
+                    val pkg = current.app.packageName
+                    val enabled = prefs.getBoolean("game_wallpaper_enabled_$pkg", true)
+                    val gameDim = prefs.getInt("game_wallpaper_dim_$pkg", -1)
+                    val dim = if (gameDim >= 0) gameDim else dimmingIntensity
+                    val blur = prefs.getInt("game_wallpaper_blur_$pkg", 0)
+                    Triple(enabled, dim, blur)
+                }
+                else -> {
+                    val enabled = prefs.getBoolean("gamespace_wallpaper_enabled", prefs.getBoolean("enable_banner_image", true))
+                    val dim = dimmingIntensity
+                    val blur = prefs.getInt("gamespace_wallpaper_blur", 0)
+                    Triple(enabled, dim, blur)
+                }
+            }
+
+            if (isWallpaperEnabled) {
+                when (current) {
+                    is RibbonEntry.Game -> {
+                        val pkg = current.app.packageName
+                        val mode = context.getGameWallpaperMode(pkg)
+                        val customGameUri = context.getGameWallpaperUri(pkg)
+                        val effectiveUri = when (mode) {
+                            "follow_home" -> customWallpaperUri
+                            "custom" -> customGameUri ?: customWallpaperUri
+                            else -> null
                         }
-                    } else if (mode == "follow_home") {
-                        Image(
-                            painter = painterResource(R.drawable.banner_bg),
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .alpha(if (isAmoled) 0.45f else 0.60f)
-                        )
-                    } else {
-                        val bitmap = AppIconCache.get(current.app.packageName)
-                        if (bitmap != null) {
-                            Image(
-                                bitmap = bitmap,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    .fillMaxWidth(0.75f)
-                                    .align(Alignment.CenterEnd)
-                                    .blur(36.dp, BlurredEdgeTreatment.Unbounded)
-                                    .alpha(if (isAmoled) 0.50f else 0.65f)
-                            )
-                            Image(
-                                bitmap = bitmap,
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(340.dp)
-                                    .align(Alignment.CenterEnd)
-                                    .offset(x = (-64).dp, y = (-12).dp)
-                                    .clip(MaterialTheme.shapes.extraLarge)
-                                    .alpha(if (isAmoled) 0.60f else 0.72f)
-                            )
-                        } else if (customWallpaperUri != null) {
+
+                        if (effectiveUri != null) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
+                                    .then(if (effectiveBlur > 0) Modifier.blur(effectiveBlur.dp, BlurredEdgeTreatment.Unbounded) else Modifier)
                                     .alpha(if (isAmoled) 0.60f else 0.75f)
+                            ) {
+                                MediaBannerRenderer(
+                                    uriString = effectiveUri,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        } else if (mode == "follow_home") {
+                            Image(
+                                painter = painterResource(R.drawable.banner_bg),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .then(if (effectiveBlur > 0) Modifier.blur(effectiveBlur.dp, BlurredEdgeTreatment.Unbounded) else Modifier)
+                                    .alpha(if (isAmoled) 0.45f else 0.60f)
+                            )
+                        } else {
+                            val bitmap = AppIconCache.get(current.app.packageName)
+                            if (bitmap != null) {
+                                Image(
+                                    bitmap = bitmap,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .fillMaxWidth(0.75f)
+                                        .align(Alignment.CenterEnd)
+                                        .blur(36.dp, BlurredEdgeTreatment.Unbounded)
+                                        .alpha(if (isAmoled) 0.50f else 0.65f)
+                                )
+                                Image(
+                                    bitmap = bitmap,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(340.dp)
+                                        .align(Alignment.CenterEnd)
+                                        .offset(x = (-64).dp, y = (-12).dp)
+                                        .clip(MaterialTheme.shapes.extraLarge)
+                                        .then(if (effectiveBlur > 0) Modifier.blur(effectiveBlur.dp, BlurredEdgeTreatment.Unbounded) else Modifier)
+                                        .alpha(if (isAmoled) 0.60f else 0.72f)
+                                )
+                            } else if (customWallpaperUri != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .then(if (effectiveBlur > 0) Modifier.blur(effectiveBlur.dp, BlurredEdgeTreatment.Unbounded) else Modifier)
+                                        .alpha(if (isAmoled) 0.60f else 0.75f)
+                                ) {
+                                    MediaBannerRenderer(
+                                        uriString = customWallpaperUri,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                            } else {
+                                Image(
+                                    painter = painterResource(R.drawable.banner_bg),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .then(if (effectiveBlur > 0) Modifier.blur(effectiveBlur.dp, BlurredEdgeTreatment.Unbounded) else Modifier)
+                                        .alpha(if (isAmoled) 0.45f else 0.60f)
+                                )
+                            }
+                        }
+                    }
+
+                    else -> {
+                        if (customWallpaperUri != null) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .then(if (effectiveBlur > 0) Modifier.blur(effectiveBlur.dp, BlurredEdgeTreatment.Unbounded) else Modifier)
+                                    .alpha(if (isAmoled) 0.65f else 0.80f)
                             ) {
                                 MediaBannerRenderer(
                                     uriString = customWallpaperUri,
@@ -175,85 +226,60 @@ internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .alpha(if (isAmoled) 0.45f else 0.60f)
+                                    .then(if (effectiveBlur > 0) Modifier.blur(effectiveBlur.dp, BlurredEdgeTreatment.Unbounded) else Modifier)
+                                    .alpha(if (isAmoled) 0.48f else 0.62f)
+                            )
+                            ZXGameSpaceContourGlyphCanvas(
+                                primaryColor = scheme.primary,
+                                tertiaryColor = scheme.tertiary,
+                                outlineColor = scheme.outlineVariant
                             )
                         }
                     }
                 }
 
-                else -> {
-                    if (customWallpaperUri != null) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .alpha(if (isAmoled) 0.65f else 0.80f)
-                        ) {
-                            MediaBannerRenderer(
-                                uriString = customWallpaperUri,
-                                modifier = Modifier.fillMaxSize()
+                val baseDimColor = if (isAmoled) Color.Black else scheme.surfaceContainerLowest
+                val dimScale = (effectiveDim / 75f).coerceIn(0.15f, 1.45f)
+
+                // Left-to-right dimming gradient
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            if (isHomescreen) {
+                                Brush.horizontalGradient(
+                                    colorStops = arrayOf(
+                                        0.00f to baseDimColor.copy(alpha = ((if (isAmoled) 0.88f else 0.85f) * dimScale).coerceIn(0f, 0.98f)),
+                                        0.35f to baseDimColor.copy(alpha = ((if (isAmoled) 0.84f else 0.80f) * dimScale).coerceIn(0f, 0.98f)),
+                                        0.68f to baseDimColor.copy(alpha = ((if (isAmoled) 0.44f else 0.38f) * dimScale).coerceIn(0f, 0.98f)),
+                                        1.00f to baseDimColor.copy(alpha = ((if (isAmoled) 0.22f else 0.18f) * dimScale).coerceIn(0f, 0.98f))
+                                    )
+                                )
+                            } else {
+                                Brush.horizontalGradient(
+                                    colorStops = arrayOf(
+                                        0.00f to baseDimColor.copy(alpha = ((if (isAmoled) 0.78f else 0.75f) * dimScale).coerceIn(0f, 0.98f)),
+                                        0.45f to baseDimColor.copy(alpha = ((if (isAmoled) 0.35f else 0.30f) * dimScale).coerceIn(0f, 0.98f)),
+                                        1.00f to baseDimColor.copy(alpha = ((if (isAmoled) 0.16f else 0.12f) * dimScale).coerceIn(0f, 0.98f))
+                                    )
+                                )
+                            }
+                        )
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0.00f to baseDimColor.copy(alpha = ((if (isAmoled) 0.32f else 0.28f) * dimScale).coerceIn(0f, 0.98f)),
+                                    0.45f to Color.Transparent,
+                                    1.00f to baseDimColor.copy(alpha = ((if (isAmoled) 0.48f else 0.42f) * dimScale).coerceIn(0f, 0.98f))
+                                )
                             )
-                        }
-                    } else {
-                        Image(
-                            painter = painterResource(R.drawable.banner_bg),
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .alpha(if (isAmoled) 0.48f else 0.62f)
                         )
-                        ZXGameSpaceContourGlyphCanvas(
-                            primaryColor = scheme.primary,
-                            tertiaryColor = scheme.tertiary,
-                            outlineColor = scheme.outlineVariant
-                        )
-                    }
-                }
+                )
             }
-
-            val baseDimColor = if (isAmoled) Color.Black else scheme.surfaceContainerLowest
-            val isHomescreen = current == RibbonEntry.Welcome
-            val dimScale = (dimmingIntensity / 75f).coerceIn(0.15f, 1.45f)
-
-            // Left-to-right dimming gradient: on homescreen, the far left 35% is more opaque
-            // for navigation contrast, smoothly transitioning towards the right to subtle transparency (not fully transparent).
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        if (isHomescreen) {
-                            Brush.horizontalGradient(
-                                colorStops = arrayOf(
-                                    0.00f to baseDimColor.copy(alpha = ((if (isAmoled) 0.88f else 0.85f) * dimScale).coerceIn(0f, 0.98f)),
-                                    0.35f to baseDimColor.copy(alpha = ((if (isAmoled) 0.84f else 0.80f) * dimScale).coerceIn(0f, 0.98f)),
-                                    0.68f to baseDimColor.copy(alpha = ((if (isAmoled) 0.44f else 0.38f) * dimScale).coerceIn(0f, 0.98f)),
-                                    1.00f to baseDimColor.copy(alpha = ((if (isAmoled) 0.22f else 0.18f) * dimScale).coerceIn(0f, 0.98f))
-                                )
-                            )
-                        } else {
-                            Brush.horizontalGradient(
-                                colorStops = arrayOf(
-                                    0.00f to baseDimColor.copy(alpha = ((if (isAmoled) 0.78f else 0.75f) * dimScale).coerceIn(0f, 0.98f)),
-                                    0.45f to baseDimColor.copy(alpha = ((if (isAmoled) 0.35f else 0.30f) * dimScale).coerceIn(0f, 0.98f)),
-                                    1.00f to baseDimColor.copy(alpha = ((if (isAmoled) 0.16f else 0.12f) * dimScale).coerceIn(0f, 0.98f))
-                                )
-                            )
-                        }
-                    )
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0.00f to baseDimColor.copy(alpha = ((if (isAmoled) 0.32f else 0.28f) * dimScale).coerceIn(0f, 0.98f)),
-                                0.45f to Color.Transparent,
-                                1.00f to baseDimColor.copy(alpha = ((if (isAmoled) 0.48f else 0.42f) * dimScale).coerceIn(0f, 0.98f))
-                            )
-                        )
-                    )
-            )
         }
     }
 }

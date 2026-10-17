@@ -98,6 +98,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -127,6 +128,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zx.azenith.R
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
+import kotlin.math.roundToInt
 import zx.azenith.ui.component.AppIconImage
 import zx.azenith.ui.component.ExpressiveDropdownItem
 import zx.azenith.ui.component.ExpressiveList
@@ -134,21 +138,34 @@ import zx.azenith.ui.component.ExpressiveListItem
 import zx.azenith.ui.component.ExpressiveSliderItem
 import zx.azenith.ui.component.LeadingIcon
 import zx.azenith.ui.component.MediaBannerRenderer
+import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.subscreens.getAppDetails
 import zx.azenith.ui.subscreens.isGameCategory
 import zx.azenith.ui.util.AppConfig
 import zx.azenith.ui.util.DebugUtils
 import zx.azenith.ui.util.PropertyUtils
+import zx.azenith.ui.util.clearHeaderImage
+import zx.azenith.ui.util.getGameWallpaperBlur
+import zx.azenith.ui.util.getGameWallpaperDim
 import zx.azenith.ui.util.getGameWallpaperMode
 import zx.azenith.ui.util.getGameWallpaperUri
 import zx.azenith.ui.util.getHeaderImage
+import zx.azenith.ui.util.getHomeWallpaperBlur
 import zx.azenith.ui.util.getSupportedDownscaleFactors
 import zx.azenith.ui.util.getSupportedFpsTargets
 import zx.azenith.ui.util.getSupportedRefreshRates
+import zx.azenith.ui.util.isGameWallpaperEnabled
+import zx.azenith.ui.util.isHomeWallpaperEnabled
+import zx.azenith.ui.util.saveHeaderImage
 import zx.azenith.ui.util.saveMediaDirectly
+import zx.azenith.ui.util.setGameWallpaperBlur
+import zx.azenith.ui.util.setGameWallpaperDim
+import zx.azenith.ui.util.setGameWallpaperEnabled
 import zx.azenith.ui.util.setGameWallpaperMode
 import zx.azenith.ui.util.setGameWallpaperUri
+import zx.azenith.ui.util.setHomeWallpaperBlur
+import zx.azenith.ui.util.setHomeWallpaperEnabled
 import zx.azenith.ui.viewmodel.AppSettingsViewModel
 import zx.azenith.ui.viewmodel.ApplistViewmodel
 
@@ -899,13 +916,42 @@ internal fun ZXGameSpaceWallpaperOverlay(
         modifier = Modifier.fillMaxSize()
     ) {
         val pkg = activePkg ?: return@AnimatedVisibility
+        val isHome = pkg == "home"
         val resolvedApp = remember(pkg, allApps) {
-            allApps.find { it.packageName == pkg }
+            if (isHome) null else allApps.find { it.packageName == pkg }
         }
-        val appDetails = remember(pkg) { getAppDetails(context, pkg) }
-        var selectedMode by remember(pkg) { mutableStateOf(context.getGameWallpaperMode(pkg)) }
-        var customUri by remember(pkg) { mutableStateOf(context.getGameWallpaperUri(pkg)) }
+        val appDetails = remember(pkg) {
+            if (isHome) Triple("Home Wallpaper", "AZenith Game Space", "") else getAppDetails(context, pkg)
+        }
+        var selectedMode by remember(pkg) {
+            mutableStateOf(if (isHome) "custom" else context.getGameWallpaperMode(pkg))
+        }
+        var customUri by remember(pkg) {
+            mutableStateOf(if (isHome) context.getHeaderImage() else context.getGameWallpaperUri(pkg))
+        }
         val homeWallpaperUri = remember(pkg) { context.getHeaderImage() }
+
+        var isWallpaperEnabled by remember(pkg) {
+            mutableStateOf(if (isHome) context.isHomeWallpaperEnabled() else context.isGameWallpaperEnabled(pkg))
+        }
+        var wallpaperDim by remember(pkg) {
+            mutableIntStateOf(
+                if (isHome) {
+                    context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                        .getInt("gamespace_wallpaper_dimming_intensity", 75)
+                } else {
+                    context.getGameWallpaperDim(pkg)
+                }
+            )
+        }
+        var wallpaperBlur by remember(pkg) {
+            mutableIntStateOf(if (isHome) context.getHomeWallpaperBlur() else context.getGameWallpaperBlur(pkg))
+        }
+
+        val systemDim = remember {
+            context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                .getInt("gamespace_wallpaper_dimming_intensity", 75)
+        }
 
         val imagePicker = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.PickVisualMedia()
@@ -923,8 +969,12 @@ internal fun ZXGameSpaceWallpaperOverlay(
                     }
                     val savedUri = context.saveMediaDirectly(sourceUri, extension)
                     if (savedUri != null) {
-                        context.setGameWallpaperUri(pkg, savedUri)
-                        context.setGameWallpaperMode(pkg, "custom")
+                        if (isHome) {
+                            context.saveHeaderImage(savedUri)
+                        } else {
+                            context.setGameWallpaperUri(pkg, savedUri)
+                            context.setGameWallpaperMode(pkg, "custom")
+                        }
                         withContext(Dispatchers.Main) {
                             customUri = savedUri
                             selectedMode = "custom"
@@ -999,7 +1049,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                             onClick = onClose
                                         )
                                         Text(
-                                            text = "Game Wallpaper",
+                                            text = if (isHome) "Home Wallpaper" else "Game Wallpaper",
                                             style = MaterialTheme.typography.titleMedium.copy(
                                                 fontWeight = FontWeight.ExtraBold
                                             ),
@@ -1008,7 +1058,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                     }
                                 }
 
-                                // App identity card
+                                // App / Home Identity card
                                 Surface(
                                     shape = RoundedCornerShape(20.dp),
                                     color = scheme.surfaceContainerHigh,
@@ -1022,7 +1072,22 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                                         ) {
-                                            if (resolvedApp != null) {
+                                            if (isHome) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(14.dp),
+                                                    color = scheme.primaryContainer,
+                                                    modifier = Modifier.size(48.dp)
+                                                ) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Icon(
+                                                            imageVector = Icons.Rounded.Wallpaper,
+                                                            contentDescription = null,
+                                                            tint = scheme.onPrimaryContainer,
+                                                            modifier = Modifier.size(26.dp)
+                                                        )
+                                                    }
+                                                }
+                                            } else if (resolvedApp != null) {
                                                 AppIconImage(app = resolvedApp, size = 48.dp)
                                             } else {
                                                 Surface(
@@ -1041,7 +1106,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                             }
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
-                                                    text = resolvedApp?.label ?: appDetails.first,
+                                                    text = if (isHome) "Home Stage" else (resolvedApp?.label ?: appDetails.first),
                                                     style = MaterialTheme.typography.titleSmall.copy(
                                                         fontWeight = FontWeight.Bold
                                                     ),
@@ -1050,7 +1115,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                     overflow = TextOverflow.Ellipsis
                                                 )
                                                 Text(
-                                                    text = pkg,
+                                                    text = if (isHome) "AZenith Game Space" else pkg,
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = scheme.onSurfaceVariant,
                                                     maxLines = 1,
@@ -1063,26 +1128,28 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
-                                            Surface(
-                                                shape = CircleShape,
-                                                color = scheme.secondaryContainer,
-                                                contentColor = scheme.onSecondaryContainer
-                                            ) {
-                                                Text(
-                                                    text = "v${appDetails.third}",
-                                                    style = MaterialTheme.typography.labelSmall.copy(
-                                                        fontWeight = FontWeight.Bold
-                                                    ),
-                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
-                                                )
+                                            if (!isHome && appDetails.third.isNotEmpty()) {
+                                                Surface(
+                                                    shape = CircleShape,
+                                                    color = scheme.secondaryContainer,
+                                                    contentColor = scheme.onSecondaryContainer
+                                                ) {
+                                                    Text(
+                                                        text = "v${appDetails.third}",
+                                                        style = MaterialTheme.typography.labelSmall.copy(
+                                                            fontWeight = FontWeight.Bold
+                                                        ),
+                                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                                                    )
+                                                }
                                             }
                                             Surface(
                                                 shape = CircleShape,
-                                                color = if (isOverrideActive) scheme.primaryContainer else scheme.surfaceContainerHighest,
-                                                contentColor = if (isOverrideActive) scheme.onPrimaryContainer else scheme.onSurfaceVariant
+                                                color = if (isHome || isOverrideActive) scheme.primaryContainer else scheme.surfaceContainerHighest,
+                                                contentColor = if (isHome || isOverrideActive) scheme.onPrimaryContainer else scheme.onSurfaceVariant
                                             ) {
                                                 Text(
-                                                    text = modeBadgeText,
+                                                    text = if (isHome) "Global" else modeBadgeText,
                                                     style = MaterialTheme.typography.labelSmall.copy(
                                                         fontWeight = FontWeight.Bold
                                                     ),
@@ -1093,26 +1160,96 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                     }
                                 }
 
-                                // Custom Stage Switch Card (matching App Settings Master Switch Card)
-                                val masterShape = RoundedCornerShape(18.dp)
+                                if (!isHome) {
+                                    // Custom Stage Switch Card
+                                    val masterShape = RoundedCornerShape(18.dp)
+                                    Surface(
+                                        shape = masterShape,
+                                        color = if (isOverrideActive) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                                        contentColor = if (isOverrideActive) scheme.onPrimaryContainer else scheme.onSurface,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .gamepadFocusOutline(shape = masterShape, register = true)
+                                            .clip(masterShape)
+                                            .clickable {
+                                                val nextMode = if (isOverrideActive) {
+                                                    "default"
+                                                } else if (customUri != null) {
+                                                    "custom"
+                                                } else {
+                                                    "follow_home"
+                                                }
+                                                selectedMode = nextMode
+                                                context.setGameWallpaperMode(pkg, nextMode)
+                                            }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Palette,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = "Custom Stage",
+                                                    style = MaterialTheme.typography.labelLarge.copy(
+                                                        fontWeight = FontWeight.Bold
+                                                    ),
+                                                    maxLines = 1
+                                                )
+                                                Text(
+                                                    text = when {
+                                                        !isOverrideActive -> "Default game icon art"
+                                                        customUri != null -> "Custom artwork active"
+                                                        else -> "Synced with Home tab"
+                                                    },
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = if (isOverrideActive) {
+                                                        scheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                                    } else {
+                                                        scheme.onSurfaceVariant
+                                                    },
+                                                    maxLines = 1
+                                                )
+                                            }
+                                            Switch(
+                                                checked = isOverrideActive,
+                                                onCheckedChange = { isChecked ->
+                                                    val nextMode = if (isChecked) {
+                                                        if (customUri != null) "custom" else "follow_home"
+                                                    } else {
+                                                        "default"
+                                                    }
+                                                    selectedMode = nextMode
+                                                    context.setGameWallpaperMode(pkg, nextMode)
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Show Wallpaper Switch Card (Supports pure pitch black / Monet surface when disabled)
+                                val wallpaperToggleShape = RoundedCornerShape(18.dp)
                                 Surface(
-                                    shape = masterShape,
-                                    color = if (isOverrideActive) scheme.primaryContainer else scheme.surfaceContainerHigh,
-                                    contentColor = if (isOverrideActive) scheme.onPrimaryContainer else scheme.onSurface,
+                                    shape = wallpaperToggleShape,
+                                    color = if (isWallpaperEnabled) scheme.surfaceContainerHigh else scheme.surfaceContainerHighest.copy(alpha = 0.6f),
+                                    contentColor = scheme.onSurface,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .gamepadFocusOutline(shape = masterShape, register = true)
-                                        .clip(masterShape)
+                                        .gamepadFocusOutline(shape = wallpaperToggleShape, register = true)
+                                        .clip(wallpaperToggleShape)
                                         .clickable {
-                                            val nextMode = if (isOverrideActive) {
-                                                "default"
-                                            } else if (customUri != null) {
-                                                "custom"
+                                            val next = !isWallpaperEnabled
+                                            isWallpaperEnabled = next
+                                            if (isHome) {
+                                                context.setHomeWallpaperEnabled(next)
                                             } else {
-                                                "follow_home"
+                                                context.setGameWallpaperEnabled(pkg, next)
                                             }
-                                            selectedMode = nextMode
-                                            context.setGameWallpaperMode(pkg, nextMode)
                                         }
                                 ) {
                                     Row(
@@ -1121,115 +1258,109 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Rounded.Palette,
+                                            imageVector = Icons.Rounded.Wallpaper,
                                             contentDescription = null,
-                                            modifier = Modifier.size(20.dp)
+                                            modifier = Modifier.size(20.dp),
+                                            tint = if (isWallpaperEnabled) scheme.primary else scheme.onSurfaceVariant
                                         )
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = "Custom Stage",
-                                                style = MaterialTheme.typography.labelLarge.copy(
+                                                text = "Show Wallpaper",
+                                                style = MaterialTheme.typography.labelMedium.copy(
                                                     fontWeight = FontWeight.Bold
                                                 ),
                                                 maxLines = 1
                                             )
                                             Text(
-                                                text = when (selectedMode) {
-                                                    "custom" -> "Custom artwork active"
-                                                    "follow_home" -> "Synced with Home tab"
-                                                    else -> "Default game icon art"
-                                                },
+                                                text = if (isWallpaperEnabled) "Wallpaper active" else "Clean (Monet/Pitch Black)",
                                                 style = MaterialTheme.typography.labelSmall,
-                                                color = if (isOverrideActive) {
-                                                    scheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                                } else {
-                                                    scheme.onSurfaceVariant
-                                                },
+                                                color = scheme.onSurfaceVariant,
                                                 maxLines = 1
                                             )
                                         }
                                         Switch(
-                                            checked = isOverrideActive,
+                                            checked = isWallpaperEnabled,
                                             onCheckedChange = { isChecked ->
-                                                val nextMode = if (isChecked) {
-                                                    if (customUri != null) "custom" else "follow_home"
+                                                isWallpaperEnabled = isChecked
+                                                if (isHome) {
+                                                    context.setHomeWallpaperEnabled(isChecked)
                                                 } else {
-                                                    "default"
+                                                    context.setGameWallpaperEnabled(pkg, isChecked)
                                                 }
-                                                selectedMode = nextMode
-                                                context.setGameWallpaperMode(pkg, nextMode)
                                             }
                                         )
                                     }
                                 }
                             }
 
-                            // Bottom Quick Actions: Launch & System Info
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                val launchShape = RoundedCornerShape(16.dp)
-                                Surface(
-                                    shape = launchShape,
-                                    color = scheme.primary,
-                                    contentColor = scheme.onPrimary,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(44.dp)
-                                        .gamepadFocusOutline(shape = launchShape, register = true)
-                                        .clip(launchShape)
-                                        .clickable {
-                                            if (resolvedApp != null) {
-                                                onLaunch(resolvedApp)
-                                            } else {
-                                                launchGame(context, pkg)
-                                            }
-                                        }
+                            // Bottom Quick Actions: Launch & System Info (only for apps)
+                            if (!isHome) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxSize(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center
+                                    val launchShape = RoundedCornerShape(16.dp)
+                                    Surface(
+                                        shape = launchShape,
+                                        color = scheme.primary,
+                                        contentColor = scheme.onPrimary,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(44.dp)
+                                            .gamepadFocusOutline(shape = launchShape, register = true)
+                                            .clip(launchShape)
+                                            .clickable {
+                                                if (resolvedApp != null) {
+                                                    onLaunch(resolvedApp)
+                                                } else {
+                                                    launchGame(context, pkg)
+                                                }
+                                            }
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.PlayArrow,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(Modifier.width(6.dp))
-                                        Text(
-                                            text = stringResource(R.string.gamespace_play_game),
-                                            style = MaterialTheme.typography.labelLarge.copy(
-                                                fontWeight = FontWeight.Bold
+                                        Row(
+                                            modifier = Modifier.fillMaxSize(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.PlayArrow,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
                                             )
-                                        )
-                                    }
-                                }
-
-                                val infoShape = RoundedCornerShape(16.dp)
-                                Surface(
-                                    shape = infoShape,
-                                    color = scheme.secondaryContainer,
-                                    contentColor = scheme.onSecondaryContainer,
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .gamepadFocusOutline(shape = infoShape, register = true)
-                                        .clip(infoShape)
-                                        .clickable {
-                                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                                data = Uri.parse("package:$pkg")
-                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                            }
-                                            runCatching { context.startActivity(intent) }
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(
+                                                text = stringResource(R.string.gamespace_play_game),
+                                                style = MaterialTheme.typography.labelLarge.copy(
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            )
                                         }
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Info,
-                                            contentDescription = stringResource(R.string.str_app_info),
-                                            modifier = Modifier.size(20.dp)
-                                        )
+                                    }
+
+                                    val infoShape = RoundedCornerShape(16.dp)
+                                    Surface(
+                                        shape = infoShape,
+                                        color = scheme.secondaryContainer,
+                                        contentColor = scheme.onSecondaryContainer,
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .gamepadFocusOutline(shape = infoShape, register = true)
+                                            .clip(infoShape)
+                                            .clickable {
+                                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                                    data = Uri.parse("package:$pkg")
+                                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                }
+                                                runCatching { context.startActivity(intent) }
+                                            }
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Info,
+                                                contentDescription = stringResource(R.string.str_app_info),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -1248,135 +1379,16 @@ internal fun ZXGameSpaceWallpaperOverlay(
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(18.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             item {
                                 Text(
-                                    text = "WALLPAPER SOURCE",
+                                    text = "MEDIA ARTWORK",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = 1.2.sp
                                     ),
                                     color = scheme.primary
-                                )
-                            }
-                            item {
-                                val isDefault = selectedMode == "default"
-                                val isFollowHome = selectedMode == "follow_home"
-                                val isCustom = selectedMode == "custom"
-
-                                ExpressiveList(
-                                    content = listOf(
-                                        {
-                                            ExpressiveListItem(
-                                                onClick = {
-                                                    selectedMode = "default"
-                                                    context.setGameWallpaperMode(pkg, "default")
-                                                },
-                                                leadingContent = {
-                                                    LeadingIcon(
-                                                        icon = Icons.Rounded.SportsEsports,
-                                                        contentDescription = "Default Game Art"
-                                                    )
-                                                },
-                                                headlineContent = {
-                                                    Text(text = "Default Game Art")
-                                                },
-                                                supportingContent = {
-                                                    Text(text = "Dynamic atmospheric background with game icon")
-                                                },
-                                                trailingContent = {
-                                                    Text(
-                                                        text = if (isDefault) "Active" else "Default",
-                                                        color = if (isDefault) scheme.primary else scheme.onSurfaceVariant,
-                                                        fontWeight = if (isDefault) FontWeight.Bold else FontWeight.Normal
-                                                    )
-                                                }
-                                            )
-                                        },
-                                        {
-                                            ExpressiveListItem(
-                                                onClick = {
-                                                    selectedMode = "follow_home"
-                                                    context.setGameWallpaperMode(pkg, "follow_home")
-                                                },
-                                                leadingContent = {
-                                                    LeadingIcon(
-                                                        icon = Icons.Rounded.Sync,
-                                                        contentDescription = "Follow Home Wallpaper"
-                                                    )
-                                                },
-                                                headlineContent = {
-                                                    Text(text = "Follow Home Wallpaper")
-                                                },
-                                                supportingContent = {
-                                                    Text(text = "Match the background wallpaper set on the Home tab")
-                                                },
-                                                trailingContent = {
-                                                    Text(
-                                                        text = if (isFollowHome) "Active" else "Off",
-                                                        color = if (isFollowHome) scheme.primary else scheme.onSurfaceVariant,
-                                                        fontWeight = if (isFollowHome) FontWeight.Bold else FontWeight.Normal
-                                                    )
-                                                }
-                                            )
-                                        },
-                                        {
-                                            ExpressiveListItem(
-                                                onClick = {
-                                                    if (customUri != null) {
-                                                        selectedMode = "custom"
-                                                        context.setGameWallpaperMode(pkg, "custom")
-                                                    } else {
-                                                        imagePicker.launch(
-                                                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
-                                                        )
-                                                    }
-                                                },
-                                                leadingContent = {
-                                                    LeadingIcon(
-                                                        icon = Icons.Rounded.Wallpaper,
-                                                        contentDescription = "Custom Wallpaper"
-                                                    )
-                                                },
-                                                headlineContent = {
-                                                    Text(text = "Custom Wallpaper")
-                                                },
-                                                supportingContent = {
-                                                    Text(
-                                                        text = if (customUri != null) {
-                                                            "Personalized photo, GIF, or video"
-                                                        } else {
-                                                            "Choose an image or video for this game"
-                                                        }
-                                                    )
-                                                },
-                                                trailingContent = {
-                                                    Text(
-                                                        text = when {
-                                                            isCustom -> "Active"
-                                                            customUri != null -> "Ready"
-                                                            else -> "Browse"
-                                                        },
-                                                        color = if (isCustom) scheme.primary else scheme.onSurfaceVariant,
-                                                        fontWeight = if (isCustom) FontWeight.Bold else FontWeight.Normal
-                                                    )
-                                                }
-                                            )
-                                        }
-                                    )
-                                )
-                            }
-
-                            item {
-                                Text(
-                                    text = "CUSTOM MEDIA & PREVIEW",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        letterSpacing = 1.2.sp
-                                    ),
-                                    color = scheme.primary,
-                                    modifier = Modifier.padding(top = 4.dp)
                                 )
                             }
 
@@ -1387,7 +1399,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .padding(16.dp),
-                                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                                            verticalArrangement = Arrangement.spacedBy(16.dp)
                                         ) {
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
@@ -1400,17 +1412,19 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                 )
                                                 Column(modifier = Modifier.weight(1f)) {
                                                     Text(
-                                                        text = "Stage Media Artwork",
+                                                        text = if (isHome) "Home Stage Artwork" else "Stage Media Artwork",
                                                         style = MaterialTheme.typography.titleMedium.copy(
                                                             fontWeight = FontWeight.Bold
                                                         ),
                                                         color = scheme.onSurface
                                                     )
                                                     Text(
-                                                        text = if (customUri != null) {
-                                                            "Custom wallpaper media configured for this game"
-                                                        } else {
-                                                            "Select an image, GIF, or video from your device"
+                                                        text = when {
+                                                            !isWallpaperEnabled -> "Wallpaper is turned off (clean background)"
+                                                            isHome -> if (customUri != null) "Custom wallpaper configured for Home Stage" else "Default atmospheric wallpaper active"
+                                                            !isOverrideActive -> "Default game dynamic icon artwork"
+                                                            customUri != null -> "Custom wallpaper active for this game"
+                                                            else -> "Synchronized with Home Stage wallpaper"
                                                         },
                                                         style = MaterialTheme.typography.bodySmall,
                                                         color = scheme.onSurfaceVariant
@@ -1423,78 +1437,109 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                // Visual Preview Box (110.dp height matching symmetrical action buttons)
+                                                // Visual Preview Box (118.dp height)
                                                 Surface(
                                                     shape = RoundedCornerShape(16.dp),
                                                     color = scheme.surfaceContainerLowest,
                                                     modifier = Modifier
                                                         .weight(0.48f)
-                                                        .height(110.dp)
+                                                        .height(118.dp)
                                                         .clip(RoundedCornerShape(16.dp))
                                                 ) {
                                                     Box(modifier = Modifier.fillMaxSize()) {
-                                                        val effectivePreviewUri = when {
-                                                            selectedMode == "custom" && customUri != null -> customUri
-                                                            selectedMode == "follow_home" -> homeWallpaperUri
-                                                            customUri != null -> customUri
-                                                            else -> null
-                                                        }
-                                                        if (effectivePreviewUri != null) {
-                                                            MediaBannerRenderer(
-                                                                uriString = effectivePreviewUri,
-                                                                modifier = Modifier.fillMaxSize()
-                                                            )
-                                                        } else if (selectedMode == "follow_home") {
-                                                            Image(
-                                                                painter = painterResource(R.drawable.banner_bg),
-                                                                contentDescription = null,
-                                                                contentScale = ContentScale.Crop,
-                                                                modifier = Modifier.fillMaxSize()
-                                                            )
+                                                        if (!isWallpaperEnabled) {
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .fillMaxSize()
+                                                                    .background(scheme.surfaceContainerLowest),
+                                                                contentAlignment = Alignment.Center
+                                                            ) {
+                                                                Text(
+                                                                    text = "Clean (No Wallpaper)",
+                                                                    style = MaterialTheme.typography.labelSmall,
+                                                                    color = scheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                                                )
+                                                            }
                                                         } else {
+                                                            val effectivePreviewUri = when {
+                                                                isHome -> customUri
+                                                                selectedMode == "custom" && customUri != null -> customUri
+                                                                selectedMode == "follow_home" -> homeWallpaperUri
+                                                                else -> null
+                                                            }
+                                                            if (effectivePreviewUri != null) {
+                                                                MediaBannerRenderer(
+                                                                    uriString = effectivePreviewUri,
+                                                                    modifier = Modifier
+                                                                        .fillMaxSize()
+                                                                        .then(if (wallpaperBlur > 0) Modifier.blur(wallpaperBlur.dp, BlurredEdgeTreatment.Unbounded) else Modifier)
+                                                                )
+                                                            } else if (isHome || selectedMode == "follow_home") {
+                                                                Image(
+                                                                    painter = painterResource(R.drawable.banner_bg),
+                                                                    contentDescription = null,
+                                                                    contentScale = ContentScale.Crop,
+                                                                    modifier = Modifier
+                                                                        .fillMaxSize()
+                                                                        .then(if (wallpaperBlur > 0) Modifier.blur(wallpaperBlur.dp, BlurredEdgeTreatment.Unbounded) else Modifier)
+                                                                )
+                                                            } else {
+                                                                Box(
+                                                                    modifier = Modifier
+                                                                        .fillMaxSize()
+                                                                        .background(
+                                                                            Brush.radialGradient(
+                                                                                colors = listOf(
+                                                                                    scheme.primaryContainer.copy(alpha = 0.45f),
+                                                                                    scheme.surfaceContainerLowest
+                                                                                )
+                                                                            )
+                                                                        ),
+                                                                    contentAlignment = Alignment.Center
+                                                                ) {
+                                                                    if (resolvedApp != null) {
+                                                                        Box(
+                                                                            modifier = Modifier
+                                                                                .size(54.dp)
+                                                                                .then(if (wallpaperBlur > 0) Modifier.blur(wallpaperBlur.dp, BlurredEdgeTreatment.Unbounded) else Modifier),
+                                                                            contentAlignment = Alignment.Center
+                                                                        ) {
+                                                                            AppIconImage(
+                                                                                app = resolvedApp,
+                                                                                size = 54.dp
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+
+                                                            val isAmoled = scheme.surfaceContainerLowest == Color.Black
+                                                            val previewBaseDim = if (isAmoled) Color.Black else scheme.surfaceContainerLowest
+                                                            val effectiveDim = if (isHome) wallpaperDim else if (wallpaperDim >= 0) wallpaperDim else systemDim
+                                                            val previewDimScale = (effectiveDim / 75f).coerceIn(0.15f, 1.45f)
+
                                                             Box(
                                                                 modifier = Modifier
                                                                     .fillMaxSize()
                                                                     .background(
-                                                                        Brush.radialGradient(
-                                                                            colors = listOf(
-                                                                                scheme.primaryContainer.copy(alpha = 0.45f),
-                                                                                scheme.surfaceContainerLowest
+                                                                        Brush.horizontalGradient(
+                                                                            colorStops = arrayOf(
+                                                                                0.00f to previewBaseDim.copy(alpha = (0.80f * previewDimScale).coerceIn(0f, 0.98f)),
+                                                                                0.45f to previewBaseDim.copy(alpha = (0.55f * previewDimScale).coerceIn(0f, 0.98f)),
+                                                                                1.00f to previewBaseDim.copy(alpha = (0.20f * previewDimScale).coerceIn(0f, 0.98f))
                                                                             )
                                                                         )
-                                                                    ),
-                                                                contentAlignment = Alignment.Center
-                                                            ) {
-                                                                if (resolvedApp != null) {
-                                                                    AppIconImage(app = resolvedApp, size = 54.dp)
-                                                                }
-                                                            }
-                                                        }
-
-                                                        val isAmoled = scheme.surfaceContainerLowest == Color.Black
-                                                        val previewBaseDim = if (isAmoled) Color.Black else scheme.surfaceContainerLowest
-
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .fillMaxSize()
-                                                                .background(
-                                                                    Brush.horizontalGradient(
-                                                                        colorStops = arrayOf(
-                                                                            0.00f to previewBaseDim.copy(alpha = 0.80f),
-                                                                            0.45f to previewBaseDim.copy(alpha = 0.55f),
-                                                                            1.00f to previewBaseDim.copy(alpha = 0.20f)
-                                                                        )
                                                                     )
-                                                                )
-                                                        )
+                                                            )
+                                                        }
                                                     }
                                                 }
 
-                                                // Symmetrical 110.dp Action Buttons Column
+                                                // Symmetrical Action Buttons Column
                                                 Column(
                                                     modifier = Modifier
                                                         .weight(0.52f)
-                                                        .height(110.dp),
+                                                        .height(118.dp),
                                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                                 ) {
                                                     val chooseShape = RoundedCornerShape(16.dp)
@@ -1552,10 +1597,15 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                                 .gamepadFocusOutline(shape = resetShape, register = true)
                                                                 .clip(resetShape)
                                                                 .clickable {
-                                                                    context.setGameWallpaperUri(pkg, null)
-                                                                    customUri = null
-                                                                    selectedMode = "default"
-                                                                    context.setGameWallpaperMode(pkg, "default")
+                                                                    if (isHome) {
+                                                                        context.clearHeaderImage()
+                                                                        customUri = null
+                                                                    } else {
+                                                                        context.setGameWallpaperUri(pkg, null)
+                                                                        customUri = null
+                                                                        selectedMode = "default"
+                                                                        context.setGameWallpaperMode(pkg, "default")
+                                                                    }
                                                                 }
                                                         ) {
                                                             Row(
@@ -1572,7 +1622,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                                 )
                                                                 Spacer(Modifier.width(8.dp))
                                                                 Text(
-                                                                    text = "Reset Wallpaper",
+                                                                    text = if (isHome) "Reset to Default" else "Reset Wallpaper",
                                                                     style = MaterialTheme.typography.labelLarge.copy(
                                                                         fontWeight = FontWeight.Bold
                                                                     ),
@@ -1582,6 +1632,143 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                         }
                                                     }
                                                 }
+                                            }
+
+                                            // Slider 1: Dimming Intensity Layer
+                                            val isFollowSystem = !isHome && wallpaperDim < 0
+                                            Column(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Column {
+                                                        Text(
+                                                            text = "Dimming Layer",
+                                                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                                            color = scheme.onSurface
+                                                        )
+                                                        Text(
+                                                            text = if (isFollowSystem) "Following system preference ($systemDim%)" else "Adjust wallpaper gradient dimming opacity",
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = scheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                    ) {
+                                                        if (!isHome) {
+                                                            Surface(
+                                                                shape = RoundedCornerShape(10.dp),
+                                                                color = if (isFollowSystem) scheme.primaryContainer else scheme.surfaceContainerHighest,
+                                                                contentColor = if (isFollowSystem) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
+                                                                modifier = Modifier
+                                                                    .clip(RoundedCornerShape(10.dp))
+                                                                    .clickable {
+                                                                        val next = if (isFollowSystem) 75 else -1
+                                                                        wallpaperDim = next
+                                                                        context.setGameWallpaperDim(pkg, next)
+                                                                    }
+                                                            ) {
+                                                                Text(
+                                                                    text = "Follow System",
+                                                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                                )
+                                                            }
+                                                        }
+                                                        if (!isFollowSystem) {
+                                                            Text(
+                                                                text = "${if (isHome) wallpaperDim else wallpaperDim}%",
+                                                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                                                color = scheme.primary
+                                                            )
+                                                        }
+                                                    }
+                                                }
+
+                                                if (!isFollowSystem) {
+                                                    ZenithSlider(
+                                                        value = wallpaperDim.toFloat(),
+                                                        onValueChange = { raw ->
+                                                            val snapped = ((raw / 5f).roundToInt() * 5).coerceIn(15, 100)
+                                                            if (snapped != wallpaperDim) {
+                                                                wallpaperDim = snapped
+                                                            }
+                                                        },
+                                                        onValueChangeFinished = {
+                                                            if (isHome) {
+                                                                context.getSharedPreferences("settings", Context.MODE_PRIVATE)
+                                                                    .edit()
+                                                                    .putInt("gamespace_wallpaper_dimming_intensity", wallpaperDim)
+                                                                    .apply()
+                                                            } else {
+                                                                context.setGameWallpaperDim(pkg, wallpaperDim)
+                                                            }
+                                                        },
+                                                        valueRange = 15f..100f,
+                                                        steps = 16,
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .height(28.dp)
+                                                    )
+                                                }
+                                            }
+
+                                            // Slider 2: Wallpaper Blur
+                                            Column(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Column {
+                                                        Text(
+                                                            text = "Wallpaper Blur",
+                                                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                                            color = scheme.onSurface
+                                                        )
+                                                        Text(
+                                                            text = "Adjust background depth-of-field blur",
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = scheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                    Text(
+                                                        text = if (wallpaperBlur == 0) "Sharp (0 dp)" else "$wallpaperBlur dp",
+                                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                                        color = scheme.primary
+                                                    )
+                                                }
+
+                                                ZenithSlider(
+                                                    value = wallpaperBlur.toFloat(),
+                                                    onValueChange = { raw ->
+                                                        val snapped = raw.roundToInt().coerceIn(0, 25)
+                                                        if (snapped != wallpaperBlur) {
+                                                            wallpaperBlur = snapped
+                                                        }
+                                                    },
+                                                    onValueChangeFinished = {
+                                                        if (isHome) {
+                                                            context.setHomeWallpaperBlur(wallpaperBlur)
+                                                        } else {
+                                                            context.setGameWallpaperBlur(pkg, wallpaperBlur)
+                                                        }
+                                                    },
+                                                    valueRange = 0f..25f,
+                                                    steps = 24,
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .height(28.dp)
+                                                )
                                             }
                                         }
                                     }

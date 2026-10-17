@@ -133,6 +133,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -184,9 +186,13 @@ import zx.azenith.ui.theme.ColorMode
 import zx.azenith.ui.util.clearHeaderImage
 import zx.azenith.ui.util.dumpDiagnosticLogs
 import zx.azenith.ui.util.getHeaderImage
+import zx.azenith.ui.util.getHomeWallpaperBlur
 import zx.azenith.ui.util.getSupportedRefreshRatesPicker
+import zx.azenith.ui.util.isHomeWallpaperEnabled
 import zx.azenith.ui.util.saveHeaderImage
 import zx.azenith.ui.util.saveMediaDirectly
+import zx.azenith.ui.util.setHomeWallpaperBlur
+import zx.azenith.ui.util.setHomeWallpaperEnabled
 import zx.azenith.ui.viewmodel.SettingsViewModel
 import zx.azenith.ui.viewmodel.TweakViewModel
 
@@ -765,6 +771,12 @@ internal fun SettingsAppearancePane() {
     var wallpaperDimmingIntensity by remember {
         mutableIntStateOf(prefs.getInt("gamespace_wallpaper_dimming_intensity", 75).coerceIn(15, 100))
     }
+    var isWallpaperEnabled by remember {
+        mutableStateOf(context.isHomeWallpaperEnabled())
+    }
+    var wallpaperBlur by remember {
+        mutableIntStateOf(context.getHomeWallpaperBlur())
+    }
 
     var colorSpec by remember {
         mutableStateOf(ColorEngine.fromPersisted(prefs.getString("color_spec", null)))
@@ -784,6 +796,12 @@ internal fun SettingsAppearancePane() {
                 }
                 "gamespace_wallpaper_dimming_intensity" -> {
                     wallpaperDimmingIntensity = prefs.getInt("gamespace_wallpaper_dimming_intensity", 75).coerceIn(15, 100)
+                }
+                "gamespace_wallpaper_enabled", "enable_banner_image" -> {
+                    isWallpaperEnabled = context.isHomeWallpaperEnabled()
+                }
+                "gamespace_wallpaper_blur" -> {
+                    wallpaperBlur = context.getHomeWallpaperBlur()
                 }
                 "color_mode" -> {
                     colorModeValue = prefs.getInt("color_mode", ColorMode.SYSTEM.value)
@@ -849,6 +867,8 @@ internal fun SettingsAppearancePane() {
         HomeWallpaperSection(
             customWallpaperUri = customWallpaperUri,
             initialDimming = wallpaperDimmingIntensity,
+            initialBlur = wallpaperBlur,
+            isWallpaperEnabled = isWallpaperEnabled,
             colorModeValue = colorModeValue,
             onChooseWallpaper = {
                 imagePicker.launch(
@@ -862,6 +882,14 @@ internal fun SettingsAppearancePane() {
             onDimmingCommitted = {
                 wallpaperDimmingIntensity = it
                 prefs.edit().putInt("gamespace_wallpaper_dimming_intensity", it).apply()
+            },
+            onBlurCommitted = {
+                wallpaperBlur = it
+                context.setHomeWallpaperBlur(it)
+            },
+            onWallpaperEnabledChanged = {
+                isWallpaperEnabled = it
+                context.setHomeWallpaperEnabled(it)
             }
         )
 
@@ -1198,14 +1226,19 @@ private fun CustomizeSidePanelSection(
 private fun HomeWallpaperSection(
     customWallpaperUri: String?,
     initialDimming: Int,
+    initialBlur: Int,
+    isWallpaperEnabled: Boolean,
     colorModeValue: Int,
     onChooseWallpaper: () -> Unit,
     onResetWallpaper: () -> Unit,
-    onDimmingCommitted: (Int) -> Unit
+    onDimmingCommitted: (Int) -> Unit,
+    onBlurCommitted: (Int) -> Unit,
+    onWallpaperEnabledChanged: (Boolean) -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
     val motion = MaterialTheme.motionScheme
     var sliderDimming by remember(initialDimming) { mutableIntStateOf(initialDimming) }
+    var sliderBlur by remember(initialBlur) { mutableIntStateOf(initialBlur) }
 
     Surface(
         shape = RoundedCornerShape(24.dp),
@@ -1252,6 +1285,21 @@ private fun HomeWallpaperSection(
                         )
                     }
                 }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = if (isWallpaperEnabled) "Enabled" else "Off",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = if (isWallpaperEnabled) scheme.primary else scheme.onSurfaceVariant
+                    )
+                    Switch(
+                        checked = isWallpaperEnabled,
+                        onCheckedChange = onWallpaperEnabledChanged
+                    )
+                }
             }
 
             Row(
@@ -1269,52 +1317,71 @@ private fun HomeWallpaperSection(
                         .clip(RoundedCornerShape(16.dp))
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        if (customWallpaperUri != null) {
-                            MediaBannerRenderer(
-                                uriString = customWallpaperUri,
-                                modifier = Modifier.fillMaxSize()
-                            )
+                        if (!isWallpaperEnabled) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(scheme.surfaceContainerLowest),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Clean (No Wallpaper)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = scheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                )
+                            }
                         } else {
-                            Image(
-                                painter = painterResource(R.drawable.banner_bg),
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
+                            if (customWallpaperUri != null) {
+                                MediaBannerRenderer(
+                                    uriString = customWallpaperUri,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .then(if (sliderBlur > 0) Modifier.blur(sliderBlur.dp, BlurredEdgeTreatment.Unbounded) else Modifier)
+                                )
+                            } else {
+                                Image(
+                                    painter = painterResource(R.drawable.banner_bg),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .then(if (sliderBlur > 0) Modifier.blur(sliderBlur.dp, BlurredEdgeTreatment.Unbounded) else Modifier)
+                                )
+                            }
+                            val previewDimScale = (sliderDimming / 75f).coerceIn(0.15f, 1.45f)
+                            val isAmoled = colorModeValue == ColorMode.DARKAMOLED.value
+                            val previewBaseDim = if (isAmoled) Color.Black else scheme.surfaceContainerLowest
+
+                            // GameSpace horizontal gradient dimming
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            colorStops = arrayOf(
+                                                0.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.88f else 0.85f) * previewDimScale).coerceIn(0f, 0.98f)),
+                                                0.35f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.84f else 0.80f) * previewDimScale).coerceIn(0f, 0.98f)),
+                                                0.68f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.44f else 0.38f) * previewDimScale).coerceIn(0f, 0.98f)),
+                                                1.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.22f else 0.18f) * previewDimScale).coerceIn(0f, 0.98f))
+                                            )
+                                        )
+                                    )
+                            )
+                            // GameSpace vertical vignette
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            colorStops = arrayOf(
+                                                0.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.32f else 0.28f) * previewDimScale).coerceIn(0f, 0.98f)),
+                                                0.45f to Color.Transparent,
+                                                1.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.48f else 0.42f) * previewDimScale).coerceIn(0f, 0.98f))
+                                            )
+                                        )
+                                    )
                             )
                         }
-                        val previewDimScale = (sliderDimming / 75f).coerceIn(0.15f, 1.45f)
-                        val isAmoled = colorModeValue == ColorMode.DARKAMOLED.value
-                        val previewBaseDim = if (isAmoled) Color.Black else scheme.surfaceContainerLowest
-
-                        // GameSpace horizontal gradient dimming
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.horizontalGradient(
-                                        colorStops = arrayOf(
-                                            0.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.88f else 0.85f) * previewDimScale).coerceIn(0f, 0.98f)),
-                                            0.35f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.84f else 0.80f) * previewDimScale).coerceIn(0f, 0.98f)),
-                                            0.68f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.44f else 0.38f) * previewDimScale).coerceIn(0f, 0.98f)),
-                                            1.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.22f else 0.18f) * previewDimScale).coerceIn(0f, 0.98f))
-                                        )
-                                    )
-                                )
-                        )
-                        // GameSpace vertical vignette
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.verticalGradient(
-                                        colorStops = arrayOf(
-                                            0.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.32f else 0.28f) * previewDimScale).coerceIn(0f, 0.98f)),
-                                            0.45f to Color.Transparent,
-                                            1.00f to previewBaseDim.copy(alpha = ((if (isAmoled) 0.48f else 0.42f) * previewDimScale).coerceIn(0f, 0.98f))
-                                        )
-                                    )
-                                )
-                        )
                     }
                 }
 
@@ -1443,6 +1510,54 @@ private fun HomeWallpaperSection(
                     },
                     valueRange = 15f..100f,
                     steps = 16,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(28.dp)
+                )
+            }
+
+            // Wallpaper Blur Slider
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Wallpaper Blur",
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onSurface
+                        )
+                        Text(
+                            text = "Adjust background depth-of-field blur",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = scheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        text = if (sliderBlur == 0) "Sharp (0 dp)" else "$sliderBlur dp",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.primary
+                    )
+                }
+
+                ZenithSlider(
+                    value = sliderBlur.toFloat(),
+                    onValueChange = { raw ->
+                        val snapped = raw.roundToInt().coerceIn(0, 25)
+                        if (snapped != sliderBlur) {
+                            sliderBlur = snapped
+                        }
+                    },
+                    onValueChangeFinished = {
+                        onBlurCommitted(sliderBlur)
+                    },
+                    valueRange = 0f..25f,
+                    steps = 24,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(28.dp)

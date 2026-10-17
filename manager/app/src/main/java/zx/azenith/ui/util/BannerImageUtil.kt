@@ -147,3 +147,64 @@ fun Context.setGameWallpaperUri(packageName: String, uri: String?) {
     }
     editor.apply()
 }
+
+fun Context.getGameWallpaperDim(packageName: String): Int {
+    return getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .getInt("game_wallpaper_dim_$packageName", -1)
+}
+
+fun Context.setGameWallpaperDim(packageName: String, dim: Int) {
+    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .edit()
+        .putInt("game_wallpaper_dim_$packageName", dim)
+        .apply()
+}
+
+fun Context.getGameWallpaperBlur(packageName: String): Int {
+    return getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .getInt("game_wallpaper_blur_$packageName", 0)
+}
+
+fun Context.setGameWallpaperBlur(packageName: String, blur: Int) {
+    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .edit()
+        .putInt("game_wallpaper_blur_$packageName", blur)
+        .apply()
+}
+
+fun Context.isGameWallpaperEnabled(packageName: String): Boolean {
+    return getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .getBoolean("game_wallpaper_enabled_$packageName", true)
+}
+
+fun Context.setGameWallpaperEnabled(packageName: String, enabled: Boolean) {
+    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .edit()
+        .putBoolean("game_wallpaper_enabled_$packageName", enabled)
+        .apply()
+}
+
+fun Context.getHomeWallpaperBlur(): Int {
+    return getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .getInt("gamespace_wallpaper_blur", 0)
+}
+
+fun Context.setHomeWallpaperBlur(blur: Int) {
+    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .edit()
+        .putInt("gamespace_wallpaper_blur", blur)
+        .apply()
+}
+
+fun Context.isHomeWallpaperEnabled(): Boolean {
+    val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    return prefs.getBoolean("gamespace_wallpaper_enabled", prefs.getBoolean(KEY_ENABLE_BANNER, true))
+}
+
+fun Context.setHomeWallpaperEnabled(enabled: Boolean) {
+    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .edit()
+        .putBoolean("gamespace_wallpaper_enabled", enabled)
+        .putBoolean(KEY_ENABLE_BANNER, enabled)
+        .apply()
+}
