@@ -236,6 +236,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.hazeBlur
+import dev.chrisbanes.haze.blur.material3.Material3
+import dev.chrisbanes.haze.hazeSource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -521,6 +527,7 @@ fun ZXGameSpaceHub(
     }
     val deviceName = remember(context) { getRealDeviceName(context) }
     val chipsetName = remember(context) { getChipsetName(context) }
+    val hazeState = remember { HazeState() }
 
     GamepadFocusRoot(
         modifier = Modifier
@@ -565,9 +572,15 @@ fun ZXGameSpaceHub(
             }
     ) {
         // Dynamic full-bleed atmospheric backdrop driven by the selected ribbon entry.
-        ZXGameSpaceStageBackdrop(
-            entry = if (category == TopCategory.Games) activeEntry else RibbonEntry.Welcome
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .hazeSource(hazeState)
+        ) {
+            ZXGameSpaceStageBackdrop(
+                entry = if (category == TopCategory.Games) activeEntry else RibbonEntry.Welcome
+            )
+        }
 
         val isScrolled = homeExpanded || (category == TopCategory.Games && activeEntry == RibbonEntry.Welcome && welcomeScroll.value > 15)
         val topBarScrimAlpha by animateFloatAsState(
@@ -637,7 +650,11 @@ fun ZXGameSpaceHub(
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 // Games Stage
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .hazeSource(hazeState)
+                ) {
                     AnimatedVisibility(
                         visible = !searchOpen && !homeExpanded && !libraryExpanded,
                         enter = fadeIn(effectsSpec) + expandVertically(spatialSpec),
@@ -725,7 +742,7 @@ fun ZXGameSpaceHub(
                                     },
                                     onSelectGame = { game ->
                                         val idx = ribbonEntries.indexOfFirst {
-                                            it is RibbonEntry.Game && it.app.packageName == game.packageName
+                                             it is RibbonEntry.Game && it.app.packageName == game.packageName
                                         }
                                         if (idx >= 0) selectedRibbonIndex = idx else onLaunch(game)
                                     },
@@ -775,6 +792,7 @@ fun ZXGameSpaceHub(
                 // Settings Stage - Expressive Bouncy slide in from right overlay
                 ZXGameSpaceSettingsOverlay(
                     visible = category == TopCategory.Settings,
+                    hazeState = hazeState,
                     modifier = Modifier.fillMaxSize()
                 ) {
                     ZXGameSpaceSettingsStage(
@@ -809,7 +827,7 @@ fun ZXGameSpaceHub(
             }
         }
 
-        // Floating Quick Settings Panel (overlay on left side, does not distort background)
+        // Floating Quick Settings Panel (overlay on right side, does not distort background)
         ZXGameSpaceQuickSettingsOverlay(
             visible = quickSettingsOpen,
             onClose = { quickSettingsOpen = false }
@@ -836,7 +854,7 @@ fun ZXGameSpaceHub(
 }
 
 /**
- * Expressive floating Quick Settings panel overlaying the screen on the left side.
+ * Expressive floating Quick Settings panel overlaying the screen on the right side.
  * Allows instant monitoring of Network, Bluetooth, Controller/Remote connection states,
  * and quick adjustments for media volume and display brightness without leaving or distorting Game Space.
  */
@@ -927,7 +945,7 @@ private fun ZXGameSpaceQuickSettingsOverlay(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.32f))
+                .background(scheme.scrim.copy(alpha = 0.35f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -936,18 +954,18 @@ private fun ZXGameSpaceQuickSettingsOverlay(
         )
     }
 
-    // Floating panel sliding in with spring bouncy animation
+    // Floating panel sliding in from right side with spring bouncy animation
     AnimatedVisibility(
         visible = visible,
         enter = slideInHorizontally(
-            initialOffsetX = { fullWidth -> -fullWidth },
+            initialOffsetX = { fullWidth -> fullWidth },
             animationSpec = spring(
                 dampingRatio = Spring.DampingRatioLowBouncy,
                 stiffness = Spring.StiffnessMediumLow
             )
         ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
         exit = slideOutHorizontally(
-            targetOffsetX = { fullWidth -> -fullWidth },
+            targetOffsetX = { fullWidth -> fullWidth },
             animationSpec = spring(
                 dampingRatio = Spring.DampingRatioNoBouncy,
                 stiffness = Spring.StiffnessMedium
@@ -957,9 +975,9 @@ private fun ZXGameSpaceQuickSettingsOverlay(
     ) {
         Box(
             modifier = Modifier
-                .fillMaxHeight()
-                .padding(start = 24.dp, top = 16.dp, bottom = 16.dp),
-            contentAlignment = Alignment.CenterStart
+                .fillMaxSize()
+                .padding(end = 24.dp, top = 16.dp, bottom = 16.dp),
+            contentAlignment = Alignment.CenterEnd
         ) {
             Surface(
                 shape = RoundedCornerShape(28.dp),
@@ -1061,8 +1079,8 @@ private fun ZXGameSpaceQuickSettingsOverlay(
                                 isCellular -> Icons.Rounded.SignalCellularAlt
                                 else -> Icons.Rounded.WifiOff
                             },
-                            iconTint = if (isNetConnected) scheme.primary else scheme.onSurfaceVariant.copy(alpha = 0.6f),
-                            iconContainerColor = if (isNetConnected) scheme.primaryContainer.copy(alpha = 0.7f) else scheme.surfaceContainerHighest,
+                            iconTint = if (isNetConnected) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
+                            iconContainerColor = if (isNetConnected) scheme.primaryContainer else scheme.surfaceContainerLow,
                             title = stringResource(R.string.quick_settings_network),
                             subtitle = when {
                                 isWifi -> stringResource(R.string.quick_settings_wifi_connected)
@@ -1071,29 +1089,32 @@ private fun ZXGameSpaceQuickSettingsOverlay(
                                 else -> stringResource(R.string.quick_settings_offline)
                             },
                             badge = if (isNetConnected) "ONLINE" else "OFFLINE",
-                            badgeColor = if (isNetConnected) scheme.primary else scheme.outline
+                            badgeContainerColor = if (isNetConnected) scheme.primaryContainer else scheme.surfaceContainerLow,
+                            badgeContentColor = if (isNetConnected) scheme.onPrimaryContainer else scheme.onSurfaceVariant
                         )
 
                         // 2. Bluetooth Card
                         QuickSettingTile(
                             icon = if (isBtConnected) Icons.Rounded.BluetoothConnected else if (isBtEnabled) Icons.Rounded.Bluetooth else Icons.Rounded.BluetoothDisabled,
-                            iconTint = if (isBtConnected) scheme.secondary else if (isBtEnabled) scheme.onSurface else scheme.onSurfaceVariant.copy(alpha = 0.6f),
-                            iconContainerColor = if (isBtConnected) scheme.secondaryContainer.copy(alpha = 0.7f) else scheme.surfaceContainerHighest,
+                            iconTint = if (isBtConnected) scheme.onSecondaryContainer else if (isBtEnabled) scheme.onSurface else scheme.onSurfaceVariant,
+                            iconContainerColor = if (isBtConnected) scheme.secondaryContainer else scheme.surfaceContainerLow,
                             title = stringResource(R.string.quick_settings_bluetooth),
                             subtitle = if (isBtConnected) stringResource(R.string.quick_settings_bt_connected) else if (isBtEnabled) stringResource(R.string.quick_settings_bt_ready) else stringResource(R.string.quick_settings_disabled),
                             badge = if (isBtConnected) "CONNECTED" else if (isBtEnabled) "ON" else "OFF",
-                            badgeColor = if (isBtConnected) scheme.secondary else scheme.outline
+                            badgeContainerColor = if (isBtConnected) scheme.secondaryContainer else scheme.surfaceContainerLow,
+                            badgeContentColor = if (isBtConnected) scheme.onSecondaryContainer else scheme.onSurfaceVariant
                         )
 
                         // 3. Controller / TV Remote Card
                         QuickSettingTile(
                             icon = if (hasGamepad) Icons.Rounded.SportsEsports else if (hasTvRemote) Icons.Rounded.Tv else Icons.Rounded.Smartphone,
-                            iconTint = if (hasGamepad || hasTvRemote) scheme.tertiary else scheme.onSurfaceVariant,
-                            iconContainerColor = if (hasGamepad || hasTvRemote) scheme.tertiaryContainer.copy(alpha = 0.7f) else scheme.surfaceContainerHighest,
+                            iconTint = if (hasGamepad || hasTvRemote) scheme.onTertiaryContainer else scheme.onSurfaceVariant,
+                            iconContainerColor = if (hasGamepad || hasTvRemote) scheme.tertiaryContainer else scheme.surfaceContainerLow,
                             title = if (hasGamepad) stringResource(R.string.quick_settings_gamepad) else if (hasTvRemote) stringResource(R.string.quick_settings_tv_remote) else stringResource(R.string.quick_settings_input_device),
                             subtitle = controllerName ?: if (hasGamepad) stringResource(R.string.quick_settings_gamepad_ready) else if (hasTvRemote) stringResource(R.string.quick_settings_tv_remote_ready) else stringResource(R.string.quick_settings_touch_internal),
                             badge = if (hasGamepad || hasTvRemote) "ACTIVE" else "STANDBY",
-                            badgeColor = if (hasGamepad || hasTvRemote) scheme.tertiary else scheme.outline
+                            badgeContainerColor = if (hasGamepad || hasTvRemote) scheme.tertiaryContainer else scheme.surfaceContainerLow,
+                            badgeContentColor = if (hasGamepad || hasTvRemote) scheme.onTertiaryContainer else scheme.onSurfaceVariant
                         )
 
                         Spacer(Modifier.height(4.dp))
@@ -1110,8 +1131,9 @@ private fun ZXGameSpaceQuickSettingsOverlay(
 
                         // Media Volume Card
                         Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = scheme.surfaceContainerHighest.copy(alpha = 0.65f),
+                            shape = RoundedCornerShape(16.dp),
+                            color = scheme.surfaceContainerHighest,
+                            border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.35f)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(
@@ -1158,7 +1180,7 @@ private fun ZXGameSpaceQuickSettingsOverlay(
                                     colors = SliderDefaults.colors(
                                         thumbColor = scheme.primary,
                                         activeTrackColor = scheme.primary,
-                                        inactiveTrackColor = scheme.surfaceContainerHighest
+                                        inactiveTrackColor = scheme.surfaceContainerHigh
                                     ),
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -1169,8 +1191,9 @@ private fun ZXGameSpaceQuickSettingsOverlay(
 
                         // Display Brightness Card
                         Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = scheme.surfaceContainerHighest.copy(alpha = 0.65f),
+                            shape = RoundedCornerShape(16.dp),
+                            color = scheme.surfaceContainerHighest,
+                            border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.35f)),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(
@@ -1220,7 +1243,7 @@ private fun ZXGameSpaceQuickSettingsOverlay(
                                     colors = SliderDefaults.colors(
                                         thumbColor = scheme.tertiary,
                                         activeTrackColor = scheme.tertiary,
-                                        inactiveTrackColor = scheme.surfaceContainerHighest
+                                        inactiveTrackColor = scheme.surfaceContainerHigh
                                     ),
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -1243,13 +1266,14 @@ private fun QuickSettingTile(
     title: String,
     subtitle: String,
     badge: String,
-    badgeColor: Color
+    badgeContainerColor: Color,
+    badgeContentColor: Color
 ) {
     val scheme = MaterialTheme.colorScheme
     Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = scheme.surfaceContainerHighest.copy(alpha = 0.5f),
-        border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.2f)),
+        shape = RoundedCornerShape(16.dp),
+        color = scheme.surfaceContainerHighest,
+        border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.35f)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -1260,7 +1284,7 @@ private fun QuickSettingTile(
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Surface(
-                shape = CircleShape,
+                shape = RoundedCornerShape(12.dp),
                 color = iconContainerColor,
                 modifier = Modifier.size(40.dp)
             ) {
@@ -1291,7 +1315,7 @@ private fun QuickSettingTile(
 
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = badgeColor.copy(alpha = 0.15f),
+                color = badgeContainerColor,
                 modifier = Modifier.padding(start = 4.dp)
             ) {
                 Text(
@@ -1300,8 +1324,8 @@ private fun QuickSettingTile(
                         fontWeight = FontWeight.Bold,
                         fontSize = 10.sp
                     ),
-                    color = badgeColor,
-                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                    color = badgeContentColor,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
         }
@@ -1311,10 +1335,12 @@ private fun QuickSettingTile(
 @Composable
 private fun ZXGameSpaceSettingsOverlay(
     visible: Boolean,
+    hazeState: HazeState,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
     val motion = MaterialTheme.motionScheme
+    val scheme = MaterialTheme.colorScheme
     AnimatedVisibility(
         visible = visible,
         enter = slideInHorizontally(
@@ -1333,7 +1359,20 @@ private fun ZXGameSpaceSettingsOverlay(
         ) + fadeOut(animationSpec = motion.defaultEffectsSpec()),
         modifier = modifier
     ) {
-        content()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .hazeBlur(
+                    input = HazeInput.Sources(hazeState),
+                    style = HazeBlurStyle.Material3(
+                        containerColor = scheme.surfaceContainerLowest.copy(alpha = 0.55f)
+                    ) {
+                        blurRadius(28.dp)
+                    }
+                )
+        ) {
+            content()
+        }
     }
 }
 
