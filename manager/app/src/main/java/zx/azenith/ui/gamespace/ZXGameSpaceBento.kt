@@ -365,7 +365,7 @@ private fun BentoMorphLayout(
     val gapPx = with(density) { BENTO_GAP.roundToPx() }
     val compactHPx = with(density) { 72.dp.roundToPx() }
     val heroH1Px = with(density) { 184.dp.roundToPx() }
-    val row2H1Px = with(density) { 136.dp.roundToPx() }
+    val row2H1Px = with(density) { 176.dp.roundToPx() }
     val row3H1Px = with(density) { 88.dp.roundToPx() }
 
     Layout(
@@ -1016,8 +1016,8 @@ private fun DeviceTile(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(18.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -1026,7 +1026,7 @@ private fun DeviceTile(
                 MorphBadge(
                     shape = BentoShapes.Pentagon,
                     color = scheme.primary,
-                    size = 56.dp,
+                    size = 52.dp,
                     pressedShape = BentoShapes.Gem,
                     engaged = engaged,
                     spin = -40f
@@ -1056,52 +1056,52 @@ private fun DeviceTile(
                 }
                 NudgeChevron(engaged = engaged, tint = scheme.onSurfaceVariant)
             }
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SpecChip(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Rounded.Speed,
-                    description = stringResource(R.string.refreshrates),
-                    value = stringResource(R.string.refresh_rate_format, refreshHz.toString()),
-                    shape = BentoShapes.Sunny,
-                    engaged = engaged,
-                    spin = 90f
-                )
-                SpecChip(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Rounded.Android,
-                    description = stringResource(R.string.android_version),
-                    value = "Android ${Build.VERSION.RELEASE}",
-                    shape = BentoShapes.Cookie4,
-                    engaged = engaged,
-                    spin = -60f
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SpecChip(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Rounded.Memory,
-                    description = stringResource(R.string.gamespace_spec_arch),
-                    value = Build.SUPPORTED_ABIS.firstOrNull().orEmpty(),
-                    shape = BentoShapes.Arch,
-                    engaged = engaged,
-                    spin = 45f
-                )
-                SpecChip(
-                    modifier = Modifier.weight(1f),
-                    icon = Icons.Rounded.Security,
-                    description = stringResource(R.string.gamespace_spec_patch),
-                    value = Build.VERSION.SECURITY_PATCH,
-                    shape = BentoShapes.Cookie6,
-                    engaged = engaged,
-                    spin = -90f
-                )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SpecChip(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Rounded.Speed,
+                        description = stringResource(R.string.refreshrates),
+                        value = stringResource(R.string.refresh_rate_format, refreshHz.toString()),
+                        shape = BentoShapes.Sunny,
+                        engaged = engaged,
+                        spin = 90f
+                    )
+                    SpecChip(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Rounded.Android,
+                        description = stringResource(R.string.android_version),
+                        value = "Android ${Build.VERSION.RELEASE}",
+                        shape = BentoShapes.Cookie4,
+                        engaged = engaged,
+                        spin = -60f
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SpecChip(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Rounded.Memory,
+                        description = stringResource(R.string.gamespace_spec_arch),
+                        value = Build.SUPPORTED_ABIS.firstOrNull().orEmpty(),
+                        shape = BentoShapes.Arch,
+                        engaged = engaged,
+                        spin = 45f
+                    )
+                    SpecChip(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Rounded.Security,
+                        description = stringResource(R.string.gamespace_spec_patch),
+                        value = Build.VERSION.SECURITY_PATCH,
+                        shape = BentoShapes.Cookie6,
+                        engaged = engaged,
+                        spin = -90f
+                    )
+                }
             }
         }
     }
 }
 
-/** Icon-plus-value pill; the icon carries the meaning so no label word is needed. */
 @Composable
 private fun SpecChip(
     icon: ImageVector,
@@ -1115,16 +1115,17 @@ private fun SpecChip(
     val scheme = MaterialTheme.colorScheme
     Row(
         modifier = modifier
+            .heightIn(min = 38.dp)
             .clip(CircleShape)
             .background(scheme.surfaceContainerHighest)
-            .padding(start = 6.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
+            .padding(start = 6.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         MorphBadge(
             shape = shape,
             color = scheme.secondaryContainer,
-            size = 32.dp,
+            size = 30.dp,
             engaged = engaged,
             spin = spin
         ) {
