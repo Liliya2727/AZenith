@@ -882,10 +882,10 @@ internal fun SettingsAppearancePane() {
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             val sideOptions = listOf(
-                                Triple("left", "Left Side", "Pull out from left edge"),
-                                Triple("right", "Right Side", "Pull out from right edge")
+                                "left" to "Left Side",
+                                "right" to "Right Side"
                             )
-                            sideOptions.forEach { (sideKey, title, subtitle) ->
+                            sideOptions.forEach { (sideKey, title) ->
                                 val selected = sidePanelSide == sideKey
                                 val cornerPercent by animateIntAsState(
                                     targetValue = if (selected) 28 else 18,
@@ -963,24 +963,11 @@ internal fun SettingsAppearancePane() {
                                             }
                                         }
 
-                                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                            Text(
-                                                text = title,
-                                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                                maxLines = 1
-                                            )
-                                            Text(
-                                                text = subtitle,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = if (selected) {
-                                                    scheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                                } else {
-                                                    scheme.onSurfaceVariant
-                                                },
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
+                                        Text(
+                                            text = title,
+                                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                            maxLines = 1
+                                        )
                                     }
                                 }
                             }
@@ -1007,11 +994,7 @@ internal fun SettingsAppearancePane() {
                                 color = scheme.onSurface
                             )
                             Text(
-                                text = when {
-                                    sliderSensitivity <= 45 -> "Less Sensitive · ${sliderSensitivity}%"
-                                    sliderSensitivity >= 80 -> "More Sensitive · ${sliderSensitivity}%"
-                                    else -> "Balanced · ${sliderSensitivity}%"
-                                },
+                                text = "${sliderSensitivity}%",
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                 color = scheme.primary
                             )
@@ -1158,31 +1141,6 @@ internal fun SettingsAppearancePane() {
                             )
                         }
                     }
-
-                    Surface(
-                        shape = CircleShape,
-                        color = if (customWallpaperUri != null) scheme.primaryContainer else scheme.surfaceContainerHighest
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            if (customWallpaperUri != null) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Check,
-                                    contentDescription = null,
-                                    tint = scheme.onPrimaryContainer,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                            Text(
-                                text = if (customWallpaperUri != null) "Custom Wallpaper" else "Default Wallpaper",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                color = if (customWallpaperUri != null) scheme.onPrimaryContainer else scheme.onSurfaceVariant
-                            )
-                        }
-                    }
                 }
 
                 Row(
@@ -1225,7 +1183,7 @@ internal fun SettingsAppearancePane() {
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
                                 Text(
-                                    text = if (customWallpaperUri != null) "Custom Stage Wallpaper" else "Default Theme Wallpaper",
+                                    text = if (customWallpaperUri != null) "Custom Wallpaper" else "Default Wallpaper",
                                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                                     color = Color.White,
                                     maxLines = 1,
