@@ -436,6 +436,7 @@ if [ "$APP_INSTALLED" = "true" ]; then
     pm grant zx.azenith android.permission.READ_EXTERNAL_STORAGE
     pm grant zx.azenith android.permission.POST_NOTIFICATIONS
     pm grant zx.azenith android.permission.READ_MEDIA_IMAGES
+    appops set zx.azenith SYSTEM_ALERT_WINDOW allow > /dev/null 2>&1
 fi
 
 # Remove old module files if available
