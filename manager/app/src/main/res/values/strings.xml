@@ -178,6 +178,8 @@
     <string name="gamespace_show_less">Show less</string>
     <string name="gamespace_welcome">Home</string>
     <string name="gamespace_settings_general">General</string>
+    <string name="gamespace_back_to_start">Back to Start</string>
+    <string name="gamespace_back_to_start_desc">Jump back to the first home page</string>
     <string name="quick_settings_title">Quick Controls</string>
     <string name="quick_settings_network">Network</string>
     <string name="quick_settings_bluetooth">Bluetooth</string>

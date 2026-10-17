@@ -231,6 +231,8 @@ internal fun ZXGameSpaceTileRibbon(
     val visualIndex = carouselPos.value.roundToInt().coerceIn(0, entries.lastIndex.coerceAtLeast(0))
     val activeEntry = entries.getOrElse(visualIndex) { RibbonEntry.Welcome }
 
+    val libraryIndex = entries.indexOf(RibbonEntry.Library)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -242,8 +244,14 @@ internal fun ZXGameSpaceTileRibbon(
                     },
                     onDragEnd = {
                         isDragging = false
-                        val maxIdx = entries.lastIndex.coerceAtLeast(0)
-                        val target = carouselPos.value.roundToInt().coerceIn(0, maxIdx)
+                        val effectiveMaxIdx = if (currentSelectedIndex >= libraryIndex && libraryIndex >= 0) {
+                            entries.lastIndex.coerceAtLeast(0)
+                        } else if (libraryIndex >= 0) {
+                            libraryIndex
+                        } else {
+                            entries.lastIndex.coerceAtLeast(0)
+                        }
+                        val target = carouselPos.value.roundToInt().coerceIn(0, effectiveMaxIdx)
                         if (target != currentSelectedIndex) {
                             currentOnSelect(target)
                         }
@@ -262,13 +270,19 @@ internal fun ZXGameSpaceTileRibbon(
                     },
                     onHorizontalDrag = { change, dragAmount ->
                         change.consume()
-                        val maxIdx = entries.lastIndex.coerceAtLeast(0)
+                        val effectiveMaxIdx = if (currentSelectedIndex >= libraryIndex && libraryIndex >= 0) {
+                            entries.lastIndex.coerceAtLeast(0)
+                        } else if (libraryIndex >= 0) {
+                            libraryIndex
+                        } else {
+                            entries.lastIndex.coerceAtLeast(0)
+                        }
                         val nextPos = (carouselPos.value - (dragAmount / itemPitchPx))
-                            .coerceIn(0f, maxIdx.toFloat())
+                            .coerceIn(0f, effectiveMaxIdx.toFloat())
                         scope.launch {
                             carouselPos.snapTo(nextPos)
                         }
-                        val nearest = nextPos.roundToInt().coerceIn(0, maxIdx)
+                        val nearest = nextPos.roundToInt().coerceIn(0, effectiveMaxIdx)
                         if (nearest != currentSelectedIndex) {
                             currentOnSelect(nearest)
                         }
@@ -288,23 +302,46 @@ internal fun ZXGameSpaceTileRibbon(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.Top
         ) {
+            val showWrapTile = selectedIndex >= libraryIndex && libraryIndex >= 0
             entries.forEachIndexed { index, item ->
                 val dist = (carouselPos.value - index).absoluteValue
                 val selectionFraction = (1f - dist).coerceIn(0f, 1f)
                 val isSelected = index == selectedIndex
-                ZXGameSpaceRibbonTile(
-                    entry = item,
-                    selectionFraction = selectionFraction,
-                    selected = isSelected,
-                    onFocus = { onSelect(index) },
-                    onClick = {
-                        if (isSelected) {
-                            onActivate(item)
-                        } else {
-                            onSelect(index)
-                        }
+                if (item is RibbonEntry.WrapToFirst) {
+                    AnimatedVisibility(
+                        visible = showWrapTile,
+                        enter = fadeIn(motion.defaultEffectsSpec()) + expandHorizontally(motion.defaultSpatialSpec()),
+                        exit = fadeOut(motion.defaultEffectsSpec()) + shrinkHorizontally(motion.defaultSpatialSpec())
+                    ) {
+                        ZXGameSpaceRibbonTile(
+                            entry = item,
+                            selectionFraction = selectionFraction,
+                            selected = isSelected,
+                            onFocus = { onSelect(index) },
+                            onClick = {
+                                if (isSelected) {
+                                    onActivate(item)
+                                } else {
+                                    onSelect(index)
+                                }
+                            }
+                        )
                     }
-                )
+                } else {
+                    ZXGameSpaceRibbonTile(
+                        entry = item,
+                        selectionFraction = selectionFraction,
+                        selected = isSelected,
+                        onFocus = { onSelect(index) },
+                        onClick = {
+                            if (isSelected) {
+                                onActivate(item)
+                            } else {
+                                onSelect(index)
+                            }
+                        }
+                    )
+                }
             }
         }
 
@@ -349,7 +386,7 @@ internal fun ZXGameSpaceTileRibbon(
 
                 RibbonEntry.WrapToFirst -> {
                     Text(
-                        text = "Back to Start",
+                        text = stringResource(R.string.gamespace_back_to_start),
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Normal
                         ),
@@ -528,7 +565,7 @@ internal fun WrapToFirstTileContent(selectedFraction: Float = 0f) {
         val iconSize = lerp(26.dp, 38.dp, selectedFraction)
         Icon(
             imageVector = Icons.Rounded.ChevronRight,
-            contentDescription = "Back to Start",
+            contentDescription = stringResource(R.string.gamespace_back_to_start),
             tint = if (selectedFraction > 0.5f) scheme.primary else scheme.onSurface,
             modifier = Modifier.size(iconSize)
         )
@@ -592,7 +629,7 @@ internal fun WrapToFirstStage(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "Back to Start",
+                            text = stringResource(R.string.gamespace_back_to_start),
                             style = MaterialTheme.typography.headlineLarge.copy(
                                 fontWeight = FontWeight.ExtraBold,
                                 letterSpacing = 0.5.sp
@@ -602,7 +639,7 @@ internal fun WrapToFirstStage(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = "Jump back to the first home page",
+                            text = stringResource(R.string.gamespace_back_to_start_desc),
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.Medium
                             ),
@@ -642,7 +679,7 @@ internal fun WrapToFirstStage(
                         modifier = Modifier.size(28.dp)
                     )
                     Text(
-                        text = "Back to Start",
+                        text = stringResource(R.string.gamespace_back_to_start),
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Black,
                             letterSpacing = 0.5.sp
