@@ -754,18 +754,27 @@ internal fun WelcomeHubStage(
                 val fromDrag = source == NestedScrollSource.UserInput
                 if (stageHold && fromDrag && available.y < 0f) return available
                 if (!expandedNow.value && available.y < 0f) {
-                    val projected = scroll.value + available.y
+                    val projected = scroll.value - available.y
                     if (projected >= HOME_EXPAND_AT) {
                         if (fromDrag) stageHold = true
                         notifyExpanded.value(true)
                         scope.launch { runCatching { scroll.animateScrollTo(0) } }
-                        return Offset(0f, projected - HOME_EXPAND_AT)
+                        return Offset(0f, available.y)
                     }
                 }
                 if (expandedNow.value && fromDrag && available.y > 0f && scroll.value <= 0) {
                     stageHold = false
                     notifyExpanded.value(false)
                     return Offset(0f, available.y)
+                }
+                return Offset.Zero
+            }
+
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                if (!expandedNow.value && scroll.value >= HOME_EXPAND_AT) {
+                    stageHold = true
+                    notifyExpanded.value(true)
+                    scope.launch { runCatching { scroll.animateScrollTo(0) } }
                 }
                 return Offset.Zero
             }
@@ -882,7 +891,23 @@ internal fun WelcomeHubStage(
                 )
             }
 
+            val ramp = (scroll.value / HOME_EXPAND_AT.toFloat()).coerceIn(0f, 1f)
+            val targetProgress = if (expanded) 1f else ramp
+            val expandProgress by animateFloatAsState(
+                targetValue = targetProgress,
+                animationSpec = spring(
+                    dampingRatio = 0.82f,
+                    stiffness = Spring.StiffnessMediumLow
+                ),
+                label = "BentoMorphProgress"
+            )
+
             HubBentoGrid(
+                expandProgress = expandProgress,
+                onExpandRequest = {
+                    stageHold = true
+                    notifyExpanded.value(true)
+                },
                 moduleInstalled = moduleInstalled,
                 moduleValue = moduleValue,
                 servicePid = service.second.takeIf { moduleInstalled == true && it.isNotBlank() },
@@ -906,7 +931,9 @@ internal fun WelcomeHubStage(
                 onLearnMore = { uriHandler.openUri("https://github.com/Liliya2727/AZenith") }
             )
 
-            Spacer(Modifier.height(16.dp))
+            // Runway for upward drag so scroll triggers expansion.
+            val runwayHeight = lerp(140.dp, 16.dp, expandProgress)
+            Spacer(Modifier.height(runwayHeight))
         }
     }
 

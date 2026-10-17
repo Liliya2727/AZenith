@@ -26,13 +26,20 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -107,6 +114,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
+import androidx.compose.ui.unit.sp
 import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.RoundedPolygon
 import kotlinx.coroutines.delay
@@ -342,12 +350,127 @@ private fun RollingCount(count: Int, color: Color, modifier: Modifier = Modifier
     )
 }
 
-/**
- * The Welcome stage's bento wall. Zig-zag widths (wide-left, wide-right, even) keep the rows from
- * reading as a uniform table.
- */
+private fun lerpInt(a: Int, b: Int, t: Float): Int = (a + (b - a) * t).roundToInt()
+
+// Morphs the three primary widgets between compact 1-line top row and full bento deck.
+@Composable
+private fun BentoMorphLayout(
+    progress: Float,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    val density = LocalDensity.current
+    val gapPx = with(density) { BENTO_GAP.roundToPx() }
+    val compactHPx = with(density) { 72.dp.roundToPx() }
+    val heroH1Px = with(density) { 184.dp.roundToPx() }
+    val row2H1Px = with(density) { 136.dp.roundToPx() }
+    val row3H1Px = with(density) { 88.dp.roundToPx() }
+
+    Layout(
+        content = content,
+        modifier = modifier
+    ) { measurables, constraints ->
+        val totalWidth = constraints.maxWidth
+        val p = progress.coerceIn(0f, 1f)
+
+        val compactItemW = (totalWidth - 2 * gapPx) / 3
+
+        val heroW1 = ((totalWidth - gapPx) * 1.22f / 2.22f).roundToInt()
+        val rightColW1 = totalWidth - gapPx - heroW1
+        val statusH1 = (heroH1Px - gapPx) / 2
+
+        val row2Y1 = heroH1Px + gapPx
+        val libW1 = ((totalWidth - gapPx) * 1f / 2.25f).roundToInt()
+        val devW1 = totalWidth - gapPx - libW1
+
+        val row3Y1 = row2Y1 + row2H1Px + gapPx
+        val halfW1 = (totalWidth - gapPx) / 2
+        val otherHalfW1 = totalWidth - gapPx - halfW1
+
+        val totalDeckH1 = row3Y1 + row3H1Px
+
+        val profileW = lerpInt(compactItemW, heroW1, p)
+        val profileH = lerpInt(compactHPx, heroH1Px, p)
+
+        val moduleW = lerpInt(compactItemW, rightColW1, p)
+        val moduleH = lerpInt(compactHPx, statusH1, p)
+        val moduleX = lerpInt(compactItemW + gapPx, heroW1 + gapPx, p)
+
+        val rootW = lerpInt(compactItemW, rightColW1, p)
+        val rootH = lerpInt(compactHPx, statusH1, p)
+        val rootX = lerpInt(2 * (compactItemW + gapPx), heroW1 + gapPx, p)
+        val rootY = lerpInt(0, statusH1 + gapPx, p)
+
+        val totalHeight = lerpInt(compactHPx, totalDeckH1, p)
+
+        val profilePlaceable = measurables.getOrNull(0)?.measure(
+            Constraints.fixed(profileW.coerceAtLeast(0), profileH.coerceAtLeast(0))
+        )
+        val modulePlaceable = measurables.getOrNull(1)?.measure(
+            Constraints.fixed(moduleW.coerceAtLeast(0), moduleH.coerceAtLeast(0))
+        )
+        val rootPlaceable = measurables.getOrNull(2)?.measure(
+            Constraints.fixed(rootW.coerceAtLeast(0), rootH.coerceAtLeast(0))
+        )
+
+        val libPlaceable = if (p > 0.001f && measurables.size > 3) {
+            measurables[3].measure(Constraints.fixed(libW1.coerceAtLeast(0), row2H1Px.coerceAtLeast(0)))
+        } else null
+        val devPlaceable = if (p > 0.001f && measurables.size > 4) {
+            measurables[4].measure(Constraints.fixed(devW1.coerceAtLeast(0), row2H1Px.coerceAtLeast(0)))
+        } else null
+        val suppPlaceable = if (p > 0.001f && measurables.size > 5) {
+            measurables[5].measure(Constraints.fixed(halfW1.coerceAtLeast(0), row3H1Px.coerceAtLeast(0)))
+        } else null
+        val docPlaceable = if (p > 0.001f && measurables.size > 6) {
+            measurables[6].measure(Constraints.fixed(otherHalfW1.coerceAtLeast(0), row3H1Px.coerceAtLeast(0)))
+        } else null
+
+        layout(totalWidth, totalHeight) {
+            profilePlaceable?.placeRelative(0, 0)
+            modulePlaceable?.placeRelative(moduleX, 0)
+            rootPlaceable?.placeRelative(rootX, rootY)
+
+            if (p > 0.001f) {
+                val row2Alpha = ((p - 0.15f) / 0.85f).coerceIn(0f, 1f)
+                val row2Scale = 0.90f + 0.10f * p
+                val row2Y = lerpInt(compactHPx, row2Y1, p)
+
+                libPlaceable?.placeRelativeWithLayer(0, row2Y) {
+                    alpha = row2Alpha
+                    scaleX = row2Scale
+                    scaleY = row2Scale
+                }
+                devPlaceable?.placeRelativeWithLayer(libW1 + gapPx, row2Y) {
+                    alpha = row2Alpha
+                    scaleX = row2Scale
+                    scaleY = row2Scale
+                }
+
+                val row3Alpha = ((p - 0.32f) / 0.68f).coerceIn(0f, 1f)
+                val row3Scale = 0.90f + 0.10f * p
+                val row3Y = lerpInt(compactHPx, row3Y1, p)
+
+                suppPlaceable?.placeRelativeWithLayer(0, row3Y) {
+                    alpha = row3Alpha
+                    scaleX = row3Scale
+                    scaleY = row3Scale
+                }
+                docPlaceable?.placeRelativeWithLayer(halfW1 + gapPx, row3Y) {
+                    alpha = row3Alpha
+                    scaleX = row3Scale
+                    scaleY = row3Scale
+                }
+            }
+        }
+    }
+}
+
+// Bento wall morphing and transforming between a compact 72dp top row and the full deck.
 @Composable
 internal fun HubBentoGrid(
+    expandProgress: Float,
+    onExpandRequest: () -> Unit,
     moduleInstalled: Boolean?,
     moduleValue: String,
     servicePid: String?,
@@ -370,129 +493,109 @@ internal fun HubBentoGrid(
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(BENTO_GAP)
+
+    BentoMorphLayout(
+        progress = expandProgress,
+        modifier = modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(184.dp),
-            horizontalArrangement = Arrangement.spacedBy(BENTO_GAP)
-        ) {
-            ProfileHeroTile(
-                modifier = Modifier.weight(1.25f).fillMaxHeight(),
-                profile = profile,
-                profileValue = profileValue,
-                isManualMode = isManualMode,
-                isApplying = isProfileApplying,
-                onClick = onProfileClick
-            )
-            Column(
-                modifier = Modifier.weight(1f).fillMaxHeight(),
-                verticalArrangement = Arrangement.spacedBy(BENTO_GAP)
-            ) {
-                val moduleMissing = moduleInstalled == false
-                StatusTile(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    order = 1,
-                    icon = Icons.Rounded.Memory,
-                    label = stringResource(R.string.gamespace_info_module),
-                    value = moduleValue,
-                    badge = if (servicePid.isNullOrBlank()) null else stringResource(R.string.pid_format, servicePid),
-                    shape = if (moduleMissing) BentoShapes.Slanted else BentoShapes.Cookie12,
-                    pressedShape = BentoShapes.Cookie6,
-                    container = if (moduleMissing) scheme.errorContainer else scheme.secondaryContainer,
-                    onContainer = if (moduleMissing) scheme.onErrorContainer else scheme.onSecondaryContainer,
-                    badgeColor = if (moduleMissing) scheme.error else scheme.secondary,
-                    onBadge = if (moduleMissing) scheme.onError else scheme.onSecondary,
-                    spin = 60f
-                )
-                val rootDenied = rootGranted == false
-                StatusTile(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    order = 2,
-                    icon = if (rootGranted == true) Icons.Rounded.VerifiedUser else Icons.Rounded.Security,
-                    label = stringResource(R.string.root_access),
-                    value = rootValue,
-                    badge = null,
-                    shape = if (rootDenied) BentoShapes.Slanted else BentoShapes.Clover4,
-                    pressedShape = BentoShapes.Clover8,
-                    container = if (rootDenied) scheme.errorContainer else scheme.surfaceContainerHigh,
-                    onContainer = if (rootDenied) scheme.onErrorContainer else scheme.onSurface,
-                    badgeColor = if (rootDenied) scheme.error else scheme.tertiary,
-                    onBadge = if (rootDenied) scheme.onError else scheme.onTertiary,
-                    spin = -45f
-                )
-            }
-        }
+        MorphedProfileTile(
+            progress = expandProgress,
+            profile = profile,
+            profileValue = profileValue,
+            isManualMode = isManualMode,
+            isApplying = isProfileApplying,
+            onClick = onProfileClick,
+            onExpandClick = onExpandRequest
+        )
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(IntrinsicSize.Max),
-            horizontalArrangement = Arrangement.spacedBy(BENTO_GAP)
-        ) {
-            LibraryTile(
-                modifier = Modifier.weight(1f).fillMaxHeight(),
-                gamesCount = gamesCount,
-                allAppsCount = allAppsCount,
-                onClick = onOpenLibrary
-            )
-            DeviceTile(
-                modifier = Modifier.weight(1.25f).fillMaxHeight(),
-                deviceName = deviceName,
-                chipsetName = chipsetName,
-                refreshHz = refreshHz,
-                onClick = onOpenSettings
-            )
-        }
+        val moduleMissing = moduleInstalled == false
+        MorphedStatusTile(
+            progress = expandProgress,
+            order = 1,
+            icon = Icons.Rounded.Memory,
+            label = stringResource(R.string.gamespace_info_module),
+            value = moduleValue,
+            badge = if (servicePid.isNullOrBlank()) null else stringResource(R.string.pid_format, servicePid),
+            shape = if (moduleMissing) BentoShapes.Slanted else BentoShapes.Cookie12,
+            pressedShape = BentoShapes.Cookie6,
+            container = if (moduleMissing) scheme.errorContainer else scheme.secondaryContainer,
+            onContainer = if (moduleMissing) scheme.onErrorContainer else scheme.onSecondaryContainer,
+            badgeColor = if (moduleMissing) scheme.error else scheme.secondary,
+            onBadge = if (moduleMissing) scheme.onError else scheme.onSecondary,
+            spin = 60f,
+            onExpandClick = onExpandRequest
+        )
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(IntrinsicSize.Max),
-            horizontalArrangement = Arrangement.spacedBy(BENTO_GAP)
-        ) {
-            LinkTile(
-                modifier = Modifier.weight(1f).fillMaxHeight(),
-                order = 5,
-                icon = Icons.Rounded.Favorite,
-                label = stringResource(R.string.support_us),
-                description = stringResource(R.string.support_us_desc),
-                shape = BentoShapes.Heart,
-                pressedShape = BentoShapes.Burst,
-                container = scheme.secondaryContainer,
-                onContainer = scheme.onSecondaryContainer,
-                badgeColor = scheme.secondary,
-                onBadge = scheme.onSecondary,
-                onClick = onSupport
-            )
-            LinkTile(
-                modifier = Modifier.weight(1f).fillMaxHeight(),
-                order = 6,
-                icon = Icons.Rounded.Info,
-                label = stringResource(R.string.learn_more),
-                description = stringResource(R.string.learn_more_desc),
-                shape = BentoShapes.Flower,
-                pressedShape = BentoShapes.VerySunny,
-                container = scheme.surfaceContainerHigh,
-                onContainer = scheme.onSurface,
-                badgeColor = scheme.primary,
-                onBadge = scheme.onPrimary,
-                onClick = onLearnMore
-            )
-        }
+        val rootDenied = rootGranted == false
+        MorphedStatusTile(
+            progress = expandProgress,
+            order = 2,
+            icon = if (rootGranted == true) Icons.Rounded.VerifiedUser else Icons.Rounded.Security,
+            label = stringResource(R.string.root_access),
+            value = rootValue,
+            badge = null,
+            shape = if (rootDenied) BentoShapes.Slanted else BentoShapes.Clover4,
+            pressedShape = BentoShapes.Clover8,
+            container = if (rootDenied) scheme.errorContainer else scheme.surfaceContainerHigh,
+            onContainer = if (rootDenied) scheme.onErrorContainer else scheme.onSurface,
+            badgeColor = if (rootDenied) scheme.error else scheme.tertiary,
+            onBadge = if (rootDenied) scheme.onError else scheme.onTertiary,
+            spin = -45f,
+            onExpandClick = onExpandRequest
+        )
+
+        LibraryTile(
+            gamesCount = gamesCount,
+            allAppsCount = allAppsCount,
+            onClick = onOpenLibrary
+        )
+
+        DeviceTile(
+            deviceName = deviceName,
+            chipsetName = chipsetName,
+            refreshHz = refreshHz,
+            onClick = onOpenSettings
+        )
+
+        LinkTile(
+            order = 5,
+            icon = Icons.Rounded.Favorite,
+            label = stringResource(R.string.support_us),
+            description = stringResource(R.string.support_us_desc),
+            shape = BentoShapes.Heart,
+            pressedShape = BentoShapes.Burst,
+            container = scheme.secondaryContainer,
+            onContainer = scheme.onSecondaryContainer,
+            badgeColor = scheme.secondary,
+            onBadge = scheme.onSecondary,
+            onClick = onSupport
+        )
+
+        LinkTile(
+            order = 6,
+            icon = Icons.Rounded.Info,
+            label = stringResource(R.string.learn_more),
+            description = stringResource(R.string.learn_more_desc),
+            shape = BentoShapes.Flower,
+            pressedShape = BentoShapes.VerySunny,
+            container = scheme.surfaceContainerHigh,
+            onContainer = scheme.onSurface,
+            badgeColor = scheme.primary,
+            onBadge = scheme.onPrimary,
+            onClick = onLearnMore
+        )
     }
 }
 
 @Composable
-private fun ProfileHeroTile(
+private fun MorphedProfileTile(
+    progress: Float,
     profile: String,
     profileValue: String,
     isManualMode: Boolean,
     isApplying: Boolean,
     onClick: (() -> Unit)?,
+    onExpandClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -505,26 +608,41 @@ private fun ProfileHeroTile(
         else -> BentoShapes.Cookie9 to Icons.Rounded.Water
     }
 
+    val p = progress.coerceIn(0f, 1f)
+    val badgeSize = lerp(48.dp, 100.dp, p)
+    val glyphSize = lerp(24.dp, 44.dp, p)
+    val restCorner = lerp(24.dp, 36.dp, p)
+    val engagedCorner = lerp(14.dp, 20.dp, p)
+    val padH = lerp(14.dp, 20.dp, p)
+    val padV = lerp(10.dp, 16.dp, p)
+    val gap = lerp(12.dp, 18.dp, p)
+
+    val effectiveClick = if (p < 0.35f) {
+        if (isManualMode && onClick != null) onClick else onExpandClick
+    } else {
+        onClick
+    }
+
     BentoTile(
         order = 0,
         container = scheme.primaryContainer,
         contentColor = scheme.onPrimaryContainer,
         modifier = modifier,
-        onClick = onClick,
-        restCorner = 36.dp,
-        engagedCorner = 20.dp
+        onClick = effectiveClick,
+        restCorner = restCorner,
+        engagedCorner = engagedCorner
     ) { engaged ->
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(horizontal = padH, vertical = padV),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(18.dp)
+            horizontalArrangement = Arrangement.spacedBy(gap)
         ) {
             MorphBadge(
                 shape = shape,
                 color = scheme.primary,
-                size = 104.dp,
+                size = badgeSize,
                 pressedShape = BentoShapes.Sunny,
                 engaged = engaged,
                 spin = 25f
@@ -535,16 +653,16 @@ private fun ProfileHeroTile(
                         (fadeIn(effects) + scaleIn(spatial, initialScale = 0.4f))
                             .togetherWith(fadeOut(effects) + scaleOut(spatial, targetScale = 0.4f))
                     },
-                    label = "HeroBadgeContent"
+                    label = "MorphedHeroBadgeContent"
                 ) { glyph ->
                     if (glyph == null) {
-                        LoadingIndicator(modifier = Modifier.size(64.dp), color = scheme.onPrimary)
+                        LoadingIndicator(modifier = Modifier.size(glyphSize), color = scheme.onPrimary)
                     } else {
                         Icon(
                             imageVector = glyph,
                             contentDescription = null,
                             tint = scheme.onPrimary,
-                            modifier = Modifier.size(46.dp)
+                            modifier = Modifier.size(glyphSize)
                         )
                     }
                 }
@@ -552,30 +670,55 @@ private fun ProfileHeroTile(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = stringResource(R.string.current_profile),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = scheme.onPrimaryContainer.copy(alpha = 0.78f),
+                    text = stringResource(R.string.current_profile).let { if (p < 0.4f) it.uppercase() else it },
+                    style = if (p < 0.4f) {
+                        MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp)
+                    } else {
+                        MaterialTheme.typography.labelLarge
+                    },
+                    color = scheme.onPrimaryContainer.copy(alpha = if (p < 0.4f) 0.72f else 0.78f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 AnimatedContent(
                     targetState = profile,
                     transitionSpec = {
-                        (slideInVertically(motion.defaultSpatialSpec()) { it } + fadeIn(effects))
-                            .togetherWith(slideOutVertically(motion.defaultSpatialSpec()) { -it } + fadeOut(effects))
+                        (slideInVertically(motion.defaultSpatialSpec()) { it / 2 } + fadeIn(effects))
+                            .togetherWith(slideOutVertically(motion.defaultSpatialSpec()) { -it / 2 } + fadeOut(effects))
                     },
-                    label = "HeroProfileName"
+                    label = "MorphedProfileName"
                 ) { name ->
                     Text(
                         text = name,
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                        style = if (p < 0.4f) {
+                            MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        } else {
+                            MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
+                        },
                         color = scheme.onPrimaryContainer,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Spacer(Modifier.height(10.dp))
-                ModePill(isManualMode = isManualMode, engaged = engaged)
+
+                if (p > 0.15f) {
+                    Spacer(Modifier.height(lerp(0.dp, 10.dp, p)))
+                    Box(
+                        modifier = Modifier.graphicsLayer {
+                            alpha = ((p - 0.25f) / 0.75f).coerceIn(0f, 1f)
+                            translationY = (1f - p) * 14.dp.toPx()
+                        }
+                    ) {
+                        ModePill(isManualMode = isManualMode, engaged = engaged)
+                    }
+                }
+            }
+
+            if (p < 0.35f && isManualMode) {
+                NudgeChevron(
+                    engaged = engaged,
+                    tint = scheme.onPrimaryContainer.copy(alpha = (1f - p * 2.8f).coerceIn(0f, 0.75f))
+                )
             }
         }
     }
@@ -623,7 +766,8 @@ private fun ModePill(isManualMode: Boolean, engaged: () -> Float) {
 }
 
 @Composable
-private fun StatusTile(
+private fun MorphedStatusTile(
+    progress: Float,
     order: Int,
     icon: ImageVector,
     label: String,
@@ -636,29 +780,39 @@ private fun StatusTile(
     badgeColor: Color,
     onBadge: Color,
     spin: Float,
+    onExpandClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val motion = MaterialTheme.motionScheme
     val effects = motion.defaultEffectsSpec<Float>()
+    val p = progress.coerceIn(0f, 1f)
+
+    val badgeSize = lerp(48.dp, 52.dp, p)
+    val restCorner = lerp(24.dp, 28.dp, p)
+    val engagedCorner = lerp(14.dp, 36.dp, p)
+    val padH = lerp(14.dp, 16.dp, p)
+    val padV = 10.dp
+
     BentoTile(
         order = order,
         container = container,
         contentColor = onContainer,
         modifier = modifier,
-        restCorner = 28.dp,
-        engagedCorner = 40.dp
+        onClick = if (p < 0.35f) onExpandClick else null,
+        restCorner = restCorner,
+        engagedCorner = engagedCorner
     ) { engaged ->
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = padH, vertical = padV),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.spacedBy(lerp(12.dp, 14.dp, p))
         ) {
             MorphBadge(
                 shape = shape,
                 color = badgeColor,
-                size = 52.dp,
+                size = badgeSize,
                 pressedShape = pressedShape,
                 engaged = engaged,
                 spin = spin
@@ -667,9 +821,13 @@ private fun StatusTile(
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = onContainer.copy(alpha = 0.78f),
+                    text = label.let { if (p < 0.4f) it.uppercase() else it },
+                    style = if (p < 0.4f) {
+                        MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.6.sp)
+                    } else {
+                        MaterialTheme.typography.labelLarge
+                    },
+                    color = onContainer.copy(alpha = if (p < 0.4f) 0.72f else 0.78f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -679,31 +837,31 @@ private fun StatusTile(
                         (slideInVertically(motion.defaultSpatialSpec()) { it / 2 } + fadeIn(effects))
                             .togetherWith(slideOutVertically(motion.defaultSpatialSpec()) { -it / 2 } + fadeOut(effects))
                     },
-                    label = "StatusValue"
+                    label = "MorphedStatusValue"
                 ) { text ->
                     Text(
                         text = text,
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        style = if (p < 0.4f) {
+                            MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        } else {
+                            MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                        },
                         color = onContainer,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
             }
-            AnimatedVisibility(
-                visible = badge != null,
-                enter = fadeIn(effects) + scaleIn(motion.fastSpatialSpec(), initialScale = 0.6f),
-                exit = fadeOut(effects) + scaleOut(motion.fastSpatialSpec(), targetScale = 0.6f)
-            ) {
+            if (!badge.isNullOrBlank()) {
                 Text(
-                    text = badge.orEmpty(),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    text = badge,
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                     color = onBadge,
                     maxLines = 1,
                     modifier = Modifier
                         .clip(CircleShape)
                         .background(badgeColor)
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
                 )
             }
         }
