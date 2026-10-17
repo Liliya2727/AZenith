@@ -169,6 +169,9 @@
     <string name="gamespace_info_battery">Battery</string>
     <string name="gamespace_info_games">Games Tracked</string>
     <string name="gamespace_info_apps">Apps Installed</string>
+    <string name="gamespace_spec_arch">Architecture</string>
+    <string name="gamespace_spec_patch">Security Patch</string>
+    <string name="gamespace_mode_manual">Manual</string>
     <string name="gamespace_app_settings">App Settings</string>
     <string name="gamespace_library_close">Close library</string>
     <string name="gamespace_search_hint">Type to search apps in Game Space</string>
