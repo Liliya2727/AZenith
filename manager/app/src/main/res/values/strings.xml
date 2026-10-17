@@ -161,7 +161,9 @@
     <string name="gamespace_exit_title">Leave Game Space?</string>
     <string name="gamespace_exit_desc">Close the Game Space shell and go back to AZenith, or close AZenith as well.</string>
     <string name="gamespace_exit_shell">Exit Game Space</string>
+    <string name="gamespace_exit_shell_subtitle">Return to standard app view</string>
     <string name="gamespace_exit_app">Exit AZenith</string>
+    <string name="gamespace_exit_app_subtitle">Close AZenith completely</string>
     <string name="gamespace_info_module">Module Status</string>
     <string name="gamespace_info_pid">Service PID</string>
     <string name="gamespace_info_battery">Battery</string>

@@ -1666,7 +1666,6 @@ private fun ZXGameSpaceAppSettingsOverlay(
  *
  * A dialog is its own window, so it carries [gamepadKeyWatch] — the activity never sees its keys.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ZXGameSpaceExitDialog(
     onDismiss: () -> Unit,
@@ -1674,44 +1673,185 @@ private fun ZXGameSpaceExitDialog(
     onExitApp: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
+    val defaultRequester = remember { FocusRequester() }
 
-    AlertDialog(
+    LaunchedEffect(Unit) {
+        delay(100)
+        runCatching { defaultRequester.requestFocus() }
+    }
+
+    Dialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.gamepadKeyWatch(),
-        icon = { Icon(Icons.Rounded.PowerSettingsNew, contentDescription = null) },
-        title = { Text(stringResource(R.string.gamespace_exit_title)) },
-        text = { Text(stringResource(R.string.gamespace_exit_desc)) },
-        confirmButton = {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = scheme.surfaceContainerHigh,
+            tonalElevation = 8.dp,
+            shadowElevation = 24.dp,
+            border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.35f)),
+            modifier = Modifier
+                .widthIn(min = 460.dp, max = 520.dp)
+                .padding(20.dp)
+                .gamepadKeyWatch()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                TextButton(
-                    onClick = onExitShell,
-                    modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
+                // Header Disc & Title
+                Surface(
+                    shape = CircleShape,
+                    color = scheme.secondaryContainer,
+                    modifier = Modifier.size(48.dp)
                 ) {
-                    Text(stringResource(R.string.gamespace_exit_shell))
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Rounded.PowerSettingsNew,
+                            contentDescription = null,
+                            tint = scheme.onSecondaryContainer,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
+
+                Spacer(Modifier.height(14.dp))
+
+                Text(
+                    text = stringResource(R.string.gamespace_exit_title),
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.onSurface,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                // Action Cards Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Option 1: Return to AZenith
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = scheme.surfaceContainerHighest,
+                        border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.3f)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(130.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .focusRequester(defaultRequester)
+                            .gamepadFocusOutline(shape = RoundedCornerShape(20.dp), register = true)
+                            .clickable(onClick = onExitShell)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.SpaceBetween,
+                            horizontalAlignment = Alignment.Start
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = scheme.primaryContainer,
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                                        contentDescription = null,
+                                        tint = scheme.onPrimaryContainer,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.gamespace_exit_shell),
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.onSurface
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    text = stringResource(R.string.gamespace_exit_shell_subtitle),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = scheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    // Option 2: Quit AZenith Completely
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = scheme.errorContainer.copy(alpha = 0.35f),
+                        border = BorderStroke(1.dp, scheme.error.copy(alpha = 0.3f)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(130.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .gamepadFocusOutline(shape = RoundedCornerShape(20.dp), register = true)
+                            .clickable(onClick = onExitApp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.SpaceBetween,
+                            horizontalAlignment = Alignment.Start
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = scheme.errorContainer,
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.PowerSettingsNew,
+                                        contentDescription = null,
+                                        tint = scheme.onErrorContainer,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.gamespace_exit_app),
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.error
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    text = stringResource(R.string.gamespace_exit_app_subtitle),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = scheme.onErrorContainer.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+                // Cancel Pill Button
                 TextButton(
-                    onClick = onExitApp,
-                    modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(percent = 50),
+                    modifier = Modifier
+                        .gamepadFocusOutline(shape = RoundedCornerShape(percent = 50), register = true)
+                        .padding(horizontal = 16.dp)
                 ) {
                     Text(
-                        text = stringResource(R.string.gamespace_exit_app),
-                        color = scheme.error
+                        text = stringResource(R.string.dialog_cancel),
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                        color = scheme.onSurfaceVariant
                     )
                 }
             }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
-            ) {
-                Text(stringResource(R.string.dialog_cancel))
-            }
         }
-    )
+    }
 }
 
 /**
