@@ -563,6 +563,17 @@ fun ZXGameSpaceHub(
     var searchOpen by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var quickSettingsOpen by remember { mutableStateOf(false) }
+    var pendingLaunchApp by remember { mutableStateOf<ApplistViewmodel.AppInfo?>(null) }
+    var sidePanelPromptOpen by remember { mutableStateOf(false) }
+    val requestAppLaunch: (ApplistViewmodel.AppInfo) -> Unit = { app ->
+        val setupDone = prefs.getBoolean("gamespace_sidepanel_setup_done", false)
+        if (!setupDone) {
+            pendingLaunchApp = app
+            sidePanelPromptOpen = true
+        } else {
+            onLaunch(app)
+        }
+    }
     // The sheet's own offset decides the expansion, so the scroll lives above the stage.
     val welcomeScroll = rememberScrollState()
     var homeExpanded by remember { mutableStateOf(false) }
@@ -751,7 +762,7 @@ fun ZXGameSpaceHub(
                                 onSelect = { selectedRibbonIndex = it },
                                 onActivate = { entry ->
                                     when (entry) {
-                                        is RibbonEntry.Game -> onLaunch(entry.app)
+                                        is RibbonEntry.Game -> requestAppLaunch(entry.app)
                                         RibbonEntry.Welcome -> {
                                             enabledApps.firstOrNull()?.let { selectedRibbonIndex = 1 }
                                         }
@@ -828,15 +839,15 @@ fun ZXGameSpaceHub(
                                         val idx = ribbonEntries.indexOfFirst {
                                              it is RibbonEntry.Game && it.app.packageName == game.packageName
                                         }
-                                        if (idx >= 0) selectedRibbonIndex = idx else onLaunch(game)
+                                        if (idx >= 0) selectedRibbonIndex = idx else requestAppLaunch(game)
                                     },
-                                    onLaunchGame = onLaunch,
+                                    onLaunchGame = requestAppLaunch,
                                     onOpenLibrary = { selectedRibbonIndex = ribbonEntries.lastIndex }
                                 )
 
                                 is RibbonEntry.Game -> GameHeroStage(
                                     app = entry.app,
-                                    onLaunch = { onLaunch(entry.app) },
+                                    onLaunch = { requestAppLaunch(entry.app) },
                                     onOpenAppSettings = { tuningPkg = entry.app.packageName }
                                 )
 
@@ -863,7 +874,7 @@ fun ZXGameSpaceHub(
                     ZXGameSpaceSearchPane(
                         query = searchQuery,
                         apps = allApps,
-                        onLaunch = onLaunch,
+                        onLaunch = requestAppLaunch,
                         onOpenSettings = { tuningPkg = it.packageName },
                         onNavigateToSettingsTab = { tab ->
                             selectedSettingsTab = tab
@@ -893,16 +904,23 @@ fun ZXGameSpaceHub(
                         deviceName = deviceName,
                         chipsetName = chipsetName,
                         onApplyProfile = onApplyProfile,
+                        onPreviewSidePanelPrompt = {
+                            pendingLaunchApp = null
+                            sidePanelPromptOpen = true
+                        },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
             }
 
             BackHandler(
-                enabled = tuningPkg != null || quickSettingsOpen || category == TopCategory.Settings ||
-                    searchOpen || homeExpanded || libraryExpanded
+                enabled = sidePanelPromptOpen || tuningPkg != null || quickSettingsOpen ||
+                    category == TopCategory.Settings || searchOpen || homeExpanded || libraryExpanded
             ) {
-                if (tuningPkg != null) {
+                if (sidePanelPromptOpen) {
+                    sidePanelPromptOpen = false
+                    pendingLaunchApp = null
+                } else if (tuningPkg != null) {
                     tuningPkg = null
                 } else if (quickSettingsOpen) {
                     quickSettingsOpen = false
@@ -946,8 +964,26 @@ fun ZXGameSpaceHub(
             packageName = tuningPkg,
             allApps = allApps,
             hazeState = hazeState,
-            onLaunch = onLaunch,
+            onLaunch = requestAppLaunch,
             onClose = { tuningPkg = null }
+        )
+
+        ZXGameSpaceSidePanelOnboardingOverlay(
+            visible = sidePanelPromptOpen,
+            pendingApp = pendingLaunchApp,
+            hazeState = hazeState,
+            onDismiss = {
+                sidePanelPromptOpen = false
+                pendingLaunchApp = null
+            },
+            onConfirm = {
+                val appToLaunch = pendingLaunchApp
+                sidePanelPromptOpen = false
+                pendingLaunchApp = null
+                if (appToLaunch != null) {
+                    onLaunch(appToLaunch)
+                }
+            }
         )
     }
     }
@@ -5823,6 +5859,7 @@ private fun ZXGameSpaceSettingsStage(
     deviceName: String = "",
     chipsetName: String = "",
     onApplyProfile: (String) -> Unit = {},
+    onPreviewSidePanelPrompt: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -5971,7 +6008,9 @@ private fun ZXGameSpaceSettingsStage(
                         refreshHz = refreshHz,
                         onApplyProfile = onApplyProfile
                     )
-                    SettingsSidebarTab.Appearance -> SettingsAppearancePane()
+                    SettingsSidebarTab.Appearance -> SettingsAppearancePane(
+                        onPreviewSidePanelPrompt = onPreviewSidePanelPrompt
+                    )
                     SettingsSidebarTab.About -> SettingsAboutPane(
                         deviceName = deviceName,
                         chipsetName = chipsetName
@@ -6354,13 +6393,24 @@ private val GAMESPACE_PRESET_KEY_COLORS = listOf(
 )
 
 @Composable
-private fun SettingsAppearancePane() {
+private fun SettingsAppearancePane(
+    onPreviewSidePanelPrompt: () -> Unit = {}
+) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
     val systemDark = isSystemInDarkTheme()
 
     val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    var sidePanelSide by remember {
+        mutableStateOf(prefs.getString("gamespace_sidepanel_side", "left") ?: "left")
+    }
+    var sidePanelSensitivity by remember {
+        mutableIntStateOf(prefs.getInt("gamespace_sidepanel_sensitivity", 65).coerceIn(20, 100))
+    }
+    var sliderSensitivity by remember(sidePanelSensitivity) {
+        mutableIntStateOf(sidePanelSensitivity)
+    }
     var colorModeValue by remember { mutableIntStateOf(prefs.getInt("color_mode", ColorMode.SYSTEM.value)) }
     var keyColorValue by remember { mutableIntStateOf(prefs.getInt("key_color", 0)) }
     var appScalePercent by remember {
@@ -6368,6 +6418,22 @@ private fun SettingsAppearancePane() {
     }
     var sliderScalePercent by remember(appScalePercent) {
         mutableIntStateOf(appScalePercent)
+    }
+    DisposableEffect(prefs) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            when (key) {
+                "gamespace_sidepanel_side" -> {
+                    sidePanelSide = prefs.getString("gamespace_sidepanel_side", "left") ?: "left"
+                }
+                "gamespace_sidepanel_sensitivity" -> {
+                    val updated = prefs.getInt("gamespace_sidepanel_sensitivity", 65).coerceIn(20, 100)
+                    sidePanelSensitivity = updated
+                    sliderSensitivity = updated
+                }
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
     val currentColorSpec = remember {
         ColorEngine.fromPersisted(prefs.getString("color_spec", null))
@@ -6395,10 +6461,336 @@ private fun SettingsAppearancePane() {
                 color = scheme.onSurface
             )
             Text(
-                text = "Theme mode, interface scaling, and Monet or preset color palettes",
+                text = "Customize Side Panel dock & sensitivity, theme mode, interface scaling, and color palettes",
                 style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant.copy(alpha = 0.8f)
             )
+        }
+
+        // 0. Customize Side Panel (above original Theme options)
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = scheme.surfaceContainerHigh,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = scheme.primaryContainer,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Rounded.GridView,
+                                    contentDescription = null,
+                                    tint = scheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        Column {
+                            Text(
+                                text = "Customize Side Panel",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = scheme.onSurface
+                            )
+                            Text(
+                                text = "Floating pull-out bar pinned to screen edge when launching an app",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val promptBtnShape = RoundedCornerShape(12.dp)
+                        Surface(
+                            shape = promptBtnShape,
+                            color = scheme.secondaryContainer,
+                            contentColor = scheme.onSecondaryContainer,
+                            modifier = Modifier
+                                .gamepadFocusOutline(shape = promptBtnShape, register = true)
+                                .clip(promptBtnShape)
+                                .clickable(onClick = onPreviewSidePanelPrompt)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Tune,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Text(
+                                    text = "First-Launch Overlay",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = CircleShape,
+                            color = scheme.primaryContainer
+                        ) {
+                            Text(
+                                text = "${if (sidePanelSide == "left") "Left Side" else "Right Side"} · ${sliderSensitivity}%",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                color = scheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                            )
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Left Side vs Right Side Dock Selector
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Pinned Edge Position",
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onSurface
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            val sideOptions = listOf(
+                                Triple("left", "Left Side", "Pull out from left edge"),
+                                Triple("right", "Right Side", "Pull out from right edge")
+                            )
+                            sideOptions.forEach { (sideKey, title, subtitle) ->
+                                val selected = sidePanelSide == sideKey
+                                val cornerPercent by animateIntAsState(
+                                    targetValue = if (selected) 28 else 18,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioLowBouncy,
+                                        stiffness = Spring.StiffnessMediumLow
+                                    ),
+                                    label = "SidePanelEdgeCorner"
+                                )
+                                val cardShape = RoundedCornerShape(percent = cornerPercent)
+                                Surface(
+                                    shape = cardShape,
+                                    color = if (selected) scheme.primaryContainer else scheme.surfaceContainerHighest,
+                                    contentColor = if (selected) scheme.onPrimaryContainer else scheme.onSurface,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .gamepadFocusOutline(shape = cardShape, register = true)
+                                        .clip(cardShape)
+                                        .clickable {
+                                            sidePanelSide = sideKey
+                                            prefs.edit().putString("gamespace_sidepanel_side", sideKey).apply()
+                                        }
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        // Mini landscape screen preview showing floating handle
+                                        Surface(
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = scheme.surfaceContainerLow,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(42.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .padding(horizontal = 6.dp, vertical = 6.dp)
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .align(
+                                                            if (sideKey == "left") Alignment.CenterStart
+                                                            else Alignment.CenterEnd
+                                                        )
+                                                        .width(5.dp)
+                                                        .height(24.dp)
+                                                        .clip(CircleShape)
+                                                        .background(
+                                                            if (selected) scheme.primary else scheme.onSurfaceVariant
+                                                        )
+                                                )
+                                                Icon(
+                                                    imageVector = if (sideKey == "left") {
+                                                        Icons.Rounded.ChevronRight
+                                                    } else {
+                                                        Icons.AutoMirrored.Rounded.ArrowBack
+                                                    },
+                                                    contentDescription = null,
+                                                    tint = if (selected) scheme.primary else scheme.onSurfaceVariant,
+                                                    modifier = Modifier
+                                                        .align(
+                                                            if (sideKey == "left") Alignment.CenterStart
+                                                            else Alignment.CenterEnd
+                                                        )
+                                                        .padding(
+                                                            start = if (sideKey == "left") 8.dp else 0.dp,
+                                                            end = if (sideKey == "right") 8.dp else 0.dp
+                                                        )
+                                                        .size(16.dp)
+                                                )
+                                            }
+                                        }
+
+                                        Text(
+                                            text = title,
+                                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                            maxLines = 1
+                                        )
+                                        Text(
+                                            text = subtitle,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (selected) {
+                                                scheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                            } else {
+                                                scheme.onSurfaceVariant
+                                            },
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Swipe-In Sensitivity Selector + Slider (commits on release)
+                    Surface(
+                        shape = RoundedCornerShape(18.dp),
+                        color = scheme.surfaceContainerHighest,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Swipe-In Sensitivity",
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.onSurface
+                                )
+                                Text(
+                                    text = when {
+                                        sliderSensitivity <= 45 -> "Less Sensitive · ${sliderSensitivity}%"
+                                        sliderSensitivity >= 80 -> "More Sensitive · ${sliderSensitivity}%"
+                                        else -> "Balanced · ${sliderSensitivity}%"
+                                    },
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.primary
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                val presets = listOf(
+                                    "Less Sensitive" to 35,
+                                    "Balanced" to 65,
+                                    "More Sensitive" to 90
+                                )
+                                presets.forEach { (label, targetVal) ->
+                                    val selected = when (targetVal) {
+                                        35 -> sliderSensitivity <= 45
+                                        90 -> sliderSensitivity >= 80
+                                        else -> sliderSensitivity in 46..79
+                                    }
+                                    val pillRadius by animateIntAsState(
+                                        targetValue = if (selected) 50 else 26,
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioLowBouncy,
+                                            stiffness = Spring.StiffnessMediumLow
+                                        ),
+                                        label = "SensPresetRadius"
+                                    )
+                                    val pillShape = RoundedCornerShape(percent = pillRadius)
+                                    Surface(
+                                        shape = pillShape,
+                                        color = if (selected) scheme.primary else scheme.surfaceContainerLow,
+                                        contentColor = if (selected) scheme.onPrimary else scheme.onSurface,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .gamepadFocusOutline(shape = pillShape, register = true)
+                                            .clip(pillShape)
+                                            .clickable {
+                                                sliderSensitivity = targetVal
+                                                sidePanelSensitivity = targetVal
+                                                prefs.edit().putInt("gamespace_sidepanel_sensitivity", targetVal).apply()
+                                            }
+                                    ) {
+                                        Box(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontWeight = FontWeight.Bold
+                                                ),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            ZenithSlider(
+                                value = sliderSensitivity.toFloat(),
+                                onValueChange = { raw ->
+                                    val snapped = ((raw / 5f).roundToInt() * 5).coerceIn(20, 100)
+                                    if (snapped != sliderSensitivity) {
+                                        sliderSensitivity = snapped
+                                    }
+                                },
+                                onValueChangeFinished = {
+                                    if (sliderSensitivity != sidePanelSensitivity) {
+                                        sidePanelSensitivity = sliderSensitivity
+                                        prefs.edit()
+                                            .putInt("gamespace_sidepanel_sensitivity", sliderSensitivity)
+                                            .apply()
+                                    }
+                                },
+                                valueRange = 20f..100f,
+                                steps = 15,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(28.dp)
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         // 1. Theme Mode (Auto / Light / Dark / AMOLED)
@@ -6910,6 +7302,507 @@ private fun GameSpacePaletteSwatch(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+        }
+    }
+}
+
+/**
+ * First-time app launch Material 3 Expressive screen overlay asking whether to pin the
+ * floating Game Panel pull-out bar to the Left Side or Right Side and how sensitive it
+ * responds to swipe-in gestures.
+ */
+@Composable
+private fun ZXGameSpaceSidePanelOnboardingOverlay(
+    visible: Boolean,
+    pendingApp: ApplistViewmodel.AppInfo?,
+    hazeState: HazeState,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    val context = LocalContext.current
+    val scheme = MaterialTheme.colorScheme
+    val motion = MaterialTheme.motionScheme
+    val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+
+    var selectedSide by remember(visible) {
+        mutableStateOf(prefs.getString("gamespace_sidepanel_side", "left") ?: "left")
+    }
+    var committedSensitivity by remember(visible) {
+        mutableIntStateOf(prefs.getInt("gamespace_sidepanel_sensitivity", 65).coerceIn(20, 100))
+    }
+    var sliderSensitivity by remember(committedSensitivity) {
+        mutableIntStateOf(committedSensitivity)
+    }
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInVertically(
+            initialOffsetY = { fullHeight -> fullHeight / 3 },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        ) + scaleIn(
+            initialScale = 0.92f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
+        exit = slideOutVertically(
+            targetOffsetY = { fullHeight -> fullHeight / 4 },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMedium
+            )
+        ) + scaleOut(
+            targetScale = 0.95f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMedium
+            )
+        ) + fadeOut(animationSpec = motion.defaultEffectsSpec()),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .hazeBlur(
+                    input = HazeInput.Sources(hazeState),
+                    style = HazeBlurStyle.Material3(
+                        containerColor = scheme.surfaceContainerLowest.copy(alpha = 0.72f)
+                    ) {
+                        blurRadius(28.dp)
+                    }
+                )
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onDismiss
+                )
+                .padding(horizontal = 32.dp, vertical = 20.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = scheme.surfaceContainerLow,
+                modifier = Modifier
+                    .widthIn(max = 680.dp)
+                    .fillMaxWidth()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {}
+                    )
+            ) {
+                Column(
+                    modifier = Modifier.padding(22.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            if (pendingApp != null) {
+                                AppIconImage(app = pendingApp, size = 48.dp)
+                            } else {
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = scheme.primaryContainer,
+                                    modifier = Modifier.size(48.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.GridView,
+                                            contentDescription = null,
+                                            tint = scheme.onPrimaryContainer,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = "Configure In-Game Side Panel",
+                                    style = MaterialTheme.typography.titleLarge.copy(
+                                        fontWeight = FontWeight.ExtraBold
+                                    ),
+                                    color = scheme.onSurface
+                                )
+                                Text(
+                                    text = if (pendingApp != null) {
+                                        "Launching ${pendingApp.label} · Choose where to pin the floating Game Panel bar and its swipe-in sensitivity"
+                                    } else {
+                                        "Choose where to pin the floating Game Panel pull-out bar and how sensitive it responds to edge swipes"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = scheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
+                        TopBarIconButton(
+                            icon = Icons.Rounded.Close,
+                            contentDescription = stringResource(R.string.cd_back),
+                            onClick = onDismiss
+                        )
+                    }
+
+                    // 1. Left Side vs Right Side Selection
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        val sideChoices = listOf(
+                            Triple("left", "Left Side", "Pin floating pull-out bar to the left screen edge"),
+                            Triple("right", "Right Side", "Pin floating pull-out bar to the right screen edge")
+                        )
+                        sideChoices.forEach { (key, title, desc) ->
+                            val selected = selectedSide == key
+                            val cornerPercent by animateIntAsState(
+                                targetValue = if (selected) 26 else 18,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioLowBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                ),
+                                label = "OnboardingSideCorner"
+                            )
+                            val cardShape = RoundedCornerShape(percent = cornerPercent)
+                            Surface(
+                                shape = cardShape,
+                                color = if (selected) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                                contentColor = if (selected) scheme.onPrimaryContainer else scheme.onSurface,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .gamepadFocusOutline(shape = cardShape, register = true)
+                                    .clip(cardShape)
+                                    .clickable { selectedSide = key }
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    // Visual landscape frame showing pinned floating bar & pull-out gesture
+                                    Surface(
+                                        shape = RoundedCornerShape(14.dp),
+                                        color = scheme.surfaceContainerLowest,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(58.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(horizontal = 8.dp, vertical = 8.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(
+                                                        if (key == "left") Alignment.CenterStart
+                                                        else Alignment.CenterEnd
+                                                    )
+                                                    .width(6.dp)
+                                                    .height(34.dp)
+                                                    .clip(CircleShape)
+                                                    .background(
+                                                        if (selected) scheme.primary else scheme.onSurfaceVariant
+                                                    )
+                                            )
+                                            Row(
+                                                modifier = Modifier
+                                                    .align(
+                                                        if (key == "left") Alignment.CenterStart
+                                                        else Alignment.CenterEnd
+                                                    )
+                                                    .padding(
+                                                        start = if (key == "left") 14.dp else 0.dp,
+                                                        end = if (key == "right") 14.dp else 0.dp
+                                                    ),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                if (key == "right") {
+                                                    Icon(
+                                                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                                                        contentDescription = null,
+                                                        tint = if (selected) scheme.primary else scheme.onSurfaceVariant,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                                Surface(
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = if (selected) {
+                                                        scheme.secondaryContainer
+                                                    } else {
+                                                        scheme.surfaceContainerHigh
+                                                    }
+                                                ) {
+                                                    Text(
+                                                        text = "Swipe In",
+                                                        style = MaterialTheme.typography.labelSmall.copy(
+                                                            fontWeight = FontWeight.Bold
+                                                        ),
+                                                        color = if (selected) {
+                                                            scheme.onSecondaryContainer
+                                                        } else {
+                                                            scheme.onSurfaceVariant
+                                                        },
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                    )
+                                                }
+                                                if (key == "left") {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.ChevronRight,
+                                                        contentDescription = null,
+                                                        tint = if (selected) scheme.primary else scheme.onSurfaceVariant,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = title,
+                                                style = MaterialTheme.typography.titleSmall.copy(
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            )
+                                            Text(
+                                                text = desc,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = if (selected) {
+                                                    scheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                                } else {
+                                                    scheme.onSurfaceVariant
+                                                },
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        if (selected) {
+                                            Surface(
+                                                shape = CircleShape,
+                                                color = scheme.primary,
+                                                modifier = Modifier.size(24.dp)
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.Check,
+                                                        contentDescription = null,
+                                                        tint = scheme.onPrimary,
+                                                        modifier = Modifier.size(15.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // 2. Swipe-In Sensitivity Section
+                    Surface(
+                        shape = RoundedCornerShape(22.dp),
+                        color = scheme.surfaceContainerHigh,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Swipe-In Response Sensitivity",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.onSurface
+                                )
+                                Surface(
+                                    shape = CircleShape,
+                                    color = scheme.secondaryContainer
+                                ) {
+                                    Text(
+                                        text = when {
+                                            sliderSensitivity <= 45 -> "Less Sensitive · ${sliderSensitivity}%"
+                                            sliderSensitivity >= 80 -> "More Sensitive · ${sliderSensitivity}%"
+                                            else -> "Balanced · ${sliderSensitivity}%"
+                                        },
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = scheme.onSecondaryContainer,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                val presets = listOf(
+                                    "Less Sensitive" to 35,
+                                    "Balanced" to 65,
+                                    "More Sensitive" to 90
+                                )
+                                presets.forEach { (label, targetVal) ->
+                                    val selected = when (targetVal) {
+                                        35 -> sliderSensitivity <= 45
+                                        90 -> sliderSensitivity >= 80
+                                        else -> sliderSensitivity in 46..79
+                                    }
+                                    val pillRadius by animateIntAsState(
+                                        targetValue = if (selected) 50 else 28,
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioLowBouncy,
+                                            stiffness = Spring.StiffnessMediumLow
+                                        ),
+                                        label = "OnboardingSensPillRadius"
+                                    )
+                                    val pillShape = RoundedCornerShape(percent = pillRadius)
+                                    Surface(
+                                        shape = pillShape,
+                                        color = if (selected) scheme.primary else scheme.surfaceContainerHighest,
+                                        contentColor = if (selected) scheme.onPrimary else scheme.onSurface,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .gamepadFocusOutline(shape = pillShape, register = true)
+                                            .clip(pillShape)
+                                            .clickable {
+                                                sliderSensitivity = targetVal
+                                                committedSensitivity = targetVal
+                                            }
+                                    ) {
+                                        Box(
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                style = MaterialTheme.typography.labelMedium.copy(
+                                                    fontWeight = FontWeight.Bold
+                                                ),
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            ZenithSlider(
+                                value = sliderSensitivity.toFloat(),
+                                onValueChange = { raw ->
+                                    val snapped = ((raw / 5f).roundToInt() * 5).coerceIn(20, 100)
+                                    if (snapped != sliderSensitivity) {
+                                        sliderSensitivity = snapped
+                                    }
+                                },
+                                onValueChangeFinished = {
+                                    committedSensitivity = sliderSensitivity
+                                },
+                                valueRange = 20f..100f,
+                                steps = 15,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(28.dp)
+                            )
+                        }
+                    }
+
+                    // 3. Action Buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val cancelShape = RoundedCornerShape(18.dp)
+                        Surface(
+                            shape = cancelShape,
+                            color = scheme.surfaceContainerHigh,
+                            contentColor = scheme.onSurface,
+                            modifier = Modifier
+                                .weight(1f)
+                                .gamepadFocusOutline(shape = cancelShape, register = true)
+                                .clip(cancelShape)
+                                .clickable(onClick = onDismiss)
+                        ) {
+                            Box(
+                                modifier = Modifier.padding(vertical = 13.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Cancel",
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                                )
+                            }
+                        }
+
+                        val confirmShape = CircleShape
+                        Surface(
+                            shape = confirmShape,
+                            color = scheme.primary,
+                            contentColor = scheme.onPrimary,
+                            modifier = Modifier
+                                .weight(1.6f)
+                                .gamepadFocusOutline(shape = confirmShape, register = true)
+                                .clip(confirmShape)
+                                .clickable {
+                                    prefs.edit()
+                                        .putString("gamespace_sidepanel_side", selectedSide)
+                                        .putInt("gamespace_sidepanel_sensitivity", sliderSensitivity)
+                                        .putBoolean("gamespace_sidepanel_setup_done", true)
+                                        .apply()
+                                    onConfirm()
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(vertical = 13.dp, horizontal = 18.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = if (pendingApp != null) {
+                                        Icons.Rounded.PlayArrow
+                                    } else {
+                                        Icons.Rounded.Check
+                                    },
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = if (pendingApp != null) {
+                                        "Save & Launch ${pendingApp.label}"
+                                    } else {
+                                        "Save Side Panel Settings"
+                                    },
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
