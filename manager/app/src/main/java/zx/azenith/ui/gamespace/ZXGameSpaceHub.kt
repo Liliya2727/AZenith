@@ -2751,17 +2751,29 @@ private fun ZXGameSpaceTileRibbon(
     val listState = rememberLazyListState()
     var selectedRightEdgePx by remember { mutableStateOf(0f) }
     var ribbonWidthPx by remember { mutableStateOf(0f) }
-    var accumulatedDrag by remember { mutableStateOf(0f) }
-    val dragThresholdPx = with(density) { 44.dp.toPx() }
     val configuration = LocalConfiguration.current
     val endPadding = (configuration.screenWidthDp + 500).dp
+    val anchorOffset = 124.dp
+    val itemPitchPx = with(density) { 62.dp.toPx() }
 
     LaunchedEffect(selectedIndex, entries.size) {
-        // Past the second tile (at the 3rd slot, index 2), the selected item anchors
-        // at column 3 and previous items slide smoothly off-screen to the left.
-        val targetIndex = (selectedIndex - 2).coerceAtLeast(0)
-        runCatching {
-            listState.animateScrollToItem(index = targetIndex, scrollOffset = 0)
+        if (listState.firstVisibleItemIndex != selectedIndex || listState.firstVisibleItemScrollOffset != 0) {
+            runCatching {
+                listState.animateScrollToItem(index = selectedIndex, scrollOffset = 0)
+            }
+        }
+    }
+
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (!listState.isScrollInProgress) {
+            val first = listState.firstVisibleItemIndex
+            val offset = listState.firstVisibleItemScrollOffset
+            val target = (if (offset > itemPitchPx / 2) first + 1 else first).coerceIn(0, entries.lastIndex)
+            if (target != selectedIndex) {
+                onSelect(target)
+            } else if (offset != 0) {
+                listState.animateScrollToItem(target, 0)
+            }
         }
     }
 
@@ -2772,42 +2784,17 @@ private fun ZXGameSpaceTileRibbon(
             .fillMaxWidth()
             .height(92.dp)
             .onGloballyPositioned { ribbonWidthPx = it.size.width.toFloat() }
-            .pointerInput(entries.size, selectedIndex) {
-                detectHorizontalDragGestures(
-                    onDragStart = { accumulatedDrag = 0f },
-                    onDragEnd = { accumulatedDrag = 0f },
-                    onDragCancel = { accumulatedDrag = 0f },
-                    onHorizontalDrag = { _, dragAmount ->
-                        accumulatedDrag += dragAmount
-                        if (accumulatedDrag <= -dragThresholdPx) {
-                            // User slid left: moves to the left app
-                            val next = (selectedIndex - 1).coerceAtLeast(0)
-                            if (next != selectedIndex) {
-                                onSelect(next)
-                            }
-                            accumulatedDrag = 0f
-                        } else if (accumulatedDrag >= dragThresholdPx) {
-                            // User slid right: moves to the right app
-                            val next = (selectedIndex + 1).coerceAtMost(entries.lastIndex)
-                            if (next != selectedIndex) {
-                                onSelect(next)
-                            }
-                            accumulatedDrag = 0f
-                        }
-                    }
-                )
-            }
     ) {
         LazyRow(
             state = listState,
-            userScrollEnabled = false,
+            userScrollEnabled = true,
             modifier = Modifier
                 .fillMaxSize()
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
                 .gamepadScreenEntry(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.Top,
-            contentPadding = PaddingValues(end = endPadding)
+            contentPadding = PaddingValues(start = anchorOffset, end = endPadding)
         ) {
             itemsIndexed(entries, key = { _, item -> item.key }) { index, item ->
                 val isSelected = index == selectedIndex
@@ -2867,22 +2854,6 @@ private fun ZXGameSpaceTileRibbon(
                         } else {
                             stringResource(R.string.gamespace_untuned).uppercase()
                         }
-                    )
-                    Text(
-                        text = activeEntry.app.label,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Normal
-                        ),
-                        color = scheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 320.dp)
-                    )
-                    Icon(
-                        imageVector = Icons.Rounded.Album,
-                        contentDescription = null,
-                        tint = scheme.onSurfaceVariant.copy(alpha = 0.75f),
-                        modifier = Modifier.size(16.dp)
                     )
                 }
 
@@ -2950,13 +2921,13 @@ private fun ZXGameSpaceRibbonTile(
         }
 
         // Enabled/disabled at a glance: a filled dot when the app carries the tweaks, a hollow
-        // ring when it does not.
+        // ring when it does not, positioned at the top-right corner of the highlight.
         if (entry is RibbonEntry.Game) {
             val on = entry.app.isEnabledInConfig
             Box(
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(if (selected) 5.dp else 3.dp)
+                    .align(Alignment.TopEnd)
+                    .padding(if (selected) 6.dp else 4.dp)
                     .size(if (selected) 12.dp else 9.dp)
                     .clip(CircleShape)
                     .background(if (on) scheme.primary else scheme.surfaceContainerHighest)
@@ -3042,37 +3013,8 @@ private fun WelcomeGlyphTileContent(selected: Boolean) {
 
 @Composable
 private fun GameTileContent(app: ApplistViewmodel.AppInfo, selected: Boolean) {
-    val scheme = MaterialTheme.colorScheme
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         AppIconImage(app = app, size = if (selected) 82.dp else 54.dp)
-        if (selected) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                scheme.surfaceContainerLowest.copy(alpha = 0.72f)
-                            )
-                        )
-                    )
-            )
-            Text(
-                text = app.label,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 9.sp
-                ),
-                color = scheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(horizontal = 4.dp, vertical = 4.dp)
-            )
-        }
     }
 }
 
@@ -4569,26 +4511,6 @@ private fun GameHeroStage(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-
-                Spacer(Modifier.height(6.dp))
-
-                Text(
-                    text = buildString {
-                        append(
-                            stringResource(
-                                if (app.isEnabledInConfig) R.string.gamespace_tuned
-                                else R.string.gamespace_untuned
-                            )
-                        )
-                        append(" · ")
-                        append(app.packageName)
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = scheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
             }
 
             // Play and the App Settings gear own the far right corner once the pointer has
