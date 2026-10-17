@@ -312,6 +312,24 @@ object RootUtils {
         return Shell.getShell().isRoot
     }
 
+    fun getRootManager(): String {
+        return try {
+            val suVer = Shell.cmd("su -v").exec().out.firstOrNull() ?: ""
+            when {
+                suVer.contains("KernelSU", ignoreCase = true) -> "KernelSU"
+                suVer.contains("MAGISK", ignoreCase = true) -> "Magisk"
+                suVer.contains("APatch", ignoreCase = true) -> "APatch"
+                SuFile("/data/adb/ksu").exists() -> "KernelSU"
+                SuFile("/data/adb/magisk").exists() -> "Magisk"
+                SuFile("/data/adb/ap").exists() -> "APatch"
+                suVer.isNotBlank() -> suVer.substringAfter(':').ifBlank { suVer }
+                else -> "Superuser"
+            }
+        } catch (_: Exception) {
+            "Superuser"
+        }
+    }
+
     fun isModuleInstalled(): Boolean {
         return SuFile(MODULE_DIR).exists()
     }

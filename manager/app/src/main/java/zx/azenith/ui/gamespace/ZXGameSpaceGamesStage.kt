@@ -860,7 +860,7 @@ internal fun WelcomeHubStage(
                     value = moduleValue,
                     container = if (moduleInstalled == false) scheme.errorContainer else scheme.secondaryContainer,
                     onContainer = if (moduleInstalled == false) scheme.onErrorContainer else scheme.onSecondaryContainer,
-                    pillText = pidBadge
+                    pillText = if (moduleInstalled == true && service.second.isNotBlank()) service.second else null
                 )
 
                 // 2. Root Access Widget
@@ -1334,61 +1334,23 @@ internal fun HubInfoTile(
         shape = shape,
         color = container
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+        Box(modifier = Modifier.fillMaxSize()) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = onContainer.copy(alpha = 0.12f),
+                modifier = Modifier
+                    .size(96.dp)
+                    .align(Alignment.CenterStart)
+                    .offset(x = (-8).dp)
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(start = 78.dp, end = 16.dp, top = 16.dp, bottom = 16.dp),
+                verticalArrangement = Arrangement.Center
             ) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = onContainer.copy(alpha = 0.14f),
-                    modifier = Modifier.size(38.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = onContainer,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-
-                if (pillText != null) {
-                    Surface(
-                        shape = CircleShape,
-                        color = onContainer.copy(alpha = 0.14f)
-                    ) {
-                        Text(
-                            text = pillText,
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.4.sp
-                            ),
-                            color = onContainer,
-                            maxLines = 1,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                        )
-                    }
-                } else if (showArrow) {
-                    Icon(
-                        imageVector = Icons.Rounded.ChevronRight,
-                        contentDescription = null,
-                        tint = onContainer.copy(alpha = 0.7f),
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = label.uppercase(),
                     style = MaterialTheme.typography.labelSmall.copy(
@@ -1399,15 +1361,50 @@ internal fun HubInfoTile(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = onContainer,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+
+                Spacer(Modifier.height(4.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = onContainer,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    if (!pillText.isNullOrBlank()) {
+                        Surface(
+                            shape = CircleShape,
+                            color = onContainer.copy(alpha = 0.16f)
+                        ) {
+                            Text(
+                                text = pillText,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.4.sp
+                                ),
+                                color = onContainer,
+                                maxLines = 1,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+
+                    if (showArrow) {
+                        Icon(
+                            imageVector = Icons.Rounded.ChevronRight,
+                            contentDescription = null,
+                            tint = onContainer.copy(alpha = 0.75f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
         }
     }
