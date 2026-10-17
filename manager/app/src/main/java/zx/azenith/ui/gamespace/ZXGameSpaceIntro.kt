@@ -22,13 +22,9 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -39,7 +35,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -52,7 +47,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.SportsEsports
@@ -73,16 +67,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
@@ -93,11 +82,12 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zx.azenith.R
+import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
 /** Total length of the Game Space expressive intro animation (at max 2800ms <= 3s). */
-const val GAME_SPACE_INTRO_MS = 2800
+const val GAME_SPACE_INTRO_MS = 2600
 
 private val BOOT_STAGES = listOf(
     R.string.gamespace_boot_link,
@@ -107,61 +97,115 @@ private val BOOT_STAGES = listOf(
 )
 
 /**
- * Expressive Material 3 Intro screen:
- * - Spring-physics driven shape-morphing emblem.
- * - Floating playful geometric gaming satellites (Square, Triangle, Cross, Circle).
- * - Connected morphing pill stage indicators.
- * - Tap to skip immediately. Max duration: 2.8s.
+ * Material 3 Expressive Intro Screen:
+ * - The AZenith mascot silhouette drops from max size to small with energetic spring bounce physics.
+ * - Solid Material 3 shapes (circles, capsules, diamonds, rounded squares) explode outward from the impact center.
+ * - Clean silhouette without background container cards or dark vignetted glows.
+ * - Morphing connected stage pills with stage status indicators.
+ * - Seamless exit transition dissolving into Game Space Shell.
  */
 @Composable
-fun ZXGameSpaceIntro(onFinished: () -> Unit) {
+fun ZXGameSpaceIntro(
+    onTransitionStart: () -> Unit = {},
+    onFinished: () -> Unit
+) {
     val scheme = MaterialTheme.colorScheme
     val scope = rememberCoroutineScope()
     var stageIndex by remember { mutableIntStateOf(0) }
     var handedOff by remember { mutableStateOf(false) }
-    val progress = remember { Animatable(0f) }
 
-    val finishOnce = {
+    val progress = remember { Animatable(0f) }
+    val exitProgress = remember { Animatable(0f) }
+
+    // Silhouette falling & bouncing physics from max size to small
+    val logoScale = remember { Animatable(2.8f) }
+    val logoAlpha = remember { Animatable(0f) }
+
+    // Exploding Material 3 shapes burst
+    val explosionProgress = remember { Animatable(0f) }
+
+    val startExit = {
         if (!handedOff) {
             handedOff = true
-            onFinished()
+            onTransitionStart()
+            scope.launch {
+                exitProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing)
+                )
+                onFinished()
+            }
         }
     }
 
     LaunchedEffect(Unit) {
+        // Logo drop & bounce
+        launch {
+            logoAlpha.animateTo(1f, tween(180, easing = LinearEasing))
+        }
+        launch {
+            logoScale.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+            )
+        }
+
+        // Exploding Material 3 shapes burst from central impact point
+        launch {
+            delay(240)
+            explosionProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = 750, easing = FastOutSlowInEasing)
+            )
+        }
+
+        // Total progress progression
         launch {
             progress.animateTo(
                 targetValue = 1f,
                 animationSpec = tween(durationMillis = GAME_SPACE_INTRO_MS, easing = FastOutSlowInEasing)
             )
-            finishOnce()
+            startExit()
         }
 
-        // Stepping through the 4 boot stages cleanly across 2.6s before final handoff.
+        // 4 Boot Stages
         delay(350)
         stageIndex = 1
-        delay(650)
+        delay(600)
         stageIndex = 2
-        delay(750)
+        delay(650)
         stageIndex = 3
-        delay(850)
-        finishOnce()
+        delay(750)
+        startExit()
     }
+
+    val exitVal = exitProgress.value
+    val exitAlpha = (1f - exitVal * 1.3f).coerceIn(0f, 1f)
+    val exitTranslationDown = 32f * exitVal
+    val exitScale = 1f + 0.26f * exitVal
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(scheme.surface)
+            .background(scheme.surface.copy(alpha = (1f - exitVal).coerceIn(0f, 1f)))
             .pointerInput(Unit) {
                 detectTapGestures {
                     scope.launch { runCatching { progress.snapTo(1f) } }
-                    finishOnce()
+                    startExit()
                 }
             },
         contentAlignment = Alignment.Center
     ) {
-        ExpressiveAmbientWash()
-        ExpressiveFloatingGlyphs(stageIndex)
+        // Exploding Material 3 shapes burst from the center impact point
+        if (explosionProgress.value > 0f) {
+            Material3ImpactExplosion(
+                progress = explosionProgress.value,
+                exitAlpha = exitAlpha
+            )
+        }
 
         Column(
             modifier = Modifier
@@ -176,184 +220,156 @@ fun ZXGameSpaceIntro(onFinished: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                ExpressiveHeroEmblem(stageIndex)
+                // AZenith mascot silhouette directly on screen (no background card/circle)
+                Image(
+                    painter = painterResource(R.drawable.ic_launcher_monochrome),
+                    contentDescription = null,
+                    colorFilter = ColorFilter.tint(scheme.primary),
+                    modifier = Modifier
+                        .size(92.dp)
+                        .graphicsLayer {
+                            val totalScale = logoScale.value * exitScale
+                            scaleX = totalScale
+                            scaleY = totalScale
+                            alpha = logoAlpha.value * exitAlpha
+                        }
+                )
+
                 Spacer(Modifier.height(18.dp))
-                ExpressiveWordmark(stageIndex)
+
+                ExpressiveWordmark(
+                    stageIndex = stageIndex,
+                    exitTranslationY = exitTranslationDown,
+                    exitAlpha = exitAlpha
+                )
+
                 Spacer(Modifier.height(8.dp))
-                ExpressiveModeBadge(stageIndex)
+
+                ExpressiveModeBadge(
+                    stageIndex = stageIndex,
+                    exitTranslationY = exitTranslationDown,
+                    exitAlpha = exitAlpha
+                )
             }
 
             ExpressiveStageTracker(
                 stageIndex = stageIndex,
-                progress = progress.value
+                progress = progress.value,
+                exitTranslationY = exitTranslationDown * 1.2f,
+                exitAlpha = exitAlpha
             )
         }
     }
 }
 
-/** Soft breathing radial glow in tonal container hues. */
-@Composable
-private fun ExpressiveAmbientWash() {
-    val scheme = MaterialTheme.colorScheme
-    val infiniteTransition = rememberInfiniteTransition(label = "AmbientGlowTransition")
-    val pulse by infiniteTransition.animateFloat(
-        initialValue = 0.75f,
-        targetValue = 1.05f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "AmbientPulse"
-    )
-
-    Box(
-        Modifier
-            .fillMaxSize()
-            .drawBehind {
-                drawRect(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            scheme.primaryContainer.copy(alpha = 0.42f * pulse),
-                            scheme.tertiaryContainer.copy(alpha = 0.24f * pulse),
-                            Color.Transparent
-                        ),
-                        radius = size.minDimension * 0.75f
-                    )
-                )
-            }
-    )
-}
-
 /**
- * 4 Playful gaming glyph satellites floating around the center with spring physics
- * and harmonic floating oscillation.
+ * Exploding Material 3 shapes bursting outward from the impact center:
+ * - Solid filled MD3 shapes (circles, capsules, diamonds, rounded squares).
+ * - Tonal MD3 palette colors without outlines or glow.
  */
 @Composable
-private fun ExpressiveFloatingGlyphs(stageIndex: Int) {
+private fun Material3ImpactExplosion(
+    progress: Float,
+    exitAlpha: Float = 1f
+) {
     val scheme = MaterialTheme.colorScheme
-    val enterAnim by animateFloatAsState(
-        targetValue = if (stageIndex >= 1) 1f else 0f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-        label = "GlyphsEnter"
-    )
-
-    val infiniteTransition = rememberInfiniteTransition(label = "GlyphOrbit")
-    val orbitTime by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 6.28318f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(7000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "OrbitTime"
-    )
+    val palette = remember(scheme) {
+        listOf(
+            scheme.primary,
+            scheme.secondary,
+            scheme.tertiary,
+            scheme.primaryContainer,
+            scheme.secondaryContainer,
+            scheme.tertiaryContainer
+        )
+    }
 
     Canvas(
         modifier = Modifier
             .fillMaxSize()
-            .graphicsLayer { alpha = enterAnim }
+            .graphicsLayer { alpha = exitAlpha }
     ) {
         val cx = size.width / 2f
-        val cy = size.height / 2f
-        val radiusX = size.width * 0.28f * enterAnim
-        val radiusY = size.height * 0.28f * enterAnim
-        val stroke = Stroke(width = 3.5f, cap = StrokeCap.Round)
+        val cy = size.height / 2f - 40.dp.toPx() // Align with silhouette center
+        val particleCount = 18
+        val maxSpread = 210.dp.toPx()
 
-        // Glyph 1: Rounded Square (Top-Left)
-        val x1 = cx - radiusX + cos(orbitTime.toDouble()).toFloat() * 18f
-        val y1 = cy - radiusY + sin(orbitTime.toDouble()).toFloat() * 14f
-        drawRoundRect(
-            color = scheme.primary.copy(alpha = 0.38f),
-            topLeft = Offset(x1 - 18f, y1 - 18f),
-            size = Size(36f, 36f),
-            cornerRadius = CornerRadius(10f, 10f),
-            style = stroke
-        )
+        for (i in 0 until particleCount) {
+            val angleDeg = (i * (360f / particleCount) + (i * 7f)) % 360f
+            val angleRad = angleDeg * (PI / 180f).toFloat()
 
-        // Glyph 2: Triangle (Top-Right)
-        val x2 = cx + radiusX + sin(orbitTime.toDouble() + 1.5).toFloat() * 16f
-        val y2 = cy - radiusY + cos(orbitTime.toDouble() + 1.5).toFloat() * 18f
-        val tri = Path().apply {
-            moveTo(x2, y2 - 20f)
-            lineTo(x2 + 20f, y2 + 16f)
-            lineTo(x2 - 20f, y2 + 16f)
-            close()
-        }
-        drawPath(tri, color = scheme.tertiary.copy(alpha = 0.38f), style = stroke)
+            // Distance based on progress with staggered radial offsets
+            val radialMultiplier = 0.70f + (i % 5) * 0.12f
+            val currentDist = maxSpread * progress * radialMultiplier
 
-        // Glyph 3: Cross / X (Bottom-Left)
-        val x3 = cx - radiusX + sin(orbitTime.toDouble() + 3.0).toFloat() * 18f
-        val y3 = cy + radiusY + cos(orbitTime.toDouble() + 3.0).toFloat() * 14f
-        drawLine(
-            color = scheme.secondary.copy(alpha = 0.38f),
-            start = Offset(x3 - 14f, y3 - 14f),
-            end = Offset(x3 + 14f, y3 + 14f),
-            strokeWidth = 4f,
-            cap = StrokeCap.Round
-        )
-        drawLine(
-            color = scheme.secondary.copy(alpha = 0.38f),
-            start = Offset(x3 + 14f, y3 - 14f),
-            end = Offset(x3 - 14f, y3 + 14f),
-            strokeWidth = 4f,
-            cap = StrokeCap.Round
-        )
+            val px = cx + cos(angleRad) * currentDist
+            val py = cy + sin(angleRad) * currentDist
 
-        // Glyph 4: Circle (Bottom-Right)
-        val x4 = cx + radiusX + cos(orbitTime.toDouble() + 4.5).toFloat() * 14f
-        val y4 = cy + radiusY + sin(orbitTime.toDouble() + 4.5).toFloat() * 18f
-        drawCircle(
-            color = scheme.primary.copy(alpha = 0.38f),
-            radius = 18f,
-            center = Offset(x4, y4),
-            style = stroke
-        )
-    }
-}
+            // Particle fades out smoothly as it reaches edge
+            val particleAlpha = ((1f - progress * progress) * 0.90f).coerceIn(0f, 1f)
+            val color = palette[i % palette.size].copy(alpha = particleAlpha)
 
-/** Expressive Morphing Emblem that springs in with bouncy physics. */
-@Composable
-private fun ExpressiveHeroEmblem(stageIndex: Int) {
-    val scheme = MaterialTheme.colorScheme
-    val scaleAnim by animateFloatAsState(
-        targetValue = if (stageIndex >= 0) 1f else 0.3f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "EmblemScale"
-    )
-    val morphCorner by animateDpAsState(
-        targetValue = if (stageIndex >= 2) 34.dp else 48.dp,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy),
-        label = "EmblemCorner"
-    )
+            val particleScale = (sin((progress * PI).coerceIn(0.0, PI))).toFloat()
 
-    Surface(
-        shape = RoundedCornerShape(morphCorner),
-        color = scheme.primaryContainer,
-        modifier = Modifier
-            .size(108.dp)
-            .graphicsLayer {
-                scaleX = scaleAnim
-                scaleY = scaleAnim
+            when (i % 4) {
+                0 -> {
+                    // Solid filled Circle
+                    val radius = (7.dp.toPx() + (i % 3) * 2.5f.dp.toPx()) * particleScale
+                    drawCircle(
+                        color = color,
+                        radius = radius,
+                        center = Offset(px, py)
+                    )
+                }
+                1 -> {
+                    // Solid filled Capsule / Pill
+                    val pw = (22.dp.toPx() + (i % 2) * 6.dp.toPx()) * particleScale
+                    val ph = 9.dp.toPx() * particleScale
+                    drawRoundRect(
+                        color = color,
+                        topLeft = Offset(px - pw / 2f, py - ph / 2f),
+                        size = Size(pw, ph),
+                        cornerRadius = CornerRadius(ph / 2f, ph / 2f)
+                    )
+                }
+                2 -> {
+                    // Solid filled 4-Point Diamond Sparkle
+                    val s = (14.dp.toPx() + (i % 2) * 4.dp.toPx()) * particleScale
+                    val diamond = Path().apply {
+                        moveTo(px, py - s)
+                        lineTo(px + s * 0.55f, py)
+                        lineTo(px, py + s)
+                        lineTo(px - s * 0.55f, py)
+                        close()
+                    }
+                    drawPath(path = diamond, color = color)
+                }
+                else -> {
+                    // Solid filled Rounded Square
+                    val s = (12.dp.toPx() + (i % 2) * 3.dp.toPx()) * particleScale
+                    val cr = 4.dp.toPx() * particleScale
+                    drawRoundRect(
+                        color = color,
+                        topLeft = Offset(px - s / 2f, py - s / 2f),
+                        size = Size(s, s),
+                        cornerRadius = CornerRadius(cr, cr)
+                    )
+                }
             }
-            .border(2.dp, scheme.primary.copy(alpha = 0.45f), RoundedCornerShape(morphCorner))
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Image(
-                painter = painterResource(R.drawable.ic_launcher_monochrome),
-                contentDescription = null,
-                colorFilter = ColorFilter.tint(scheme.onPrimaryContainer),
-                modifier = Modifier.size(54.dp)
-            )
         }
     }
 }
 
-/** Typography reveal with snappy spring physics. */
+/** Typography reveal with snappy spring physics and exit translation. */
 @Composable
-private fun ExpressiveWordmark(stageIndex: Int) {
+private fun ExpressiveWordmark(
+    stageIndex: Int,
+    exitTranslationY: Float = 0f,
+    exitAlpha: Float = 1f
+) {
     val scheme = MaterialTheme.colorScheme
     val enterAnim by animateFloatAsState(
-        targetValue = if (stageIndex >= 1) 1f else 0f,
+        targetValue = if (stageIndex >= 0) 1f else 0f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium),
         label = "WordmarkEnter"
     )
@@ -366,18 +382,22 @@ private fun ExpressiveWordmark(stageIndex: Int) {
         ),
         color = scheme.onSurface,
         modifier = Modifier.graphicsLayer {
-            alpha = enterAnim
-            translationY = 18f * (1f - enterAnim)
+            alpha = enterAnim * exitAlpha
+            translationY = 18f * (1f - enterAnim) + exitTranslationY
         }
     )
 }
 
-/** Playful Game Space pill badge with controller icon. */
+/** Playful Game Space pill badge with controller icon and exit translation. */
 @Composable
-private fun ExpressiveModeBadge(stageIndex: Int) {
+private fun ExpressiveModeBadge(
+    stageIndex: Int,
+    exitTranslationY: Float = 0f,
+    exitAlpha: Float = 1f
+) {
     val scheme = MaterialTheme.colorScheme
     val enterAnim by animateFloatAsState(
-        targetValue = if (stageIndex >= 1) 1f else 0f,
+        targetValue = if (stageIndex >= 0) 1f else 0f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
         label = "BadgeEnter"
     )
@@ -386,9 +406,10 @@ private fun ExpressiveModeBadge(stageIndex: Int) {
         shape = CircleShape,
         color = scheme.surfaceContainerHighest,
         modifier = Modifier.graphicsLayer {
-            alpha = enterAnim
+            alpha = enterAnim * exitAlpha
             scaleX = enterAnim
             scaleY = enterAnim
+            translationY = exitTranslationY
         }
     ) {
         Row(
@@ -418,18 +439,26 @@ private fun ExpressiveModeBadge(stageIndex: Int) {
  * Bottom Expressive Stage Tracker:
  * - Dynamic stage text with smooth animated swap.
  * - Connected morphing pill indicators with animated width and colors.
+ * - Graceful exit downward translation.
  */
 @Composable
 private fun ExpressiveStageTracker(
     stageIndex: Int,
-    progress: Float
+    progress: Float,
+    exitTranslationY: Float = 0f,
+    exitAlpha: Float = 1f
 ) {
     val scheme = MaterialTheme.colorScheme
     val safeStage = stageIndex.coerceIn(0, BOOT_STAGES.lastIndex)
     val isReady = safeStage == BOOT_STAGES.lastIndex
 
     Column(
-        modifier = Modifier.padding(bottom = 6.dp),
+        modifier = Modifier
+            .padding(bottom = 6.dp)
+            .graphicsLayer {
+                alpha = exitAlpha
+                translationY = exitTranslationY
+            },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
