@@ -24,13 +24,17 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -126,7 +130,7 @@ internal fun ZXGameSpaceTopBar(
     selectedCategory: TopCategory,
     clock: String,
     battery: Pair<Int, Boolean>,
-    isScrolled: Boolean = false,
+    isHomeLogoGone: Boolean = false,
     onSelectCategory: (TopCategory) -> Unit,
     searchOpen: Boolean = false,
     searchQuery: String = "",
@@ -136,9 +140,44 @@ internal fun ZXGameSpaceTopBar(
     onSettingsClick: () -> Unit,
     onAvatarClick: () -> Unit,
     onStatusClick: () -> Unit = {},
+    onLogoClick: (() -> Unit)? = null,
     onExit: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
+
+    var searchMorphedBack by remember { mutableStateOf(!searchOpen) }
+
+    val searchWidth by animateDpAsState(
+        targetValue = if (searchOpen) 268.dp else 38.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "SearchBarWidth",
+        finishedListener = { finalWidth ->
+            if (finalWidth <= 40.dp && !searchOpen) {
+                searchMorphedBack = true
+            }
+        }
+    )
+
+    LaunchedEffect(searchOpen) {
+        if (searchOpen) {
+            searchMorphedBack = false
+        }
+    }
+
+    val searchBg by animateColorAsState(
+        targetValue = if (searchOpen) {
+            scheme.surfaceContainerHighest
+        } else {
+            scheme.surfaceContainerHigh
+        },
+        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+        label = "SearchBarBg"
+    )
+
+    val showLogo = isHomeLogoGone && !searchOpen && (searchMorphedBack || searchWidth <= 38.5.dp)
 
     Row(
         modifier = Modifier
@@ -222,6 +261,87 @@ internal fun ZXGameSpaceTopBar(
                     }
                 }
             }
+
+            AnimatedVisibility(
+                visible = showLogo,
+                enter = fadeIn(animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec()) +
+                        slideInHorizontally(
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioLowBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            ),
+                            initialOffsetX = { -it / 3 }
+                        ) +
+                        expandHorizontally(
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioLowBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            ),
+                            expandFrom = Alignment.Start
+                        ),
+                exit = fadeOut(animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec()) +
+                       slideOutHorizontally(
+                           animationSpec = spring(
+                               dampingRatio = Spring.DampingRatioNoBouncy,
+                               stiffness = Spring.StiffnessMedium
+                           ),
+                           targetOffsetX = { -it / 3 }
+                       ) +
+                       shrinkHorizontally(
+                           animationSpec = spring(
+                               dampingRatio = Spring.DampingRatioNoBouncy,
+                               stiffness = Spring.StiffnessMedium
+                           ),
+                           shrinkTowards = Alignment.Start
+                       )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .then(
+                            if (onLogoClick != null) {
+                                Modifier.clickable(onClick = onLogoClick)
+                            } else {
+                                Modifier
+                            }
+                        )
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(1.5.dp)
+                            .height(16.dp)
+                            .clip(CircleShape)
+                            .background(scheme.outlineVariant.copy(alpha = 0.45f))
+                    )
+                    Text(
+                        text = stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = (-0.3).sp
+                        ),
+                        color = scheme.onSurface,
+                        maxLines = 1
+                    )
+                    Surface(
+                        shape = CircleShape,
+                        color = scheme.primaryContainer
+                    ) {
+                        Text(
+                            text = "GAME SPACE",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.8.sp
+                            ),
+                            color = scheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
         }
 
         Spacer(Modifier.weight(1f))
@@ -232,23 +352,6 @@ internal fun ZXGameSpaceTopBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             val searchRequester = remember { FocusRequester() }
-            val searchWidth by animateDpAsState(
-                targetValue = if (searchOpen) 268.dp else 38.dp,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                ),
-                label = "SearchBarWidth"
-            )
-            val searchBg by animateColorAsState(
-                targetValue = if (searchOpen) {
-                    scheme.surfaceContainerHighest
-                } else {
-                    scheme.surfaceContainerHigh
-                },
-                animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-                label = "SearchBarBg"
-            )
 
             LaunchedEffect(searchOpen) {
                 if (searchOpen) {

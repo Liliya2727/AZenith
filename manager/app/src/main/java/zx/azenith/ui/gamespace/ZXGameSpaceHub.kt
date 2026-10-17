@@ -286,6 +286,10 @@ fun ZXGameSpaceHub(
         }
 
         val isScrolled = homeExpanded || (category == TopCategory.Games && activeEntry == RibbonEntry.Welcome && welcomeScroll.value > 15)
+        val isHomeLogoGone = (category != TopCategory.Games) ||
+            (activeEntry != RibbonEntry.Welcome) ||
+            homeExpanded ||
+            (welcomeScroll.value > 15)
         val topBarScrimAlpha by animateFloatAsState(
             targetValue = if (isScrolled) 1f else 0f,
             animationSpec = motion.defaultEffectsSpec<Float>(),
@@ -332,7 +336,7 @@ fun ZXGameSpaceHub(
                 selectedCategory = category,
                 clock = clock,
                 battery = battery,
-                isScrolled = isScrolled,
+                isHomeLogoGone = isHomeLogoGone,
                 onSelectCategory = {
                     searchOpen = false
                     searchQuery = ""
@@ -368,6 +372,16 @@ fun ZXGameSpaceHub(
                     searchOpen = false
                     searchQuery = ""
                     quickSettingsOpen = !quickSettingsOpen
+                },
+                onLogoClick = {
+                    searchOpen = false
+                    searchQuery = ""
+                    category = TopCategory.Games
+                    selectedRibbonIndex = 0
+                    homeExpanded = false
+                    scope.launch {
+                        welcomeScroll.animateScrollTo(0)
+                    }
                 },
                 onExit = {
                     searchOpen = false
