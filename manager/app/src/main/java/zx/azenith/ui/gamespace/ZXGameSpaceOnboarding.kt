@@ -166,7 +166,7 @@ internal fun ZXGameSpaceSidePanelOnboardingOverlay(
         val startPad = maxOf(24.dp, insets.calculateStartPadding(layoutDirection))
         val endPad = maxOf(24.dp, insets.calculateEndPadding(layoutDirection))
         val topPad = maxOf(10.dp, insets.calculateTopPadding())
-        val bottomPad = maxOf(10.dp, insets.calculateBottomPadding())
+        val bottomPad = 0.dp
 
         CompositionLocalProvider(
             LocalContentColor provides scheme.onSurface

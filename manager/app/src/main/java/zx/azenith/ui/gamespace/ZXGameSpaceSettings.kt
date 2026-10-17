@@ -193,7 +193,7 @@ internal fun ZXGameSpaceSettingsStage(
     val density = LocalDensity.current
 
     Row(
-        modifier = modifier.padding(top = 4.dp, bottom = 12.dp),
+        modifier = modifier.padding(top = 4.dp, bottom = 0.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Surface(

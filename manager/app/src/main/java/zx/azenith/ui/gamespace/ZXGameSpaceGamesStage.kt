@@ -1856,14 +1856,15 @@ internal fun GameHeroStage(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .weight(1f)
+                .padding(bottom = 12.dp),
             verticalAlignment = Alignment.Bottom
         ) {
             val versionName = app.packageInfo.versionName?.takeIf { it.isNotBlank() }
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(bottom = 14.dp, end = 16.dp),
+                    .padding(end = 16.dp),
                 verticalArrangement = Arrangement.Bottom
             ) {
                 Row(

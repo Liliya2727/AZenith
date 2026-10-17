@@ -242,7 +242,7 @@ internal fun ZXGameSpaceAppSettingsOverlay(
         val startPad = maxOf(24.dp, insets.calculateStartPadding(layoutDirection))
         val endPad = maxOf(24.dp, insets.calculateEndPadding(layoutDirection))
         val topPad = maxOf(18.dp, insets.calculateTopPadding())
-        val bottomPad = maxOf(18.dp, insets.calculateBottomPadding())
+        val bottomPad = 0.dp
 
         CompositionLocalProvider(
             LocalContentColor provides scheme.onSurface

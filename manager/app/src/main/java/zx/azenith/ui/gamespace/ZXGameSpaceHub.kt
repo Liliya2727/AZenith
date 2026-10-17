@@ -317,7 +317,6 @@ fun ZXGameSpaceHub(
         val startSafePad = maxOf(32.dp, cutoutInsets.calculateStartPadding(layoutDirection))
         val endSafePad = maxOf(32.dp, cutoutInsets.calculateEndPadding(layoutDirection))
         val topSafePad = maxOf(14.dp, cutoutInsets.calculateTopPadding())
-        val bottomSafePad = maxOf(14.dp, cutoutInsets.calculateBottomPadding())
 
         Column(
             modifier = Modifier
@@ -326,7 +325,7 @@ fun ZXGameSpaceHub(
                     start = startSafePad,
                     end = endSafePad,
                     top = topSafePad,
-                    bottom = bottomSafePad
+                    bottom = 0.dp
                 )
         ) {
             ZXGameSpaceTopBar(
