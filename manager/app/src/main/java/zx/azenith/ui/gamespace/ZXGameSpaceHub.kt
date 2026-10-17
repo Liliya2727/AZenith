@@ -18,9 +18,16 @@
 
 package zx.azenith.ui.gamespace
 
+import android.app.Activity
 import android.app.ActivityManager
+import android.bluetooth.BluetoothManager
 import android.content.Context
+import android.media.AudioManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.BatteryManager
+import android.provider.Settings
+import android.view.InputDevice
 import android.view.KeyEvent
 import android.os.Build
 import androidx.activity.compose.BackHandler
@@ -46,6 +53,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
@@ -53,6 +61,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -84,15 +93,25 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.automirrored.rounded.VolumeDown
+import androidx.compose.material.icons.automirrored.rounded.VolumeMute
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Album
 import androidx.compose.material.icons.rounded.Android
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.BatteryAlert
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.BatteryStd
+import androidx.compose.material.icons.rounded.Bluetooth
+import androidx.compose.material.icons.rounded.BluetoothConnected
+import androidx.compose.material.icons.rounded.BluetoothDisabled
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.BrightnessAuto
+import androidx.compose.material.icons.rounded.BrightnessHigh
+import androidx.compose.material.icons.rounded.BrightnessLow
+import androidx.compose.material.icons.rounded.BrightnessMedium
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.CleaningServices
 import androidx.compose.material.icons.rounded.Close
@@ -121,6 +140,7 @@ import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.SettingsSuggest
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.SignalCellularAlt
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Speed
@@ -129,9 +149,12 @@ import androidx.compose.material.icons.rounded.SwapVerticalCircle
 import androidx.compose.material.icons.rounded.ThermostatAuto
 import androidx.compose.material.icons.rounded.Token
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.WebStories
+import androidx.compose.material.icons.rounded.Wifi
+import androidx.compose.material.icons.rounded.WifiOff
 import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -142,6 +165,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -154,6 +179,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -208,6 +234,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -459,6 +487,7 @@ fun ZXGameSpaceHub(
     var tuningPkg by remember { mutableStateOf<String?>(null) }
     var searchOpen by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var quickSettingsOpen by remember { mutableStateOf(false) }
     // The sheet's own offset decides the expansion, so the scroll lives above the stage.
     val welcomeScroll = rememberScrollState()
     var homeExpanded by remember { mutableStateOf(false) }
@@ -600,6 +629,7 @@ fun ZXGameSpaceHub(
                     }
                     onApplyProfile(nextProfile)
                 },
+                onStatusClick = { quickSettingsOpen = !quickSettingsOpen },
                 onExit = { exitPrompt = true }
             )
 
@@ -761,8 +791,10 @@ fun ZXGameSpaceHub(
                 }
             }
 
-            BackHandler(enabled = category == TopCategory.Settings || searchOpen || homeExpanded || libraryExpanded) {
-                if (category == TopCategory.Settings) {
+            BackHandler(enabled = quickSettingsOpen || category == TopCategory.Settings || searchOpen || homeExpanded || libraryExpanded) {
+                if (quickSettingsOpen) {
+                    quickSettingsOpen = false
+                } else if (category == TopCategory.Settings) {
                     category = TopCategory.Games
                 } else if (searchOpen) {
                     searchOpen = false
@@ -776,6 +808,12 @@ fun ZXGameSpaceHub(
                 }
             }
         }
+
+        // Floating Quick Settings Panel (overlay on left side, does not distort background)
+        ZXGameSpaceQuickSettingsOverlay(
+            visible = quickSettingsOpen,
+            onClose = { quickSettingsOpen = false }
+        )
 
         if (exitPrompt) {
             ZXGameSpaceExitDialog(
@@ -793,6 +831,474 @@ fun ZXGameSpaceHub(
 
         tuningPkg?.let { pkg ->
             ZXGameSpaceAppSettingsOverlay(packageName = pkg, onClose = { tuningPkg = null })
+        }
+    }
+}
+
+/**
+ * Expressive floating Quick Settings panel overlaying the screen on the left side.
+ * Allows instant monitoring of Network, Bluetooth, Controller/Remote connection states,
+ * and quick adjustments for media volume and display brightness without leaving or distorting Game Space.
+ */
+@Composable
+private fun ZXGameSpaceQuickSettingsOverlay(
+    visible: Boolean,
+    onClose: () -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    val motion = MaterialTheme.motionScheme
+    val context = LocalContext.current
+    val audioManager = remember(context) { context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager }
+    val connectivityManager = remember(context) { context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager }
+    val bluetoothManager = remember(context) { context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager }
+
+    // Volume control state
+    val maxVol = remember(audioManager) { audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15 }
+    var volFraction by remember(audioManager) {
+        val curVol = audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 8
+        mutableFloatStateOf((curVol.toFloat() / maxVol.coerceAtLeast(1)).coerceIn(0f, 1f))
+    }
+
+    // Display brightness control state
+    val activity = context as? Activity
+    var brightnessFraction by remember(activity) {
+        val windowAttr = activity?.window?.attributes?.screenBrightness ?: -1f
+        val currentBrightness = if (windowAttr >= 0f) {
+            windowAttr
+        } else {
+            runCatching {
+                Settings.System.getInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS) / 255f
+            }.getOrDefault(0.5f)
+        }
+        mutableFloatStateOf(currentBrightness.coerceIn(0.02f, 1f))
+    }
+
+    // Connectivity state sampling
+    val activeNet = connectivityManager?.activeNetwork
+    val caps = connectivityManager?.getNetworkCapabilities(activeNet)
+    val isWifi = caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+    val isCellular = caps?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true
+    val isNetConnected = caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+
+    // Bluetooth state
+    val isBtEnabled = runCatching { bluetoothManager?.adapter?.isEnabled == true }.getOrDefault(false)
+    val isBtConnected = runCatching {
+        if (isBtEnabled) {
+            val adapter = bluetoothManager?.adapter
+            adapter?.getProfileConnectionState(android.bluetooth.BluetoothProfile.HEADSET) == android.bluetooth.BluetoothProfile.STATE_CONNECTED ||
+            adapter?.getProfileConnectionState(android.bluetooth.BluetoothProfile.A2DP) == android.bluetooth.BluetoothProfile.STATE_CONNECTED
+        } else false
+    }.getOrDefault(false)
+
+    // Controller / Remote detection
+    val inputStatus = remember {
+        val deviceIds = InputDevice.getDeviceIds()
+        var foundGamepad: String? = null
+        var foundTvRemote: String? = null
+        for (id in deviceIds) {
+            val dev = InputDevice.getDevice(id) ?: continue
+            if (dev.isVirtual) continue
+            val sources = dev.sources
+            val isGamepad = (sources and InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD ||
+                            (sources and InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK
+            val isDpad = (sources and InputDevice.SOURCE_DPAD) == InputDevice.SOURCE_DPAD
+            if (isGamepad) {
+                foundGamepad = dev.name
+                break
+            } else if (isDpad) {
+                foundTvRemote = dev.name
+            }
+        }
+        Triple(foundGamepad != null, foundTvRemote != null, foundGamepad ?: foundTvRemote)
+    }
+    val (hasGamepad, hasTvRemote, controllerName) = inputStatus
+
+    // Scrim overlay - dismiss on click outside
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = motion.defaultEffectsSpec()),
+        exit = fadeOut(animationSpec = motion.defaultEffectsSpec())
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.32f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onClose
+                )
+        )
+    }
+
+    // Floating panel sliding in with spring bouncy animation
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInHorizontally(
+            initialOffsetX = { fullWidth -> -fullWidth },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
+        exit = slideOutHorizontally(
+            targetOffsetX = { fullWidth -> -fullWidth },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMedium
+            )
+        ) + fadeOut(animationSpec = motion.defaultEffectsSpec()),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(start = 24.dp, top = 16.dp, bottom = 16.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = scheme.surfaceContainerHigh,
+                tonalElevation = 6.dp,
+                shadowElevation = 16.dp,
+                border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.35f)),
+                modifier = Modifier
+                    .width(360.dp)
+                    .fillMaxHeight()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {} // Prevent click-through from dismissing panel
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(20.dp)
+                ) {
+                    // Header Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = scheme.primaryContainer,
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Tune,
+                                        contentDescription = null,
+                                        tint = scheme.onPrimaryContainer,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.quick_settings_title),
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.onSurface
+                                )
+                                Text(
+                                    text = stringResource(R.string.quick_settings_subtitle),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = scheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = onClose,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .gamepadFocusOutline(shape = CircleShape, register = true)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.dialog_cancel),
+                                tint = scheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(14.dp))
+                    HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.25f))
+                    Spacer(Modifier.height(14.dp))
+
+                    // Scrollable sections
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Section: Connectivity
+                        Text(
+                            text = stringResource(R.string.quick_settings_section_connectivity),
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            ),
+                            color = scheme.primary
+                        )
+
+                        // 1. Internet / Network Card
+                        QuickSettingTile(
+                            icon = when {
+                                isWifi -> Icons.Rounded.Wifi
+                                isCellular -> Icons.Rounded.SignalCellularAlt
+                                else -> Icons.Rounded.WifiOff
+                            },
+                            iconTint = if (isNetConnected) scheme.primary else scheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            iconContainerColor = if (isNetConnected) scheme.primaryContainer.copy(alpha = 0.7f) else scheme.surfaceContainerHighest,
+                            title = stringResource(R.string.quick_settings_network),
+                            subtitle = when {
+                                isWifi -> stringResource(R.string.quick_settings_wifi_connected)
+                                isCellular -> stringResource(R.string.quick_settings_cellular_connected)
+                                isNetConnected -> stringResource(R.string.quick_settings_online)
+                                else -> stringResource(R.string.quick_settings_offline)
+                            },
+                            badge = if (isNetConnected) "ONLINE" else "OFFLINE",
+                            badgeColor = if (isNetConnected) scheme.primary else scheme.outline
+                        )
+
+                        // 2. Bluetooth Card
+                        QuickSettingTile(
+                            icon = if (isBtConnected) Icons.Rounded.BluetoothConnected else if (isBtEnabled) Icons.Rounded.Bluetooth else Icons.Rounded.BluetoothDisabled,
+                            iconTint = if (isBtConnected) scheme.secondary else if (isBtEnabled) scheme.onSurface else scheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            iconContainerColor = if (isBtConnected) scheme.secondaryContainer.copy(alpha = 0.7f) else scheme.surfaceContainerHighest,
+                            title = stringResource(R.string.quick_settings_bluetooth),
+                            subtitle = if (isBtConnected) stringResource(R.string.quick_settings_bt_connected) else if (isBtEnabled) stringResource(R.string.quick_settings_bt_ready) else stringResource(R.string.quick_settings_disabled),
+                            badge = if (isBtConnected) "CONNECTED" else if (isBtEnabled) "ON" else "OFF",
+                            badgeColor = if (isBtConnected) scheme.secondary else scheme.outline
+                        )
+
+                        // 3. Controller / TV Remote Card
+                        QuickSettingTile(
+                            icon = if (hasGamepad) Icons.Rounded.SportsEsports else if (hasTvRemote) Icons.Rounded.Tv else Icons.Rounded.Smartphone,
+                            iconTint = if (hasGamepad || hasTvRemote) scheme.tertiary else scheme.onSurfaceVariant,
+                            iconContainerColor = if (hasGamepad || hasTvRemote) scheme.tertiaryContainer.copy(alpha = 0.7f) else scheme.surfaceContainerHighest,
+                            title = if (hasGamepad) stringResource(R.string.quick_settings_gamepad) else if (hasTvRemote) stringResource(R.string.quick_settings_tv_remote) else stringResource(R.string.quick_settings_input_device),
+                            subtitle = controllerName ?: if (hasGamepad) stringResource(R.string.quick_settings_gamepad_ready) else if (hasTvRemote) stringResource(R.string.quick_settings_tv_remote_ready) else stringResource(R.string.quick_settings_touch_internal),
+                            badge = if (hasGamepad || hasTvRemote) "ACTIVE" else "STANDBY",
+                            badgeColor = if (hasGamepad || hasTvRemote) scheme.tertiary else scheme.outline
+                        )
+
+                        Spacer(Modifier.height(4.dp))
+
+                        // Section: Sliders / Hardware Controls
+                        Text(
+                            text = stringResource(R.string.quick_settings_section_controls),
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            ),
+                            color = scheme.primary
+                        )
+
+                        // Media Volume Card
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = scheme.surfaceContainerHighest.copy(alpha = 0.65f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = when {
+                                                volFraction <= 0.01f -> Icons.AutoMirrored.Rounded.VolumeMute
+                                                volFraction < 0.5f -> Icons.AutoMirrored.Rounded.VolumeDown
+                                                else -> Icons.AutoMirrored.Rounded.VolumeUp
+                                            },
+                                            contentDescription = null,
+                                            tint = scheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.quick_settings_volume),
+                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                                            color = scheme.onSurface
+                                        )
+                                    }
+                                    Text(
+                                        text = "${(volFraction * 100).roundToInt()}%",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = scheme.primary
+                                    )
+                                }
+                                Slider(
+                                    value = volFraction,
+                                    onValueChange = { newFraction ->
+                                        volFraction = newFraction
+                                        val targetVol = (newFraction * maxVol).roundToInt()
+                                        audioManager?.setStreamVolume(AudioManager.STREAM_MUSIC, targetVol, 0)
+                                    },
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = scheme.primary,
+                                        activeTrackColor = scheme.primary,
+                                        inactiveTrackColor = scheme.surfaceContainerHighest
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .gamepadFocusOutline(shape = RoundedCornerShape(12.dp), register = true)
+                                )
+                            }
+                        }
+
+                        // Display Brightness Card
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = scheme.surfaceContainerHighest.copy(alpha = 0.65f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = when {
+                                                brightnessFraction < 0.33f -> Icons.Rounded.BrightnessLow
+                                                brightnessFraction < 0.66f -> Icons.Rounded.BrightnessMedium
+                                                else -> Icons.Rounded.BrightnessHigh
+                                            },
+                                            contentDescription = null,
+                                            tint = scheme.tertiary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.quick_settings_brightness),
+                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                                            color = scheme.onSurface
+                                        )
+                                    }
+                                    Text(
+                                        text = "${(brightnessFraction * 100).roundToInt()}%",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = scheme.tertiary
+                                    )
+                                }
+                                Slider(
+                                    value = brightnessFraction,
+                                    onValueChange = { newFraction ->
+                                        brightnessFraction = newFraction
+                                        activity?.let { act ->
+                                            val lp = act.window.attributes
+                                            lp.screenBrightness = newFraction.coerceIn(0.01f, 1f)
+                                            act.window.attributes = lp
+                                        }
+                                    },
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = scheme.tertiary,
+                                        activeTrackColor = scheme.tertiary,
+                                        inactiveTrackColor = scheme.surfaceContainerHighest
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .gamepadFocusOutline(shape = RoundedCornerShape(12.dp), register = true)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickSettingTile(
+    icon: ImageVector,
+    iconTint: Color,
+    iconContainerColor: Color,
+    title: String,
+    subtitle: String,
+    badge: String,
+    badgeColor: Color
+) {
+    val scheme = MaterialTheme.colorScheme
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = scheme.surfaceContainerHighest.copy(alpha = 0.5f),
+        border = BorderStroke(1.dp, scheme.outlineVariant.copy(alpha = 0.2f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = iconContainerColor,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = scheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = badgeColor.copy(alpha = 0.15f),
+                modifier = Modifier.padding(start = 4.dp)
+            ) {
+                Text(
+                    text = badge,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp
+                    ),
+                    color = badgeColor,
+                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                )
+            }
         }
     }
 }
@@ -1405,6 +1911,7 @@ private fun ZXGameSpaceTopBar(
     onSearchClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onAvatarClick: () -> Unit,
+    onStatusClick: () -> Unit = {},
     onExit: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -1640,7 +2147,11 @@ private fun ZXGameSpaceTopBar(
             Surface(
                 shape = CircleShape,
                 color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
-                modifier = Modifier.height(38.dp)
+                modifier = Modifier
+                    .height(38.dp)
+                    .clip(CircleShape)
+                    .gamepadFocusOutline(shape = CircleShape, register = true)
+                    .clickable(onClick = onStatusClick)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
