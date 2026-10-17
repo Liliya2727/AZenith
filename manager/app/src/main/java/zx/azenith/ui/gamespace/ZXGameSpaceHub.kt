@@ -22,6 +22,8 @@ import android.app.ActivityManager
 import android.content.Context
 import android.os.BatteryManager
 import android.view.KeyEvent
+import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -29,17 +31,23 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -47,37 +55,55 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.Android
 import androidx.compose.material.icons.rounded.Apps
-import androidx.compose.material.icons.rounded.BarChart
+import androidx.compose.material.icons.rounded.BatteryAlert
+import androidx.compose.material.icons.rounded.BatteryChargingFull
+import androidx.compose.material.icons.rounded.BatteryStd
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Memory
-import androidx.compose.material.icons.rounded.MoreHoriz
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PowerSettingsNew
-import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.Token
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.WorkspacePremium
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
@@ -86,11 +112,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -99,6 +133,10 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -107,17 +145,25 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.changedToDown
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -126,16 +172,27 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import zx.azenith.R
 import zx.azenith.ui.component.AppIconCache
+import zx.azenith.ui.component.ScreenWrapper
 import zx.azenith.ui.component.AppIconImage
 import zx.azenith.ui.component.GamepadFocusRoot
 import zx.azenith.ui.component.gamepadFocusOutline
+import zx.azenith.ui.component.gamepadKeyWatch
 import zx.azenith.ui.component.gamepadScreenEntry
+import zx.azenith.ui.subscreens.AppSettingsScreen
+import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.util.getChipsetName
 import zx.azenith.ui.util.getRealDeviceName
 import zx.azenith.ui.util.getSupportedRefreshRatesPicker
@@ -173,15 +230,25 @@ fun ZXGameSpaceHub(
     allApps: List<ApplistViewmodel.AppInfo> = games,
     onApplyProfile: (String) -> Unit = {},
     onLaunch: (ApplistViewmodel.AppInfo) -> Unit,
-    onExit: () -> Unit
+    onExit: () -> Unit,
+    onExitApp: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val motion = MaterialTheme.motionScheme
     val effectsSpec = motion.defaultEffectsSpec<Float>()
+    val spatialSpec = motion.defaultSpatialSpec<androidx.compose.ui.unit.IntSize>()
 
     var category by remember { mutableStateOf(TopCategory.Games) }
     var selectedRibbonIndex by remember { mutableIntStateOf(0) }
+    var exitPrompt by remember { mutableStateOf(false) }
+    var tuningPkg by remember { mutableStateOf<String?>(null) }
+    var searchOpen by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    // The sheet's own offset decides the expansion, so the scroll lives above the stage.
+    val welcomeScroll = rememberScrollState()
+    var homeExpanded by remember { mutableStateOf(false) }
+    var libraryExpanded by remember { mutableStateOf(false) }
 
     val ribbonEntries = remember(games) {
         buildList {
@@ -193,6 +260,15 @@ fun ZXGameSpaceHub(
 
     val safeIndex = selectedRibbonIndex.coerceIn(0, ribbonEntries.lastIndex)
     val activeEntry = ribbonEntries[safeIndex]
+
+    // The stage's own gate drives the expansion; leaving one is all that is left to reset here.
+    LaunchedEffect(activeEntry) {
+        if (activeEntry != RibbonEntry.Welcome) {
+            homeExpanded = false
+            welcomeScroll.scrollTo(0)
+        }
+        if (activeEntry != RibbonEntry.Library) libraryExpanded = false
+    }
 
     val clock = rememberClock()
     val battery = rememberBatteryState()
@@ -230,6 +306,33 @@ fun ZXGameSpaceHub(
             entry = if (category == TopCategory.Games) activeEntry else RibbonEntry.Welcome
         )
 
+        val isScrolled = homeExpanded || (category == TopCategory.Games && activeEntry == RibbonEntry.Welcome && welcomeScroll.value > 15)
+        val topBarScrimAlpha by animateFloatAsState(
+            targetValue = if (isScrolled) 1f else 0f,
+            animationSpec = motion.defaultEffectsSpec<Float>(),
+            label = "TopBarScrimAlpha"
+        )
+
+        // Continuous edge-to-edge top bar gradient scrim merging with the status bar
+        if (topBarScrimAlpha > 0.01f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(115.dp)
+                    .graphicsLayer { alpha = topBarScrimAlpha }
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                scheme.surface.copy(alpha = 0.96f),
+                                scheme.surface.copy(alpha = 0.85f),
+                                scheme.surface.copy(alpha = 0.35f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -238,10 +341,19 @@ fun ZXGameSpaceHub(
             ZXGameSpaceTopBar(
                 selectedCategory = category,
                 clock = clock,
+                battery = battery,
+                isScrolled = isScrolled,
                 onSelectCategory = { category = it },
+                searchOpen = searchOpen,
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
+                onSearchClose = {
+                    searchOpen = false
+                    searchQuery = ""
+                },
                 onSearchClick = {
                     category = TopCategory.Games
-                    selectedRibbonIndex = ribbonEntries.lastIndex
+                    searchOpen = true
                 },
                 onSettingsClick = {
                     category = if (category == TopCategory.System) TopCategory.Games else TopCategory.System
@@ -254,47 +366,72 @@ fun ZXGameSpaceHub(
                     }
                     onApplyProfile(nextProfile)
                 },
-                onExit = onExit
+                onExit = { exitPrompt = true }
             )
 
             Spacer(Modifier.height(6.dp))
 
             if (category == TopCategory.Games) {
-                ZXGameSpaceTileRibbon(
-                    entries = ribbonEntries,
-                    selectedIndex = safeIndex,
-                    onSelect = { selectedRibbonIndex = it },
-                    onActivate = { entry ->
-                        when (entry) {
-                            is RibbonEntry.Game -> onLaunch(entry.app)
-                            RibbonEntry.Welcome -> {
-                                games.firstOrNull()?.let { selectedRibbonIndex = 1 }
+                // The library sits under the ribbon like the sheet does, so the ribbon only
+                // leaves once one of them has been scrolled to full screen.
+                AnimatedVisibility(
+                    visible = !searchOpen && !homeExpanded && !libraryExpanded,
+                    enter = fadeIn(effectsSpec) + expandVertically(spatialSpec),
+                    exit = fadeOut(effectsSpec) + shrinkVertically(spatialSpec)
+                ) {
+                    Column {
+                        ZXGameSpaceTileRibbon(
+                            entries = ribbonEntries,
+                            selectedIndex = safeIndex,
+                            onSelect = { selectedRibbonIndex = it },
+                            onActivate = { entry ->
+                                when (entry) {
+                                    is RibbonEntry.Game -> onLaunch(entry.app)
+                                    RibbonEntry.Welcome -> {
+                                        games.firstOrNull()?.let { selectedRibbonIndex = 1 }
+                                    }
+                                    RibbonEntry.Library -> {
+                                        selectedRibbonIndex = ribbonEntries.lastIndex
+                                    }
+                                }
                             }
-                            RibbonEntry.Library -> {
-                                selectedRibbonIndex = ribbonEntries.lastIndex
-                            }
-                        }
+                        )
+
+                        Spacer(Modifier.height(10.dp))
                     }
-                )
+                }
 
-                Spacer(Modifier.height(10.dp))
+                BackHandler(enabled = searchOpen || homeExpanded || libraryExpanded) {
+                    if (searchOpen) {
+                        searchOpen = false
+                        searchQuery = ""
+                    } else if (homeExpanded) {
+                        homeExpanded = false
+                    } else if (libraryExpanded) {
+                        libraryExpanded = false
+                    } else {
+                        selectedRibbonIndex = 0
+                    }
+                }
 
-                AnimatedContent(
-                    targetState = activeEntry,
-                    transitionSpec = {
-                        fadeIn(effectsSpec) togetherWith fadeOut(effectsSpec)
-                    },
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    label = "ZXGameSpaceMainStage"
-                ) { entry ->
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    AnimatedContent(
+                        targetState = activeEntry,
+                        transitionSpec = {
+                            fadeIn(effectsSpec) togetherWith fadeOut(effectsSpec)
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                        label = "ZXGameSpaceMainStage"
+                    ) { entry ->
                     when (entry) {
                         RibbonEntry.Welcome -> WelcomeHubStage(
+                            scroll = welcomeScroll,
+                            expanded = homeExpanded,
+                            onExpandedChange = { homeExpanded = it },
                             profile = profile,
                             profileValue = profileValue,
                             games = games,
                             allAppsCount = allApps.size.coerceAtLeast(games.size),
-                            battery = battery,
-                            ramState = ramState,
                             refreshHz = refreshHz,
                             deviceName = deviceName,
                             chipsetName = chipsetName,
@@ -306,21 +443,36 @@ fun ZXGameSpaceHub(
                                 }
                                 if (idx >= 0) selectedRibbonIndex = idx else onLaunch(game)
                             },
-                            onLaunchGame = onLaunch
+                            onLaunchGame = onLaunch,
+                            onOpenLibrary = { selectedRibbonIndex = ribbonEntries.lastIndex }
                         )
 
                         is RibbonEntry.Game -> GameHeroStage(
                             app = entry.app,
-                            profile = profile,
-                            refreshHz = refreshHz,
                             onLaunch = { onLaunch(entry.app) },
-                            onOpenTune = { category = TopCategory.System }
+                            onOpenAppSettings = { tuningPkg = entry.app.packageName }
                         )
 
                         RibbonEntry.Library -> LibraryGridStage(
                             games = games,
                             allApps = allApps,
-                            onLaunch = onLaunch
+                            expanded = libraryExpanded,
+                            onOpenSettings = { tuningPkg = it.packageName },
+                            onExpandedChange = { libraryExpanded = it },
+                            onClose = { selectedRibbonIndex = 0 }
+                        )
+                    }
+                }
+
+                    ZXGameSpaceSearchOverlay(
+                        visible = searchOpen,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        ZXGameSpaceSearchPane(
+                            query = searchQuery,
+                            apps = allApps,
+                            onLaunch = onLaunch,
+                            onOpenSettings = { tuningPkg = it.packageName }
                         )
                     }
                 }
@@ -339,7 +491,268 @@ fun ZXGameSpaceHub(
                 )
             }
         }
+
+        if (exitPrompt) {
+            ZXGameSpaceExitDialog(
+                onDismiss = { exitPrompt = false },
+                onExitShell = {
+                    exitPrompt = false
+                    onExit()
+                },
+                onExitApp = {
+                    exitPrompt = false
+                    onExitApp()
+                }
+            )
+        }
+
+        tuningPkg?.let { pkg ->
+            ZXGameSpaceAppSettingsOverlay(packageName = pkg, onClose = { tuningPkg = null })
+        }
     }
+}
+
+@Composable
+private fun ZXGameSpaceSearchOverlay(
+    visible: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    val effectsSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+
+    // The scoped AnimatedVisibility overloads do not resolve from inside the stage Box.
+    AnimatedVisibility(
+        visible = visible,
+        modifier = modifier,
+        enter = fadeIn(effectsSpec),
+        exit = fadeOut(effectsSpec)
+    ) {
+        content()
+    }
+}
+
+/** Sheet offset (px) at which a drag stops being scroll and becomes the full-screen step. */
+private const val HOME_EXPAND_AT = 90
+
+private const val SEARCH_RESULT_CAP = 3
+
+/**
+ * Results for the top bar search, drawn over the stage rather than beside it. Apps only for now —
+ * settings entries land here later. Word-for-word hits lead, then prefix hits, then the rest, and
+ * anything past [SEARCH_RESULT_CAP] hides behind Show all.
+ */
+@Composable
+private fun ZXGameSpaceSearchPane(
+    query: String,
+    apps: List<ApplistViewmodel.AppInfo>,
+    onLaunch: (ApplistViewmodel.AppInfo) -> Unit,
+    onOpenSettings: (ApplistViewmodel.AppInfo) -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    var showAll by remember(query) { mutableStateOf(false) }
+
+    val matches = remember(query, apps) {
+        if (query.isBlank()) {
+            emptyList()
+        } else {
+            apps.filter { it.label.contains(query, ignoreCase = true) }
+                .sortedWith(
+                    compareByDescending<ApplistViewmodel.AppInfo> {
+                        it.label.equals(query, ignoreCase = true)
+                    }.thenByDescending { it.label.startsWith(query, ignoreCase = true) }
+                        .thenBy { it.label.lowercase() }
+                )
+        }
+    }
+    val shown = if (showAll) matches else matches.take(SEARCH_RESULT_CAP)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(scheme.surface.copy(alpha = 0.96f))
+    ) {
+        when {
+            query.isBlank() -> Text(
+                text = stringResource(R.string.gamespace_search_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onSurfaceVariant,
+                modifier = Modifier.align(Alignment.Center)
+            )
+
+            matches.isEmpty() -> Text(
+                text = stringResource(R.string.gamespace_search_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = scheme.onSurfaceVariant,
+                modifier = Modifier.align(Alignment.Center)
+            )
+
+            else -> Column(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(shown, key = { it.packageName }) { app ->
+                        val shape = MaterialTheme.shapes.medium
+                        Surface(
+                            shape = shape,
+                            color = scheme.surfaceContainerHigh.copy(alpha = 0.88f),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(60.dp)
+                                .gamepadFocusOutline(shape = shape)
+                                .clip(shape)
+                                .clickable { onLaunch(app) }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AppIconImage(app = app, size = 40.dp)
+                                Spacer(Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = app.label,
+                                        style = MaterialTheme.typography.labelLarge.copy(
+                                            fontWeight = FontWeight.SemiBold
+                                        ),
+                                        color = scheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = stringResource(
+                                            if (app.isEnabledInConfig) R.string.gamespace_tuned
+                                            else R.string.gamespace_untuned
+                                        ),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (app.isEnabledInConfig) {
+                                            scheme.primary
+                                        } else {
+                                            scheme.onSurfaceVariant
+                                        },
+                                        maxLines = 1
+                                    )
+                                }
+                                TopBarIconButton(
+                                    icon = Icons.Rounded.Settings,
+                                    contentDescription = stringResource(R.string.gamespace_app_settings),
+                                    onClick = { onOpenSettings(app) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (matches.size > SEARCH_RESULT_CAP && !showAll) {
+                    TextButton(
+                        onClick = { showAll = true },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.gamespace_show_all) + " (${matches.size})"
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The manager's App Settings, mounted inside the shell. Handing the job to the manager activity is
+ * not an option: both activities are `singleTask`, so starting the manager from here would clear
+ * Game Space off the task rather than stack on top of it.
+ */
+@Composable
+private fun ZXGameSpaceAppSettingsOverlay(
+    packageName: String,
+    onClose: () -> Unit
+) {
+    val settingsNav = rememberNavController()
+    val entry by settingsNav.currentBackStackEntryAsState()
+    var landed by remember { mutableStateOf(false) }
+
+    BackHandler { onClose() }
+
+    // The screen pops its own entry when it hands back, and an empty host is the overlay's way out.
+    LaunchedEffect(entry) {
+        if (entry != null) landed = true else if (landed) onClose()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
+        NavHost(
+            navController = settingsNav,
+            startDestination = "app_settings"
+        ) {
+            composable("app_settings") {
+                ScreenWrapper(navController = settingsNav, animatedVisibilityScope = this) {
+                    AppSettingsScreen(navController = settingsNav, packageName = packageName)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Leave prompt for the power button: close the shell and stay on AZenith, or close both. Backing
+ * out of the dialog leaves the two alone.
+ *
+ * A dialog is its own window, so it carries [gamepadKeyWatch] — the activity never sees its keys.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ZXGameSpaceExitDialog(
+    onDismiss: () -> Unit,
+    onExitShell: () -> Unit,
+    onExitApp: () -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.gamepadKeyWatch(),
+        icon = { Icon(Icons.Rounded.PowerSettingsNew, contentDescription = null) },
+        title = { Text(stringResource(R.string.gamespace_exit_title)) },
+        text = { Text(stringResource(R.string.gamespace_exit_desc)) },
+        confirmButton = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(
+                    onClick = onExitShell,
+                    modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
+                ) {
+                    Text(stringResource(R.string.gamespace_exit_shell))
+                }
+                TextButton(
+                    onClick = onExitApp,
+                    modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
+                ) {
+                    Text(
+                        text = stringResource(R.string.gamespace_exit_app),
+                        color = scheme.error
+                    )
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
+            ) {
+                Text(stringResource(R.string.dialog_cancel))
+            }
+        }
+    )
 }
 
 /**
@@ -529,7 +942,13 @@ private fun ZXGameSpaceContourGlyphCanvas(
 private fun ZXGameSpaceTopBar(
     selectedCategory: TopCategory,
     clock: String,
+    battery: Pair<Int, Boolean>,
+    isScrolled: Boolean = false,
     onSelectCategory: (TopCategory) -> Unit,
+    searchOpen: Boolean = false,
+    searchQuery: String = "",
+    onSearchQueryChange: (String) -> Unit = {},
+    onSearchClose: () -> Unit = {},
     onSearchClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onAvatarClick: () -> Unit,
@@ -540,11 +959,11 @@ private fun ZXGameSpaceTopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(44.dp),
+            .heightIn(min = 44.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             TopCategory.entries.forEach { tab ->
@@ -563,16 +982,67 @@ private fun ZXGameSpaceTopBar(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
+
+            AnimatedVisibility(
+                visible = isScrolled,
+                enter = fadeIn() + expandHorizontally(),
+                exit = fadeOut() + shrinkHorizontally()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(1.5.dp)
+                            .height(18.dp)
+                            .background(scheme.outlineVariant.copy(alpha = 0.7f))
+                    )
+                    Text(
+                        text = stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.onSurface
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.weight(1f))
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        if (searchOpen) {
+            val searchRequester = remember { FocusRequester() }
+
+            LaunchedEffect(Unit) { searchRequester.requestFocus() }
+
+            TextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                placeholder = { Text(stringResource(R.string.search_apps)) },
+                singleLine = true,
+                modifier = Modifier
+                    .width(300.dp)
+                    .focusRequester(searchRequester),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent
+                )
+            )
+
             TopBarIconButton(
-                icon = Icons.Rounded.Search,
+                icon = Icons.Rounded.Close,
+                contentDescription = stringResource(R.string.gamespace_search_close),
+                onClick = onSearchClose
+            )
+        } else {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TopBarIconButton(
+                    icon = Icons.Rounded.Search,
                 contentDescription = stringResource(R.string.gamespace_library_title),
                 onClick = onSearchClick
             )
@@ -614,13 +1084,47 @@ private fun ZXGameSpaceTopBar(
                 onClick = onExit
             )
 
-            Spacer(Modifier.width(4.dp))
+            // Material 3 battery chip beside the clock
+            Surface(
+                shape = CircleShape,
+                color = if (battery.second) scheme.primaryContainer
+                        else if (battery.first <= 20) scheme.errorContainer
+                        else scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                modifier = Modifier.padding(start = 2.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = if (battery.second) Icons.Rounded.BatteryChargingFull
+                                      else if (battery.first <= 20) Icons.Rounded.BatteryAlert
+                                      else Icons.Rounded.BatteryStd,
+                        contentDescription = stringResource(R.string.gamespace_info_battery),
+                        tint = if (battery.second) scheme.onPrimaryContainer
+                               else if (battery.first <= 20) scheme.onErrorContainer
+                               else scheme.onSurface,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Text(
+                        text = "${battery.first}%",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = if (battery.second) scheme.onPrimaryContainer
+                                else if (battery.first <= 20) scheme.onErrorContainer
+                                else scheme.onSurface
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(2.dp))
 
             Text(
                 text = clock,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Normal),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                 color = scheme.onSurface
             )
+            }
         }
     }
 }
@@ -670,7 +1174,8 @@ private fun ZXGameSpaceTileRibbon(
     var ribbonWidthPx by remember { mutableStateOf(0f) }
 
     LaunchedEffect(selectedIndex, entries.size) {
-        runCatching { listState.animateScrollToItem((selectedIndex - 1).coerceAtLeast(0)) }
+        // Past the third tile the pointer holds its slot and the row slides beneath it.
+        runCatching { listState.animateScrollToItem((selectedIndex - 2).coerceAtLeast(0)) }
     }
 
     val activeEntry = entries.getOrElse(selectedIndex) { RibbonEntry.Welcome }
@@ -746,7 +1251,7 @@ private fun ZXGameSpaceTileRibbon(
                         text = if (activeEntry.app.isEnabledInConfig) {
                             stringResource(R.string.gamespace_tuned).uppercase()
                         } else {
-                            "GAME"
+                            stringResource(R.string.gamespace_untuned).uppercase()
                         }
                     )
                     Text(
@@ -828,6 +1333,25 @@ private fun ZXGameSpaceRibbonTile(
                 is RibbonEntry.Game -> GameTileContent(app = entry.app, selected = selected)
                 RibbonEntry.Library -> LibraryTileContent()
             }
+        }
+
+        // Enabled/disabled at a glance: a filled dot when the app carries the tweaks, a hollow
+        // ring when it does not.
+        if (entry is RibbonEntry.Game) {
+            val on = entry.app.isEnabledInConfig
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(if (selected) 5.dp else 3.dp)
+                    .size(if (selected) 12.dp else 9.dp)
+                    .clip(CircleShape)
+                    .background(if (on) scheme.primary else scheme.surfaceContainerHighest)
+                    .border(
+                        width = 1.dp,
+                        color = if (on) scheme.primary else scheme.outline.copy(alpha = 0.7f),
+                        shape = CircleShape
+                    )
+            )
         }
     }
 }
@@ -957,53 +1481,170 @@ private fun LibraryTileContent() {
 }
 
 /**
- * Stage 1: ZXGameSpace Welcome bento grid (matches Image 1).
- * 3-column bento layout:
- * - Left: Active Profiles card (with 4 circular medallions) + Featured Banner card
- * - Center: Performance & Thermal card + Optimization Trophies card (4 trophy counters + progress bar)
- * - Right: 3 Circular Hardware Rings card (Battery, RAM, Display Hz) + Spotlight card
+ * Stage 1: the home sheet. The bento wall used to sit in the stage's leftover height and clipped
+ * at its edge, so what the normal-mode home reports is carried here instead -- one widget per
+ * reading, and the sheet scrolls rather than cutting anything off. Scrolling it past the ribbon's
+ * room slides the sheet up to full height and adds the readings the collapsed view has no space
+ * for; scrolling back to the top hands that room back to the app list.
  */
 @Composable
 private fun WelcomeHubStage(
+    scroll: ScrollState,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
     profile: String,
     profileValue: String,
     games: List<ApplistViewmodel.AppInfo>,
     allAppsCount: Int,
-    battery: Pair<Int, Boolean>,
-    ramState: Pair<Float, String>,
     refreshHz: Int,
     deviceName: String,
     chipsetName: String,
     onApplyProfile: (String) -> Unit,
     onOpenSystem: () -> Unit,
     onSelectGame: (ApplistViewmodel.AppInfo) -> Unit,
-    onLaunchGame: (ApplistViewmodel.AppInfo) -> Unit
+    onLaunchGame: (ApplistViewmodel.AppInfo) -> Unit,
+    onOpenLibrary: () -> Unit = {}
 ) {
-    val tunedCount = remember(games) { games.count { it.isEnabledInConfig } }
-    val featuredGame = games.firstOrNull()
-    val spotlightGame = games.getOrNull(1) ?: featuredGame
+    val uriHandler = LocalUriHandler.current
+    val scheme = MaterialTheme.colorScheme
+    val wordmark = stringResource(R.string.app_name)
+    val scope = rememberCoroutineScope()
+    // Read through these in the gate: it outlives the composition that handed it the callbacks.
+    val expandedNow = rememberUpdatedState(expanded)
+    val notifyExpanded = rememberUpdatedState(onExpandedChange)
+    // The drag that expands the sheet is spent on the expansion; the next one does the scrolling.
+    var stageHold by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Upper open stage breathing room so the contour waves and symbols show through.
-        Spacer(Modifier.weight(0.22f))
+    val stageGate = remember(scroll) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val fromDrag = source == NestedScrollSource.UserInput
+                if (stageHold && fromDrag && available.y < 0f) return available
+                if (!expandedNow.value && available.y < 0f) {
+                    val projected = scroll.value + available.y
+                    if (projected >= HOME_EXPAND_AT) {
+                        if (fromDrag) stageHold = true
+                        notifyExpanded.value(true)
+                        // Full screen puts the sheet at its own top, readings below the bar.
+                        scope.launch { runCatching { scroll.animateScrollTo(0) } }
+                        return Offset(0f, projected - HOME_EXPAND_AT)
+                    }
+                }
+                if (expandedNow.value && fromDrag && available.y > 0f && scroll.value <= 0) {
+                    stageHold = false
+                    notifyExpanded.value(false)
+                    return Offset(0f, available.y)
+                }
+                return Offset.Zero
+            }
+        }
+    }
 
-        Row(
+    // Root and module are one-shot probes; the service is watched instead because the daemon can
+    // restart underneath an open sheet and a stale pid would be worse than none.
+    val rootGranted by produceState<Boolean?>(initialValue = null) {
+        value = withContext(Dispatchers.IO) { RootUtils.isRootGranted() }
+    }
+    val moduleInstalled by produceState<Boolean?>(initialValue = null) {
+        value = withContext(Dispatchers.IO) { RootUtils.isModuleInstalled() }
+    }
+    val service by RootUtils.observeServiceStatusRes()
+        .collectAsState(initial = R.string.status_initializing to "")
+
+    val rootValue = when (rootGranted) {
+        true -> stringResource(R.string.root_granted)
+        false -> stringResource(R.string.root_not_granted)
+        else -> stringResource(R.string.status_checking)
+    }
+    val moduleValue = when (moduleInstalled) {
+        true -> stringResource(service.first)
+        false -> stringResource(R.string.module_not_installed)
+        else -> stringResource(R.string.status_checking)
+    }
+    val suspended = stringResource(R.string.status_suspended)
+    val pidValue = service.second.ifBlank { suspended }
+
+    val topRoom by animateDpAsState(
+        targetValue = if (expanded) 64.dp else 142.dp,
+        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec<androidx.compose.ui.unit.Dp>(),
+        label = "WelcomeTopRoom"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(stageGate)
+            // A new touch is a new scroll: the drag that paid for the expansion is over.
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        awaitPointerEvent(PointerEventPass.Initial).changes.forEach { change ->
+                            if (change.changedToDown()) stageHold = false
+                        }
+                    }
+                }
+            }
+    ) {
+        Column(
             modifier = Modifier
-                .weight(0.78f)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                .fillMaxSize()
+                .verticalScroll(scroll)
         ) {
-            // Column 1: Active Profiles + Store/Engine Banner
-            Column(
-                modifier = Modifier.weight(1f).fillMaxHeight(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(topRoom)
+                    .clipToBounds(),
+                contentAlignment = Alignment.BottomStart
             ) {
-                ActiveProfilesBentoCard(
-                    profile = profile,
-                    profileValue = profileValue,
-                    tunedCount = tunedCount,
-                    chipsetName = chipsetName,
+                HomeWordmark(
+                    scroll = scroll,
+                    held = expanded,
+                    text = wordmark,
                     deviceName = deviceName,
+                    chipsetName = chipsetName
+                )
+            }
+
+            // Row 1: Core System & Performance Status (4 balanced cards across the width)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Max),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                HubInfoTile(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    icon = if (rootGranted == true) Icons.Rounded.VerifiedUser else Icons.Rounded.Security,
+                    label = stringResource(R.string.root_access),
+                    value = rootValue,
+                    container = if (rootGranted == false) scheme.errorContainer else scheme.primaryContainer,
+                    onContainer = if (rootGranted == false) scheme.onErrorContainer else scheme.onPrimaryContainer
+                )
+                HubInfoTile(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    icon = Icons.Rounded.Memory,
+                    label = stringResource(R.string.gamespace_info_module),
+                    value = moduleValue,
+                    container = if (moduleInstalled == false) scheme.errorContainer else scheme.secondaryContainer,
+                    onContainer = if (moduleInstalled == false) scheme.onErrorContainer else scheme.onSecondaryContainer
+                )
+                HubInfoTile(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    icon = Icons.Rounded.Tune,
+                    label = stringResource(R.string.gamespace_info_pid),
+                    value = pidValue,
+                    container = scheme.tertiaryContainer,
+                    onContainer = scheme.onTertiaryContainer
+                )
+                HubInfoTile(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    icon = Icons.Rounded.Token,
+                    label = stringResource(R.string.current_profile),
+                    value = profile,
+                    container = scheme.surfaceContainerHigh,
+                    onContainer = scheme.onSurface,
+                    badgeText = "CYCLE PROFILE",
                     onClick = {
                         val next = when (profileValue) {
                             "1" -> "2"
@@ -1011,66 +1652,562 @@ private fun WelcomeHubStage(
                             else -> "1"
                         }
                         onApplyProfile(next)
-                    },
-                    modifier = Modifier.weight(1.38f).fillMaxWidth()
-                )
-
-                EngineBannerBentoCard(
-                    featuredGame = featuredGame,
-                    deviceName = deviceName,
-                    onClick = {
-                        if (featuredGame != null) onSelectGame(featuredGame) else onOpenSystem()
-                    },
-                    modifier = Modifier.weight(0.72f).fillMaxWidth()
+                    }
                 )
             }
 
-            // Column 2: Performance & Thermal + Optimization Trophies
-            Column(
-                modifier = Modifier.weight(1.05f).fillMaxHeight(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+            Spacer(Modifier.height(12.dp))
+
+            // Row 2: Landscape Bento Deck (2-column balanced layout)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Max),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                PerfThermalBentoCard(
-                    onClick = onOpenSystem,
-                    modifier = Modifier.weight(0.76f).fillMaxWidth()
+                // Column 1: Hardware & System Architecture Deck (55% width)
+                HardwareSpecsBentoCard(
+                    modifier = Modifier.weight(1.1f).fillMaxHeight(),
+                    deviceName = deviceName,
+                    chipsetName = chipsetName,
+                    refreshHz = refreshHz,
+                    onOpenSystem = onOpenSystem
                 )
 
-                OptimizationTrophiesBentoCard(
-                    profile = profile,
-                    profileValue = profileValue,
-                    tunedCount = tunedCount,
+                // Column 2: Gaming Library & Quick Action Deck (45% width)
+                GamingLibraryBentoCard(
+                    modifier = Modifier.weight(0.9f).fillMaxHeight(),
                     gamesCount = games.size,
                     allAppsCount = allAppsCount,
-                    onClick = onOpenSystem,
-                    modifier = Modifier.weight(1.34f).fillMaxWidth()
+                    onOpenLibrary = onOpenLibrary
                 )
             }
 
-            // Column 3: 3 Circular Hardware Rings + Spotlight Game Card
-            Column(
-                modifier = Modifier.weight(1.05f).fillMaxHeight(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                HardwareRingsBentoCard(
-                    battery = battery,
-                    ramState = ramState,
-                    refreshHz = refreshHz,
-                    onClick = onOpenSystem,
-                    modifier = Modifier.weight(0.76f).fillMaxWidth()
-                )
+            Spacer(Modifier.height(12.dp))
 
-                SpotlightBentoCard(
-                    game = spotlightGame,
-                    chipsetName = chipsetName,
-                    onClick = {
-                        if (spotlightGame != null) onLaunchGame(spotlightGame) else onOpenSystem()
-                    },
-                    modifier = Modifier.weight(1.34f).fillMaxWidth()
+            // Row 3: Community & Knowledge Links (Side-by-side 50/50 split)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Max),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                HubLinkTile(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    icon = Icons.Rounded.Favorite,
+                    label = stringResource(R.string.support_us),
+                    description = stringResource(R.string.support_us_desc),
+                    container = scheme.secondaryContainer.copy(alpha = 0.85f),
+                    onContainer = scheme.onSecondaryContainer,
+                    onClick = { uriHandler.openUri("https://t.me/ZeshArch") }
+                )
+                HubLinkTile(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    icon = Icons.Rounded.Info,
+                    label = stringResource(R.string.learn_more),
+                    description = stringResource(R.string.learn_more_desc),
+                    container = scheme.tertiaryContainer.copy(alpha = 0.85f),
+                    onContainer = scheme.onTertiaryContainer,
+                    onClick = { uriHandler.openUri("https://github.com/Liliya2727/AZenith") }
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+/** The wordmark at rest: hero size while the sheet is whole, shrinking off its own baseline as
+ * the bar below it takes over. */
+@Composable
+private fun HomeWordmark(
+    scroll: ScrollState,
+    held: Boolean,
+    text: String,
+    deviceName: String,
+    chipsetName: String
+) {
+    val scheme = MaterialTheme.colorScheme
+    // Holds it down once the sheet is full screen, where the offset has gone back to zero.
+    val hold by animateFloatAsState(
+        targetValue = if (held) 1f else 0f,
+        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>(),
+        label = "HomeWordmarkHold"
+    )
+
+    Column(
+        modifier = Modifier
+            .padding(start = 24.dp, bottom = 12.dp)
+            .graphicsLayer {
+                val ramp = (scroll.value / HOME_EXPAND_AT.toFloat()).coerceIn(0f, 1f)
+                val progress = maxOf(ramp, hold)
+                alpha = (1f - progress * 1.25f).coerceIn(0f, 1f)
+                val scale = 1f - 0.35f * progress
+                scaleX = scale
+                scaleY = scale
+                translationY = -progress * 28f
+                transformOrigin = TransformOrigin(0f, 1f)
+            }
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.displayLarge.copy(
+                    fontSize = 72.sp,
+                    lineHeight = 74.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = (-1.5).sp
+                ),
+                color = scheme.onSurface,
+                maxLines = 1
+            )
+            Surface(
+                shape = CircleShape,
+                color = scheme.primaryContainer,
+                modifier = Modifier.padding(top = 10.dp)
+            ) {
+                Text(
+                    text = "GAME SPACE",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.2.sp
+                    ),
+                    color = scheme.onPrimaryContainer,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+            }
+        }
+        Text(
+            text = "$deviceName \u00b7 $chipsetName",
+            style = MaterialTheme.typography.labelLarge.copy(
+                fontWeight = FontWeight.Medium
+            ),
+            color = scheme.onSurfaceVariant.copy(alpha = 0.82f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 2.dp, top = 2.dp)
+        )
+    }
+}
+
+@Composable
+private fun HardwareSpecsBentoCard(
+    modifier: Modifier = Modifier,
+    deviceName: String,
+    chipsetName: String,
+    refreshHz: Int,
+    onOpenSystem: () -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(24.dp)
+
+    Surface(
+        modifier = modifier
+            .gamepadFocusOutline(shape = shape, register = true)
+            .clickable(onClick = onOpenSystem),
+        shape = shape,
+        color = scheme.surfaceContainerHigh.copy(alpha = 0.82f)
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = scheme.primaryContainer,
+                    modifier = Modifier.size(38.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Rounded.Smartphone,
+                            contentDescription = null,
+                            tint = scheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.device_info).uppercase(),
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.primary,
+                        letterSpacing = 0.8.sp
+                    )
+                    Text(
+                        text = "$deviceName \u00b7 $chipsetName",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = scheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Rounded.ChevronRight,
+                    contentDescription = null,
+                    tint = scheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SpecPill(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Rounded.Speed,
+                    label = stringResource(R.string.refreshrates),
+                    value = stringResource(R.string.refresh_rate_format, refreshHz.toString())
+                )
+                SpecPill(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Rounded.Android,
+                    label = stringResource(R.string.android_version),
+                    value = "Android ${Build.VERSION.RELEASE}"
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SpecPill(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Rounded.Memory,
+                    label = "ARCH",
+                    value = Build.SUPPORTED_ABIS.firstOrNull() ?: "arm64-v8a"
+                )
+                SpecPill(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Rounded.Check,
+                    label = "SECURITY",
+                    value = Build.VERSION.SECURITY_PATCH.ifBlank { "Up to date" }
                 )
             }
         }
     }
 }
+
+@Composable
+private fun SpecPill(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    label: String,
+    value: String
+) {
+    val scheme = MaterialTheme.colorScheme
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        color = scheme.surfaceContainerHighest.copy(alpha = 0.7f)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = scheme.primary,
+                modifier = Modifier.size(16.dp)
+            )
+            Column {
+                Text(
+                    text = label.uppercase(),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
+                    ),
+                    color = scheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    maxLines = 1
+                )
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = scheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GamingLibraryBentoCard(
+    modifier: Modifier = Modifier,
+    gamesCount: Int,
+    allAppsCount: Int,
+    onOpenLibrary: () -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(24.dp)
+
+    Surface(
+        modifier = modifier
+            .gamepadFocusOutline(shape = shape, register = true)
+            .clickable(onClick = onOpenLibrary),
+        shape = shape,
+        color = scheme.surfaceContainerHigh.copy(alpha = 0.82f)
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = scheme.tertiaryContainer,
+                    modifier = Modifier.size(38.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Rounded.SportsEsports,
+                            contentDescription = null,
+                            tint = scheme.onTertiaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.gamespace_library_title).uppercase(),
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.tertiary,
+                        letterSpacing = 0.8.sp
+                    )
+                    Text(
+                        text = "$gamesCount ${stringResource(R.string.gamespace_info_games).lowercase()}",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = scheme.onSurface,
+                        maxLines = 1
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(14.dp),
+                    color = scheme.surfaceContainerHighest.copy(alpha = 0.7f)
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                        Text(
+                            text = stringResource(R.string.gamespace_info_games).uppercase(),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = scheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = "$gamesCount Tuned",
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onSurface
+                        )
+                    }
+                }
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(14.dp),
+                    color = scheme.surfaceContainerHighest.copy(alpha = 0.7f)
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                        Text(
+                            text = stringResource(R.string.gamespace_info_apps).uppercase(),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = scheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = "$allAppsCount Apps",
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onSurface
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = scheme.primary.copy(alpha = 0.14f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(R.string.gamespace_library_title),
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.primary
+                    )
+                    Icon(
+                        imageVector = Icons.Rounded.ChevronRight,
+                        contentDescription = null,
+                        tint = scheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** One reading on the sheet, at the stage's scale, filled in its own container role. */
+@Composable
+private fun HubInfoTile(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    label: String,
+    value: String,
+    container: Color,
+    onContainer: Color,
+    badgeText: String? = null,
+    onClick: (() -> Unit)? = null
+) {
+    val shape = RoundedCornerShape(20.dp)
+    Surface(
+        modifier = modifier
+            .gamepadFocusOutline(shape = shape, register = onClick != null)
+            .then(
+                if (onClick != null) Modifier.clickable(onClick = onClick)
+                else Modifier
+            ),
+        shape = shape,
+        color = container
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = onContainer,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = onContainer.copy(alpha = 0.75f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                color = onContainer,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (badgeText != null) {
+                Text(
+                    text = badgeText,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
+                    ),
+                    color = onContainer.copy(alpha = 0.7f),
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+/** Support and Learn More, carried as links the way the normal-mode home carries them. */
+@Composable
+private fun HubLinkTile(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    label: String,
+    description: String,
+    container: Color,
+    onContainer: Color,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(20.dp)
+
+    Surface(
+        modifier = modifier
+            .gamepadFocusOutline(shape = shape, register = true)
+            .clickable(onClick = onClick),
+        shape = shape,
+        color = container
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = onContainer.copy(alpha = 0.12f),
+                modifier = Modifier.size(36.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = onContainer,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = onContainer,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = onContainer.copy(alpha = 0.78f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Icon(
+                imageVector = Icons.Rounded.ChevronRight,
+                contentDescription = null,
+                tint = onContainer.copy(alpha = 0.6f),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
 
 @Composable
 private fun ActiveProfilesBentoCard(
@@ -1700,7 +2837,10 @@ private fun SpotlightBentoCard(
                     )
                     ZXGameSpaceDualBadge(
                         left = "AZENITH",
-                        right = if (game?.isEnabledInConfig == true) "TUNED" else "GAME"
+                        right = stringResource(
+                            if (game?.isEnabledInConfig == true) R.string.gamespace_tuned
+                            else R.string.gamespace_untuned
+                        ).uppercase()
                     )
                 }
             }
@@ -1768,18 +2908,15 @@ private fun ZXGameSpacePlatformTag(text: String) {
 }
 
 /**
- * Stage 2: ZXGameSpace game hero stage (matches Image 2).
- * - Left hero column: Large title, subtitle, pill "Play Game" button + circular "..." button
- * - Right floating status pills: `[100%]` `[120Hz]`
- * - Bottom peeking cards row: "Optimization Status" card + "AZenith Game Boost" card
+ * Stage 2: ZXGameSpace game hero stage.
+ * - Left hero column: icon, title, tuned/untuned line with the package name
+ * - Far right corner: Play and App Settings
  */
 @Composable
 private fun GameHeroStage(
     app: ApplistViewmodel.AppInfo,
-    profile: String,
-    refreshHz: Int,
     onLaunch: () -> Unit,
-    onOpenTune: () -> Unit
+    onOpenAppSettings: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
     val motion = MaterialTheme.motionScheme
@@ -1838,283 +2975,90 @@ private fun GameHeroStage(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(Modifier.height(14.dp))
-
-                // Play-game pill button plus the circular overflow button.
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    var playFocused by remember { mutableStateOf(false) }
-                    val playBg by animateColorAsState(
-                        targetValue = if (playFocused) {
-                            scheme.primaryContainer
-                        } else {
-                            scheme.surfaceContainerHighest.copy(alpha = 0.88f)
-                        },
-                        animationSpec = colorSpec,
-                        label = "PlayBtnBg"
-                    )
-                    val playFg by animateColorAsState(
-                        targetValue = if (playFocused) scheme.onPrimaryContainer else scheme.onSurface,
-                        animationSpec = colorSpec,
-                        label = "PlayBtnFg"
-                    )
-
-                    Surface(
-                        shape = CircleShape,
-                        color = playBg,
-                        contentColor = playFg,
-                        modifier = Modifier
-                            .width(184.dp)
-                            .height(44.dp)
-                            .onFocusChanged { playFocused = it.isFocused }
-                            .gamepadFocusOutline(shape = CircleShape, width = 2.dp)
-                            .clip(CircleShape)
-                            .clickable(onClick = onLaunch)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                text = stringResource(R.string.gamespace_play_game),
-                                style = MaterialTheme.typography.titleSmall.copy(
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            )
-                        }
-                    }
-
-                    var moreFocused by remember { mutableStateOf(false) }
-                    val moreBg by animateColorAsState(
-                        targetValue = if (moreFocused) {
-                            scheme.secondaryContainer
-                        } else {
-                            scheme.surfaceContainerHighest.copy(alpha = 0.82f)
-                        },
-                        animationSpec = colorSpec,
-                        label = "MoreBtnBg"
-                    )
-
-                    Surface(
-                        shape = CircleShape,
-                        color = moreBg,
-                        contentColor = if (moreFocused) scheme.onSecondaryContainer else scheme.onSurface,
-                        modifier = Modifier
-                            .size(44.dp)
-                            .onFocusChanged { moreFocused = it.isFocused }
-                            .gamepadFocusOutline(shape = CircleShape, width = 2.dp)
-                            .clip(CircleShape)
-                            .clickable(onClick = onOpenTune)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Rounded.MoreHoriz,
-                                contentDescription = stringResource(R.string.gamespace_tune),
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
-                }
             }
 
-            // Right Floating Telemetry Pills (matches [100%] [54h] in Image 2)
-            Row(
-                modifier = Modifier.padding(bottom = 14.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                ZXGameSpaceTelemetryPill(
-                    icon = Icons.Rounded.BarChart,
-                    text = if (app.isEnabledInConfig) "100%" else "STD"
-                )
-                ZXGameSpaceTelemetryPill(
-                    icon = Icons.Rounded.Schedule,
-                    text = "${refreshHz}Hz"
-                )
-            }
-        }
+            // Play and the App Settings gear own the far right corner once the pointer has
+            // walked past the third tile.
+            var gearFocused by remember { mutableStateOf(false) }
+            val gearBg by animateColorAsState(
+                targetValue = if (gearFocused) {
+                    scheme.secondaryContainer
+                } else {
+                    scheme.surfaceContainerHighest.copy(alpha = 0.82f)
+                },
+                animationSpec = colorSpec,
+                label = "GearBtnBg"
+            )
 
-        // Bottom Peeking Info Cards Row (matches "Trophies" and "Friends Who Play" in Image 2)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(74.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Left Bottom Card: Trophies / Optimization Breakdown
-            val cardShape = MaterialTheme.shapes.large
             Surface(
-                shape = cardShape,
-                color = scheme.surfaceContainerHigh.copy(alpha = 0.88f),
+                shape = CircleShape,
+                color = gearBg,
+                contentColor = if (gearFocused) scheme.onSecondaryContainer else scheme.onSurface,
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .gamepadFocusOutline(shape = cardShape)
-                    .clip(cardShape)
-                    .clickable(onClick = onOpenTune)
+                    .size(44.dp)
+                    .onFocusChanged { gearFocused = it.isFocused }
+                    .gamepadFocusOutline(shape = CircleShape, width = 2.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onOpenAppSettings)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(18.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        InlineTrophyBadge(
-                            icon = Icons.Rounded.EmojiEvents,
-                            tint = scheme.primary,
-                            value = if (app.isEnabledInConfig) "1" else "0"
-                        )
-                        InlineTrophyBadge(
-                            icon = Icons.Rounded.WorkspacePremium,
-                            tint = scheme.tertiary,
-                            value = profile.ifBlank { "—" }
-                        )
-                        InlineTrophyBadge(
-                            icon = Icons.Rounded.Speed,
-                            tint = scheme.secondary,
-                            value = "${refreshHz}Hz"
-                        )
-                        InlineTrophyBadge(
-                            icon = Icons.Rounded.Bolt,
-                            tint = scheme.onSurfaceVariant,
-                            value = "UID ${app.uid}"
-                        )
-                    }
-                    Text(
-                        text = stringResource(R.string.gamespace_trophies_title),
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
-                        color = scheme.onSurface
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.Settings,
+                        contentDescription = stringResource(R.string.gamespace_app_settings),
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
 
-            // Right Bottom Card: AZenith Game Boost + Decorative Badge Matrix
+            var playFocused by remember { mutableStateOf(false) }
+            val playBg by animateColorAsState(
+                targetValue = if (playFocused) {
+                    scheme.primaryContainer
+                } else {
+                    scheme.surfaceContainerHighest.copy(alpha = 0.88f)
+                },
+                animationSpec = colorSpec,
+                label = "PlayBtnBg"
+            )
+            val playFg by animateColorAsState(
+                targetValue = if (playFocused) scheme.onPrimaryContainer else scheme.onSurface,
+                animationSpec = colorSpec,
+                label = "PlayBtnFg"
+            )
+
+            Spacer(Modifier.width(12.dp))
+
             Surface(
-                shape = cardShape,
-                color = scheme.surfaceContainerHigh.copy(alpha = 0.88f),
+                shape = CircleShape,
+                color = playBg,
+                contentColor = playFg,
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .gamepadFocusOutline(shape = cardShape)
-                    .clip(cardShape)
+                    .height(44.dp)
+                    .onFocusChanged { playFocused = it.isFocused }
+                    .gamepadFocusOutline(shape = CircleShape, width = 2.dp)
+                    .clip(CircleShape)
                     .clickable(onClick = onLaunch)
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        verticalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.SportsEsports,
-                            contentDescription = null,
-                            tint = scheme.onSurface,
-                            modifier = Modifier.size(18.dp)
+                    Icon(
+                        imageVector = Icons.Rounded.PlayArrow,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.gamespace_play_game),
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.SemiBold
                         )
-                        Text(
-                            text = stringResource(R.string.gamespace_boost_title),
-                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
-                            color = scheme.onSurface,
-                            maxLines = 1
-                        )
-                    }
-
-                    // 3x2 decorative glyph matrix on the right edge (mirrors Image 2 bottom-right card)
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        repeat(2) { rowIdx ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                repeat(3) { colIdx ->
-                                    val alpha = 0.12f + (colIdx + rowIdx) * 0.06f
-                                    Box(
-                                        modifier = Modifier
-                                            .size(22.dp)
-                                            .clip(MaterialTheme.shapes.extraSmall)
-                                            .border(
-                                                1.dp,
-                                                scheme.onSurface.copy(alpha = alpha),
-                                                MaterialTheme.shapes.extraSmall
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.SportsEsports,
-                                            contentDescription = null,
-                                            tint = scheme.onSurface.copy(alpha = alpha),
-                                            modifier = Modifier.size(12.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    )
                 }
             }
         }
-    }
-}
 
-@Composable
-private fun ZXGameSpaceTelemetryPill(icon: ImageVector, text: String) {
-    val scheme = MaterialTheme.colorScheme
-    Surface(
-        shape = MaterialTheme.shapes.small,
-        color = scheme.surfaceContainerLowest.copy(alpha = 0.85f),
-        contentColor = scheme.onSurface,
-        modifier = Modifier.border(
-            1.dp,
-            scheme.outlineVariant.copy(alpha = 0.5f),
-            MaterialTheme.shapes.small
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = scheme.onSurface,
-                modifier = Modifier.size(14.dp)
-            )
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
-            )
-        }
-    }
-}
-
-@Composable
-private fun InlineTrophyBadge(
-    icon: ImageVector,
-    tint: Color,
-    value: String
-) {
-    val scheme = MaterialTheme.colorScheme
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = tint,
-            modifier = Modifier.size(16.dp)
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = scheme.onSurface,
-            maxLines = 1
-        )
     }
 }
 
@@ -2126,20 +3070,48 @@ private fun InlineTrophyBadge(
 private fun LibraryGridStage(
     games: List<ApplistViewmodel.AppInfo>,
     allApps: List<ApplistViewmodel.AppInfo>,
-    onLaunch: (ApplistViewmodel.AppInfo) -> Unit
+    expanded: Boolean,
+    onOpenSettings: (ApplistViewmodel.AppInfo) -> Unit,
+    onExpandedChange: (Boolean) -> Unit,
+    onClose: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
     val motion = MaterialTheme.motionScheme
     var showAllApps by remember { mutableStateOf(games.isEmpty()) }
-    var onlyTuned by remember { mutableStateOf(false) }
+    var onlyEnabled by remember { mutableStateOf(false) }
+    val gridState = rememberLazyGridState()
+    val expandedNow = rememberUpdatedState(expanded)
+    val notifyExpanded = rememberUpdatedState(onExpandedChange)
 
-    val baseList = if (showAllApps) allApps else games
-    val displayed = remember(baseList, onlyTuned) {
-        if (onlyTuned) baseList.filter { it.isEnabledInConfig } else baseList
+    // The grid takes the ribbon's room once it has been scrolled, and only a pull at the very top
+    // hands the room back — a list barely taller than the viewport must not flip the two.
+    LaunchedEffect(gridState) {
+        snapshotFlow { gridState.firstVisibleItemIndex to gridState.firstVisibleItemScrollOffset }
+            .collect { (index, offset) ->
+                if (index > 0 || offset > 60) notifyExpanded.value(true)
+            }
+    }
+    val gridPull = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (source != NestedScrollSource.UserInput || available.y <= 0f) return Offset.Zero
+                if (!expandedNow.value) return Offset.Zero
+                if (gridState.firstVisibleItemIndex > 0) return Offset.Zero
+                if (gridState.firstVisibleItemScrollOffset > 0) return Offset.Zero
+                notifyExpanded.value(false)
+                return Offset.Zero
+            }
+        }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    val baseList = if (showAllApps) allApps else games
+    val displayed = remember(baseList, onlyEnabled) {
+        if (onlyEnabled) baseList.filter { it.isEnabledInConfig } else baseList
+    }
+
+    Column(modifier = Modifier.fillMaxSize().nestedScroll(gridPull)) {
         Row(
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -2154,9 +3126,17 @@ private fun LibraryGridStage(
                 onClick = { showAllApps = true }
             )
             ExpressiveFilterChip(
-                selected = onlyTuned,
+                selected = onlyEnabled,
                 label = stringResource(R.string.gamespace_tuned),
-                onClick = { onlyTuned = !onlyTuned }
+                onClick = { onlyEnabled = !onlyEnabled }
+            )
+
+            Spacer(Modifier.weight(1f))
+
+            TopBarIconButton(
+                icon = Icons.Rounded.Close,
+                contentDescription = stringResource(R.string.gamespace_library_close),
+                onClick = onClose
             )
         }
 
@@ -2172,6 +3152,7 @@ private fun LibraryGridStage(
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 148.dp),
+                state = gridState,
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -2186,7 +3167,8 @@ private fun LibraryGridStage(
                             .height(64.dp)
                             .gamepadFocusOutline(shape = shape)
                             .clip(shape)
-                            .clickable { onLaunch(app) }
+                            // Settings first: the tile is a way into the app's tuning, not a launch.
+                            .clickable { onOpenSettings(app) }
                     ) {
                         Row(
                             modifier = Modifier

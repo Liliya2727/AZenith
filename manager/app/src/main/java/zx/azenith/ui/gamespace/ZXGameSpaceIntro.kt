@@ -20,34 +20,47 @@ package zx.azenith.ui.gamespace
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -61,10 +74,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
@@ -75,11 +93,12 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zx.azenith.R
+import kotlin.math.cos
+import kotlin.math.sin
 
-/** Length of the Game Space boot sequence. The rail's clock runs exactly this long. */
-const val GAME_SPACE_INTRO_MS = 3000
+/** Total length of the Game Space expressive intro animation (at max 2800ms <= 3s). */
+const val GAME_SPACE_INTRO_MS = 2800
 
-/** The four stages the shell walks through, in the order the rail reports them. */
 private val BOOT_STAGES = listOf(
     R.string.gamespace_boot_link,
     R.string.gamespace_boot_scan,
@@ -87,26 +106,20 @@ private val BOOT_STAGES = listOf(
     R.string.gamespace_boot_ready,
 )
 
-// When each entrance step lands, as a fraction of the clock: mark, wordmark, hairline, stage
-// label, then the rail's last step. Fractions instead of fixed ms so the sequence keeps its
-// shape whenever the length changes.
-private val STAGE_AT = listOf(0.016f, 0.088f, 0.212f, 0.392f, 0.832f)
-
 /**
- * The boot intro: one clock owns the walk and the handoff, a separate stagger walks the layers in,
- * and every layer moves on the theme's [MaterialTheme.motionScheme] — spatial specs for anything
- * that travels, effects specs for alpha — rather than hand-rolled tweens.
- *
- * Tapping skips: the clock's own coroutine is cancelled by the snap, so [onFinished] is guarded to
- * fire once whichever path gets there first.
+ * Expressive Material 3 Intro screen:
+ * - Spring-physics driven shape-morphing emblem.
+ * - Floating playful geometric gaming satellites (Square, Triangle, Cross, Circle).
+ * - Connected morphing pill stage indicators.
+ * - Tap to skip immediately. Max duration: 2.8s.
  */
 @Composable
 fun ZXGameSpaceIntro(onFinished: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val scope = rememberCoroutineScope()
-    val clock = remember { Animatable(0f) }
-    var stage by remember { mutableIntStateOf(0) }
+    var stageIndex by remember { mutableIntStateOf(0) }
     var handedOff by remember { mutableStateOf(false) }
+    val progress = remember { Animatable(0f) }
 
     val finishOnce = {
         if (!handedOff) {
@@ -116,16 +129,22 @@ fun ZXGameSpaceIntro(onFinished: () -> Unit) {
     }
 
     LaunchedEffect(Unit) {
-        var elapsed = 0f
-        STAGE_AT.forEachIndexed { index, at ->
-            delay(((at - elapsed) * GAME_SPACE_INTRO_MS).toLong())
-            stage = index + 1
-            elapsed = at
+        launch {
+            progress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(durationMillis = GAME_SPACE_INTRO_MS, easing = FastOutSlowInEasing)
+            )
+            finishOnce()
         }
-    }
 
-    LaunchedEffect(Unit) {
-        clock.animateTo(1f, tween(GAME_SPACE_INTRO_MS, easing = LinearEasing))
+        // Stepping through the 4 boot stages cleanly across 2.6s before final handoff.
+        delay(350)
+        stageIndex = 1
+        delay(650)
+        stageIndex = 2
+        delay(750)
+        stageIndex = 3
+        delay(850)
         finishOnce()
     }
 
@@ -135,257 +154,342 @@ fun ZXGameSpaceIntro(onFinished: () -> Unit) {
             .background(scheme.surface)
             .pointerInput(Unit) {
                 detectTapGestures {
-                    scope.launch { runCatching { clock.snapTo(1f) } }
+                    scope.launch { runCatching { progress.snapTo(1f) } }
                     finishOnce()
                 }
-            }
+            },
+        contentAlignment = Alignment.Center
     ) {
-        StageGlow(stage)
+        ExpressiveAmbientWash()
+        ExpressiveFloatingGlyphs(stageIndex)
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 64.dp, vertical = 40.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 48.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Spacer(Modifier.weight(1f))
-            HeroMark(stage)
-            Spacer(Modifier.height(30.dp))
-            Wordmark(stage)
-            Spacer(Modifier.height(18.dp))
-            Hairline(stage)
-            Spacer(Modifier.height(18.dp))
-            ShellLabel(stage)
-            Spacer(Modifier.weight(1f))
-            BootRail(clock = clock, step = (stage - 1).coerceIn(0, BOOT_STAGES.lastIndex))
+            Spacer(Modifier.height(8.dp))
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                ExpressiveHeroEmblem(stageIndex)
+                Spacer(Modifier.height(18.dp))
+                ExpressiveWordmark(stageIndex)
+                Spacer(Modifier.height(8.dp))
+                ExpressiveModeBadge(stageIndex)
+            }
+
+            ExpressiveStageTracker(
+                stageIndex = stageIndex,
+                progress = progress.value
+            )
         }
     }
 }
 
-/**
- * Accent wash under the mark. Container roles rather than the accents themselves, so the wash stays
- * a tonal tint of the wallpaper palette instead of an accent field over the surface.
- *
- * One pulse drives both gradients — a second clock at a different period reads as the stage
- * shaking rather than breathing. Both reads sit in the draw phase, so the wash repaints without
- * recomposing the intro.
- */
+/** Soft breathing radial glow in tonal container hues. */
 @Composable
-private fun StageGlow(stage: Int) {
+private fun ExpressiveAmbientWash() {
     val scheme = MaterialTheme.colorScheme
-    val motion = MaterialTheme.motionScheme
-    val enter = animateFloatAsState(
-        targetValue = if (stage >= 1) 1f else 0f,
-        animationSpec = motion.defaultEffectsSpec(),
-        label = "stageGlow"
-    )
-    val pulse = rememberInfiniteTransition(label = "stageGlowPulse").animateFloat(
-        initialValue = 0.86f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Reverse),
-        label = "stageGlowPulseValue"
+    val infiniteTransition = rememberInfiniteTransition(label = "AmbientGlowTransition")
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 0.75f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "AmbientPulse"
     )
 
     Box(
         Modifier
             .fillMaxSize()
             .drawBehind {
-                val p = pulse.value
                 drawRect(
                     Brush.radialGradient(
                         colors = listOf(
-                            scheme.primaryContainer.copy(alpha = 0.55f * p),
-                            scheme.tertiaryContainer.copy(alpha = 0.30f * p),
+                            scheme.primaryContainer.copy(alpha = 0.42f * pulse),
+                            scheme.tertiaryContainer.copy(alpha = 0.24f * pulse),
                             Color.Transparent
-                        )
-                    )
-                )
-                drawRect(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            scheme.surface.copy(alpha = 0.85f * enter.value)
-                        )
+                        ),
+                        radius = size.minDimension * 0.75f
                     )
                 )
             }
     )
 }
 
-/** Launcher mark on its expressive container: arrives on a spring, overshoot and all. */
+/**
+ * 4 Playful gaming glyph satellites floating around the center with spring physics
+ * and harmonic floating oscillation.
+ */
 @Composable
-private fun HeroMark(stage: Int) {
+private fun ExpressiveFloatingGlyphs(stageIndex: Int) {
     val scheme = MaterialTheme.colorScheme
-    val motion = MaterialTheme.motionScheme
-    val enter = animateFloatAsState(
-        targetValue = if (stage >= 1) 1f else 0f,
-        animationSpec = motion.defaultSpatialSpec(),
-        label = "heroMark"
-    )
-    val fade = animateFloatAsState(
-        targetValue = if (stage >= 1) 1f else 0f,
-        animationSpec = motion.defaultEffectsSpec(),
-        label = "heroMarkFade"
+    val enterAnim by animateFloatAsState(
+        targetValue = if (stageIndex >= 1) 1f else 0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "GlyphsEnter"
     )
 
-    Box(
+    val infiniteTransition = rememberInfiniteTransition(label = "GlyphOrbit")
+    val orbitTime by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 6.28318f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(7000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "OrbitTime"
+    )
+
+    Canvas(
         modifier = Modifier
-            .size(136.dp)
-            .graphicsLayer {
-                val e = enter.value
-                scaleX = 0.68f + 0.32f * e
-                scaleY = 0.68f + 0.32f * e
-                alpha = fade.value
-            }
-            .clip(CircleShape)
-            .background(scheme.primaryContainer),
-        contentAlignment = Alignment.Center
+            .fillMaxSize()
+            .graphicsLayer { alpha = enterAnim }
     ) {
-        Image(
-            painter = painterResource(R.drawable.ic_launcher_monochrome),
-            contentDescription = null,
-            colorFilter = ColorFilter.tint(scheme.onPrimaryContainer),
-            modifier = Modifier.size(66.dp)
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+        val radiusX = size.width * 0.28f * enterAnim
+        val radiusY = size.height * 0.28f * enterAnim
+        val stroke = Stroke(width = 3.5f, cap = StrokeCap.Round)
+
+        // Glyph 1: Rounded Square (Top-Left)
+        val x1 = cx - radiusX + cos(orbitTime.toDouble()).toFloat() * 18f
+        val y1 = cy - radiusY + sin(orbitTime.toDouble()).toFloat() * 14f
+        drawRoundRect(
+            color = scheme.primary.copy(alpha = 0.38f),
+            topLeft = Offset(x1 - 18f, y1 - 18f),
+            size = Size(36f, 36f),
+            cornerRadius = CornerRadius(10f, 10f),
+            style = stroke
+        )
+
+        // Glyph 2: Triangle (Top-Right)
+        val x2 = cx + radiusX + sin(orbitTime.toDouble() + 1.5).toFloat() * 16f
+        val y2 = cy - radiusY + cos(orbitTime.toDouble() + 1.5).toFloat() * 18f
+        val tri = Path().apply {
+            moveTo(x2, y2 - 20f)
+            lineTo(x2 + 20f, y2 + 16f)
+            lineTo(x2 - 20f, y2 + 16f)
+            close()
+        }
+        drawPath(tri, color = scheme.tertiary.copy(alpha = 0.38f), style = stroke)
+
+        // Glyph 3: Cross / X (Bottom-Left)
+        val x3 = cx - radiusX + sin(orbitTime.toDouble() + 3.0).toFloat() * 18f
+        val y3 = cy + radiusY + cos(orbitTime.toDouble() + 3.0).toFloat() * 14f
+        drawLine(
+            color = scheme.secondary.copy(alpha = 0.38f),
+            start = Offset(x3 - 14f, y3 - 14f),
+            end = Offset(x3 + 14f, y3 + 14f),
+            strokeWidth = 4f,
+            cap = StrokeCap.Round
+        )
+        drawLine(
+            color = scheme.secondary.copy(alpha = 0.38f),
+            start = Offset(x3 + 14f, y3 - 14f),
+            end = Offset(x3 - 14f, y3 + 14f),
+            strokeWidth = 4f,
+            cap = StrokeCap.Round
+        )
+
+        // Glyph 4: Circle (Bottom-Right)
+        val x4 = cx + radiusX + cos(orbitTime.toDouble() + 4.5).toFloat() * 14f
+        val y4 = cy + radiusY + sin(orbitTime.toDouble() + 4.5).toFloat() * 18f
+        drawCircle(
+            color = scheme.primary.copy(alpha = 0.38f),
+            radius = 18f,
+            center = Offset(x4, y4),
+            style = stroke
         )
     }
 }
 
-/** The wordmark, tracking opening as it rises. */
+/** Expressive Morphing Emblem that springs in with bouncy physics. */
 @Composable
-private fun Wordmark(stage: Int) {
+private fun ExpressiveHeroEmblem(stageIndex: Int) {
     val scheme = MaterialTheme.colorScheme
-    val motion = MaterialTheme.motionScheme
-    val enter = animateFloatAsState(
-        targetValue = if (stage >= 2) 1f else 0f,
-        animationSpec = motion.defaultSpatialSpec(),
-        label = "wordmark"
+    val scaleAnim by animateFloatAsState(
+        targetValue = if (stageIndex >= 0) 1f else 0.3f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "EmblemScale"
+    )
+    val morphCorner by animateDpAsState(
+        targetValue = if (stageIndex >= 2) 34.dp else 48.dp,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy),
+        label = "EmblemCorner"
     )
 
-    // Tracking is layout-affecting, so this read stays in composition.
-    val rise = enter.value
+    Surface(
+        shape = RoundedCornerShape(morphCorner),
+        color = scheme.primaryContainer,
+        modifier = Modifier
+            .size(108.dp)
+            .graphicsLayer {
+                scaleX = scaleAnim
+                scaleY = scaleAnim
+            }
+            .border(2.dp, scheme.primary.copy(alpha = 0.45f), RoundedCornerShape(morphCorner))
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Image(
+                painter = painterResource(R.drawable.ic_launcher_monochrome),
+                contentDescription = null,
+                colorFilter = ColorFilter.tint(scheme.onPrimaryContainer),
+                modifier = Modifier.size(54.dp)
+            )
+        }
+    }
+}
+
+/** Typography reveal with snappy spring physics. */
+@Composable
+private fun ExpressiveWordmark(stageIndex: Int) {
+    val scheme = MaterialTheme.colorScheme
+    val enterAnim by animateFloatAsState(
+        targetValue = if (stageIndex >= 1) 1f else 0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium),
+        label = "WordmarkEnter"
+    )
+
     Text(
         text = stringResource(R.string.app_name).uppercase(),
-        style = MaterialTheme.typography.displaySmall.copy(
-            fontWeight = FontWeight.Bold,
-            letterSpacing = (18f - 12f * rise).sp
+        style = MaterialTheme.typography.headlineLarge.copy(
+            fontWeight = FontWeight.Black,
+            letterSpacing = (8f - 4f * enterAnim).sp
         ),
         color = scheme.onSurface,
         modifier = Modifier.graphicsLayer {
-            alpha = rise
-            translationY = 22f * (1f - rise)
+            alpha = enterAnim
+            translationY = 18f * (1f - enterAnim)
         }
     )
 }
 
-/** Hairline that grows out of the centre under the wordmark. */
+/** Playful Game Space pill badge with controller icon. */
 @Composable
-private fun Hairline(stage: Int) {
+private fun ExpressiveModeBadge(stageIndex: Int) {
     val scheme = MaterialTheme.colorScheme
-    val motion = MaterialTheme.motionScheme
-    val grow = animateFloatAsState(
-        targetValue = if (stage >= 3) 1f else 0f,
-        animationSpec = motion.defaultSpatialSpec(),
-        label = "hairline"
-    )
-    val fade = animateFloatAsState(
-        targetValue = if (stage >= 3) 1f else 0f,
-        animationSpec = motion.defaultEffectsSpec(),
-        label = "hairlineFade"
+    val enterAnim by animateFloatAsState(
+        targetValue = if (stageIndex >= 1) 1f else 0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "BadgeEnter"
     )
 
-    Box(
-        Modifier
-            .width(340.dp)
-            .height(2.dp)
-            .graphicsLayer {
-                scaleX = grow.value
-                alpha = 0.9f * fade.value
-                transformOrigin = TransformOrigin(0.5f, 0.5f)
-            }
-            .background(
-                Brush.horizontalGradient(
-                    listOf(Color.Transparent, scheme.primary, scheme.tertiary, Color.Transparent)
-                )
-            )
-    )
-}
-
-/** The shell's name, spreading out under the hairline. */
-@Composable
-private fun ShellLabel(stage: Int) {
-    val scheme = MaterialTheme.colorScheme
-    val motion = MaterialTheme.motionScheme
-    val enter = animateFloatAsState(
-        targetValue = if (stage >= 4) 1f else 0f,
-        animationSpec = motion.defaultSpatialSpec(),
-        label = "shellLabel"
-    )
-
-    val rise = enter.value
-    Text(
-        text = stringResource(R.string.gamespace_mode_name).uppercase(),
-        style = MaterialTheme.typography.labelLarge.copy(
-            fontWeight = FontWeight.Medium,
-            letterSpacing = (4f + 12f * rise).sp
-        ),
-        color = scheme.primary,
+    Surface(
+        shape = CircleShape,
+        color = scheme.surfaceContainerHighest,
         modifier = Modifier.graphicsLayer {
-            alpha = rise
-            translationY = 14f * (1f - rise)
+            alpha = enterAnim
+            scaleX = enterAnim
+            scaleY = enterAnim
         }
-    )
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.SportsEsports,
+                contentDescription = null,
+                tint = scheme.primary,
+                modifier = Modifier.size(16.dp)
+            )
+            Text(
+                text = stringResource(R.string.gamespace_mode_name).uppercase(),
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.sp
+                ),
+                color = scheme.onSurface
+            )
+        }
+    }
 }
 
-/** Boot rail: the stage line steps through the four stages, the bar is the clock itself. */
+/**
+ * Bottom Expressive Stage Tracker:
+ * - Dynamic stage text with smooth animated swap.
+ * - Connected morphing pill indicators with animated width and colors.
+ */
 @Composable
-private fun BootRail(clock: Animatable<Float, AnimationVector1D>, step: Int) {
+private fun ExpressiveStageTracker(
+    stageIndex: Int,
+    progress: Float
+) {
     val scheme = MaterialTheme.colorScheme
-    val motion = MaterialTheme.motionScheme
+    val safeStage = stageIndex.coerceIn(0, BOOT_STAGES.lastIndex)
+    val isReady = safeStage == BOOT_STAGES.lastIndex
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = Modifier.padding(bottom = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         AnimatedContent(
-            targetState = step,
+            targetState = safeStage,
             transitionSpec = {
-                fadeIn(motion.defaultEffectsSpec()) togetherWith fadeOut(motion.defaultEffectsSpec())
+                (fadeIn(animationSpec = tween(220)) + scaleIn(initialScale = 0.92f))
+                    .togetherWith(fadeOut(animationSpec = tween(150)) + scaleOut(targetScale = 1.05f))
             },
-            label = "bootStage"
+            label = "StageText"
         ) { index ->
-            Text(
-                text = stringResource(BOOT_STAGES[index]).uppercase(),
-                style = MaterialTheme.typography.labelLarge.copy(letterSpacing = 3.sp),
-                color = scheme.onSurfaceVariant
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                if (isReady) {
+                    Icon(
+                        imageVector = Icons.Rounded.Check,
+                        contentDescription = null,
+                        tint = scheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Text(
+                    text = stringResource(BOOT_STAGES[index]),
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = if (isReady) FontWeight.Bold else FontWeight.Medium
+                    ),
+                    color = if (isReady) scheme.primary else scheme.onSurfaceVariant
+                )
+            }
         }
 
-        Spacer(Modifier.width(20.dp))
-
-        Box(
-            Modifier
-                .weight(1f)
-                .height(3.dp)
-                .clip(CircleShape)
-                .background(scheme.surfaceContainerHighest)
+        // 4 Connected Morphing Stage Pills
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        scaleX = clock.value
-                        transformOrigin = TransformOrigin(0f, 0.5f)
-                    }
-                    .background(Brush.horizontalGradient(listOf(scheme.primary, scheme.tertiary)))
-            )
+            BOOT_STAGES.indices.forEach { index ->
+                val active = index == safeStage
+                val completed = index < safeStage
+                val pillWidth by animateDpAsState(
+                    targetValue = if (active) 28.dp else 8.dp,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                    label = "PillWidth"
+                )
+                val pillColor = when {
+                    active -> scheme.primary
+                    completed -> scheme.primary.copy(alpha = 0.5f)
+                    else -> scheme.surfaceContainerHighest
+                }
+
+                Box(
+                    modifier = Modifier
+                        .height(8.dp)
+                        .width(pillWidth)
+                        .clip(CircleShape)
+                        .background(pillColor)
+                )
+            }
         }
-
-        Spacer(Modifier.width(20.dp))
-
-        Text(
-            text = "${(clock.value * 100f).toInt()}%",
-            style = MaterialTheme.typography.labelLarge,
-            color = scheme.onSurface
-        )
     }
 }

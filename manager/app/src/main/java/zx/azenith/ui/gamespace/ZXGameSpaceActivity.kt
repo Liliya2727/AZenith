@@ -59,7 +59,10 @@ class ZXGameSpaceActivity : ComponentActivity() {
             // Material You straight through: the shell reads the same dynamic palette as the
             // manager, in whichever mode the system is in, so there is no branded dark room.
             AZenithTheme {
-                ZXGameSpaceShell(onExit = { finish() })
+                ZXGameSpaceShell(
+                    onExit = { finish() },
+                    onExitApp = { finishAffinity() }
+                )
             }
         }
     }

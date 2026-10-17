@@ -50,7 +50,10 @@ import zx.azenith.ui.viewmodel.ApplistViewmodel
  * `ui/subscreens/ExperimentalScreen.kt`; this composable only owns the shell itself.
  */
 @Composable
-fun ZXGameSpaceShell(onExit: () -> Unit) {
+fun ZXGameSpaceShell(
+    onExit: () -> Unit,
+    onExitApp: () -> Unit = {}
+) {
     val context = LocalContext.current
     val motion = MaterialTheme.motionScheme
     val applist: ApplistViewmodel = viewModel()
@@ -115,7 +118,8 @@ fun ZXGameSpaceShell(onExit: () -> Unit) {
                         ).submit()
                     },
                     onLaunch = { app -> launchGame(context, app.packageName) },
-                    onExit = { leaving = true }
+                    onExit = { leaving = true },
+                    onExitApp = onExitApp
                 )
             }
         } else {

@@ -32,6 +32,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -62,6 +63,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -191,6 +193,295 @@ fun AppSettingsScreen(
     // Removed DisposableEffect calling loadApps onDispose to prevent animation lag.
 
 
+    val isLandscape = LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    // Landscape supplies the side padding itself, so the lists inside stop carrying theirs.
+    val panePadding = if (isLandscape) 0.dp else 16.dp
+
+    // Each region is built once and the layouts only decide where it goes: portrait stacks them
+    // in one column, landscape keeps identity and its switch on the left and the tweaks they
+    // gate on the right.
+    val bannerItem: LazyListScope.() -> Unit = {
+        item {
+            Spacer(modifier = Modifier.height(16.dp))
+            ExpressiveList(
+                modifier = Modifier.padding(horizontal = panePadding),
+                content = listOf( 
+                   {
+                       ExpressiveInfoCard(
+                           supportingContent = { Text(text = stringResource(R.string.str_app_specific_settings_will_ove)) },
+                           leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
+                           containerColor = colorScheme.surfaceContainerLow,
+                           onClick = {}
+                       )
+                   }
+                )
+            )
+        }
+    }
+
+    val headerItem: LazyListScope.() -> Unit = {
+        item {
+            // The header is the app's icon and name, which are known from the
+            // package manager regardless of how AZenith is configured for it.
+            // It used to be gated on `config != null`, but turning the master
+            // switch off REMOVES the app's entry from the config map, so the
+            // header collapsed into a skeleton for every app AZenith was not
+            // tuned for -- including one the user had just switched off. Only
+            // the rows below depend on the config; those keep their own gate.
+            AppHeader(appDetails, packageName, compact = isLandscape)
+        }
+    }
+
+    // The switch gates every row under it, so it sits in the panel that holds them rather than
+    // beside the app's name, where a long name used to push it off the first screenful.
+    val switchItem: LazyListScope.() -> Unit = {
+        item {
+            ExpressiveList(
+                modifier = Modifier.padding(horizontal = panePadding),
+                content = listOf {
+                    ExpressiveSwitchItem(
+                        icon = Icons.Rounded.PowerSettingsNew,
+                        title = stringResource(R.string.master_switch),
+                        summary = stringResource(R.string.master_switch_desc),
+                        checked = localMasterOn,
+                        onCheckedChange = { isChecked ->
+                            userToggled = true
+                            localMasterOn = isChecked 
+                            packageName?.let { pkg -> viewModel.toggleMasterSwitch(pkg, isChecked) } 
+                        }
+                    )
+                }
+            )
+        }
+    }
+
+    val tweaks: LazyListScope.() -> Unit = {
+        item {
+            AnimatedVisibility(
+                visible = localMasterOn,
+
+                enter = if (userToggled) {
+                    expandVertically(animationSpec = tween(400)) + fadeIn()
+                } else {
+                    EnterTransition.None
+                },
+                exit = shrinkVertically(animationSpec = tween(400)) + fadeOut()
+            ) {
+                val displayConfig = config ?: zx.azenith.ui.util.AppConfig()
+
+                Column {
+                    SectionHeader(stringResource(R.string.section_performance))
+                    ExpressiveList(
+                        modifier = Modifier.padding(horizontal = panePadding),
+                        content = buildList {
+                            add {
+                                ExpressiveDropdownItem(
+                                    icon = Icons.Rounded.Speed,
+                                    title = stringResource(R.string.perf_lite_mode),
+                                    summary = stringResource(R.string.perf_lite_mode_desc_short),
+                                    items = booleanModes,
+                                    selectedIndex = getBoolIndex(displayConfig.perf_lite_mode),
+                                    onItemSelected = { index ->
+                                        val value = listOf("default", "true", "false")[index]
+                                        packageName?.let { viewModel.updateSetting(it, "perf_lite_mode", value) }
+                                    }
+                                )
+                            }
+                        }
+                    )
+                
+                    SectionHeader(stringResource(R.string.section_additionalsettings))
+                    ExpressiveList(
+                        modifier = Modifier.padding(horizontal = panePadding),
+                        content = buildList {
+                            if (bypassSupported) {
+                                add {
+                                    ExpressiveDropdownItem(
+                                        icon = Icons.Rounded.Cable,
+                                        title = stringResource(R.string.bcharging),
+                                        summary = stringResource(R.string.enable_bypass_charge_desc),
+                                        items = booleanModes,
+                                        selectedIndex = getBoolIndex(displayConfig.bypass_charging),
+                                        onItemSelected = { index ->
+                                            val value = listOf("default", "true", "false")[index]
+                                            packageName?.let { viewModel.updateSetting(it, "bypass_charging", value) }
+                                        }
+                                    )
+                                }
+                            }
+                            add {
+                                ExpressiveDropdownItem(
+                                    icon = Icons.Rounded.RocketLaunch,
+                                    title = stringResource(R.string.game_preload),
+                                    summary = stringResource(R.string.game_preload_desc),
+                                    items = booleanModes,
+                                    selectedIndex = getBoolIndex(displayConfig.game_preload),
+                                    onItemSelected = { index ->
+                                        val value = listOf("default", "true", "false")[index]
+                                        packageName?.let { viewModel.updateSetting(it, "game_preload", value) }
+                                    }
+                                )
+                            }
+                            if (isFullModeEnabled) {
+                                add {
+                                    ExpressiveDropdownItem(
+                                        icon = Icons.Rounded.SwapVerticalCircle,
+                                        title = stringResource(R.string.app_priority),
+                                        summary = stringResource(R.string.app_priority_desc),
+                                        items = booleanModes,
+                                        selectedIndex = getBoolIndex(displayConfig.app_priority),
+                                        onItemSelected = { index ->
+                                            val value = listOf("default", "true", "false")[index]
+                                            packageName?.let { viewModel.updateSetting(it, "app_priority", value) }
+                                        }
+                                    )
+                                }
+                            }
+                            add {
+                                ExpressiveDropdownItem(
+                                    icon = Icons.Rounded.DoNotDisturbOn,
+                                    title = stringResource(R.string.dnd_mode),
+                                    summary = stringResource(R.string.dnd_mode_desc),
+                                    items = booleanModes,
+                                    selectedIndex = getBoolIndex(displayConfig.dnd_on_gaming),
+                                    onItemSelected = { index ->
+                                        val value = listOf("default", "true", "false")[index]
+                                        packageName?.let { viewModel.updateSetting(it, "dnd_on_gaming", value) }
+                                    }
+                                )
+                            }
+                        }
+                    )
+                
+                    SectionHeader(stringResource(R.string.section_display_render_settings))
+                    ExpressiveList(
+                        modifier = Modifier.padding(horizontal = panePadding),
+                        content = buildList {
+                            if (isFullModeEnabled) {
+                                add {
+                                    ExpressiveDropdownItem(
+                                        icon = Icons.Rounded.WebStories,
+                                        title = stringResource(R.string.refreshrates),
+                                        summary = stringResource(R.string.refreshrates_desc),
+                                        items = dynamicRefreshDisplayModes,
+                                        selectedIndex = rawRefreshModes.indexOfFirst {
+                                            it.equals(displayConfig.refresh_rate, ignoreCase = true)
+                                        }.coerceAtLeast(0),
+                                        onItemSelected = { index ->
+                                            val value = rawRefreshModes[index]
+                                            packageName?.let { viewModel.updateSetting(it, "refresh_rate", value) }
+                                        }
+                                    )
+                                }
+                            }
+                            add {
+                                ExpressiveDropdownItem(
+                                    icon = Icons.Rounded.Layers,
+                                    title = stringResource(R.string.renderengine),
+                                    summary = stringResource(R.string.renderengine_desc),
+                                    items = rendererModes,
+                                    selectedIndex = rendererValues.indexOfFirst { it.equals(displayConfig.renderer, ignoreCase = true) }.coerceAtLeast(0),
+                                    onItemSelected = { index ->
+                                        val value = rendererValues[index]
+                                        packageName?.let { viewModel.updateSetting(it, "renderer", value) }
+                                    }
+                                )
+                            }
+                        }
+                    )
+                
+                    if (isGameApp) {
+                        SectionHeader(stringResource(R.string.section_resolution_settings))
+                        ExpressiveList(
+                            modifier = Modifier.padding(horizontal = panePadding),
+                            content = buildList {
+                                add {
+                                    val currentDownscaleIndex = rawDownscaleSteps.indexOf(displayConfig.resolution_downscale)
+                                        .coerceAtLeast(0)
+                                    var downscaleSliderPos by remember(displayConfig.resolution_downscale) {
+                                        mutableStateOf(currentDownscaleIndex.toFloat())
+                                    }
+                
+                                    ExpressiveSliderItem(
+                                        icon = Icons.Rounded.AspectRatio,
+                                        title = stringResource(R.string.resolution_downscale_title),
+                                        subtitle = stringResource(R.string.resolution_downscale_desc),
+                                        badgeText = downscaleDisplaySteps.getOrElse(downscaleSliderPos.toInt()) { defaultLabel },
+                                        sliderPosition = downscaleSliderPos,
+                                        valueRange = 0f..(rawDownscaleSteps.size - 1).toFloat(),
+                                        steps = rawDownscaleSteps.size - 2,
+                                        onValueChange = { downscaleSliderPos = it },
+                                        onValueChangeFinished = {
+                                            val value = rawDownscaleSteps[downscaleSliderPos.toInt()]
+                                            packageName?.let { viewModel.updateSetting(it, "resolution_downscale", value) }
+                                        }
+                                    )
+                                }
+                                add {
+                                    val currentFpsIndex = rawFpsSteps.indexOf(displayConfig.resolution_fps)
+                                        .coerceAtLeast(0)
+                                    var fpsSliderPos by remember(displayConfig.resolution_fps) {
+                                        mutableStateOf(currentFpsIndex.toFloat())
+                                    }
+                                    val downscaleIsOff = displayConfig.resolution_downscale == "default"
+                
+                                    ExpressiveSliderItem(
+                                        icon = Icons.Rounded.Speed,
+                                        title = stringResource(R.string.resolution_fps_target_title),
+                                        subtitle = stringResource(R.string.resolution_fps_target_desc),
+                                        badgeText = "${fpsDisplaySteps.getOrElse(fpsSliderPos.toInt()) { "60" }}fps",
+                                        sliderPosition = fpsSliderPos,
+                                        valueRange = 0f..(rawFpsSteps.size - 1).toFloat(),
+                                        steps = rawFpsSteps.size - 2,
+                                        enabled = !downscaleIsOff,
+                                        onValueChange = { fpsSliderPos = it },
+                                        onValueChangeFinished = {
+                                            val value = rawFpsSteps[fpsSliderPos.toInt()]
+                                            packageName?.let { viewModel.updateSetting(it, "resolution_fps", value) }
+                                        }
+                                    )
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        if (isFullModeEnabled) {
+            item {
+                AnimatedVisibility(
+                    visible = localMasterOn,
+
+                    enter = if (userToggled) {
+                        expandVertically(animationSpec = tween(400)) + fadeIn()
+                    } else {
+                        EnterTransition.None
+                    },
+                    exit = shrinkVertically(animationSpec = tween(400)) + fadeOut()
+                ) {
+                    val displayConfig = config ?: zx.azenith.ui.util.AppConfig() 
+                    
+                    Column {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        ExpressiveList(
+                            modifier = Modifier.padding(horizontal = panePadding),
+                            content = listOf( 
+                               {
+                                   ExpressiveInfoCard(
+                                       supportingContent = { Text(text = stringResource(R.string.str_by_using_per_app_refresh_rate)) },
+                                       leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
+                                       containerColor = colorScheme.surfaceContainerLow,
+                                       onClick = {}
+                                   )
+                               }
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     Scaffold(
             modifier = Modifier,
             topBar = { 
@@ -225,289 +516,61 @@ fun AppSettingsScreen(
             contentColor = ScaffoldContentColor(),
             containerColor = ScaffoldContainerColor(colorScheme.surface)
         ) { innerPadding ->
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
-            contentPadding = PaddingValues(
-                top = innerPadding.calculateTopPadding(),
-                bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-            ),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-        
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-                ExpressiveList(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    content = listOf( 
-                       {
-                           ExpressiveInfoCard(
-                               supportingContent = { Text(text = stringResource(R.string.str_app_specific_settings_will_ove)) },
-                               leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
-                               containerColor = colorScheme.surfaceContainerLow,
-                               onClick = {}
-                           )
-                       }
-                    )
-                )
-            }
-        
-        
-            item {
-                // The header is the app's icon and name, which are known from the
-                // package manager regardless of how AZenith is configured for it.
-                // It used to be gated on `config != null`, but turning the master
-                // switch off REMOVES the app's entry from the config map, so the
-                // header collapsed into a skeleton for every app AZenith was not
-                // tuned for -- including one the user had just switched off. Only
-                // the rows below depend on the config; those keep their own gate.
-                AppHeader(appDetails, packageName)
-            }
-
-
-            item {
-                ExpressiveList(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    content = listOf {
-                        ExpressiveSwitchItem(
-                            icon = Icons.Rounded.PowerSettingsNew,
-                            title = stringResource(R.string.master_switch),
-                            summary = stringResource(R.string.master_switch_desc),
-                            checked = localMasterOn,
-                            onCheckedChange = { isChecked ->
-                                userToggled = true
-                                localMasterOn = isChecked 
-                                packageName?.let { pkg -> viewModel.toggleMasterSwitch(pkg, isChecked) } 
-                            }
-                        )
-                    }
-                )
-            }
-            
-            item {
-                AnimatedVisibility(
-                    visible = localMasterOn,
-
-                    enter = if (userToggled) {
-                        expandVertically(animationSpec = tween(400)) + fadeIn()
-                    } else {
-                        EnterTransition.None
-                    },
-                    exit = shrinkVertically(animationSpec = tween(400)) + fadeOut()
+            if (isLandscape) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp)
+                        .hazePageSource(),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    val displayConfig = config ?: zx.azenith.ui.util.AppConfig()
-
-                    Column {
-                        SectionHeader(stringResource(R.string.section_performance))
-                        ExpressiveList(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            content = buildList {
-                                add {
-                                    ExpressiveDropdownItem(
-                                        icon = Icons.Rounded.Speed,
-                                        title = stringResource(R.string.perf_lite_mode),
-                                        summary = stringResource(R.string.perf_lite_mode_desc_short),
-                                        items = booleanModes,
-                                        selectedIndex = getBoolIndex(displayConfig.perf_lite_mode),
-                                        onItemSelected = { index ->
-                                            val value = listOf("default", "true", "false")[index]
-                                            packageName?.let { viewModel.updateSetting(it, "perf_lite_mode", value) }
-                                        }
-                                    )
-                                }
-                            }
-                        )
-                    
-                        SectionHeader(stringResource(R.string.section_additionalsettings))
-                        ExpressiveList(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            content = buildList {
-                                if (bypassSupported) {
-                                    add {
-                                        ExpressiveDropdownItem(
-                                            icon = Icons.Rounded.Cable,
-                                            title = stringResource(R.string.bcharging),
-                                            summary = stringResource(R.string.enable_bypass_charge_desc),
-                                            items = booleanModes,
-                                            selectedIndex = getBoolIndex(displayConfig.bypass_charging),
-                                            onItemSelected = { index ->
-                                                val value = listOf("default", "true", "false")[index]
-                                                packageName?.let { viewModel.updateSetting(it, "bypass_charging", value) }
-                                            }
-                                        )
-                                    }
-                                }
-                                add {
-                                    ExpressiveDropdownItem(
-                                        icon = Icons.Rounded.RocketLaunch,
-                                        title = stringResource(R.string.game_preload),
-                                        summary = stringResource(R.string.game_preload_desc),
-                                        items = booleanModes,
-                                        selectedIndex = getBoolIndex(displayConfig.game_preload),
-                                        onItemSelected = { index ->
-                                            val value = listOf("default", "true", "false")[index]
-                                            packageName?.let { viewModel.updateSetting(it, "game_preload", value) }
-                                        }
-                                    )
-                                }
-                                if (isFullModeEnabled) {
-                                    add {
-                                        ExpressiveDropdownItem(
-                                            icon = Icons.Rounded.SwapVerticalCircle,
-                                            title = stringResource(R.string.app_priority),
-                                            summary = stringResource(R.string.app_priority_desc),
-                                            items = booleanModes,
-                                            selectedIndex = getBoolIndex(displayConfig.app_priority),
-                                            onItemSelected = { index ->
-                                                val value = listOf("default", "true", "false")[index]
-                                                packageName?.let { viewModel.updateSetting(it, "app_priority", value) }
-                                            }
-                                        )
-                                    }
-                                }
-                                add {
-                                    ExpressiveDropdownItem(
-                                        icon = Icons.Rounded.DoNotDisturbOn,
-                                        title = stringResource(R.string.dnd_mode),
-                                        summary = stringResource(R.string.dnd_mode_desc),
-                                        items = booleanModes,
-                                        selectedIndex = getBoolIndex(displayConfig.dnd_on_gaming),
-                                        onItemSelected = { index ->
-                                            val value = listOf("default", "true", "false")[index]
-                                            packageName?.let { viewModel.updateSetting(it, "dnd_on_gaming", value) }
-                                        }
-                                    )
-                                }
-                            }
-                        )
-                    
-                        SectionHeader(stringResource(R.string.section_display_render_settings))
-                        ExpressiveList(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            content = buildList {
-                                if (isFullModeEnabled) {
-                                    add {
-                                        ExpressiveDropdownItem(
-                                            icon = Icons.Rounded.WebStories,
-                                            title = stringResource(R.string.refreshrates),
-                                            summary = stringResource(R.string.refreshrates_desc),
-                                            items = dynamicRefreshDisplayModes,
-                                            selectedIndex = rawRefreshModes.indexOfFirst {
-                                                it.equals(displayConfig.refresh_rate, ignoreCase = true)
-                                            }.coerceAtLeast(0),
-                                            onItemSelected = { index ->
-                                                val value = rawRefreshModes[index]
-                                                packageName?.let { viewModel.updateSetting(it, "refresh_rate", value) }
-                                            }
-                                        )
-                                    }
-                                }
-                                add {
-                                    ExpressiveDropdownItem(
-                                        icon = Icons.Rounded.Layers,
-                                        title = stringResource(R.string.renderengine),
-                                        summary = stringResource(R.string.renderengine_desc),
-                                        items = rendererModes,
-                                        selectedIndex = rendererValues.indexOfFirst { it.equals(displayConfig.renderer, ignoreCase = true) }.coerceAtLeast(0),
-                                        onItemSelected = { index ->
-                                            val value = rendererValues[index]
-                                            packageName?.let { viewModel.updateSetting(it, "renderer", value) }
-                                        }
-                                    )
-                                }
-                            }
-                        )
-                    
-                        if (isGameApp) {
-                            SectionHeader(stringResource(R.string.section_resolution_settings))
-                            ExpressiveList(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                content = buildList {
-                                    add {
-                                        val currentDownscaleIndex = rawDownscaleSteps.indexOf(displayConfig.resolution_downscale)
-                                            .coerceAtLeast(0)
-                                        var downscaleSliderPos by remember(displayConfig.resolution_downscale) {
-                                            mutableStateOf(currentDownscaleIndex.toFloat())
-                                        }
-                    
-                                        ExpressiveSliderItem(
-                                            icon = Icons.Rounded.AspectRatio,
-                                            title = stringResource(R.string.resolution_downscale_title),
-                                            subtitle = stringResource(R.string.resolution_downscale_desc),
-                                            badgeText = downscaleDisplaySteps.getOrElse(downscaleSliderPos.toInt()) { defaultLabel },
-                                            sliderPosition = downscaleSliderPos,
-                                            valueRange = 0f..(rawDownscaleSteps.size - 1).toFloat(),
-                                            steps = rawDownscaleSteps.size - 2,
-                                            onValueChange = { downscaleSliderPos = it },
-                                            onValueChangeFinished = {
-                                                val value = rawDownscaleSteps[downscaleSliderPos.toInt()]
-                                                packageName?.let { viewModel.updateSetting(it, "resolution_downscale", value) }
-                                            }
-                                        )
-                                    }
-                                    add {
-                                        val currentFpsIndex = rawFpsSteps.indexOf(displayConfig.resolution_fps)
-                                            .coerceAtLeast(0)
-                                        var fpsSliderPos by remember(displayConfig.resolution_fps) {
-                                            mutableStateOf(currentFpsIndex.toFloat())
-                                        }
-                                        val downscaleIsOff = displayConfig.resolution_downscale == "default"
-                    
-                                        ExpressiveSliderItem(
-                                            icon = Icons.Rounded.Speed,
-                                            title = stringResource(R.string.resolution_fps_target_title),
-                                            subtitle = stringResource(R.string.resolution_fps_target_desc),
-                                            badgeText = "${fpsDisplaySteps.getOrElse(fpsSliderPos.toInt()) { "60" }}fps",
-                                            sliderPosition = fpsSliderPos,
-                                            valueRange = 0f..(rawFpsSteps.size - 1).toFloat(),
-                                            steps = rawFpsSteps.size - 2,
-                                            enabled = !downscaleIsOff,
-                                            onValueChange = { fpsSliderPos = it },
-                                            onValueChangeFinished = {
-                                                val value = rawFpsSteps[fpsSliderPos.toInt()]
-                                                packageName?.let { viewModel.updateSetting(it, "resolution_fps", value) }
-                                            }
-                                        )
-                                    }
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-            if (isFullModeEnabled) {
-                item {
-                    AnimatedVisibility(
-                        visible = localMasterOn,
-    
-                        enter = if (userToggled) {
-                            expandVertically(animationSpec = tween(400)) + fadeIn()
-                        } else {
-                            EnterTransition.None
-                        },
-                        exit = shrinkVertically(animationSpec = tween(400)) + fadeOut()
+                    // Left pane: what the app is. It holds no focus target of its own, so the
+                    // d-pad seed stays in the pane below.
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(0.36f)
+                            .fillMaxHeight(),
+                        contentPadding = PaddingValues(
+                            top = innerPadding.calculateTopPadding() + 8.dp,
+                            bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                        ),
+                        verticalArrangement = Arrangement.Center
                     ) {
-                        val displayConfig = config ?: zx.azenith.ui.util.AppConfig() 
-                        
-                        Column {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            ExpressiveList(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                content = listOf( 
-                                   {
-                                       ExpressiveInfoCard(
-                                           supportingContent = { Text(text = stringResource(R.string.str_by_using_per_app_refresh_rate)) },
-                                           leadingContent = { LeadingIcon(icon = Icons.Filled.Info) },
-                                           containerColor = colorScheme.surfaceContainerLow,
-                                           onClick = {}
-                                       )
-                                   }
-                                )
-                            )
-                        }
+                        headerItem()
+                    }
+
+                    // Right pane: the switch that gates the app, and everything AZenith does to it
+                    // once that switch is on.
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(0.64f)
+                            .fillMaxHeight(),
+                        contentPadding = PaddingValues(
+                            top = innerPadding.calculateTopPadding() + 8.dp,
+                            bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                        ),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        switchItem()
+                        bannerItem()
+                        tweaks()
                     }
                 }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().hazePageSource().gamepadScreenEntry(),
+                    contentPadding = PaddingValues(
+                        top = innerPadding.calculateTopPadding(),
+                        bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                    ),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    bannerItem()
+                    headerItem()
+                    switchItem()
+                    tweaks()
+                }
             }
-        }
     }
 }
 
@@ -528,15 +591,21 @@ fun SectionHeader(title: String) {
 }
 
 @Composable
-fun AppHeader(appDetails: Triple<String, android.content.pm.ApplicationInfo?, String>, packageName: String?) {
+fun AppHeader(
+    appDetails: Triple<String, android.content.pm.ApplicationInfo?, String>,
+    packageName: String?,
+    compact: Boolean = false
+) {
     val context = LocalContext.current
     val pm = context.packageManager
     val density = LocalDensity.current
     
 
-    val iconSize = 68.dp
-    val targetSizePx = remember(iconSize, density) {
-        with(density) { iconSize.roundToPx() }
+    // A landscape side pane gives the same header a fraction of the height, so the tile and the
+    // 32dp of breathing room that read as generous in portrait push the version chip off the pane.
+    val tileSize = if (compact) 68.dp else 100.dp
+    val targetSizePx = remember(tileSize, density) {
+        with(density) { tileSize.roundToPx() }
     }
 
 
@@ -560,13 +629,13 @@ fun AppHeader(appDetails: Triple<String, android.content.pm.ApplicationInfo?, St
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 32.dp),
+            .padding(vertical = if (compact) 8.dp else 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Surface(
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.size(100.dp),
+            modifier = Modifier.size(tileSize),
             shadowElevation = 2.dp
         ) {
             Box(modifier = Modifier.padding(16.dp).fillMaxSize()) {

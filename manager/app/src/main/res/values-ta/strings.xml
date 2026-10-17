@@ -154,8 +154,6 @@
     <string name="gamespace_rail_settings">Controls</string>
     <string name="gamespace_section_soon">Coming in the next pass</string>
     <string name="gamespace_tune">Tune</string>
-    <string name="gamespace_tuned">Tuned</string>
-    <string name="gamespace_untuned">Not tuned</string>
     <string name="gpu_mali">GPU Mali திட்டமிடல்</string>
     <string name="gpu_mali_desc">GPU ஐ தொடர் செயலாக்க பணிகளை கட்டாயப்படுத்துகிறது, சட்ட வீத நிலைத்தன்மையை அதிகரிக்கிறது</string>
     <string name="instruction_sets">Android ABI</string>

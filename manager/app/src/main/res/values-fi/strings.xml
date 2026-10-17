@@ -154,8 +154,6 @@
     <string name="gamespace_rail_settings">Controls</string>
     <string name="gamespace_section_soon">Coming in the next pass</string>
     <string name="gamespace_tune">Tune</string>
-    <string name="gamespace_tuned">Tuned</string>
-    <string name="gamespace_untuned">Not tuned</string>
     <string name="gpu_mali">GPU Mali -aikataulutus</string>
     <string name="gpu_mali_desc">Pakota GPU käsittelemään tehtävät sarjassa parantaaksesi kuvataajuuden vakautta</string>
     <string name="instruction_sets">Android ABI</string>

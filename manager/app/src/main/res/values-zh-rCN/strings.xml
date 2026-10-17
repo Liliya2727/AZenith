@@ -154,8 +154,6 @@
     <string name="gamespace_rail_settings">Controls</string>
     <string name="gamespace_section_soon">Coming in the next pass</string>
     <string name="gamespace_tune">Tune</string>
-    <string name="gamespace_tuned">Tuned</string>
-    <string name="gamespace_untuned">Not tuned</string>
     <string name="gpu_mali">GPU Mali 调度</string>
     <string name="gpu_mali_desc">强制 GPU 串行处理任务，提升帧率稳定性</string>
     <string name="instruction_sets">Android ABI</string>

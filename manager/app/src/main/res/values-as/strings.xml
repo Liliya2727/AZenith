@@ -155,8 +155,6 @@
     <string name="gamespace_rail_settings">Controls</string>
     <string name="gamespace_section_soon">Coming in the next pass</string>
     <string name="gamespace_tune">Tune</string>
-    <string name="gamespace_tuned">Tuned</string>
-    <string name="gamespace_untuned">Not tuned</string>
     <string name="gpu_mali">GPU Mali শিডিউলিং</string>
     <string name="gpu_mali_desc">GPU ক ধাৰাবাহিকভাৱে কাৰ্য্য প্ৰক্ৰিয়া কৰিবলৈ বাধ্য কৰক, ফ্ৰেম ৰেট স্থিৰতা বৃদ্ধি কৰক</string>
     <string name="instruction_sets">Android ABI</string>
