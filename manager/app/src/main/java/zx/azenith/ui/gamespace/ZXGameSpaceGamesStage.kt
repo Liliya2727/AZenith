@@ -2213,31 +2213,35 @@ internal fun GameHeroStage(
                     shape = CircleShape,
                     color = scheme.primary,
                     contentColor = scheme.onPrimary,
+                    tonalElevation = 6.dp,
+                    shadowElevation = 8.dp,
                     modifier = Modifier
-                        .height(56.dp)
+                        .height(72.dp)
                         .graphicsLayer {
                             scaleX = playScale
                             scaleY = playScale
                         }
                         .onFocusChanged { playFocused = it.isFocused }
-                        .gamepadFocusOutline(shape = CircleShape, width = 2.dp)
+                        .gamepadFocusOutline(shape = CircleShape, width = 3.dp)
                         .clip(CircleShape)
                         .clickable(onClick = onLaunch)
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 26.dp),
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .padding(horizontal = 34.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.PlayArrow,
                             contentDescription = null,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(32.dp)
                         )
                         Text(
                             text = "Play",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.ExtraBold,
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Black,
                                 letterSpacing = 0.5.sp
                             )
                         )
