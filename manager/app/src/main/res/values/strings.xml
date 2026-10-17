@@ -174,6 +174,7 @@
     <string name="gamespace_search_close">Close search</string>
     <string name="gamespace_show_all">Show all</string>
     <string name="gamespace_welcome">Home</string>
+    <string name="gamespace_settings_general">General</string>
     <string name="gpu_mali">GPU Mali Scheduling</string>
     <string name="gpu_mali_desc">Force GPU to process tasks in series, improving frame rate stability</string>
     <string name="instruction_sets">Android ABI</string>

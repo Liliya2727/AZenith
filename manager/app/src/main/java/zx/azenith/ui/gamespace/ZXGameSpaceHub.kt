@@ -34,8 +34,14 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
@@ -83,34 +89,59 @@ import androidx.compose.material.icons.rounded.BatteryAlert
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.BatteryStd
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.BrightnessAuto
+import androidx.compose.material.icons.rounded.BugReport
+import androidx.compose.material.icons.rounded.CleaningServices
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Code
+import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.DoNotDisturbOn
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.HourglassEmpty
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Memory
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PowerSettingsNew
+import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material.icons.rounded.RocketLaunch
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.SettingsSuggest
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.material.icons.rounded.SwapVerticalCircle
+import androidx.compose.material.icons.rounded.ThermostatAuto
 import androidx.compose.material.icons.rounded.Token
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.VerifiedUser
+import androidx.compose.material.icons.rounded.Vibration
+import androidx.compose.material.icons.rounded.WebStories
 import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -124,6 +155,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -161,6 +193,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
@@ -172,10 +205,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.topjohnwu.superuser.Shell
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
@@ -183,6 +219,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import zx.azenith.BuildConfig
 import zx.azenith.R
 import zx.azenith.ui.component.AppIconCache
 import zx.azenith.ui.component.ScreenWrapper
@@ -193,14 +230,19 @@ import zx.azenith.ui.component.gamepadKeyWatch
 import zx.azenith.ui.component.gamepadScreenEntry
 import zx.azenith.ui.subscreens.AppSettingsScreen
 import zx.azenith.ui.util.RootUtils
+import zx.azenith.ui.util.dumpDiagnosticLogs
 import zx.azenith.ui.util.getChipsetName
 import zx.azenith.ui.util.getRealDeviceName
 import zx.azenith.ui.util.getSupportedRefreshRatesPicker
+import com.google.accompanist.drawablepainter.rememberDrawablePainter
+import zx.azenith.ui.theme.ColorMode
 import zx.azenith.ui.viewmodel.ApplistViewmodel
+import zx.azenith.ui.viewmodel.SettingsViewModel
+import zx.azenith.ui.viewmodel.TweakViewModel
 
 private enum class TopCategory(val labelRes: Int) {
     Games(R.string.gamespace_tab_games),
-    System(R.string.gamespace_tab_media)
+    Settings(R.string.settings)
 }
 
 private sealed interface RibbonEntry {
@@ -291,7 +333,7 @@ fun ZXGameSpaceHub(
                             true
                         }
                         KeyEvent.KEYCODE_BUTTON_R1 -> {
-                            category = TopCategory.System
+                            category = TopCategory.Settings
                             true
                         }
                         else -> false
@@ -356,7 +398,7 @@ fun ZXGameSpaceHub(
                     searchOpen = true
                 },
                 onSettingsClick = {
-                    category = if (category == TopCategory.System) TopCategory.Games else TopCategory.System
+                    category = if (category == TopCategory.Settings) TopCategory.Games else TopCategory.Settings
                 },
                 onAvatarClick = {
                     val nextProfile = when (profileValue) {
@@ -418,7 +460,38 @@ fun ZXGameSpaceHub(
                     AnimatedContent(
                         targetState = activeEntry,
                         transitionSpec = {
-                            fadeIn(effectsSpec) togetherWith fadeOut(effectsSpec)
+                            val fromIndex = ribbonEntries.indexOf(initialState)
+                            val toIndex = ribbonEntries.indexOf(targetState)
+                            val movingForward = toIndex >= fromIndex
+
+                            val slideInOffset = { size: Int ->
+                                if (movingForward) (size * 0.18f).roundToInt()
+                                else (-size * 0.18f).roundToInt()
+                            }
+                            val slideOutOffset = { size: Int ->
+                                if (movingForward) (-size * 0.18f).roundToInt()
+                                else (size * 0.18f).roundToInt()
+                            }
+
+                            (slideInHorizontally(
+                                animationSpec = motion.defaultSpatialSpec(),
+                                initialOffsetX = slideInOffset
+                            ) + scaleIn(
+                                animationSpec = motion.defaultSpatialSpec(),
+                                initialScale = 0.94f
+                            ) + fadeIn(
+                                animationSpec = motion.defaultEffectsSpec()
+                            )).togetherWith(
+                                slideOutHorizontally(
+                                    animationSpec = motion.defaultSpatialSpec(),
+                                    targetOffsetX = slideOutOffset
+                                ) + scaleOut(
+                                    animationSpec = motion.defaultSpatialSpec(),
+                                    targetScale = 1.03f
+                                ) + fadeOut(
+                                    animationSpec = motion.defaultEffectsSpec()
+                                )
+                            )
                         },
                         modifier = Modifier.fillMaxSize(),
                         label = "ZXGameSpaceMainStage"
@@ -436,7 +509,7 @@ fun ZXGameSpaceHub(
                             deviceName = deviceName,
                             chipsetName = chipsetName,
                             onApplyProfile = onApplyProfile,
-                            onOpenSystem = { category = TopCategory.System },
+                            onOpenSettings = { category = TopCategory.Settings },
                             onSelectGame = { game ->
                                 val idx = ribbonEntries.indexOfFirst {
                                     it is RibbonEntry.Game && it.app.packageName == game.packageName
@@ -478,11 +551,9 @@ fun ZXGameSpaceHub(
                 }
             } else {
                 Spacer(Modifier.height(8.dp))
-                SystemControlStage(
+                ZXGameSpaceSettingsStage(
                     profile = profile,
                     profileValue = profileValue,
-                    battery = battery,
-                    ramState = ramState,
                     refreshHz = refreshHz,
                     deviceName = deviceName,
                     chipsetName = chipsetName,
@@ -959,28 +1030,34 @@ private fun ZXGameSpaceTopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 44.dp),
+            .heightIn(min = 48.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Left Segment: Category Navigation Tabs & Scrolled Wordmark
         Row(
-            horizontalArrangement = Arrangement.spacedBy(20.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             TopCategory.entries.forEach { tab ->
                 val selected = tab == selectedCategory
-                val shape = MaterialTheme.shapes.small
-                Text(
-                    text = stringResource(tab.labelRes),
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
-                    ),
-                    color = if (selected) scheme.onSurface else scheme.onSurfaceVariant.copy(alpha = 0.6f),
+                val shape = RoundedCornerShape(14.dp)
+                Surface(
+                    shape = shape,
+                    color = if (selected) scheme.primaryContainer else Color.Transparent,
+                    contentColor = if (selected) scheme.onPrimaryContainer else scheme.onSurfaceVariant.copy(alpha = 0.7f),
                     modifier = Modifier
                         .clip(shape)
-                        .gamepadFocusOutline(shape = shape)
+                        .gamepadFocusOutline(shape = shape, register = true)
                         .clickable { onSelectCategory(tab) }
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                )
+                ) {
+                    Text(
+                        text = stringResource(tab.labelRes),
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                        ),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                    )
+                }
             }
 
             AnimatedVisibility(
@@ -996,85 +1073,132 @@ private fun ZXGameSpaceTopBar(
                         modifier = Modifier
                             .width(1.5.dp)
                             .height(18.dp)
-                            .background(scheme.outlineVariant.copy(alpha = 0.7f))
+                            .background(scheme.outlineVariant.copy(alpha = 0.6f))
                     )
-                    Text(
-                        text = stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = scheme.onSurface
-                    )
+                    Surface(
+                        shape = CircleShape,
+                        color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                        modifier = Modifier.height(30.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(scheme.primary)
+                            )
+                            Text(
+                                text = stringResource(R.string.app_name),
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                color = scheme.onSurface
+                            )
+                        }
+                    }
                 }
             }
         }
 
         Spacer(Modifier.weight(1f))
 
-        if (searchOpen) {
-            val searchRequester = remember { FocusRequester() }
+        // Right Segment: Actions & System Status Capsule
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (searchOpen) {
+                val searchRequester = remember { FocusRequester() }
 
-            LaunchedEffect(Unit) { searchRequester.requestFocus() }
+                LaunchedEffect(Unit) { searchRequester.requestFocus() }
 
-            TextField(
-                value = searchQuery,
-                onValueChange = onSearchQueryChange,
-                placeholder = { Text(stringResource(R.string.search_apps)) },
-                singleLine = true,
-                modifier = Modifier
-                    .width(300.dp)
-                    .focusRequester(searchRequester),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent
-                )
-            )
-
-            TopBarIconButton(
-                icon = Icons.Rounded.Close,
-                contentDescription = stringResource(R.string.gamespace_search_close),
-                onClick = onSearchClose
-            )
-        } else {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                    modifier = Modifier.height(38.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(start = 12.dp, end = 6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Search,
+                            contentDescription = null,
+                            tint = scheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        TextField(
+                            value = searchQuery,
+                            onValueChange = onSearchQueryChange,
+                            placeholder = {
+                                Text(
+                                    stringResource(R.string.search_apps),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            },
+                            singleLine = true,
+                            modifier = Modifier
+                                .width(220.dp)
+                                .focusRequester(searchRequester),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                disabledIndicatorColor = Color.Transparent
+                            )
+                        )
+                        IconButton(
+                            onClick = onSearchClose,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.gamespace_search_close),
+                                tint = scheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+            } else {
                 TopBarIconButton(
                     icon = Icons.Rounded.Search,
-                contentDescription = stringResource(R.string.gamespace_library_title),
-                onClick = onSearchClick
-            )
-            TopBarIconButton(
-                icon = Icons.Rounded.Settings,
-                contentDescription = stringResource(R.string.gamespace_rail_settings),
-                onClick = onSettingsClick
-            )
+                    contentDescription = stringResource(R.string.gamespace_library_title),
+                    onClick = onSearchClick
+                )
+            }
 
-            // Profile avatar with green/primary online status indicator dot (matches Image 2).
-            Box(
+            // Profile avatar with online status indicator dot.
+            Surface(
+                shape = CircleShape,
+                color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
                 modifier = Modifier
-                    .size(36.dp)
-                    .gamepadFocusOutline(shape = CircleShape)
+                    .size(38.dp)
                     .clip(CircleShape)
-                    .clickable(onClick = onAvatarClick),
-                contentAlignment = Alignment.Center
+                    .gamepadFocusOutline(shape = CircleShape, register = true)
+                    .clickable(onClick = onAvatarClick)
             ) {
-                Image(
-                    painter = painterResource(R.drawable.avatar),
-                    contentDescription = stringResource(R.string.gamespace_profile),
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(30.dp).clip(CircleShape)
-                )
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .align(Alignment.BottomEnd)
-                        .clip(CircleShape)
-                        .background(scheme.primary)
-                        .border(1.5.dp, scheme.surfaceContainerLowest, CircleShape)
-                )
+                Box(contentAlignment = Alignment.Center) {
+                    Image(
+                        painter = painterResource(R.drawable.avatar),
+                        contentDescription = stringResource(R.string.gamespace_profile),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.size(30.dp).clip(CircleShape)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(9.dp)
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 1.dp, bottom = 1.dp)
+                            .clip(CircleShape)
+                            .background(scheme.primary)
+                            .border(1.5.dp, scheme.surfaceContainerLowest, CircleShape)
+                    )
+                }
             }
 
             TopBarIconButton(
@@ -1084,46 +1208,63 @@ private fun ZXGameSpaceTopBar(
                 onClick = onExit
             )
 
-            // Material 3 battery chip beside the clock
+            // Material 3 Expressive Unified System Status Capsule (Clock & Battery)
             Surface(
                 shape = CircleShape,
-                color = if (battery.second) scheme.primaryContainer
-                        else if (battery.first <= 20) scheme.errorContainer
-                        else scheme.surfaceContainerHigh.copy(alpha = 0.85f),
-                modifier = Modifier.padding(start = 2.dp)
+                color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                modifier = Modifier.height(38.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = if (battery.second) Icons.Rounded.BatteryChargingFull
-                                      else if (battery.first <= 20) Icons.Rounded.BatteryAlert
-                                      else Icons.Rounded.BatteryStd,
-                        contentDescription = stringResource(R.string.gamespace_info_battery),
-                        tint = if (battery.second) scheme.onPrimaryContainer
-                               else if (battery.first <= 20) scheme.onErrorContainer
-                               else scheme.onSurface,
-                        modifier = Modifier.size(15.dp)
-                    )
                     Text(
-                        text = "${battery.first}%",
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = if (battery.second) scheme.onPrimaryContainer
-                                else if (battery.first <= 20) scheme.onErrorContainer
-                                else scheme.onSurface
+                        text = clock,
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 0.2.sp
+                        ),
+                        color = scheme.onSurface
                     )
+
+                    Box(
+                        modifier = Modifier
+                            .size(3.5.dp)
+                            .clip(CircleShape)
+                            .background(scheme.outlineVariant.copy(alpha = 0.7f))
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        val isCharging = battery.second
+                        val isLow = battery.first <= 20
+                        val batteryColor = when {
+                            isCharging -> scheme.primary
+                            isLow -> scheme.error
+                            else -> scheme.onSurfaceVariant
+                        }
+                        Icon(
+                            imageVector = when {
+                                isCharging -> Icons.Rounded.BatteryChargingFull
+                                isLow -> Icons.Rounded.BatteryAlert
+                                else -> Icons.Rounded.BatteryStd
+                            },
+                            contentDescription = stringResource(R.string.gamespace_info_battery),
+                            tint = batteryColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "${battery.first}%",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = batteryColor
+                        )
+                    }
                 }
-            }
-
-            Spacer(Modifier.width(2.dp))
-
-            Text(
-                text = clock,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = scheme.onSurface
-            )
             }
         }
     }
@@ -1136,20 +1277,25 @@ private fun TopBarIconButton(
     tint: Color = MaterialTheme.colorScheme.onSurface,
     onClick: () -> Unit
 ) {
-    Box(
+    val scheme = MaterialTheme.colorScheme
+    Surface(
+        shape = CircleShape,
+        color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+        contentColor = tint,
         modifier = Modifier
-            .size(36.dp)
+            .size(38.dp)
             .clip(CircleShape)
-            .gamepadFocusOutline(shape = CircleShape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
+            .gamepadFocusOutline(shape = CircleShape, register = true)
+            .clickable(onClick = onClick)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = tint,
-            modifier = Modifier.size(21.dp)
-        )
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = tint,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
 
@@ -1172,10 +1318,16 @@ private fun ZXGameSpaceTileRibbon(
     val listState = rememberLazyListState()
     var selectedRightEdgePx by remember { mutableStateOf(0f) }
     var ribbonWidthPx by remember { mutableStateOf(0f) }
+    val configuration = LocalConfiguration.current
+    val endPadding = (configuration.screenWidthDp + 500).dp
 
     LaunchedEffect(selectedIndex, entries.size) {
-        // Past the third tile the pointer holds its slot and the row slides beneath it.
-        runCatching { listState.animateScrollToItem((selectedIndex - 2).coerceAtLeast(0)) }
+        // Past the second tile (at the 3rd slot, index 2), the selected item anchors
+        // at column 3 and previous items slide smoothly off-screen to the left.
+        val targetIndex = (selectedIndex - 2).coerceAtLeast(0)
+        runCatching {
+            listState.animateScrollToItem(index = targetIndex, scrollOffset = 0)
+        }
     }
 
     val activeEntry = entries.getOrElse(selectedIndex) { RibbonEntry.Welcome }
@@ -1193,7 +1345,7 @@ private fun ZXGameSpaceTileRibbon(
                 .gamepadScreenEntry(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.Top,
-            contentPadding = PaddingValues(end = 180.dp)
+            contentPadding = PaddingValues(end = endPadding)
         ) {
             itemsIndexed(entries, key = { _, item -> item.key }) { index, item ->
                 val isSelected = index == selectedIndex
@@ -1500,7 +1652,7 @@ private fun WelcomeHubStage(
     deviceName: String,
     chipsetName: String,
     onApplyProfile: (String) -> Unit,
-    onOpenSystem: () -> Unit,
+    onOpenSettings: () -> Unit,
     onSelectGame: (ApplistViewmodel.AppInfo) -> Unit,
     onLaunchGame: (ApplistViewmodel.AppInfo) -> Unit,
     onOpenLibrary: () -> Unit = {}
@@ -1671,7 +1823,7 @@ private fun WelcomeHubStage(
                     deviceName = deviceName,
                     chipsetName = chipsetName,
                     refreshHz = refreshHz,
-                    onOpenSystem = onOpenSystem
+                    onOpenSettings = onOpenSettings
                 )
 
                 // Column 2: Gaming Library & Quick Action Deck (45% width)
@@ -1799,7 +1951,7 @@ private fun HardwareSpecsBentoCard(
     deviceName: String,
     chipsetName: String,
     refreshHz: Int,
-    onOpenSystem: () -> Unit
+    onOpenSettings: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(24.dp)
@@ -1807,7 +1959,7 @@ private fun HardwareSpecsBentoCard(
     Surface(
         modifier = modifier
             .gamepadFocusOutline(shape = shape, register = true)
-            .clickable(onClick = onOpenSystem),
+            .clickable(onClick = onOpenSettings),
         shape = shape,
         color = scheme.surfaceContainerHigh.copy(alpha = 0.82f)
     ) {
@@ -3255,141 +3407,999 @@ private fun ExpressiveFilterChip(
     )
 }
 
-/**
- * Stage 4: System / Performance Control Deck when the top "System" tab is selected.
- */
+private enum class SettingsSidebarTab(
+    val labelRes: Int,
+    val icon: ImageVector
+) {
+    General(R.string.gamespace_settings_general, Icons.Rounded.Tune),
+    Tweaks(R.string.nav_tweaks, Icons.Rounded.Bolt),
+    Theme(R.string.theme, Icons.Rounded.Palette),
+    About(R.string.section_about, Icons.Rounded.Info)
+}
+
 @Composable
-private fun SystemControlStage(
-    profile: String,
-    profileValue: String,
-    battery: Pair<Int, Boolean>,
-    ramState: Pair<Float, String>,
-    refreshHz: Int,
-    deviceName: String,
-    chipsetName: String,
-    onApplyProfile: (String) -> Unit,
+private fun ZXGameSpaceSettingsStage(
+    profile: String = "",
+    profileValue: String = "",
+    refreshHz: Int = 0,
+    deviceName: String = "",
+    chipsetName: String = "",
+    onApplyProfile: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    var selectedTab by rememberSaveable { mutableStateOf(SettingsSidebarTab.General) }
+    val scheme = MaterialTheme.colorScheme
+    val motion = MaterialTheme.motionScheme
+
+    Row(
+        modifier = modifier.padding(top = 4.dp, bottom = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = scheme.surfaceContainerHigh.copy(alpha = 0.82f),
+            modifier = Modifier
+                .width(220.dp)
+                .fillMaxHeight()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.settings).uppercase(),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.2.sp
+                    ),
+                    color = scheme.primary,
+                    modifier = Modifier.padding(start = 12.dp, top = 8.dp, bottom = 4.dp)
+                )
+
+                SettingsSidebarTab.entries.forEach { tab ->
+                    val isSelected = tab == selectedTab
+                    val itemShape = RoundedCornerShape(16.dp)
+                    val containerColor = if (isSelected) scheme.primaryContainer else Color.Transparent
+                    val contentColor = if (isSelected) scheme.onPrimaryContainer else scheme.onSurfaceVariant
+
+                    Surface(
+                        shape = itemShape,
+                        color = containerColor,
+                        contentColor = contentColor,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .gamepadFocusOutline(shape = itemShape, register = true)
+                            .clip(itemShape)
+                            .clickable { selectedTab = tab }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = tab.icon,
+                                contentDescription = null,
+                                tint = contentColor,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Text(
+                                text = stringResource(tab.labelRes),
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = scheme.surfaceContainerLow.copy(alpha = 0.72f),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+        ) {
+            AnimatedContent(
+                targetState = selectedTab,
+                transitionSpec = {
+                    (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), initialScale = 0.98f))
+                        .togetherWith(fadeOut(motion.defaultEffectsSpec()) + scaleOut(motion.defaultSpatialSpec(), targetScale = 1.01f))
+                },
+                modifier = Modifier.fillMaxSize(),
+                label = "SettingsPaneTransition"
+            ) { tab ->
+                when (tab) {
+                    SettingsSidebarTab.General -> SettingsGeneralPane()
+                    SettingsSidebarTab.Tweaks -> SettingsTweaksPane(
+                        profile = profile,
+                        profileValue = profileValue,
+                        refreshHz = refreshHz,
+                        onApplyProfile = onApplyProfile
+                    )
+                    SettingsSidebarTab.Theme -> SettingsThemePane()
+                    SettingsSidebarTab.About -> SettingsAboutPane(
+                        deviceName = deviceName,
+                        chipsetName = chipsetName
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsGeneralPane(
+    settingsViewModel: SettingsViewModel = viewModel()
+) {
+    val uiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var statusFeedback by remember { mutableStateOf<String?>(null) }
+    val scrollState = rememberScrollState()
     val scheme = MaterialTheme.colorScheme
 
     Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = stringResource(R.string.gamespace_settings_general),
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.onSurface
+                )
+                Text(
+                    text = "Core daemon behavior, system services, and diagnostic utilities",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant.copy(alpha = 0.8f)
+                )
+            }
+
+            statusFeedback?.let { msg ->
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = scheme.primaryContainer
+                ) {
+                    Text(
+                        text = msg,
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = scheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.NotificationsActive,
+                    title = stringResource(R.string.show_notifications),
+                    summary = "Post status notifications when active profile switches",
+                    checked = uiState.profileNotifications,
+                    onCheckedChange = { settingsViewModel.setProfileNotifications(it) }
+                )
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.Vibration,
+                    title = stringResource(R.string.tap_haptic_feedback),
+                    summary = "Tactile impulse feedback on interactive taps and toggles",
+                    checked = uiState.tapHaptic,
+                    onCheckedChange = { settingsViewModel.onTapHapticToggle(it) }
+                )
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.Info,
+                    title = stringResource(R.string.show_toast),
+                    summary = "Display brief toast notifications on profile and state switches",
+                    checked = uiState.stateToast,
+                    onCheckedChange = { settingsViewModel.setShowToast(it) }
+                )
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.BugReport,
+                    title = stringResource(R.string.allow_verbose_log),
+                    summary = "Write extended debug diagnostics to /data/adb/.config/AZenith",
+                    checked = uiState.debugMode,
+                    onCheckedChange = { settingsViewModel.setDebugMode(it) }
+                )
+            }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.Memory,
+                    title = stringResource(R.string.disable_auto_mode),
+                    summary = stringResource(R.string.disable_auto_mode_desc),
+                    checked = uiState.autoMode,
+                    onCheckedChange = { settingsViewModel.setAutoMode(it) }
+                )
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.Security,
+                    title = stringResource(R.string.disable_tweak),
+                    summary = stringResource(R.string.disable_tweak_desc),
+                    checked = uiState.disableTweak,
+                    onCheckedChange = { settingsViewModel.setDisableTweak(it) }
+                )
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.HourglassEmpty,
+                    title = stringResource(R.string.profile_timeout),
+                    summary = stringResource(R.string.profile_timeout_desc),
+                    checked = uiState.profileTimeout,
+                    onCheckedChange = { settingsViewModel.setProfileTimeout(it) }
+                )
+            }
+        }
+
         Text(
-            text = stringResource(R.string.section_performance).uppercase(),
-            style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 2.sp),
-            color = scheme.onSurfaceVariant
+            text = stringResource(R.string.section_diagnostics).uppercase(),
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.2.sp
+            ),
+            color = scheme.primary,
+            modifier = Modifier.padding(top = 4.dp)
         )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            SystemProfileCard(
-                labelRes = R.string.Profile_Performance,
-                iconRes = R.drawable.ic_performance,
-                active = profileValue == "1",
-                onClick = { onApplyProfile("1") },
-                modifier = Modifier.weight(1f)
-            )
-            SystemProfileCard(
-                labelRes = R.string.Profile_Balanced,
-                iconRes = R.drawable.ic_balanced,
-                active = profileValue == "2" || profileValue.isBlank(),
-                onClick = { onApplyProfile("2") },
-                modifier = Modifier.weight(1f)
-            )
-            SystemProfileCard(
-                labelRes = R.string.Profile_ECO_mode,
-                iconRes = R.drawable.ic_eco,
-                active = profileValue == "3",
-                onClick = { onApplyProfile("3") },
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Row(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Surface(
-                shape = MaterialTheme.shapes.large,
-                color = scheme.surfaceContainerHigh.copy(alpha = 0.88f),
-                modifier = Modifier.weight(1f).fillMaxHeight()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = stringResource(R.string.current_profile),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = scheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = profile.ifBlank { "—" },
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.Bold
-                        ),
-                        color = scheme.onSurface
-                    )
-                    Text(
-                        text = "$deviceName · $chipsetName",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = scheme.onSurfaceVariant
-                    )
+            SettingsActionCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Rounded.RestartAlt,
+                title = stringResource(R.string.restart_service),
+                summary = stringResource(R.string.restart_service_desc),
+                onClick = {
+                    Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service --rerun").submit { res ->
+                        statusFeedback = if (res.isSuccess) {
+                            context.getString(R.string.toast_restarting_service)
+                        } else {
+                            "Restart failed"
+                        }
+                    }
                 }
-            }
-
-            HardwareRingsBentoCard(
-                battery = battery,
-                ramState = ramState,
-                refreshHz = refreshHz,
-                onClick = {},
-                modifier = Modifier.weight(1f).fillMaxHeight()
+            )
+            SettingsActionCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Rounded.Save,
+                title = stringResource(R.string.save_log),
+                summary = stringResource(R.string.save_log_desc),
+                onClick = {
+                    coroutineScope.launch {
+                        val file = dumpDiagnosticLogs(context, saveToDownloads = true)
+                        statusFeedback = if (file != null && file.exists()) {
+                            context.getString(R.string.toast_log_saved)
+                        } else {
+                            context.getString(R.string.toast_log_save_fail)
+                        }
+                    }
+                }
             )
         }
     }
 }
 
 @Composable
-private fun SystemProfileCard(
-    labelRes: Int,
-    iconRes: Int,
-    active: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+private fun SettingsTweaksPane(
+    profile: String = "",
+    profileValue: String = "",
+    refreshHz: Int = 0,
+    onApplyProfile: (String) -> Unit = {},
+    tweakViewModel: TweakViewModel = viewModel()
+) {
+    val context = LocalContext.current
+    val scheme = MaterialTheme.colorScheme
+    val scrollState = rememberScrollState()
+
+    LaunchedEffect(Unit) {
+        if (!tweakViewModel.isUiLoaded) {
+            tweakViewModel.loadAllConfiguration(context)
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = stringResource(R.string.nav_tweaks),
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.onSurface
+                )
+                Text(
+                    text = "Kernel governor, scheduling optimizations, and hardware accelerators",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant.copy(alpha = 0.8f)
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            val profiles = listOf(
+                Triple("1", R.string.Profile_Performance, R.drawable.ic_performance),
+                Triple("2", R.string.Profile_Balanced, R.drawable.ic_balanced),
+                Triple("3", R.string.Profile_ECO_mode, R.drawable.ic_eco)
+            )
+            profiles.forEach { (value, labelRes, iconRes) ->
+                val active = profileValue == value || (value == "2" && profileValue.isBlank())
+                val shape = RoundedCornerShape(18.dp)
+                Surface(
+                    shape = shape,
+                    color = if (active) scheme.primaryContainer else scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                    contentColor = if (active) scheme.onPrimaryContainer else scheme.onSurface,
+                    modifier = Modifier
+                        .weight(1f)
+                        .gamepadFocusOutline(shape = shape, register = true)
+                        .clip(shape)
+                        .clickable { onApplyProfile(value) }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(iconRes),
+                            contentDescription = null,
+                            tint = if (active) scheme.onPrimaryContainer else scheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text(
+                            text = stringResource(labelRes),
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.Speed,
+                    title = stringResource(R.string.perf_lite_mode),
+                    summary = stringResource(R.string.perf_lite_mode_desc),
+                    checked = tweakViewModel.liteState ?: false,
+                    onCheckedChange = { tweakViewModel.updateLiteMode(it) }
+                )
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.RocketLaunch,
+                    title = stringResource(R.string.game_preload),
+                    summary = stringResource(R.string.game_preload_desc),
+                    checked = tweakViewModel.preloadState ?: false,
+                    onCheckedChange = { tweakViewModel.updatePreloadMode(it) }
+                )
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.CleaningServices,
+                    title = stringResource(R.string.memory_killer),
+                    summary = stringResource(R.string.memory_killer_desc),
+                    checked = tweakViewModel.memKillerState ?: false,
+                    onCheckedChange = { tweakViewModel.updateMemoryKiller(it) }
+                )
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.SwapVerticalCircle,
+                    title = stringResource(R.string.app_priority_control),
+                    summary = stringResource(R.string.app_priority_control_desc),
+                    checked = tweakViewModel.appPriorState ?: false,
+                    onCheckedChange = { tweakViewModel.updateAppPriority(it) }
+                )
+            }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.DoNotDisturbOn,
+                    title = stringResource(R.string.dnd_mode_gaming),
+                    summary = stringResource(R.string.dnd_mode_gaming_desc),
+                    checked = tweakViewModel.dndState ?: false,
+                    onCheckedChange = { tweakViewModel.updateDndMode(it) }
+                )
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.ContentCut,
+                    title = stringResource(R.string.trim_filesystem),
+                    summary = stringResource(R.string.trim_filesystem_desc),
+                    checked = tweakViewModel.fstrimState ?: false,
+                    onCheckedChange = { tweakViewModel.updateFstrim(it) }
+                )
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.ThermostatAuto,
+                    title = stringResource(R.string.thermalcore_service),
+                    summary = stringResource(R.string.thermalcore_service_desc),
+                    checked = tweakViewModel.thermalState ?: false,
+                    onCheckedChange = { tweakViewModel.updateThermalCore(it) }
+                )
+
+                SettingsActionCard(
+                    icon = Icons.Rounded.WebStories,
+                    title = stringResource(R.string.refreshrates),
+                    summary = "Display refresh rate locked during gaming",
+                    trailingBadge = if (refreshHz > 0) "${refreshHz}Hz" else "${tweakViewModel.currentRefreshRate ?: 60}Hz",
+                    onClick = {
+                        val supported = getSupportedRefreshRatesPicker(context)
+                        if (supported.isNotEmpty()) {
+                            val curr = (tweakViewModel.currentRefreshRate ?: 60).toString()
+                            val currIdx = supported.indexOf(curr)
+                            val next = if (currIdx >= 0 && currIdx < supported.lastIndex) supported[currIdx + 1] else supported.first()
+                            tweakViewModel.executeSetRefreshRates(next, context)
+                        }
+                    }
+                )
+                SettingsActionCard(
+                    icon = Icons.Rounded.SettingsSuggest,
+                    title = stringResource(R.string.renderengine),
+                    summary = "HWUI graphics compositing backend",
+                    trailingBadge = tweakViewModel.currentRenderer?.take(10) ?: "Default",
+                    onClick = {
+                        val current = (tweakViewModel.currentRenderer ?: "default").lowercase()
+                        val next = when {
+                            current.contains("vk") -> "default"
+                            current.contains("gl") -> "skiavk"
+                            else -> "skiagl"
+                        }
+                        tweakViewModel.executeSetRenderer(next, context)
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsThemePane() {
+    val context = LocalContext.current
+    val scheme = MaterialTheme.colorScheme
+    val scrollState = rememberScrollState()
+
+    val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    var blurOn by remember { mutableStateOf(prefs.getBoolean("expressive_blur_ui", false)) }
+    var scrollAnimOn by remember { mutableStateOf(prefs.getBoolean("use_scroll_animation", true)) }
+    var colorModeValue by remember { mutableStateOf(prefs.getInt("color_mode", ColorMode.SYSTEM.value)) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Column {
+            Text(
+                text = stringResource(R.string.theme),
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                color = scheme.onSurface
+            )
+            Text(
+                text = "Material 3 Expressive personalization, blur effects, and dynamic palette",
+                style = MaterialTheme.typography.bodySmall,
+                color = scheme.onSurfaceVariant.copy(alpha = 0.8f)
+            )
+        }
+
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "ACTIVE PALETTE",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.2.sp
+                    ),
+                    color = scheme.primary
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val swatches = listOf(
+                        "Primary" to scheme.primary,
+                        "Secondary" to scheme.secondary,
+                        "Tertiary" to scheme.tertiary,
+                        "Container" to scheme.primaryContainer,
+                        "Surface" to scheme.surfaceContainerHighest
+                    )
+                    swatches.forEach { (name, color) ->
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = color,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(52.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = name,
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = if (color == scheme.primary || color == scheme.secondary || color == scheme.tertiary) Color.White else scheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            SettingsSwitchCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Rounded.Palette,
+                title = stringResource(R.string.str_expressive_blur),
+                summary = stringResource(R.string.str_expressive_blur_summary),
+                checked = blurOn,
+                onCheckedChange = { enabled ->
+                    blurOn = enabled
+                    prefs.edit().putBoolean("expressive_blur_ui", enabled).apply()
+                }
+            )
+
+            SettingsSwitchCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Rounded.Speed,
+                title = stringResource(R.string.str_use_scroll_animation),
+                summary = stringResource(R.string.str_use_scroll_animation_summary),
+                checked = scrollAnimOn,
+                onCheckedChange = { enabled ->
+                    scrollAnimOn = enabled
+                    prefs.edit().putBoolean("use_scroll_animation", enabled).apply()
+                }
+            )
+        }
+
+        Text(
+            text = "COLOR MODE",
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.2.sp
+            ),
+            color = scheme.primary,
+            modifier = Modifier.padding(top = 4.dp)
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            val modes = listOf(
+                Triple("System", ColorMode.SYSTEM.value, Icons.Rounded.BrightnessAuto),
+                Triple("Light", ColorMode.LIGHT.value, Icons.Rounded.LightMode),
+                Triple("Dark", ColorMode.DARK.value, Icons.Rounded.DarkMode),
+                Triple("AMOLED", ColorMode.DARKAMOLED.value, Icons.Rounded.Android)
+            )
+            modes.forEach { (name, value, icon) ->
+                val selected = colorModeValue == value
+                val shape = RoundedCornerShape(16.dp)
+                Surface(
+                    shape = shape,
+                    color = if (selected) scheme.primaryContainer else scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                    contentColor = if (selected) scheme.onPrimaryContainer else scheme.onSurface,
+                    modifier = Modifier
+                        .weight(1f)
+                        .gamepadFocusOutline(shape = shape, register = true)
+                        .clip(shape)
+                        .clickable {
+                            colorModeValue = value
+                            prefs.edit().putInt("color_mode", value).apply()
+                        }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = if (selected) scheme.onPrimaryContainer else scheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = name,
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsAboutPane(
+    deviceName: String = "",
+    chipsetName: String = ""
+) {
+    val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
+    val scheme = MaterialTheme.colorScheme
+    val scrollState = rememberScrollState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Column {
+            Text(
+                text = stringResource(R.string.section_about),
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                color = scheme.onSurface
+            )
+            Text(
+                text = "Project information, architecture specifications, and community links",
+                style = MaterialTheme.typography.bodySmall,
+                color = scheme.onSurfaceVariant.copy(alpha = 0.8f)
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(22.dp),
+                color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Image(
+                            painter = rememberDrawablePainter(
+                                context.applicationInfo.loadIcon(context.packageManager)
+                            ),
+                            contentDescription = stringResource(R.string.app_name),
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(scheme.primaryContainer)
+                        )
+
+                        Column {
+                            Text(
+                                text = stringResource(R.string.app_name),
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black),
+                                color = scheme.onSurface
+                            )
+                            Text(
+                                text = stringResource(R.string.str_version_buildconfig_version_na, BuildConfig.VERSION_NAME),
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = scheme.primary
+                            )
+                            Text(
+                                text = "$deviceName · $chipsetName",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
+
+                    Text(
+                        text = "COMMUNITY & CODE",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.2.sp
+                        ),
+                        color = scheme.primary
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        SettingsActionCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Rounded.Code,
+                            title = "GitHub",
+                            summary = "Source repository",
+                            onClick = { uriHandler.openUri("https://github.com/Liliya2727/AZenith") }
+                        )
+                        SettingsActionCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Rounded.Share,
+                            title = "Telegram",
+                            summary = "Discussion group",
+                            onClick = { uriHandler.openUri("https://t.me/ArchHavenDisc") }
+                        )
+                    }
+                }
+            }
+
+            Surface(
+                shape = RoundedCornerShape(22.dp),
+                color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.str_maintainer).uppercase(),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.2.sp
+                        ),
+                        color = scheme.primary
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.avatar_liliya),
+                            contentDescription = stringResource(R.string.str_liliya),
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.str_liliya),
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                color = scheme.onSurface
+                            )
+                            Text(
+                                text = stringResource(R.string.str_creator_maintainer),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
+
+                    Text(
+                        text = stringResource(R.string.str_open_source).uppercase(),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.2.sp
+                        ),
+                        color = scheme.primary
+                    )
+
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = stringResource(R.string.str_licenses) + " · Apache 2.0",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = scheme.onSurface
+                        )
+                        Text(
+                            text = "Built with Material 3 Expressive, Android NDK, Kotlin Coroutines & Jetpack Compose",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = scheme.onSurfaceVariant.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsSwitchCard(
+    icon: ImageVector,
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    summary: String? = null
 ) {
     val scheme = MaterialTheme.colorScheme
-    val shape = MaterialTheme.shapes.large
+    val shape = RoundedCornerShape(18.dp)
 
     Surface(
         shape = shape,
-        color = if (active) scheme.primaryContainer else scheme.surfaceContainerHigh.copy(alpha = 0.88f),
-        contentColor = if (active) scheme.onPrimaryContainer else scheme.onSurface,
+        color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+        contentColor = scheme.onSurface,
         modifier = modifier
-            .gamepadFocusOutline(shape = shape)
+            .fillMaxWidth()
+            .gamepadFocusOutline(shape = shape, register = true)
+            .clip(shape)
+            .clickable { onCheckedChange(!checked) }
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = if (checked) scheme.primaryContainer else scheme.surfaceContainerHighest,
+                modifier = Modifier.size(38.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = if (checked) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = scheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (!summary.isNullOrBlank()) {
+                    Text(
+                        text = summary,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = scheme.onPrimary,
+                    checkedTrackColor = scheme.primary,
+                    uncheckedThumbColor = scheme.outline,
+                    uncheckedTrackColor = scheme.surfaceContainerHighest
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsActionCard(
+    icon: ImageVector,
+    title: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    summary: String? = null,
+    trailingBadge: String? = null
+) {
+    val scheme = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(18.dp)
+
+    Surface(
+        shape = shape,
+        color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+        contentColor = scheme.onSurface,
+        modifier = modifier
+            .fillMaxWidth()
+            .gamepadFocusOutline(shape = shape, register = true)
             .clip(shape)
             .clickable(onClick = onClick)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Icon(
-                painter = painterResource(iconRes),
-                contentDescription = null,
-                tint = if (active) scheme.onPrimaryContainer else scheme.primary,
-                modifier = Modifier.size(26.dp)
-            )
-            Text(
-                text = stringResource(labelRes),
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = scheme.secondaryContainer,
+                modifier = Modifier.size(38.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = scheme.onSecondaryContainer,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = scheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (!summary.isNullOrBlank()) {
+                    Text(
+                        text = summary,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            if (!trailingBadge.isNullOrBlank()) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = scheme.primaryContainer
+                ) {
+                    Text(
+                        text = trailingBadge,
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.ChevronRight,
+                    contentDescription = null,
+                    tint = scheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }
