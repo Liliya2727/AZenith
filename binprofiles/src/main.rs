@@ -14,6 +14,7 @@
 // limitations under the License.
 //
 
+mod android_ffi;
 mod utils;
 mod chipsets;
 mod profiles;
