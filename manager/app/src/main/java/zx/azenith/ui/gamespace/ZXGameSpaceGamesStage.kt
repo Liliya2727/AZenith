@@ -86,6 +86,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -122,8 +123,10 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -131,7 +134,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
+import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -165,6 +170,7 @@ internal fun ZXGameSpaceTileRibbon(
     val scheme = MaterialTheme.colorScheme
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
     val itemPitchPx = with(density) { 62.dp.toPx() }
     val expandedRightBasePx = with(density) { (88.dp + 12.dp).toPx() }
 
@@ -185,7 +191,18 @@ internal fun ZXGameSpaceTileRibbon(
         }
     }
 
-    val activeEntry = entries.getOrElse(selectedIndex) { RibbonEntry.Welcome }
+    // Haptic feedback on each game scrolled/passed
+    var lastHapticIndex by remember { mutableIntStateOf(selectedIndex) }
+    LaunchedEffect(carouselPos.value) {
+        val currentNearest = carouselPos.value.roundToInt().coerceIn(0, entries.lastIndex.coerceAtLeast(0))
+        if (currentNearest != lastHapticIndex) {
+            lastHapticIndex = currentNearest
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+    }
+
+    val visualIndex = carouselPos.value.roundToInt().coerceIn(0, entries.lastIndex.coerceAtLeast(0))
+    val activeEntry = entries.getOrElse(visualIndex) { RibbonEntry.Welcome }
 
     Box(
         modifier = Modifier
@@ -245,9 +262,12 @@ internal fun ZXGameSpaceTileRibbon(
             verticalAlignment = Alignment.Top
         ) {
             entries.forEachIndexed { index, item ->
+                val dist = (carouselPos.value - index).absoluteValue
+                val selectionFraction = (1f - dist).coerceIn(0f, 1f)
                 val isSelected = index == selectedIndex
                 ZXGameSpaceRibbonTile(
                     entry = item,
+                    selectionFraction = selectionFraction,
                     selected = isSelected,
                     onFocus = { onSelect(index) },
                     onClick = {
@@ -286,13 +306,7 @@ internal fun ZXGameSpaceTileRibbon(
                 }
 
                 is RibbonEntry.Game -> {
-                    ZXGameSpacePlatformTag(
-                        text = if (activeEntry.app.isEnabledInConfig) {
-                            stringResource(R.string.gamespace_tuned).uppercase()
-                        } else {
-                            stringResource(R.string.gamespace_untuned).uppercase()
-                        }
-                    )
+                    // No ENABLED label
                 }
 
                 RibbonEntry.Library -> {
@@ -313,29 +327,23 @@ internal fun ZXGameSpaceTileRibbon(
 @Composable
 internal fun ZXGameSpaceRibbonTile(
     entry: RibbonEntry,
+    selectionFraction: Float,
     selected: Boolean,
     onFocus: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
-    val motion = MaterialTheme.motionScheme
-    val colorSpec = motion.defaultEffectsSpec<Color>()
 
-    val tileSize by animateDpAsState(
-        targetValue = if (selected) 88.dp else 54.dp,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        ),
-        label = "RibbonTileSize"
-    )
-    val outerShape = if (selected) MaterialTheme.shapes.large else MaterialTheme.shapes.medium
-    val borderColor by animateColorAsState(
-        targetValue = if (selected) scheme.onSurface.copy(alpha = 0.85f) else Color.Transparent,
-        animationSpec = colorSpec,
-        label = "RibbonTileBorder"
-    )
+    val tileSize = lerp(54.dp, 88.dp, selectionFraction)
+    val outerRadius = lerp(16.dp, 24.dp, selectionFraction)
+    val innerRadius = lerp(12.dp, 18.dp, selectionFraction)
+    val outerShape = RoundedCornerShape(outerRadius)
+    val innerShape = RoundedCornerShape(innerRadius)
+
+    val borderColor = scheme.onSurface.copy(alpha = (0.85f * selectionFraction).coerceIn(0f, 1f))
+    val borderWidth = lerp(0.dp, 1.5.dp, selectionFraction)
+    val tilePadding = lerp(0.dp, 3.dp, selectionFraction)
 
     Box(
         modifier = modifier
@@ -343,40 +351,24 @@ internal fun ZXGameSpaceRibbonTile(
             .onFocusChanged { if (it.isFocused) onFocus() }
             .gamepadFocusOutline(shape = outerShape, width = 2.dp)
             .clip(outerShape)
-            .border(width = if (selected) 1.5.dp else 0.dp, color = borderColor, shape = outerShape)
+            .then(
+                if (borderWidth > 0.2.dp) {
+                    Modifier.border(width = borderWidth, color = borderColor, shape = outerShape)
+                } else Modifier
+            )
             .clickable(onClick = onClick)
-            .padding(if (selected) 3.dp else 0.dp)
+            .padding(tilePadding)
     ) {
-        val innerShape = if (selected) MaterialTheme.shapes.medium else MaterialTheme.shapes.small
         Surface(
             shape = innerShape,
             color = scheme.surfaceContainerHigh,
             modifier = Modifier.fillMaxSize()
         ) {
             when (entry) {
-                RibbonEntry.Welcome -> WelcomeGlyphTileContent(selected = selected)
-                is RibbonEntry.Game -> GameTileContent(app = entry.app, selected = selected)
-                RibbonEntry.Library -> LibraryTileContent()
+                RibbonEntry.Welcome -> WelcomeGlyphTileContent(selectedFraction = selectionFraction)
+                is RibbonEntry.Game -> GameTileContent(app = entry.app, selectedFraction = selectionFraction)
+                RibbonEntry.Library -> LibraryTileContent(selectedFraction = selectionFraction)
             }
-        }
-
-        // Enabled/disabled at a glance: a filled dot when the app carries the tweaks, a hollow
-        // ring when it does not, positioned at the top-right corner of the highlight.
-        if (entry is RibbonEntry.Game) {
-            val on = entry.app.isEnabledInConfig
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(if (selected) 6.dp else 4.dp)
-                    .size(if (selected) 12.dp else 9.dp)
-                    .clip(CircleShape)
-                    .background(if (on) scheme.primary else scheme.surfaceContainerHighest)
-                    .border(
-                        width = 1.dp,
-                        color = if (on) scheme.primary else scheme.outline.copy(alpha = 0.7f),
-                        shape = CircleShape
-                    )
-            )
         }
     }
 }
@@ -385,7 +377,7 @@ internal fun ZXGameSpaceRibbonTile(
  * The signature 2x2 controller symbol quad (Triangle, Circle, Cross, Square) on the Welcome tile.
  */
 @Composable
-internal fun WelcomeGlyphTileContent(selected: Boolean) {
+internal fun WelcomeGlyphTileContent(selectedFraction: Float) {
     val scheme = MaterialTheme.colorScheme
     Box(
         modifier = Modifier
@@ -400,11 +392,11 @@ internal fun WelcomeGlyphTileContent(selected: Boolean) {
             ),
         contentAlignment = Alignment.Center
     ) {
-        val glyphSpan = if (selected) 34.dp else 22.dp
+        val glyphSpan = lerp(22.dp, 34.dp, selectedFraction)
         Canvas(modifier = Modifier.size(glyphSpan)) {
             val w = size.width
             val h = size.height
-            val stroke = Stroke(width = if (selected) 4.2f else 3f, cap = StrokeCap.Round)
+            val stroke = Stroke(width = 3f + (1.2f * selectedFraction), cap = StrokeCap.Round)
             val color = scheme.onSurface
 
             // Top-Left: Square
@@ -452,14 +444,15 @@ internal fun WelcomeGlyphTileContent(selected: Boolean) {
 }
 
 @Composable
-internal fun GameTileContent(app: ApplistViewmodel.AppInfo, selected: Boolean) {
+internal fun GameTileContent(app: ApplistViewmodel.AppInfo, selectedFraction: Float) {
+    val iconSize = lerp(44.dp, 82.dp, selectedFraction)
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        AppIconImage(app = app, size = if (selected) 82.dp else 54.dp)
+        AppIconImage(app = app, size = iconSize)
     }
 }
 
 @Composable
-internal fun LibraryTileContent() {
+internal fun LibraryTileContent(selectedFraction: Float = 0f) {
     val scheme = MaterialTheme.colorScheme
     Box(
         modifier = Modifier
@@ -467,11 +460,12 @@ internal fun LibraryTileContent() {
             .background(scheme.surfaceContainerHigh),
         contentAlignment = Alignment.Center
     ) {
+        val iconSize = lerp(24.dp, 34.dp, selectedFraction)
         Icon(
             imageVector = Icons.Rounded.GridView,
             contentDescription = stringResource(R.string.gamespace_library_title),
             tint = scheme.onSurface,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(iconSize)
         )
     }
 }
