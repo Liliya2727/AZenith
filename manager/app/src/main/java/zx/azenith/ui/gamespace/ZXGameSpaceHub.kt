@@ -273,23 +273,39 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zx.azenith.BuildConfig
 import zx.azenith.R
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.material.icons.rounded.AspectRatio
+import androidx.compose.material.icons.rounded.Cable
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Layers
 import zx.azenith.ui.component.AppIconCache
-import zx.azenith.ui.component.ScreenWrapper
 import zx.azenith.ui.component.AppIconImage
+import zx.azenith.ui.component.ExpressiveDropdownItem
+import zx.azenith.ui.component.ExpressiveList
+import zx.azenith.ui.component.ExpressiveSliderItem
 import zx.azenith.ui.component.GamepadFocusRoot
 import zx.azenith.ui.component.GamepadInput
 import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.component.gamepadKeyWatch
 import zx.azenith.ui.component.gamepadScreenEntry
-import zx.azenith.ui.subscreens.AppSettingsScreen
+import zx.azenith.ui.subscreens.getAppDetails
+import zx.azenith.ui.subscreens.isGameCategory
+import zx.azenith.ui.util.AppConfig
+import zx.azenith.ui.util.DebugUtils
+import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.util.dumpDiagnosticLogs
 import zx.azenith.ui.util.getChipsetName
 import zx.azenith.ui.util.getRealDeviceName
+import zx.azenith.ui.util.getSupportedDownscaleFactors
+import zx.azenith.ui.util.getSupportedFpsTargets
+import zx.azenith.ui.util.getSupportedRefreshRates
 import zx.azenith.ui.util.getSupportedRefreshRatesPicker
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import zx.azenith.ui.theme.ColorMode
+import zx.azenith.ui.viewmodel.AppSettingsViewModel
 import zx.azenith.ui.viewmodel.ApplistViewmodel
 import zx.azenith.ui.viewmodel.SettingsViewModel
 import zx.azenith.ui.viewmodel.TweakViewModel
@@ -826,8 +842,13 @@ fun ZXGameSpaceHub(
                 }
             }
 
-            BackHandler(enabled = quickSettingsOpen || category == TopCategory.Settings || searchOpen || homeExpanded || libraryExpanded) {
-                if (quickSettingsOpen) {
+            BackHandler(
+                enabled = tuningPkg != null || quickSettingsOpen || category == TopCategory.Settings ||
+                    searchOpen || homeExpanded || libraryExpanded
+            ) {
+                if (tuningPkg != null) {
+                    tuningPkg = null
+                } else if (quickSettingsOpen) {
                     quickSettingsOpen = false
                 } else if (category == TopCategory.Settings) {
                     category = TopCategory.Games
@@ -864,9 +885,14 @@ fun ZXGameSpaceHub(
             )
         }
 
-        tuningPkg?.let { pkg ->
-            ZXGameSpaceAppSettingsOverlay(packageName = pkg, onClose = { tuningPkg = null })
-        }
+        ZXGameSpaceAppSettingsOverlay(
+            visible = tuningPkg != null,
+            packageName = tuningPkg,
+            allApps = allApps,
+            hazeState = hazeState,
+            onLaunch = onLaunch,
+            onClose = { tuningPkg = null }
+        )
     }
 }
 
@@ -1976,38 +2002,690 @@ private fun ZXGameSpaceSearchPane(
 }
 
 /**
- * The manager's App Settings, mounted inside the shell. Handing the job to the manager activity is
- * not an option: both activities are `singleTask`, so starting the manager from here would clear
- * Game Space off the task rather than stack on top of it.
+ * Game Space App Tuning Sheet: slides up from below with Material 3 bouncy expressive physics over
+ * a Haze-blurred backdrop, styled natively in the two-pane Game Space layout.
  */
 @Composable
 private fun ZXGameSpaceAppSettingsOverlay(
-    packageName: String,
-    onClose: () -> Unit
+    visible: Boolean,
+    packageName: String?,
+    allApps: List<ApplistViewmodel.AppInfo>,
+    hazeState: HazeState,
+    onLaunch: (ApplistViewmodel.AppInfo) -> Unit,
+    onClose: () -> Unit,
+    viewModel: AppSettingsViewModel = viewModel()
 ) {
-    val settingsNav = rememberNavController()
-    val entry by settingsNav.currentBackStackEntryAsState()
-    var landed by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val scheme = MaterialTheme.colorScheme
+    val motion = MaterialTheme.motionScheme
 
-    BackHandler { onClose() }
-
-    // The screen pops its own entry when it hands back, and an empty host is the overlay's way out.
-    LaunchedEffect(entry) {
-        if (entry != null) landed = true else if (landed) onClose()
+    var activePkg by remember { mutableStateOf(packageName) }
+    if (packageName != null) {
+        activePkg = packageName
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
+    LaunchedEffect(activePkg) {
+        if (activePkg != null) {
+            viewModel.loadConfig()
+        }
+    }
+
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInVertically(
+            initialOffsetY = { fullHeight -> fullHeight },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
+        exit = slideOutVertically(
+            targetOffsetY = { fullHeight -> fullHeight },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMedium
+            )
+        ) + fadeOut(animationSpec = motion.defaultEffectsSpec()),
+        modifier = Modifier.fillMaxSize()
     ) {
-        NavHost(
-            navController = settingsNav,
-            startDestination = "app_settings"
+        val pkg = activePkg ?: return@AnimatedVisibility
+        val resolvedApp = remember(pkg, allApps) {
+            allApps.find { it.packageName == pkg }
+        }
+        val appDetails = remember(pkg) { getAppDetails(context, pkg) }
+        val isGameApp = remember(pkg) { isGameCategory(context, pkg) }
+        val config = viewModel.fullConfig[pkg]
+        var localMasterOn by remember(pkg, config != null) { mutableStateOf(config != null) }
+
+        var isFullModeEnabled by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            isFullModeEnabled = DebugUtils.isFullModeEnabled()
+        }
+        var bypassSupported by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            bypassSupported = withContext(Dispatchers.IO) {
+                val path = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "")
+                path != "UNSUPPORTED" && path != "NEED_SETUP"
+            }
+        }
+
+        val booleanModes = listOf(
+            stringResource(R.string.default_label),
+            stringResource(R.string.on_label),
+            stringResource(R.string.off_label)
+        )
+        val rendererModes = listOf(
+            stringResource(R.string.Renderer_Default),
+            stringResource(R.string.renderer_skia_vk),
+            stringResource(R.string.renderer_skia_vk_threaded),
+            stringResource(R.string.renderer_skiagl),
+            stringResource(R.string.renderer_skiagl_threaded),
+            stringResource(R.string.renderer_opengl_es),
+            stringResource(R.string.renderer_opengl_es_threaded),
+            stringResource(R.string.Renderer_Vulkan)
+        )
+        val rendererValues = listOf(
+            "default",
+            "skiavk",
+            "skiavkthreaded",
+            "skiagl",
+            "skiaglthreaded",
+            "opengl",
+            "openglthreaded",
+            "vulkan"
+        )
+        val defaultLabel = stringResource(R.string.default_label)
+        val rawRefreshModes = remember { getSupportedRefreshRates(context) }
+        val rawDownscaleSteps = remember { getSupportedDownscaleFactors() }
+        val rawFpsSteps = remember { getSupportedFpsTargets(context) }
+        val downscaleDisplaySteps = remember(rawDownscaleSteps, defaultLabel) {
+            rawDownscaleSteps.map { if (it == "default") defaultLabel else it }
+        }
+        val fpsDisplaySteps = remember(rawFpsSteps, defaultLabel) {
+            rawFpsSteps.map { if (it == "default") defaultLabel else it }
+        }
+        val dynamicRefreshDisplayModes = remember(rawRefreshModes, defaultLabel) {
+            rawRefreshModes.map { mode ->
+                if (mode.equals("default", ignoreCase = true)) defaultLabel else mode
+            }
+        }
+        fun getBoolIndex(v: String?): Int = when (v) {
+            "true" -> 1
+            "false" -> 2
+            else -> 0
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .hazeBlur(
+                    input = HazeInput.Sources(hazeState),
+                    style = HazeBlurStyle.Material3(
+                        containerColor = scheme.surfaceContainerLowest.copy(alpha = 0.62f)
+                    ) {
+                        blurRadius(28.dp)
+                    }
+                )
+                .padding(horizontal = 24.dp, vertical = 18.dp)
         ) {
-            composable("app_settings") {
-                ScreenWrapper(navController = settingsNav, animatedVisibilityScope = this) {
-                    AppSettingsScreen(navController = settingsNav, packageName = packageName)
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Left GameSpace Identity Sidebar
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = scheme.surfaceContainerLow.copy(alpha = 0.90f),
+                    modifier = Modifier
+                        .width(264.dp)
+                        .fillMaxHeight()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(18.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    TopBarIconButton(
+                                        icon = Icons.Rounded.KeyboardArrowDown,
+                                        contentDescription = stringResource(R.string.cd_back),
+                                        onClick = onClose
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.app_settings_title),
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.ExtraBold
+                                        ),
+                                        color = scheme.onSurface
+                                    )
+                                }
+                            }
+
+                            // App identity card
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = scheme.surfaceContainerHigh,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        if (resolvedApp != null) {
+                                            AppIconImage(app = resolvedApp, size = 48.dp)
+                                        } else {
+                                            Surface(
+                                                shape = RoundedCornerShape(14.dp),
+                                                color = scheme.primaryContainer,
+                                                modifier = Modifier.size(48.dp)
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.Android,
+                                                        contentDescription = null,
+                                                        tint = scheme.onPrimaryContainer
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = resolvedApp?.label ?: appDetails.first,
+                                                style = MaterialTheme.typography.titleSmall.copy(
+                                                    fontWeight = FontWeight.Bold
+                                                ),
+                                                color = scheme.onSurface,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                text = pkg,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = scheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = scheme.secondaryContainer,
+                                            contentColor = scheme.onSecondaryContainer
+                                        ) {
+                                            Text(
+                                                text = "v${appDetails.third}",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontWeight = FontWeight.Bold
+                                                ),
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                                            )
+                                        }
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = if (localMasterOn) scheme.primaryContainer else scheme.surfaceContainerHighest,
+                                            contentColor = if (localMasterOn) scheme.onPrimaryContainer else scheme.onSurfaceVariant
+                                        ) {
+                                            Text(
+                                                text = if (localMasterOn) {
+                                                    stringResource(R.string.status_enabled)
+                                                } else {
+                                                    stringResource(R.string.status_disabled)
+                                                },
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontWeight = FontWeight.Bold
+                                                ),
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Master Switch Card
+                            val masterShape = RoundedCornerShape(18.dp)
+                            Surface(
+                                shape = masterShape,
+                                color = if (localMasterOn) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                                contentColor = if (localMasterOn) scheme.onPrimaryContainer else scheme.onSurface,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .gamepadFocusOutline(shape = masterShape, register = true)
+                                    .clip(masterShape)
+                                    .clickable {
+                                        val next = !localMasterOn
+                                        localMasterOn = next
+                                        viewModel.toggleMasterSwitch(pkg, next)
+                                        ApplistViewmodel.apps = ApplistViewmodel.apps.map {
+                                            if (it.packageName == pkg) it.copy(isEnabledInConfig = next) else it
+                                        }
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.PowerSettingsNew,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = stringResource(R.string.master_switch),
+                                            style = MaterialTheme.typography.labelLarge.copy(
+                                                fontWeight = FontWeight.Bold
+                                            ),
+                                            maxLines = 1
+                                        )
+                                        Text(
+                                            text = if (localMasterOn) "Active profile hooks" else "Tap to enable tuning",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = if (localMasterOn) {
+                                                scheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                            } else {
+                                                scheme.onSurfaceVariant
+                                            },
+                                            maxLines = 1
+                                        )
+                                    }
+                                    Switch(
+                                        checked = localMasterOn,
+                                        onCheckedChange = { isChecked ->
+                                            localMasterOn = isChecked
+                                            viewModel.toggleMasterSwitch(pkg, isChecked)
+                                            ApplistViewmodel.apps = ApplistViewmodel.apps.map {
+                                                if (it.packageName == pkg) it.copy(isEnabledInConfig = isChecked) else it
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Bottom Quick Actions: Launch & System Info
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            val launchShape = RoundedCornerShape(16.dp)
+                            Surface(
+                                shape = launchShape,
+                                color = scheme.primary,
+                                contentColor = scheme.onPrimary,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(44.dp)
+                                    .gamepadFocusOutline(shape = launchShape, register = true)
+                                    .clip(launchShape)
+                                    .clickable {
+                                        if (resolvedApp != null) {
+                                            onLaunch(resolvedApp)
+                                        } else {
+                                            launchGame(context, pkg)
+                                        }
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.PlayArrow,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = stringResource(R.string.gamespace_play_game),
+                                        style = MaterialTheme.typography.labelLarge.copy(
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    )
+                                }
+                            }
+
+                            val infoShape = RoundedCornerShape(16.dp)
+                            Surface(
+                                shape = infoShape,
+                                color = scheme.secondaryContainer,
+                                contentColor = scheme.onSecondaryContainer,
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .gamepadFocusOutline(shape = infoShape, register = true)
+                                    .clip(infoShape)
+                                    .clickable {
+                                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                            data = Uri.parse("package:$pkg")
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        runCatching { context.startActivity(intent) }
+                                    }
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Info,
+                                        contentDescription = stringResource(R.string.str_app_info),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Right GameSpace Tuning Stage
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = scheme.surfaceContainerLow.copy(alpha = 0.85f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                ) {
+                    AnimatedContent(
+                        targetState = localMasterOn,
+                        transitionSpec = {
+                            (fadeIn(motion.defaultEffectsSpec()) + scaleIn(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioLowBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                ),
+                                initialScale = 0.96f
+                            )).togetherWith(
+                                fadeOut(motion.defaultEffectsSpec()) + scaleOut(targetScale = 0.98f)
+                            )
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                        label = "AppTuningMasterContent"
+                    ) { enabled ->
+                        if (!enabled) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(28.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = scheme.secondaryContainer,
+                                        contentColor = scheme.onSecondaryContainer,
+                                        modifier = Modifier.size(64.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Tune,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(30.dp)
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        text = stringResource(R.string.master_switch),
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                        color = scheme.onSurface
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.master_switch_desc),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = scheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.widthIn(max = 360.dp)
+                                    )
+                                }
+                            }
+                        } else {
+                            val displayConfig = config ?: AppConfig()
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(18.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                item {
+                                    Text(
+                                        text = stringResource(R.string.section_performance).uppercase(),
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = 1.2.sp
+                                        ),
+                                        color = scheme.primary
+                                    )
+                                }
+                                item {
+                                    ExpressiveList(
+                                        content = listOf {
+                                            ExpressiveDropdownItem(
+                                                icon = Icons.Rounded.Speed,
+                                                title = stringResource(R.string.perf_lite_mode),
+                                                summary = stringResource(R.string.perf_lite_mode_desc_short),
+                                                items = booleanModes,
+                                                selectedIndex = getBoolIndex(displayConfig.perf_lite_mode),
+                                                onItemSelected = { index ->
+                                                    val value = listOf("default", "true", "false")[index]
+                                                    viewModel.updateSetting(pkg, "perf_lite_mode", value)
+                                                }
+                                            )
+                                        }
+                                    )
+                                }
+
+                                item {
+                                    Text(
+                                        text = stringResource(R.string.section_additionalsettings).uppercase(),
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = 1.2.sp
+                                        ),
+                                        color = scheme.primary,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
+                                item {
+                                    ExpressiveList(
+                                        content = buildList {
+                                            if (bypassSupported) {
+                                                add {
+                                                    ExpressiveDropdownItem(
+                                                        icon = Icons.Rounded.Cable,
+                                                        title = stringResource(R.string.bcharging),
+                                                        summary = stringResource(R.string.enable_bypass_charge_desc),
+                                                        items = booleanModes,
+                                                        selectedIndex = getBoolIndex(displayConfig.bypass_charging),
+                                                        onItemSelected = { index ->
+                                                            val value = listOf("default", "true", "false")[index]
+                                                            viewModel.updateSetting(pkg, "bypass_charging", value)
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                            add {
+                                                ExpressiveDropdownItem(
+                                                    icon = Icons.Rounded.RocketLaunch,
+                                                    title = stringResource(R.string.game_preload),
+                                                    summary = stringResource(R.string.game_preload_desc),
+                                                    items = booleanModes,
+                                                    selectedIndex = getBoolIndex(displayConfig.game_preload),
+                                                    onItemSelected = { index ->
+                                                        val value = listOf("default", "true", "false")[index]
+                                                        viewModel.updateSetting(pkg, "game_preload", value)
+                                                    }
+                                                )
+                                            }
+                                            if (isFullModeEnabled) {
+                                                add {
+                                                    ExpressiveDropdownItem(
+                                                        icon = Icons.Rounded.SwapVerticalCircle,
+                                                        title = stringResource(R.string.app_priority),
+                                                        summary = stringResource(R.string.app_priority_desc),
+                                                        items = booleanModes,
+                                                        selectedIndex = getBoolIndex(displayConfig.app_priority),
+                                                        onItemSelected = { index ->
+                                                            val value = listOf("default", "true", "false")[index]
+                                                            viewModel.updateSetting(pkg, "app_priority", value)
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                            add {
+                                                ExpressiveDropdownItem(
+                                                    icon = Icons.Rounded.DoNotDisturbOn,
+                                                    title = stringResource(R.string.dnd_mode),
+                                                    summary = stringResource(R.string.dnd_mode_desc),
+                                                    items = booleanModes,
+                                                    selectedIndex = getBoolIndex(displayConfig.dnd_on_gaming),
+                                                    onItemSelected = { index ->
+                                                        val value = listOf("default", "true", "false")[index]
+                                                        viewModel.updateSetting(pkg, "dnd_on_gaming", value)
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
+
+                                item {
+                                    Text(
+                                        text = stringResource(R.string.section_display_render_settings).uppercase(),
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            letterSpacing = 1.2.sp
+                                        ),
+                                        color = scheme.primary,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
+                                item {
+                                    ExpressiveList(
+                                        content = buildList {
+                                            if (isFullModeEnabled) {
+                                                add {
+                                                    ExpressiveDropdownItem(
+                                                        icon = Icons.Rounded.WebStories,
+                                                        title = stringResource(R.string.refreshrates),
+                                                        summary = stringResource(R.string.refreshrates_desc),
+                                                        items = dynamicRefreshDisplayModes,
+                                                        selectedIndex = rawRefreshModes.indexOfFirst {
+                                                            it.equals(displayConfig.refresh_rate, ignoreCase = true)
+                                                        }.coerceAtLeast(0),
+                                                        onItemSelected = { index ->
+                                                            val value = rawRefreshModes[index]
+                                                            viewModel.updateSetting(pkg, "refresh_rate", value)
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                            add {
+                                                ExpressiveDropdownItem(
+                                                    icon = Icons.Rounded.Layers,
+                                                    title = stringResource(R.string.renderengine),
+                                                    summary = stringResource(R.string.renderengine_desc),
+                                                    items = rendererModes,
+                                                    selectedIndex = rendererValues.indexOfFirst {
+                                                        it.equals(displayConfig.renderer, ignoreCase = true)
+                                                    }.coerceAtLeast(0),
+                                                    onItemSelected = { index ->
+                                                        val value = rendererValues[index]
+                                                        viewModel.updateSetting(pkg, "renderer", value)
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
+
+                                if (isGameApp) {
+                                    item {
+                                        Text(
+                                            text = stringResource(R.string.section_resolution_settings).uppercase(),
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                letterSpacing = 1.2.sp
+                                            ),
+                                            color = scheme.primary,
+                                            modifier = Modifier.padding(top = 4.dp)
+                                        )
+                                    }
+                                    item {
+                                        ExpressiveList(
+                                            content = buildList {
+                                                add {
+                                                    val currentDownscaleIndex = rawDownscaleSteps
+                                                        .indexOf(displayConfig.resolution_downscale)
+                                                        .coerceAtLeast(0)
+                                                    var downscaleSliderPos by remember(displayConfig.resolution_downscale) {
+                                                        mutableFloatStateOf(currentDownscaleIndex.toFloat())
+                                                    }
+                                                    ExpressiveSliderItem(
+                                                        icon = Icons.Rounded.AspectRatio,
+                                                        title = stringResource(R.string.resolution_downscale_title),
+                                                        subtitle = stringResource(R.string.resolution_downscale_desc),
+                                                        badgeText = downscaleDisplaySteps.getOrElse(downscaleSliderPos.toInt()) { defaultLabel },
+                                                        sliderPosition = downscaleSliderPos,
+                                                        valueRange = 0f..(rawDownscaleSteps.size - 1).toFloat(),
+                                                        steps = rawDownscaleSteps.size - 2,
+                                                        onValueChange = { downscaleSliderPos = it },
+                                                        onValueChangeFinished = {
+                                                            val value = rawDownscaleSteps[downscaleSliderPos.toInt()]
+                                                            viewModel.updateSetting(pkg, "resolution_downscale", value)
+                                                        }
+                                                    )
+                                                }
+                                                add {
+                                                    val currentFpsIndex = rawFpsSteps
+                                                        .indexOf(displayConfig.resolution_fps)
+                                                        .coerceAtLeast(0)
+                                                    var fpsSliderPos by remember(displayConfig.resolution_fps) {
+                                                        mutableFloatStateOf(currentFpsIndex.toFloat())
+                                                    }
+                                                    val downscaleIsOff = displayConfig.resolution_downscale == "default"
+                                                    ExpressiveSliderItem(
+                                                        icon = Icons.Rounded.Speed,
+                                                        title = stringResource(R.string.resolution_fps_target_title),
+                                                        subtitle = stringResource(R.string.resolution_fps_target_desc),
+                                                        badgeText = "${fpsDisplaySteps.getOrElse(fpsSliderPos.toInt()) { "60" }}fps",
+                                                        sliderPosition = fpsSliderPos,
+                                                        valueRange = 0f..(rawFpsSteps.size - 1).toFloat(),
+                                                        steps = rawFpsSteps.size - 2,
+                                                        enabled = !downscaleIsOff,
+                                                        onValueChange = { fpsSliderPos = it },
+                                                        onValueChangeFinished = {
+                                                            val value = rawFpsSteps[fpsSliderPos.toInt()]
+                                                            viewModel.updateSetting(pkg, "resolution_fps", value)
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -4513,28 +5191,62 @@ private fun GameHeroStage(
                 .weight(1f),
             verticalAlignment = Alignment.Bottom
         ) {
-            // Left Hero Column: Emblem/Title + Subtitle + [Play Game] [...]
+            // Left Hero Column: Emblem/Title + Package/Version metadata
+            val versionName = app.packageInfo.versionName?.takeIf { it.isNotBlank() }
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(bottom = 14.dp),
+                    .padding(bottom = 14.dp, end = 16.dp),
                 verticalArrangement = Arrangement.Bottom
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    AppIconImage(app = app, size = 52.dp)
-                    Text(
-                        text = app.label,
-                        style = MaterialTheme.typography.headlineLarge.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            letterSpacing = 0.5.sp
-                        ),
-                        color = scheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    AppIconImage(app = app, size = 56.dp)
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = app.label,
+                            style = MaterialTheme.typography.headlineLarge.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = 0.5.sp
+                            ),
+                            color = scheme.onSurface,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            if (versionName != null) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = scheme.secondaryContainer.copy(alpha = 0.85f),
+                                    contentColor = scheme.onSecondaryContainer
+                                ) {
+                                    Text(
+                                        text = "v$versionName",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = app.packageName,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                color = scheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
                 }
             }
 
