@@ -215,7 +215,7 @@ fun AZenithTheme(
     val isDynamic = themeState.keyColor == 0
     val colorSpec = themeState.colorSpec.librarySpec
 
-    val colorScheme = if (isDynamic) {
+    val rawColorScheme = if (isDynamic) {
         val baseScheme = when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
                 if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
@@ -241,6 +241,18 @@ fun AZenithTheme(
             isAmoled = amoledMode,
             specVersion = colorSpec,
         )
+    }
+
+    val colorScheme = if (amoledMode) {
+        rawColorScheme.copy(
+            background = Color.Black,
+            surface = Color.Black,
+            surfaceDim = Color.Black,
+            surfaceContainerLowest = Color.Black,
+            surfaceContainerLow = Color(0xFF0A0A0A)
+        )
+    } else {
+        rawColorScheme
     }
 
     val view = androidx.compose.ui.platform.LocalView.current

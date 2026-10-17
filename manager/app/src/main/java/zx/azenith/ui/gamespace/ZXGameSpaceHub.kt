@@ -42,13 +42,18 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -68,6 +73,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -277,10 +283,23 @@ import zx.azenith.BuildConfig
 import zx.azenith.R
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AspectRatio
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Cable
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Layers
+import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material.icons.rounded.ZoomIn
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.expressiveLightColorScheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.Density
+import com.materialkolor.rememberDynamicColorScheme
 import zx.azenith.ui.component.AppIconCache
 import zx.azenith.ui.component.AppIconImage
 import zx.azenith.ui.component.ExpressiveDropdownItem
@@ -306,11 +325,14 @@ import zx.azenith.ui.util.getSupportedFpsTargets
 import zx.azenith.ui.util.getSupportedRefreshRates
 import zx.azenith.ui.util.getSupportedRefreshRatesPicker
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
+import zx.azenith.ui.theme.ColorEngine
 import zx.azenith.ui.theme.ColorMode
 import zx.azenith.ui.viewmodel.AppSettingsViewModel
 import zx.azenith.ui.viewmodel.ApplistViewmodel
 import zx.azenith.ui.viewmodel.SettingsViewModel
 import zx.azenith.ui.viewmodel.TweakViewModel
+
+private val LocalGameSpaceAnimationsEnabled = compositionLocalOf { true }
 
 private enum class TopCategory(val labelRes: Int) {
     Games(R.string.gamespace_tab_games),
@@ -467,21 +489,27 @@ private val SETTINGS_SEARCH_ITEMS = listOf(
     // Theme
     SettingsSearchItem(
         titleRes = R.string.theme,
-        summaryText = "Material 3 Expressive personalization and dynamic palette",
+        summaryText = "Auto, Light, Dark, and AMOLED pure black modes",
         tab = SettingsSidebarTab.Theme,
-        icon = Icons.Rounded.Palette
+        icon = Icons.Rounded.BrightnessAuto
     ),
     SettingsSearchItem(
-        titleRes = R.string.str_expressive_blur,
-        summaryRes = R.string.str_expressive_blur_summary,
+        titleRes = R.string.pers_text_scale,
+        summaryText = "App scale percent from 70% downscale to 150% upscale",
         tab = SettingsSidebarTab.Theme,
-        icon = Icons.Rounded.WebStories
+        icon = Icons.Rounded.ZoomIn
     ),
     SettingsSearchItem(
         titleRes = R.string.str_use_scroll_animation,
-        summaryRes = R.string.str_use_scroll_animation_summary,
+        summaryText = "Toggle UI animations or instant pop-ups",
         tab = SettingsSidebarTab.Theme,
         icon = Icons.Rounded.PlayArrow
+    ),
+    SettingsSearchItem(
+        titleRes = R.string.theme,
+        summaryText = "Follow Monet dynamic colors or select a preset palette",
+        tab = SettingsSidebarTab.Theme,
+        icon = Icons.Rounded.Palette
     ),
 
     // About
@@ -518,6 +546,28 @@ fun ZXGameSpaceHub(
     val motion = MaterialTheme.motionScheme
     val effectsSpec = motion.defaultEffectsSpec<Float>()
     val spatialSpec = motion.defaultSpatialSpec<androidx.compose.ui.unit.IntSize>()
+
+    val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    var appScalePercent by remember {
+        mutableIntStateOf(prefs.getInt("gamespace_app_scale", 100).coerceIn(70, 150))
+    }
+    var animationsEnabled by remember {
+        mutableStateOf(prefs.getBoolean("gamespace_animations", true))
+    }
+    DisposableEffect(prefs) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            when (key) {
+                "gamespace_app_scale" -> {
+                    appScalePercent = prefs.getInt("gamespace_app_scale", 100).coerceIn(70, 150)
+                }
+                "gamespace_animations" -> {
+                    animationsEnabled = prefs.getBoolean("gamespace_animations", true)
+                }
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
 
     val scope = rememberCoroutineScope()
     val ribbonFocusRequester = remember { FocusRequester() }
@@ -563,7 +613,16 @@ fun ZXGameSpaceHub(
     val deviceName = remember(context) { getRealDeviceName(context) }
     val chipsetName = remember(context) { getChipsetName(context) }
     val hazeState = remember { HazeState() }
+    val baseDensity = LocalDensity.current
+    val scaleFactor = appScalePercent.coerceIn(70, 150) / 100f
 
+    CompositionLocalProvider(
+        LocalDensity provides Density(
+            density = baseDensity.density * scaleFactor,
+            fontScale = baseDensity.fontScale
+        ),
+        LocalGameSpaceAnimationsEnabled provides animationsEnabled
+    ) {
     GamepadFocusRoot(
         modifier = Modifier
             .fillMaxSize()
@@ -692,8 +751,8 @@ fun ZXGameSpaceHub(
                 ) {
                     AnimatedVisibility(
                         visible = !searchOpen && !homeExpanded && !libraryExpanded,
-                        enter = fadeIn(effectsSpec) + expandVertically(spatialSpec),
-                        exit = fadeOut(effectsSpec) + shrinkVertically(spatialSpec)
+                        enter = if (animationsEnabled) fadeIn(effectsSpec) + expandVertically(spatialSpec) else EnterTransition.None,
+                        exit = if (animationsEnabled) fadeOut(effectsSpec) + shrinkVertically(spatialSpec) else ExitTransition.None
                     ) {
                         Column {
                             ZXGameSpaceTileRibbon(
@@ -722,38 +781,42 @@ fun ZXGameSpaceHub(
                         AnimatedContent(
                             targetState = activeEntry,
                             transitionSpec = {
-                                val fromIndex = ribbonEntries.indexOf(initialState)
-                                val toIndex = ribbonEntries.indexOf(targetState)
-                                val movingForward = toIndex >= fromIndex
+                                if (!animationsEnabled) {
+                                    EnterTransition.None.togetherWith(ExitTransition.None)
+                                } else {
+                                    val fromIndex = ribbonEntries.indexOf(initialState)
+                                    val toIndex = ribbonEntries.indexOf(targetState)
+                                    val movingForward = toIndex >= fromIndex
 
-                                val slideInOffset = { size: Int ->
-                                    if (movingForward) (size * 0.18f).roundToInt()
-                                    else (-size * 0.18f).roundToInt()
-                                }
-                                val slideOutOffset = { size: Int ->
-                                    if (movingForward) (-size * 0.18f).roundToInt()
-                                    else (size * 0.18f).roundToInt()
-                                }
+                                    val slideInOffset = { size: Int ->
+                                        if (movingForward) (size * 0.18f).roundToInt()
+                                        else (-size * 0.18f).roundToInt()
+                                    }
+                                    val slideOutOffset = { size: Int ->
+                                        if (movingForward) (-size * 0.18f).roundToInt()
+                                        else (size * 0.18f).roundToInt()
+                                    }
 
-                                (slideInHorizontally(
-                                    animationSpec = motion.defaultSpatialSpec(),
-                                    initialOffsetX = slideInOffset
-                                ) + scaleIn(
-                                    animationSpec = motion.defaultSpatialSpec(),
-                                    initialScale = 0.94f
-                                ) + fadeIn(
-                                    animationSpec = motion.defaultEffectsSpec()
-                                )).togetherWith(
-                                    slideOutHorizontally(
+                                    (slideInHorizontally(
                                         animationSpec = motion.defaultSpatialSpec(),
-                                        targetOffsetX = slideOutOffset
-                                    ) + scaleOut(
+                                        initialOffsetX = slideInOffset
+                                    ) + scaleIn(
                                         animationSpec = motion.defaultSpatialSpec(),
-                                        targetScale = 1.03f
-                                    ) + fadeOut(
+                                        initialScale = 0.94f
+                                    ) + fadeIn(
                                         animationSpec = motion.defaultEffectsSpec()
+                                    )).togetherWith(
+                                        slideOutHorizontally(
+                                            animationSpec = motion.defaultSpatialSpec(),
+                                            targetOffsetX = slideOutOffset
+                                        ) + scaleOut(
+                                            animationSpec = motion.defaultSpatialSpec(),
+                                            targetScale = 1.03f
+                                        ) + fadeOut(
+                                            animationSpec = motion.defaultEffectsSpec()
+                                        )
                                     )
-                                )
+                                }
                             },
                             modifier = Modifier.fillMaxSize(),
                             label = "ZXGameSpaceMainStage"
@@ -901,6 +964,7 @@ fun ZXGameSpaceHub(
             onClose = { tuningPkg = null }
         )
     }
+    }
 }
 
 /**
@@ -916,6 +980,7 @@ private fun ZXGameSpaceQuickSettingsOverlay(
 ) {
     val scheme = MaterialTheme.colorScheme
     val motion = MaterialTheme.motionScheme
+    val animationsEnabled = LocalGameSpaceAnimationsEnabled.current
     val context = LocalContext.current
     val audioManager = remember(context) { context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager }
     val connectivityManager = remember(context) { context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager }
@@ -954,8 +1019,8 @@ private fun ZXGameSpaceQuickSettingsOverlay(
     // Scrim overlay - dismiss on click outside
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(animationSpec = motion.defaultEffectsSpec()),
-        exit = fadeOut(animationSpec = motion.defaultEffectsSpec())
+        enter = if (animationsEnabled) fadeIn(animationSpec = motion.defaultEffectsSpec()) else EnterTransition.None,
+        exit = if (animationsEnabled) fadeOut(animationSpec = motion.defaultEffectsSpec()) else ExitTransition.None
     ) {
         Box(
             modifier = Modifier
@@ -972,20 +1037,28 @@ private fun ZXGameSpaceQuickSettingsOverlay(
     // Floating panel sliding in from right side with spring bouncy animation
     AnimatedVisibility(
         visible = visible,
-        enter = slideInHorizontally(
-            initialOffsetX = { fullWidth -> fullWidth },
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioLowBouncy,
-                stiffness = Spring.StiffnessMediumLow
-            )
-        ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
-        exit = slideOutHorizontally(
-            targetOffsetX = { fullWidth -> fullWidth },
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessMedium
-            )
-        ) + fadeOut(animationSpec = motion.defaultEffectsSpec()),
+        enter = if (animationsEnabled) {
+            slideInHorizontally(
+                initialOffsetX = { fullWidth -> fullWidth },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+            ) + fadeIn(animationSpec = motion.defaultEffectsSpec())
+        } else {
+            EnterTransition.None
+        },
+        exit = if (animationsEnabled) {
+            slideOutHorizontally(
+                targetOffsetX = { fullWidth -> fullWidth },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            ) + fadeOut(animationSpec = motion.defaultEffectsSpec())
+        } else {
+            ExitTransition.None
+        },
         modifier = Modifier.fillMaxSize()
     ) {
         Box(
@@ -1684,22 +1757,31 @@ private fun ZXGameSpaceSettingsOverlay(
 ) {
     val motion = MaterialTheme.motionScheme
     val scheme = MaterialTheme.colorScheme
+    val animationsEnabled = LocalGameSpaceAnimationsEnabled.current
     AnimatedVisibility(
         visible = visible,
-        enter = slideInHorizontally(
-            initialOffsetX = { fullWidth -> fullWidth },
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioLowBouncy,
-                stiffness = Spring.StiffnessMediumLow
-            )
-        ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
-        exit = slideOutHorizontally(
-            targetOffsetX = { fullWidth -> fullWidth },
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessMedium
-            )
-        ) + fadeOut(animationSpec = motion.defaultEffectsSpec()),
+        enter = if (!animationsEnabled) {
+            EnterTransition.None
+        } else {
+            slideInHorizontally(
+                initialOffsetX = { fullWidth -> fullWidth },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+            ) + fadeIn(animationSpec = motion.defaultEffectsSpec())
+        },
+        exit = if (!animationsEnabled) {
+            ExitTransition.None
+        } else {
+            slideOutHorizontally(
+                targetOffsetX = { fullWidth -> fullWidth },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            ) + fadeOut(animationSpec = motion.defaultEffectsSpec())
+        },
         modifier = modifier
     ) {
         Box(
@@ -1728,36 +1810,45 @@ private fun ZXGameSpaceSearchOverlay(
 ) {
     val motion = MaterialTheme.motionScheme
     val scheme = MaterialTheme.colorScheme
+    val animationsEnabled = LocalGameSpaceAnimationsEnabled.current
 
     AnimatedVisibility(
         visible = visible,
         modifier = modifier,
-        enter = slideInVertically(
-            initialOffsetY = { fullHeight -> -fullHeight / 6 },
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioLowBouncy,
-                stiffness = Spring.StiffnessMediumLow
-            )
-        ) + scaleIn(
-            initialScale = 0.94f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioLowBouncy,
-                stiffness = Spring.StiffnessMediumLow
-            )
-        ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
-        exit = slideOutVertically(
-            targetOffsetY = { fullHeight -> -fullHeight / 8 },
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessMedium
-            )
-        ) + scaleOut(
-            targetScale = 0.96f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessMedium
-            )
-        ) + fadeOut(animationSpec = motion.defaultEffectsSpec())
+        enter = if (!animationsEnabled) {
+            EnterTransition.None
+        } else {
+            slideInVertically(
+                initialOffsetY = { fullHeight -> -fullHeight / 6 },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+            ) + scaleIn(
+                initialScale = 0.94f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+            ) + fadeIn(animationSpec = motion.defaultEffectsSpec())
+        },
+        exit = if (!animationsEnabled) {
+            ExitTransition.None
+        } else {
+            slideOutVertically(
+                targetOffsetY = { fullHeight -> -fullHeight / 8 },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            ) + scaleOut(
+                targetScale = 0.96f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            ) + fadeOut(animationSpec = motion.defaultEffectsSpec())
+        }
     ) {
         Box(
             modifier = Modifier
@@ -2167,6 +2258,7 @@ private fun ZXGameSpaceAppSettingsOverlay(
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val motion = MaterialTheme.motionScheme
+    val animationsEnabled = LocalGameSpaceAnimationsEnabled.current
 
     var activePkg by remember { mutableStateOf(packageName) }
     if (packageName != null) {
@@ -2181,20 +2273,28 @@ private fun ZXGameSpaceAppSettingsOverlay(
 
     AnimatedVisibility(
         visible = visible,
-        enter = slideInVertically(
-            initialOffsetY = { fullHeight -> fullHeight },
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioLowBouncy,
-                stiffness = Spring.StiffnessMediumLow
-            )
-        ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
-        exit = slideOutVertically(
-            targetOffsetY = { fullHeight -> fullHeight },
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessMedium
-            )
-        ) + fadeOut(animationSpec = motion.defaultEffectsSpec()),
+        enter = if (!animationsEnabled) {
+            EnterTransition.None
+        } else {
+            slideInVertically(
+                initialOffsetY = { fullHeight -> fullHeight },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+            ) + fadeIn(animationSpec = motion.defaultEffectsSpec())
+        },
+        exit = if (!animationsEnabled) {
+            ExitTransition.None
+        } else {
+            slideOutVertically(
+                targetOffsetY = { fullHeight -> fullHeight },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            ) + fadeOut(animationSpec = motion.defaultEffectsSpec())
+        },
         modifier = Modifier.fillMaxSize()
     ) {
         val pkg = activePkg ?: return@AnimatedVisibility
@@ -2395,9 +2495,9 @@ private fun ZXGameSpaceAppSettingsOverlay(
                                         ) {
                                             Text(
                                                 text = if (localMasterOn) {
-                                                    stringResource(R.string.status_enabled)
+                                                    stringResource(R.string.gamespace_tuned)
                                                 } else {
-                                                    stringResource(R.string.status_disabled)
+                                                    stringResource(R.string.gamespace_untuned)
                                                 },
                                                 style = MaterialTheme.typography.labelSmall.copy(
                                                     fontWeight = FontWeight.Bold
@@ -3042,9 +3142,12 @@ private fun ZXGameSpaceExitDialog(
 @Composable
 private fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
     val scheme = MaterialTheme.colorScheme
+    val animationsEnabled = LocalGameSpaceAnimationsEnabled.current
+    val isAmoled = scheme.surfaceContainerLowest == Color.Black
 
     Crossfade(
         targetState = entry,
+        animationSpec = if (animationsEnabled) tween(300) else snap(),
         label = "ZXGameSpaceBackdropCrossfade"
     ) { current ->
         Box(modifier = Modifier.fillMaxSize().background(scheme.surfaceContainerLowest)) {
@@ -3061,7 +3164,7 @@ private fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
                                 .fillMaxWidth(0.72f)
                                 .align(Alignment.CenterEnd)
                                 .blur(36.dp, BlurredEdgeTreatment.Unbounded)
-                                .alpha(0.38f)
+                                .alpha(if (isAmoled) 0.22f else 0.38f)
                         )
                         Image(
                             bitmap = bitmap,
@@ -3072,9 +3175,9 @@ private fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
                                 .align(Alignment.CenterEnd)
                                 .offset(x = (-72).dp, y = (-18).dp)
                                 .clip(MaterialTheme.shapes.extraLarge)
-                                .alpha(0.28f)
+                                .alpha(if (isAmoled) 0.20f else 0.28f)
                         )
-                    } else {
+                    } else if (!isAmoled) {
                         Image(
                             painter = painterResource(R.drawable.banner_bg),
                             contentDescription = null,
@@ -3085,12 +3188,14 @@ private fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
                 }
 
                 else -> {
-                    Image(
-                        painter = painterResource(R.drawable.banner_bg),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize().alpha(0.22f)
-                    )
+                    if (!isAmoled) {
+                        Image(
+                            painter = painterResource(R.drawable.banner_bg),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize().alpha(0.22f)
+                        )
+                    }
                     ZXGameSpaceContourGlyphCanvas(
                         primaryColor = scheme.primary,
                         tertiaryColor = scheme.tertiary,
@@ -3105,11 +3210,19 @@ private fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
                     .fillMaxSize()
                     .background(
                         Brush.horizontalGradient(
-                            colors = listOf(
-                                scheme.surfaceContainerLowest.copy(alpha = 0.92f),
-                                scheme.surfaceContainerLowest.copy(alpha = 0.58f),
-                                scheme.primaryContainer.copy(alpha = 0.14f)
-                            )
+                            colors = if (isAmoled) {
+                                listOf(
+                                    Color.Black,
+                                    Color.Black.copy(alpha = 0.85f),
+                                    Color.Black.copy(alpha = 0.55f)
+                                )
+                            } else {
+                                listOf(
+                                    scheme.surfaceContainerLowest.copy(alpha = 0.92f),
+                                    scheme.surfaceContainerLowest.copy(alpha = 0.58f),
+                                    scheme.primaryContainer.copy(alpha = 0.14f)
+                                )
+                            }
                         )
                     )
             )
@@ -3118,11 +3231,19 @@ private fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(
-                                scheme.surfaceContainerLowest.copy(alpha = 0.55f),
-                                Color.Transparent,
-                                scheme.surfaceContainerLowest.copy(alpha = 0.94f)
-                            )
+                            colors = if (isAmoled) {
+                                listOf(
+                                    Color.Black.copy(alpha = 0.78f),
+                                    Color.Transparent,
+                                    Color.Black
+                                )
+                            } else {
+                                listOf(
+                                    scheme.surfaceContainerLowest.copy(alpha = 0.55f),
+                                    Color.Transparent,
+                                    scheme.surfaceContainerLowest.copy(alpha = 0.94f)
+                                )
+                            }
                         )
                     )
             )
@@ -3365,13 +3486,18 @@ private fun ZXGameSpaceTopBar(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val animationsEnabled = LocalGameSpaceAnimationsEnabled.current
             val searchRequester = remember { FocusRequester() }
             val searchWidth by animateDpAsState(
                 targetValue = if (searchOpen) 268.dp else 38.dp,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                ),
+                animationSpec = if (animationsEnabled) {
+                    spring(
+                        dampingRatio = Spring.DampingRatioLowBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                } else {
+                    snap()
+                },
                 label = "SearchBarWidth"
             )
             val searchBg by animateColorAsState(
@@ -3380,7 +3506,7 @@ private fun ZXGameSpaceTopBar(
                 } else {
                     scheme.surfaceContainerHigh.copy(alpha = 0.85f)
                 },
-                animationSpec = colorSpec,
+                animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
                 label = "SearchBarBg"
             )
 
@@ -6265,23 +6391,58 @@ private fun SettingsTweaksPane(
     }
 }
 
+private val GAMESPACE_PRESET_KEY_COLORS = listOf(
+    0xFFF44336.toInt() to "Crimson",
+    0xFFE91E63.toInt() to "Sakura",
+    0xFF9C27B0.toInt() to "Orchid",
+    0xFF673AB7.toInt() to "Iris",
+    0xFF3F51B5.toInt() to "Indigo",
+    0xFF2196F3.toInt() to "Azure",
+    0xFF00BCD4.toInt() to "Cyan",
+    0xFF009688.toInt() to "Teal",
+    0xFF4FAF50.toInt() to "Emerald",
+    0xFFFFEB3B.toInt() to "Solar",
+    0xFFFFC107.toInt() to "Amber",
+    0xFFFF9800.toInt() to "Tangerine",
+    0xFF795548.toInt() to "Mocha",
+    0xFF607D8F.toInt() to "Slate",
+    0xFFFF9CA8.toInt() to "Blossom",
+)
+
 @Composable
 private fun SettingsThemePane() {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
+    val systemDark = isSystemInDarkTheme()
 
     val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
-    var blurOn by remember { mutableStateOf(prefs.getBoolean("expressive_blur_ui", false)) }
-    var scrollAnimOn by remember { mutableStateOf(prefs.getBoolean("use_scroll_animation", true)) }
-    var colorModeValue by remember { mutableStateOf(prefs.getInt("color_mode", ColorMode.SYSTEM.value)) }
+    var colorModeValue by remember { mutableIntStateOf(prefs.getInt("color_mode", ColorMode.SYSTEM.value)) }
+    var keyColorValue by remember { mutableIntStateOf(prefs.getInt("key_color", 0)) }
+    var appScalePercent by remember {
+        mutableIntStateOf(prefs.getInt("gamespace_app_scale", 100).coerceIn(70, 150))
+    }
+    var animationsOn by remember {
+        mutableStateOf(prefs.getBoolean("gamespace_animations", true))
+    }
+    val currentColorSpec = remember {
+        ColorEngine.fromPersisted(prefs.getString("color_spec", null))
+    }
+
+    val isDarkPreview = when (ColorMode.fromValue(colorModeValue)) {
+        ColorMode.LIGHT -> false
+        ColorMode.DARK, ColorMode.DARKAMOLED -> true
+        ColorMode.SYSTEM -> systemDark
+    }
+
+    val followMonet = keyColorValue == 0
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
             .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Column {
             Text(
@@ -6290,53 +6451,115 @@ private fun SettingsThemePane() {
                 color = scheme.onSurface
             )
             Text(
-                text = "Material 3 Expressive personalization, blur effects, and dynamic palette",
+                text = "Theme mode, interface scaling, motion transitions, and Monet or preset color palettes",
                 style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant.copy(alpha = 0.8f)
             )
         }
 
+        // 1. Theme Mode (Auto / Light / Dark / AMOLED)
         Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+            shape = RoundedCornerShape(24.dp),
+            color = scheme.surfaceContainerHigh,
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
                 modifier = Modifier.padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = "ACTIVE PALETTE",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp
-                    ),
-                    color = scheme.primary
-                )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    val swatches = listOf(
-                        "Primary" to scheme.primary,
-                        "Secondary" to scheme.secondary,
-                        "Tertiary" to scheme.tertiary,
-                        "Container" to scheme.primaryContainer,
-                        "Surface" to scheme.surfaceContainerHighest
+                    Column {
+                        Text(
+                            text = "Theme Mode",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onSurface
+                        )
+                        Text(
+                            text = if (colorModeValue == ColorMode.DARKAMOLED.value) {
+                                "AMOLED mode draws pure black backgrounds where possible"
+                            } else {
+                                "Auto, Light, and Dark follow Monet dynamic surface tones"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = scheme.onSurfaceVariant
+                        )
+                    }
+                    Surface(
+                        shape = CircleShape,
+                        color = scheme.primaryContainer
+                    ) {
+                        Text(
+                            text = when (ColorMode.fromValue(colorModeValue)) {
+                                ColorMode.SYSTEM -> "Auto"
+                                ColorMode.LIGHT -> "Light"
+                                ColorMode.DARK -> "Dark"
+                                ColorMode.DARKAMOLED -> "AMOLED"
+                            },
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    val modes = listOf(
+                        Triple("Auto", ColorMode.SYSTEM.value, Icons.Rounded.BrightnessAuto),
+                        Triple("Light", ColorMode.LIGHT.value, Icons.Rounded.LightMode),
+                        Triple("Dark", ColorMode.DARK.value, Icons.Rounded.DarkMode),
+                        Triple("AMOLED", ColorMode.DARKAMOLED.value, Icons.Rounded.Android)
                     )
-                    swatches.forEach { (name, color) ->
+                    modes.forEach { (name, value, icon) ->
+                        val selected = colorModeValue == value
+                        val pillRadius by animateIntAsState(
+                            targetValue = if (selected) 50 else 28,
+                            animationSpec = if (animationsOn) {
+                                spring(
+                                    dampingRatio = Spring.DampingRatioLowBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            } else {
+                                snap()
+                            },
+                            label = "ThemeModePillRadius"
+                        )
+                        val shape = RoundedCornerShape(percent = pillRadius)
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = color,
+                            shape = shape,
+                            color = if (selected) scheme.primary else scheme.surfaceContainerHighest,
+                            contentColor = if (selected) scheme.onPrimary else scheme.onSurface,
                             modifier = Modifier
                                 .weight(1f)
-                                .height(52.dp)
+                                .gamepadFocusOutline(shape = shape, register = true)
+                                .clip(shape)
+                                .clickable {
+                                    colorModeValue = value
+                                    prefs.edit().putInt("color_mode", value).apply()
+                                }
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = if (selected) scheme.onPrimary else scheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
                                 Text(
                                     text = name,
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = if (color == scheme.primary || color == scheme.secondary || color == scheme.tertiary) Color.White else scheme.onSurface
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                    maxLines = 1
                                 )
                             }
                         }
@@ -6345,90 +6568,429 @@ private fun SettingsThemePane() {
             }
         }
 
+        // 2. App Scale (70% .. 150%, step 5%, default 100%) + Animations Toggle
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            SettingsSwitchCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Rounded.Palette,
-                title = stringResource(R.string.str_expressive_blur),
-                summary = stringResource(R.string.str_expressive_blur_summary),
-                checked = blurOn,
-                onCheckedChange = { enabled ->
-                    blurOn = enabled
-                    prefs.edit().putBoolean("expressive_blur_ui", enabled).apply()
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = scheme.surfaceContainerHigh,
+                modifier = Modifier.weight(1.25f)
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = scheme.secondaryContainer,
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.ZoomIn,
+                                        contentDescription = null,
+                                        tint = scheme.onSecondaryContainer,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = "App Scale",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.onSurface
+                                )
+                                Text(
+                                    text = "70% downscale to 150% upscale (5% steps)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = scheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val stepBtnShape = RoundedCornerShape(12.dp)
+                            Surface(
+                                shape = stepBtnShape,
+                                color = scheme.surfaceContainerHighest,
+                                contentColor = scheme.onSurface,
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .gamepadFocusOutline(shape = stepBtnShape, register = true)
+                                    .clip(stepBtnShape)
+                                    .clickable(enabled = appScalePercent > 70) {
+                                        val next = (appScalePercent - 5).coerceIn(70, 150)
+                                        appScalePercent = next
+                                        prefs.edit().putInt("gamespace_app_scale", next).apply()
+                                    }
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Remove,
+                                        contentDescription = "Decrease scale",
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                shape = CircleShape,
+                                color = if (appScalePercent == 100) scheme.primaryContainer else scheme.primary,
+                                contentColor = if (appScalePercent == 100) scheme.onPrimaryContainer else scheme.onPrimary,
+                                modifier = Modifier
+                                    .gamepadFocusOutline(shape = CircleShape, register = true)
+                                    .clip(CircleShape)
+                                    .clickable {
+                                        appScalePercent = 100
+                                        prefs.edit().putInt("gamespace_app_scale", 100).apply()
+                                    }
+                            ) {
+                                Text(
+                                    text = "${appScalePercent}%",
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.ExtraBold),
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                )
+                            }
+
+                            Surface(
+                                shape = stepBtnShape,
+                                color = scheme.surfaceContainerHighest,
+                                contentColor = scheme.onSurface,
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .gamepadFocusOutline(shape = stepBtnShape, register = true)
+                                    .clip(stepBtnShape)
+                                    .clickable(enabled = appScalePercent < 150) {
+                                        val next = (appScalePercent + 5).coerceIn(70, 150)
+                                        appScalePercent = next
+                                        prefs.edit().putInt("gamespace_app_scale", next).apply()
+                                    }
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Add,
+                                        contentDescription = "Increase scale",
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    ZenithSlider(
+                        value = appScalePercent.toFloat(),
+                        onValueChange = { raw ->
+                            val snapped = ((raw / 5f).roundToInt() * 5).coerceIn(70, 150)
+                            if (snapped != appScalePercent) {
+                                appScalePercent = snapped
+                                prefs.edit().putInt("gamespace_app_scale", snapped).apply()
+                            }
+                        },
+                        onValueChangeFinished = {},
+                        valueRange = 70f..150f,
+                        steps = 15,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(28.dp)
+                    )
                 }
-            )
+            }
 
             SettingsSwitchCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Rounded.Speed,
-                title = stringResource(R.string.str_use_scroll_animation),
-                summary = stringResource(R.string.str_use_scroll_animation_summary),
-                checked = scrollAnimOn,
+                modifier = Modifier.weight(0.95f),
+                icon = Icons.Rounded.AutoAwesome,
+                title = "Animations",
+                summary = if (animationsOn) {
+                    "Play Material 3 bouncy expressive animations"
+                } else {
+                    "Instant pop-ups with transition animations disabled"
+                },
+                checked = animationsOn,
                 onCheckedChange = { enabled ->
-                    scrollAnimOn = enabled
-                    prefs.edit().putBoolean("use_scroll_animation", enabled).apply()
+                    animationsOn = enabled
+                    prefs.edit().putBoolean("gamespace_animations", enabled).apply()
                 }
             )
         }
 
-        Text(
-            text = "COLOR MODE",
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.2.sp
-            ),
-            color = scheme.primary,
-            modifier = Modifier.padding(top = 4.dp)
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        // 3. App Theme Palette (Follow Monet vs Existing Preset Seed Colors)
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = scheme.surfaceContainerHigh,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            val modes = listOf(
-                Triple("System", ColorMode.SYSTEM.value, Icons.Rounded.BrightnessAuto),
-                Triple("Light", ColorMode.LIGHT.value, Icons.Rounded.LightMode),
-                Triple("Dark", ColorMode.DARK.value, Icons.Rounded.DarkMode),
-                Triple("AMOLED", ColorMode.DARKAMOLED.value, Icons.Rounded.Android)
-            )
-            modes.forEach { (name, value, icon) ->
-                val selected = colorModeValue == value
-                val shape = RoundedCornerShape(16.dp)
-                Surface(
-                    shape = shape,
-                    color = if (selected) scheme.primaryContainer else scheme.surfaceContainerHigh.copy(alpha = 0.85f),
-                    contentColor = if (selected) scheme.onPrimaryContainer else scheme.onSurface,
-                    modifier = Modifier
-                        .weight(1f)
-                        .gamepadFocusOutline(shape = shape, register = true)
-                        .clip(shape)
-                        .clickable {
-                            colorModeValue = value
-                            prefs.edit().putInt("color_mode", value).apply()
-                        }
+            Column(
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = if (selected) scheme.onPrimaryContainer else scheme.primary,
-                            modifier = Modifier.size(20.dp)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "App Theme Palette",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onSurface
                         )
                         Text(
-                            text = name,
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                            maxLines = 1
+                            text = if (followMonet) {
+                                "Following system Monet dynamic wallpaper palette"
+                            } else {
+                                val presetLabel = GAMESPACE_PRESET_KEY_COLORS.firstOrNull { it.first == keyColorValue }?.second ?: "Custom"
+                                "Using $presetLabel preset color seed from Personalization"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = scheme.onSurfaceVariant
+                        )
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val monetPillShape = RoundedCornerShape(percent = if (followMonet) 50 else 28)
+                        Surface(
+                            shape = monetPillShape,
+                            color = if (followMonet) scheme.primary else scheme.surfaceContainerHighest,
+                            contentColor = if (followMonet) scheme.onPrimary else scheme.onSurface,
+                            modifier = Modifier
+                                .gamepadFocusOutline(shape = monetPillShape, register = true)
+                                .clip(monetPillShape)
+                                .clickable {
+                                    keyColorValue = 0
+                                    prefs.edit().putInt("key_color", 0).apply()
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.AutoAwesome,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "Follow Monet",
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                                )
+                            }
+                        }
+
+                        val presetPillShape = RoundedCornerShape(percent = if (!followMonet) 50 else 28)
+                        Surface(
+                            shape = presetPillShape,
+                            color = if (!followMonet) scheme.primary else scheme.surfaceContainerHighest,
+                            contentColor = if (!followMonet) scheme.onPrimary else scheme.onSurface,
+                            modifier = Modifier
+                                .gamepadFocusOutline(shape = presetPillShape, register = true)
+                                .clip(presetPillShape)
+                                .clickable {
+                                    if (followMonet) {
+                                        val firstPreset = GAMESPACE_PRESET_KEY_COLORS.first().first
+                                        keyColorValue = firstPreset
+                                        prefs.edit().putInt("key_color", firstPreset).apply()
+                                    }
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Palette,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "Preset Palette",
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(vertical = 2.dp)
+                ) {
+                    item(key = "monet_dynamic") {
+                        GameSpacePaletteSwatch(
+                            seedColor = Color.Unspecified,
+                            label = "Monet",
+                            selected = followMonet,
+                            isDark = isDarkPreview,
+                            colorSpec = currentColorSpec,
+                            onClick = {
+                                keyColorValue = 0
+                                prefs.edit().putInt("key_color", 0).apply()
+                            }
+                        )
+                    }
+                    items(
+                        items = GAMESPACE_PRESET_KEY_COLORS,
+                        key = { it.first }
+                    ) { (colorInt, name) ->
+                        GameSpacePaletteSwatch(
+                            seedColor = Color(colorInt),
+                            label = name,
+                            selected = keyColorValue == colorInt,
+                            isDark = isDarkPreview,
+                            colorSpec = currentColorSpec,
+                            onClick = {
+                                keyColorValue = colorInt
+                                prefs.edit().putInt("key_color", colorInt).apply()
+                            }
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun GameSpacePaletteSwatch(
+    seedColor: Color,
+    label: String,
+    selected: Boolean,
+    isDark: Boolean,
+    colorSpec: ColorEngine,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    val animationsEnabled = LocalGameSpaceAnimationsEnabled.current
+
+    val swatchScheme = if (seedColor == Color.Unspecified) {
+        val baseScheme = when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+                if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            else ->
+                if (isDark) darkColorScheme() else expressiveLightColorScheme()
+        }
+        rememberDynamicColorScheme(
+            seedColor = baseScheme.primary,
+            isDark = isDark,
+            specVersion = colorSpec.librarySpec,
+            primary = baseScheme.primary,
+            secondary = baseScheme.secondary,
+            tertiary = baseScheme.tertiary,
+            neutral = baseScheme.surface,
+            neutralVariant = baseScheme.surfaceVariant,
+            error = baseScheme.error
+        )
+    } else {
+        rememberDynamicColorScheme(
+            seedColor = seedColor,
+            isDark = isDark,
+            specVersion = colorSpec.librarySpec
+        )
+    }
+
+    val cornerPercent by animateIntAsState(
+        targetValue = if (selected) 36 else 24,
+        animationSpec = if (animationsEnabled) {
+            spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        } else {
+            snap()
+        },
+        label = "SwatchCornerPercent"
+    )
+    val shape = RoundedCornerShape(percent = cornerPercent)
+
+    Surface(
+        shape = shape,
+        color = if (selected) swatchScheme.primaryContainer else swatchScheme.surfaceContainerHighest,
+        modifier = Modifier
+            .width(84.dp)
+            .gamepadFocusOutline(shape = shape, register = true)
+            .clip(shape)
+            .clickable(onClick = onClick)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier.size(48.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(modifier = Modifier.size(46.dp)) {
+                    drawArc(
+                        color = swatchScheme.primary,
+                        startAngle = 180f,
+                        sweepAngle = 180f,
+                        useCenter = true
+                    )
+                    drawArc(
+                        color = swatchScheme.tertiaryContainer,
+                        startAngle = 0f,
+                        sweepAngle = 90f,
+                        useCenter = true
+                    )
+                    drawArc(
+                        color = swatchScheme.secondaryContainer,
+                        startAngle = 90f,
+                        sweepAngle = 90f,
+                        useCenter = true
+                    )
+                }
+
+                if (selected) {
+                    Surface(
+                        shape = CircleShape,
+                        color = swatchScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = null,
+                                tint = swatchScheme.onPrimary,
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .clip(CircleShape)
+                            .background(swatchScheme.primary)
+                    )
+                }
+            }
+
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold
+                ),
+                color = if (selected) swatchScheme.onPrimaryContainer else swatchScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
