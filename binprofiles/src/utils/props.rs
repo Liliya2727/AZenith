@@ -1,20 +1,23 @@
 //! System property access and user configuration flags.
+//!
+//! `getprop` / `setprop` go through bionic directly (see `crate::android_ffi`)
+//! instead of spawning their binaries. `resetprop` still spawns, because only
+//! the Magisk/KSU tool can delete properties and override `ro.*` ones.
 
+use crate::android_ffi;
 use crate::utils::logging::log_error;
 use std::fs;
-use std::process::Command;
 
 pub const CONFIG_PATH: &str = "/data/adb/.config/AZenith";
 
+/// Returns the property value, or `""` when unset/empty.
 pub fn getprop(key: &str) -> String {
-    if let Ok(output) = Command::new("getprop").arg(key).output() {
-        String::from_utf8_lossy(&output.stdout).trim().to_string()
-    } else {
-        String::new()
-    }
+    android_ffi::prop_get(key).unwrap_or_default()
 }
 
 pub fn resetprop(key: &str, val: &str) {
+    use std::process::Command;
+
     let status = if val.is_empty() {
         Command::new("resetprop").arg("--delete").arg(key).status()
     } else {
@@ -27,13 +30,13 @@ pub fn resetprop(key: &str, val: &str) {
 }
 
 pub fn setprop(key: &str, val: &str) {
-    if let Err(e) = Command::new("setprop").arg(key).arg(val).status() {
-        log_error("prop", &format!("setprop failed key={} value={} err={}", key, val, e));
+    if !android_ffi::prop_set(key, val) {
+        log_error("prop", &format!("setprop failed key={} value={}", key, val));
     }
 }
 
 pub fn setprop_cmd(key: &str, value: &str) {
-    let _ = Command::new("setprop").arg(key).arg(value).status();
+    let _ = android_ffi::prop_set(key, value);
 }
 
 /// Returns the first non-empty property value, following the fallback chain order.
