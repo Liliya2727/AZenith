@@ -2748,34 +2748,23 @@ private fun ZXGameSpaceTileRibbon(
 ) {
     val scheme = MaterialTheme.colorScheme
     val density = LocalDensity.current
-    val listState = rememberLazyListState()
     var selectedRightEdgePx by remember { mutableStateOf(0f) }
     var ribbonWidthPx by remember { mutableStateOf(0f) }
-    val configuration = LocalConfiguration.current
-    val endPadding = (configuration.screenWidthDp + 500).dp
-    val anchorOffset = 124.dp
+    var dragOffsetPx by remember { mutableFloatStateOf(0f) }
     val itemPitchPx = with(density) { 62.dp.toPx() }
 
-    LaunchedEffect(selectedIndex, entries.size) {
-        if (listState.firstVisibleItemIndex != selectedIndex || listState.firstVisibleItemScrollOffset != 0) {
-            runCatching {
-                listState.animateScrollToItem(index = selectedIndex, scrollOffset = 0)
-            }
-        }
-    }
-
-    LaunchedEffect(listState.isScrollInProgress) {
-        if (!listState.isScrollInProgress) {
-            val first = listState.firstVisibleItemIndex
-            val offset = listState.firstVisibleItemScrollOffset
-            val target = (if (offset > itemPitchPx / 2) first + 1 else first).coerceIn(0, entries.lastIndex)
-            if (target != selectedIndex) {
-                onSelect(target)
-            } else if (offset != 0) {
-                listState.animateScrollToItem(target, 0)
-            }
-        }
-    }
+    // Target scroll offset:
+    // For indices 0, 1, 2: scroll offset is 0dp.
+    // For index >= 2: target anchors index at slot 3 (124dp), offset = (index - 2) * 62dp.
+    val targetScrollDp = if (selectedIndex <= 2) 0.dp else ((selectedIndex - 2) * 62).dp
+    val animatedScrollDp by animateDpAsState(
+        targetValue = targetScrollDp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "CarouselScroll"
+    )
 
     val activeEntry = entries.getOrElse(selectedIndex) { RibbonEntry.Welcome }
 
@@ -2784,19 +2773,46 @@ private fun ZXGameSpaceTileRibbon(
             .fillMaxWidth()
             .height(92.dp)
             .onGloballyPositioned { ribbonWidthPx = it.size.width.toFloat() }
+            .pointerInput(entries.size, selectedIndex) {
+                detectHorizontalDragGestures(
+                    onDragStart = { dragOffsetPx = 0f },
+                    onDragEnd = {
+                        val steps = (-dragOffsetPx / itemPitchPx).roundToInt()
+                        if (steps != 0) {
+                            val next = (selectedIndex + steps).coerceIn(0, entries.lastIndex)
+                            if (next != selectedIndex) {
+                                onSelect(next)
+                            }
+                        }
+                        dragOffsetPx = 0f
+                    },
+                    onDragCancel = { dragOffsetPx = 0f },
+                    onHorizontalDrag = { _, dragAmount ->
+                        dragOffsetPx += dragAmount
+                        val steps = (-dragOffsetPx / itemPitchPx).roundToInt()
+                        if (kotlin.math.abs(steps) >= 1) {
+                            val next = (selectedIndex + steps).coerceIn(0, entries.lastIndex)
+                            if (next != selectedIndex) {
+                                onSelect(next)
+                                dragOffsetPx += steps * itemPitchPx
+                            }
+                        }
+                    }
+                )
+            }
     ) {
-        LazyRow(
-            state = listState,
-            userScrollEnabled = true,
+        val totalOffsetPx = -with(density) { animatedScrollDp.toPx() } + dragOffsetPx
+
+        Row(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxHeight()
+                .offset { IntOffset(x = totalOffsetPx.roundToInt(), y = 0) }
                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
                 .gamepadScreenEntry(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.Top,
-            contentPadding = PaddingValues(start = anchorOffset, end = endPadding)
+            verticalAlignment = Alignment.Top
         ) {
-            itemsIndexed(entries, key = { _, item -> item.key }) { index, item ->
+            entries.forEachIndexed { index, item ->
                 val isSelected = index == selectedIndex
                 ZXGameSpaceRibbonTile(
                     entry = item,
@@ -2882,12 +2898,14 @@ private fun ZXGameSpaceRibbonTile(
 ) {
     val scheme = MaterialTheme.colorScheme
     val motion = MaterialTheme.motionScheme
-    val spatialSpec = motion.defaultSpatialSpec<androidx.compose.ui.unit.Dp>()
     val colorSpec = motion.defaultEffectsSpec<Color>()
 
     val tileSize by animateDpAsState(
         targetValue = if (selected) 88.dp else 54.dp,
-        animationSpec = spatialSpec,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
         label = "RibbonTileSize"
     )
     val outerShape = if (selected) MaterialTheme.shapes.large else MaterialTheme.shapes.medium
