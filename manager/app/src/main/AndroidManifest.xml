@@ -57,6 +57,10 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+
+        <service
+            android:name=".ui.gamespace.ZXSidePanelService"
+            android:exported="false" />
         
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"

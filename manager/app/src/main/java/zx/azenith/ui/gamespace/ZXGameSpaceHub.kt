@@ -71,7 +71,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.blur.HazeBlurStyle
+import dev.chrisbanes.haze.blur.hazeBlur
+import dev.chrisbanes.haze.blur.material3.Material3
 import dev.chrisbanes.haze.hazeSource
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
@@ -135,6 +139,7 @@ fun ZXGameSpaceHub(
             pendingLaunchApp = app
             sidePanelPromptOpen = true
         } else {
+            ZXSidePanelService.show(context, app.packageName, app.label)
             onLaunch(app)
         }
     }
@@ -239,6 +244,42 @@ fun ZXGameSpaceHub(
             )
         }
 
+        val isAmoled = scheme.surfaceContainerLowest == Color.Black
+        val isHomescreenScrolled = category == TopCategory.Games && activeEntry == RibbonEntry.Welcome && (homeExpanded || welcomeScroll.value > 10)
+        val isLibrary = category == TopCategory.Games && (activeEntry == RibbonEntry.Library || libraryExpanded)
+        val isSettings = category == TopCategory.Settings
+
+        val targetBlurAlpha = when {
+            isSettings -> 1f
+            isLibrary -> 1f
+            isHomescreenScrolled -> {
+                if (homeExpanded) 1f else (welcomeScroll.value.toFloat() / 180f).coerceIn(0f, 1f)
+            }
+            else -> 0f
+        }
+
+        // Focused background atmospheric blur over the wallpaper when scrolling into widgets, on Library, or in Settings
+        val backdropBlurAlpha by animateFloatAsState(
+            targetValue = targetBlurAlpha,
+            animationSpec = motion.defaultEffectsSpec(),
+            label = "BackdropBlurAlpha"
+        )
+        if (backdropBlurAlpha > 0.001f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = backdropBlurAlpha }
+                    .hazeBlur(
+                        input = HazeInput.Sources(hazeState),
+                        style = HazeBlurStyle.Material3(
+                            containerColor = scheme.surfaceContainerLowest.copy(alpha = if (isAmoled) 0.60f else 0.52f)
+                        ) {
+                            blurRadius(28.dp)
+                        }
+                    )
+            )
+        }
+
         val isScrolled = homeExpanded || (category == TopCategory.Games && activeEntry == RibbonEntry.Welcome && welcomeScroll.value > 15)
         val topBarScrimAlpha by animateFloatAsState(
             targetValue = if (isScrolled) 1f else 0f,
@@ -318,123 +359,154 @@ fun ZXGameSpaceHub(
             Spacer(Modifier.height(6.dp))
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                // Games Stage
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .hazeSource(hazeState)
-                ) {
-                    AnimatedVisibility(
-                        visible = !searchOpen && !homeExpanded && !libraryExpanded,
-                        enter = fadeIn(effectsSpec) + expandVertically(spatialSpec),
-                        exit = fadeOut(effectsSpec) + shrinkVertically(spatialSpec)
-                    ) {
-                        Column {
-                            ZXGameSpaceTileRibbon(
-                                entries = ribbonEntries,
-                                selectedIndex = safeIndex,
-                                onSelect = { selectedRibbonIndex = it },
-                                onActivate = { entry ->
-                                    when (entry) {
-                                        is RibbonEntry.Game -> requestAppLaunch(entry.app)
-                                        RibbonEntry.Welcome -> {
-                                            enabledApps.firstOrNull()?.let { selectedRibbonIndex = 1 }
-                                        }
-                                        RibbonEntry.Library -> {
-                                            selectedRibbonIndex = ribbonEntries.lastIndex
+                AnimatedContent(
+                    targetState = category,
+                    transitionSpec = {
+                        (fadeIn(animationSpec = motion.defaultEffectsSpec()) +
+                            scaleIn(animationSpec = motion.defaultSpatialSpec(), initialScale = 0.98f))
+                            .togetherWith(
+                                fadeOut(animationSpec = motion.defaultEffectsSpec()) +
+                                    scaleOut(animationSpec = motion.defaultSpatialSpec(), targetScale = 1.01f)
+                            )
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                    label = "CategoryStageTransition"
+                ) { currentCategory ->
+                    when (currentCategory) {
+                        TopCategory.Games -> {
+                            // Games Stage
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .hazeSource(hazeState)
+                            ) {
+                                AnimatedVisibility(
+                                    visible = !searchOpen && !homeExpanded && !libraryExpanded,
+                                    enter = fadeIn(effectsSpec) + expandVertically(spatialSpec),
+                                    exit = fadeOut(effectsSpec) + shrinkVertically(spatialSpec)
+                                ) {
+                                    Column {
+                                        ZXGameSpaceTileRibbon(
+                                            entries = ribbonEntries,
+                                            selectedIndex = safeIndex,
+                                            onSelect = { selectedRibbonIndex = it },
+                                            onActivate = { entry ->
+                                                when (entry) {
+                                                    is RibbonEntry.Game -> requestAppLaunch(entry.app)
+                                                    RibbonEntry.Welcome -> {
+                                                        enabledApps.firstOrNull()?.let { selectedRibbonIndex = 1 }
+                                                    }
+                                                    RibbonEntry.Library -> {
+                                                        selectedRibbonIndex = ribbonEntries.lastIndex
+                                                    }
+                                                }
+                                            },
+                                            focusRequester = ribbonFocusRequester
+                                        )
+
+                                        Spacer(Modifier.height(10.dp))
+                                    }
+                                }
+
+                                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                                    AnimatedContent(
+                                        targetState = activeEntry,
+                                        transitionSpec = {
+                                            val fromIndex = ribbonEntries.indexOf(initialState)
+                                            val toIndex = ribbonEntries.indexOf(targetState)
+                                            val movingForward = toIndex >= fromIndex
+
+                                            val slideInOffset = { size: Int ->
+                                                if (movingForward) (size * 0.18f).roundToInt()
+                                                else (-size * 0.18f).roundToInt()
+                                            }
+                                            val slideOutOffset = { size: Int ->
+                                                if (movingForward) (-size * 0.18f).roundToInt()
+                                                else (size * 0.18f).roundToInt()
+                                            }
+
+                                            (slideInHorizontally(
+                                                animationSpec = motion.defaultSpatialSpec(),
+                                                initialOffsetX = slideInOffset
+                                            ) + scaleIn(
+                                                animationSpec = motion.defaultSpatialSpec(),
+                                                initialScale = 0.94f
+                                            ) + fadeIn(
+                                                animationSpec = motion.defaultEffectsSpec()
+                                            )).togetherWith(
+                                                slideOutHorizontally(
+                                                    animationSpec = motion.defaultSpatialSpec(),
+                                                    targetOffsetX = slideOutOffset
+                                                ) + scaleOut(
+                                                    animationSpec = motion.defaultSpatialSpec(),
+                                                    targetScale = 1.03f
+                                                ) + fadeOut(
+                                                    animationSpec = motion.defaultEffectsSpec()
+                                                )
+                                            )
+                                        },
+                                        modifier = Modifier.fillMaxSize(),
+                                        label = "ZXGameSpaceMainStage"
+                                    ) { entry ->
+                                        when (entry) {
+                                            RibbonEntry.Welcome -> WelcomeHubStage(
+                                                scroll = welcomeScroll,
+                                                expanded = homeExpanded,
+                                                onExpandedChange = { homeExpanded = it },
+                                                profile = profile,
+                                                profileValue = profileValue,
+                                                games = enabledApps,
+                                                allAppsCount = allApps.size.coerceAtLeast(enabledApps.size),
+                                                refreshHz = refreshHz,
+                                                deviceName = deviceName,
+                                                chipsetName = chipsetName,
+                                                onApplyProfile = onApplyProfile,
+                                                onOpenSettings = {
+                                                    selectedSettingsTab = SettingsSidebarTab.General
+                                                    category = TopCategory.Settings
+                                                },
+                                                onSelectGame = { game ->
+                                                    val idx = ribbonEntries.indexOfFirst {
+                                                        it is RibbonEntry.Game && it.app.packageName == game.packageName
+                                                    }
+                                                    if (idx >= 0) selectedRibbonIndex = idx else requestAppLaunch(game)
+                                                },
+                                                onLaunchGame = requestAppLaunch,
+                                                onOpenLibrary = { selectedRibbonIndex = ribbonEntries.lastIndex }
+                                            )
+
+                                            is RibbonEntry.Game -> GameHeroStage(
+                                                app = entry.app,
+                                                onLaunch = { requestAppLaunch(entry.app) },
+                                                onOpenAppSettings = { tuningPkg = entry.app.packageName }
+                                            )
+
+                                            RibbonEntry.Library -> LibraryGridStage(
+                                                games = games,
+                                                allApps = allApps,
+                                                expanded = libraryExpanded,
+                                                onOpenSettings = { tuningPkg = it.packageName },
+                                                onExpandedChange = { libraryExpanded = it },
+                                                onClose = { selectedRibbonIndex = 0 },
+                                                onNavigateUp = { ribbonFocusRequester.requestFocus() }
+                                            )
                                         }
                                     }
-                                },
-                                focusRequester = ribbonFocusRequester
-                            )
-
-                            Spacer(Modifier.height(10.dp))
-                        }
-                    }
-
-                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                        AnimatedContent(
-                            targetState = activeEntry,
-                            transitionSpec = {
-                                val fromIndex = ribbonEntries.indexOf(initialState)
-                                val toIndex = ribbonEntries.indexOf(targetState)
-                                val movingForward = toIndex >= fromIndex
-
-                                val slideInOffset = { size: Int ->
-                                    if (movingForward) (size * 0.18f).roundToInt()
-                                    else (-size * 0.18f).roundToInt()
                                 }
-                                val slideOutOffset = { size: Int ->
-                                    if (movingForward) (-size * 0.18f).roundToInt()
-                                    else (size * 0.18f).roundToInt()
-                                }
-
-                                (slideInHorizontally(
-                                    animationSpec = motion.defaultSpatialSpec(),
-                                    initialOffsetX = slideInOffset
-                                ) + scaleIn(
-                                    animationSpec = motion.defaultSpatialSpec(),
-                                    initialScale = 0.94f
-                                ) + fadeIn(
-                                    animationSpec = motion.defaultEffectsSpec()
-                                )).togetherWith(
-                                    slideOutHorizontally(
-                                        animationSpec = motion.defaultSpatialSpec(),
-                                        targetOffsetX = slideOutOffset
-                                    ) + scaleOut(
-                                        animationSpec = motion.defaultSpatialSpec(),
-                                        targetScale = 1.03f
-                                    ) + fadeOut(
-                                        animationSpec = motion.defaultEffectsSpec()
-                                    )
-                                )
-                            },
-                            modifier = Modifier.fillMaxSize(),
-                            label = "ZXGameSpaceMainStage"
-                        ) { entry ->
-                            when (entry) {
-                                RibbonEntry.Welcome -> WelcomeHubStage(
-                                    scroll = welcomeScroll,
-                                    expanded = homeExpanded,
-                                    onExpandedChange = { homeExpanded = it },
-                                    profile = profile,
-                                    profileValue = profileValue,
-                                    games = enabledApps,
-                                    allAppsCount = allApps.size.coerceAtLeast(enabledApps.size),
-                                    refreshHz = refreshHz,
-                                    deviceName = deviceName,
-                                    chipsetName = chipsetName,
-                                    onApplyProfile = onApplyProfile,
-                                    onOpenSettings = {
-                                        selectedSettingsTab = SettingsSidebarTab.General
-                                        category = TopCategory.Settings
-                                    },
-                                    onSelectGame = { game ->
-                                        val idx = ribbonEntries.indexOfFirst {
-                                            it is RibbonEntry.Game && it.app.packageName == game.packageName
-                                        }
-                                        if (idx >= 0) selectedRibbonIndex = idx else requestAppLaunch(game)
-                                    },
-                                    onLaunchGame = requestAppLaunch,
-                                    onOpenLibrary = { selectedRibbonIndex = ribbonEntries.lastIndex }
-                                )
-
-                                is RibbonEntry.Game -> GameHeroStage(
-                                    app = entry.app,
-                                    onLaunch = { requestAppLaunch(entry.app) },
-                                    onOpenAppSettings = { tuningPkg = entry.app.packageName }
-                                )
-
-                                RibbonEntry.Library -> LibraryGridStage(
-                                    games = games,
-                                    allApps = allApps,
-                                    expanded = libraryExpanded,
-                                    onOpenSettings = { tuningPkg = it.packageName },
-                                    onExpandedChange = { libraryExpanded = it },
-                                    onClose = { selectedRibbonIndex = 0 },
-                                    onNavigateUp = { ribbonFocusRequester.requestFocus() }
-                                )
                             }
+                        }
+                        TopCategory.Settings -> {
+                            ZXGameSpaceSettingsStage(
+                                selectedTab = selectedSettingsTab,
+                                onSelectTab = { selectedSettingsTab = it },
+                                profile = profile,
+                                profileValue = profileValue,
+                                refreshHz = refreshHz,
+                                deviceName = deviceName,
+                                chipsetName = chipsetName,
+                                onApplyProfile = onApplyProfile,
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
                     }
                 }
@@ -509,60 +581,6 @@ fun ZXGameSpaceHub(
             )
         }
 
-        ZXGameSpaceSettingsOverlay(
-            visible = category == TopCategory.Settings,
-            hazeState = hazeState,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                ZXGameSpaceTopBar(
-                    selectedCategory = category,
-                    clock = clock,
-                    battery = battery,
-                    isScrolled = isScrolled,
-                    onSelectCategory = { category = it },
-                    searchOpen = searchOpen,
-                    searchQuery = searchQuery,
-                    onSearchQueryChange = { searchQuery = it },
-                    onSearchClose = {
-                        searchOpen = false
-                        searchQuery = ""
-                    },
-                    onSearchClick = {
-                        category = TopCategory.Games
-                        searchOpen = true
-                    },
-                    onSettingsClick = {
-                        category = if (category == TopCategory.Settings) TopCategory.Games else TopCategory.Settings
-                    },
-                    onAvatarClick = {
-                        val nextProfile = when (profileValue) {
-                            "1" -> "2"
-                            "2" -> "3"
-                            else -> "1"
-                        }
-                        onApplyProfile(nextProfile)
-                    },
-                    onStatusClick = { quickSettingsOpen = !quickSettingsOpen },
-                    onExit = { exitPrompt = true }
-                )
-
-                Spacer(Modifier.height(6.dp))
-
-                ZXGameSpaceSettingsStage(
-                    selectedTab = selectedSettingsTab,
-                    onSelectTab = { selectedSettingsTab = it },
-                    profile = profile,
-                    profileValue = profileValue,
-                    refreshHz = refreshHz,
-                    deviceName = deviceName,
-                    chipsetName = chipsetName,
-                    onApplyProfile = onApplyProfile,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-        }
-
         ZXGameSpaceAppSettingsOverlay(
             visible = tuningPkg != null,
             packageName = tuningPkg,
@@ -587,6 +605,7 @@ fun ZXGameSpaceHub(
                 if (appToLaunch != null) {
                     scope.launch {
                         delay(240)
+                        ZXSidePanelService.show(context, appToLaunch.packageName, appToLaunch.label)
                         onLaunch(appToLaunch)
                     }
                 }

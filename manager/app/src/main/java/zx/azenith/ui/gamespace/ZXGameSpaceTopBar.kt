@@ -19,7 +19,9 @@
 package zx.azenith.ui.gamespace
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
@@ -216,120 +218,148 @@ internal fun ZXGameSpaceTopBar(
 
         Spacer(Modifier.weight(1f))
 
-        // Center / Right Segment: Inline Search Field (Morphs on Search Active)
-        if (searchOpen) {
-            val focusRequester = remember { FocusRequester() }
-            LaunchedEffect(Unit) {
-                delay(120)
-                runCatching { focusRequester.requestFocus() }
-            }
-
-            Surface(
-                shape = CircleShape,
-                color = scheme.surfaceContainerHigh,
-                modifier = Modifier
-                    .weight(2f)
-                    .padding(horizontal = 12.dp)
-                    .height(40.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Search,
-                        contentDescription = null,
-                        tint = scheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-
-                    BasicTextField(
-                        value = searchQuery,
-                        onValueChange = onSearchQueryChange,
-                        singleLine = true,
-                        cursorBrush = SolidColor(scheme.primary),
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(
-                            color = scheme.onSurface,
-                            fontWeight = FontWeight.Medium
-                        ),
-                        modifier = Modifier
-                            .weight(1f)
-                            .focusRequester(focusRequester),
-                        decorationBox = { innerTextField ->
-                            if (searchQuery.isEmpty()) {
-                                Text(
-                                    text = stringResource(R.string.search_apps),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = scheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                )
-                            }
-                            innerTextField()
-                        }
-                    )
-
-                    if (searchQuery.isNotEmpty()) {
-                        Surface(
-                            shape = CircleShape,
-                            color = Color.Transparent,
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .clickable { onSearchQueryChange("") }
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Close,
-                                    contentDescription = "Clear",
-                                    tint = scheme.onSurfaceVariant,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.Transparent,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .clickable(onClick = onSearchClose)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Rounded.Close,
-                                contentDescription = stringResource(R.string.gamespace_search_close),
-                                tint = scheme.onSurface,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // Right Segment: Control Actions & Unified Status Capsule
+        // Right Segment: Morphing Search Bar, Control Actions & Unified Status Capsule
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (!searchOpen) {
-                TopBarIconButton(
-                    icon = Icons.Rounded.Search,
-                    contentDescription = stringResource(R.string.search_apps),
-                    onClick = onSearchClick
-                )
+            val searchRequester = remember { FocusRequester() }
+            val searchWidth by animateDpAsState(
+                targetValue = if (searchOpen) 268.dp else 38.dp,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                ),
+                label = "SearchBarWidth"
+            )
+            val searchBg by animateColorAsState(
+                targetValue = if (searchOpen) {
+                    scheme.surfaceContainerHighest
+                } else {
+                    scheme.surfaceContainerHigh.copy(alpha = 0.85f)
+                },
+                animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+                label = "SearchBarBg"
+            )
+
+            LaunchedEffect(searchOpen) {
+                if (searchOpen) {
+                    runCatching { searchRequester.requestFocus() }
+                }
             }
 
-            TopBarIconButton(
-                icon = Icons.Rounded.Settings,
-                contentDescription = stringResource(R.string.settings),
-                tint = if (selectedCategory == TopCategory.Settings) scheme.primary else scheme.onSurface,
-                onClick = onSettingsClick
-            )
+            Surface(
+                shape = CircleShape,
+                color = searchBg,
+                contentColor = scheme.onSurfaceVariant,
+                modifier = Modifier
+                    .width(searchWidth)
+                    .height(38.dp)
+                    .clip(CircleShape)
+                    .gamepadFocusOutline(shape = CircleShape, register = !searchOpen)
+                    .then(
+                        if (!searchOpen) {
+                            Modifier.clickable(onClick = onSearchClick)
+                        } else {
+                            Modifier
+                        }
+                    )
+            ) {
+                if (searchOpen) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(start = 12.dp, end = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Search,
+                            contentDescription = null,
+                            tint = scheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        BasicTextField(
+                            value = searchQuery,
+                            onValueChange = onSearchQueryChange,
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                color = scheme.onSurface,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            cursorBrush = SolidColor(scheme.primary),
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(searchRequester),
+                            decorationBox = { innerTextField ->
+                                Box(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
+                                    if (searchQuery.isEmpty()) {
+                                        Text(
+                                            text = stringResource(R.string.search_apps),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = scheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            }
+                        )
+                        if (searchQuery.isNotEmpty()) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color.Transparent,
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .clickable { onSearchQueryChange("") }
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Close,
+                                        contentDescription = "Clear",
+                                        tint = scheme.onSurfaceVariant,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                }
+                            }
+                        }
+                        Surface(
+                            shape = CircleShape,
+                            color = scheme.surfaceContainerHigh,
+                            contentColor = scheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .size(26.dp)
+                                .clip(CircleShape)
+                                .clickable(onClick = onSearchClose)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = stringResource(R.string.gamespace_search_close),
+                                    modifier = Modifier.size(15.dp)
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Search,
+                            contentDescription = stringResource(R.string.search_apps),
+                            tint = scheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
 
             TopBarIconButton(
                 icon = Icons.Rounded.PowerSettingsNew,

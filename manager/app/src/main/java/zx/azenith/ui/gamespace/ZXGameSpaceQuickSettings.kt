@@ -21,13 +21,14 @@ package zx.azenith.ui.gamespace
 import android.app.Activity
 import android.bluetooth.BluetoothManager
 import android.content.Context
-import android.content.Intent
 import android.hardware.input.InputManager
 import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.provider.Settings
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -37,7 +38,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,7 +47,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -56,32 +55,25 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.automirrored.rounded.VolumeDown
 import androidx.compose.material.icons.automirrored.rounded.VolumeMute
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
-import androidx.compose.material.icons.rounded.BatteryAlert
-import androidx.compose.material.icons.rounded.BatteryChargingFull
-import androidx.compose.material.icons.rounded.BatteryStd
 import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.BluetoothConnected
 import androidx.compose.material.icons.rounded.BluetoothDisabled
 import androidx.compose.material.icons.rounded.BrightnessHigh
 import androidx.compose.material.icons.rounded.BrightnessLow
 import androidx.compose.material.icons.rounded.BrightnessMedium
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.SignalCellularAlt
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material.icons.rounded.WifiOff
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -92,19 +84,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -114,14 +101,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import zx.azenith.R
+import zx.azenith.ui.component.GamepadInput
 import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.component.gamepadFocusOutline
 
 /**
- * Quick settings sheet anchored to the right edge on solid Material 3 surfaces.
+ * Material 3 Expressive Quick Settings panel anchored to the right edge.
  *
- * Network, Bluetooth audio and input devices come from framework callbacks rather than a single
- * read, so the panel stays accurate for as long as it is open.
+ * Displays real-time Network and Bluetooth status, dynamic Input Mode hero,
+ * and draggable Media Volume and Screen Brightness sliders.
  */
 @Composable
 internal fun ZXGameSpaceQuickSettingsOverlay(
@@ -136,43 +124,40 @@ internal fun ZXGameSpaceQuickSettingsOverlay(
     val inputManager = remember(context) { context.getSystemService(Context.INPUT_SERVICE) as? InputManager }
     val bluetoothManager = remember(context) { context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager }
 
-    // Volume control state
+    // Volume control state (0f..1f fraction matching ZenithSlider)
     val maxVol = remember(audioManager) { audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15 }
-    var currentVol by remember(audioManager) {
-        mutableIntStateOf(audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: (maxVol / 2))
+    var volFraction by remember(audioManager) {
+        val curVol = audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: 8
+        mutableFloatStateOf((curVol.toFloat() / maxVol.coerceAtLeast(1)).coerceIn(0f, 1f))
     }
 
-    // Screen brightness control state
+    // Display brightness control state (0.01f..1f fraction matching ZenithSlider)
     val activity = context as? Activity
-    var brightness by remember(activity) {
-        val windowVal = activity?.window?.attributes?.screenBrightness ?: -1f
-        val initial = if (windowVal >= 0f) {
-            windowVal
+    var brightnessFraction by remember(activity) {
+        val windowAttr = activity?.window?.attributes?.screenBrightness ?: -1f
+        val currentBrightness = if (windowAttr >= 0f) {
+            windowAttr
         } else {
-            val sys = runCatching {
-                Settings.System.getInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS)
-            }.getOrDefault(128)
-            (sys / 255f).coerceIn(0.05f, 1f)
+            runCatching {
+                Settings.System.getInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS) / 255f
+            }.getOrDefault(0.5f)
         }
-        mutableFloatStateOf(initial)
+        mutableFloatStateOf(currentBrightness.coerceIn(0.01f, 1f))
     }
 
     // Hardware status monitoring
     val network = rememberQuickNetworkState(connectivityManager)
     val bluetoothEndpoints = rememberQuickBluetoothEndpoints(audioManager, bluetoothManager)
     val inputDevices = rememberQuickInputDevices(inputManager)
-    val ram = rememberRamState()
-    val battery = rememberBatteryState()
-
-    val controllers = remember(inputDevices) {
-        inputDevices.filter { it.kind == QuickInputKind.Controller }
+    val isBtOn = remember(bluetoothEndpoints, visible) {
+        bluetoothEndpoints.isNotEmpty() || runCatching { bluetoothManager?.adapter?.isEnabled == true }.getOrDefault(false)
     }
-    val hasGamepad = controllers.isNotEmpty()
 
     val cutoutInsets = WindowInsets.displayCutout.asPaddingValues()
     val layoutDirection = LocalLayoutDirection.current
     val endSafePad = maxOf(24.dp, cutoutInsets.calculateEndPadding(layoutDirection))
 
+    // Scrim overlay - dismiss on tap outside
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn(animationSpec = motion.defaultEffectsSpec()),
@@ -181,251 +166,215 @@ internal fun ZXGameSpaceQuickSettingsOverlay(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(scheme.scrim.copy(alpha = 0.50f))
+                .background(scheme.scrim.copy(alpha = 0.35f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = onClose
                 )
+        )
+    }
+
+    // Floating panel sliding in from right side with spring bouncy animation
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInHorizontally(
+            initialOffsetX = { fullWidth -> fullWidth },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
+        exit = slideOutHorizontally(
+            targetOffsetX = { fullWidth -> fullWidth },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMedium
+            )
+        ) + fadeOut(animationSpec = motion.defaultEffectsSpec()),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(end = endSafePad, top = 16.dp, bottom = 16.dp),
+            contentAlignment = Alignment.CenterEnd
         ) {
-            AnimatedVisibility(
-                visible = visible,
-                enter = slideInHorizontally(
-                    initialOffsetX = { it },
-                    animationSpec = motion.defaultSpatialSpec()
-                ),
-                exit = slideOutHorizontally(
-                    targetOffsetX = { it },
-                    animationSpec = motion.defaultSpatialSpec()
-                ),
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = scheme.surfaceContainerLow,
                 modifier = Modifier
-                    .align(Alignment.CenterEnd)
+                    .width(360.dp)
                     .fillMaxHeight()
-                    .widthIn(min = 380.dp, max = 460.dp)
-                    .pointerInput(Unit) {
-                        detectHorizontalDragGestures { _, dragAmount ->
-                            if (dragAmount > 20f) onClose()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {} // Prevent click-through from dismissing panel
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 16.dp)
+                ) {
+                    // Header
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = scheme.primaryContainer,
+                                modifier = Modifier.size(38.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Tune,
+                                        contentDescription = null,
+                                        tint = scheme.onPrimaryContainer,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = stringResource(R.string.quick_settings_title),
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                color = scheme.onSurface
+                            )
+                        }
+                        IconButton(
+                            onClick = onClose,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .gamepadFocusOutline(shape = CircleShape, register = true)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                contentDescription = stringResource(R.string.dialog_cancel),
+                                tint = scheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                     }
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .widthIn(min = 380.dp, max = 460.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = {}
-                        ),
-                    shape = RoundedCornerShape(topStart = 32.dp, bottomStart = 32.dp),
-                    color = scheme.surfaceContainerHigh,
-                    shadowElevation = 16.dp,
-                    tonalElevation = 6.dp
-                ) {
+
+                    // Bento Widgets Scrollable Container
                     Column(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(
-                                start = 24.dp,
-                                end = endSafePad,
-                                top = 20.dp,
-                                bottom = 20.dp
-                            )
+                            .weight(1f)
                             .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        // Title bar with close button
+                        // Bento Row 1: Network & Bluetooth
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Column {
-                                Text(
-                                    text = stringResource(R.string.quick_settings_title),
-                                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                                    color = scheme.onSurface
-                                )
-                                Text(
-                                    text = "System Telemetry & Controls",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = scheme.onSurfaceVariant
-                                )
+                            // Network Bento Card
+                            val netCategory = when {
+                                !network.isConnected -> stringResource(R.string.quick_settings_network)
+                                network.isWifi -> stringResource(R.string.quick_settings_net_wifi)
+                                network.isCellular -> stringResource(R.string.quick_settings_net_cellular)
+                                else -> stringResource(R.string.quick_settings_network)
                             }
-                            IconButton(
-                                onClick = onClose,
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .background(scheme.surfaceContainerHighest, CircleShape)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Close,
-                                    contentDescription = stringResource(R.string.dialog_cancel),
-                                    tint = scheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp)
-                                )
+                            val netHeadline = when {
+                                !network.isConnected -> stringResource(R.string.quick_settings_offline)
+                                else -> network.label
                             }
+                            BentoStatCard(
+                                icon = when {
+                                    !network.isConnected -> Icons.Rounded.WifiOff
+                                    network.isWifi -> Icons.Rounded.Wifi
+                                    network.isCellular -> Icons.Rounded.SignalCellularAlt
+                                    else -> Icons.Rounded.Wifi
+                                },
+                                iconContainerColor = if (network.isConnected) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                                iconTint = if (network.isConnected) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
+                                category = netCategory,
+                                headline = netHeadline,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            // Bluetooth Bento Card (shows Active when enabled, connected device name if paired, None only when disabled)
+                            val btDevice = bluetoothEndpoints.firstOrNull()?.name
+                            val btHeadline = when {
+                                bluetoothEndpoints.isNotEmpty() -> btDevice ?: stringResource(R.string.quick_settings_value_active)
+                                isBtOn -> stringResource(R.string.quick_settings_value_active)
+                                else -> stringResource(R.string.quick_settings_value_none)
+                            }
+                            BentoStatCard(
+                                icon = when {
+                                    bluetoothEndpoints.isNotEmpty() -> Icons.Rounded.BluetoothConnected
+                                    isBtOn -> Icons.Rounded.Bluetooth
+                                    else -> Icons.Rounded.BluetoothDisabled
+                                },
+                                iconContainerColor = if (bluetoothEndpoints.isNotEmpty()) scheme.secondaryContainer else if (isBtOn) scheme.surfaceContainerHigh else scheme.surfaceContainer,
+                                iconTint = if (bluetoothEndpoints.isNotEmpty()) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
+                                category = stringResource(R.string.quick_settings_bluetooth),
+                                headline = btHeadline,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
 
-                        // 2x2 Bento Grid: Telemetry Cards
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                BentoStatCard(
-                                    icon = if (network.isWifi) Icons.Rounded.Wifi else if (network.isCellular) Icons.Rounded.SignalCellularAlt else Icons.Rounded.WifiOff,
-                                    iconContainerColor = if (network.isConnected) scheme.primaryContainer else scheme.surfaceContainerLow,
-                                    iconTint = if (network.isConnected) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
-                                    category = stringResource(R.string.quick_settings_network),
-                                    headline = network.label,
-                                    modifier = Modifier.weight(1f)
-                                )
-
-                                BentoStatCard(
-                                    icon = if (bluetoothEndpoints.isNotEmpty()) Icons.Rounded.BluetoothConnected else Icons.Rounded.Bluetooth,
-                                    iconContainerColor = if (bluetoothEndpoints.isNotEmpty()) scheme.secondaryContainer else scheme.surfaceContainerLow,
-                                    iconTint = if (bluetoothEndpoints.isNotEmpty()) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
-                                    category = stringResource(R.string.quick_settings_bluetooth),
-                                    headline = bluetoothEndpoints.firstOrNull()?.name ?: stringResource(R.string.quick_settings_value_none),
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                BentoStatCard(
-                                    icon = if (battery.second) Icons.Rounded.BatteryChargingFull else if (battery.first <= 15) Icons.Rounded.BatteryAlert else Icons.Rounded.BatteryStd,
-                                    iconContainerColor = if (battery.second) scheme.primaryContainer else if (battery.first <= 15) scheme.errorContainer else scheme.surfaceContainerLow,
-                                    iconTint = if (battery.second) scheme.onPrimaryContainer else if (battery.first <= 15) scheme.onErrorContainer else scheme.onSurfaceVariant,
-                                    category = "Battery",
-                                    headline = "${battery.first}%${if (battery.second) " Charging" else ""}",
-                                    modifier = Modifier.weight(1f)
-                                )
-
-                                BentoStatCard(
-                                    icon = Icons.Rounded.Memory,
-                                    iconContainerColor = scheme.tertiaryContainer,
-                                    iconTint = scheme.onTertiaryContainer,
-                                    category = "RAM",
-                                    headline = "${ram.second} Used",
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
+                        // Bento Row 2: Input Mode Hero Bento Card
+                        val connectedGamepad = inputDevices.firstOrNull {
+                            it.kind == QuickInputKind.Controller
                         }
-
-                        // Hero Bento Card: Input Mode & Active Controller
+                        val isGamepadActive = GamepadInput.dpadMode || (connectedGamepad != null && GamepadInput.active)
                         BentoInputHeroCard(
-                            isGamepad = hasGamepad,
-                            controllerName = controllers.firstOrNull()?.name,
+                            isGamepad = isGamepadActive,
+                            controllerName = connectedGamepad?.name?.takeIf { it.isNotBlank() },
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        // Slider Bento Cards: Media Volume & Screen Brightness
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            val volumeFraction = if (maxVol > 0) (currentVol.toFloat() / maxVol.toFloat()).coerceIn(0f, 1f) else 0f
-                            val volumePercent = (volumeFraction * 100f).roundToInt()
-                            val volIcon = when {
-                                currentVol == 0 -> Icons.AutoMirrored.Rounded.VolumeMute
-                                volumeFraction < 0.5f -> Icons.AutoMirrored.Rounded.VolumeDown
+                        // Bento Row 3: Media Volume Slider Bento Card
+                        BentoSliderCard(
+                            icon = when {
+                                volFraction <= 0.01f -> Icons.AutoMirrored.Rounded.VolumeMute
+                                volFraction < 0.5f -> Icons.AutoMirrored.Rounded.VolumeDown
                                 else -> Icons.AutoMirrored.Rounded.VolumeUp
-                            }
-
-                            BentoSliderCard(
-                                icon = volIcon,
-                                title = stringResource(R.string.quick_settings_volume),
-                                valuePercent = volumePercent,
-                                accent = scheme.primary,
-                                value = currentVol.toFloat(),
-                                onValueChange = { raw ->
-                                    val step = raw.roundToInt().coerceIn(0, maxVol)
-                                    if (step != currentVol) {
-                                        currentVol = step
-                                        audioManager?.setStreamVolume(AudioManager.STREAM_MUSIC, step, 0)
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            val brightPercent = (brightness.coerceIn(0f, 1f) * 100f).roundToInt()
-                            val brightIcon = when {
-                                brightness < 0.35f -> Icons.Rounded.BrightnessLow
-                                brightness < 0.70f -> Icons.Rounded.BrightnessMedium
-                                else -> Icons.Rounded.BrightnessHigh
-                            }
-
-                            BentoSliderCard(
-                                icon = brightIcon,
-                                title = stringResource(R.string.quick_settings_brightness),
-                                valuePercent = brightPercent,
-                                accent = scheme.tertiary,
-                                value = brightness * 100f,
-                                onValueChange = { raw ->
-                                    val next = (raw / 100f).coerceIn(0.02f, 1f)
-                                    brightness = next
-                                    activity?.window?.let { win ->
-                                        val lp = win.attributes
-                                        lp.screenBrightness = next
-                                        win.attributes = lp
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-
-                        // System Settings Navigation link
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = scheme.surfaceContainerHighest,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    runCatching {
-                                        context.startActivity(Intent(Settings.ACTION_SETTINGS).apply {
-                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                        })
-                                    }
-                                }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
-                                        contentDescription = null,
-                                        tint = scheme.onSurfaceVariant,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Text(
-                                        text = "Open System Settings",
-                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
-                                        color = scheme.onSurface
-                                    )
-                                }
-                                Icon(
-                                    imageVector = Icons.Rounded.ChevronRight,
-                                    contentDescription = null,
-                                    tint = scheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp)
+                            },
+                            title = stringResource(R.string.quick_settings_volume),
+                            valuePercent = (volFraction * 100).roundToInt(),
+                            accent = scheme.primary,
+                            value = volFraction,
+                            onValueChange = { newFraction ->
+                                volFraction = newFraction
+                                audioManager?.setStreamVolume(
+                                    AudioManager.STREAM_MUSIC,
+                                    (newFraction * maxVol).roundToInt(),
+                                    0
                                 )
-                            }
-                        }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        // Bento Row 4: Display Brightness Slider Bento Card
+                        BentoSliderCard(
+                            icon = when {
+                                brightnessFraction < 0.33f -> Icons.Rounded.BrightnessLow
+                                brightnessFraction < 0.66f -> Icons.Rounded.BrightnessMedium
+                                else -> Icons.Rounded.BrightnessHigh
+                            },
+                            title = stringResource(R.string.quick_settings_brightness),
+                            valuePercent = (brightnessFraction * 100).roundToInt(),
+                            accent = scheme.tertiary,
+                            value = brightnessFraction,
+                            onValueChange = { newFraction ->
+                                brightnessFraction = newFraction
+                                activity?.window?.let { window ->
+                                    val attributes = window.attributes
+                                    attributes.screenBrightness = newFraction.coerceIn(0.01f, 1f)
+                                    window.attributes = attributes
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }

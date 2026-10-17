@@ -169,26 +169,33 @@ internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
                 }
             }
 
-            // Left-to-right and top-to-bottom Material 3 tonal scrims for guaranteed legibility.
+            val baseDimColor = if (isAmoled) Color.Black else scheme.surfaceContainerLowest
+            val isHomescreen = current == RibbonEntry.Welcome
+
+            // Left-to-right dimming gradient: on homescreen, the far left 35% is more opaque
+            // for navigation contrast, smoothly transitioning towards the right to subtle transparency (not fully transparent).
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
-                        Brush.horizontalGradient(
-                            colors = if (isAmoled) {
-                                listOf(
-                                    Color.Black.copy(alpha = 0.72f),
-                                    Color.Black.copy(alpha = 0.28f),
-                                    Color.Transparent
+                        if (isHomescreen) {
+                            Brush.horizontalGradient(
+                                colorStops = arrayOf(
+                                    0.00f to baseDimColor.copy(alpha = if (isAmoled) 0.88f else 0.85f),
+                                    0.35f to baseDimColor.copy(alpha = if (isAmoled) 0.84f else 0.80f),
+                                    0.68f to baseDimColor.copy(alpha = if (isAmoled) 0.44f else 0.38f),
+                                    1.00f to baseDimColor.copy(alpha = if (isAmoled) 0.22f else 0.18f)
                                 )
-                            } else {
-                                listOf(
-                                    scheme.surfaceContainerLowest.copy(alpha = 0.76f),
-                                    scheme.surfaceContainerLowest.copy(alpha = 0.32f),
-                                    Color.Transparent
+                            )
+                        } else {
+                            Brush.horizontalGradient(
+                                colorStops = arrayOf(
+                                    0.00f to baseDimColor.copy(alpha = if (isAmoled) 0.78f else 0.75f),
+                                    0.45f to baseDimColor.copy(alpha = if (isAmoled) 0.35f else 0.30f),
+                                    1.00f to baseDimColor.copy(alpha = if (isAmoled) 0.16f else 0.12f)
                                 )
-                            }
-                        )
+                            )
+                        }
                     )
             )
             Box(
@@ -196,19 +203,11 @@ internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            colors = if (isAmoled) {
-                                listOf(
-                                    Color.Black.copy(alpha = 0.38f),
-                                    Color.Transparent,
-                                    Color.Black.copy(alpha = 0.52f)
-                                )
-                            } else {
-                                listOf(
-                                    scheme.surfaceContainerLowest.copy(alpha = 0.34f),
-                                    Color.Transparent,
-                                    scheme.surfaceContainerLowest.copy(alpha = 0.52f)
-                                )
-                            }
+                            colorStops = arrayOf(
+                                0.00f to baseDimColor.copy(alpha = if (isAmoled) 0.32f else 0.28f),
+                                0.45f to Color.Transparent,
+                                1.00f to baseDimColor.copy(alpha = if (isAmoled) 0.48f else 0.42f)
+                            )
                         )
                     )
             )
