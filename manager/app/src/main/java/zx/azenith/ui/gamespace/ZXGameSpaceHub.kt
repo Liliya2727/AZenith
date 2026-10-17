@@ -101,7 +101,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
@@ -806,6 +808,7 @@ fun ZXGameSpaceHub(
                 // Search Overlay
                 ZXGameSpaceSearchOverlay(
                     visible = searchOpen,
+                    hazeState = hazeState,
                     modifier = Modifier.fillMaxSize()
                 ) {
                     ZXGameSpaceSearchPane(
@@ -816,6 +819,10 @@ fun ZXGameSpaceHub(
                         onNavigateToSettingsTab = { tab ->
                             selectedSettingsTab = tab
                             category = TopCategory.Settings
+                            searchOpen = false
+                            searchQuery = ""
+                        },
+                        onClose = {
                             searchOpen = false
                             searchQuery = ""
                         }
@@ -1715,32 +1722,72 @@ private fun ZXGameSpaceSettingsOverlay(
 @Composable
 private fun ZXGameSpaceSearchOverlay(
     visible: Boolean,
+    hazeState: HazeState,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    val effectsSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    val motion = MaterialTheme.motionScheme
+    val scheme = MaterialTheme.colorScheme
 
-    // The scoped AnimatedVisibility overloads do not resolve from inside the stage Box.
     AnimatedVisibility(
         visible = visible,
         modifier = modifier,
-        enter = fadeIn(effectsSpec),
-        exit = fadeOut(effectsSpec)
+        enter = slideInVertically(
+            initialOffsetY = { fullHeight -> -fullHeight / 6 },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        ) + scaleIn(
+            initialScale = 0.94f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
+        exit = slideOutVertically(
+            targetOffsetY = { fullHeight -> -fullHeight / 8 },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMedium
+            )
+        ) + scaleOut(
+            targetScale = 0.96f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMedium
+            )
+        ) + fadeOut(animationSpec = motion.defaultEffectsSpec())
     ) {
-        content()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .hazeBlur(
+                    input = HazeInput.Sources(hazeState),
+                    style = HazeBlurStyle.Material3(
+                        containerColor = scheme.surfaceContainerLowest.copy(alpha = 0.62f)
+                    ) {
+                        blurRadius(28.dp)
+                    }
+                )
+        ) {
+            content()
+        }
     }
 }
 
 /** Sheet offset (px) at which a drag stops being scroll and becomes the full-screen step. */
 private const val HOME_EXPAND_AT = 90
 
-private const val SEARCH_RESULT_CAP = 3
+private const val SEARCH_RESULT_CAP = 6
 
-/**
- * Results for the top bar search, drawn over the stage rather than beside it. Apps only for now —
- * settings entries land here later. Word-for-word hits lead, then prefix hits, then the rest, and
- * anything past [SEARCH_RESULT_CAP] hides behind Show all.
- */
+private enum class SearchScopeFilter(val label: String) {
+    All("All"),
+    Games("Games"),
+    Tuned("Tuned"),
+    Settings("Settings")
+}
+
 private data class ResolvedSettingItem(
     val title: String,
     val summary: String,
@@ -1754,11 +1801,13 @@ private fun ZXGameSpaceSearchPane(
     apps: List<ApplistViewmodel.AppInfo>,
     onLaunch: (ApplistViewmodel.AppInfo) -> Unit,
     onOpenSettings: (ApplistViewmodel.AppInfo) -> Unit,
-    onNavigateToSettingsTab: (SettingsSidebarTab) -> Unit
+    onNavigateToSettingsTab: (SettingsSidebarTab) -> Unit,
+    onClose: () -> Unit = {}
 ) {
     val scheme = MaterialTheme.colorScheme
     val context = LocalContext.current
     var showAllApps by remember(query) { mutableStateOf(false) }
+    var scopeFilter by remember { mutableStateOf(SearchScopeFilter.All) }
 
     val resolvedSettings = remember(context) {
         SETTINGS_SEARCH_ITEMS.map { item ->
@@ -1773,28 +1822,43 @@ private fun ZXGameSpaceSearchPane(
         }
     }
 
-    val matchedApps = remember(query, apps) {
+    val matchedApps = remember(query, apps, scopeFilter) {
+        val base = when (scopeFilter) {
+            SearchScopeFilter.Games -> apps.filter { it.isRecommended || it.isEnabledInConfig }
+            SearchScopeFilter.Tuned -> apps.filter { it.isEnabledInConfig }
+            SearchScopeFilter.Settings -> emptyList()
+            SearchScopeFilter.All -> apps
+        }
         if (query.isBlank()) {
-            emptyList()
+            base.sortedWith(
+                compareByDescending<ApplistViewmodel.AppInfo> { it.isEnabledInConfig }
+                    .thenByDescending { it.isRecommended }
+                    .thenBy { it.label.lowercase() }
+            )
         } else {
-            apps.filter { it.label.contains(query, ignoreCase = true) }
-                .sortedWith(
-                    compareByDescending<ApplistViewmodel.AppInfo> {
-                        it.label.equals(query, ignoreCase = true)
-                    }.thenByDescending { it.label.startsWith(query, ignoreCase = true) }
-                        .thenBy { it.label.lowercase() }
-                )
+            base.filter {
+                it.label.contains(query, ignoreCase = true) ||
+                    it.packageName.contains(query, ignoreCase = true)
+            }.sortedWith(
+                compareByDescending<ApplistViewmodel.AppInfo> {
+                    it.label.equals(query, ignoreCase = true)
+                }.thenByDescending { it.label.startsWith(query, ignoreCase = true) }
+                    .thenByDescending { it.isEnabledInConfig }
+                    .thenBy { it.label.lowercase() }
+            )
         }
     }
 
-    val matchedSettings = remember(query, resolvedSettings) {
-        if (query.isBlank()) {
+    val matchedSettings = remember(query, resolvedSettings, scopeFilter) {
+        if (scopeFilter == SearchScopeFilter.Games || scopeFilter == SearchScopeFilter.Tuned) {
             emptyList()
+        } else if (query.isBlank()) {
+            if (scopeFilter == SearchScopeFilter.Settings) resolvedSettings else resolvedSettings.take(4)
         } else {
             resolvedSettings.filter {
                 it.title.contains(query, ignoreCase = true) ||
-                it.summary.contains(query, ignoreCase = true) ||
-                it.tab.name.contains(query, ignoreCase = true)
+                    it.summary.contains(query, ignoreCase = true) ||
+                    it.tab.name.contains(query, ignoreCase = true)
             }.sortedWith(
                 compareByDescending<ResolvedSettingItem> {
                     it.title.equals(query, ignoreCase = true)
@@ -1804,111 +1868,185 @@ private fun ZXGameSpaceSearchPane(
         }
     }
 
-    val shownApps = if (showAllApps) matchedApps else matchedApps.take(SEARCH_RESULT_CAP)
+    val shownApps = if (showAllApps || scopeFilter != SearchScopeFilter.All) {
+        matchedApps
+    } else {
+        matchedApps.take(SEARCH_RESULT_CAP)
+    }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(scheme.surface.copy(alpha = 0.96f))
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = scheme.surfaceContainerLow.copy(alpha = 0.88f),
+        modifier = Modifier.fillMaxSize()
     ) {
-        when {
-            query.isBlank() -> Text(
-                text = stringResource(R.string.gamespace_search_hint),
-                style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onSurfaceVariant,
-                modifier = Modifier.align(Alignment.Center)
-            )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Top Filter Bar & Result Summary
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SearchScopeFilter.entries.forEach { filter ->
+                    ExpressiveFilterChip(
+                        selected = scopeFilter == filter,
+                        label = filter.label,
+                        onClick = { scopeFilter = filter }
+                    )
+                }
 
-            matchedApps.isEmpty() && matchedSettings.isEmpty() -> Text(
-                text = stringResource(R.string.gamespace_search_empty),
-                style = MaterialTheme.typography.bodyMedium,
-                color = scheme.onSurfaceVariant,
-                modifier = Modifier.align(Alignment.Center)
-            )
+                Spacer(Modifier.weight(1f))
 
-            else -> Column(modifier = Modifier.fillMaxSize()) {
+                Text(
+                    text = if (query.isBlank()) {
+                        stringResource(R.string.gamespace_search_hint)
+                    } else {
+                        "${matchedApps.size + matchedSettings.size} results"
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                    color = scheme.onSurfaceVariant
+                )
+
+                TopBarIconButton(
+                    icon = Icons.Rounded.Close,
+                    contentDescription = stringResource(R.string.gamespace_search_close),
+                    onClick = onClose
+                )
+            }
+
+            if (matchedApps.isEmpty() && matchedSettings.isEmpty()) {
+                EmptyPane(
+                    icon = Icons.Rounded.Search,
+                    titleRes = R.string.gamespace_search_empty,
+                    bodyRes = R.string.gamespace_search_hint,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                )
+            } else {
                 LazyColumn(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 6.dp)
+                    contentPadding = PaddingValues(bottom = 8.dp)
                 ) {
-                    if (matchedApps.isNotEmpty()) {
+                    if (shownApps.isNotEmpty()) {
                         item(key = "header_apps") {
-                            Text(
-                                text = "${stringResource(R.string.gamespace_tab_games)} & ${stringResource(R.string.gamespace_all_apps)} (${matchedApps.size})".uppercase(),
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.2.sp
-                                ),
-                                color = scheme.primary,
-                                modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp)
-                            )
-                        }
-
-                        items(shownApps, key = { "app_${it.packageName}" }) { app ->
-                            val shape = MaterialTheme.shapes.medium
-                            Surface(
-                                shape = shape,
-                                color = scheme.surfaceContainerHigh.copy(alpha = 0.88f),
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(60.dp)
-                                    .gamepadFocusOutline(shape = shape)
-                                    .clip(shape)
-                                    .clickable { onLaunch(app) }
+                                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(horizontal = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    AppIconImage(app = app, size = 40.dp)
-                                    Spacer(Modifier.width(12.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "${stringResource(R.string.gamespace_tab_games)} & ${stringResource(R.string.gamespace_all_apps)} (${matchedApps.size})".uppercase(),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 1.2.sp
+                                    ),
+                                    color = scheme.primary
+                                )
+                                if (matchedApps.size > SEARCH_RESULT_CAP && !showAllApps && scopeFilter == SearchScopeFilter.All) {
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = scheme.secondaryContainer,
+                                        contentColor = scheme.onSecondaryContainer,
+                                        modifier = Modifier
+                                            .clip(CircleShape)
+                                            .clickable { showAllApps = true }
+                                    ) {
                                         Text(
-                                            text = app.label,
-                                            style = MaterialTheme.typography.labelLarge.copy(
-                                                fontWeight = FontWeight.SemiBold
-                                            ),
-                                            color = scheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Text(
-                                            text = stringResource(
-                                                if (app.isEnabledInConfig) R.string.gamespace_tuned
-                                                else R.string.gamespace_untuned
-                                            ),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = if (app.isEnabledInConfig) {
-                                                scheme.primary
-                                            } else {
-                                                scheme.onSurfaceVariant
-                                            },
-                                            maxLines = 1
+                                            text = "${stringResource(R.string.gamespace_show_all)} (${matchedApps.size})",
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                                         )
                                     }
-                                    TopBarIconButton(
-                                        icon = Icons.Rounded.Settings,
-                                        contentDescription = stringResource(R.string.gamespace_app_settings),
-                                        onClick = { onOpenSettings(app) }
-                                    )
                                 }
                             }
                         }
 
-                        if (matchedApps.size > SEARCH_RESULT_CAP && !showAllApps) {
-                            item(key = "apps_show_all") {
-                                TextButton(
-                                    onClick = { showAllApps = true },
-                                    modifier = Modifier.align(Alignment.End)
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.gamespace_show_all) + " (${matchedApps.size})"
-                                    )
+                        val chunkedApps = shownApps.chunked(2)
+                        itemsIndexed(chunkedApps, key = { idx, row -> "app_row_${idx}_${row.first().packageName}" }) { _, rowApps ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                rowApps.forEach { app ->
+                                    val shape = RoundedCornerShape(18.dp)
+                                    val versionName = app.packageInfo.versionName?.takeIf { it.isNotBlank() }
+                                    Surface(
+                                        shape = shape,
+                                        color = scheme.surfaceContainerHigh.copy(alpha = 0.90f),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(66.dp)
+                                            .gamepadFocusOutline(shape = shape, register = true)
+                                            .clip(shape)
+                                            .clickable { onLaunch(app) }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(horizontal = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            AppIconImage(app = app, size = 42.dp)
+                                            Column(
+                                                modifier = Modifier.weight(1f),
+                                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                ) {
+                                                    Text(
+                                                        text = app.label,
+                                                        style = MaterialTheme.typography.labelLarge.copy(
+                                                            fontWeight = FontWeight.Bold
+                                                        ),
+                                                        color = scheme.onSurface,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                        modifier = Modifier.weight(1f, fill = false)
+                                                    )
+                                                    if (app.isEnabledInConfig) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(7.dp)
+                                                                .clip(CircleShape)
+                                                                .background(scheme.primary)
+                                                        )
+                                                    }
+                                                }
+                                                Text(
+                                                    text = if (versionName != null) {
+                                                        "v$versionName · ${app.packageName}"
+                                                    } else {
+                                                        app.packageName
+                                                    },
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = scheme.onSurfaceVariant,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                            TopBarIconButton(
+                                                icon = Icons.Rounded.Settings,
+                                                contentDescription = stringResource(R.string.gamespace_app_settings),
+                                                onClick = { onOpenSettings(app) }
+                                            )
+                                        }
+                                    }
+                                }
+                                if (rowApps.size == 1) {
+                                    Spacer(Modifier.weight(1f))
                                 }
                             }
                         }
@@ -1923,74 +2061,85 @@ private fun ZXGameSpaceSearchPane(
                                     letterSpacing = 1.2.sp
                                 ),
                                 color = scheme.primary,
-                                modifier = Modifier.padding(start = 8.dp, top = 12.dp, bottom = 4.dp)
+                                modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 2.dp)
                             )
                         }
 
-                        items(matchedSettings, key = { "setting_${it.tab.name}_${it.title}" }) { setting ->
-                            val shape = MaterialTheme.shapes.medium
-                            Surface(
-                                shape = shape,
-                                color = scheme.surfaceContainerHigh.copy(alpha = 0.88f),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(60.dp)
-                                    .gamepadFocusOutline(shape = shape)
-                                    .clip(shape)
-                                    .clickable { onNavigateToSettingsTab(setting.tab) }
+                        val chunkedSettings = matchedSettings.chunked(2)
+                        itemsIndexed(chunkedSettings, key = { idx, row -> "setting_row_${idx}_${row.first().title}" }) { _, rowSettings ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(horizontal = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
+                                rowSettings.forEach { setting ->
+                                    val shape = RoundedCornerShape(18.dp)
                                     Surface(
-                                        shape = RoundedCornerShape(10.dp),
-                                        color = scheme.secondaryContainer,
-                                        modifier = Modifier.size(36.dp)
+                                        shape = shape,
+                                        color = scheme.surfaceContainerHigh.copy(alpha = 0.90f),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(62.dp)
+                                            .gamepadFocusOutline(shape = shape, register = true)
+                                            .clip(shape)
+                                            .clickable { onNavigateToSettingsTab(setting.tab) }
                                     ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                imageVector = setting.icon,
-                                                contentDescription = null,
-                                                tint = scheme.onSecondaryContainer,
-                                                modifier = Modifier.size(20.dp)
-                                            )
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(horizontal = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            Surface(
+                                                shape = RoundedCornerShape(12.dp),
+                                                color = scheme.secondaryContainer,
+                                                modifier = Modifier.size(38.dp)
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Icon(
+                                                        imageVector = setting.icon,
+                                                        contentDescription = null,
+                                                        tint = scheme.onSecondaryContainer,
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                }
+                                            }
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = setting.title,
+                                                    style = MaterialTheme.typography.labelLarge.copy(
+                                                        fontWeight = FontWeight.SemiBold
+                                                    ),
+                                                    color = scheme.onSurface,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                if (setting.summary.isNotBlank()) {
+                                                    Text(
+                                                        text = setting.summary,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = scheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
+                                            }
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = scheme.primaryContainer
+                                            ) {
+                                                Text(
+                                                    text = stringResource(setting.tab.labelRes),
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                                    color = scheme.onPrimaryContainer,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                )
+                                            }
                                         }
                                     }
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = setting.title,
-                                            style = MaterialTheme.typography.labelLarge.copy(
-                                                fontWeight = FontWeight.SemiBold
-                                            ),
-                                            color = scheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        if (setting.summary.isNotBlank()) {
-                                            Text(
-                                                text = setting.summary,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = scheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                    }
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = scheme.primaryContainer
-                                    ) {
-                                        Text(
-                                            text = stringResource(setting.tab.labelRes),
-                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                            color = scheme.onPrimaryContainer,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                        )
-                                    }
+                                }
+                                if (rowSettings.size == 1) {
+                                    Spacer(Modifier.weight(1f))
                                 }
                             }
                         }
@@ -3216,67 +3365,123 @@ private fun ZXGameSpaceTopBar(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (searchOpen) {
-                val searchRequester = remember { FocusRequester() }
+            val searchRequester = remember { FocusRequester() }
+            val searchWidth by animateDpAsState(
+                targetValue = if (searchOpen) 268.dp else 38.dp,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                ),
+                label = "SearchBarWidth"
+            )
+            val searchBg by animateColorAsState(
+                targetValue = if (searchOpen) {
+                    scheme.surfaceContainerHighest
+                } else {
+                    scheme.surfaceContainerHigh.copy(alpha = 0.85f)
+                },
+                animationSpec = colorSpec,
+                label = "SearchBarBg"
+            )
 
-                LaunchedEffect(Unit) { searchRequester.requestFocus() }
+            LaunchedEffect(searchOpen) {
+                if (searchOpen) {
+                    searchRequester.requestFocus()
+                }
+            }
 
-                Surface(
-                    shape = CircleShape,
-                    color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
-                    modifier = Modifier.height(38.dp)
-                ) {
+            Surface(
+                shape = CircleShape,
+                color = searchBg,
+                contentColor = scheme.onSurfaceVariant,
+                modifier = Modifier
+                    .width(searchWidth)
+                    .height(38.dp)
+                    .clip(CircleShape)
+                    .gamepadFocusOutline(shape = CircleShape, register = !searchOpen)
+                    .then(
+                        if (!searchOpen) {
+                            Modifier.clickable(onClick = onSearchClick)
+                        } else {
+                            Modifier
+                        }
+                    )
+            ) {
+                if (searchOpen) {
                     Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(start = 12.dp, end = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(start = 12.dp, end = 6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.Search,
                             contentDescription = null,
+                            tint = scheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        BasicTextField(
+                            value = searchQuery,
+                            onValueChange = onSearchQueryChange,
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                color = scheme.onSurface,
+                                fontWeight = FontWeight.Medium
+                            ),
+                            cursorBrush = SolidColor(scheme.primary),
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(searchRequester),
+                            decorationBox = { innerTextField ->
+                                Box(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
+                                    if (searchQuery.isEmpty()) {
+                                        Text(
+                                            text = stringResource(R.string.search_apps),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = scheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            }
+                        )
+                        Surface(
+                            shape = CircleShape,
+                            color = scheme.surfaceContainerHigh,
+                            contentColor = scheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .size(26.dp)
+                                .clip(CircleShape)
+                                .clickable(onClick = onSearchClose)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = stringResource(R.string.gamespace_search_close),
+                                    modifier = Modifier.size(15.dp)
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Search,
+                            contentDescription = stringResource(R.string.gamespace_library_title),
                             tint = scheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp)
                         )
-                        Spacer(Modifier.width(6.dp))
-                        TextField(
-                            value = searchQuery,
-                            onValueChange = onSearchQueryChange,
-                            placeholder = {
-                                Text(
-                                    stringResource(R.string.search_apps),
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                            },
-                            singleLine = true,
-                            modifier = Modifier
-                                .width(220.dp)
-                                .focusRequester(searchRequester),
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                disabledIndicatorColor = Color.Transparent
-                            )
-                        )
-                        IconButton(
-                            onClick = onSearchClose,
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Close,
-                                contentDescription = stringResource(R.string.gamespace_search_close),
-                                tint = scheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
                     }
                 }
-            } else {
-                TopBarIconButton(
-                    icon = Icons.Rounded.Search,
-                    contentDescription = stringResource(R.string.gamespace_library_title),
-                    onClick = onSearchClick
-                )
             }
 
             // Profile avatar with online status indicator dot.
