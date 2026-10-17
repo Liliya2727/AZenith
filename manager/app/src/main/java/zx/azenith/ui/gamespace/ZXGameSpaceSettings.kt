@@ -24,6 +24,8 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
@@ -702,6 +704,7 @@ internal fun SettingsTweaksPane(
 internal fun SettingsAppearancePane() {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
+    val motion = MaterialTheme.motionScheme
     val scrollState = rememberScrollState()
     val systemDark = isSystemInDarkTheme()
 
@@ -1215,31 +1218,14 @@ internal fun SettingsAppearancePane() {
                                         )
                                     )
                             )
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .align(Alignment.BottomCenter)
-                                    .background(
-                                        Brush.verticalGradient(
-                                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f))
-                                        )
-                                    )
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = if (customWallpaperUri != null) "Custom Wallpaper" else "Default Wallpaper",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                                    color = Color.White,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
                         }
                     }
 
-                    // Action Buttons Column
+                    // Action Buttons Column (Symmetrical 110.dp matching the preview height)
                     Column(
-                        modifier = Modifier.weight(0.52f),
+                        modifier = Modifier
+                            .weight(0.52f)
+                            .height(110.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         val chooseShape = RoundedCornerShape(16.dp)
@@ -1249,6 +1235,7 @@ internal fun SettingsAppearancePane() {
                             contentColor = scheme.onPrimary,
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .weight(1f)
                                 .gamepadFocusOutline(shape = chooseShape, register = true)
                                 .clip(chooseShape)
                                 .clickable {
@@ -1258,15 +1245,18 @@ internal fun SettingsAppearancePane() {
                                 }
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 14.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Rounded.Image,
                                     contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
+                                Spacer(Modifier.width(8.dp))
                                 Text(
                                     text = if (customWallpaperUri != null) "Change Wallpaper" else "Choose Wallpaper",
                                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
@@ -1275,14 +1265,19 @@ internal fun SettingsAppearancePane() {
                             }
                         }
 
-                        if (customWallpaperUri != null) {
+                        AnimatedVisibility(
+                            visible = customWallpaperUri != null,
+                            enter = fadeIn(motion.defaultEffectsSpec()) + expandVertically(motion.defaultSpatialSpec()),
+                            exit = fadeOut(motion.defaultEffectsSpec()) + shrinkVertically(motion.defaultSpatialSpec())
+                        ) {
                             val resetShape = RoundedCornerShape(16.dp)
                             Surface(
                                 shape = resetShape,
                                 color = scheme.surfaceContainerHighest,
-                                contentColor = scheme.onSurface,
+                                contentColor = scheme.error,
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .height(48.dp)
                                     .gamepadFocusOutline(shape = resetShape, register = true)
                                     .clip(resetShape)
                                     .clickable {
@@ -1291,9 +1286,11 @@ internal fun SettingsAppearancePane() {
                                     }
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 14.dp),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    horizontalArrangement = Arrangement.Center
                                 ) {
                                     Icon(
                                         imageVector = Icons.Rounded.Refresh,
@@ -1301,6 +1298,7 @@ internal fun SettingsAppearancePane() {
                                         modifier = Modifier.size(16.dp),
                                         tint = scheme.error
                                     )
+                                    Spacer(Modifier.width(8.dp))
                                     Text(
                                         text = "Reset to Default",
                                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
