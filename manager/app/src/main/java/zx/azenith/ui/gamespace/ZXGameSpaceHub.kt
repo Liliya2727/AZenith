@@ -332,8 +332,6 @@ import zx.azenith.ui.viewmodel.ApplistViewmodel
 import zx.azenith.ui.viewmodel.SettingsViewModel
 import zx.azenith.ui.viewmodel.TweakViewModel
 
-private val LocalGameSpaceAnimationsEnabled = compositionLocalOf { true }
-
 private enum class TopCategory(val labelRes: Int) {
     Games(R.string.gamespace_tab_games),
     Settings(R.string.settings)
@@ -361,7 +359,7 @@ private enum class SettingsSidebarTab(
 ) {
     General(R.string.gamespace_settings_general, Icons.Rounded.Tune),
     Tweaks(R.string.nav_tweaks, Icons.Rounded.Bolt),
-    Theme(R.string.theme, Icons.Rounded.Palette),
+    Appearance(R.string.appearance, Icons.Rounded.Palette),
     About(R.string.section_about, Icons.Rounded.Info)
 }
 
@@ -486,29 +484,23 @@ private val SETTINGS_SEARCH_ITEMS = listOf(
         icon = Icons.Rounded.SettingsSuggest
     ),
 
-    // Theme
+    // Appearance
     SettingsSearchItem(
-        titleRes = R.string.theme,
+        titleRes = R.string.appearance,
         summaryText = "Auto, Light, Dark, and AMOLED pure black modes",
-        tab = SettingsSidebarTab.Theme,
+        tab = SettingsSidebarTab.Appearance,
         icon = Icons.Rounded.BrightnessAuto
     ),
     SettingsSearchItem(
         titleRes = R.string.pers_text_scale,
         summaryText = "App scale percent from 70% downscale to 150% upscale",
-        tab = SettingsSidebarTab.Theme,
+        tab = SettingsSidebarTab.Appearance,
         icon = Icons.Rounded.ZoomIn
     ),
     SettingsSearchItem(
-        titleRes = R.string.str_use_scroll_animation,
-        summaryText = "Toggle UI animations or instant pop-ups",
-        tab = SettingsSidebarTab.Theme,
-        icon = Icons.Rounded.PlayArrow
-    ),
-    SettingsSearchItem(
-        titleRes = R.string.theme,
+        titleRes = R.string.appearance,
         summaryText = "Follow Monet dynamic colors or select a preset palette",
-        tab = SettingsSidebarTab.Theme,
+        tab = SettingsSidebarTab.Appearance,
         icon = Icons.Rounded.Palette
     ),
 
@@ -551,18 +543,10 @@ fun ZXGameSpaceHub(
     var appScalePercent by remember {
         mutableIntStateOf(prefs.getInt("gamespace_app_scale", 100).coerceIn(70, 150))
     }
-    var animationsEnabled by remember {
-        mutableStateOf(prefs.getBoolean("gamespace_animations", true))
-    }
     DisposableEffect(prefs) {
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            when (key) {
-                "gamespace_app_scale" -> {
-                    appScalePercent = prefs.getInt("gamespace_app_scale", 100).coerceIn(70, 150)
-                }
-                "gamespace_animations" -> {
-                    animationsEnabled = prefs.getBoolean("gamespace_animations", true)
-                }
+            if (key == "gamespace_app_scale") {
+                appScalePercent = prefs.getInt("gamespace_app_scale", 100).coerceIn(70, 150)
             }
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)
@@ -627,8 +611,7 @@ fun ZXGameSpaceHub(
         LocalDensity provides Density(
             density = baseDensity.density * scaleFactor,
             fontScale = baseDensity.fontScale
-        ),
-        LocalGameSpaceAnimationsEnabled provides animationsEnabled
+        )
     ) {
     GamepadFocusRoot(
         modifier = Modifier
@@ -758,8 +741,8 @@ fun ZXGameSpaceHub(
                 ) {
                     AnimatedVisibility(
                         visible = !searchOpen && !homeExpanded && !libraryExpanded,
-                        enter = if (animationsEnabled) fadeIn(effectsSpec) + expandVertically(spatialSpec) else EnterTransition.None,
-                        exit = if (animationsEnabled) fadeOut(effectsSpec) + shrinkVertically(spatialSpec) else ExitTransition.None
+                        enter = fadeIn(effectsSpec) + expandVertically(spatialSpec),
+                        exit = fadeOut(effectsSpec) + shrinkVertically(spatialSpec)
                     ) {
                         Column {
                             ZXGameSpaceTileRibbon(
@@ -788,42 +771,38 @@ fun ZXGameSpaceHub(
                         AnimatedContent(
                             targetState = activeEntry,
                             transitionSpec = {
-                                if (!animationsEnabled) {
-                                    EnterTransition.None.togetherWith(ExitTransition.None)
-                                } else {
-                                    val fromIndex = ribbonEntries.indexOf(initialState)
-                                    val toIndex = ribbonEntries.indexOf(targetState)
-                                    val movingForward = toIndex >= fromIndex
+                                val fromIndex = ribbonEntries.indexOf(initialState)
+                                val toIndex = ribbonEntries.indexOf(targetState)
+                                val movingForward = toIndex >= fromIndex
 
-                                    val slideInOffset = { size: Int ->
-                                        if (movingForward) (size * 0.18f).roundToInt()
-                                        else (-size * 0.18f).roundToInt()
-                                    }
-                                    val slideOutOffset = { size: Int ->
-                                        if (movingForward) (-size * 0.18f).roundToInt()
-                                        else (size * 0.18f).roundToInt()
-                                    }
-
-                                    (slideInHorizontally(
-                                        animationSpec = motion.defaultSpatialSpec(),
-                                        initialOffsetX = slideInOffset
-                                    ) + scaleIn(
-                                        animationSpec = motion.defaultSpatialSpec(),
-                                        initialScale = 0.94f
-                                    ) + fadeIn(
-                                        animationSpec = motion.defaultEffectsSpec()
-                                    )).togetherWith(
-                                        slideOutHorizontally(
-                                            animationSpec = motion.defaultSpatialSpec(),
-                                            targetOffsetX = slideOutOffset
-                                        ) + scaleOut(
-                                            animationSpec = motion.defaultSpatialSpec(),
-                                            targetScale = 1.03f
-                                        ) + fadeOut(
-                                            animationSpec = motion.defaultEffectsSpec()
-                                        )
-                                    )
+                                val slideInOffset = { size: Int ->
+                                    if (movingForward) (size * 0.18f).roundToInt()
+                                    else (-size * 0.18f).roundToInt()
                                 }
+                                val slideOutOffset = { size: Int ->
+                                    if (movingForward) (-size * 0.18f).roundToInt()
+                                    else (size * 0.18f).roundToInt()
+                                }
+
+                                (slideInHorizontally(
+                                    animationSpec = motion.defaultSpatialSpec(),
+                                    initialOffsetX = slideInOffset
+                                ) + scaleIn(
+                                    animationSpec = motion.defaultSpatialSpec(),
+                                    initialScale = 0.94f
+                                ) + fadeIn(
+                                    animationSpec = motion.defaultEffectsSpec()
+                                )).togetherWith(
+                                    slideOutHorizontally(
+                                        animationSpec = motion.defaultSpatialSpec(),
+                                        targetOffsetX = slideOutOffset
+                                    ) + scaleOut(
+                                        animationSpec = motion.defaultSpatialSpec(),
+                                        targetScale = 1.03f
+                                    ) + fadeOut(
+                                        animationSpec = motion.defaultEffectsSpec()
+                                    )
+                                )
                             },
                             modifier = Modifier.fillMaxSize(),
                             label = "ZXGameSpaceMainStage"
@@ -987,7 +966,6 @@ private fun ZXGameSpaceQuickSettingsOverlay(
 ) {
     val scheme = MaterialTheme.colorScheme
     val motion = MaterialTheme.motionScheme
-    val animationsEnabled = LocalGameSpaceAnimationsEnabled.current
     val context = LocalContext.current
     val audioManager = remember(context) { context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager }
     val connectivityManager = remember(context) { context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager }
@@ -1026,8 +1004,8 @@ private fun ZXGameSpaceQuickSettingsOverlay(
     // Scrim overlay - dismiss on click outside
     AnimatedVisibility(
         visible = visible,
-        enter = if (animationsEnabled) fadeIn(animationSpec = motion.defaultEffectsSpec()) else EnterTransition.None,
-        exit = if (animationsEnabled) fadeOut(animationSpec = motion.defaultEffectsSpec()) else ExitTransition.None
+        enter = fadeIn(animationSpec = motion.defaultEffectsSpec()),
+        exit = fadeOut(animationSpec = motion.defaultEffectsSpec())
     ) {
         Box(
             modifier = Modifier
@@ -1044,28 +1022,20 @@ private fun ZXGameSpaceQuickSettingsOverlay(
     // Floating panel sliding in from right side with spring bouncy animation
     AnimatedVisibility(
         visible = visible,
-        enter = if (animationsEnabled) {
-            slideInHorizontally(
-                initialOffsetX = { fullWidth -> fullWidth },
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                )
-            ) + fadeIn(animationSpec = motion.defaultEffectsSpec())
-        } else {
-            EnterTransition.None
-        },
-        exit = if (animationsEnabled) {
-            slideOutHorizontally(
-                targetOffsetX = { fullWidth -> fullWidth },
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMedium
-                )
-            ) + fadeOut(animationSpec = motion.defaultEffectsSpec())
-        } else {
-            ExitTransition.None
-        },
+        enter = slideInHorizontally(
+            initialOffsetX = { fullWidth -> fullWidth },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
+        exit = slideOutHorizontally(
+            targetOffsetX = { fullWidth -> fullWidth },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMedium
+            )
+        ) + fadeOut(animationSpec = motion.defaultEffectsSpec()),
         modifier = Modifier.fillMaxSize()
     ) {
         Box(
@@ -1764,31 +1734,22 @@ private fun ZXGameSpaceSettingsOverlay(
 ) {
     val motion = MaterialTheme.motionScheme
     val scheme = MaterialTheme.colorScheme
-    val animationsEnabled = LocalGameSpaceAnimationsEnabled.current
     AnimatedVisibility(
         visible = visible,
-        enter = if (!animationsEnabled) {
-            EnterTransition.None
-        } else {
-            slideInHorizontally(
-                initialOffsetX = { fullWidth -> fullWidth },
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                )
-            ) + fadeIn(animationSpec = motion.defaultEffectsSpec())
-        },
-        exit = if (!animationsEnabled) {
-            ExitTransition.None
-        } else {
-            slideOutHorizontally(
-                targetOffsetX = { fullWidth -> fullWidth },
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMedium
-                )
-            ) + fadeOut(animationSpec = motion.defaultEffectsSpec())
-        },
+        enter = slideInHorizontally(
+            initialOffsetX = { fullWidth -> fullWidth },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
+        exit = slideOutHorizontally(
+            targetOffsetX = { fullWidth -> fullWidth },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMedium
+            )
+        ) + fadeOut(animationSpec = motion.defaultEffectsSpec()),
         modifier = modifier
     ) {
         Box(
@@ -1817,45 +1778,36 @@ private fun ZXGameSpaceSearchOverlay(
 ) {
     val motion = MaterialTheme.motionScheme
     val scheme = MaterialTheme.colorScheme
-    val animationsEnabled = LocalGameSpaceAnimationsEnabled.current
 
     AnimatedVisibility(
         visible = visible,
         modifier = modifier,
-        enter = if (!animationsEnabled) {
-            EnterTransition.None
-        } else {
-            slideInVertically(
-                initialOffsetY = { fullHeight -> -fullHeight / 6 },
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                )
-            ) + scaleIn(
-                initialScale = 0.94f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                )
-            ) + fadeIn(animationSpec = motion.defaultEffectsSpec())
-        },
-        exit = if (!animationsEnabled) {
-            ExitTransition.None
-        } else {
-            slideOutVertically(
-                targetOffsetY = { fullHeight -> -fullHeight / 8 },
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMedium
-                )
-            ) + scaleOut(
-                targetScale = 0.96f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMedium
-                )
-            ) + fadeOut(animationSpec = motion.defaultEffectsSpec())
-        }
+        enter = slideInVertically(
+            initialOffsetY = { fullHeight -> -fullHeight / 6 },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        ) + scaleIn(
+            initialScale = 0.94f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
+        exit = slideOutVertically(
+            targetOffsetY = { fullHeight -> -fullHeight / 8 },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMedium
+            )
+        ) + scaleOut(
+            targetScale = 0.96f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMedium
+            )
+        ) + fadeOut(animationSpec = motion.defaultEffectsSpec())
     ) {
         Box(
             modifier = Modifier
@@ -2265,7 +2217,6 @@ private fun ZXGameSpaceAppSettingsOverlay(
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val motion = MaterialTheme.motionScheme
-    val animationsEnabled = LocalGameSpaceAnimationsEnabled.current
 
     var activePkg by remember { mutableStateOf(packageName) }
     if (packageName != null) {
@@ -2280,28 +2231,20 @@ private fun ZXGameSpaceAppSettingsOverlay(
 
     AnimatedVisibility(
         visible = visible,
-        enter = if (!animationsEnabled) {
-            EnterTransition.None
-        } else {
-            slideInVertically(
-                initialOffsetY = { fullHeight -> fullHeight },
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                )
-            ) + fadeIn(animationSpec = motion.defaultEffectsSpec())
-        },
-        exit = if (!animationsEnabled) {
-            ExitTransition.None
-        } else {
-            slideOutVertically(
-                targetOffsetY = { fullHeight -> fullHeight },
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMedium
-                )
-            ) + fadeOut(animationSpec = motion.defaultEffectsSpec())
-        },
+        enter = slideInVertically(
+            initialOffsetY = { fullHeight -> fullHeight },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
+        exit = slideOutVertically(
+            targetOffsetY = { fullHeight -> fullHeight },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMedium
+            )
+        ) + fadeOut(animationSpec = motion.defaultEffectsSpec()),
         modifier = Modifier.fillMaxSize()
     ) {
         val pkg = activePkg ?: return@AnimatedVisibility
@@ -3149,12 +3092,11 @@ private fun ZXGameSpaceExitDialog(
 @Composable
 private fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
     val scheme = MaterialTheme.colorScheme
-    val animationsEnabled = LocalGameSpaceAnimationsEnabled.current
     val isAmoled = scheme.surfaceContainerLowest == Color.Black
 
     Crossfade(
         targetState = entry,
-        animationSpec = if (animationsEnabled) tween(300) else snap(),
+        animationSpec = tween(300),
         label = "ZXGameSpaceBackdropCrossfade"
     ) { current ->
         Box(modifier = Modifier.fillMaxSize().background(scheme.surfaceContainerLowest)) {
@@ -3493,18 +3435,13 @@ private fun ZXGameSpaceTopBar(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val animationsEnabled = LocalGameSpaceAnimationsEnabled.current
             val searchRequester = remember { FocusRequester() }
             val searchWidth by animateDpAsState(
                 targetValue = if (searchOpen) 268.dp else 38.dp,
-                animationSpec = if (animationsEnabled) {
-                    spring(
-                        dampingRatio = Spring.DampingRatioLowBouncy,
-                        stiffness = Spring.StiffnessMediumLow
-                    )
-                } else {
-                    snap()
-                },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                ),
                 label = "SearchBarWidth"
             )
             val searchBg by animateColorAsState(
@@ -6034,7 +5971,7 @@ private fun ZXGameSpaceSettingsStage(
                         refreshHz = refreshHz,
                         onApplyProfile = onApplyProfile
                     )
-                    SettingsSidebarTab.Theme -> SettingsThemePane()
+                    SettingsSidebarTab.Appearance -> SettingsAppearancePane()
                     SettingsSidebarTab.About -> SettingsAboutPane(
                         deviceName = deviceName,
                         chipsetName = chipsetName
@@ -6417,7 +6354,7 @@ private val GAMESPACE_PRESET_KEY_COLORS = listOf(
 )
 
 @Composable
-private fun SettingsThemePane() {
+private fun SettingsAppearancePane() {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
@@ -6429,8 +6366,8 @@ private fun SettingsThemePane() {
     var appScalePercent by remember {
         mutableIntStateOf(prefs.getInt("gamespace_app_scale", 100).coerceIn(70, 150))
     }
-    var animationsOn by remember {
-        mutableStateOf(prefs.getBoolean("gamespace_animations", true))
+    var sliderScalePercent by remember(appScalePercent) {
+        mutableIntStateOf(appScalePercent)
     }
     val currentColorSpec = remember {
         ColorEngine.fromPersisted(prefs.getString("color_spec", null))
@@ -6453,12 +6390,12 @@ private fun SettingsThemePane() {
     ) {
         Column {
             Text(
-                text = stringResource(R.string.theme),
+                text = stringResource(R.string.appearance),
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                 color = scheme.onSurface
             )
             Text(
-                text = "Theme mode, interface scaling, motion transitions, and Monet or preset color palettes",
+                text = "Theme mode, interface scaling, and Monet or preset color palettes",
                 style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant.copy(alpha = 0.8f)
             )
@@ -6527,14 +6464,10 @@ private fun SettingsThemePane() {
                         val selected = colorModeValue == value
                         val pillRadius by animateIntAsState(
                             targetValue = if (selected) 50 else 28,
-                            animationSpec = if (animationsOn) {
-                                spring(
-                                    dampingRatio = Spring.DampingRatioLowBouncy,
-                                    stiffness = Spring.StiffnessMediumLow
-                                )
-                            } else {
-                                snap()
-                            },
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioLowBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            ),
                             label = "ThemeModePillRadius"
                         )
                         val shape = RoundedCornerShape(percent = pillRadius)
@@ -6575,163 +6508,147 @@ private fun SettingsThemePane() {
             }
         }
 
-        // 2. App Scale (70% .. 150%, step 5%, default 100%) + Animations Toggle
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        // 2. App Scale (70% .. 150%, step 5%, default 100%, applies on finger lift)
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = scheme.surfaceContainerHigh,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = scheme.surfaceContainerHigh,
-                modifier = Modifier.weight(1.25f)
+            Column(
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = scheme.secondaryContainer,
+                            modifier = Modifier.size(40.dp)
                         ) {
-                            Surface(
-                                shape = RoundedCornerShape(14.dp),
-                                color = scheme.secondaryContainer,
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.ZoomIn,
-                                        contentDescription = null,
-                                        tint = scheme.onSecondaryContainer,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-                            Column {
-                                Text(
-                                    text = "App Scale",
-                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = scheme.onSurface
-                                )
-                                Text(
-                                    text = "70% downscale to 150% upscale (5% steps)",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = scheme.onSurfaceVariant
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Rounded.ZoomIn,
+                                    contentDescription = null,
+                                    tint = scheme.onSecondaryContainer,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            val stepBtnShape = RoundedCornerShape(12.dp)
-                            Surface(
-                                shape = stepBtnShape,
-                                color = scheme.surfaceContainerHighest,
-                                contentColor = scheme.onSurface,
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .gamepadFocusOutline(shape = stepBtnShape, register = true)
-                                    .clip(stepBtnShape)
-                                    .clickable(enabled = appScalePercent > 70) {
-                                        val next = (appScalePercent - 5).coerceIn(70, 150)
-                                        appScalePercent = next
-                                        prefs.edit().putInt("gamespace_app_scale", next).apply()
-                                    }
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Remove,
-                                        contentDescription = "Decrease scale",
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-
-                            Surface(
-                                shape = CircleShape,
-                                color = if (appScalePercent == 100) scheme.primaryContainer else scheme.primary,
-                                contentColor = if (appScalePercent == 100) scheme.onPrimaryContainer else scheme.onPrimary,
-                                modifier = Modifier
-                                    .gamepadFocusOutline(shape = CircleShape, register = true)
-                                    .clip(CircleShape)
-                                    .clickable {
-                                        appScalePercent = 100
-                                        prefs.edit().putInt("gamespace_app_scale", 100).apply()
-                                    }
-                            ) {
-                                Text(
-                                    text = "${appScalePercent}%",
-                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.ExtraBold),
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                )
-                            }
-
-                            Surface(
-                                shape = stepBtnShape,
-                                color = scheme.surfaceContainerHighest,
-                                contentColor = scheme.onSurface,
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .gamepadFocusOutline(shape = stepBtnShape, register = true)
-                                    .clip(stepBtnShape)
-                                    .clickable(enabled = appScalePercent < 150) {
-                                        val next = (appScalePercent + 5).coerceIn(70, 150)
-                                        appScalePercent = next
-                                        prefs.edit().putInt("gamespace_app_scale", next).apply()
-                                    }
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Add,
-                                        contentDescription = "Increase scale",
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
+                        Column {
+                            Text(
+                                text = "App Scale",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = scheme.onSurface
+                            )
+                            Text(
+                                text = "70% downscale to 150% upscale (5% steps, applies on release)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.onSurfaceVariant
+                            )
                         }
                     }
 
-                    ZenithSlider(
-                        value = appScalePercent.toFloat(),
-                        onValueChange = { raw ->
-                            val snapped = ((raw / 5f).roundToInt() * 5).coerceIn(70, 150)
-                            if (snapped != appScalePercent) {
-                                appScalePercent = snapped
-                                prefs.edit().putInt("gamespace_app_scale", snapped).apply()
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val stepBtnShape = RoundedCornerShape(12.dp)
+                        Surface(
+                            shape = stepBtnShape,
+                            color = scheme.surfaceContainerHighest,
+                            contentColor = scheme.onSurface,
+                            modifier = Modifier
+                                .size(34.dp)
+                                .gamepadFocusOutline(shape = stepBtnShape, register = true)
+                                .clip(stepBtnShape)
+                                .clickable(enabled = appScalePercent > 70) {
+                                    val next = (appScalePercent - 5).coerceIn(70, 150)
+                                    appScalePercent = next
+                                    sliderScalePercent = next
+                                    prefs.edit().putInt("gamespace_app_scale", next).apply()
+                                }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Remove,
+                                    contentDescription = "Decrease scale",
+                                    modifier = Modifier.size(16.dp)
+                                )
                             }
-                        },
-                        onValueChangeFinished = {},
-                        valueRange = 70f..150f,
-                        steps = 15,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(28.dp)
-                    )
-                }
-            }
+                        }
 
-            SettingsSwitchCard(
-                modifier = Modifier.weight(0.95f),
-                icon = Icons.Rounded.AutoAwesome,
-                title = "Animations",
-                summary = if (animationsOn) {
-                    "Play Material 3 bouncy expressive animations"
-                } else {
-                    "Instant pop-ups with transition animations disabled"
-                },
-                checked = animationsOn,
-                onCheckedChange = { enabled ->
-                    animationsOn = enabled
-                    prefs.edit().putBoolean("gamespace_animations", enabled).apply()
+                        Surface(
+                            shape = CircleShape,
+                            color = if (sliderScalePercent == 100) scheme.primaryContainer else scheme.primary,
+                            contentColor = if (sliderScalePercent == 100) scheme.onPrimaryContainer else scheme.onPrimary,
+                            modifier = Modifier
+                                .gamepadFocusOutline(shape = CircleShape, register = true)
+                                .clip(CircleShape)
+                                .clickable {
+                                    appScalePercent = 100
+                                    sliderScalePercent = 100
+                                    prefs.edit().putInt("gamespace_app_scale", 100).apply()
+                                }
+                        ) {
+                            Text(
+                                text = "${sliderScalePercent}%",
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.ExtraBold),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
+                        }
+
+                        Surface(
+                            shape = stepBtnShape,
+                            color = scheme.surfaceContainerHighest,
+                            contentColor = scheme.onSurface,
+                            modifier = Modifier
+                                .size(34.dp)
+                                .gamepadFocusOutline(shape = stepBtnShape, register = true)
+                                .clip(stepBtnShape)
+                                .clickable(enabled = appScalePercent < 150) {
+                                    val next = (appScalePercent + 5).coerceIn(70, 150)
+                                    appScalePercent = next
+                                    sliderScalePercent = next
+                                    prefs.edit().putInt("gamespace_app_scale", next).apply()
+                                }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Add,
+                                    contentDescription = "Increase scale",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
                 }
-            )
+
+                ZenithSlider(
+                    value = sliderScalePercent.toFloat(),
+                    onValueChange = { raw ->
+                        val snapped = ((raw / 5f).roundToInt() * 5).coerceIn(70, 150)
+                        sliderScalePercent = snapped
+                    },
+                    onValueChangeFinished = {
+                        if (sliderScalePercent != appScalePercent) {
+                            appScalePercent = sliderScalePercent
+                            prefs.edit().putInt("gamespace_app_scale", sliderScalePercent).apply()
+                        }
+                    },
+                    valueRange = 70f..150f,
+                    steps = 15,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(28.dp)
+                )
+            }
         }
 
         // 3. App Theme Palette (Follow Monet vs Existing Preset Seed Colors)
@@ -6883,7 +6800,6 @@ private fun GameSpacePaletteSwatch(
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val animationsEnabled = LocalGameSpaceAnimationsEnabled.current
 
     val swatchScheme = if (seedColor == Color.Unspecified) {
         val baseScheme = when {
@@ -6913,14 +6829,10 @@ private fun GameSpacePaletteSwatch(
 
     val cornerPercent by animateIntAsState(
         targetValue = if (selected) 36 else 24,
-        animationSpec = if (animationsEnabled) {
-            spring(
-                dampingRatio = Spring.DampingRatioLowBouncy,
-                stiffness = Spring.StiffnessMediumLow
-            )
-        } else {
-            snap()
-        },
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
         label = "SwatchCornerPercent"
     )
     val shape = RoundedCornerShape(percent = cornerPercent)
