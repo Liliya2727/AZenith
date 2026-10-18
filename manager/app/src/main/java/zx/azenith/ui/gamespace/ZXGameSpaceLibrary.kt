@@ -430,13 +430,13 @@ private fun LibraryAppTile(
         animationSpec = motion.defaultEffectsSpec(),
         label = "LibraryTileFill"
     )
-    val ring = animateColorAsState(
-        targetValue = if (dpadFocused) scheme.onSurface else Color.Transparent,
-        animationSpec = motion.fastEffectsSpec(),
-        label = "LibraryTileRing"
-    )
     val titleColor = if (tuned) scheme.onPrimaryContainer else scheme.onSurface
-    val statusColor = if (tuned) scheme.onPrimaryContainer else scheme.onSurfaceVariant
+    val chipContainer = if (tuned) {
+        scheme.primary.copy(alpha = 0.18f)
+    } else {
+        scheme.surfaceContainerHighest.copy(alpha = 0.85f)
+    }
+    val chipContent = if (tuned) scheme.primary else scheme.onSurfaceVariant
 
     val enter = remember(revealEpoch) {
         val fresh = SystemClock.uptimeMillis() - revealEpoch < LIBRARY_REVEAL_WINDOW_MS
@@ -468,18 +468,6 @@ private fun LibraryAppTile(
             .drawWithContent {
                 drawRect(container.value)
                 drawContent()
-                val ringColor = ring.value
-                if (ringColor.alpha > 0.01f) {
-                    val stroke = 2.dp.toPx()
-                    val r = corner().toPx() - stroke / 2f
-                    drawRoundRect(
-                        color = ringColor,
-                        topLeft = Offset(stroke / 2f, stroke / 2f),
-                        size = Size(size.width - stroke, size.height - stroke),
-                        cornerRadius = CornerRadius(r, r),
-                        style = Stroke(width = stroke)
-                    )
-                }
             }
             .onFocusChanged {
                 focused = it.isFocused
@@ -511,7 +499,7 @@ private fun LibraryAppTile(
             }
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
                     text = app.label,
@@ -520,12 +508,18 @@ private fun LibraryAppTile(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = stringResource(if (tuned) R.string.gamespace_tuned else R.string.gamespace_untuned),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
-                    color = statusColor,
-                    maxLines = 1
-                )
+                Surface(
+                    shape = CircleShape,
+                    color = chipContainer,
+                    contentColor = chipContent
+                ) {
+                    Text(
+                        text = stringResource(if (tuned) R.string.gamespace_tuned else R.string.gamespace_untuned),
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        maxLines = 1
+                    )
+                }
             }
         }
     }
