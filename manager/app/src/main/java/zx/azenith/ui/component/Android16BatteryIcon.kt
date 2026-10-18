@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,10 +40,10 @@ fun Android16BatteryIcon(
     level: Int,
     isCharging: Boolean,
     modifier: Modifier = Modifier,
-    trackColor: Color = Color(0xFF8E8E93),
+    trackColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.30f),
     chargingColor: Color = Color(0xFF22C55E),
-    normalColor: Color = Color.White,
-    lowColor: Color = Color(0xFFEF4444)
+    normalColor: Color = MaterialTheme.colorScheme.primary,
+    lowColor: Color = MaterialTheme.colorScheme.error
 ) {
     val clampedLevel = level.coerceIn(0, 100)
     val isLow = clampedLevel <= 20 && !isCharging
@@ -53,10 +54,11 @@ fun Android16BatteryIcon(
         else -> normalColor
     }
 
+    val scheme = MaterialTheme.colorScheme
     val textColor = when {
         isCharging -> Color(0xFF003803)
-        isLow -> Color.White
-        else -> Color(0xFF161616)
+        isLow -> scheme.onError
+        else -> scheme.onPrimary
     }
 
     val bodyWidth = 26.dp
@@ -135,7 +137,7 @@ fun Android16BatteryIcon(
             Icon(
                 imageVector = Icons.Rounded.Bolt,
                 contentDescription = null,
-                tint = Color.White,
+                tint = chargingColor,
                 modifier = Modifier
                     .size(13.5.dp)
                     .offset(x = (-1.5).dp)
