@@ -117,9 +117,12 @@ import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 import zx.azenith.R
+import zx.azenith.ui.component.Android16BatteryIcon
 import zx.azenith.ui.component.AppIconImage
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.component.gamepadKeyWatch
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import zx.azenith.ui.viewmodel.ApplistViewmodel
 
 private const val SEARCH_RESULT_CAP = 6
@@ -550,35 +553,13 @@ internal fun ZXGameSpaceTopBar(
                             .background(scheme.outlineVariant.copy(alpha = 0.7f))
                     )
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        val isCharging = battery.isCharging
-                        val isLow = battery.level <= 20
-                        val batteryColor = when {
-                            isCharging -> scheme.primary
-                            isLow -> scheme.error
-                            else -> scheme.onSurfaceVariant
+                    Android16BatteryIcon(
+                        level = battery.level,
+                        isCharging = battery.isCharging,
+                        modifier = Modifier.semantics {
+                            contentDescription = "Battery ${battery.level}%${if (battery.isCharging) ", Charging" else ""}"
                         }
-                        Icon(
-                            imageVector = when {
-                                isCharging -> Icons.Rounded.BatteryChargingFull
-                                isLow -> Icons.Rounded.BatteryAlert
-                                else -> Icons.Rounded.BatteryStd
-                            },
-                            contentDescription = stringResource(R.string.gamespace_info_battery),
-                            tint = batteryColor,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = "${battery.level}%",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = batteryColor
-                        )
-                    }
+                    )
 
                     val tempC = battery.temperatureC
                     if (tempC != null) {

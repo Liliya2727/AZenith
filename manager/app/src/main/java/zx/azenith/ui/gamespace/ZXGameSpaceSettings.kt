@@ -2771,7 +2771,7 @@ private fun PaletteSection(
                     )
                     Text(
                         text = if (followMonet) {
-                            "Following system Monet dynamic wallpaper palette"
+                            "Following system dynamic wallpaper palette"
                         } else {
                             val presetLabel = GAMESPACE_PRESET_KEY_COLORS.firstOrNull { it.first == keyColorValue }?.second ?: "Custom"
                             "Using $presetLabel preset color seed from Personalization"
@@ -2803,7 +2803,7 @@ private fun PaletteSection(
                                 modifier = Modifier.size(16.dp)
                             )
                             Text(
-                                text = "Follow Monet",
+                                text = "Dynamic",
                                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
                             )
                         }

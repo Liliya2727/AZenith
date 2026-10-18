@@ -248,7 +248,7 @@ internal val SETTINGS_SEARCH_ITEMS = listOf(
     ),
     SettingsSearchItem(
         titleRes = R.string.appearance,
-        summaryText = "Follow Monet dynamic colors or select a preset palette",
+        summaryText = "Follow dynamic colors or select a preset palette",
         tab = SettingsSidebarTab.Appearance,
         icon = Icons.Rounded.Palette
     ),
