@@ -233,7 +233,7 @@ fun SettingsScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            modifier = if (!isLandscapeNav()) Modifier.nestedScroll(scrollBehavior.nestedScrollConnection) else Modifier,
             topBar = { 
                 // Landscape drops the bar: the dock names the page and carries both actions.
                 if (!isLandscapeNav()) {

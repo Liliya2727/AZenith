@@ -193,7 +193,10 @@ fun ApplistScreen(navController: NavController) {
                         viewModel.loadApps(context, forceRefresh = true) 
                     }
                 )
-                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .then(
+                    if (!isLandscapeNav() || isSearchMode) Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
+                    else Modifier
+                )
         ) {
             val appsToDisplay = viewModel.filteredApps
 

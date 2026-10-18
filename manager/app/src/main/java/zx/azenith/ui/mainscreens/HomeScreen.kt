@@ -97,7 +97,7 @@ fun HomeScreen(viewModel: HomeViewModel = viewModel()) {
     }
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = if (!isLandscapeNav()) Modifier.nestedScroll(scrollBehavior.nestedScrollConnection) else Modifier,
         topBar = {
             // Landscape drops the bar: the dock names the page and carries the reboot
             // action at its bottom, and the height goes to the page.
