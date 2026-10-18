@@ -30,6 +30,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -72,6 +73,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
@@ -1321,7 +1324,7 @@ private fun HomeWallpaperSection(
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = if (isWallpaperEnabled) scheme.primary else scheme.onSurfaceVariant
                     )
-                    Switch(
+                    GameSpaceSwitch(
                         checked = isWallpaperEnabled,
                         onCheckedChange = onWallpaperEnabledChanged
                     )
@@ -1946,20 +1949,20 @@ private fun ApplyGameWallpaperDialog(
             contentColor = scheme.onSurface,
             modifier = if (isLandscape) {
                 Modifier
-                    .fillMaxWidth(0.88f)
-                    .fillMaxHeight(0.90f)
-                    .padding(horizontal = 24.dp, vertical = 12.dp)
+                    .fillMaxWidth(0.92f)
+                    .fillMaxHeight(0.96f)
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
             } else {
                 Modifier
                     .fillMaxWidth(0.92f)
-                    .fillMaxHeight(0.85f)
-                    .padding(16.dp)
+                    .fillMaxHeight(0.88f)
+                    .padding(12.dp)
             }
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .padding(horizontal = 18.dp, vertical = if (isLandscape) 10.dp else 14.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 // Header
@@ -1970,19 +1973,19 @@ private fun ApplyGameWallpaperDialog(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Surface(
                             shape = CircleShape,
                             color = scheme.primaryContainer,
                             contentColor = scheme.onPrimaryContainer,
-                            modifier = Modifier.size(40.dp)
+                            modifier = Modifier.size(34.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = Icons.Rounded.Wallpaper,
                                     contentDescription = null,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }
@@ -1999,7 +2002,10 @@ private fun ApplyGameWallpaperDialog(
                             )
                         }
                     }
-                    IconButton(onClick = onDismiss) {
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(32.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Rounded.Close,
                             contentDescription = "Close",
@@ -2013,27 +2019,28 @@ private fun ApplyGameWallpaperDialog(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .padding(vertical = 10.dp)
+                        .padding(vertical = 4.dp)
                 ) {
                     if (isLandscape) {
                         Row(
                             modifier = Modifier.fillMaxSize(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
                             // Left Pane: preview & option toggles
                             Column(
                                 modifier = Modifier
-                                    .width(230.dp)
-                                    .fillMaxHeight(),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    .width(220.dp)
+                                    .fillMaxHeight()
+                                    .verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Surface(
-                                    shape = RoundedCornerShape(14.dp),
+                                    shape = RoundedCornerShape(12.dp),
                                     color = scheme.surfaceContainerLowest,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(82.dp)
-                                        .clip(RoundedCornerShape(14.dp))
+                                        .height(60.dp)
+                                        .clip(RoundedCornerShape(12.dp))
                                 ) {
                                     MediaBannerRenderer(
                                         uriString = uri,
@@ -2041,7 +2048,7 @@ private fun ApplyGameWallpaperDialog(
                                     )
                                 }
 
-                                val allShape = RoundedCornerShape(14.dp)
+                                val allShape = RoundedCornerShape(12.dp)
                                 Surface(
                                     shape = allShape,
                                     color = if (applyToAll) scheme.primaryContainer else scheme.surfaceContainerHighest.copy(alpha = 0.6f),
@@ -2052,14 +2059,14 @@ private fun ApplyGameWallpaperDialog(
                                         .clickable { applyToAll = true }
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Icon(
                                             imageVector = if (applyToAll) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
                                             contentDescription = null,
-                                            modifier = Modifier.size(18.dp),
+                                            modifier = Modifier.size(16.dp),
                                             tint = if (applyToAll) scheme.primary else scheme.onSurfaceVariant
                                         )
                                         Column {
@@ -2076,7 +2083,7 @@ private fun ApplyGameWallpaperDialog(
                                     }
                                 }
 
-                                val selectShape = RoundedCornerShape(14.dp)
+                                val selectShape = RoundedCornerShape(12.dp)
                                 Surface(
                                     shape = selectShape,
                                     color = if (!applyToAll) scheme.primaryContainer else scheme.surfaceContainerHighest.copy(alpha = 0.6f),
@@ -2087,19 +2094,19 @@ private fun ApplyGameWallpaperDialog(
                                         .clickable { applyToAll = false }
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Icon(
                                             imageVector = if (!applyToAll) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
                                             contentDescription = null,
-                                            modifier = Modifier.size(18.dp),
+                                            modifier = Modifier.size(16.dp),
                                             tint = if (!applyToAll) scheme.primary else scheme.onSurfaceVariant
                                         )
                                         Column {
                                             Text(
-                                                text = "Select Games",
+                                                text = "Select Games (${selectedSet.size})",
                                                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
                                             )
                                             Text(
@@ -2115,7 +2122,7 @@ private fun ApplyGameWallpaperDialog(
                             // Right Pane: Game list or All Games confirmation
                             if (applyToAll) {
                                 Surface(
-                                    shape = RoundedCornerShape(16.dp),
+                                    shape = RoundedCornerShape(14.dp),
                                     color = scheme.surfaceContainerLow,
                                     modifier = Modifier
                                         .weight(1f)
@@ -2124,25 +2131,26 @@ private fun ApplyGameWallpaperDialog(
                                     Column(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .padding(16.dp),
+                                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                                            .verticalScroll(rememberScrollState()),
                                         verticalArrangement = Arrangement.Center,
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
                                         Surface(
                                             shape = CircleShape,
                                             color = scheme.primaryContainer,
-                                            modifier = Modifier.size(48.dp)
+                                            modifier = Modifier.size(34.dp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
                                                 Icon(
                                                     imageVector = Icons.Rounded.AutoAwesome,
                                                     contentDescription = null,
-                                                    modifier = Modifier.size(24.dp),
+                                                    modifier = Modifier.size(18.dp),
                                                     tint = scheme.primary
                                                 )
                                             }
                                         }
-                                        Spacer(Modifier.height(10.dp))
+                                        Spacer(Modifier.height(4.dp))
                                         Text(
                                             text = "All ${games.size} games will receive this artwork",
                                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
@@ -2153,13 +2161,13 @@ private fun ApplyGameWallpaperDialog(
                                             style = MaterialTheme.typography.bodySmall,
                                             color = scheme.onSurfaceVariant
                                         )
-                                        Spacer(Modifier.height(12.dp))
+                                        Spacer(Modifier.height(6.dp))
                                         LazyRow(
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            contentPadding = PaddingValues(horizontal = 8.dp)
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            contentPadding = PaddingValues(horizontal = 4.dp)
                                         ) {
                                             items(games) { game ->
-                                                AppIconImage(app = game, size = 32.dp)
+                                                AppIconImage(app = game, size = 26.dp)
                                             }
                                         }
                                     }
@@ -2169,7 +2177,7 @@ private fun ApplyGameWallpaperDialog(
                                     modifier = Modifier
                                         .weight(1f)
                                         .fillMaxHeight(),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -2184,13 +2192,13 @@ private fun ApplyGameWallpaperDialog(
                                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                             TextButton(
                                                 onClick = { selectedSet = games.map { it.packageName }.toSet() },
-                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
                                             ) {
                                                 Text("Select All", style = MaterialTheme.typography.labelSmall)
                                             }
                                             TextButton(
                                                 onClick = { selectedSet = emptySet() },
-                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
                                             ) {
                                                 Text("Deselect All", style = MaterialTheme.typography.labelSmall)
                                             }
@@ -2206,11 +2214,11 @@ private fun ApplyGameWallpaperDialog(
                                         items(games) { game ->
                                             val isChecked = selectedSet.contains(game.packageName)
                                             Surface(
-                                                shape = RoundedCornerShape(12.dp),
+                                                shape = RoundedCornerShape(10.dp),
                                                 color = if (isChecked) scheme.primaryContainer.copy(alpha = 0.35f) else scheme.surfaceContainerLow,
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .clip(RoundedCornerShape(10.dp))
                                                     .clickable {
                                                         selectedSet = if (isChecked) {
                                                             selectedSet - game.packageName
@@ -2222,11 +2230,11 @@ private fun ApplyGameWallpaperDialog(
                                                 Row(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
-                                                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                                                        .padding(horizontal = 8.dp, vertical = 6.dp),
                                                     verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                                 ) {
-                                                    AppIconImage(app = game, size = 32.dp)
+                                                    AppIconImage(app = game, size = 26.dp)
                                                     Column(modifier = Modifier.weight(1f)) {
                                                         Text(
                                                             text = game.label,
@@ -3675,18 +3683,55 @@ internal fun SettingsSwitchCard(
                 }
             }
 
-            Switch(
+            GameSpaceSwitch(
                 checked = checked,
-                onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = scheme.onPrimary,
-                    checkedTrackColor = scheme.primary,
-                    uncheckedThumbColor = scheme.outline,
-                    uncheckedTrackColor = scheme.surfaceContainerHighest
-                )
+                onCheckedChange = onCheckedChange
             )
         }
     }
+}
+
+/** Material 3 Switch with checkmark and X icon morphing in the thumb for GameSpace. */
+@Composable
+internal fun GameSpaceSwitch(
+    checked: Boolean,
+    onCheckedChange: ((Boolean) -> Unit)?,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    val scheme = MaterialTheme.colorScheme
+    Switch(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        enabled = enabled,
+        thumbContent = {
+            AnimatedContent(
+                targetState = checked,
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(140)) + scaleIn(animationSpec = tween(140), initialScale = 0.5f))
+                        .togetherWith(fadeOut(animationSpec = tween(90)) + scaleOut(animationSpec = tween(90), targetScale = 0.5f))
+                },
+                label = "GameSpaceSwitchThumb"
+            ) { isChecked ->
+                if (isChecked) {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = null,
+                        tint = if (enabled) scheme.primary else scheme.onSurfaceVariant.copy(alpha = 0.38f),
+                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = null,
+                        tint = scheme.surfaceContainerHighest,
+                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                    )
+                }
+            }
+        },
+        modifier = modifier
+    )
 }
 
 @Composable

@@ -59,13 +59,13 @@ fun Android16BatteryIcon(
         else -> Color(0xFF161616)
     }
 
-    val bodyWidth = 35.dp
-    val bodyHeight = 17.5.dp
+    val bodyWidth = 26.dp
+    val bodyHeight = 13.5.dp
 
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(if (isCharging) 0.dp else 1.2.dp)
+        horizontalArrangement = Arrangement.spacedBy(if (isCharging) 0.dp else 1.dp)
     ) {
         // Battery Body
         Box(
@@ -110,9 +110,9 @@ fun Android16BatteryIcon(
                 contentAlignment = Alignment.Center
             ) {
                 val (fontSize, letterSpacing) = when {
-                    clampedLevel == 100 -> 11.5.sp to (-0.5).sp
-                    clampedLevel >= 10 -> 12.5.sp to (-0.2).sp
-                    else -> 12.5.sp to 0.sp
+                    clampedLevel == 100 -> 10.5.sp to (-0.6).sp
+                    clampedLevel >= 10 -> 11.sp to (-0.2).sp
+                    else -> 11.sp to 0.sp
                 }
                 Text(
                     text = "$clampedLevel",
@@ -137,21 +137,21 @@ fun Android16BatteryIcon(
                 contentDescription = null,
                 tint = Color.White,
                 modifier = Modifier
-                    .size(16.dp)
+                    .size(13.5.dp)
                     .offset(x = (-1.5).dp)
             )
         } else {
             Surface(
                 shape = RoundedCornerShape(
-                    topEnd = 1.2.dp,
-                    bottomEnd = 1.2.dp,
+                    topEnd = 1.dp,
+                    bottomEnd = 1.dp,
                     topStart = 0.5.dp,
                     bottomStart = 0.5.dp
                 ),
                 color = trackColor,
                 modifier = Modifier
-                    .width(2.dp)
-                    .height(7.dp)
+                    .width(1.8.dp)
+                    .height(5.5.dp)
             ) {}
         }
     }

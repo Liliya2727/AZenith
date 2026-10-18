@@ -490,7 +490,7 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                                 maxLines = 1
                                             )
                                         }
-                                        Switch(
+                                        GameSpaceSwitch(
                                             checked = localMasterOn,
                                             onCheckedChange = { isChecked ->
                                                 localMasterOn = isChecked
@@ -1232,7 +1232,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                     maxLines = 1
                                                 )
                                             }
-                                            Switch(
+                                            GameSpaceSwitch(
                                                 checked = isOverrideActive,
                                                 onCheckedChange = { isChecked ->
                                                     val nextMode = if (isChecked) {
@@ -1296,7 +1296,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                 maxLines = 1
                                             )
                                         }
-                                        Switch(
+                                        GameSpaceSwitch(
                                             checked = isWallpaperEnabled,
                                             onCheckedChange = { isChecked ->
                                                 isWallpaperEnabled = isChecked
