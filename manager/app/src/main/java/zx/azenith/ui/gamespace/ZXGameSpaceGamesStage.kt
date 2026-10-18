@@ -1063,83 +1063,99 @@ internal fun HomeWordmark(
     val wordmarkFontSize = wordmarkSizeSp.sp
     val wordmarkLineHeight = (wordmarkSizeSp + 2f).sp
     val badgeTopPad = (2.dp + 4.dp * (scaleRatio - 0.8f)).coerceIn(2.dp, 8.dp)
-    val penSize = (26.dp + 6.dp * (scaleRatio - 0.8f)).coerceIn(26.dp, 34.dp)
+    val penSize = (28.dp + 6.dp * (scaleRatio - 0.8f)).coerceIn(28.dp, 36.dp)
 
-    Column(
+    val progress = hold.coerceIn(0f, 1f)
+    val headerAlpha = (1f - progress * 1.35f).coerceIn(0f, 1f)
+    val headerScale = 1f - 0.25f * progress
+    val headerTranslationY = -progress * 20f
+
+    Row(
         modifier = Modifier
-            .padding(start = 24.dp, bottom = 4.dp)
-            .graphicsLayer {
-                val progress = hold.coerceIn(0f, 1f)
-                alpha = (1f - progress * 1.35f).coerceIn(0f, 1f)
-                val scale = 1f - 0.25f * progress
-                scaleX = scale
-                scaleY = scale
-                translationY = -progress * 20f
+            .fillMaxWidth()
+            .padding(start = 24.dp, end = 24.dp, bottom = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            modifier = Modifier.graphicsLayer {
+                alpha = headerAlpha
+                scaleX = headerScale
+                scaleY = headerScale
+                translationY = headerTranslationY
                 transformOrigin = TransformOrigin(0f, 1f)
             }
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.displayLarge.copy(
-                    fontSize = wordmarkFontSize,
-                    lineHeight = wordmarkLineHeight,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = (-1.0).sp
-                ),
-                color = scheme.onSurface,
-                maxLines = 1
-            )
-            Surface(
-                shape = CircleShape,
-                color = scheme.primaryContainer,
-                modifier = Modifier.padding(top = badgeTopPad)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = "GAME SPACE",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.0.sp
+                    text = text,
+                    style = MaterialTheme.typography.displayLarge.copy(
+                        fontSize = wordmarkFontSize,
+                        lineHeight = wordmarkLineHeight,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = (-1.0).sp
                     ),
-                    color = scheme.onPrimaryContainer,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    color = scheme.onSurface,
+                    maxLines = 1
                 )
-            }
-            val penShape = CircleShape
-            Surface(
-                shape = penShape,
-                color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
-                contentColor = scheme.onSurfaceVariant,
-                modifier = Modifier
-                    .padding(top = badgeTopPad)
-                    .size(penSize)
-                    .gamepadFocusOutline(shape = penShape, register = true)
-                    .clip(penShape)
-                    .clickable(onClick = onOpenHomeWallpaper)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Rounded.Edit,
-                        contentDescription = "Edit Home Wallpaper",
-                        modifier = Modifier.size(penSize * 0.54f)
+                Surface(
+                    shape = CircleShape,
+                    color = scheme.primaryContainer,
+                    modifier = Modifier.padding(top = badgeTopPad)
+                ) {
+                    Text(
+                        text = "GAME SPACE",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.0.sp
+                        ),
+                        color = scheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
             }
+            Text(
+                text = "$deviceName \u00b7 $chipsetName",
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.Medium,
+                    fontSize = (11f + 2f * scaleRatio).coerceIn(12f, 15f).sp
+                ),
+                color = scheme.onSurfaceVariant.copy(alpha = 0.82f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = 2.dp, top = 2.dp)
+            )
         }
-        Text(
-            text = "$deviceName \u00b7 $chipsetName",
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontWeight = FontWeight.Medium,
-                fontSize = (11f + 2f * scaleRatio).coerceIn(12f, 15f).sp
-            ),
-            color = scheme.onSurfaceVariant.copy(alpha = 0.82f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = 2.dp, top = 2.dp)
-        )
+
+        val penShape = CircleShape
+        Surface(
+            shape = penShape,
+            color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+            contentColor = scheme.onSurfaceVariant,
+            modifier = Modifier
+                .graphicsLayer {
+                    alpha = headerAlpha
+                    scaleX = headerScale
+                    scaleY = headerScale
+                    translationY = headerTranslationY
+                    transformOrigin = TransformOrigin(1f, 1f)
+                }
+                .size(penSize)
+                .gamepadFocusOutline(shape = penShape, register = true)
+                .clip(penShape)
+                .clickable(onClick = onOpenHomeWallpaper)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Rounded.Edit,
+                    contentDescription = "Edit Home Wallpaper",
+                    modifier = Modifier.size(penSize * 0.54f)
+                )
+            }
+        }
     }
 }
 
