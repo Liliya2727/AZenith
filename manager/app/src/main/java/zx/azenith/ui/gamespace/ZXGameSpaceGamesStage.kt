@@ -1901,12 +1901,18 @@ internal fun GameHeroStage(
 
         // 4. Action buttons: stay in place (no translation), bounce in place!
         launch {
-            playPageBounce.snapTo(0.88f)
+            playPageBounce.animateTo(
+                targetValue = 1.18f,
+                animationSpec = spring(
+                    dampingRatio = 0.60f,
+                    stiffness = 850f
+                )
+            )
             playPageBounce.animateTo(
                 targetValue = 1f,
                 animationSpec = spring(
-                    dampingRatio = 0.48f,
-                    stiffness = 320f
+                    dampingRatio = 0.42f,
+                    stiffness = 260f
                 )
             )
         }
@@ -2054,9 +2060,46 @@ internal fun GameHeroStage(
                 label = "PlayBtnScale"
             )
 
+            val haptic = LocalHapticFeedback.current
+            val playInteractionSource = remember { MutableInteractionSource() }
+            val isPlayPressed by playInteractionSource.collectIsPressedAsState()
+            val playHoldScale = remember { Animatable(1f) }
+
+            LaunchedEffect(isPlayPressed) {
+                if (isPlayPressed) {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    playHoldScale.animateTo(
+                        targetValue = 1.14f,
+                        animationSpec = spring(
+                            dampingRatio = 0.58f,
+                            stiffness = 380f
+                        )
+                    )
+                } else {
+                    playHoldScale.animateTo(
+                        targetValue = 1f,
+                        animationSpec = spring(
+                            dampingRatio = 0.38f,
+                            stiffness = 240f
+                        )
+                    )
+                }
+            }
+
+            val playShadowElevation by animateDpAsState(
+                targetValue = if (isPlayPressed) 14.dp else 8.dp,
+                animationSpec = motion.defaultSpatialSpec(),
+                label = "PlayBtnShadow"
+            )
+            val playTonalElevation by animateDpAsState(
+                targetValue = if (isPlayPressed) 10.dp else 6.dp,
+                animationSpec = motion.defaultSpatialSpec(),
+                label = "PlayBtnTonal"
+            )
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // Two-stack of circular action buttons: Pen (wallpaper) & Gear (settings)
                 Column(
@@ -2122,19 +2165,23 @@ internal fun GameHeroStage(
                     shape = playButtonShape,
                     color = scheme.primary,
                     contentColor = scheme.onPrimary,
-                    tonalElevation = 6.dp,
-                    shadowElevation = 8.dp,
+                    tonalElevation = playTonalElevation,
+                    shadowElevation = playShadowElevation,
                     modifier = Modifier
                         .height(81.dp)
                         .graphicsLayer {
-                            val combinedScale = playScale * playPageBounce.value
+                            val combinedScale = playScale * playPageBounce.value * playHoldScale.value
                             scaleX = combinedScale
                             scaleY = combinedScale
                         }
                         .onFocusChanged { playFocused = it.isFocused }
                         .gamepadFocusOutline(shape = playButtonShape, width = 3.dp)
                         .clip(playButtonShape)
-                        .clickable(onClick = onLaunch)
+                        .clickable(
+                            interactionSource = playInteractionSource,
+                            indication = ripple(),
+                            onClick = onLaunch
+                        )
                 ) {
                     Row(
                         modifier = Modifier
