@@ -802,6 +802,9 @@ internal fun SettingsAppearancePane() {
     var wallpaperBlur by remember {
         mutableIntStateOf(context.getHomeWallpaperBlur())
     }
+    var floatingShapesEnabled by remember {
+        mutableStateOf(prefs.getBoolean("gamespace_floating_shapes_enabled", true))
+    }
 
     var colorSpec by remember {
         mutableStateOf(ColorEngine.fromPersisted(prefs.getString("color_spec", null)))
@@ -827,6 +830,9 @@ internal fun SettingsAppearancePane() {
                 }
                 "gamespace_wallpaper_blur" -> {
                     wallpaperBlur = context.getHomeWallpaperBlur()
+                }
+                "gamespace_floating_shapes_enabled" -> {
+                    floatingShapesEnabled = prefs.getBoolean("gamespace_floating_shapes_enabled", true)
                 }
                 "color_mode" -> {
                     colorModeValue = prefs.getInt("color_mode", ColorMode.SYSTEM.value)
@@ -894,6 +900,7 @@ internal fun SettingsAppearancePane() {
             initialDimming = wallpaperDimmingIntensity,
             initialBlur = wallpaperBlur,
             isWallpaperEnabled = isWallpaperEnabled,
+            floatingShapesEnabled = floatingShapesEnabled,
             colorModeValue = colorModeValue,
             onChooseWallpaper = {
                 imagePicker.launch(
@@ -915,6 +922,10 @@ internal fun SettingsAppearancePane() {
             onWallpaperEnabledChanged = {
                 isWallpaperEnabled = it
                 context.setHomeWallpaperEnabled(it)
+            },
+            onFloatingShapesToggled = {
+                floatingShapesEnabled = it
+                prefs.edit().putBoolean("gamespace_floating_shapes_enabled", it).apply()
             }
         )
 
@@ -1257,12 +1268,14 @@ private fun HomeWallpaperSection(
     initialDimming: Int,
     initialBlur: Int,
     isWallpaperEnabled: Boolean,
+    floatingShapesEnabled: Boolean,
     colorModeValue: Int,
     onChooseWallpaper: () -> Unit,
     onResetWallpaper: () -> Unit,
     onDimmingCommitted: (Int) -> Unit,
     onBlurCommitted: (Int) -> Unit,
-    onWallpaperEnabledChanged: (Boolean) -> Unit
+    onWallpaperEnabledChanged: (Boolean) -> Unit,
+    onFloatingShapesToggled: (Boolean) -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
     val motion = MaterialTheme.motionScheme
@@ -1591,6 +1604,58 @@ private fun HomeWallpaperSection(
                         .fillMaxWidth()
                         .height(28.dp)
                 )
+            }
+
+            // Floating Shapes Toggle Card
+            val shapesToggleShape = RoundedCornerShape(18.dp)
+            Surface(
+                shape = shapesToggleShape,
+                color = if (floatingShapesEnabled) scheme.surfaceContainerHighest.copy(alpha = 0.65f) else scheme.surfaceContainerHighest.copy(alpha = 0.35f),
+                contentColor = scheme.onSurface,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .gamepadFocusOutline(shape = shapesToggleShape, register = true)
+                    .clip(shapesToggleShape)
+                    .clickable { onFloatingShapesToggled(!floatingShapesEnabled) }
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (floatingShapesEnabled) scheme.primaryContainer else scheme.surfaceContainerHighest,
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Rounded.AutoAwesome,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = if (floatingShapesEnabled) scheme.onPrimaryContainer else scheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Show Floating Shapes",
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = scheme.onSurface,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = "Material 3 shapes hovering & morphing on homescreen",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = scheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            maxLines = 1
+                        )
+                    }
+                    GameSpaceSwitch(
+                        checked = floatingShapesEnabled,
+                        onCheckedChange = onFloatingShapesToggled
+                    )
+                }
             }
         }
     }

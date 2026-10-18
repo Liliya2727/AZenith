@@ -69,6 +69,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.Android
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Cable
 import androidx.compose.material.icons.rounded.DeleteOutline
@@ -1311,6 +1312,62 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                 }
                                             }
                                         )
+                                    }
+                                }
+
+                                if (isHome) {
+                                    val shapesToggleShape = RoundedCornerShape(18.dp)
+                                    var floatingShapesEnabled by remember {
+                                        mutableStateOf(prefs.getBoolean("gamespace_floating_shapes_enabled", true))
+                                    }
+                                    Surface(
+                                        shape = shapesToggleShape,
+                                        color = if (floatingShapesEnabled) scheme.surfaceContainerHigh else scheme.surfaceContainerHighest.copy(alpha = 0.6f),
+                                        contentColor = scheme.onSurface,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .gamepadFocusOutline(shape = shapesToggleShape, register = true)
+                                            .clip(shapesToggleShape)
+                                            .clickable {
+                                                val next = !floatingShapesEnabled
+                                                floatingShapesEnabled = next
+                                                prefs.edit().putBoolean("gamespace_floating_shapes_enabled", next).apply()
+                                            }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.AutoAwesome,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(20.dp),
+                                                tint = if (floatingShapesEnabled) scheme.primary else scheme.onSurfaceVariant
+                                            )
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = "Show Floating Shapes",
+                                                    style = MaterialTheme.typography.labelMedium.copy(
+                                                        fontWeight = FontWeight.Bold
+                                                    ),
+                                                    maxLines = 1
+                                                )
+                                                Text(
+                                                    text = "Material 3 shapes hovering & morphing on homescreen",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = scheme.onSurfaceVariant,
+                                                    maxLines = 1
+                                                )
+                                            }
+                                            GameSpaceSwitch(
+                                                checked = floatingShapesEnabled,
+                                                onCheckedChange = { isChecked ->
+                                                    floatingShapesEnabled = isChecked
+                                                    prefs.edit().putBoolean("gamespace_floating_shapes_enabled", isChecked).apply()
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                             }
