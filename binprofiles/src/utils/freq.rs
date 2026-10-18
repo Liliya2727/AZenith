@@ -54,32 +54,21 @@ pub fn get_mtk_gpu_max_freq() -> Option<u64> {
         .max()
 }
 
-/// Re-apply the balanced frequency at runtime (user changed the freq offset).
+/// Re-apply the balanced frequency at runtime
 pub fn applyfreqbalance() {
     if Path::new("/proc/ppm").exists() {
-        dsetfreqppm();
+        setfreqppm();
     } else {
-        dsetfreq();
+        setfreq();
     }
 }
 
 /// Re-apply the performance frequency at runtime.
 pub fn applyfreqgame() {
     if Path::new("/proc/ppm").exists() {
-        dsetgamefreqppm();
+        setgamefreqppm();
     } else {
-        dsetgamefreq();
-    }
-}
-
-/// Quiet variant (no per-write log) for the runtime paths above.
-pub fn applyppmnfreqsets(value: &str, path: &str) {
-    if Path::new(path).exists() {
-        chmod(path, 0o644);
-        // FIX: append \n
-        let val_with_newline = format!("{}\n", value);
-        let _ = fs::write(path, val_with_newline);
-        chmod(path, 0o444);
+        setgamefreq();
     }
 }
 
@@ -187,25 +176,21 @@ pub fn setgamefreqppm() {
 
             let cpu_maxfreq: u64 = fs::read_to_string(format!("{}/cpuinfo_max_freq", p_str))
                 .unwrap_or_default().trim().parse().unwrap_or(0);
-
-            let new_midtarget = cpu_maxfreq;
             let avail_file = format!("{}/scaling_available_frequencies", p_str);
-            let new_midfreq = setfreqs(&avail_file, new_midtarget);
 
-            if litemode {
-                let cpu_minfreq: u64 = fs::read_to_string(format!("{}/cpuinfo_min_freq", p_str))
-                    .unwrap_or_default().trim().parse().unwrap_or(0);
-
-                write_lock(&format!("{} {}", cluster, new_midfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
-                write_lock(&format!("{} {}", cluster, cpu_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
-
-                log_debug("cpu", &format!("set policy={} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
+            let freq = if litemode {
+                setfreqs(&avail_file, cpu_maxfreq * 90 / 100)
             } else {
-                write_lock(&format!("{} {}", cluster, cpu_maxfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");             
-                write_lock(&format!("{} {}", cluster, cpu_maxfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
+                cpu_maxfreq
+            };
 
-                log_debug("cpu", &format!("set policy={} maxfreq={} minfreq={}", policy_name, cpu_maxfreq, new_midfreq));
-            }
+            let max_node = "/proc/ppm/policy/hard_userlimit_max_cpu_freq";
+            let min_node = "/proc/ppm/policy/hard_userlimit_min_cpu_freq";
+            write_lock(&format!("{} {}", cluster, freq), max_node);
+            write_lock(&format!("{} {}", cluster, freq), min_node);
+            write_lock(&format!("{} {}", cluster, freq), max_node);
+
+            log_debug("cpu", &format!("set policy={} maxfreq={} minfreq={}", policy_name, freq, freq));
             cluster += 1;
         }
     }
@@ -224,27 +209,21 @@ pub fn setgamefreq() {
 
             let cpu_maxfreq: u64 = fs::read_to_string(format!("{}/cpuinfo_max_freq", p_str))
                 .unwrap_or_default().trim().parse().unwrap_or(0);
-
-            let new_midtarget = cpu_maxfreq;
             let avail_file = format!("{}/scaling_available_frequencies", p_str);
-            let new_midfreq = setfreqs(&avail_file, new_midtarget);
 
-            if litemode {
-                let cpu_minfreq: u64 = fs::read_to_string(format!("{}/cpuinfo_min_freq", p_str))
-                    .unwrap_or_default().trim().parse().unwrap_or(0);
-
-                // Bugfix: write to the plain sysfs paths, not to /proc/ppm
-                write_unlock(&new_midfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
-                write_unlock(&cpu_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
-
-                log_debug("cpu", &format!("set policy={} maxfreq={} minfreq={}", policy_name, new_midfreq, cpu_minfreq));
+            let freq = if litemode {
+                setfreqs(&avail_file, cpu_maxfreq * 90 / 100)
             } else {
-                write_unlock(&cpu_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
-                write_unlock(&cpu_maxfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
+                cpu_maxfreq
+            };
 
-                log_debug("cpu", &format!("set policy={} maxfreq={} minfreq={}", policy_name, cpu_maxfreq, new_midfreq));
+            let max_node = format!("{}/scaling_max_freq", p_str);
+            let min_node = format!("{}/scaling_min_freq", p_str);
+            write_lock(&freq.to_string(), &max_node);
+            write_lock(&freq.to_string(), &min_node);
+            write_lock(&freq.to_string(), &max_node);
 
-            }
+            log_debug("cpu", &format!("set policy={} maxfreq={} minfreq={}", policy_name, freq, freq));
         }
     }
 }
