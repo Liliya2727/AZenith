@@ -95,8 +95,8 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
-/** Total length of the Game Space expressive intro animation (at max 2800ms <= 3s). */
-const val GAME_SPACE_INTRO_MS = 2600
+/** Total length of the Game Space expressive intro animation (5000ms). */
+const val GAME_SPACE_INTRO_MS = 5000
 
 private val BOOT_STAGES = listOf(
     R.string.gamespace_boot_link,
@@ -107,11 +107,11 @@ private val BOOT_STAGES = listOf(
 
 /**
  * Material 3 Expressive Intro Screen:
- * - The AZenith mascot silhouette drops from max size to small with energetic spring bounce physics.
- * - Solid Material 3 shapes (circles, capsules, diamonds, rounded squares) explode outward from the impact center.
- * - Clean silhouette without background container cards or dark vignetted glows.
- * - Morphing connected stage pills with stage status indicators.
- * - Seamless exit transition dissolving into Game Space Shell.
+ * - 5-second choreographed sequence displaying each boot stage clearly.
+ * - Mascot silhouette drops and settles in at the start.
+ * - Dynamic RNG explosion triggers exclusively upon reaching the final 'Ready' stage.
+ * - Particles burst with high visibility, random morphing, continuous spin, and outline shapes.
+ * - Lingers for 1s at 'Ready' before cleanly fading and transitioning off screen.
  */
 @Composable
 fun ZXGameSpaceIntro(
@@ -140,7 +140,7 @@ fun ZXGameSpaceIntro(
             scope.launch {
                 exitProgress.animateTo(
                     targetValue = 1f,
-                    animationSpec = tween(durationMillis = 420, easing = FastOutSlowInEasing)
+                    animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)
                 )
                 onFinished()
             }
@@ -150,7 +150,7 @@ fun ZXGameSpaceIntro(
     LaunchedEffect(Unit) {
         // Logo reveals immediately with an energetic punch
         launch {
-            logoAlpha.animateTo(1f, tween(100, easing = LinearEasing))
+            logoAlpha.animateTo(1f, tween(180, easing = LinearEasing))
         }
         launch {
             logoScale.animateTo(
@@ -162,31 +162,36 @@ fun ZXGameSpaceIntro(
             )
         }
 
-        // Exploding Material 3 shapes burst immediately on first open, then linger & drift slowly
+        // Linear overall progress progression (0 to 1 over 5s)
         launch {
-            explosionProgress.animateTo(
+            progress.animateTo(
                 targetValue = 1f,
                 animationSpec = tween(durationMillis = GAME_SPACE_INTRO_MS, easing = LinearEasing)
             )
         }
 
-        // Total progress progression
+        // 4 Boot Stages across 5s timeline:
+        // Stage 0: 0ms -> 1000ms (Link)
+        // Stage 1: 1000ms -> 2100ms (Scan)
+        // Stage 2: 2100ms -> 3200ms (Tune)
+        // Stage 3: 3200ms -> 5000ms (Ready) -> explodes immediately on Ready, lingers for ~1s, then exits cleanly
+        delay(1000)
+        stageIndex = 1
+        delay(1100)
+        stageIndex = 2
+        delay(1100)
+        stageIndex = 3
+
+        // Explode only upon reaching the 'Ready' stage
         launch {
-            progress.animateTo(
+            explosionProgress.animateTo(
                 targetValue = 1f,
-                animationSpec = tween(durationMillis = GAME_SPACE_INTRO_MS, easing = FastOutSlowInEasing)
+                animationSpec = tween(durationMillis = 1800, easing = LinearEasing)
             )
-            startExit()
         }
 
-        // 4 Boot Stages
-        delay(350)
-        stageIndex = 1
-        delay(600)
-        stageIndex = 2
-        delay(650)
-        stageIndex = 3
-        delay(750)
+        // Linger on 'Ready' for 1 second before starting clean exit transition
+        delay(1000)
         startExit()
     }
 
@@ -324,10 +329,10 @@ private fun Material3ImpactExplosion(
     }
 
     val particles = remember {
-        val count = 22
+        val count = 26
         val rng = kotlin.random.Random(System.currentTimeMillis())
         List(count) { i ->
-            val angleDeg = (i * (360f / count) + rng.nextFloat() * 24f - 12f) % 360f
+            val angleDeg = (i * (360f / count) + rng.nextFloat() * 20f - 10f) % 360f
             val shape1 = availableShapes[rng.nextInt(availableShapes.size)]
             var shape2 = availableShapes[rng.nextInt(availableShapes.size)]
             if (shape1 === shape2) {
@@ -335,14 +340,14 @@ private fun Material3ImpactExplosion(
             }
             ExplosionParticle(
                 baseAngleDeg = angleDeg,
-                radialMultiplier = 0.65f + rng.nextFloat() * 0.55f,
+                radialMultiplier = 0.70f + rng.nextFloat() * 0.60f,
                 shapeA = shape1,
                 shapeB = shape2,
-                isOutlined = rng.nextFloat() < 0.38f,
-                strokeWidthDp = 1.6f + rng.nextFloat() * 1.2f,
-                baseScaleDp = 16f + rng.nextFloat() * 14f,
+                isOutlined = rng.nextFloat() < 0.35f,
+                strokeWidthDp = 2.4f + rng.nextFloat() * 1.6f,
+                baseScaleDp = 22f + rng.nextFloat() * 18f,
                 initialSpinDeg = rng.nextFloat() * 360f,
-                spinSpeedDegPerSec = (if (rng.nextBoolean()) 1f else -1f) * (60f + rng.nextFloat() * 160f),
+                spinSpeedDegPerSec = (if (rng.nextBoolean()) 1f else -1f) * (80f + rng.nextFloat() * 200f),
                 colorIndex = rng.nextInt(6)
             )
         }
@@ -362,8 +367,8 @@ private fun Material3ImpactExplosion(
     ) {
         val cx = size.width / 2f
         val cy = size.height / 2f - 40.dp.toPx()
-        val baseBurstRadius = 145.dp.toPx()
-        val driftDistance = 90.dp.toPx()
+        val baseBurstRadius = 175.dp.toPx()
+        val driftDistance = 110.dp.toPx()
 
         // Fast initial explosive curve (0..0.22) followed by gentle lingering drift
         val burstFraction = (progress / 0.22f).coerceIn(0f, 1f)
@@ -372,19 +377,19 @@ private fun Material3ImpactExplosion(
 
         // Particle scale punch
         val particleScale = when {
-            progress < 0.07f -> (progress / 0.07f) * 1.08f
-            progress < 0.15f -> 1.08f - ((progress - 0.07f) / 0.08f) * 0.08f
-            progress > 0.82f -> ((1f - progress) / 0.18f).coerceIn(0f, 1f)
+            progress < 0.08f -> (progress / 0.08f) * 1.15f
+            progress < 0.18f -> 1.15f - ((progress - 0.08f) / 0.10f) * 0.15f
+            progress > 0.85f -> ((1f - progress) / 0.15f).coerceIn(0f, 1f)
             else -> 1f
         }
 
         // Particle alpha stays crisp and lingers smoothly
         val particleAlpha = when {
-            progress > 0.80f -> (((1f - progress) / 0.20f) * 0.95f).coerceIn(0f, 0.95f)
-            else -> 0.95f
+            progress > 0.85f -> (((1f - progress) / 0.15f) * 0.98f).coerceIn(0f, 0.98f)
+            else -> 0.98f
         }
 
-        val totalTimeSec = progress * (GAME_SPACE_INTRO_MS / 1000f)
+        val totalTimeSec = progress * 1.8f
 
         particles.forEachIndexed { index, particle ->
             val angleRad = particle.baseAngleDeg * (PI / 180f).toFloat()
