@@ -43,7 +43,8 @@ fun Android16BatteryIcon(
     trackColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.30f),
     chargingColor: Color = Color(0xFF22C55E),
     normalColor: Color = MaterialTheme.colorScheme.primary,
-    lowColor: Color = MaterialTheme.colorScheme.error
+    lowColor: Color = MaterialTheme.colorScheme.error,
+    boltColor: Color = Color.White
 ) {
     val clampedLevel = level.coerceIn(0, 100)
     val isLow = clampedLevel <= 20 && !isCharging
@@ -137,7 +138,7 @@ fun Android16BatteryIcon(
             Icon(
                 imageVector = Icons.Rounded.Bolt,
                 contentDescription = null,
-                tint = chargingColor,
+                tint = boltColor,
                 modifier = Modifier
                     .size(13.5.dp)
                     .offset(x = (-1.5).dp)
