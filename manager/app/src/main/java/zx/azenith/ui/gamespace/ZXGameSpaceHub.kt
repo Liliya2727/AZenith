@@ -22,7 +22,10 @@ import zx.azenith.ui.theme.ColorMode
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -32,6 +35,8 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.runtime.SideEffect
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -190,7 +195,13 @@ fun ZXGameSpaceHub(
         }
     }
 
+    var previousRibbonIndex by remember { mutableIntStateOf(0) }
     val safeIndex = selectedRibbonIndex.coerceIn(0, ribbonEntries.lastIndex)
+    val isNavigatingForward = (safeIndex >= previousRibbonIndex && !(previousRibbonIndex == 0 && safeIndex == ribbonEntries.lastIndex)) ||
+        (previousRibbonIndex == ribbonEntries.lastIndex && safeIndex == 0)
+    SideEffect {
+        previousRibbonIndex = safeIndex
+    }
     val activeEntry = ribbonEntries[safeIndex]
 
     LaunchedEffect(activeEntry) {
@@ -541,34 +552,48 @@ fun ZXGameSpaceHub(
                                             val toIndex = ribbonEntries.indexOf(targetState)
                                             val movingForward = (toIndex >= fromIndex) || (fromIndex == ribbonEntries.lastIndex && toIndex == 0)
 
-                                            val slideInOffset = { size: Int ->
-                                                if (movingForward) (size * 0.18f).roundToInt()
-                                                else (-size * 0.18f).roundToInt()
-                                            }
-                                            val slideOutOffset = { size: Int ->
-                                                if (movingForward) (-size * 0.18f).roundToInt()
-                                                else (size * 0.18f).roundToInt()
-                                            }
-
-                                            (slideInHorizontally(
-                                                animationSpec = motion.defaultSpatialSpec(),
-                                                initialOffsetX = slideInOffset
-                                            ) + scaleIn(
-                                                animationSpec = motion.defaultSpatialSpec(),
-                                                initialScale = 0.94f
-                                            ) + fadeIn(
-                                                animationSpec = motion.defaultEffectsSpec()
-                                            )).togetherWith(
-                                                slideOutHorizontally(
-                                                    animationSpec = motion.defaultSpatialSpec(),
-                                                    targetOffsetX = slideOutOffset
-                                                ) + scaleOut(
-                                                    animationSpec = motion.defaultSpatialSpec(),
-                                                    targetScale = 1.03f
-                                                ) + fadeOut(
-                                                    animationSpec = motion.defaultEffectsSpec()
+                                            if (initialState is RibbonEntry.Game && targetState is RibbonEntry.Game) {
+                                                EnterTransition.None togetherWith ExitTransition.None
+                                            } else {
+                                                val springSpatial = spring<IntOffset>(
+                                                    dampingRatio = 0.65f,
+                                                    stiffness = 320f
                                                 )
-                                            )
+                                                val springScale = spring<Float>(
+                                                    dampingRatio = 0.65f,
+                                                    stiffness = 320f
+                                                )
+                                                val effectsSpec = motion.defaultEffectsSpec<Float>()
+
+                                                val slideInOffset = { size: Int ->
+                                                    if (movingForward) (size * 0.18f).roundToInt()
+                                                    else (-size * 0.18f).roundToInt()
+                                                 }
+                                                val slideOutOffset = { size: Int ->
+                                                    if (movingForward) (-size * 0.18f).roundToInt()
+                                                    else (size * 0.18f).roundToInt()
+                                                }
+
+                                                (slideInHorizontally(
+                                                    animationSpec = springSpatial,
+                                                    initialOffsetX = slideInOffset
+                                                ) + scaleIn(
+                                                    animationSpec = springScale,
+                                                    initialScale = 0.94f
+                                                ) + fadeIn(
+                                                    animationSpec = effectsSpec
+                                                )).togetherWith(
+                                                    slideOutHorizontally(
+                                                        animationSpec = springSpatial,
+                                                        targetOffsetX = slideOutOffset
+                                                    ) + scaleOut(
+                                                        animationSpec = springScale,
+                                                        targetScale = 1.03f
+                                                    ) + fadeOut(
+                                                        animationSpec = effectsSpec
+                                                    )
+                                                )
+                                            }
                                         },
                                         modifier = Modifier.fillMaxSize(),
                                         label = "ZXGameSpaceMainStage"
@@ -604,6 +629,7 @@ fun ZXGameSpaceHub(
 
                                             is RibbonEntry.Game -> GameHeroStage(
                                                 app = entry.app,
+                                                movingForward = isNavigatingForward,
                                                 onLaunch = { requestAppLaunch(entry.app) },
                                                 onOpenAppSettings = { tuningPkg = entry.app.packageName },
                                                 onOpenWallpaperSettings = { wallpaperPkg = entry.app.packageName }

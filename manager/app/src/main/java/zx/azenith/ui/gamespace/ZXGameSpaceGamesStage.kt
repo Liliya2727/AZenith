@@ -1795,6 +1795,7 @@ internal fun SpotlightBentoCard(
 @Composable
 internal fun GameHeroStage(
     app: ApplistViewmodel.AppInfo,
+    movingForward: Boolean = true,
     onLaunch: () -> Unit,
     onOpenAppSettings: () -> Unit,
     onOpenWallpaperSettings: () -> Unit = {}
@@ -1802,6 +1803,149 @@ internal fun GameHeroStage(
     val scheme = MaterialTheme.colorScheme
     val motion = MaterialTheme.motionScheme
     val colorSpec = motion.defaultEffectsSpec<Color>()
+
+    // Individual bounce animatables for the bottom bar left info elements
+    val iconOffset = remember { Animatable(0f) }
+    val iconScale = remember { Animatable(1f) }
+    val iconAlpha = remember { Animatable(1f) }
+
+    val titleOffset = remember { Animatable(0f) }
+    val titleAlpha = remember { Animatable(1f) }
+
+    val subOffset = remember { Animatable(0f) }
+    val subAlpha = remember { Animatable(1f) }
+
+    // In-place bounce animatables for action buttons (Play, Pen, Gear)
+    val playPageBounce = remember { Animatable(1f) }
+    val penPageBounce = remember { Animatable(1f) }
+    val gearPageBounce = remember { Animatable(1f) }
+    val gearRotation = remember { Animatable(0f) }
+
+    var isFirstLaunch by remember { mutableStateOf(true) }
+
+    LaunchedEffect(app.packageName) {
+        if (isFirstLaunch) {
+            isFirstLaunch = false
+            return@LaunchedEffect
+        }
+        val sign = if (movingForward) 1f else -1f
+
+        // 1. App Icon: springs with horizontal offset + scale overshoot
+        launch {
+            iconOffset.snapTo(sign * 42f)
+            iconScale.snapTo(0.72f)
+            iconAlpha.snapTo(0.2f)
+            launch {
+                iconAlpha.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 180)
+                )
+            }
+            launch {
+                iconScale.animateTo(
+                    targetValue = 1f,
+                    animationSpec = spring(
+                        dampingRatio = 0.50f,
+                        stiffness = 320f
+                    )
+                )
+            }
+            iconOffset.animateTo(
+                targetValue = 0f,
+                animationSpec = spring(
+                    dampingRatio = 0.52f,
+                    stiffness = 300f
+                )
+            )
+        }
+
+        // 2. App Title: staggered individual spring overshoot
+        launch {
+            kotlinx.coroutines.delay(25)
+            titleOffset.snapTo(sign * 65f)
+            titleAlpha.snapTo(0.15f)
+            launch {
+                titleAlpha.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 200)
+                )
+            }
+            titleOffset.animateTo(
+                targetValue = 0f,
+                animationSpec = spring(
+                    dampingRatio = 0.54f,
+                    stiffness = 280f
+                )
+            )
+        }
+
+        // 3. Version badge & package name: staggered individual spring overshoot
+        launch {
+            kotlinx.coroutines.delay(50)
+            subOffset.snapTo(sign * 80f)
+            subAlpha.snapTo(0.1f)
+            launch {
+                subAlpha.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 220)
+                )
+            }
+            subOffset.animateTo(
+                targetValue = 0f,
+                animationSpec = spring(
+                    dampingRatio = 0.56f,
+                    stiffness = 260f
+                )
+            )
+        }
+
+        // 4. Action buttons: stay in place (no translation), bounce in place!
+        launch {
+            playPageBounce.snapTo(0.88f)
+            playPageBounce.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = 0.48f,
+                    stiffness = 320f
+                )
+            )
+        }
+
+        launch {
+            kotlinx.coroutines.delay(20)
+            penPageBounce.snapTo(0.82f)
+            penPageBounce.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = 0.50f,
+                    stiffness = 350f
+                )
+            )
+        }
+
+        launch {
+            kotlinx.coroutines.delay(35)
+            gearPageBounce.snapTo(0.82f)
+            val gearSign = if (movingForward) -1f else 1f
+            gearRotation.snapTo(gearSign * 45f)
+            launch {
+                gearRotation.animateTo(
+                    targetValue = 0f,
+                    animationSpec = spring(
+                        dampingRatio = 0.52f,
+                        stiffness = 280f
+                    )
+                )
+            }
+            gearPageBounce.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = 0.50f,
+                    stiffness = 350f
+                )
+            )
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -1825,7 +1969,16 @@ internal fun GameHeroStage(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    AppIconImage(app = app, size = 56.dp)
+                    Box(
+                        modifier = Modifier.graphicsLayer {
+                            translationX = iconOffset.value
+                            scaleX = iconScale.value
+                            scaleY = iconScale.value
+                            alpha = iconAlpha.value
+                        }
+                    ) {
+                        AppIconImage(app = app, size = 56.dp)
+                    }
                     Column(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
@@ -1837,11 +1990,19 @@ internal fun GameHeroStage(
                             ),
                             color = scheme.onSurface,
                             maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.graphicsLayer {
+                                translationX = titleOffset.value
+                                alpha = titleAlpha.value
+                            }
                         )
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.graphicsLayer {
+                                translationX = subOffset.value
+                                alpha = subAlpha.value
+                            }
                         ) {
                             if (versionName != null) {
                                 Surface(
@@ -1909,6 +2070,10 @@ internal fun GameHeroStage(
                         contentColor = if (penFocused) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
                         modifier = Modifier
                             .size(34.dp)
+                            .graphicsLayer {
+                                scaleX = penPageBounce.value
+                                scaleY = penPageBounce.value
+                            }
                             .onFocusChanged { penFocused = it.isFocused }
                             .gamepadFocusOutline(shape = CircleShape, width = 2.dp)
                             .clip(CircleShape)
@@ -1930,6 +2095,11 @@ internal fun GameHeroStage(
                         contentColor = if (gearFocused) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
                         modifier = Modifier
                             .size(34.dp)
+                            .graphicsLayer {
+                                scaleX = gearPageBounce.value
+                                scaleY = gearPageBounce.value
+                                rotationZ = gearRotation.value
+                            }
                             .onFocusChanged { gearFocused = it.isFocused }
                             .gamepadFocusOutline(shape = CircleShape, width = 2.dp)
                             .clip(CircleShape)
@@ -1957,8 +2127,9 @@ internal fun GameHeroStage(
                     modifier = Modifier
                         .height(81.dp)
                         .graphicsLayer {
-                            scaleX = playScale
-                            scaleY = playScale
+                            val combinedScale = playScale * playPageBounce.value
+                            scaleX = combinedScale
+                            scaleY = combinedScale
                         }
                         .onFocusChanged { playFocused = it.isFocused }
                         .gamepadFocusOutline(shape = playButtonShape, width = 3.dp)
