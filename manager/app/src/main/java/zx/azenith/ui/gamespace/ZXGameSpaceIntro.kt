@@ -139,26 +139,25 @@ fun ZXGameSpaceIntro(
     }
 
     LaunchedEffect(Unit) {
-        // Logo drop & bounce
+        // Logo reveals immediately with an energetic punch
         launch {
-            logoAlpha.animateTo(1f, tween(180, easing = LinearEasing))
+            logoAlpha.animateTo(1f, tween(100, easing = LinearEasing))
         }
         launch {
             logoScale.animateTo(
                 targetValue = 1f,
                 animationSpec = spring(
                     dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMediumLow
+                    stiffness = Spring.StiffnessMedium
                 )
             )
         }
 
-        // Exploding Material 3 shapes burst from central impact point
+        // Exploding Material 3 shapes burst immediately on first open, then linger & drift slowly
         launch {
-            delay(240)
             explosionProgress.animateTo(
                 targetValue = 1f,
-                animationSpec = tween(durationMillis = 750, easing = FastOutSlowInEasing)
+                animationSpec = tween(durationMillis = GAME_SPACE_INTRO_MS, easing = LinearEasing)
             )
         }
 
@@ -265,7 +264,8 @@ fun ZXGameSpaceIntro(
 /**
  * Exploding Material 3 shapes bursting outward from the impact center:
  * - Solid filled MD3 shapes (circles, capsules, diamonds, rounded squares).
- * - Tonal MD3 palette colors without outlines or glow.
+ * - Fast initial burst outward followed by smooth lingering drift across the screen.
+ * - Gentle fade-out near the end of the intro rather than vanishing quickly.
  */
 @Composable
 private fun Material3ImpactExplosion(
@@ -291,30 +291,45 @@ private fun Material3ImpactExplosion(
     ) {
         val cx = size.width / 2f
         val cy = size.height / 2f - 40.dp.toPx() // Align with silhouette center
-        val particleCount = 18
-        val maxSpread = 210.dp.toPx()
+        val particleCount = 20
+        val baseBurstRadius = 140.dp.toPx()
+        val driftDistance = 80.dp.toPx()
+
+        // Fast initial burst curve (0..0.25) that eases out into slow drift (0.25..1.0)
+        val burstFraction = (progress / 0.22f).coerceIn(0f, 1f)
+        val burstDistance = 1f - (1f - burstFraction) * (1f - burstFraction) * (1f - burstFraction)
+        val driftFraction = ((progress - 0.22f) / 0.78f).coerceIn(0f, 1f)
+
+        // Particle scale rises fast, sustains in full view, and fades out gently near exit
+        val particleScale = when {
+            progress < 0.08f -> progress / 0.08f
+            progress > 0.82f -> ((1f - progress) / 0.18f).coerceIn(0f, 1f)
+            else -> 1f
+        }
+
+        // Particle alpha stays prominent and lingers until transition
+        val particleAlpha = when {
+            progress > 0.80f -> (((1f - progress) / 0.20f) * 0.95f).coerceIn(0f, 0.95f)
+            else -> 0.95f
+        }
 
         for (i in 0 until particleCount) {
-            val angleDeg = (i * (360f / particleCount) + (i * 7f)) % 360f
+            val angleDeg = (i * (360f / particleCount) + (i * 11f)) % 360f
             val angleRad = angleDeg * (PI / 180f).toFloat()
 
-            // Distance based on progress with staggered radial offsets
-            val radialMultiplier = 0.70f + (i % 5) * 0.12f
-            val currentDist = maxSpread * progress * radialMultiplier
+            // Distance with individual radial multiplier and continuous slow outward drift
+            val radialMultiplier = 0.75f + (i % 6) * 0.10f
+            val totalDistance = (baseBurstRadius * burstDistance + driftDistance * driftFraction) * radialMultiplier
 
-            val px = cx + cos(angleRad) * currentDist
-            val py = cy + sin(angleRad) * currentDist
+            val px = cx + cos(angleRad) * totalDistance
+            val py = cy + sin(angleRad) * totalDistance
 
-            // Particle fades out smoothly as it reaches edge
-            val particleAlpha = ((1f - progress * progress) * 0.90f).coerceIn(0f, 1f)
             val color = palette[i % palette.size].copy(alpha = particleAlpha)
-
-            val particleScale = (sin((progress * PI).coerceIn(0.0, PI))).toFloat()
 
             when (i % 4) {
                 0 -> {
                     // Solid filled Circle
-                    val radius = (7.dp.toPx() + (i % 3) * 2.5f.dp.toPx()) * particleScale
+                    val radius = (7.5f.dp.toPx() + (i % 3) * 2.5f.dp.toPx()) * particleScale
                     drawCircle(
                         color = color,
                         radius = radius,
@@ -323,8 +338,8 @@ private fun Material3ImpactExplosion(
                 }
                 1 -> {
                     // Solid filled Capsule / Pill
-                    val pw = (22.dp.toPx() + (i % 2) * 6.dp.toPx()) * particleScale
-                    val ph = 9.dp.toPx() * particleScale
+                    val pw = (24.dp.toPx() + (i % 2) * 6.dp.toPx()) * particleScale
+                    val ph = 10.dp.toPx() * particleScale
                     drawRoundRect(
                         color = color,
                         topLeft = Offset(px - pw / 2f, py - ph / 2f),
@@ -334,7 +349,7 @@ private fun Material3ImpactExplosion(
                 }
                 2 -> {
                     // Solid filled 4-Point Diamond Sparkle
-                    val s = (14.dp.toPx() + (i % 2) * 4.dp.toPx()) * particleScale
+                    val s = (15.dp.toPx() + (i % 2) * 4.dp.toPx()) * particleScale
                     val diamond = Path().apply {
                         moveTo(px, py - s)
                         lineTo(px + s * 0.55f, py)
@@ -346,8 +361,8 @@ private fun Material3ImpactExplosion(
                 }
                 else -> {
                     // Solid filled Rounded Square
-                    val s = (12.dp.toPx() + (i % 2) * 3.dp.toPx()) * particleScale
-                    val cr = 4.dp.toPx() * particleScale
+                    val s = (13.dp.toPx() + (i % 2) * 3.dp.toPx()) * particleScale
+                    val cr = 4.5f.dp.toPx() * particleScale
                     drawRoundRect(
                         color = color,
                         topLeft = Offset(px - s / 2f, py - s / 2f),
