@@ -275,8 +275,23 @@ internal fun ZXGameSpaceSettingsStage(
                     modifier = Modifier.padding(start = 12.dp, top = 8.dp, bottom = 4.dp)
                 )
 
+                val sidebarScrollState = rememberScrollState()
+                var sidebarHeightPx by remember { mutableIntStateOf(0) }
                 var tabPositions by remember { mutableStateOf(mapOf<SettingsSidebarTab, Pair<Float, Float>>()) }
                 val currentPos = tabPositions[selectedTab] ?: (0f to 0f)
+
+                LaunchedEffect(selectedTab, currentPos.first, currentPos.second, sidebarHeightPx) {
+                    if (currentPos.second > 0f && sidebarHeightPx > 0) {
+                        val targetTop = currentPos.first.roundToInt()
+                        val targetBottom = (currentPos.first + currentPos.second).roundToInt()
+                        val currentScroll = sidebarScrollState.value
+                        if (targetTop < currentScroll) {
+                            sidebarScrollState.animateScrollTo(targetTop)
+                        } else if (targetBottom > currentScroll + sidebarHeightPx) {
+                            sidebarScrollState.animateScrollTo((targetBottom - sidebarHeightPx).coerceAtLeast(0))
+                        }
+                    }
+                }
 
                 val animatedY by animateFloatAsState(
                     targetValue = currentPos.first,
@@ -299,6 +314,8 @@ internal fun ZXGameSpaceSettingsStage(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
+                        .onGloballyPositioned { sidebarHeightPx = it.size.height }
+                        .verticalScroll(sidebarScrollState)
                 ) {
                     if (animatedHeight > 0f) {
                         Surface(
@@ -312,7 +329,9 @@ internal fun ZXGameSpaceSettingsStage(
                     }
 
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         SettingsSidebarTab.entries.forEach { tab ->
