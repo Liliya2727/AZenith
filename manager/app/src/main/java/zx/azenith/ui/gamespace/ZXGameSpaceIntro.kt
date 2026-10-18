@@ -71,7 +71,13 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Matrix
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
@@ -79,6 +85,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material3.toPath
+import androidx.graphics.shapes.Morph
+import androidx.graphics.shapes.RoundedPolygon
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zx.azenith.R
@@ -261,11 +270,25 @@ fun ZXGameSpaceIntro(
     }
 }
 
+private data class ExplosionParticle(
+    val baseAngleDeg: Float,
+    val radialMultiplier: Float,
+    val shapeA: RoundedPolygon,
+    val shapeB: RoundedPolygon,
+    val isOutlined: Boolean,
+    val strokeWidthDp: Float,
+    val baseScaleDp: Float,
+    val initialSpinDeg: Float,
+    val spinSpeedDegPerSec: Float,
+    val colorIndex: Int
+)
+
 /**
  * Exploding Material 3 shapes bursting outward from the impact center:
- * - Solid filled MD3 shapes (circles, capsules, diamonds, rounded squares).
- * - Fast initial burst outward followed by smooth lingering drift across the screen.
- * - Gentle fade-out near the end of the intro rather than vanishing quickly.
+ * - Dynamic RNG generation per intro invocation for unique burst patterns.
+ * - Solid filled and outline-only Material 3 shapes (circles, bursts, clovers, suns, cookies).
+ * - Continuous spin rotation accelerating from impact and drifting gently.
+ * - Smooth morphological transformation between shapes while lingering.
  */
 @Composable
 private fun Material3ImpactExplosion(
@@ -284,91 +307,124 @@ private fun Material3ImpactExplosion(
         )
     }
 
+    val availableShapes = remember {
+        listOf(
+            BentoShapes.Circle,
+            BentoShapes.Cookie4,
+            BentoShapes.Cookie6,
+            BentoShapes.Cookie9,
+            BentoShapes.Clover4,
+            BentoShapes.Clover8,
+            BentoShapes.Sunny,
+            BentoShapes.VerySunny,
+            BentoShapes.Puffy,
+            BentoShapes.SoftBurst,
+            BentoShapes.Flower
+        )
+    }
+
+    val particles = remember {
+        val count = 22
+        val rng = kotlin.random.Random(System.currentTimeMillis())
+        List(count) { i ->
+            val angleDeg = (i * (360f / count) + rng.nextFloat() * 24f - 12f) % 360f
+            val shape1 = availableShapes[rng.nextInt(availableShapes.size)]
+            var shape2 = availableShapes[rng.nextInt(availableShapes.size)]
+            if (shape1 === shape2) {
+                shape2 = availableShapes[(availableShapes.indexOf(shape1) + 1) % availableShapes.size]
+            }
+            ExplosionParticle(
+                baseAngleDeg = angleDeg,
+                radialMultiplier = 0.65f + rng.nextFloat() * 0.55f,
+                shapeA = shape1,
+                shapeB = shape2,
+                isOutlined = rng.nextFloat() < 0.38f,
+                strokeWidthDp = 1.6f + rng.nextFloat() * 1.2f,
+                baseScaleDp = 16f + rng.nextFloat() * 14f,
+                initialSpinDeg = rng.nextFloat() * 360f,
+                spinSpeedDegPerSec = (if (rng.nextBoolean()) 1f else -1f) * (60f + rng.nextFloat() * 160f),
+                colorIndex = rng.nextInt(6)
+            )
+        }
+    }
+
+    val morphs = remember(particles) {
+        particles.map { Morph(it.shapeA, it.shapeB) }
+    }
+
+    val path = remember { Path() }
+    val matrix = remember { Matrix() }
+
     Canvas(
         modifier = Modifier
             .fillMaxSize()
             .graphicsLayer { alpha = exitAlpha }
     ) {
         val cx = size.width / 2f
-        val cy = size.height / 2f - 40.dp.toPx() // Align with silhouette center
-        val particleCount = 20
-        val baseBurstRadius = 140.dp.toPx()
-        val driftDistance = 80.dp.toPx()
+        val cy = size.height / 2f - 40.dp.toPx()
+        val baseBurstRadius = 145.dp.toPx()
+        val driftDistance = 90.dp.toPx()
 
-        // Fast initial burst curve (0..0.25) that eases out into slow drift (0.25..1.0)
+        // Fast initial explosive curve (0..0.22) followed by gentle lingering drift
         val burstFraction = (progress / 0.22f).coerceIn(0f, 1f)
         val burstDistance = 1f - (1f - burstFraction) * (1f - burstFraction) * (1f - burstFraction)
         val driftFraction = ((progress - 0.22f) / 0.78f).coerceIn(0f, 1f)
 
-        // Particle scale rises fast, sustains in full view, and fades out gently near exit
+        // Particle scale punch
         val particleScale = when {
-            progress < 0.08f -> progress / 0.08f
+            progress < 0.07f -> (progress / 0.07f) * 1.08f
+            progress < 0.15f -> 1.08f - ((progress - 0.07f) / 0.08f) * 0.08f
             progress > 0.82f -> ((1f - progress) / 0.18f).coerceIn(0f, 1f)
             else -> 1f
         }
 
-        // Particle alpha stays prominent and lingers until transition
+        // Particle alpha stays crisp and lingers smoothly
         val particleAlpha = when {
             progress > 0.80f -> (((1f - progress) / 0.20f) * 0.95f).coerceIn(0f, 0.95f)
             else -> 0.95f
         }
 
-        for (i in 0 until particleCount) {
-            val angleDeg = (i * (360f / particleCount) + (i * 11f)) % 360f
-            val angleRad = angleDeg * (PI / 180f).toFloat()
+        val totalTimeSec = progress * (GAME_SPACE_INTRO_MS / 1000f)
 
-            // Distance with individual radial multiplier and continuous slow outward drift
-            val radialMultiplier = 0.75f + (i % 6) * 0.10f
-            val totalDistance = (baseBurstRadius * burstDistance + driftDistance * driftFraction) * radialMultiplier
+        particles.forEachIndexed { index, particle ->
+            val angleRad = particle.baseAngleDeg * (PI / 180f).toFloat()
+            val totalDistance = (baseBurstRadius * burstDistance + driftDistance * driftFraction) * particle.radialMultiplier
 
             val px = cx + cos(angleRad) * totalDistance
             val py = cy + sin(angleRad) * totalDistance
 
-            val color = palette[i % palette.size].copy(alpha = particleAlpha)
+            val color = palette[particle.colorIndex % palette.size].copy(alpha = particleAlpha)
+            val currentRotation = particle.initialSpinDeg + (particle.spinSpeedDegPerSec * totalTimeSec)
 
-            when (i % 4) {
-                0 -> {
-                    // Solid filled Circle
-                    val radius = (7.5f.dp.toPx() + (i % 3) * 2.5f.dp.toPx()) * particleScale
-                    drawCircle(
-                        color = color,
-                        radius = radius,
-                        center = Offset(px, py)
-                    )
-                }
-                1 -> {
-                    // Solid filled Capsule / Pill
-                    val pw = (24.dp.toPx() + (i % 2) * 6.dp.toPx()) * particleScale
-                    val ph = 10.dp.toPx() * particleScale
-                    drawRoundRect(
-                        color = color,
-                        topLeft = Offset(px - pw / 2f, py - ph / 2f),
-                        size = Size(pw, ph),
-                        cornerRadius = CornerRadius(ph / 2f, ph / 2f)
-                    )
-                }
-                2 -> {
-                    // Solid filled 4-Point Diamond Sparkle
-                    val s = (15.dp.toPx() + (i % 2) * 4.dp.toPx()) * particleScale
-                    val diamond = Path().apply {
-                        moveTo(px, py - s)
-                        lineTo(px + s * 0.55f, py)
-                        lineTo(px, py + s)
-                        lineTo(px - s * 0.55f, py)
-                        close()
+            // Morph between shapeA and shapeB across the lingering lifecycle
+            val morphFraction = (sin((progress * PI * 1.5f).coerceIn(0.0, PI * 1.5f)).toFloat()).coerceIn(0f, 1f)
+
+            val sizePx = particle.baseScaleDp.dp.toPx() * particleScale
+
+            path.rewind()
+            val outline = morphs[index].toPath(morphFraction, path)
+            matrix.reset()
+            matrix.scale(sizePx, sizePx)
+            outline.transform(matrix)
+
+            rotate(currentRotation, pivot = Offset(px, py)) {
+                translate(left = px - sizePx / 2f, top = py - sizePx / 2f) {
+                    if (particle.isOutlined) {
+                        drawPath(
+                            path = outline,
+                            color = color,
+                            style = Stroke(
+                                width = particle.strokeWidthDp.dp.toPx() * particleScale,
+                                cap = StrokeCap.Round,
+                                join = StrokeJoin.Round
+                            )
+                        )
+                    } else {
+                        drawPath(
+                            path = outline,
+                            color = color
+                        )
                     }
-                    drawPath(path = diamond, color = color)
-                }
-                else -> {
-                    // Solid filled Rounded Square
-                    val s = (13.dp.toPx() + (i % 2) * 3.dp.toPx()) * particleScale
-                    val cr = 4.5f.dp.toPx() * particleScale
-                    drawRoundRect(
-                        color = color,
-                        topLeft = Offset(px - s / 2f, py - s / 2f),
-                        size = Size(s, s),
-                        cornerRadius = CornerRadius(cr, cr)
-                    )
                 }
             }
         }
