@@ -20,6 +20,7 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
 import androidx.compose.runtime.mutableStateOf
+import java.util.concurrent.ConcurrentHashMap
 import zx.azenith.R
 
 const val PREF_SOUND_EFFECTS = "sound_effects_enabled"
@@ -46,23 +47,37 @@ object AudioUtil {
     private var cancelSoundId = 0
     private var noticeSoundId = 0
     private var noticeBackSoundId = 0
+
+    private val loadedSoundIds = ConcurrentHashMap.newKeySet<Int>()
+    private val pendingPlays = ConcurrentHashMap.newKeySet<Int>()
+
+    @Volatile
     private var isInitialized = false
 
     @Synchronized
-    private fun init(context: Context) {
+    fun init(context: Context) {
         if (isInitialized) return
         val appContext = context.applicationContext
         SoundEffectsState.enabled.value = isSoundEffectsEnabled(appContext)
 
         val attrs = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+            .setUsage(AudioAttributes.USAGE_MEDIA)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
 
         val pool = SoundPool.Builder()
-            .setMaxStreams(6)
+            .setMaxStreams(8)
             .setAudioAttributes(attrs)
             .build()
+
+        pool.setOnLoadCompleteListener { p, sampleId, status ->
+            if (status == 0) {
+                loadedSoundIds.add(sampleId)
+                if (pendingPlays.remove(sampleId) && SoundEffectsState.enabled.value) {
+                    p.play(sampleId, 1f, 1f, 1, 0, 1f)
+                }
+            }
+        }
 
         scrollSoundId = pool.load(appContext, R.raw.scroll, 1)
         okSoundId = pool.load(appContext, R.raw.ok, 1)
@@ -79,31 +94,31 @@ object AudioUtil {
         if (!isInitialized) {
             init(context)
         }
-        soundPool?.play(soundId, 1f, 1f, 1, 0, 1f)
+        val pool = soundPool ?: return
+        if (loadedSoundIds.contains(soundId)) {
+            pool.play(soundId, 1f, 1f, 1, 0, 1f)
+        } else {
+            pendingPlays.add(soundId)
+        }
     }
 
     fun playScroll(context: Context) {
-        if (!isInitialized) init(context)
         play(context, scrollSoundId)
     }
 
     fun playOk(context: Context) {
-        if (!isInitialized) init(context)
         play(context, okSoundId)
     }
 
     fun playCancel(context: Context) {
-        if (!isInitialized) init(context)
         play(context, cancelSoundId)
     }
 
     fun playNotice(context: Context) {
-        if (!isInitialized) init(context)
         play(context, noticeSoundId)
     }
 
     fun playNoticeBack(context: Context) {
-        if (!isInitialized) init(context)
         play(context, noticeBackSoundId)
     }
 }

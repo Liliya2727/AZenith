@@ -36,6 +36,7 @@ import android.os.BatteryManager
 import android.os.Build
 import android.view.InputDevice
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.BugReport
@@ -121,6 +122,7 @@ internal enum class SettingsSidebarTab(
     General(R.string.gamespace_settings_general, Icons.Rounded.Tune),
     Tweaks(R.string.nav_tweaks, Icons.Rounded.Bolt),
     Appearance(R.string.appearance, Icons.Rounded.Palette),
+    Audio(R.string.section_audio, Icons.AutoMirrored.Rounded.VolumeUp),
     About(R.string.section_about, Icons.Rounded.Info)
 }
 
@@ -263,6 +265,14 @@ internal val SETTINGS_SEARCH_ITEMS = listOf(
         summaryText = "Follow dynamic colors or select a preset palette",
         tab = SettingsSidebarTab.Appearance,
         icon = Icons.Rounded.Palette
+    ),
+
+    // Audio
+    SettingsSearchItem(
+        titleRes = R.string.sound_effects,
+        summaryRes = R.string.sound_effects_desc,
+        tab = SettingsSidebarTab.Audio,
+        icon = Icons.AutoMirrored.Rounded.VolumeUp
     ),
 
     // About

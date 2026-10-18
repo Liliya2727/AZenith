@@ -55,6 +55,7 @@ class ZXGameSpaceActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        zx.azenith.ui.util.AudioUtil.init(this)
 
         // The window background shows through until the first Compose frame, so it follows the same
         // scheme the shell wears rather than a fixed colour — a hardcoded one flashes against it.

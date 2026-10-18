@@ -77,6 +77,7 @@ import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material.icons.rounded.WifiOff
 import androidx.compose.material3.ExperimentalMaterial3Api
+import zx.azenith.ui.util.AudioUtil
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -249,7 +250,10 @@ internal fun ZXGameSpaceQuickSettingsOverlay(
                             )
                         }
                         IconButton(
-                            onClick = onClose,
+                            onClick = {
+                                AudioUtil.playCancel(context)
+                                onClose()
+                            },
                             modifier = Modifier
                                 .size(36.dp)
                                 .gamepadFocusOutline(shape = CircleShape, register = true)

@@ -81,6 +81,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import zx.azenith.ui.util.AudioUtil
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.Android
@@ -242,6 +244,7 @@ internal fun ZXGameSpaceSettingsStage(
     val scheme = MaterialTheme.colorScheme
     val motion = MaterialTheme.motionScheme
     val density = LocalDensity.current
+    val context = LocalContext.current
 
     Row(
         modifier = modifier.padding(top = 4.dp, bottom = 0.dp),
@@ -330,7 +333,10 @@ internal fun ZXGameSpaceSettingsStage(
                                     }
                                     .gamepadFocusOutline(shape = itemShape, register = true)
                                     .clip(itemShape)
-                                    .clickable { onSelectTab(tab) }
+                                    .clickable {
+                                        AudioUtil.playOk(context)
+                                        onSelectTab(tab)
+                                    }
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -386,6 +392,7 @@ internal fun ZXGameSpaceSettingsStage(
                         onApplyProfile = onApplyProfile
                     )
                     SettingsSidebarTab.Appearance -> SettingsAppearancePane()
+                    SettingsSidebarTab.Audio -> SettingsAudioPane()
                     SettingsSidebarTab.About -> SettingsAboutPane(
                         deviceName = deviceName,
                         chipsetName = chipsetName
@@ -3149,6 +3156,44 @@ internal fun GameSpacePaletteSwatch(
 }
 
 @Composable
+internal fun SettingsAudioPane(
+    settingsViewModel: SettingsViewModel = viewModel()
+) {
+    val uiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+    val scrollState = rememberScrollState()
+    val scheme = MaterialTheme.colorScheme
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Column {
+            Text(
+                text = stringResource(R.string.section_audio),
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                color = scheme.onSurface
+            )
+            Text(
+                text = "Sound effects, interaction feedback, and audio behavior",
+                style = MaterialTheme.typography.bodySmall,
+                color = scheme.onSurfaceVariant.copy(alpha = 0.8f)
+            )
+        }
+
+        SettingsSwitchCard(
+            icon = Icons.AutoMirrored.Rounded.VolumeUp,
+            title = stringResource(R.string.sound_effects),
+            summary = stringResource(R.string.sound_effects_desc),
+            checked = uiState.soundEffects,
+            onCheckedChange = { settingsViewModel.setSoundEffects(it) }
+        )
+    }
+}
+
+@Composable
 internal fun SettingsAboutPane(
     deviceName: String = "",
     chipsetName: String = ""
@@ -3713,6 +3758,7 @@ internal fun SettingsSwitchCard(
     modifier: Modifier = Modifier,
     summary: String? = null
 ) {
+    val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(18.dp)
 
@@ -3724,7 +3770,15 @@ internal fun SettingsSwitchCard(
             .fillMaxWidth()
             .gamepadFocusOutline(shape = shape, register = true)
             .clip(shape)
-            .clickable { onCheckedChange(!checked) }
+            .clickable {
+                val newVal = !checked
+                if (newVal) {
+                    AudioUtil.playOk(context)
+                } else {
+                    AudioUtil.playCancel(context)
+                }
+                onCheckedChange(newVal)
+            }
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -3767,7 +3821,7 @@ internal fun SettingsSwitchCard(
 
             GameSpaceSwitch(
                 checked = checked,
-                onCheckedChange = onCheckedChange
+                onCheckedChange = null
             )
         }
     }
@@ -3781,10 +3835,22 @@ internal fun GameSpaceSwitch(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
+    val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
+    val handleCheckedChange: ((Boolean) -> Unit)? = if (onCheckedChange != null) {
+        { newVal ->
+            if (newVal) {
+                AudioUtil.playOk(context)
+            } else {
+                AudioUtil.playCancel(context)
+            }
+            onCheckedChange(newVal)
+        }
+    } else null
+
     Switch(
         checked = checked,
-        onCheckedChange = onCheckedChange,
+        onCheckedChange = handleCheckedChange,
         enabled = enabled,
         thumbContent = {
             AnimatedContent(
@@ -3825,6 +3891,7 @@ internal fun SettingsActionCard(
     summary: String? = null,
     trailingBadge: String? = null
 ) {
+    val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(18.dp)
 
@@ -3836,7 +3903,10 @@ internal fun SettingsActionCard(
             .fillMaxWidth()
             .gamepadFocusOutline(shape = shape, register = true)
             .clip(shape)
-            .clickable(onClick = onClick)
+            .clickable {
+                AudioUtil.playOk(context)
+                onClick()
+            }
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),

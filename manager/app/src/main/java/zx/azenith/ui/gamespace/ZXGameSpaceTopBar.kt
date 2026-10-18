@@ -78,6 +78,7 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Thermostat
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
+import zx.azenith.ui.util.AudioUtil
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -155,6 +156,7 @@ internal fun ZXGameSpaceTopBar(
 ) {
     val scheme = MaterialTheme.colorScheme
     val density = LocalDensity.current
+    val context = LocalContext.current
 
     var tabsWidthPx by remember { mutableFloatStateOf(0f) }
     var cachedLogoWidthPx by remember { mutableFloatStateOf(0f) }
@@ -281,6 +283,7 @@ internal fun ZXGameSpaceTopBar(
                                 .gamepadFocusOutline(shape = shape, register = true)
                                 .clickable {
                                     if (searchOpen) onSearchClose()
+                                    AudioUtil.playOk(context)
                                     onSelectCategory(tab)
                                 }
                         ) {
@@ -484,7 +487,10 @@ internal fun ZXGameSpaceTopBar(
                             modifier = Modifier
                                 .size(26.dp)
                                 .clip(CircleShape)
-                                .clickable(onClick = onSearchClose)
+                                .clickable(onClick = {
+                                    AudioUtil.playCancel(context)
+                                    onSearchClose()
+                                })
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
@@ -647,6 +653,7 @@ internal fun ZXGameSpaceExitDialog(
     onExitApp: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
+    val context = LocalContext.current
     val defaultRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
@@ -727,7 +734,10 @@ internal fun ZXGameSpaceExitDialog(
                             .clip(RoundedCornerShape(20.dp))
                             .focusRequester(defaultRequester)
                             .gamepadFocusOutline(shape = RoundedCornerShape(20.dp), register = true)
-                            .clickable(onClick = onExitShell)
+                            .clickable(onClick = {
+                                AudioUtil.playOk(context)
+                                onExitShell()
+                            })
                     ) {
                         Column(
                             modifier = Modifier
@@ -775,7 +785,10 @@ internal fun ZXGameSpaceExitDialog(
                             .height(130.dp)
                             .clip(RoundedCornerShape(20.dp))
                             .gamepadFocusOutline(shape = RoundedCornerShape(20.dp), register = true)
-                            .clickable(onClick = onExitApp)
+                            .clickable(onClick = {
+                                AudioUtil.playOk(context)
+                                onExitApp()
+                            })
                     ) {
                         Column(
                             modifier = Modifier
@@ -1028,7 +1041,10 @@ internal fun ZXGameSpaceSearchPane(
                     modifier = Modifier
                         .size(32.dp)
                         .clip(CircleShape)
-                        .clickable(onClick = onClose)
+                        .clickable(onClick = {
+                            AudioUtil.playCancel(context)
+                            onClose()
+                        })
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
