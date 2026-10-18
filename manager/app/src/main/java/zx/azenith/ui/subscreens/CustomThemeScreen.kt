@@ -37,9 +37,12 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -211,13 +214,8 @@ fun ColorPaletteScreen(navController: NavController) {
             .apply()
     }
     
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
-
-    // The mock preview is pinned above the list instead of scrolling away in it: expanded at
-    // rest, shrunk once the list has moved, and re-expanded on tap for a closer look.
-    // Collapsing keys off isScrollInProgress rather than the scroll offset because the header's
-    // own height change reflows the list and would otherwise re-trigger itself immediately.
     val lazyListState = rememberLazyListState()
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(canScroll = { lazyListState.canScrollBackward })
 
     // Search results land here. Both LazyColumns render the same settingsItems,
     // so an item index inside it is the item index in either list.
@@ -225,23 +223,21 @@ fun ColorPaletteScreen(navController: NavController) {
         owns = { it.startsWith("pers.") },
         indexOf = { id -> PERS_ROW_ITEMS[id] }
     )
-    var previewExpandedByTap by rememberSaveable { mutableStateOf(false) }
-    // Latched, not "is the list at the top": re-expanding on the way back up changed the
-    // preview's height in the middle of a flick and reflowed the list under the finger, so the
-    // top rows slid away just as they were reached. The handle and the card still re-open it.
-    var previewMoved by rememberSaveable { mutableStateOf(false) }
-    // canScrollBackward, not the raw offset: it is false at the very top and only turns true once
-    // the head has actually ridden up. The offset counts the list's own content padding, so
-    // `> 8` read as "scrolled" before anything had moved and opened the screen already shrunk.
-    val listScrolled by remember(lazyListState) {
-        derivedStateOf { lazyListState.isScrollInProgress || lazyListState.canScrollBackward }
-    }
-    LaunchedEffect(listScrolled) {
-        if (listScrolled) {
-            previewMoved = true
-            previewExpandedByTap = false
+
+    val isAtTop by remember(lazyListState) {
+        derivedStateOf {
+            lazyListState.firstVisibleItemIndex == 0 && lazyListState.firstVisibleItemScrollOffset == 0
         }
     }
+    var manualExpanded by rememberSaveable { mutableStateOf<Boolean?>(null) }
+
+    LaunchedEffect(lazyListState.isScrollInProgress) {
+        if (lazyListState.isScrollInProgress) {
+            manualExpanded = null
+        }
+    }
+
+    val isPreviewExpanded = manualExpanded ?: isAtTop
 
 
     val cropLauncher = rememberLauncherForActivityResult(
@@ -537,13 +533,16 @@ MockCardFrame(
         } else {
             // The preview lives outside the list, so it stays put while the settings scroll
             // underneath it; the list's own offset is what collapses it.
-            Column(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = innerPadding.calculateTopPadding())
+            ) {
                 PinnedPreviewHeader(
-                    expanded = previewExpandedByTap || !previewMoved,
-                    // Only the tapped-open state zooms to the banner. At rest the full home
-                    // screen is what you want to see, so it stays unzoomed.
+                    expanded = isPreviewExpanded,
                     personalization = personalization,
-                    onToggle = { previewExpandedByTap = !previewExpandedByTap },
+                    onToggle = { manualExpanded = !isPreviewExpanded },
+                    lazyListState = lazyListState,
                     keyColor = currentKeyColor,
                     colorSpec = currentColorSpec,
                     isDark = isDark,
@@ -551,20 +550,23 @@ MockCardFrame(
                     isBannerEnabled = isBannerEnabled,
                     gradientAlpha = bannerGradientAlpha,
                     customBannerUri = customBannerUri,
-                    modifier = Modifier.padding(top = innerPadding.calculateTopPadding())
+                    modifier = Modifier.fillMaxWidth()
                 )
                 
                 Surface(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .padding(top = 12.dp),
+                        .padding(top = 8.dp),
                     shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                     tonalElevation = 1.dp
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
-                        SheetHandle(onClick = { previewExpandedByTap = !previewExpandedByTap })
+                        SheetHandle(
+                            lazyListState = lazyListState,
+                            onClick = { manualExpanded = !isPreviewExpanded }
+                        )
         
                         LazyColumn(
                             modifier = Modifier
@@ -1224,10 +1226,18 @@ private val MOCK_DIALOG_BLUR = 8.dp
 
 /** Drag-handle pill di atas sheet settings, gaya Instagram comment sheet. */
 @Composable
-private fun SheetHandle(onClick: () -> Unit) {
+private fun SheetHandle(
+    lazyListState: LazyListState,
+    onClick: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .scrollable(
+                state = lazyListState,
+                orientation = Orientation.Vertical,
+                reverseDirection = false
+            )
             // A drag handle is a touch affordance; the mock card below is the d-pad stop that
             // expands the preview.
             .focusProperties { canFocus = false }
@@ -1277,8 +1287,8 @@ fun PaletteTopAppBar(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-            
-            windowInsets = WindowInsets(0, 0, 0, 0)
+            windowInsets = WindowInsets(0, 0, 0, 0),
+            scrollBehavior = scrollBehavior
         )
     }
 }
@@ -1296,6 +1306,7 @@ private fun PinnedPreviewHeader(
     expanded: Boolean,
     personalization: Personalization,
     onToggle: () -> Unit,
+    lazyListState: LazyListState,
     keyColor: Int,
     colorSpec: ColorEngine,
     isDark: Boolean,
@@ -1315,22 +1326,12 @@ private fun PinnedPreviewHeader(
     )
 
     BoxWithConstraints(modifier = modifier) {
-        // The expanded card is the tall portrait phone; the collapsed row is only
-        // as tall as the two half-screens need, which is what leaves room for the
-        // list underneath instead of an empty band.
-        // Card aspect follows the mock's own 190:396 ratio once collapsed, so the
-        // uniform scale fills both axes instead of leaving dead margins on one side.
-        // Expanded: the tall portrait phone. Collapsed: the same phone shrunk, so the
-        // card must scale DOWN with the frame -- deriving height from maxWidth alone
-        // made the collapsed card taller than the expanded one.
-        // Two measured heights, not the mock's aspect: MockScreen already scales to
-        // fit, so deriving height from 190:396 either overshot the viewport or left a
-        // dead band. Clamping to maxHeight made the card full-screen.
         val mockAspect = MOCK_H / MOCK_W
-        // Collapsed: height is DERIVED from the width so the frame keeps the mock's
-        // 190:396 ratio exactly. Setting them independently made MockScreen's minOf
-        // go height-limited, which shrank the widgets and opened a dead margin.
-        val targetHeight = if (expanded) maxWidth * 1.45f else maxWidth * 0.40f * mockAspect
+        val targetHeight = if (expanded) {
+            minOf(maxWidth * 1.12f, 430.dp).coerceAtLeast(320.dp)
+        } else {
+            minOf(maxWidth * 0.42f, 165.dp).coerceAtLeast(140.dp)
+        }
         val height by animateDpAsState(
             targetValue = targetHeight,
             animationSpec = spring(
@@ -1339,9 +1340,7 @@ private fun PinnedPreviewHeader(
             ),
             label = "previewHeight"
         )
-        val shape = personalization.shapes.extraLarge
-        val fullWidth = maxWidth
-        val targetWidth = if (expanded) fullWidth else fullWidth * 0.40f
+        val targetWidth = (targetHeight / mockAspect).coerceIn(70.dp, maxWidth * 0.88f)
         val frameWidth by animateDpAsState(
             targetValue = targetWidth,
             animationSpec = spring(
@@ -1355,21 +1354,21 @@ private fun PinnedPreviewHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(height)
-                .padding(horizontal = 16.dp)
+                .scrollable(
+                    state = lazyListState,
+                    orientation = Orientation.Vertical,
+                    reverseDirection = false
+                )
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center
         ) {
-            // A fixed-dp radius reads rounder once the frame is smaller, because the
-            // corner takes up more of the box. Scale it with the frame so the same
-            // shape reads the same at any size.
-            val cornerScale = frameWidth / fullWidth
-            val base = 28.dp * cornerScale * personalization.cornerMultiplier
+            val cornerScale = frameWidth / (420.dp / mockAspect)
+            val base = (28.dp * cornerScale * personalization.cornerMultiplier).coerceAtLeast(10.dp)
             val scaledShape = RoundedCornerShape(base)
             MockCardFrame(
                 scheme = scheme,
                 shape = scaledShape,
-                // The tap target is the frame itself: swiping that starts on the card's
-                // dead margins still reaches the list, while a tap on the mock expands it.
                 modifier = Modifier
-                    .align(Alignment.Center)
                     .width(frameWidth)
                     .fillMaxHeight()
                     .gamepadFocusOutline(shape = scaledShape, register = true)
