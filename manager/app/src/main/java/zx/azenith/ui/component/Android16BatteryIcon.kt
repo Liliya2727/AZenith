@@ -59,13 +59,13 @@ fun Android16BatteryIcon(
         else -> Color(0xFF161616)
     }
 
-    val bodyWidth = 27.dp
-    val bodyHeight = 13.5.dp
+    val bodyWidth = 35.dp
+    val bodyHeight = 17.5.dp
 
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(if (isCharging) 0.dp else 1.dp)
+        horizontalArrangement = Arrangement.spacedBy(if (isCharging) 0.dp else 1.2.dp)
     ) {
         // Battery Body
         Box(
@@ -74,7 +74,7 @@ fun Android16BatteryIcon(
                 .height(bodyHeight)
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val cornerRadius = CornerRadius(3.5.dp.toPx(), 3.5.dp.toPx())
+                val cornerRadius = CornerRadius(size.height * 0.28f, size.height * 0.28f)
 
                 // 1. Draw track
                 drawRoundRect(
@@ -109,15 +109,20 @@ fun Android16BatteryIcon(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
+                val (fontSize, letterSpacing) = when {
+                    clampedLevel == 100 -> 11.5.sp to (-0.5).sp
+                    clampedLevel >= 10 -> 12.5.sp to (-0.2).sp
+                    else -> 12.5.sp to 0.sp
+                }
                 Text(
                     text = "$clampedLevel",
                     style = TextStyle(
-                        fontSize = if (clampedLevel == 100) 8.sp else 8.5.sp,
+                        fontSize = fontSize,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.SansSerif,
                         platformStyle = PlatformTextStyle(includeFontPadding = false),
-                        lineHeight = 9.sp,
-                        letterSpacing = if (clampedLevel == 100) (-0.8).sp else (-0.2).sp
+                        lineHeight = fontSize,
+                        letterSpacing = letterSpacing
                     ),
                     color = textColor,
                     textAlign = TextAlign.Center
@@ -132,21 +137,21 @@ fun Android16BatteryIcon(
                 contentDescription = null,
                 tint = Color.White,
                 modifier = Modifier
-                    .size(13.dp)
-                    .offset(x = (-2).dp)
+                    .size(16.dp)
+                    .offset(x = (-1.5).dp)
             )
         } else {
             Surface(
                 shape = RoundedCornerShape(
-                    topEnd = 1.dp,
-                    bottomEnd = 1.dp,
+                    topEnd = 1.2.dp,
+                    bottomEnd = 1.2.dp,
                     topStart = 0.5.dp,
                     bottomStart = 0.5.dp
                 ),
                 color = trackColor,
                 modifier = Modifier
-                    .width(1.8.dp)
-                    .height(5.5.dp)
+                    .width(2.dp)
+                    .height(7.dp)
             ) {}
         }
     }
