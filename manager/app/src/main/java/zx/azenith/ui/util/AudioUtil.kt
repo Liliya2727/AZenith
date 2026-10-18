@@ -41,6 +41,9 @@ object SoundEffectsState {
 }
 
 object AudioUtil {
+    @Volatile
+    var isGameHubActive: Boolean = false
+
     private var soundPool: SoundPool? = null
     private var scrollSoundId = 0
     private var okSoundId = 0
@@ -73,7 +76,7 @@ object AudioUtil {
         pool.setOnLoadCompleteListener { p, sampleId, status ->
             if (status == 0) {
                 loadedSoundIds.add(sampleId)
-                if (pendingPlays.remove(sampleId) && SoundEffectsState.enabled.value) {
+                if (pendingPlays.remove(sampleId) && SoundEffectsState.enabled.value && isGameHubActive) {
                     p.play(sampleId, 1f, 1f, 1, 0, 1f)
                 }
             }
@@ -90,6 +93,7 @@ object AudioUtil {
     }
 
     private fun play(context: Context, soundId: Int) {
+        if (!isGameHubActive) return
         if (!SoundEffectsState.enabled.value) return
         if (!isInitialized) {
             init(context)

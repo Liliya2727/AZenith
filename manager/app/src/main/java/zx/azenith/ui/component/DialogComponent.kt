@@ -359,20 +359,14 @@ private fun ConfirmDialog(
             horizontalArrangement = Arrangement.End
         ) {
             TextButton(
-                onClick = {
-                    zx.azenith.ui.util.AudioUtil.playCancel(context)
-                    dismiss()
-                },
+                onClick = dismiss,
                 modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
             ) {
                 Text(text = visuals.dismiss ?: stringResource(id = android.R.string.cancel))
             }
             Spacer(modifier = Modifier.width(8.dp))
             TextButton(
-                onClick = {
-                    zx.azenith.ui.util.AudioUtil.playOk(context)
-                    confirm()
-                },
+                onClick = confirm,
                 modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
             ) {
                 Text(text = visuals.confirm ?: stringResource(id = android.R.string.ok))
@@ -417,20 +411,14 @@ fun CustomContentDialog(
             horizontalArrangement = Arrangement.End
         ) {
             TextButton(
-                onClick = {
-                    zx.azenith.ui.util.AudioUtil.playCancel(context)
-                    onDismiss()
-                },
+                onClick = onDismiss,
                 modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
             ) {
                 Text(text = dismissText)
             }
             Spacer(modifier = Modifier.width(8.dp))
             TextButton(
-                onClick = {
-                    zx.azenith.ui.util.AudioUtil.playOk(context)
-                    onConfirm()
-                },
+                onClick = onConfirm,
                 enabled = confirmEnabled,
                 modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
             ) {

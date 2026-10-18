@@ -432,11 +432,6 @@ fun ExpressiveSwitchItem(
     val interactionSource = remember { MutableInteractionSource() }
     val context = androidx.compose.ui.platform.LocalContext.current
     val handleCheckedChange: (Boolean) -> Unit = { newChecked ->
-        if (newChecked) {
-            zx.azenith.ui.util.AudioUtil.playOk(context)
-        } else {
-            zx.azenith.ui.util.AudioUtil.playCancel(context)
-        }
         onCheckedChange(newChecked)
     }
 

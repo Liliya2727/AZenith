@@ -483,25 +483,6 @@ fun SettingsScreen(
                     }
                 }
 
-                item { JumpRow(activeId = jumpPulse, entryId = "settings.section_audio", highlightShape = RoundedCornerShape(14.dp)) { SettingsSectionTitle(stringResource(R.string.section_audio)) } }
-                item {
-                    ExpressiveList(
-                        content = listOf(
-                            {
-                                JumpRow(activeId = jumpPulse, entryId = "settings.sound_effects") {
-                                    ExpressiveSwitchItem(
-                                        icon = Icons.AutoMirrored.Rounded.VolumeUp,
-                                        title = stringResource(R.string.sound_effects),
-                                        summary = stringResource(R.string.sound_effects_desc),
-                                        checked = uiState.soundEffects,
-                                        onCheckedChange = settingsViewModel::setSoundEffects
-                                    )
-                                }
-                            }
-                        )
-                    )
-                }
-
                 item { SettingsSectionTitle(stringResource(R.string.section_about)) }
                 item {
                     ExpressiveList(

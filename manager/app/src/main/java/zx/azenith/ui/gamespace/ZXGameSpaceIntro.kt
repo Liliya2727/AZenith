@@ -22,9 +22,13 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -32,6 +36,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -126,8 +131,8 @@ fun ZXGameSpaceIntro(
     val progress = remember { Animatable(0f) }
     val exitProgress = remember { Animatable(0f) }
 
-    // Silhouette falling & bouncing physics from max size to small
-    val logoScale = remember { Animatable(2.8f) }
+    // Silhouette spring physics: initially collapsed, springs and bounces in place at 'Ready'
+    val logoScale = remember { Animatable(0.2f) }
     val logoAlpha = remember { Animatable(0f) }
 
     // Exploding Material 3 shapes burst
@@ -148,20 +153,6 @@ fun ZXGameSpaceIntro(
     }
 
     LaunchedEffect(Unit) {
-        // Logo reveals immediately with an energetic punch
-        launch {
-            logoAlpha.animateTo(1f, tween(180, easing = LinearEasing))
-        }
-        launch {
-            logoScale.animateTo(
-                targetValue = 1f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMedium
-                )
-            )
-        }
-
         // Linear overall progress progression (0 to 1 over 5s)
         launch {
             progress.animateTo(
@@ -174,7 +165,7 @@ fun ZXGameSpaceIntro(
         // Stage 0: 0ms -> 1000ms (Link)
         // Stage 1: 1000ms -> 2100ms (Scan)
         // Stage 2: 2100ms -> 3200ms (Tune)
-        // Stage 3: 3200ms -> 5000ms (Ready) -> explodes immediately on Ready, lingers for ~1s, then exits cleanly
+        // Stage 3: 3200ms -> 5000ms (Ready) -> morphs from loader to bouncing silhouette + explosion
         delay(1000)
         stageIndex = 1
         delay(1100)
@@ -182,7 +173,22 @@ fun ZXGameSpaceIntro(
         delay(1100)
         stageIndex = 3
 
-        // Explode only upon reaching the 'Ready' stage
+        // Upon reaching 'Ready': spring bounce animation in place for app silhouette
+        launch {
+            logoAlpha.animateTo(1f, tween(200, easing = LinearEasing))
+        }
+        launch {
+            logoScale.snapTo(0.25f)
+            logoScale.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+            )
+        }
+
+        // Explode Material 3 shapes only upon reaching the 'Ready' stage
         launch {
             explosionProgress.animateTo(
                 targetValue = 1f,
@@ -233,20 +239,52 @@ fun ZXGameSpaceIntro(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // AZenith mascot silhouette directly on screen (no background card/circle)
-                Image(
-                    painter = painterResource(R.drawable.ic_launcher_monochrome),
-                    contentDescription = null,
-                    colorFilter = ColorFilter.tint(scheme.primary),
-                    modifier = Modifier
-                        .size(92.dp)
-                        .graphicsLayer {
-                            val totalScale = logoScale.value * exitScale
-                            scaleX = totalScale
-                            scaleY = totalScale
-                            alpha = logoAlpha.value * exitAlpha
+                // Morphing Material 3 loading animation during stages 0..2;
+                // Morphs and springs the app silhouette into place on stage 3 (Ready)
+                Box(
+                    modifier = Modifier.size(92.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AnimatedContent(
+                        targetState = stageIndex >= 3,
+                        transitionSpec = {
+                            (fadeIn(animationSpec = tween(220)) + scaleIn(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                ),
+                                initialScale = 0.25f
+                            )).togetherWith(
+                                fadeOut(animationSpec = tween(160)) + scaleOut(
+                                    animationSpec = tween(160, easing = FastOutSlowInEasing),
+                                    targetScale = 1.3f
+                                )
+                            )
+                        },
+                        label = "LoaderToSilhouetteMorph"
+                    ) { isReady ->
+                        if (!isReady) {
+                            Material3ExpressiveLoader(
+                                stageIndex = stageIndex,
+                                exitAlpha = exitAlpha
+                            )
+                        } else {
+                            Image(
+                                painter = painterResource(R.drawable.ic_launcher_monochrome),
+                                contentDescription = null,
+                                colorFilter = ColorFilter.tint(scheme.primary),
+                                modifier = Modifier
+                                    .size(92.dp)
+                                    .graphicsLayer {
+                                        val totalScale = logoScale.value * exitScale
+                                        scaleX = totalScale
+                                        scaleY = totalScale
+                                        alpha = logoAlpha.value * exitAlpha
+                                    }
+                            )
                         }
-                )
+                    }
+                }
 
                 Spacer(Modifier.height(18.dp))
 
@@ -270,6 +308,132 @@ fun ZXGameSpaceIntro(
                 progress = progress.value,
                 exitTranslationY = exitTranslationDown * 1.2f,
                 exitAlpha = exitAlpha
+            )
+        }
+    }
+}
+
+/**
+ * Material 3 Expressive loading animation shown on boot stages prior to 'Ready':
+ * - Dynamic stage-responsive morphing between Material 3 RoundedPolygons.
+ * - Continuous dual-phase rotation: forward morph shape + reverse orbital dashed ring.
+ * - Gentle breathing scale pulse.
+ * - Clean Material 3 tinted styling matching active system color scheme.
+ */
+@Composable
+private fun Material3ExpressiveLoader(
+    stageIndex: Int,
+    exitAlpha: Float = 1f,
+    modifier: Modifier = Modifier
+) {
+    val scheme = MaterialTheme.colorScheme
+    val infiniteTransition = rememberInfiniteTransition(label = "M3LoaderInfinite")
+
+    val rotationZ by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "M3LoaderShapeRotation"
+    )
+
+    val morphFraction by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(950, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "M3LoaderShapeMorph"
+    )
+
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.90f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(950, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "M3LoaderShapePulse"
+    )
+
+    val (shapeA, shapeB) = remember(stageIndex) {
+        when (stageIndex) {
+            0 -> BentoShapes.Circle to BentoShapes.Cookie4
+            1 -> BentoShapes.Cookie4 to BentoShapes.Clover4
+            else -> BentoShapes.Clover4 to BentoShapes.SoftBurst
+        }
+    }
+
+    val morph = remember(shapeA, shapeB) { Morph(shapeA, shapeB) }
+    val path = remember { Path() }
+    val matrix = remember { Matrix() }
+
+    Box(
+        modifier = modifier
+            .size(92.dp)
+            .graphicsLayer { alpha = exitAlpha },
+        contentAlignment = Alignment.Center
+    ) {
+        // Orbital dashed ring rotating in counter-direction
+        Canvas(
+            modifier = Modifier
+                .size(88.dp)
+                .graphicsLayer { this.rotationZ = -rotationZ * 0.75f }
+        ) {
+            drawCircle(
+                color = scheme.primary.copy(alpha = 0.28f),
+                radius = size.minDimension / 2f - 3.dp.toPx(),
+                style = Stroke(
+                    width = 2.4.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(
+                        floatArrayOf(14.dp.toPx(), 10.dp.toPx())
+                    )
+                )
+            )
+        }
+
+        // Inner expressive morphing polygon
+        Canvas(
+            modifier = Modifier
+                .size(66.dp)
+                .graphicsLayer {
+                    this.rotationZ = rotationZ
+                    scaleX = pulseScale
+                    scaleY = pulseScale
+                }
+        ) {
+            path.reset()
+            morph.toPath(progress = morphFraction, path = path)
+
+            val bounds = path.getBounds()
+            val maxDim = maxOf(bounds.width, bounds.height).coerceAtLeast(1f)
+            val targetSize = size.minDimension * 0.88f
+            val scale = targetSize / maxDim
+
+            matrix.reset()
+            matrix.translate(size.width / 2f, size.height / 2f)
+            matrix.scale(scale, scale)
+            matrix.translate(-bounds.center.x, -bounds.center.y)
+            path.transform(matrix)
+
+            // Primary solid container fill
+            drawPath(
+                path = path,
+                color = scheme.primary.copy(alpha = 0.88f)
+            )
+
+            // Crisp highlight border stroke
+            drawPath(
+                path = path,
+                color = scheme.onPrimary.copy(alpha = 0.40f),
+                style = Stroke(
+                    width = 2.dp.toPx(),
+                    cap = StrokeCap.Round,
+                    join = StrokeJoin.Round
+                )
             )
         }
     }

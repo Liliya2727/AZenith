@@ -55,6 +55,7 @@ class ZXGameSpaceActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        zx.azenith.ui.util.AudioUtil.isGameHubActive = true
         zx.azenith.ui.util.AudioUtil.init(this)
 
         // The window background shows through until the first Compose frame, so it follows the same
@@ -98,5 +99,10 @@ class ZXGameSpaceActivity : ComponentActivity() {
             if (dark) darkColorScheme() else lightColorScheme()
         }
         return scheme.surface.toArgb()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        zx.azenith.ui.util.AudioUtil.isGameHubActive = false
     }
 }

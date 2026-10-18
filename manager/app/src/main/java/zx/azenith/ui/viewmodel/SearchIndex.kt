@@ -403,15 +403,6 @@ object SearchIndex {
             target = SearchTarget.Pager("settings")
         ),
         SearchEntry(
-            id = "settings.sound_effects",
-            titleRes = R.string.sound_effects,
-            summaryRes = R.string.sound_effects_desc,
-            icon = Icons.AutoMirrored.Rounded.VolumeUp,
-            group = SearchGroup.Settings,
-            target = SearchTarget.Pager("settings"),
-            keywordsRes = listOf(R.string.section_audio)
-        ),
-        SearchEntry(
             id = "settings.about",
             titleRes = R.string.about_azenith,
             icon = Icons.Filled.ContactPage,
