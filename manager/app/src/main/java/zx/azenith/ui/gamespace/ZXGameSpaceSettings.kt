@@ -3226,14 +3226,21 @@ internal fun SettingsAudioPane(
     val currentTrack by BgmManager.currentTrack.collectAsStateWithLifecycle()
     val isPlaying by BgmManager.isPlaying.collectAsStateWithLifecycle()
 
+    var isImportingMusic by remember { mutableStateOf(false) }
+
     val audioPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
     ) { uris: List<Uri> ->
         if (uris.isNotEmpty()) {
+            isImportingMusic = true
             scope.launch {
-                val count = BgmManager.addTracksFromUris(context, uris)
-                if (count > 0) {
-                    Toast.makeText(context, "Added $count track(s)", Toast.LENGTH_SHORT).show()
+                try {
+                    val count = BgmManager.addTracksFromUris(context, uris)
+                    if (count > 0) {
+                        Toast.makeText(context, "Added $count track(s)", Toast.LENGTH_SHORT).show()
+                    }
+                } finally {
+                    isImportingMusic = false
                 }
             }
         }
@@ -3614,6 +3621,53 @@ internal fun SettingsAudioPane(
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    if (isImportingMusic) {
+        Dialog(
+            onDismissRequest = {},
+            properties = DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false,
+                usePlatformDefaultWidth = false
+            )
+        ) {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = scheme.surfaceContainerHigh,
+                contentColor = scheme.onSurface,
+                tonalElevation = 6.dp,
+                modifier = Modifier
+                    .fillMaxWidth(0.55f)
+                    .clip(RoundedCornerShape(24.dp))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(18.dp)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(36.dp),
+                        strokeWidth = 3.5.dp,
+                        color = scheme.primary
+                    )
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.bgm_importing_title),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onSurface
+                        )
+                        Text(
+                            text = stringResource(R.string.bgm_importing_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = scheme.onSurfaceVariant
+                        )
                     }
                 }
             }

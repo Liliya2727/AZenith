@@ -376,6 +376,8 @@
     <string name="bgm_delete_track">Remove track</string>
     <string name="bgm_playing">Playing</string>
     <string name="bgm_stopped">Paused</string>
+    <string name="bgm_importing_title">Importing Music</string>
+    <string name="bgm_importing_desc">Reading audio metadata and preparing track…</string>
     <string name="section_current_status">Current Status</string>
     <string name="section_diagnostics">Diagnostics</string>
     <string name="section_display_render_settings">Display &amp; Render</string>

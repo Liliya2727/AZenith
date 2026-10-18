@@ -107,10 +107,10 @@ object BgmManager {
     @Volatile
     var isGameHubActive: Boolean = false
 
-    private val _isEnabled = MutableStateFlow(false)
+    private val _isEnabled = MutableStateFlow(true)
     val isEnabled: StateFlow<Boolean> = _isEnabled.asStateFlow()
 
-    private val _volume = MutableStateFlow(70)
+    private val _volume = MutableStateFlow(25)
     val volume: StateFlow<Int> = _volume.asStateFlow()
 
     private val _playlist = MutableStateFlow<List<BgmTrack>>(listOf(BgmTrack.DEFAULT))
@@ -160,8 +160,13 @@ object BgmManager {
         val appContext = context.applicationContext
         val prefs = appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-        val enabled = prefs.getBoolean(PREF_BGM_ENABLED, false)
-        val vol = prefs.getInt(PREF_BGM_VOLUME, 70).coerceIn(0, 100)
+        val enabled = prefs.getBoolean(PREF_BGM_ENABLED, true)
+        val vol = if (prefs.contains(PREF_BGM_VOLUME)) {
+            val saved = prefs.getInt(PREF_BGM_VOLUME, 25)
+            if (saved == 70) 25 else saved.coerceIn(0, 100)
+        } else {
+            25
+        }
         val activeId = prefs.getString(PREF_BGM_ACTIVE_ID, BgmTrack.DEFAULT.id) ?: BgmTrack.DEFAULT.id
 
         val loadedPlaylist = loadPlaylistFromPrefs(appContext, prefs)
