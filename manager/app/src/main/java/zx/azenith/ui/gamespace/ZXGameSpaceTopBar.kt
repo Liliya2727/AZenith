@@ -18,6 +18,7 @@
 
 package zx.azenith.ui.gamespace
 
+import android.view.KeyEvent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
@@ -97,6 +98,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.TransformOrigin
@@ -663,6 +667,17 @@ internal fun ZXGameSpaceExitDialog(
                 .widthIn(min = 460.dp, max = 520.dp)
                 .padding(20.dp)
                 .gamepadKeyWatch()
+                .onPreviewKeyEvent { event ->
+                    if (event.type == KeyEventType.KeyDown &&
+                        (event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
+                         event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ESCAPE)
+                    ) {
+                        onDismiss()
+                        true
+                    } else {
+                        false
+                    }
+                }
         ) {
             Column(
                 modifier = Modifier

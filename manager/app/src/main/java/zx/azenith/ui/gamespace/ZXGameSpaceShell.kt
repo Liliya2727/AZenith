@@ -103,16 +103,12 @@ fun ZXGameSpaceShell(
         onExit()
     }
 
-    // Back skips the intro, then backs out of the shell.
-    BackHandler {
-        if (introActive) {
-            introActive = false
-            scope.launch {
-                hubFade.snapTo(1f)
-                hubScale.snapTo(1f)
-            }
-        } else {
-            leaving = true
+    // Back skips the intro, then hub handles back navigation and confirmation dialogue.
+    BackHandler(enabled = introActive) {
+        introActive = false
+        scope.launch {
+            hubFade.snapTo(1f)
+            hubScale.snapTo(1f)
         }
     }
 
@@ -128,6 +124,7 @@ fun ZXGameSpaceShell(
                 }
         ) {
             ZXGameSpaceHub(
+                introActive = introActive,
                 profile = profile,
                 profileValue = profileValue,
                 games = games,

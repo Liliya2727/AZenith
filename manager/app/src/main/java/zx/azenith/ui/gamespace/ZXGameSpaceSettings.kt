@@ -19,9 +19,14 @@ package zx.azenith.ui.gamespace
 import android.content.Context
 import android.net.Uri
 import android.os.Build
+import android.view.KeyEvent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import zx.azenith.ui.component.gamepadKeyWatch
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -2012,7 +2017,7 @@ private fun ApplyGameWallpaperDialog(
             shape = RoundedCornerShape(28.dp),
             color = scheme.surfaceContainerHigh,
             contentColor = scheme.onSurface,
-            modifier = if (isLandscape) {
+            modifier = (if (isLandscape) {
                 Modifier
                     .fillMaxWidth(0.92f)
                     .fillMaxHeight(0.96f)
@@ -2022,7 +2027,19 @@ private fun ApplyGameWallpaperDialog(
                     .fillMaxWidth(0.92f)
                     .fillMaxHeight(0.88f)
                     .padding(12.dp)
-            }
+            })
+                .gamepadKeyWatch()
+                .onPreviewKeyEvent { event ->
+                    if (event.type == KeyEventType.KeyDown &&
+                        (event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
+                         event.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_ESCAPE)
+                    ) {
+                        onDismiss()
+                        true
+                    } else {
+                        false
+                    }
+                }
         ) {
             Column(
                 modifier = Modifier

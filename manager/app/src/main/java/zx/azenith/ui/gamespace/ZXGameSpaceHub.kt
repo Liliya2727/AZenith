@@ -117,6 +117,7 @@ import zx.azenith.ui.viewmodel.ApplistViewmodel
  */
 @Composable
 fun ZXGameSpaceHub(
+    introActive: Boolean = false,
     profile: String,
     profileValue: String = "",
     games: List<ApplistViewmodel.AppInfo>,
@@ -225,6 +226,35 @@ fun ZXGameSpaceHub(
     val baseDensity = LocalDensity.current
     val scaleFactor = appScalePercent.coerceIn(60, 150) / 100f
 
+    val handleBack: () -> Unit = {
+        if (exitPrompt) {
+            exitPrompt = false
+        } else if (sidePanelPromptOpen) {
+            sidePanelPromptOpen = false
+            pendingLaunchApp = null
+        } else if (tuningPkg != null) {
+            tuningPkg = null
+        } else if (wallpaperPkg != null) {
+            wallpaperPkg = null
+        } else if (quickSettingsOpen) {
+            quickSettingsOpen = false
+        } else if (category == TopCategory.Settings) {
+            selectedSettingsTab = SettingsSidebarTab.General
+            category = TopCategory.Games
+        } else if (searchOpen) {
+            searchOpen = false
+            searchQuery = ""
+        } else if (activeEntry == RibbonEntry.Welcome && homeExpanded) {
+            homeExpanded = false
+        } else if (activeEntry == RibbonEntry.Library && libraryExpanded) {
+            libraryExpanded = false
+        } else if (selectedRibbonIndex != 0) {
+            selectedRibbonIndex = 0
+        } else {
+            exitPrompt = true
+        }
+    }
+
     CompositionLocalProvider(
         LocalDensity provides Density(
             density = baseDensity.density * scaleFactor,
@@ -244,6 +274,11 @@ fun ZXGameSpaceHub(
                         }
                         KeyEvent.KEYCODE_BUTTON_R1 -> {
                             category = TopCategory.Settings
+                            true
+                        }
+                        KeyEvent.KEYCODE_BUTTON_B,
+                        KeyEvent.KEYCODE_ESCAPE -> {
+                            handleBack()
                             true
                         }
                         KeyEvent.KEYCODE_DPAD_UP -> {
@@ -718,34 +753,8 @@ fun ZXGameSpaceHub(
                 }
             }
 
-            BackHandler(
-                enabled = sidePanelPromptOpen || tuningPkg != null || wallpaperPkg != null || quickSettingsOpen ||
-                    category == TopCategory.Settings || searchOpen ||
-                    (activeEntry == RibbonEntry.Welcome && homeExpanded) ||
-                    (activeEntry == RibbonEntry.Library && libraryExpanded)
-            ) {
-                if (sidePanelPromptOpen) {
-                    sidePanelPromptOpen = false
-                    pendingLaunchApp = null
-                } else if (tuningPkg != null) {
-                    tuningPkg = null
-                } else if (wallpaperPkg != null) {
-                    wallpaperPkg = null
-                } else if (quickSettingsOpen) {
-                    quickSettingsOpen = false
-                } else if (category == TopCategory.Settings) {
-                    selectedSettingsTab = SettingsSidebarTab.General
-                    category = TopCategory.Games
-                } else if (searchOpen) {
-                    searchOpen = false
-                    searchQuery = ""
-                } else if (activeEntry == RibbonEntry.Welcome && homeExpanded) {
-                    homeExpanded = false
-                } else if (activeEntry == RibbonEntry.Library && libraryExpanded) {
-                    libraryExpanded = false
-                } else {
-                    selectedRibbonIndex = 0
-                }
+            BackHandler(enabled = !introActive) {
+                handleBack()
             }
         }
 
