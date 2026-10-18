@@ -247,7 +247,7 @@ fun ZXGameSpaceHub(
                             true
                         }
                         KeyEvent.KEYCODE_DPAD_UP -> {
-                            if (homeExpanded) {
+                            if (activeEntry == RibbonEntry.Welcome && homeExpanded) {
                                 homeExpanded = false
                                 scope.launch {
                                     welcomeScroll.animateScrollTo(0)
@@ -255,7 +255,7 @@ fun ZXGameSpaceHub(
                                     runCatching { ribbonFocusRequester.requestFocus() }
                                 }
                                 true
-                            } else if (libraryExpanded) {
+                            } else if (activeEntry == RibbonEntry.Library && libraryExpanded) {
                                 libraryExpanded = false
                                 scope.launch {
                                     delay(50)
@@ -287,7 +287,7 @@ fun ZXGameSpaceHub(
 
         val isAmoled = remember { prefs.getInt("color_mode", ColorMode.SYSTEM.value) == ColorMode.DARKAMOLED.value }
         val isHomescreenScrolled = category == TopCategory.Games && activeEntry == RibbonEntry.Welcome && (homeExpanded || welcomeScroll.value > 10)
-        val isLibrary = category == TopCategory.Games && (activeEntry == RibbonEntry.Library || libraryExpanded)
+        val isLibrary = category == TopCategory.Games && activeEntry == RibbonEntry.Library
         val isSettings = category == TopCategory.Settings
         val isOverlayOpen = tuningPkg != null || wallpaperPkg != null || sidePanelPromptOpen
 
@@ -324,11 +324,10 @@ fun ZXGameSpaceHub(
             )
         }
 
-        val isScrolled = homeExpanded || (category == TopCategory.Games && activeEntry == RibbonEntry.Welcome && welcomeScroll.value > 15)
+        val isScrolled = category == TopCategory.Games && activeEntry == RibbonEntry.Welcome && (homeExpanded || welcomeScroll.value > 15)
         val isHomeLogoGone = (category != TopCategory.Games) ||
             (activeEntry != RibbonEntry.Welcome) ||
-            homeExpanded ||
-            (welcomeScroll.value > 15)
+            (activeEntry == RibbonEntry.Welcome && (homeExpanded || welcomeScroll.value > 15))
         val topBarScrimAlpha by animateFloatAsState(
             targetValue = if (isScrolled) 1f else 0f,
             animationSpec = motion.defaultEffectsSpec<Float>(),
@@ -462,8 +461,11 @@ fun ZXGameSpaceHub(
                                     .fillMaxSize()
                                     .hazeSource(overlayHazeState)
                             ) {
+                                val isRibbonVisible = !searchOpen &&
+                                    !(activeEntry == RibbonEntry.Welcome && homeExpanded) &&
+                                    !(activeEntry == RibbonEntry.Library && libraryExpanded)
                                 AnimatedVisibility(
-                                    visible = !searchOpen && !homeExpanded && !libraryExpanded,
+                                    visible = isRibbonVisible,
                                     enter = fadeIn(effectsSpec) + expandVertically(spatialSpec),
                                     exit = fadeOut(effectsSpec) + shrinkVertically(spatialSpec)
                                 ) {
@@ -471,7 +473,12 @@ fun ZXGameSpaceHub(
                                         ZXGameSpaceTileRibbon(
                                             entries = ribbonEntries,
                                             selectedIndex = safeIndex,
-                                            onSelect = { selectedRibbonIndex = it },
+                                            onSelect = {
+                                                selectedRibbonIndex = it
+                                                if (ribbonEntries.getOrNull(it) != RibbonEntry.Welcome) {
+                                                    homeExpanded = false
+                                                }
+                                            },
                                             onActivate = { entry ->
                                                 when (entry) {
                                                     is RibbonEntry.Game -> requestAppLaunch(entry.app)
@@ -493,7 +500,9 @@ fun ZXGameSpaceHub(
                                     }
                                 }
 
-                                val canSwipeStage = !searchOpen && !homeExpanded && !libraryExpanded
+                                val canSwipeStage = !searchOpen &&
+                                    !(activeEntry == RibbonEntry.Welcome && homeExpanded) &&
+                                    !(activeEntry == RibbonEntry.Library && libraryExpanded)
                                 var accumulatedDragX by remember { mutableFloatStateOf(0f) }
                                 var hasSwipedInCurrentGesture by remember { mutableStateOf(false) }
                                 val haptic = LocalHapticFeedback.current
@@ -528,14 +537,22 @@ fun ZXGameSpaceHub(
                                                                     hasSwipedInCurrentGesture = true
                                                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                                     if (safeIndex < ribbonEntries.lastIndex) {
-                                                                        selectedRibbonIndex = safeIndex + 1
+                                                                        val next = safeIndex + 1
+                                                                        selectedRibbonIndex = next
+                                                                        if (ribbonEntries.getOrNull(next) != RibbonEntry.Welcome) {
+                                                                            homeExpanded = false
+                                                                        }
                                                                     }
                                                                 } else if (accumulatedDragX >= thresholdPx) {
                                                                     change.consume()
                                                                     hasSwipedInCurrentGesture = true
                                                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                                     if (safeIndex > 0) {
-                                                                        selectedRibbonIndex = safeIndex - 1
+                                                                        val prev = safeIndex - 1
+                                                                        selectedRibbonIndex = prev
+                                                                        if (ribbonEntries.getOrNull(prev) != RibbonEntry.Welcome) {
+                                                                            homeExpanded = false
+                                                                        }
                                                                     }
                                                                 }
                                                             }
@@ -602,7 +619,7 @@ fun ZXGameSpaceHub(
                                             RibbonEntry.Welcome -> WelcomeHubStage(
                                                 scroll = welcomeScroll,
                                                 expanded = homeExpanded,
-                                                onExpandedChange = { homeExpanded = it },
+                                                onExpandedChange = { if (activeEntry == RibbonEntry.Welcome) homeExpanded = it },
                                                 appScalePercent = appScalePercent,
                                                 profile = profile,
                                                 profileValue = profileValue,
@@ -620,10 +637,14 @@ fun ZXGameSpaceHub(
                                                     val idx = ribbonEntries.indexOfFirst {
                                                         it is RibbonEntry.Game && it.app.packageName == game.packageName
                                                     }
+                                                    homeExpanded = false
                                                     if (idx >= 0) selectedRibbonIndex = idx else requestAppLaunch(game)
                                                 },
                                                 onLaunchGame = requestAppLaunch,
-                                                onOpenLibrary = { selectedRibbonIndex = ribbonEntries.indexOf(RibbonEntry.Library) },
+                                                onOpenLibrary = {
+                                                    homeExpanded = false
+                                                    selectedRibbonIndex = ribbonEntries.indexOf(RibbonEntry.Library)
+                                                },
                                                 onOpenHomeWallpaper = { wallpaperPkg = "home" }
                                             )
 
@@ -640,7 +661,7 @@ fun ZXGameSpaceHub(
                                                 allApps = allApps,
                                                 expanded = libraryExpanded,
                                                 onOpenSettings = { tuningPkg = it.packageName },
-                                                onExpandedChange = { libraryExpanded = it },
+                                                onExpandedChange = { if (activeEntry == RibbonEntry.Library) libraryExpanded = it },
                                                 onClose = { selectedRibbonIndex = 0 },
                                                 onNavigateUp = { ribbonFocusRequester.requestFocus() }
                                             )
@@ -699,7 +720,9 @@ fun ZXGameSpaceHub(
 
             BackHandler(
                 enabled = sidePanelPromptOpen || tuningPkg != null || wallpaperPkg != null || quickSettingsOpen ||
-                    category == TopCategory.Settings || searchOpen || homeExpanded || libraryExpanded
+                    category == TopCategory.Settings || searchOpen ||
+                    (activeEntry == RibbonEntry.Welcome && homeExpanded) ||
+                    (activeEntry == RibbonEntry.Library && libraryExpanded)
             ) {
                 if (sidePanelPromptOpen) {
                     sidePanelPromptOpen = false
@@ -716,9 +739,9 @@ fun ZXGameSpaceHub(
                 } else if (searchOpen) {
                     searchOpen = false
                     searchQuery = ""
-                } else if (homeExpanded) {
+                } else if (activeEntry == RibbonEntry.Welcome && homeExpanded) {
                     homeExpanded = false
-                } else if (libraryExpanded) {
+                } else if (activeEntry == RibbonEntry.Library && libraryExpanded) {
                     libraryExpanded = false
                 } else {
                     selectedRibbonIndex = 0
