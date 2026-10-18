@@ -58,10 +58,13 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -71,11 +74,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.Android
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.CleaningServices
 import androidx.compose.material.icons.rounded.Close
@@ -94,6 +99,8 @@ import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.RestartAlt
@@ -103,12 +110,16 @@ import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.SettingsSuggest
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.SwapVerticalCircle
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.ThermostatAuto
 import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material.icons.rounded.WebStories
 import androidx.compose.material.icons.rounded.ZoomIn
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -121,6 +132,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -183,16 +195,24 @@ import com.materialkolor.rememberDynamicColorScheme
 import com.topjohnwu.superuser.Shell
 import zx.azenith.ui.theme.ColorEngine
 import zx.azenith.ui.theme.ColorMode
+import android.widget.Toast
+import zx.azenith.ui.component.AppIconImage
+import zx.azenith.ui.util.batchResetGameWallpapers
+import zx.azenith.ui.util.batchSetGameWallpaper
+import zx.azenith.ui.util.batchSetGameWallpaperMode
 import zx.azenith.ui.util.clearHeaderImage
 import zx.azenith.ui.util.dumpDiagnosticLogs
+import zx.azenith.ui.util.getGlobalGameWallpaperMode
 import zx.azenith.ui.util.getHeaderImage
 import zx.azenith.ui.util.getHomeWallpaperBlur
 import zx.azenith.ui.util.getSupportedRefreshRatesPicker
 import zx.azenith.ui.util.isHomeWallpaperEnabled
 import zx.azenith.ui.util.saveHeaderImage
 import zx.azenith.ui.util.saveMediaDirectly
+import zx.azenith.ui.util.setGlobalGameWallpaperMode
 import zx.azenith.ui.util.setHomeWallpaperBlur
 import zx.azenith.ui.util.setHomeWallpaperEnabled
+import zx.azenith.ui.viewmodel.ApplistViewmodel
 import zx.azenith.ui.viewmodel.SettingsViewModel
 import zx.azenith.ui.viewmodel.TweakViewModel
 
@@ -893,6 +913,10 @@ internal fun SettingsAppearancePane() {
             }
         )
 
+        GameWallpaperSection(
+            colorModeValue = colorModeValue
+        )
+
         ThemeModeSection(
             colorModeValue = colorModeValue,
             onModeSelected = {
@@ -1325,7 +1349,7 @@ private fun HomeWallpaperSection(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "Clean (No Wallpaper)",
+                                    text = "No Wallpaper",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = scheme.onSurfaceVariant.copy(alpha = 0.6f)
                                 )
@@ -1562,6 +1586,620 @@ private fun HomeWallpaperSection(
                         .fillMaxWidth()
                         .height(28.dp)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GameWallpaperSection(
+    colorModeValue: Int
+) {
+    val context = LocalContext.current
+    val scheme = MaterialTheme.colorScheme
+    val coroutineScope = rememberCoroutineScope()
+    val motion = MaterialTheme.motionScheme
+
+    val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    var selectedMode by remember {
+        mutableStateOf(context.getGlobalGameWallpaperMode())
+    }
+
+    DisposableEffect(prefs) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "gamespace_global_game_wallpaper_mode") {
+                selectedMode = context.getGlobalGameWallpaperMode()
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+
+    LaunchedEffect(Unit) {
+        if (ApplistViewmodel.apps.isEmpty()) {
+            ApplistViewmodel().loadApps(context)
+        }
+    }
+
+    val installed = ApplistViewmodel.apps
+    val targetGames = remember(installed) {
+        val configured = installed.filter { it.isEnabledInConfig || it.isRecommended }
+        if (configured.isNotEmpty()) configured else installed.filter { !it.isSystem }
+    }
+
+    var showBatchDialog by remember { mutableStateOf(false) }
+    var pendingBatchUri by remember { mutableStateOf<String?>(null) }
+
+    val batchImagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        uri?.let { sourceUri ->
+            coroutineScope.launch(Dispatchers.IO) {
+                val mimeType = context.contentResolver.getType(sourceUri) ?: ""
+                val isVideo = mimeType.startsWith("video/")
+                val extension = when {
+                    isVideo -> "mp4"
+                    mimeType == "image/gif" -> "gif"
+                    mimeType == "image/png" -> "png"
+                    mimeType == "image/webp" -> "webp"
+                    else -> "jpg"
+                }
+                val savedUri = context.saveMediaDirectly(sourceUri, extension)
+                if (savedUri != null) {
+                    withContext(Dispatchers.Main) {
+                        pendingBatchUri = savedUri
+                        showBatchDialog = true
+                    }
+                }
+            }
+        }
+    }
+
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = scheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = scheme.primaryContainer,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Rounded.SportsEsports,
+                            contentDescription = null,
+                            tint = scheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Game Wallpaper",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.onSurface
+                    )
+                    Text(
+                        text = "Default background wallpaper mode and batch artwork across games",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            GameWallpaperOptionRow(
+                title = "Default (App Icon)",
+                subtitle = "Dynamic artwork generated from each game's icon",
+                icon = Icons.Rounded.AutoAwesome,
+                isSelected = selectedMode == "default",
+                onClick = {
+                    selectedMode = "default"
+                    context.setGlobalGameWallpaperMode("default")
+                    val pkgs = targetGames.map { it.packageName }
+                    if (pkgs.isNotEmpty()) {
+                        context.batchSetGameWallpaperMode(pkgs, "default")
+                    }
+                }
+            )
+
+            GameWallpaperOptionRow(
+                title = "Follow Home Wallpaper",
+                subtitle = "All games mirror the current Home tab wallpaper",
+                icon = Icons.Rounded.Sync,
+                isSelected = selectedMode == "follow_home",
+                onClick = {
+                    selectedMode = "follow_home"
+                    context.setGlobalGameWallpaperMode("follow_home")
+                    val pkgs = targetGames.map { it.packageName }
+                    if (pkgs.isNotEmpty()) {
+                        context.batchSetGameWallpaperMode(pkgs, "follow_home")
+                    }
+                }
+            )
+
+            GameWallpaperOptionRow(
+                title = "Custom",
+                subtitle = "Configure individually per game or apply artwork in batch",
+                icon = Icons.Rounded.Palette,
+                isSelected = selectedMode == "custom",
+                onClick = {
+                    selectedMode = "custom"
+                    context.setGlobalGameWallpaperMode("custom")
+                }
+            )
+
+            AnimatedVisibility(
+                visible = selectedMode == "custom",
+                enter = fadeIn(motion.defaultEffectsSpec()) + expandVertically(motion.defaultSpatialSpec()),
+                exit = fadeOut(motion.defaultEffectsSpec()) + shrinkVertically(motion.defaultSpatialSpec())
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = scheme.surfaceContainerLowest.copy(alpha = 0.6f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Info,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = scheme.primary
+                            )
+                            Text(
+                                text = "Individual Custom: Open any game's App Settings (gear icon) to adjust custom stage artwork, dimming, and blur independently.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val batchShape = RoundedCornerShape(16.dp)
+                        Surface(
+                            shape = batchShape,
+                            color = scheme.primary,
+                            contentColor = scheme.onPrimary,
+                            modifier = Modifier
+                                .weight(1f)
+                                .gamepadFocusOutline(shape = batchShape, register = true)
+                                .clip(batchShape)
+                                .clickable {
+                                    batchImagePicker.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+                                    )
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.AddPhotoAlternate,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = "Batch Apply Wallpaper",
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                    maxLines = 1
+                                )
+                            }
+                        }
+
+                        val resetShape = RoundedCornerShape(16.dp)
+                        Surface(
+                            shape = resetShape,
+                            color = scheme.surfaceContainerHighest,
+                            contentColor = scheme.error,
+                            modifier = Modifier
+                                .gamepadFocusOutline(shape = resetShape, register = true)
+                                .clip(resetShape)
+                                .clickable {
+                                    val pkgs = targetGames.map { it.packageName }
+                                    if (pkgs.isNotEmpty()) {
+                                        context.batchResetGameWallpapers(pkgs)
+                                        Toast.makeText(context, "Reset all game wallpapers to default", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Refresh,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = scheme.error
+                                    )
+                                    Text(
+                                        text = "Reset All",
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = scheme.error,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showBatchDialog && pendingBatchUri != null) {
+        BatchApplyGameWallpaperDialog(
+            uri = pendingBatchUri!!,
+            games = targetGames,
+            onDismiss = {
+                showBatchDialog = false
+                pendingBatchUri = null
+            },
+            onApply = { selectedPackages ->
+                if (selectedPackages.isNotEmpty()) {
+                    context.batchSetGameWallpaper(selectedPackages, pendingBatchUri!!)
+                    Toast.makeText(
+                        context,
+                        "Applied wallpaper to ${selectedPackages.size} game${if (selectedPackages.size > 1) "s" else ""}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                showBatchDialog = false
+                pendingBatchUri = null
+            }
+        )
+    }
+}
+
+@Composable
+private fun GameWallpaperOptionRow(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    val cardShape = RoundedCornerShape(16.dp)
+
+    Surface(
+        shape = cardShape,
+        color = if (isSelected) scheme.primaryContainer else scheme.surfaceContainerHighest.copy(alpha = 0.5f),
+        contentColor = if (isSelected) scheme.onPrimaryContainer else scheme.onSurface,
+        modifier = Modifier
+            .fillMaxWidth()
+            .gamepadFocusOutline(shape = cardShape, register = true)
+            .clip(cardShape)
+            .clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = if (isSelected) scheme.primary else scheme.surfaceContainerHighest,
+                contentColor = if (isSelected) scheme.onPrimary else scheme.onSurfaceVariant,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    color = if (isSelected) scheme.onPrimaryContainer else scheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isSelected) scheme.onPrimaryContainer.copy(alpha = 0.8f) else scheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                imageVector = if (isSelected) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                contentDescription = null,
+                tint = if (isSelected) scheme.primary else scheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun BatchApplyGameWallpaperDialog(
+    uri: String,
+    games: List<ApplistViewmodel.AppInfo>,
+    onDismiss: () -> Unit,
+    onApply: (List<String>) -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    var applyToAll by remember { mutableStateOf(true) }
+    var selectedSet by remember { mutableStateOf(games.map { it.packageName }.toSet()) }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = scheme.surfaceContainerHigh,
+            contentColor = scheme.onSurface,
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = scheme.primaryContainer,
+                            contentColor = scheme.onPrimaryContainer,
+                            modifier = Modifier.size(42.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Wallpaper,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        Column {
+                            Text(
+                                text = "Batch Apply Wallpaper",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = scheme.onSurface
+                            )
+                            Text(
+                                text = "Choose which games receive this artwork",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Rounded.Close,
+                            contentDescription = "Close",
+                            tint = scheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = scheme.surfaceContainerLowest,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(84.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                ) {
+                    MediaBannerRenderer(
+                        uriString = uri,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    val allShape = RoundedCornerShape(14.dp)
+                    Surface(
+                        shape = allShape,
+                        color = if (applyToAll) scheme.primaryContainer else scheme.surfaceContainerHighest,
+                        contentColor = if (applyToAll) scheme.onPrimaryContainer else scheme.onSurface,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(allShape)
+                            .clickable { applyToAll = true }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (applyToAll) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = if (applyToAll) scheme.primary else scheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "All Games (${games.size})",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                            )
+                        }
+                    }
+
+                    val selectShape = RoundedCornerShape(14.dp)
+                    Surface(
+                        shape = selectShape,
+                        color = if (!applyToAll) scheme.primaryContainer else scheme.surfaceContainerHighest,
+                        contentColor = if (!applyToAll) scheme.onPrimaryContainer else scheme.onSurface,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(selectShape)
+                            .clickable { applyToAll = false }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (!applyToAll) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = if (!applyToAll) scheme.primary else scheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "Select Games",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                            )
+                        }
+                    }
+                }
+
+                if (!applyToAll) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${selectedSet.size} of ${games.size} selected",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = scheme.onSurfaceVariant
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            TextButton(
+                                onClick = { selectedSet = games.map { it.packageName }.toSet() },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text("Select All", style = MaterialTheme.typography.labelSmall)
+                            }
+                            TextButton(
+                                onClick = { selectedSet = emptySet() },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text("Deselect All", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 220.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(games) { game ->
+                            val isChecked = selectedSet.contains(game.packageName)
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isChecked) scheme.primaryContainer.copy(alpha = 0.35f) else Color.Transparent,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        selectedSet = if (isChecked) {
+                                            selectedSet - game.packageName
+                                        } else {
+                                            selectedSet + game.packageName
+                                        }
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    AppIconImage(app = game, size = 32.dp)
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = game.label,
+                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                            color = scheme.onSurface,
+                                            maxLines = 1
+                                        )
+                                        Text(
+                                            text = game.packageName,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = scheme.onSurfaceVariant,
+                                            maxLines = 1
+                                        )
+                                    }
+                                    Checkbox(
+                                        checked = isChecked,
+                                        onCheckedChange = { checked ->
+                                            selectedSet = if (checked) {
+                                                selectedSet + game.packageName
+                                            } else {
+                                                selectedSet - game.packageName
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    val targetCount = if (applyToAll) games.size else selectedSet.size
+                    Button(
+                        onClick = {
+                            val targetList = if (applyToAll) games.map { it.packageName } else selectedSet.toList()
+                            onApply(targetList)
+                        },
+                        enabled = targetCount > 0,
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Text("Apply ($targetCount)")
+                    }
+                }
             }
         }
     }

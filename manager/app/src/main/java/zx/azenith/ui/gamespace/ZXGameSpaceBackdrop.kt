@@ -87,7 +87,7 @@ internal fun ZXGameSpaceStageBackdrop(entry: RibbonEntry) {
                 customWallpaperUri = context.getHeaderImage()
             } else if (key == "gamespace_wallpaper_dimming_intensity") {
                 dimmingIntensity = prefs.getInt("gamespace_wallpaper_dimming_intensity", 75)
-            } else if (key == "gamespace_wallpaper_blur" || key == "gamespace_wallpaper_enabled" || key == "enable_banner_image" || key?.startsWith("game_wallpaper_") == true) {
+            } else if (key == "gamespace_wallpaper_blur" || key == "gamespace_wallpaper_enabled" || key == "enable_banner_image" || key == "gamespace_global_game_wallpaper_mode" || key?.startsWith("game_wallpaper_") == true) {
                 gameWallpaperTrigger++
             }
         }

@@ -47,9 +47,16 @@ fun Context.saveMediaDirectly(sourceUri: Uri, extension: String): String? {
     }
 }
 
-private fun Context.deleteOldBannerFile(uriString: String?) {
+private fun Context.deleteOldBannerFile(uriString: String?, excludingKey: String? = null) {
     if (uriString.isNullOrEmpty()) return
     try {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val isStillReferenced = prefs.all.entries.any { (k, v) ->
+            if (excludingKey != null && k == excludingKey) false
+            else v == uriString
+        }
+        if (isStillReferenced) return
+
         val uri = Uri.parse(uriString)
         val path = uri.path ?: uriString 
         val file = File(path)
@@ -72,7 +79,7 @@ fun Context.saveHeaderImage(uri: String) {
     val oldUri = getHeaderImage()
     
     if (oldUri != null && oldUri != uri) {
-        deleteOldBannerFile(oldUri)
+        deleteOldBannerFile(oldUri, excludingKey = KEY_HEADER_IMAGE)
     }
 
     getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -84,7 +91,7 @@ fun Context.saveHeaderImage(uri: String) {
 fun Context.clearHeaderImage() {
     val oldUri = getHeaderImage()
     
-    deleteOldBannerFile(oldUri)
+    deleteOldBannerFile(oldUri, excludingKey = KEY_HEADER_IMAGE)
 
     getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         .edit()
@@ -116,9 +123,22 @@ fun Context.setBannerGradientAlpha(alpha: Float) {
         .apply()
 }
 
-fun Context.getGameWallpaperMode(packageName: String): String {
+fun Context.getGlobalGameWallpaperMode(): String {
     return getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        .getString("game_wallpaper_mode_$packageName", "default") ?: "default"
+        .getString("gamespace_global_game_wallpaper_mode", "default") ?: "default"
+}
+
+fun Context.setGlobalGameWallpaperMode(mode: String) {
+    getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .edit()
+        .putString("gamespace_global_game_wallpaper_mode", mode)
+        .apply()
+}
+
+fun Context.getGameWallpaperMode(packageName: String): String {
+    val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    val fallback = prefs.getString("gamespace_global_game_wallpaper_mode", "default") ?: "default"
+    return prefs.getString("game_wallpaper_mode_$packageName", fallback) ?: fallback
 }
 
 fun Context.setGameWallpaperMode(packageName: String, mode: String) {
@@ -126,6 +146,41 @@ fun Context.setGameWallpaperMode(packageName: String, mode: String) {
         .edit()
         .putString("game_wallpaper_mode_$packageName", mode)
         .apply()
+}
+
+fun Context.batchSetGameWallpaperMode(packages: List<String>, mode: String) {
+    val editor = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+    packages.forEach { pkg ->
+        editor.putString("game_wallpaper_mode_$pkg", mode)
+    }
+    editor.apply()
+}
+
+fun Context.batchSetGameWallpaper(packages: List<String>, uri: String) {
+    val editor = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+    packages.forEach { pkg ->
+        editor.putString("game_wallpaper_mode_$pkg", "custom")
+        editor.putString("game_wallpaper_uri_$pkg", uri)
+        editor.putBoolean("game_wallpaper_enabled_$pkg", true)
+    }
+    editor.apply()
+}
+
+fun Context.batchResetGameWallpapers(packages: List<String>) {
+    val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    val editor = prefs.edit()
+    packages.forEach { pkg ->
+        val oldUri = prefs.getString("game_wallpaper_uri_$pkg", null)
+        editor.remove("game_wallpaper_mode_$pkg")
+        editor.remove("game_wallpaper_uri_$pkg")
+        editor.remove("game_wallpaper_enabled_$pkg")
+        editor.remove("game_wallpaper_dim_$pkg")
+        editor.remove("game_wallpaper_blur_$pkg")
+        if (oldUri != null) {
+            deleteOldBannerFile(oldUri, excludingKey = "game_wallpaper_uri_$pkg")
+        }
+    }
+    editor.apply()
 }
 
 fun Context.getGameWallpaperUri(packageName: String): String? {
@@ -137,7 +192,7 @@ fun Context.setGameWallpaperUri(packageName: String, uri: String?) {
     val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     val oldUri = prefs.getString("game_wallpaper_uri_$packageName", null)
     if (oldUri != null && oldUri != uri) {
-        deleteOldBannerFile(oldUri)
+        deleteOldBannerFile(oldUri, excludingKey = "game_wallpaper_uri_$packageName")
     }
     val editor = prefs.edit()
     if (uri != null) {

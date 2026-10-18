@@ -974,13 +974,16 @@ internal fun ZXGameSpaceWallpaperOverlay(
                     if (savedUri != null) {
                         if (isHome) {
                             context.saveHeaderImage(savedUri)
+                            context.setHomeWallpaperEnabled(true)
                         } else {
                             context.setGameWallpaperUri(pkg, savedUri)
                             context.setGameWallpaperMode(pkg, "custom")
+                            context.setGameWallpaperEnabled(pkg, true)
                         }
                         withContext(Dispatchers.Main) {
                             customUri = savedUri
                             selectedMode = "custom"
+                            isWallpaperEnabled = true
                         }
                     }
                 }
@@ -1190,6 +1193,10 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                 }
                                                 selectedMode = nextMode
                                                 context.setGameWallpaperMode(pkg, nextMode)
+                                                if (nextMode != "default" && !isWallpaperEnabled) {
+                                                    isWallpaperEnabled = true
+                                                    context.setGameWallpaperEnabled(pkg, true)
+                                                }
                                             }
                                     ) {
                                         Row(
@@ -1235,6 +1242,10 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                     }
                                                     selectedMode = nextMode
                                                     context.setGameWallpaperMode(pkg, nextMode)
+                                                    if (isChecked && !isWallpaperEnabled) {
+                                                        isWallpaperEnabled = true
+                                                        context.setGameWallpaperEnabled(pkg, true)
+                                                    }
                                                 }
                                             )
                                         }
@@ -1258,6 +1269,10 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                 context.setHomeWallpaperEnabled(next)
                                             } else {
                                                 context.setGameWallpaperEnabled(pkg, next)
+                                                if (!next && isOverrideActive) {
+                                                    selectedMode = "default"
+                                                    context.setGameWallpaperMode(pkg, "default")
+                                                }
                                             }
                                         }
                                 ) {
@@ -1280,12 +1295,6 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                 ),
                                                 maxLines = 1
                                             )
-                                            Text(
-                                                text = if (isWallpaperEnabled) "Wallpaper active" else "Clean (Monet/Pitch Black)",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = scheme.onSurfaceVariant,
-                                                maxLines = 1
-                                            )
                                         }
                                         Switch(
                                             checked = isWallpaperEnabled,
@@ -1295,6 +1304,10 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                     context.setHomeWallpaperEnabled(isChecked)
                                                 } else {
                                                     context.setGameWallpaperEnabled(pkg, isChecked)
+                                                    if (!isChecked && isOverrideActive) {
+                                                        selectedMode = "default"
+                                                        context.setGameWallpaperMode(pkg, "default")
+                                                    }
                                                 }
                                             }
                                         )
@@ -1465,7 +1478,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
                                                                 contentAlignment = Alignment.Center
                                                             ) {
                                                                 Text(
-                                                                    text = "Clean (No Wallpaper)",
+                                                                    text = "No Wallpaper",
                                                                     style = MaterialTheme.typography.labelSmall,
                                                                     color = scheme.onSurfaceVariant.copy(alpha = 0.6f)
                                                                 )
