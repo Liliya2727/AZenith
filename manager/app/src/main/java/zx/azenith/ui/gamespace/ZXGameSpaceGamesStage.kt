@@ -1837,13 +1837,7 @@ internal fun GameHeroStage(
     val gearPageBounce = remember { Animatable(1f) }
     val gearRotation = remember { Animatable(0f) }
 
-    var isFirstLaunch by remember { mutableStateOf(true) }
-
     LaunchedEffect(app.packageName) {
-        if (isFirstLaunch) {
-            isFirstLaunch = false
-            return@LaunchedEffect
-        }
         val sign = if (movingForward) 1f else -1f
 
         // 1. App Icon: springs with horizontal offset + scale overshoot
@@ -1918,17 +1912,17 @@ internal fun GameHeroStage(
         // 4. Action buttons: stay in place (no translation), bounce in place!
         launch {
             playPageBounce.animateTo(
-                targetValue = 1.18f,
+                targetValue = 1.20f,
                 animationSpec = spring(
-                    dampingRatio = 0.60f,
-                    stiffness = 850f
+                    dampingRatio = 0.55f,
+                    stiffness = 900f
                 )
             )
             playPageBounce.animateTo(
                 targetValue = 1f,
                 animationSpec = spring(
-                    dampingRatio = 0.42f,
-                    stiffness = 260f
+                    dampingRatio = 0.38f,
+                    stiffness = 240f
                 )
             )
         }
