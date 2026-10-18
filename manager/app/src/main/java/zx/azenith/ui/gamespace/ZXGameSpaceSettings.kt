@@ -3225,6 +3225,7 @@ internal fun SettingsAudioPane(
     val playlist by BgmManager.playlist.collectAsStateWithLifecycle()
     val currentTrack by BgmManager.currentTrack.collectAsStateWithLifecycle()
     val isPlaying by BgmManager.isPlaying.collectAsStateWithLifecycle()
+    val nowPlayingEnabled by BgmManager.isNowPlayingEnabled.collectAsStateWithLifecycle()
 
     var isImportingMusic by remember { mutableStateOf(false) }
 
@@ -3623,6 +3624,14 @@ internal fun SettingsAudioPane(
                         }
                     }
                 }
+
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.GraphicEq,
+                    title = stringResource(R.string.bgm_now_playing_title),
+                    summary = stringResource(R.string.bgm_now_playing_desc),
+                    checked = nowPlayingEnabled,
+                    onCheckedChange = { BgmManager.setNowPlayingEnabled(context, it) }
+                )
             }
         }
     }

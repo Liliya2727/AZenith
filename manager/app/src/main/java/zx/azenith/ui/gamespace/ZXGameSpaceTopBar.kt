@@ -152,6 +152,8 @@ internal fun ZXGameSpaceTopBar(
     onSettingsClick: () -> Unit,
     onAvatarClick: () -> Unit,
     onStatusClick: () -> Unit = {},
+    isNowPlayingOpen: Boolean = false,
+    onNowPlayingClick: () -> Unit = {},
     onLogoClick: (() -> Unit)? = null,
     onExit: () -> Unit
 ) {
@@ -607,6 +609,11 @@ internal fun ZXGameSpaceTopBar(
                     }
                 }
             }
+
+            NowPlayingDot(
+                isPanelOpen = isNowPlayingOpen,
+                onOpenPanel = onNowPlayingClick
+            )
         }
     }
 }

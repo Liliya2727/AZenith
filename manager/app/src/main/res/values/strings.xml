@@ -378,6 +378,15 @@
     <string name="bgm_stopped">Paused</string>
     <string name="bgm_importing_title">Importing Music</string>
     <string name="bgm_importing_desc">Reading audio metadata and preparing track…</string>
+    <string name="bgm_now_playing_title">Now Playing</string>
+    <string name="bgm_now_playing_desc">Show the currently playing BGM indicator in the status bar</string>
+    <string name="bgm_now_playing_repeat_all">Repeat all tracks</string>
+    <string name="bgm_now_playing_repeat_one">Repeat current track</string>
+    <string name="bgm_now_playing_previous">Previous track</string>
+    <string name="bgm_now_playing_next">Next track</string>
+    <string name="bgm_now_playing_play">Play</string>
+    <string name="bgm_now_playing_pause">Pause</string>
+    <string name="bgm_now_playing_playlist">Playlist</string>
     <string name="section_current_status">Current Status</string>
     <string name="section_diagnostics">Diagnostics</string>
     <string name="section_display_render_settings">Display &amp; Render</string>

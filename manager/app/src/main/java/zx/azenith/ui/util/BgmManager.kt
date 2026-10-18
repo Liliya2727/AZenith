@@ -18,6 +18,8 @@ package zx.azenith.ui.util
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.media.AudioAttributes
 import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
@@ -26,7 +28,9 @@ import android.provider.OpenableColumns
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -44,6 +48,13 @@ const val PREF_BGM_ENABLED = "gamespace_bgm_enabled"
 const val PREF_BGM_VOLUME = "gamespace_bgm_volume"
 const val PREF_BGM_PLAYLIST = "gamespace_bgm_playlist"
 const val PREF_BGM_ACTIVE_ID = "gamespace_bgm_active_id"
+const val PREF_BGM_NOW_PLAYING = "gamespace_bgm_now_playing"
+const val PREF_BGM_REPEAT_MODE = "gamespace_bgm_repeat_mode"
+
+enum class BgmRepeatMode {
+    ALL,
+    ONE
+}
 
 data class BgmTrack(
     val id: String,
@@ -113,6 +124,21 @@ object BgmManager {
     private val _volume = MutableStateFlow(25)
     val volume: StateFlow<Int> = _volume.asStateFlow()
 
+    private val _isNowPlayingEnabled = MutableStateFlow(true)
+    val isNowPlayingEnabled: StateFlow<Boolean> = _isNowPlayingEnabled.asStateFlow()
+
+    private val _repeatMode = MutableStateFlow(BgmRepeatMode.ALL)
+    val repeatMode: StateFlow<BgmRepeatMode> = _repeatMode.asStateFlow()
+
+    private val _playbackPositionMs = MutableStateFlow(0L)
+    val playbackPositionMs: StateFlow<Long> = _playbackPositionMs.asStateFlow()
+
+    private val _currentAlbumArt = MutableStateFlow<Bitmap?>(null)
+    val currentAlbumArt: StateFlow<Bitmap?> = _currentAlbumArt.asStateFlow()
+
+    private val albumArtCache = mutableMapOf<String, Bitmap?>()
+    private var positionJob: Job? = null
+
     private val _playlist = MutableStateFlow<List<BgmTrack>>(listOf(BgmTrack.DEFAULT))
     val playlist: StateFlow<List<BgmTrack>> = _playlist.asStateFlow()
 
@@ -124,6 +150,139 @@ object BgmManager {
 
     private var mediaPlayer: MediaPlayer? = null
     private var isInitialized = false
+
+    fun formatTimeMs(timeMs: Long): String {
+        val totalSeconds = (timeMs / 1000).coerceAtLeast(0L)
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        val hours = minutes / 60
+        return if (hours > 0) {
+            String.format("%d:%02d:%02d", hours, minutes % 60, seconds)
+        } else {
+            String.format("%d:%02d", minutes, seconds)
+        }
+    }
+
+    suspend fun loadAlbumArt(context: Context, track: BgmTrack): Bitmap? {
+        if (track.isDefault || track.relativePath == null) return null
+        synchronized(albumArtCache) {
+            if (albumArtCache.containsKey(track.id)) {
+                return albumArtCache[track.id]
+            }
+        }
+        return withContext(Dispatchers.IO) {
+            val file = File(context.filesDir, "bgm_tracks/${track.relativePath}")
+            if (!file.exists()) {
+                synchronized(albumArtCache) { albumArtCache[track.id] = null }
+                return@withContext null
+            }
+            val retriever = MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(file.absolutePath)
+                val pic = retriever.embeddedPicture
+                val bmp = if (pic != null) {
+                    BitmapFactory.decodeByteArray(pic, 0, pic.size)
+                } else null
+                synchronized(albumArtCache) { albumArtCache[track.id] = bmp }
+                bmp
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to load album art for ${track.title}", e)
+                synchronized(albumArtCache) { albumArtCache[track.id] = null }
+                null
+            } finally {
+                try { retriever.release() } catch (_: Exception) {}
+            }
+        }
+    }
+
+    private fun updateAlbumArtForTrack(context: Context, track: BgmTrack) {
+        scope.launch {
+            val bmp = loadAlbumArt(context, track)
+            _currentAlbumArt.value = bmp
+        }
+    }
+
+    private fun startPositionTracker() {
+        positionJob?.cancel()
+        positionJob = scope.launch {
+            while (_isPlaying.value) {
+                val player = mediaPlayer
+                if (player != null) {
+                    try {
+                        _playbackPositionMs.value = player.currentPosition.toLong()
+                    } catch (_: Exception) {}
+                }
+                delay(250L)
+            }
+        }
+    }
+
+    private fun stopPositionTracker() {
+        positionJob?.cancel()
+        positionJob = null
+    }
+
+    fun setNowPlayingEnabled(context: Context, enabled: Boolean) {
+        _isNowPlayingEnabled.value = enabled
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putBoolean(PREF_BGM_NOW_PLAYING, enabled).apply()
+    }
+
+    fun toggleRepeatMode(context: Context) {
+        val newMode = if (_repeatMode.value == BgmRepeatMode.ALL) BgmRepeatMode.ONE else BgmRepeatMode.ALL
+        _repeatMode.value = newMode
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putString(PREF_BGM_REPEAT_MODE, newMode.name.lowercase()).apply()
+
+        mediaPlayer?.let { player ->
+            try {
+                if (newMode == BgmRepeatMode.ONE) {
+                    player.isLooping = true
+                } else {
+                    player.isLooping = _playlist.value.size <= 1
+                    player.setOnCompletionListener { playNext(context) }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to toggle repeat mode", e)
+            }
+        }
+    }
+
+    fun seekTo(positionMs: Long) {
+        mediaPlayer?.let { player ->
+            try {
+                player.seekTo(positionMs.toInt())
+                _playbackPositionMs.value = positionMs
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to seek to $positionMs", e)
+            }
+        }
+    }
+
+    fun togglePlayPause(context: Context) {
+        val player = mediaPlayer
+        if (player != null) {
+            if (player.isPlaying) {
+                player.pause()
+                _isPlaying.value = false
+                stopPositionTracker()
+            } else {
+                player.start()
+                _isPlaying.value = true
+                startPositionTracker()
+            }
+        } else if (_isEnabled.value) {
+            playCurrentTrack(context.applicationContext)
+        }
+    }
+
+    fun playPreviousOrRestart(context: Context) {
+        if (_playbackPositionMs.value > 3000L) {
+            seekTo(0L)
+        } else {
+            playPrevious(context)
+        }
+    }
 
     data class AudioMetadata(
         val title: String? = null,
@@ -168,15 +327,22 @@ object BgmManager {
             25
         }
         val activeId = prefs.getString(PREF_BGM_ACTIVE_ID, BgmTrack.DEFAULT.id) ?: BgmTrack.DEFAULT.id
+        val nowPlayingEnabled = prefs.getBoolean(PREF_BGM_NOW_PLAYING, true)
+        val repeatModeStr = prefs.getString(PREF_BGM_REPEAT_MODE, "all")
+        val rMode = if (repeatModeStr == "one") BgmRepeatMode.ONE else BgmRepeatMode.ALL
 
         val loadedPlaylist = loadPlaylistFromPrefs(appContext, prefs)
         val selected = loadedPlaylist.firstOrNull { it.id == activeId } ?: loadedPlaylist.firstOrNull() ?: BgmTrack.DEFAULT
 
         _isEnabled.value = enabled
         _volume.value = vol
+        _isNowPlayingEnabled.value = nowPlayingEnabled
+        _repeatMode.value = rMode
         _playlist.value = loadedPlaylist
         _currentTrack.value = selected
         isInitialized = true
+
+        updateAlbumArtForTrack(appContext, selected)
 
         if (enabled && isGameHubActive) {
             playCurrentTrack(appContext)
@@ -274,6 +440,8 @@ object BgmManager {
     fun selectTrack(context: Context, track: BgmTrack) {
         val appContext = context.applicationContext
         _currentTrack.value = track
+        _playbackPositionMs.value = 0L
+        updateAlbumArtForTrack(appContext, track)
         appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putString(PREF_BGM_ACTIVE_ID, track.id).apply()
 
@@ -338,7 +506,8 @@ object BgmManager {
             player.setVolume(volFactor, volFactor)
 
             val currentPlaylist = _playlist.value
-            if (currentPlaylist.size <= 1) {
+            val isOne = _repeatMode.value == BgmRepeatMode.ONE
+            if (isOne || currentPlaylist.size <= 1) {
                 player.isLooping = true
             } else {
                 player.isLooping = false
@@ -357,6 +526,7 @@ object BgmManager {
             player.start()
             mediaPlayer = player
             _isPlaying.value = true
+            startPositionTracker()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start BGM track: ${track.title}", e)
             _isPlaying.value = false
@@ -364,6 +534,7 @@ object BgmManager {
     }
 
     private fun stopPlayback() {
+        stopPositionTracker()
         try {
             mediaPlayer?.apply {
                 if (isPlaying) stop()
@@ -375,6 +546,7 @@ object BgmManager {
         } finally {
             mediaPlayer = null
             _isPlaying.value = false
+            _playbackPositionMs.value = 0L
         }
     }
 
@@ -386,6 +558,7 @@ object BgmManager {
                     if (!player.isPlaying) {
                         player.start()
                         _isPlaying.value = true
+                        startPositionTracker()
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error resuming player", e)
@@ -396,6 +569,7 @@ object BgmManager {
     }
 
     fun onActivityPause() {
+        stopPositionTracker()
         try {
             mediaPlayer?.let { player ->
                 if (player.isPlaying) {
@@ -488,6 +662,10 @@ object BgmManager {
             }
         }
 
+        synchronized(albumArtCache) {
+            albumArtCache.remove(trackId)
+        }
+
         var updated = currentList.filterNot { it.id == trackId }
         if (updated.isEmpty()) {
             updated = listOf(BgmTrack.DEFAULT)
@@ -516,6 +694,10 @@ object BgmManager {
 
     fun resetPlaylistToDefault(context: Context) {
         val appContext = context.applicationContext
+        synchronized(albumArtCache) {
+            albumArtCache.clear()
+        }
+        _currentAlbumArt.value = null
         val tracksDir = File(appContext.filesDir, "bgm_tracks")
         scope.launch(Dispatchers.IO) {
             try {

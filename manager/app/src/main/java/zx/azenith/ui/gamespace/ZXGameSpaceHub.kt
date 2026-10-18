@@ -178,6 +178,7 @@ fun ZXGameSpaceHub(
     var searchOpen by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var quickSettingsOpen by remember { mutableStateOf(false) }
+    var nowPlayingOpen by remember { mutableStateOf(false) }
     var pendingLaunchApp by remember { mutableStateOf<ApplistViewmodel.AppInfo?>(null) }
     var sidePanelPromptOpen by remember { mutableStateOf(false) }
     val requestAppLaunch: (ApplistViewmodel.AppInfo) -> Unit = { app ->
@@ -255,6 +256,8 @@ fun ZXGameSpaceHub(
             tuningPkg = null
         } else if (wallpaperPkg != null) {
             wallpaperPkg = null
+        } else if (nowPlayingOpen) {
+            nowPlayingOpen = false
         } else if (quickSettingsOpen) {
             quickSettingsOpen = false
         } else if (category == TopCategory.Settings) {
@@ -473,6 +476,12 @@ fun ZXGameSpaceHub(
                     searchOpen = false
                     searchQuery = ""
                     quickSettingsOpen = !quickSettingsOpen
+                },
+                isNowPlayingOpen = nowPlayingOpen,
+                onNowPlayingClick = {
+                    searchOpen = false
+                    searchQuery = ""
+                    nowPlayingOpen = !nowPlayingOpen
                 },
                 onLogoClick = {
                     searchOpen = false
@@ -786,6 +795,13 @@ fun ZXGameSpaceHub(
         ZXGameSpaceQuickSettingsOverlay(
             visible = quickSettingsOpen,
             onClose = { quickSettingsOpen = false }
+        )
+
+        // Floating Now Playing Media Panel (overlay on right side, with haze blur)
+        NowPlayingPanelOverlay(
+            visible = nowPlayingOpen,
+            hazeState = overlayHazeState,
+            onClose = { nowPlayingOpen = false }
         )
 
         if (exitPrompt) {
