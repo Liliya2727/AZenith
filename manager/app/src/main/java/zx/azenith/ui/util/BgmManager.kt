@@ -19,6 +19,7 @@ package zx.azenith.ui.util
 import android.content.Context
 import android.content.SharedPreferences
 import android.media.AudioAttributes
+import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
 import android.net.Uri
 import android.provider.OpenableColumns
@@ -47,13 +48,31 @@ const val PREF_BGM_ACTIVE_ID = "gamespace_bgm_active_id"
 data class BgmTrack(
     val id: String,
     val title: String,
+    val artist: String? = null,
+    val durationMs: Long = 0L,
     val fileName: String,
     val relativePath: String? = null,
     val isDefault: Boolean = false
 ) {
+    val formattedDuration: String
+        get() {
+            if (durationMs <= 0L) return ""
+            val totalSeconds = durationMs / 1000
+            val minutes = totalSeconds / 60
+            val seconds = totalSeconds % 60
+            val hours = minutes / 60
+            return if (hours > 0) {
+                String.format("%d:%02d:%02d", hours, minutes % 60, seconds)
+            } else {
+                String.format("%d:%02d", minutes, seconds)
+            }
+        }
+
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("title", title)
+        put("artist", artist ?: "")
+        put("durationMs", durationMs)
         put("fileName", fileName)
         put("relativePath", relativePath ?: "")
         put("isDefault", isDefault)
@@ -63,6 +82,8 @@ data class BgmTrack(
         fun fromJson(obj: JSONObject): BgmTrack = BgmTrack(
             id = obj.getString("id"),
             title = obj.getString("title"),
+            artist = obj.optString("artist").takeIf { it.isNotBlank() },
+            durationMs = obj.optLong("durationMs", 0L),
             fileName = obj.optString("fileName", "custom.ogg"),
             relativePath = obj.optString("relativePath").takeIf { it.isNotBlank() },
             isDefault = obj.optBoolean("isDefault", false)
@@ -71,6 +92,8 @@ data class BgmTrack(
         val DEFAULT = BgmTrack(
             id = "default",
             title = "AZenith Theme",
+            artist = null,
+            durationMs = 134374L,
             fileName = "bgm.ogg",
             relativePath = null,
             isDefault = true
@@ -102,6 +125,35 @@ object BgmManager {
     private var mediaPlayer: MediaPlayer? = null
     private var isInitialized = false
 
+    data class AudioMetadata(
+        val title: String? = null,
+        val artist: String? = null,
+        val durationMs: Long = 0L
+    )
+
+    fun extractMetadata(file: File): AudioMetadata {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(file.absolutePath)
+            val title = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)?.trim()
+            val artist = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)?.trim()
+            val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+            val durationMs = durationStr?.toLongOrNull() ?: 0L
+            AudioMetadata(
+                title = title?.takeIf { it.isNotBlank() },
+                artist = artist?.takeIf { it.isNotBlank() },
+                durationMs = durationMs
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to extract metadata from ${file.name}", e)
+            AudioMetadata()
+        } finally {
+            try {
+                retriever.release()
+            } catch (_: Exception) {}
+        }
+    }
+
     @Synchronized
     fun init(context: Context) {
         if (isInitialized) return
@@ -112,7 +164,7 @@ object BgmManager {
         val vol = prefs.getInt(PREF_BGM_VOLUME, 70).coerceIn(0, 100)
         val activeId = prefs.getString(PREF_BGM_ACTIVE_ID, BgmTrack.DEFAULT.id) ?: BgmTrack.DEFAULT.id
 
-        val loadedPlaylist = loadPlaylistFromPrefs(prefs)
+        val loadedPlaylist = loadPlaylistFromPrefs(appContext, prefs)
         val selected = loadedPlaylist.firstOrNull { it.id == activeId } ?: loadedPlaylist.firstOrNull() ?: BgmTrack.DEFAULT
 
         _isEnabled.value = enabled
@@ -126,22 +178,51 @@ object BgmManager {
         }
     }
 
-    private fun loadPlaylistFromPrefs(prefs: SharedPreferences): List<BgmTrack> {
+    private fun loadPlaylistFromPrefs(context: Context, prefs: SharedPreferences): List<BgmTrack> {
         val rawJson = prefs.getString(PREF_BGM_PLAYLIST, null)
-        if (rawJson.isNullOrBlank()) {
-            return listOf(BgmTrack.DEFAULT)
-        }
-        return try {
-            val array = JSONArray(rawJson)
-            val list = mutableListOf<BgmTrack>()
-            for (i in 0 until array.length()) {
-                list.add(BgmTrack.fromJson(array.getJSONObject(i)))
-            }
-            if (list.isEmpty()) listOf(BgmTrack.DEFAULT) else list
-        } catch (e: Exception) {
-            Log.e(TAG, "Error parsing playlist JSON", e)
+        val list = if (rawJson.isNullOrBlank()) {
             listOf(BgmTrack.DEFAULT)
+        } else {
+            try {
+                val array = JSONArray(rawJson)
+                val tracks = mutableListOf<BgmTrack>()
+                for (i in 0 until array.length()) {
+                    tracks.add(BgmTrack.fromJson(array.getJSONObject(i)))
+                }
+                if (tracks.isEmpty()) listOf(BgmTrack.DEFAULT) else tracks
+            } catch (e: Exception) {
+                Log.e(TAG, "Error parsing playlist JSON", e)
+                listOf(BgmTrack.DEFAULT)
+            }
         }
+
+        var needsResave = false
+        val enriched = list.map { track ->
+            if (track.isDefault) {
+                if (track.durationMs <= 0L) {
+                    needsResave = true
+                    track.copy(durationMs = 134374L)
+                } else track
+            } else if (track.relativePath != null) {
+                val file = File(context.filesDir, "bgm_tracks/${track.relativePath}")
+                if (file.exists() && (track.durationMs <= 0L || track.artist == null)) {
+                    val meta = extractMetadata(file)
+                    needsResave = true
+                    track.copy(
+                        title = meta.title ?: track.title,
+                        artist = meta.artist ?: track.artist,
+                        durationMs = if (meta.durationMs > 0) meta.durationMs else track.durationMs
+                    )
+                } else track
+            } else track
+        }
+
+        if (needsResave) {
+            val array = JSONArray()
+            enriched.forEach { array.put(it.toJson()) }
+            prefs.edit().putString(PREF_BGM_PLAYLIST, array.toString()).apply()
+        }
+        return enriched
     }
 
     private fun savePlaylistToPrefs(context: Context) {
@@ -349,10 +430,15 @@ object BgmManager {
                 }
 
                 if (destFile.exists() && destFile.length() > 0) {
+                    val meta = extractMetadata(destFile)
+                    val resolvedTitle = meta.title
+                        ?: rawTitle.replace('_', ' ').replace('-', ' ').trim().ifEmpty { "Track" }
                     newTracks.add(
                         BgmTrack(
                             id = id,
-                            title = rawTitle.replace('_', ' ').replace('-', ' ').trim().ifEmpty { "Track" },
+                            title = resolvedTitle,
+                            artist = meta.artist,
+                            durationMs = meta.durationMs,
                             fileName = displayName,
                             relativePath = destFileName,
                             isDefault = false

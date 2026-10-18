@@ -3532,12 +3532,23 @@ internal fun SettingsAudioPane(
                                                     }
                                                 }
                                             }
+                                            if (!track.isDefault) {
+                                                val subtitle = track.artist ?: track.fileName
+                                                Text(
+                                                    text = subtitle,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = scheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+
+                                        if (track.formattedDuration.isNotEmpty()) {
                                             Text(
-                                                text = if (track.isDefault) "manager/bgm.ogg • Built-in" else track.fileName,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = scheme.onSurfaceVariant.copy(alpha = 0.75f),
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
+                                                text = track.formattedDuration,
+                                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+                                                color = scheme.onSurfaceVariant.copy(alpha = 0.8f)
                                             )
                                         }
 
