@@ -423,7 +423,7 @@ fun ColorPaletteScreen(navController: NavController) {
 
 
     Scaffold(
-        modifier = Modifier,
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             PaletteTopAppBar(

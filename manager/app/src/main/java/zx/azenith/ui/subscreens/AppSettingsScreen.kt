@@ -483,7 +483,7 @@ fun AppSettingsScreen(
     }
 
     Scaffold(
-            modifier = Modifier,
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             topBar = { 
                 AppSettingsTopAppBar(
                     onLaunchApp = {
@@ -774,7 +774,8 @@ fun AppSettingsTopAppBar(
                 containerColor = Color.Transparent,
                 scrolledContainerColor = Color.Transparent
             ),
-            windowInsets = WindowInsets(0, 0, 0, 0)
+            windowInsets = WindowInsets(0, 0, 0, 0),
+            scrollBehavior = scrollBehavior
         )
     }
 }

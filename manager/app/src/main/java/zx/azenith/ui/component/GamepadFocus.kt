@@ -243,8 +243,9 @@ fun Modifier.gamepadScreenEntry(): Modifier {
     val requester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     var entered by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
+    LaunchedEffect(GamepadInput.dpadMode) {
         GamepadFocusNav.publishLastEntry(requester)
+        if (!GamepadInput.dpadMode) return@LaunchedEffect
         // The screen is still running its enter transition, and its rows only appear once the
         // root-side property reads come back, so retry until something takes focus.
         repeat(8) {
