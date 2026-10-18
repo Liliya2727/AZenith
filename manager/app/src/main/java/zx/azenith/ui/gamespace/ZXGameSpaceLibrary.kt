@@ -102,7 +102,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
-import androidx.graphics.shapes.RoundedPolygon
 import kotlinx.coroutines.delay
 import zx.azenith.R
 import zx.azenith.ui.component.AppIconImage
@@ -119,18 +118,6 @@ private val LIBRARY_TILE_HEIGHT = 88.dp
 private val LIBRARY_REST_CORNER = 28.dp
 private val LIBRARY_ENGAGED_CORNER = 12.dp
 
-// Stable per package, so an app keeps its silhouette across sessions and filter changes.
-private fun tunedShapeFor(packageName: String): RoundedPolygon {
-    val shapes = arrayOf(
-        BentoShapes.Cookie9,
-        BentoShapes.Clover8,
-        BentoShapes.Sunny,
-        BentoShapes.Cookie6,
-        BentoShapes.Puffy,
-        BentoShapes.Flower
-    )
-    return shapes[(packageName.hashCode() and Int.MAX_VALUE) % shapes.size]
-}
 
 /**
  * Stage 3: Full Game Library Grid when the rightmost Library tile is selected.
@@ -513,10 +500,10 @@ private fun LibraryAppTile(
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             MorphBadge(
-                shape = if (tuned) tunedShapeFor(app.packageName) else BentoShapes.Circle,
+                shape = BentoShapes.Circle,
                 color = if (tuned) scheme.primary else scheme.surfaceContainerHighest,
                 size = 60.dp,
-                pressedShape = if (tuned) BentoShapes.VerySunny else BentoShapes.Cookie4,
+                pressedShape = BentoShapes.Cookie4,
                 engaged = engaged,
                 spin = 24f
             ) {
