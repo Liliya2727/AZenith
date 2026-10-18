@@ -125,7 +125,7 @@ fun Context.setBannerGradientAlpha(alpha: Float) {
 
 fun Context.getGlobalGameWallpaperMode(): String {
     return getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        .getString("gamespace_global_game_wallpaper_mode", "default") ?: "default"
+        .getString("gamespace_global_game_wallpaper_mode", "custom") ?: "custom"
 }
 
 fun Context.setGlobalGameWallpaperMode(mode: String) {
@@ -135,9 +135,35 @@ fun Context.setGlobalGameWallpaperMode(mode: String) {
         .apply()
 }
 
+fun Context.resolveGlobalGameWallpaperMode(packages: List<String>): String {
+    val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    if (packages.isEmpty()) {
+        return prefs.getString("gamespace_global_game_wallpaper_mode", "custom") ?: "custom"
+    }
+    val hasCustomUri = packages.any { pkg ->
+        !prefs.getString("game_wallpaper_uri_$pkg", null).isNullOrEmpty()
+    }
+    val explicitModes = packages.mapNotNull { pkg ->
+        prefs.getString("game_wallpaper_mode_$pkg", null)
+    }
+    if (hasCustomUri || explicitModes.any { it == "custom" }) {
+        return "custom"
+    }
+    if (explicitModes.size == packages.size) {
+        val first = explicitModes.first()
+        if (explicitModes.all { it == first }) {
+            return first
+        }
+        return "custom"
+    }
+    val stored = prefs.getString("gamespace_global_game_wallpaper_mode", null)
+    return stored ?: "custom"
+}
+
 fun Context.getGameWallpaperMode(packageName: String): String {
     val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    val fallback = prefs.getString("gamespace_global_game_wallpaper_mode", "default") ?: "default"
+    val hasUri = !prefs.getString("game_wallpaper_uri_$packageName", null).isNullOrEmpty()
+    val fallback = if (hasUri) "custom" else (prefs.getString("gamespace_global_game_wallpaper_mode", "default") ?: "default")
     return prefs.getString("game_wallpaper_mode_$packageName", fallback) ?: fallback
 }
 
@@ -145,6 +171,7 @@ fun Context.setGameWallpaperMode(packageName: String, mode: String) {
     getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         .edit()
         .putString("game_wallpaper_mode_$packageName", mode)
+        .putString("gamespace_global_game_wallpaper_mode", "custom")
         .apply()
 }
 
@@ -152,7 +179,15 @@ fun Context.batchSetGameWallpaperMode(packages: List<String>, mode: String) {
     val editor = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
     packages.forEach { pkg ->
         editor.putString("game_wallpaper_mode_$pkg", mode)
+        if (mode == "default") {
+            val oldUri = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString("game_wallpaper_uri_$pkg", null)
+            editor.remove("game_wallpaper_uri_$pkg")
+            if (oldUri != null) {
+                deleteOldBannerFile(oldUri, excludingKey = "game_wallpaper_uri_$pkg")
+            }
+        }
     }
+    editor.putString("gamespace_global_game_wallpaper_mode", mode)
     editor.apply()
 }
 
@@ -163,6 +198,7 @@ fun Context.batchSetGameWallpaper(packages: List<String>, uri: String) {
         editor.putString("game_wallpaper_uri_$pkg", uri)
         editor.putBoolean("game_wallpaper_enabled_$pkg", true)
     }
+    editor.putString("gamespace_global_game_wallpaper_mode", "custom")
     editor.apply()
 }
 
@@ -180,6 +216,7 @@ fun Context.batchResetGameWallpapers(packages: List<String>) {
             deleteOldBannerFile(oldUri, excludingKey = "game_wallpaper_uri_$pkg")
         }
     }
+    editor.putString("gamespace_global_game_wallpaper_mode", "default")
     editor.apply()
 }
 
@@ -197,6 +234,8 @@ fun Context.setGameWallpaperUri(packageName: String, uri: String?) {
     val editor = prefs.edit()
     if (uri != null) {
         editor.putString("game_wallpaper_uri_$packageName", uri)
+        editor.putString("game_wallpaper_mode_$packageName", "custom")
+        editor.putString("gamespace_global_game_wallpaper_mode", "custom")
     } else {
         editor.remove("game_wallpaper_uri_$packageName")
     }

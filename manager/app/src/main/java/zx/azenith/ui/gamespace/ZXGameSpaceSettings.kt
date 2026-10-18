@@ -197,6 +197,8 @@ import zx.azenith.ui.theme.ColorEngine
 import zx.azenith.ui.theme.ColorMode
 import android.widget.Toast
 import zx.azenith.ui.component.AppIconImage
+import androidx.compose.ui.platform.LocalConfiguration
+import zx.azenith.ui.util.resolveGlobalGameWallpaperMode
 import zx.azenith.ui.util.batchResetGameWallpapers
 import zx.azenith.ui.util.batchSetGameWallpaper
 import zx.azenith.ui.util.batchSetGameWallpaperMode
@@ -1599,21 +1601,7 @@ private fun GameWallpaperSection(
     val scheme = MaterialTheme.colorScheme
     val coroutineScope = rememberCoroutineScope()
     val motion = MaterialTheme.motionScheme
-
     val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
-    var selectedMode by remember {
-        mutableStateOf(context.getGlobalGameWallpaperMode())
-    }
-
-    DisposableEffect(prefs) {
-        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == "gamespace_global_game_wallpaper_mode") {
-                selectedMode = context.getGlobalGameWallpaperMode()
-            }
-        }
-        prefs.registerOnSharedPreferenceChangeListener(listener)
-        onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
-    }
 
     LaunchedEffect(Unit) {
         if (ApplistViewmodel.apps.isEmpty()) {
@@ -1625,6 +1613,20 @@ private fun GameWallpaperSection(
     val targetGames = remember(installed) {
         val configured = installed.filter { it.isEnabledInConfig || it.isRecommended }
         if (configured.isNotEmpty()) configured else installed.filter { !it.isSystem }
+    }
+
+    var selectedMode by remember(targetGames) {
+        mutableStateOf(context.resolveGlobalGameWallpaperMode(targetGames.map { it.packageName }))
+    }
+
+    DisposableEffect(prefs, targetGames) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "gamespace_global_game_wallpaper_mode" || key?.startsWith("game_wallpaper_") == true) {
+                selectedMode = context.resolveGlobalGameWallpaperMode(targetGames.map { it.packageName })
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
 
     var showBatchDialog by remember { mutableStateOf(false) }
@@ -1698,7 +1700,7 @@ private fun GameWallpaperSection(
             }
 
             GameWallpaperOptionRow(
-                title = "Default (App Icon)",
+                title = "Default",
                 subtitle = "Dynamic artwork generated from each game's icon",
                 icon = Icons.Rounded.AutoAwesome,
                 isSelected = selectedMode == "default",
@@ -1729,7 +1731,7 @@ private fun GameWallpaperSection(
 
             GameWallpaperOptionRow(
                 title = "Custom",
-                subtitle = "Configure individually per game or apply artwork in batch",
+                subtitle = "Configure wallpaper individually per games",
                 icon = Icons.Rounded.Palette,
                 isSelected = selectedMode == "custom",
                 onClick = {
@@ -1749,30 +1751,6 @@ private fun GameWallpaperSection(
                         .padding(top = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = scheme.surfaceContainerLowest.copy(alpha = 0.6f),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Info,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                                tint = scheme.primary
-                            )
-                            Text(
-                                text = "Individual Custom: Open any game's App Settings (gear icon) to adjust custom stage artwork, dimming, and blur independently.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = scheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1806,7 +1784,7 @@ private fun GameWallpaperSection(
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    text = "Batch Apply Wallpaper",
+                                    text = "Choose Wallpaper",
                                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                                     maxLines = 1
                                 )
@@ -1860,7 +1838,7 @@ private fun GameWallpaperSection(
     }
 
     if (showBatchDialog && pendingBatchUri != null) {
-        BatchApplyGameWallpaperDialog(
+        ApplyGameWallpaperDialog(
             uri = pendingBatchUri!!,
             games = targetGames,
             onDismiss = {
@@ -1946,7 +1924,7 @@ private fun GameWallpaperOptionRow(
 }
 
 @Composable
-private fun BatchApplyGameWallpaperDialog(
+private fun ApplyGameWallpaperDialog(
     uri: String,
     games: List<ApplistViewmodel.AppInfo>,
     onDismiss: () -> Unit,
@@ -1955,6 +1933,8 @@ private fun BatchApplyGameWallpaperDialog(
     val scheme = MaterialTheme.colorScheme
     var applyToAll by remember { mutableStateOf(true) }
     var selectedSet by remember { mutableStateOf(games.map { it.packageName }.toSet()) }
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -1964,14 +1944,25 @@ private fun BatchApplyGameWallpaperDialog(
             shape = RoundedCornerShape(28.dp),
             color = scheme.surfaceContainerHigh,
             contentColor = scheme.onSurface,
-            modifier = Modifier
-                .fillMaxWidth(0.85f)
-                .padding(16.dp)
+            modifier = if (isLandscape) {
+                Modifier
+                    .fillMaxWidth(0.88f)
+                    .fillMaxHeight(0.90f)
+                    .padding(horizontal = 24.dp, vertical = 12.dp)
+            } else {
+                Modifier
+                    .fillMaxWidth(0.92f)
+                    .fillMaxHeight(0.85f)
+                    .padding(16.dp)
+            }
         ) {
             Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
+                // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -1985,7 +1976,7 @@ private fun BatchApplyGameWallpaperDialog(
                             shape = CircleShape,
                             color = scheme.primaryContainer,
                             contentColor = scheme.onPrimaryContainer,
-                            modifier = Modifier.size(42.dp)
+                            modifier = Modifier.size(40.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
@@ -1997,12 +1988,12 @@ private fun BatchApplyGameWallpaperDialog(
                         }
                         Column {
                             Text(
-                                text = "Batch Apply Wallpaper",
+                                text = "Apply Wallpaper",
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                 color = scheme.onSurface
                             )
                             Text(
-                                text = "Choose which games receive this artwork",
+                                text = "Choose either for all games or selected",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = scheme.onSurfaceVariant
                             )
@@ -2017,161 +2008,435 @@ private fun BatchApplyGameWallpaperDialog(
                     }
                 }
 
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = scheme.surfaceContainerLowest,
+                // Middle Content Area
+                Box(
                     modifier = Modifier
+                        .weight(1f)
                         .fillMaxWidth()
-                        .height(84.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .padding(vertical = 10.dp)
                 ) {
-                    MediaBannerRenderer(
-                        uriString = uri,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    val allShape = RoundedCornerShape(14.dp)
-                    Surface(
-                        shape = allShape,
-                        color = if (applyToAll) scheme.primaryContainer else scheme.surfaceContainerHighest,
-                        contentColor = if (applyToAll) scheme.onPrimaryContainer else scheme.onSurface,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(allShape)
-                            .clickable { applyToAll = true }
-                    ) {
+                    if (isLandscape) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Icon(
-                                imageVector = if (applyToAll) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                                tint = if (applyToAll) scheme.primary else scheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "All Games (${games.size})",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                            )
-                        }
-                    }
-
-                    val selectShape = RoundedCornerShape(14.dp)
-                    Surface(
-                        shape = selectShape,
-                        color = if (!applyToAll) scheme.primaryContainer else scheme.surfaceContainerHighest,
-                        contentColor = if (!applyToAll) scheme.onPrimaryContainer else scheme.onSurface,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(selectShape)
-                            .clickable { applyToAll = false }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = if (!applyToAll) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                                tint = if (!applyToAll) scheme.primary else scheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "Select Games",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                            )
-                        }
-                    }
-                }
-
-                if (!applyToAll) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "${selectedSet.size} of ${games.size} selected",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = scheme.onSurfaceVariant
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            TextButton(
-                                onClick = { selectedSet = games.map { it.packageName }.toSet() },
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                            ) {
-                                Text("Select All", style = MaterialTheme.typography.labelSmall)
-                            }
-                            TextButton(
-                                onClick = { selectedSet = emptySet() },
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                            ) {
-                                Text("Deselect All", style = MaterialTheme.typography.labelSmall)
-                            }
-                        }
-                    }
-
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 220.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        items(games) { game ->
-                            val isChecked = selectedSet.contains(game.packageName)
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (isChecked) scheme.primaryContainer.copy(alpha = 0.35f) else Color.Transparent,
+                            // Left Pane: preview & option toggles
+                            Column(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        selectedSet = if (isChecked) {
-                                            selectedSet - game.packageName
-                                        } else {
-                                            selectedSet + game.packageName
-                                        }
-                                    }
+                                    .width(230.dp)
+                                    .fillMaxHeight(),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Row(
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = scheme.surfaceContainerLowest,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 10.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        .height(82.dp)
+                                        .clip(RoundedCornerShape(14.dp))
                                 ) {
-                                    AppIconImage(app = game, size = 32.dp)
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = game.label,
-                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                                            color = scheme.onSurface,
-                                            maxLines = 1
+                                    MediaBannerRenderer(
+                                        uriString = uri,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+
+                                val allShape = RoundedCornerShape(14.dp)
+                                Surface(
+                                    shape = allShape,
+                                    color = if (applyToAll) scheme.primaryContainer else scheme.surfaceContainerHighest.copy(alpha = 0.6f),
+                                    contentColor = if (applyToAll) scheme.onPrimaryContainer else scheme.onSurface,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(allShape)
+                                        .clickable { applyToAll = true }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (applyToAll) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                            tint = if (applyToAll) scheme.primary else scheme.onSurfaceVariant
                                         )
-                                        Text(
-                                            text = game.packageName,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = scheme.onSurfaceVariant,
-                                            maxLines = 1
-                                        )
+                                        Column {
+                                            Text(
+                                                text = "All Games (${games.size})",
+                                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                                            )
+                                            Text(
+                                                text = "Apply to all library games",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = if (applyToAll) scheme.onPrimaryContainer.copy(alpha = 0.8f) else scheme.onSurfaceVariant
+                                            )
+                                        }
                                     }
-                                    Checkbox(
-                                        checked = isChecked,
-                                        onCheckedChange = { checked ->
-                                            selectedSet = if (checked) {
-                                                selectedSet + game.packageName
-                                            } else {
-                                                selectedSet - game.packageName
+                                }
+
+                                val selectShape = RoundedCornerShape(14.dp)
+                                Surface(
+                                    shape = selectShape,
+                                    color = if (!applyToAll) scheme.primaryContainer else scheme.surfaceContainerHighest.copy(alpha = 0.6f),
+                                    contentColor = if (!applyToAll) scheme.onPrimaryContainer else scheme.onSurface,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(selectShape)
+                                        .clickable { applyToAll = false }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (!applyToAll) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                            tint = if (!applyToAll) scheme.primary else scheme.onSurfaceVariant
+                                        )
+                                        Column {
+                                            Text(
+                                                text = "Select Games",
+                                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                                            )
+                                            Text(
+                                                text = "Choose specific games",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = if (!applyToAll) scheme.onPrimaryContainer.copy(alpha = 0.8f) else scheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Right Pane: Game list or All Games confirmation
+                            if (applyToAll) {
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = scheme.surfaceContainerLow,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(16.dp),
+                                        verticalArrangement = Arrangement.Center,
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = scheme.primaryContainer,
+                                            modifier = Modifier.size(48.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.AutoAwesome,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(24.dp),
+                                                    tint = scheme.primary
+                                                )
                                             }
                                         }
+                                        Spacer(Modifier.height(10.dp))
+                                        Text(
+                                            text = "All ${games.size} games will receive this artwork",
+                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = scheme.onSurface
+                                        )
+                                        Text(
+                                            text = "Every game stage will showcase this wallpaper",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = scheme.onSurfaceVariant
+                                        )
+                                        Spacer(Modifier.height(12.dp))
+                                        LazyRow(
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            contentPadding = PaddingValues(horizontal = 8.dp)
+                                        ) {
+                                            items(games) { game ->
+                                                AppIconImage(app = game, size = 32.dp)
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight(),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "${selectedSet.size} of ${games.size} selected",
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                            color = scheme.onSurfaceVariant
+                                        )
+                                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            TextButton(
+                                                onClick = { selectedSet = games.map { it.packageName }.toSet() },
+                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                            ) {
+                                                Text("Select All", style = MaterialTheme.typography.labelSmall)
+                                            }
+                                            TextButton(
+                                                onClick = { selectedSet = emptySet() },
+                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                            ) {
+                                                Text("Deselect All", style = MaterialTheme.typography.labelSmall)
+                                            }
+                                        }
+                                    }
+
+                                    LazyColumn(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        items(games) { game ->
+                                            val isChecked = selectedSet.contains(game.packageName)
+                                            Surface(
+                                                shape = RoundedCornerShape(12.dp),
+                                                color = if (isChecked) scheme.primaryContainer.copy(alpha = 0.35f) else scheme.surfaceContainerLow,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .clickable {
+                                                        selectedSet = if (isChecked) {
+                                                            selectedSet - game.packageName
+                                                        } else {
+                                                            selectedSet + game.packageName
+                                                        }
+                                                    }
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                                ) {
+                                                    AppIconImage(app = game, size = 32.dp)
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Text(
+                                                            text = game.label,
+                                                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                                            color = scheme.onSurface,
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis
+                                                        )
+                                                        Text(
+                                                            text = game.packageName,
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = scheme.onSurfaceVariant,
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis
+                                                        )
+                                                    }
+                                                    Checkbox(
+                                                        checked = isChecked,
+                                                        onCheckedChange = { checked ->
+                                                            selectedSet = if (checked) {
+                                                                selectedSet + game.packageName
+                                                            } else {
+                                                                selectedSet - game.packageName
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Portrait layout
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(14.dp),
+                                color = scheme.surfaceContainerLowest,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(64.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                            ) {
+                                MediaBannerRenderer(
+                                    uriString = uri,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                val allShape = RoundedCornerShape(12.dp)
+                                Surface(
+                                    shape = allShape,
+                                    color = if (applyToAll) scheme.primaryContainer else scheme.surfaceContainerHighest,
+                                    contentColor = if (applyToAll) scheme.onPrimaryContainer else scheme.onSurface,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(allShape)
+                                        .clickable { applyToAll = true }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (applyToAll) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp),
+                                            tint = if (applyToAll) scheme.primary else scheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = "All Games (${games.size})",
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                                        )
+                                    }
+                                }
+
+                                val selectShape = RoundedCornerShape(12.dp)
+                                Surface(
+                                    shape = selectShape,
+                                    color = if (!applyToAll) scheme.primaryContainer else scheme.surfaceContainerHighest,
+                                    contentColor = if (!applyToAll) scheme.onPrimaryContainer else scheme.onSurface,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(selectShape)
+                                        .clickable { applyToAll = false }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (!applyToAll) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp),
+                                            tint = if (!applyToAll) scheme.primary else scheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            text = "Select Games",
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (!applyToAll) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "${selectedSet.size} of ${games.size} selected",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = scheme.onSurfaceVariant
+                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        TextButton(
+                                            onClick = { selectedSet = games.map { it.packageName }.toSet() },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Text("Select All", style = MaterialTheme.typography.labelSmall)
+                                        }
+                                        TextButton(
+                                            onClick = { selectedSet = emptySet() },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Text("Deselect All", style = MaterialTheme.typography.labelSmall)
+                                        }
+                                    }
+                                }
+
+                                LazyColumn(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    items(games) { game ->
+                                        val isChecked = selectedSet.contains(game.packageName)
+                                        Surface(
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = if (isChecked) scheme.primaryContainer.copy(alpha = 0.35f) else Color.Transparent,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .clickable {
+                                                    selectedSet = if (isChecked) {
+                                                        selectedSet - game.packageName
+                                                    } else {
+                                                        selectedSet + game.packageName
+                                                    }
+                                                }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                            ) {
+                                                AppIconImage(app = game, size = 32.dp)
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = game.label,
+                                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                                        color = scheme.onSurface,
+                                                        maxLines = 1
+                                                    )
+                                                    Text(
+                                                        text = game.packageName,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = scheme.onSurfaceVariant,
+                                                        maxLines = 1
+                                                    )
+                                                }
+                                                Checkbox(
+                                                    checked = isChecked,
+                                                    onCheckedChange = { checked ->
+                                                        selectedSet = if (checked) {
+                                                            selectedSet + game.packageName
+                                                        } else {
+                                                            selectedSet - game.packageName
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxWidth(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "All ${games.size} games will receive this artwork",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = scheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -2179,6 +2444,7 @@ private fun BatchApplyGameWallpaperDialog(
                     }
                 }
 
+                // Footer Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
