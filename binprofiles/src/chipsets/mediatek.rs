@@ -131,7 +131,7 @@ pub fn mediatek_balance() {
     write_lock("0", "/proc/perfmgr/syslimiter/syslimiter_force_disable");
     write_lock("stop 0", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
     write_lock("1", "/sys/kernel/eara_thermal/enable");
-    apply_dvfsrc("-1", "-1", "userspace");
+    apply_dvfsrc("255", "-1", "userspace");
     apply_mali_power_policy("coarse_demand");
 }
 
@@ -170,6 +170,6 @@ pub fn mediatek_powersave() {
     write_lock("0", "/proc/perfmgr/syslimiter/syslimiter_force_disable");
     write_lock("stop 0", "/proc/mtk_batoc_throttling/battery_oc_protect_stop");
     write_lock("1", "/sys/kernel/eara_thermal/enable");
-    apply_dvfsrc("-1", "-1", "powersave");
+    apply_dvfsrc("255", "-1", "powersave");
     apply_mali_power_policy("coarse_demand");
 }
