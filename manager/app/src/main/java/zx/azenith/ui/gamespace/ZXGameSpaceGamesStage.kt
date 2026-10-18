@@ -1909,55 +1909,55 @@ internal fun GameHeroStage(
             )
         }
 
-        // 4. Action buttons: stay in place (no translation), bounce in place!
+        // 4. Action buttons: stay in place (no translation), subtle quick pop!
         launch {
             playPageBounce.animateTo(
-                targetValue = 1.20f,
+                targetValue = 1.05f,
                 animationSpec = spring(
-                    dampingRatio = 0.55f,
-                    stiffness = 900f
+                    dampingRatio = 0.68f,
+                    stiffness = 1500f
                 )
             )
             playPageBounce.animateTo(
                 targetValue = 1f,
                 animationSpec = spring(
-                    dampingRatio = 0.38f,
-                    stiffness = 240f
+                    dampingRatio = 0.68f,
+                    stiffness = 1300f
                 )
             )
         }
 
         launch {
             kotlinx.coroutines.delay(20)
-            penPageBounce.snapTo(0.82f)
+            penPageBounce.snapTo(0.92f)
             penPageBounce.animateTo(
                 targetValue = 1f,
                 animationSpec = spring(
-                    dampingRatio = 0.50f,
-                    stiffness = 350f
+                    dampingRatio = 0.65f,
+                    stiffness = 1000f
                 )
             )
         }
 
         launch {
             kotlinx.coroutines.delay(35)
-            gearPageBounce.snapTo(0.82f)
+            gearPageBounce.snapTo(0.92f)
             val gearSign = if (movingForward) -1f else 1f
-            gearRotation.snapTo(gearSign * 45f)
+            gearRotation.snapTo(gearSign * 30f)
             launch {
                 gearRotation.animateTo(
                     targetValue = 0f,
                     animationSpec = spring(
-                        dampingRatio = 0.52f,
-                        stiffness = 280f
+                        dampingRatio = 0.65f,
+                        stiffness = 1000f
                     )
                 )
             }
             gearPageBounce.animateTo(
                 targetValue = 1f,
                 animationSpec = spring(
-                    dampingRatio = 0.50f,
-                    stiffness = 350f
+                    dampingRatio = 0.65f,
+                    stiffness = 1000f
                 )
             )
         }
@@ -1971,7 +1971,7 @@ internal fun GameHeroStage(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(bottom = 12.dp),
+                .padding(bottom = 12.dp, end = 12.dp),
             verticalAlignment = Alignment.Bottom
         ) {
             val versionName = app.packageInfo.versionName?.takeIf { it.isNotBlank() }
@@ -2079,18 +2079,18 @@ internal fun GameHeroStage(
                 if (isPlayPressed) {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     playHoldScale.animateTo(
-                        targetValue = 1.14f,
+                        targetValue = 1.04f,
                         animationSpec = spring(
-                            dampingRatio = 0.58f,
-                            stiffness = 380f
+                            dampingRatio = 0.65f,
+                            stiffness = 1200f
                         )
                     )
                 } else {
                     playHoldScale.animateTo(
                         targetValue = 1f,
                         animationSpec = spring(
-                            dampingRatio = 0.38f,
-                            stiffness = 240f
+                            dampingRatio = 0.65f,
+                            stiffness = 1200f
                         )
                     )
                 }
@@ -2183,6 +2183,7 @@ internal fun GameHeroStage(
                             val combinedScale = playScale * playPageBounce.value * playHoldScale.value
                             scaleX = combinedScale
                             scaleY = combinedScale
+                            transformOrigin = TransformOrigin.Center
                         }
                         .onFocusChanged { playFocused = it.isFocused }
                         .gamepadFocusOutline(shape = playButtonShape, width = 3.dp)
