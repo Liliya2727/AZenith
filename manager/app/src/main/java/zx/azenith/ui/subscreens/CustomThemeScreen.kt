@@ -38,7 +38,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.scrollable
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -70,7 +71,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -216,6 +221,37 @@ fun ColorPaletteScreen(navController: NavController) {
     
     val lazyListState = rememberLazyListState()
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(canScroll = { lazyListState.canScrollBackward })
+    var isPreviewExpanded by rememberSaveable { mutableStateOf(true) }
+
+    val nestedScrollConnection = remember(isLandscape) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (!isLandscape && available.y < -4f && isPreviewExpanded) {
+                    isPreviewExpanded = false
+                }
+                return scrollBehavior.nestedScrollConnection.onPreScroll(available, source)
+            }
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                if (!isLandscape && available.y > 6f && !isPreviewExpanded && !lazyListState.canScrollBackward) {
+                    isPreviewExpanded = true
+                }
+                return scrollBehavior.nestedScrollConnection.onPostScroll(consumed, available, source)
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                return scrollBehavior.nestedScrollConnection.onPreFling(available)
+            }
+
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                return scrollBehavior.nestedScrollConnection.onPostFling(consumed, available)
+            }
+        }
+    }
 
     // Search results land here. Both LazyColumns render the same settingsItems,
     // so an item index inside it is the item index in either list.
@@ -223,21 +259,6 @@ fun ColorPaletteScreen(navController: NavController) {
         owns = { it.startsWith("pers.") },
         indexOf = { id -> PERS_ROW_ITEMS[id] }
     )
-
-    val isAtTop by remember(lazyListState) {
-        derivedStateOf {
-            lazyListState.firstVisibleItemIndex == 0 && lazyListState.firstVisibleItemScrollOffset == 0
-        }
-    }
-    var manualExpanded by rememberSaveable { mutableStateOf<Boolean?>(null) }
-
-    LaunchedEffect(lazyListState.isScrollInProgress) {
-        if (lazyListState.isScrollInProgress) {
-            manualExpanded = null
-        }
-    }
-
-    val isPreviewExpanded = manualExpanded ?: isAtTop
 
 
     val cropLauncher = rememberLauncherForActivityResult(
@@ -419,7 +440,7 @@ fun ColorPaletteScreen(navController: NavController) {
 
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = Modifier.nestedScroll(nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             PaletteTopAppBar(
@@ -541,8 +562,9 @@ MockCardFrame(
                 PinnedPreviewHeader(
                     expanded = isPreviewExpanded,
                     personalization = personalization,
-                    onToggle = { manualExpanded = !isPreviewExpanded },
-                    lazyListState = lazyListState,
+                    onToggle = { isPreviewExpanded = !isPreviewExpanded },
+                    onExpand = { isPreviewExpanded = true },
+                    onCollapse = { isPreviewExpanded = false },
                     keyColor = currentKeyColor,
                     colorSpec = currentColorSpec,
                     isDark = isDark,
@@ -564,8 +586,9 @@ MockCardFrame(
                 ) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         SheetHandle(
-                            lazyListState = lazyListState,
-                            onClick = { manualExpanded = !isPreviewExpanded }
+                            onToggle = { isPreviewExpanded = !isPreviewExpanded },
+                            onExpand = { isPreviewExpanded = true },
+                            onCollapse = { isPreviewExpanded = false }
                         )
         
                         LazyColumn(
@@ -1224,19 +1247,21 @@ private val MOCK_DIALOG_BLUR = 8.dp
 // How far the mock scales up when the card is tapped to frame the banner. 2.2x fills the
 // card width from the mock's top edge, which puts the banner dead centre in the frame.
 
-/** Drag-handle pill di atas sheet settings, gaya Instagram comment sheet. */
 @Composable
 private fun SheetHandle(
-    lazyListState: LazyListState,
-    onClick: () -> Unit
+    onToggle: () -> Unit,
+    onExpand: () -> Unit,
+    onCollapse: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .scrollable(
-                state = lazyListState,
+            .draggable(
                 orientation = Orientation.Vertical,
-                reverseDirection = false
+                state = rememberDraggableState { delta ->
+                    if (delta < -4f) onCollapse()
+                    else if (delta > 4f) onExpand()
+                }
             )
             // A drag handle is a touch affordance; the mock card below is the d-pad stop that
             // expands the preview.
@@ -1244,7 +1269,7 @@ private fun SheetHandle(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = onClick
+                onClick = onToggle
             )
             .padding(vertical = 12.dp),
         contentAlignment = Alignment.Center
@@ -1306,7 +1331,8 @@ private fun PinnedPreviewHeader(
     expanded: Boolean,
     personalization: Personalization,
     onToggle: () -> Unit,
-    lazyListState: LazyListState,
+    onExpand: () -> Unit,
+    onCollapse: () -> Unit,
     keyColor: Int,
     colorSpec: ColorEngine,
     isDark: Boolean,
@@ -1354,10 +1380,12 @@ private fun PinnedPreviewHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(height)
-                .scrollable(
-                    state = lazyListState,
+                .draggable(
                     orientation = Orientation.Vertical,
-                    reverseDirection = false
+                    state = rememberDraggableState { delta ->
+                        if (delta < -4f) onCollapse()
+                        else if (delta > 4f) onExpand()
+                    }
                 )
                 .padding(horizontal = 16.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center
