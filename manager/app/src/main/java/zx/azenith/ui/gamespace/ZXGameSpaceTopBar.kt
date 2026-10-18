@@ -79,6 +79,7 @@ import androidx.compose.material.icons.rounded.Thermostat
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import zx.azenith.ui.util.AudioUtil
+import zx.azenith.ui.util.tapHaptic
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -673,6 +674,7 @@ internal fun ZXGameSpaceExitDialog(
             modifier = Modifier
                 .widthIn(min = 460.dp, max = 520.dp)
                 .padding(20.dp)
+                .tapHaptic()
                 .gamepadKeyWatch()
                 .onPreviewKeyEvent { event ->
                     if (event.type == KeyEventType.KeyDown &&

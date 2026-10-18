@@ -106,6 +106,8 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zx.azenith.ui.component.GamepadFocusRoot
+import zx.azenith.ui.util.TapHapticState
+import zx.azenith.ui.util.AudioUtil
 import zx.azenith.ui.util.getChipsetName
 import zx.azenith.ui.util.getRealDeviceName
 import zx.azenith.ui.util.getSupportedRefreshRatesPicker
@@ -582,12 +584,15 @@ fun ZXGameSpaceHub(
                                                         },
                                                         onHorizontalDrag = { change, dragAmount ->
                                                             if (!hasSwipedInCurrentGesture) {
-                                                                accumulatedDragX += dragAmount
+                                                                 accumulatedDragX += dragAmount
                                                                 val thresholdPx = with(density) { 32.dp.toPx() }
                                                                 if (accumulatedDragX <= -thresholdPx) {
                                                                     change.consume()
                                                                     hasSwipedInCurrentGesture = true
-                                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                    if (TapHapticState.enabled.value) {
+                                                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                    }
+                                                                    AudioUtil.playScroll(context)
                                                                     if (safeIndex < ribbonEntries.lastIndex) {
                                                                         val next = safeIndex + 1
                                                                         selectedRibbonIndex = next
@@ -598,7 +603,10 @@ fun ZXGameSpaceHub(
                                                                 } else if (accumulatedDragX >= thresholdPx) {
                                                                     change.consume()
                                                                     hasSwipedInCurrentGesture = true
-                                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                    if (TapHapticState.enabled.value) {
+                                                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                    }
+                                                                    AudioUtil.playScroll(context)
                                                                     if (safeIndex > 0) {
                                                                         val prev = safeIndex - 1
                                                                         selectedRibbonIndex = prev

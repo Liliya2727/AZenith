@@ -111,18 +111,22 @@ object AudioUtil {
     }
 
     fun playOk(context: Context) {
+        TapHapticState.suppressSound = true
         play(context, okSoundId)
     }
 
     fun playCancel(context: Context) {
+        TapHapticState.suppressSound = true
         play(context, cancelSoundId)
     }
 
     fun playNotice(context: Context) {
+        TapHapticState.suppressSound = true
         play(context, noticeSoundId)
     }
 
     fun playNoticeBack(context: Context) {
+        TapHapticState.suppressSound = true
         play(context, noticeBackSoundId)
     }
 }

@@ -25,6 +25,9 @@ import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -36,6 +39,8 @@ import androidx.core.view.WindowInsetsControllerCompat
 import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.theme.ColorMode
 import zx.azenith.ui.theme.ThemeController
+import zx.azenith.ui.util.TapHapticState
+import zx.azenith.ui.util.tapHaptic
 
 /**
  * Hosts Game Space. Separate from [zx.azenith.MainActivity] because the shell needs a landscape,
@@ -55,6 +60,7 @@ class ZXGameSpaceActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        TapHapticState.init(this)
         zx.azenith.ui.util.AudioUtil.isGameHubActive = true
         zx.azenith.ui.util.AudioUtil.init(this)
 
@@ -77,10 +83,16 @@ class ZXGameSpaceActivity : ComponentActivity() {
             // Material You straight through: the shell reads the same dynamic palette as the
             // manager, in whichever mode the system is in, so there is no branded dark room.
             AZenithTheme {
-                ZXGameSpaceShell(
-                    onExit = { finish() },
-                    onExitApp = { finishAffinity() }
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .tapHaptic()
+                ) {
+                    ZXGameSpaceShell(
+                        onExit = { finish() },
+                        onExitApp = { finishAffinity() }
+                    )
+                }
             }
         }
     }

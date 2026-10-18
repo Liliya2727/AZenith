@@ -28,6 +28,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalViewConfiguration
 
@@ -56,6 +57,11 @@ object TapHapticState {
      * never read (a gesture that ends in a drag) cannot leak into a later tap.
      */
     var suppressTap = false
+    var suppressSound = false
+
+    fun init(context: Context) {
+        enabled.value = isTapHapticEnabled(context)
+    }
 }
 
 fun setTapHapticEnabled(context: Context, enabled: Boolean) {
@@ -74,14 +80,38 @@ fun fireTapHaptic(haptic: HapticFeedback) {
 /**
  * Confirmation pulse for the toggle that turns haptics on: the switch is off while this runs, so
  * every other hook is gated out and the user would otherwise feel nothing at the moment of
- * enabling. Runs through the window decor view, which is what makes it audible under the flag
- * that is still false at this point. Deliberately not fired when disabling -- switching feedback
- * off must be silent or the toggle appears broken.
+ * enabling. Runs through the window decor view, with vibrator fallback so it reliably pulses.
  */
 fun fireConfirmHaptic(context: Context) {
-    val view = android.view.View(context)
-    @Suppress("DEPRECATION")
-    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+    val decorView = (context as? android.app.Activity)?.window?.decorView
+    val performed = decorView?.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY) == true
+    if (!performed) {
+        try {
+            val vibrator = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                val vm = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager
+                vm?.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                context.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+            }
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                val effect = try {
+                    android.os.VibrationEffect.createPredefined(android.os.VibrationEffect.EFFECT_CLICK)
+                } catch (_: Exception) {
+                    android.os.VibrationEffect.createOneShot(25L, android.os.VibrationEffect.DEFAULT_AMPLITUDE)
+                }
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    val attrs = android.os.VibrationAttributes.createForUsage(android.os.VibrationAttributes.USAGE_TOUCH)
+                    vibrator?.vibrate(effect, attrs)
+                } else {
+                    vibrator?.vibrate(effect)
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(25L)
+            }
+        } catch (_: Exception) { }
+    }
 }
 
 /**
@@ -105,12 +135,14 @@ fun fireConfirmHaptic(context: Context) {
 fun Modifier.tapHaptic(): Modifier = composed {
     val viewConfiguration = LocalViewConfiguration.current
     val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
 
     this.pointerInput(Unit) {
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
             // Any leftover from a gesture that never produced a release is dropped here.
             TapHapticState.suppressTap = false
+            TapHapticState.suppressSound = false
             val enabledAtPress = TapHapticState.enabled.value
             val longPressTimeout = viewConfiguration.longPressTimeoutMillis
 
@@ -134,9 +166,15 @@ fun Modifier.tapHaptic(): Modifier = composed {
             // Read here, not at the press: the control's own handler runs in the Main pass, which
             // is before this Final pass, so a flag it sets for this gesture is visible now.
             val released = up
-            val suppressed = TapHapticState.suppressTap
-            if (released != null && released.isConsumed && enabledAtPress && !suppressed) {
-                haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+            val suppressedTap = TapHapticState.suppressTap
+            val suppressedSound = TapHapticState.suppressSound
+            if (released != null && released.isConsumed) {
+                if (enabledAtPress && !suppressedTap) {
+                    haptic.performHapticFeedback(HapticFeedbackType.VirtualKey)
+                }
+                if (AudioUtil.isGameHubActive && !suppressedSound) {
+                    AudioUtil.playOk(context)
+                }
             }
         }
     }

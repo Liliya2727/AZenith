@@ -136,6 +136,8 @@ import zx.azenith.ui.util.setGameWallpaperMode
 import zx.azenith.ui.util.getGameWallpaperUri
 import zx.azenith.ui.util.setGameWallpaperUri
 import zx.azenith.ui.util.saveMediaDirectly
+import zx.azenith.ui.util.TapHapticState
+import zx.azenith.ui.util.AudioUtil
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -256,8 +258,10 @@ internal fun ZXGameSpaceTileRibbon(
         val currentNearest = carouselPos.value.roundToInt().coerceIn(0, entries.lastIndex.coerceAtLeast(0))
         if (currentNearest != lastHapticIndex) {
             lastHapticIndex = currentNearest
-            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-            zx.azenith.ui.util.AudioUtil.playScroll(context)
+            if (TapHapticState.enabled.value) {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            }
+            AudioUtil.playScroll(context)
         }
     }
 
@@ -2008,7 +2012,9 @@ internal fun GameHeroStage(
 
             LaunchedEffect(isPlayPressed) {
                 if (isPlayPressed) {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    if (TapHapticState.enabled.value) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
                     playHoldScale.animateTo(
                         targetValue = 1.04f,
                         animationSpec = spring(

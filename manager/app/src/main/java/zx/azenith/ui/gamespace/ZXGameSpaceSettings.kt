@@ -83,6 +83,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import zx.azenith.ui.util.AudioUtil
+import zx.azenith.ui.util.tapHaptic
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.Android
@@ -2035,6 +2036,7 @@ private fun ApplyGameWallpaperDialog(
                     .fillMaxHeight(0.88f)
                     .padding(12.dp)
             })
+                .tapHaptic()
                 .gamepadKeyWatch()
                 .onPreviewKeyEvent { event ->
                     if (event.type == KeyEventType.KeyDown &&
@@ -3454,6 +3456,7 @@ internal fun SettingsAboutPane(
                 modifier = Modifier
                     .fillMaxWidth(0.72f)
                     .padding(16.dp)
+                    .tapHaptic()
             ) {
                 Column(
                     modifier = Modifier
@@ -3580,6 +3583,7 @@ internal fun SettingsAboutPane(
                 modifier = Modifier
                     .fillMaxWidth(0.84f)
                     .fillMaxHeight(0.86f)
+                    .tapHaptic()
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     Row(
