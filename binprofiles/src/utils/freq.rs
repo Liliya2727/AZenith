@@ -107,8 +107,10 @@ pub fn setfreqppm() {
             let new_maxfreq = setfreqs(&avail_file, new_max_target);
 
             if curprofile == "3" {
+                // profile 3: max = middle available freq
+                let new_maxfreq = which_midfreq(&avail_file).unwrap_or(new_maxfreq);
                 let target_min_target = cpu_maxfreq * 40 / 100;
-                let new_minfreq = setfreqs(&avail_file, target_min_target);
+                let new_minfreq = setfreqs(&avail_file, target_min_target).min(new_maxfreq);
 
                 write_lock(&format!("{} {}", cluster, new_maxfreq), "/proc/ppm/policy/hard_userlimit_max_cpu_freq");
                 write_lock(&format!("{} {}", cluster, new_minfreq), "/proc/ppm/policy/hard_userlimit_min_cpu_freq");
@@ -149,8 +151,10 @@ pub fn setfreq() {
             let new_maxfreq = setfreqs(&avail_file, new_max_target);
 
             if curprofile == "3" {
+                // profile 3: max = middle available freq
+                let new_maxfreq = which_midfreq(&avail_file).unwrap_or(new_maxfreq);
                 let target_min_target = cpu_maxfreq * 40 / 100;
-                let new_minfreq = setfreqs(&avail_file, target_min_target);
+                let new_minfreq = setfreqs(&avail_file, target_min_target).min(new_maxfreq);
 
                 write_lock(&new_maxfreq.to_string(), &format!("{}/scaling_max_freq", p_str));
                 write_lock(&new_minfreq.to_string(), &format!("{}/scaling_min_freq", p_str));
