@@ -40,6 +40,7 @@ data class SettingsUiState(
     val debugMode: Boolean = false,
     val profileTimeout: Boolean = false,
     val profileNotifications: Boolean = false,
+    val soundEffects: Boolean = true,
     val isLoaded: Boolean = false
 )
 
@@ -61,8 +62,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             val debugMode = PropertyUtils.get("persist.sys.azenith.debugmode") == "true"
             val profileTimeout = PropertyUtils.get("persist.sys.azenith.dropforeground") == "1"
             val profileNotifications = PropertyUtils.get("persist.sys.azenith.profilenotifications") == "1"
+            val soundEffects = zx.azenith.ui.util.isSoundEffectsEnabled(getApplication())
     
             TapHapticState.enabled.value = tapHaptic
+            zx.azenith.ui.util.SoundEffectsState.enabled.value = soundEffects
             _uiState.value = SettingsUiState(
                 disableTweak = disableTweak,
                 stateToast = stateToast,
@@ -71,9 +74,15 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 debugMode = debugMode,
                 profileTimeout = profileTimeout,
                 profileNotifications = profileNotifications,
+                soundEffects = soundEffects,
                 isLoaded = true
             )
         }
+    }
+
+    fun setSoundEffects(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(soundEffects = enabled)
+        zx.azenith.ui.util.setSoundEffectsEnabled(getApplication(), enabled)
     }
 
     /** UI-only preference, so it is stored in SharedPreferences, not a system property. */

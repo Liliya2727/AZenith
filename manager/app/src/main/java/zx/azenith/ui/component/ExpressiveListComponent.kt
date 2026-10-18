@@ -430,10 +430,19 @@ fun ExpressiveSwitchItem(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val handleCheckedChange: (Boolean) -> Unit = { newChecked ->
+        if (newChecked) {
+            zx.azenith.ui.util.AudioUtil.playOk(context)
+        } else {
+            zx.azenith.ui.util.AudioUtil.playCancel(context)
+        }
+        onCheckedChange(newChecked)
+    }
 
     ExpressiveListItem(
         onClick = if (enabled || onDisabledClick == null) {
-            { onCheckedChange(!checked) }
+            { handleCheckedChange(!checked) }
         } else {
             onDisabledClick
         },
@@ -443,7 +452,7 @@ fun ExpressiveSwitchItem(
             role = Role.Switch,
             enabled = enabled,
             indication = LocalIndication.current,
-            onValueChange = onCheckedChange
+            onValueChange = handleCheckedChange
         ),
         headlineContent = { Text(title) },
         leadingContent = icon?.let {
@@ -478,7 +487,7 @@ fun ExpressiveSwitchItem(
                         )
                     }
                 }, 
-                onCheckedChange = onCheckedChange,
+                onCheckedChange = handleCheckedChange,
                 interactionSource = interactionSource
             )
         },

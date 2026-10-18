@@ -160,6 +160,17 @@ fun ZXGameSpaceHub(
     }
     var selectedRibbonIndex by remember { mutableIntStateOf(0) }
     var exitPrompt by remember { mutableStateOf(false) }
+
+    var prevExitPrompt by remember { mutableStateOf(false) }
+    LaunchedEffect(exitPrompt) {
+        if (exitPrompt && !prevExitPrompt) {
+            zx.azenith.ui.util.AudioUtil.playNotice(context)
+        } else if (!exitPrompt && prevExitPrompt) {
+            zx.azenith.ui.util.AudioUtil.playNoticeBack(context)
+        }
+        prevExitPrompt = exitPrompt
+    }
+
     var tuningPkg by remember { mutableStateOf<String?>(null) }
     var wallpaperPkg by remember { mutableStateOf<String?>(null) }
     var searchOpen by remember { mutableStateOf(false) }

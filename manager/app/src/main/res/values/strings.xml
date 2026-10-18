@@ -361,6 +361,9 @@
     <string name="section_about">About</string>
     <string name="section_additionalsettings">Additional Settings</string>
     <string name="section_addons">Add-ons</string>
+    <string name="section_audio">Audio</string>
+    <string name="sound_effects">Sound Effects</string>
+    <string name="sound_effects_desc">Play audio feedback for navigation, toggles, and dialogs</string>
     <string name="section_current_status">Current Status</string>
     <string name="section_diagnostics">Diagnostics</string>
     <string name="section_display_render_settings">Display &amp; Render</string>

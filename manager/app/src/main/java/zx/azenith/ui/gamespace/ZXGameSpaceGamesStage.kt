@@ -229,6 +229,7 @@ internal fun ZXGameSpaceTileRibbon(
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
     val itemPitchPx = with(density) { 62.dp.toPx() }
     val expandedRightBasePx = with(density) { (88.dp + 12.dp).toPx() }
 
@@ -249,13 +250,14 @@ internal fun ZXGameSpaceTileRibbon(
         }
     }
 
-    // Haptic feedback on each game scrolled/passed
+    // Haptic and audio feedback on each game scrolled/passed
     var lastHapticIndex by remember { mutableIntStateOf(selectedIndex) }
     LaunchedEffect(carouselPos.value) {
         val currentNearest = carouselPos.value.roundToInt().coerceIn(0, entries.lastIndex.coerceAtLeast(0))
         if (currentNearest != lastHapticIndex) {
             lastHapticIndex = currentNearest
             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            zx.azenith.ui.util.AudioUtil.playScroll(context)
         }
     }
 

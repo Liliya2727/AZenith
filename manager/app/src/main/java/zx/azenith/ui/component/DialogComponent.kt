@@ -352,20 +352,27 @@ private fun ConfirmDialog(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        val context = LocalContext.current
         Spacer(modifier = Modifier.height(24.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End
         ) {
             TextButton(
-                onClick = dismiss,
+                onClick = {
+                    zx.azenith.ui.util.AudioUtil.playCancel(context)
+                    dismiss()
+                },
                 modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
             ) {
                 Text(text = visuals.dismiss ?: stringResource(id = android.R.string.cancel))
             }
             Spacer(modifier = Modifier.width(8.dp))
             TextButton(
-                onClick = confirm,
+                onClick = {
+                    zx.azenith.ui.util.AudioUtil.playOk(context)
+                    confirm()
+                },
                 modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
             ) {
                 Text(text = visuals.confirm ?: stringResource(id = android.R.string.ok))
@@ -390,6 +397,7 @@ fun CustomContentDialog(
     origin: Offset = Offset(0.5f, 0.5f),
     content: @Composable () -> Unit
 ) {
+    val context = LocalContext.current
     AZenithDialog(
         visible = visible,
         onDismiss = onDismiss,
@@ -409,14 +417,20 @@ fun CustomContentDialog(
             horizontalArrangement = Arrangement.End
         ) {
             TextButton(
-                onClick = onDismiss,
+                onClick = {
+                    zx.azenith.ui.util.AudioUtil.playCancel(context)
+                    onDismiss()
+                },
                 modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
             ) {
                 Text(text = dismissText)
             }
             Spacer(modifier = Modifier.width(8.dp))
             TextButton(
-                onClick = onConfirm,
+                onClick = {
+                    zx.azenith.ui.util.AudioUtil.playOk(context)
+                    onConfirm()
+                },
                 enabled = confirmEnabled,
                 modifier = Modifier.gamepadFocusOutline(shape = RoundedCornerShape(percent = 50))
             ) {
