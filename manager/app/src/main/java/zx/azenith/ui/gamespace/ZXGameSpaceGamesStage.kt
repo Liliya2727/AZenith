@@ -56,6 +56,8 @@ import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -183,6 +185,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
@@ -754,6 +757,7 @@ internal fun WelcomeHubStage(
     val expandThresholdPx = with(density) { (32.dp * scaleRatio).coerceIn(28.dp, 54.dp).toPx() }
 
     LaunchedEffect(expanded) {
+        dragExpandDistance = 0f
         if (!expanded && scroll.value != 0) {
             scroll.scrollTo(0)
         }
@@ -784,6 +788,40 @@ internal fun WelcomeHubStage(
                     return Offset(0f, available.y)
                 }
                 return Offset.Zero
+            }
+
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                if (expandedNow.value && source == NestedScrollSource.UserInput && available.y > 0f && scroll.value <= 0) {
+                    notifyExpanded.value(false)
+                    dragExpandDistance = 0f
+                    return Offset(0f, available.y)
+                }
+                return Offset.Zero
+            }
+
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                dragExpandDistance = 0f
+                if (!expandedNow.value) {
+                    if (available.y < -200f) {
+                        notifyExpanded.value(true)
+                        return available
+                    }
+                } else {
+                    if (available.y > 200f && scroll.value <= 0) {
+                        notifyExpanded.value(false)
+                        return available
+                    }
+                }
+                return Velocity.Zero
+            }
+
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                dragExpandDistance = 0f
+                if (expandedNow.value && available.y > 80f && scroll.value <= 0) {
+                    notifyExpanded.value(false)
+                    return available
+                }
+                return Velocity.Zero
             }
         }
     }
@@ -861,22 +899,24 @@ internal fun WelcomeHubStage(
             .fillMaxSize()
             .nestedScroll(stageGate)
             .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Final)
-                        if (event.changes.all { !it.pressed }) {
-                            if (!expandedNow.value) {
-                                dragExpandDistance = 0f
-                            }
-                        }
+                awaitEachGesture {
+                    try {
+                        awaitFirstDown(requireUnconsumed = false)
+                        do {
+                            val event = awaitPointerEvent()
+                        } while (event.changes.any { it.pressed })
+                    } finally {
+                        dragExpandDistance = 0f
                     }
                 }
             }
     ) {
         val stageH = maxHeight
-        val dynamicRestTopRoom = (stageH * 0.38f).coerceIn(68.dp, 136.dp)
-        val dynamicCompactH = (stageH * 0.23f).coerceIn(54.dp, 80.dp)
-        val dynamicGap = (stageH * 0.05f - 3.dp).coerceIn(0.dp, 18.dp)
+        val dynamicCompactH = (stageH * 0.22f).coerceIn(52.dp, 72.dp)
+        val restBottomSpacer = (14.dp + 4.dp * (scaleRatio - 0.8f)).coerceIn(12.dp, 20.dp)
+        val dynamicGap = (stageH * 0.04f).coerceIn(4.dp, 12.dp)
+        val dynamicRestTopRoom = (stageH - dynamicCompactH - dynamicGap - restBottomSpacer)
+            .coerceAtLeast(32.dp)
 
         val topRoom by animateDpAsState(
             targetValue = if (expanded) 12.dp else dynamicRestTopRoom,
@@ -887,8 +927,7 @@ internal fun WelcomeHubStage(
             label = "WelcomeTopRoom"
         )
 
-        val dragRamp = (dragExpandDistance / expandThresholdPx).coerceIn(0f, 1f)
-        val targetProgress = if (expanded) 1f else dragRamp
+        val targetProgress = if (expanded) 1f else 0f
         val expandProgress by animateFloatAsState(
             targetValue = targetProgress,
             animationSpec = spring(
@@ -955,7 +994,6 @@ internal fun WelcomeHubStage(
                 onLearnMore = { uriHandler.openUri("https://github.com/Liliya2727/AZenith") }
             )
 
-            val restBottomSpacer = (stageH * 0.08f).coerceIn(16.dp, 36.dp)
             val bottomSpacer = lerp(restBottomSpacer, 32.dp, expandProgress.coerceIn(0f, 1f))
             Spacer(Modifier.height(bottomSpacer))
         }
