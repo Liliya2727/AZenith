@@ -82,23 +82,35 @@ internal enum class TopCategory(val labelRes: Int) {
     Settings(R.string.settings)
 }
 
+internal enum class RibbonStageType {
+    Welcome,
+    Game,
+    Library,
+    WrapToFirst
+}
+
 internal sealed interface RibbonEntry {
     val key: String
+    val stageType: RibbonStageType
 
     data object Welcome : RibbonEntry {
         override val key: String = "__welcome__"
+        override val stageType: RibbonStageType = RibbonStageType.Welcome
     }
 
     data class Game(val app: ApplistViewmodel.AppInfo) : RibbonEntry {
         override val key: String = app.packageName
+        override val stageType: RibbonStageType = RibbonStageType.Game
     }
 
     data object Library : RibbonEntry {
         override val key: String = "__library__"
+        override val stageType: RibbonStageType = RibbonStageType.Library
     }
 
     data object WrapToFirst : RibbonEntry {
         override val key: String = "__wrap_to_first__"
+        override val stageType: RibbonStageType = RibbonStageType.WrapToFirst
     }
 }
 

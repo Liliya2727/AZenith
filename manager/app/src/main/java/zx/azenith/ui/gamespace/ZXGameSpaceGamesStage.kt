@@ -29,7 +29,9 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
@@ -1820,17 +1822,6 @@ internal fun GameHeroStage(
     val motion = MaterialTheme.motionScheme
     val colorSpec = motion.defaultEffectsSpec<Color>()
 
-    // Individual bounce animatables for the bottom bar left info elements
-    val iconOffset = remember { Animatable(0f) }
-    val iconScale = remember { Animatable(1f) }
-    val iconAlpha = remember { Animatable(1f) }
-
-    val titleOffset = remember { Animatable(0f) }
-    val titleAlpha = remember { Animatable(1f) }
-
-    val subOffset = remember { Animatable(0f) }
-    val subAlpha = remember { Animatable(1f) }
-
     // In-place bounce animatables for action buttons (Play, Pen, Gear)
     val playPageBounce = remember { Animatable(1f) }
     val penPageBounce = remember { Animatable(1f) }
@@ -1838,78 +1829,7 @@ internal fun GameHeroStage(
     val gearRotation = remember { Animatable(0f) }
 
     LaunchedEffect(app.packageName) {
-        val sign = if (movingForward) 1f else -1f
-
-        // 1. App Icon: springs with horizontal offset + scale overshoot
-        launch {
-            iconOffset.snapTo(sign * 42f)
-            iconScale.snapTo(0.72f)
-            iconAlpha.snapTo(0.2f)
-            launch {
-                iconAlpha.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(durationMillis = 180)
-                )
-            }
-            launch {
-                iconScale.animateTo(
-                    targetValue = 1f,
-                    animationSpec = spring(
-                        dampingRatio = 0.50f,
-                        stiffness = 320f
-                    )
-                )
-            }
-            iconOffset.animateTo(
-                targetValue = 0f,
-                animationSpec = spring(
-                    dampingRatio = 0.52f,
-                    stiffness = 300f
-                )
-            )
-        }
-
-        // 2. App Title: staggered individual spring overshoot
-        launch {
-            kotlinx.coroutines.delay(25)
-            titleOffset.snapTo(sign * 65f)
-            titleAlpha.snapTo(0.15f)
-            launch {
-                titleAlpha.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(durationMillis = 200)
-                )
-            }
-            titleOffset.animateTo(
-                targetValue = 0f,
-                animationSpec = spring(
-                    dampingRatio = 0.54f,
-                    stiffness = 280f
-                )
-            )
-        }
-
-        // 3. Version badge & package name: staggered individual spring overshoot
-        launch {
-            kotlinx.coroutines.delay(50)
-            subOffset.snapTo(sign * 80f)
-            subAlpha.snapTo(0.1f)
-            launch {
-                subAlpha.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(durationMillis = 220)
-                )
-            }
-            subOffset.animateTo(
-                targetValue = 0f,
-                animationSpec = spring(
-                    dampingRatio = 0.56f,
-                    stiffness = 260f
-                )
-            )
-        }
-
-        // 4. Action buttons: stay in place (no translation), subtle quick pop!
+        // Action buttons: stay in place (no translation), subtle quick pop!
         launch {
             playPageBounce.animateTo(
                 targetValue = 1.05f,
@@ -1974,51 +1894,60 @@ internal fun GameHeroStage(
                 .padding(bottom = 12.dp, end = 12.dp),
             verticalAlignment = Alignment.Bottom
         ) {
-            val versionName = app.packageInfo.versionName?.takeIf { it.isNotBlank() }
-            Column(
+            AnimatedContent(
+                targetState = app,
+                transitionSpec = {
+                    val sign = if (movingForward) 1 else -1
+                    val springSpatial = spring<IntOffset>(
+                        dampingRatio = 0.70f,
+                        stiffness = 450f
+                    )
+                    val springFade = spring<Float>(
+                        dampingRatio = 0.85f,
+                        stiffness = 550f
+                    )
+                    (slideInHorizontally(
+                        animationSpec = springSpatial,
+                        initialOffsetX = { fullWidth -> (fullWidth * 0.30f * sign).roundToInt() }
+                    ) + fadeIn(
+                        animationSpec = springFade
+                    )).togetherWith(
+                        slideOutHorizontally(
+                            animationSpec = springSpatial,
+                            targetOffsetX = { fullWidth -> (-fullWidth * 0.30f * sign).roundToInt() }
+                        ) + fadeOut(
+                            animationSpec = springFade
+                        )
+                    )
+                },
                 modifier = Modifier
                     .weight(1f)
                     .padding(end = 16.dp),
-                verticalArrangement = Arrangement.Bottom
-            ) {
+                contentAlignment = Alignment.BottomStart,
+                label = "GameHeroInfoTransition"
+            ) { currentApp ->
+                val versionName = currentApp.packageInfo.versionName?.takeIf { it.isNotBlank() }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Box(
-                        modifier = Modifier.graphicsLayer {
-                            translationX = iconOffset.value
-                            scaleX = iconScale.value
-                            scaleY = iconScale.value
-                            alpha = iconAlpha.value
-                        }
-                    ) {
-                        AppIconImage(app = app, size = 56.dp)
-                    }
+                    AppIconImage(app = currentApp, size = 56.dp)
                     Column(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = app.label,
+                            text = currentApp.label,
                             style = MaterialTheme.typography.headlineLarge.copy(
                                 fontWeight = FontWeight.ExtraBold,
                                 letterSpacing = 0.5.sp
                             ),
                             color = scheme.onSurface,
                             maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.graphicsLayer {
-                                translationX = titleOffset.value
-                                alpha = titleAlpha.value
-                            }
+                            overflow = TextOverflow.Ellipsis
                         )
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.graphicsLayer {
-                                translationX = subOffset.value
-                                alpha = subAlpha.value
-                            }
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             if (versionName != null) {
                                 Surface(
@@ -2036,7 +1965,7 @@ internal fun GameHeroStage(
                                 }
                             }
                             Text(
-                                text = app.packageName,
+                                text = currentApp.packageName,
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     fontWeight = FontWeight.Medium
                                 ),

@@ -204,6 +204,11 @@ fun ZXGameSpaceHub(
         previousRibbonIndex = safeIndex
     }
     val activeEntry = ribbonEntries[safeIndex]
+    val activeStageType = activeEntry.stageType
+    var lastGameApp by remember { mutableStateOf(enabledApps.firstOrNull()) }
+    if (activeEntry is RibbonEntry.Game) {
+        lastGameApp = activeEntry.app
+    }
 
     LaunchedEffect(activeEntry) {
         if (activeEntry != RibbonEntry.Welcome) {
@@ -598,60 +603,53 @@ fun ZXGameSpaceHub(
                                         )
                                 ) {
                                     AnimatedContent(
-                                        targetState = activeEntry,
+                                        targetState = activeStageType,
                                         transitionSpec = {
-                                            val fromIndex = ribbonEntries.indexOf(initialState)
-                                            val toIndex = ribbonEntries.indexOf(targetState)
-                                            val movingForward = (toIndex >= fromIndex) || (fromIndex == ribbonEntries.lastIndex && toIndex == 0)
+                                            val movingForward = isNavigatingForward
+                                            val springSpatial = spring<IntOffset>(
+                                                dampingRatio = 0.65f,
+                                                stiffness = 320f
+                                            )
+                                            val springScale = spring<Float>(
+                                                dampingRatio = 0.65f,
+                                                stiffness = 320f
+                                            )
+                                            val effectsSpec = motion.defaultEffectsSpec<Float>()
 
-                                            if (initialState is RibbonEntry.Game && targetState is RibbonEntry.Game) {
-                                                EnterTransition.None togetherWith ExitTransition.None
-                                            } else {
-                                                val springSpatial = spring<IntOffset>(
-                                                    dampingRatio = 0.65f,
-                                                    stiffness = 320f
-                                                )
-                                                val springScale = spring<Float>(
-                                                    dampingRatio = 0.65f,
-                                                    stiffness = 320f
-                                                )
-                                                val effectsSpec = motion.defaultEffectsSpec<Float>()
-
-                                                val slideInOffset = { size: Int ->
-                                                    if (movingForward) (size * 0.18f).roundToInt()
-                                                    else (-size * 0.18f).roundToInt()
-                                                 }
-                                                val slideOutOffset = { size: Int ->
-                                                    if (movingForward) (-size * 0.18f).roundToInt()
-                                                    else (size * 0.18f).roundToInt()
-                                                }
-
-                                                (slideInHorizontally(
-                                                    animationSpec = springSpatial,
-                                                    initialOffsetX = slideInOffset
-                                                ) + scaleIn(
-                                                    animationSpec = springScale,
-                                                    initialScale = 0.94f
-                                                ) + fadeIn(
-                                                    animationSpec = effectsSpec
-                                                )).togetherWith(
-                                                    slideOutHorizontally(
-                                                        animationSpec = springSpatial,
-                                                        targetOffsetX = slideOutOffset
-                                                    ) + scaleOut(
-                                                        animationSpec = springScale,
-                                                        targetScale = 1.03f
-                                                    ) + fadeOut(
-                                                        animationSpec = effectsSpec
-                                                    )
-                                                )
+                                            val slideInOffset = { size: Int ->
+                                                if (movingForward) (size * 0.18f).roundToInt()
+                                                else (-size * 0.18f).roundToInt()
                                             }
+                                            val slideOutOffset = { size: Int ->
+                                                if (movingForward) (-size * 0.18f).roundToInt()
+                                                else (size * 0.18f).roundToInt()
+                                            }
+
+                                            (slideInHorizontally(
+                                                animationSpec = springSpatial,
+                                                initialOffsetX = slideInOffset
+                                            ) + scaleIn(
+                                                animationSpec = springScale,
+                                                initialScale = 0.94f
+                                            ) + fadeIn(
+                                                animationSpec = effectsSpec
+                                            )).togetherWith(
+                                                slideOutHorizontally(
+                                                    animationSpec = springSpatial,
+                                                    targetOffsetX = slideOutOffset
+                                                ) + scaleOut(
+                                                    animationSpec = springScale,
+                                                    targetScale = 1.03f
+                                                ) + fadeOut(
+                                                    animationSpec = effectsSpec
+                                                )
+                                            )
                                         },
                                         modifier = Modifier.fillMaxSize(),
                                         label = "ZXGameSpaceMainStage"
-                                    ) { entry ->
-                                        when (entry) {
-                                            RibbonEntry.Welcome -> WelcomeHubStage(
+                                    ) { stageType ->
+                                        when (stageType) {
+                                            RibbonStageType.Welcome -> WelcomeHubStage(
                                                 scroll = welcomeScroll,
                                                 expanded = homeExpanded,
                                                 onExpandedChange = { if (activeEntry == RibbonEntry.Welcome) homeExpanded = it },
@@ -683,15 +681,20 @@ fun ZXGameSpaceHub(
                                                 onOpenHomeWallpaper = { wallpaperPkg = "home" }
                                             )
 
-                                            is RibbonEntry.Game -> GameHeroStage(
-                                                app = entry.app,
-                                                movingForward = isNavigatingForward,
-                                                onLaunch = { requestAppLaunch(entry.app) },
-                                                onOpenAppSettings = { tuningPkg = entry.app.packageName },
-                                                onOpenWallpaperSettings = { wallpaperPkg = entry.app.packageName }
-                                            )
+                                            RibbonStageType.Game -> {
+                                                val currentGame = (activeEntry as? RibbonEntry.Game)?.app ?: lastGameApp
+                                                if (currentGame != null) {
+                                                    GameHeroStage(
+                                                        app = currentGame,
+                                                        movingForward = isNavigatingForward,
+                                                        onLaunch = { requestAppLaunch(currentGame) },
+                                                        onOpenAppSettings = { tuningPkg = currentGame.packageName },
+                                                        onOpenWallpaperSettings = { wallpaperPkg = currentGame.packageName }
+                                                    )
+                                                }
+                                            }
 
-                                            RibbonEntry.Library -> LibraryGridStage(
+                                            RibbonStageType.Library -> LibraryGridStage(
                                                 games = games,
                                                 allApps = allApps,
                                                 expanded = libraryExpanded,
@@ -701,7 +704,7 @@ fun ZXGameSpaceHub(
                                                 onNavigateUp = { ribbonFocusRequester.requestFocus() }
                                             )
 
-                                            RibbonEntry.WrapToFirst -> WrapToFirstStage(
+                                            RibbonStageType.WrapToFirst -> WrapToFirstStage(
                                                 onReturnToFirst = { selectedRibbonIndex = 0 }
                                             )
                                         }
