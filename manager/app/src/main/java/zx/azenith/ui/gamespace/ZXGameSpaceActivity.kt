@@ -39,6 +39,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.theme.ColorMode
 import zx.azenith.ui.theme.ThemeController
+import zx.azenith.ui.util.BgmManager
 import zx.azenith.ui.util.TapHapticState
 import zx.azenith.ui.util.tapHaptic
 
@@ -63,6 +64,7 @@ class ZXGameSpaceActivity : ComponentActivity() {
         TapHapticState.init(this)
         zx.azenith.ui.util.AudioUtil.isGameHubActive = true
         zx.azenith.ui.util.AudioUtil.init(this)
+        BgmManager.init(this)
 
         // The window background shows through until the first Compose frame, so it follows the same
         // scheme the shell wears rather than a fixed colour — a hardcoded one flashes against it.
@@ -113,8 +115,19 @@ class ZXGameSpaceActivity : ComponentActivity() {
         return scheme.surface.toArgb()
     }
 
+    override fun onResume() {
+        super.onResume()
+        BgmManager.onActivityResume(this)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        BgmManager.onActivityPause()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         zx.azenith.ui.util.AudioUtil.isGameHubActive = false
+        BgmManager.onDestroy()
     }
 }
