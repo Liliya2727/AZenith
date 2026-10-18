@@ -356,12 +356,13 @@ private fun lerpInt(a: Int, b: Int, t: Float): Int = (a + (b - a) * t).roundToIn
 @Composable
 private fun BentoMorphLayout(
     progress: Float,
+    compactHeight: Dp = 58.dp,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
     val density = LocalDensity.current
     val gapPx = with(density) { BENTO_GAP.roundToPx() }
-    val compactHPx = with(density) { 58.dp.roundToPx() }
+    val compactHPx = with(density) { compactHeight.roundToPx() }
     val heroH1Px = with(density) { 184.dp.roundToPx() }
     val row2H1Px = with(density) { 176.dp.roundToPx() }
     val row3H1Px = with(density) { 88.dp.roundToPx() }
@@ -494,6 +495,7 @@ private fun BentoMorphLayout(
 @Composable
 internal fun HubBentoGrid(
     expandProgress: Float,
+    compactHeight: Dp = 58.dp,
     onExpandRequest: () -> Unit,
     moduleInstalled: Boolean?,
     moduleValue: String,
@@ -520,10 +522,12 @@ internal fun HubBentoGrid(
 
     BentoMorphLayout(
         progress = expandProgress,
+        compactHeight = compactHeight,
         modifier = modifier.fillMaxWidth()
     ) {
         MorphedProfileTile(
             progress = expandProgress,
+            compactHeight = compactHeight,
             profile = profile,
             profileValue = profileValue,
             isManualMode = isManualMode,
@@ -535,6 +539,7 @@ internal fun HubBentoGrid(
         val moduleMissing = moduleInstalled == false
         MorphedStatusTile(
             progress = expandProgress,
+            compactHeight = compactHeight,
             order = 1,
             icon = Icons.Rounded.Memory,
             label = stringResource(R.string.gamespace_info_module),
@@ -553,6 +558,7 @@ internal fun HubBentoGrid(
         val rootDenied = rootGranted == false
         MorphedStatusTile(
             progress = expandProgress,
+            compactHeight = compactHeight,
             order = 2,
             icon = if (rootGranted == true) Icons.Rounded.VerifiedUser else Icons.Rounded.Security,
             label = stringResource(R.string.root_access),
@@ -614,6 +620,7 @@ internal fun HubBentoGrid(
 @Composable
 private fun MorphedProfileTile(
     progress: Float,
+    compactHeight: Dp = 58.dp,
     profile: String,
     profileValue: String,
     isManualMode: Boolean,
@@ -633,12 +640,14 @@ private fun MorphedProfileTile(
     }
 
     val p = progress.coerceIn(0f, 1f)
-    val badgeSize = lerp(38.dp, 100.dp, p)
-    val glyphSize = lerp(20.dp, 44.dp, p)
+    val restBadgeSize = (compactHeight * 0.65f).coerceIn(36.dp, 52.dp)
+    val badgeSize = lerp(restBadgeSize, 100.dp, p)
+    val glyphSize = lerp(restBadgeSize * 0.52f, 44.dp, p)
     val restCorner = lerp(18.dp, 36.dp, p)
     val engagedCorner = lerp(12.dp, 20.dp, p)
     val padH = lerp(12.dp, 20.dp, p)
-    val padV = lerp(8.dp, 16.dp, p)
+    val restPadV = (compactHeight * 0.14f).coerceIn(7.dp, 12.dp)
+    val padV = lerp(restPadV, 16.dp, p)
     val gap = lerp(10.dp, 18.dp, p)
 
     val effectiveClick = if (p < 0.35f) {
@@ -792,6 +801,7 @@ private fun ModePill(isManualMode: Boolean, engaged: () -> Float) {
 @Composable
 private fun MorphedStatusTile(
     progress: Float,
+    compactHeight: Dp = 58.dp,
     order: Int,
     icon: ImageVector,
     label: String,
@@ -810,11 +820,13 @@ private fun MorphedStatusTile(
     val motion = MaterialTheme.motionScheme
     val effects = motion.defaultEffectsSpec<Float>()
     val p = progress.coerceIn(0f, 1f)
-    val badgeSize = lerp(38.dp, 52.dp, p)
+    val restBadgeSize = (compactHeight * 0.65f).coerceIn(36.dp, 52.dp)
+    val badgeSize = lerp(restBadgeSize, 52.dp, p)
     val restCorner = lerp(18.dp, 28.dp, p)
     val engagedCorner = lerp(12.dp, 36.dp, p)
     val padH = lerp(12.dp, 16.dp, p)
-    val padV = lerp(8.dp, 10.dp, p)
+    val restPadV = (compactHeight * 0.14f).coerceIn(7.dp, 12.dp)
+    val padV = lerp(restPadV, 10.dp, p)
     val gap = lerp(10.dp, 14.dp, p)
 
     BentoTile(
@@ -845,7 +857,7 @@ private fun MorphedStatusTile(
                     imageVector = icon,
                     contentDescription = null,
                     tint = onBadge,
-                    modifier = Modifier.size(lerp(20.dp, 24.dp, p))
+                    modifier = Modifier.size(lerp(restBadgeSize * 0.52f, 24.dp, p))
                 )
             }
             Column(modifier = Modifier.weight(1f)) {

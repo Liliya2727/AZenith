@@ -578,6 +578,7 @@ fun ZXGameSpaceHub(
                                                 scroll = welcomeScroll,
                                                 expanded = homeExpanded,
                                                 onExpandedChange = { homeExpanded = it },
+                                                appScalePercent = appScalePercent,
                                                 profile = profile,
                                                 profileValue = profileValue,
                                                 games = enabledApps,

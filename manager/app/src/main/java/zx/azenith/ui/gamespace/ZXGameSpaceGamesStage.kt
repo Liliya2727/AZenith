@@ -59,6 +59,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -726,6 +727,7 @@ internal fun WelcomeHubStage(
     scroll: ScrollState,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
+    appScalePercent: Int = 85,
     profile: String,
     profileValue: String,
     games: List<ApplistViewmodel.AppInfo>,
@@ -748,7 +750,8 @@ internal fun WelcomeHubStage(
     val notifyExpanded = rememberUpdatedState(onExpandedChange)
     var dragExpandDistance by remember { mutableStateOf(0f) }
     val density = LocalDensity.current
-    val expandThresholdPx = with(density) { 36.dp.toPx() }
+    val scaleRatio = (100f / appScalePercent.coerceIn(60, 150))
+    val expandThresholdPx = with(density) { (32.dp * scaleRatio).coerceIn(28.dp, 54.dp).toPx() }
 
     LaunchedEffect(expanded) {
         if (!expanded && scroll.value != 0) {
@@ -853,16 +856,7 @@ internal fun WelcomeHubStage(
         suspended
     }
 
-    val topRoom by animateDpAsState(
-        targetValue = if (expanded) 12.dp else 76.dp,
-        animationSpec = spring(
-            dampingRatio = 0.52f,
-            stiffness = 240f
-        ),
-        label = "WelcomeTopRoom"
-    )
-
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .nestedScroll(stageGate)
@@ -879,6 +873,31 @@ internal fun WelcomeHubStage(
                 }
             }
     ) {
+        val stageH = maxHeight
+        val dynamicRestTopRoom = (stageH * 0.38f).coerceIn(68.dp, 136.dp)
+        val dynamicCompactH = (stageH * 0.23f).coerceIn(54.dp, 80.dp)
+        val dynamicGap = (stageH * 0.05f - 3.dp).coerceIn(0.dp, 18.dp)
+
+        val topRoom by animateDpAsState(
+            targetValue = if (expanded) 12.dp else dynamicRestTopRoom,
+            animationSpec = spring(
+                dampingRatio = 0.52f,
+                stiffness = 240f
+            ),
+            label = "WelcomeTopRoom"
+        )
+
+        val dragRamp = (dragExpandDistance / expandThresholdPx).coerceIn(0f, 1f)
+        val targetProgress = if (expanded) 1f else dragRamp
+        val expandProgress by animateFloatAsState(
+            targetValue = targetProgress,
+            animationSpec = spring(
+                dampingRatio = 0.52f,
+                stiffness = 240f
+            ),
+            label = "BentoMorphProgress"
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -897,23 +916,19 @@ internal fun WelcomeHubStage(
                     text = wordmark,
                     deviceName = deviceName,
                     chipsetName = chipsetName,
+                    scaleRatio = scaleRatio,
                     onOpenHomeWallpaper = onOpenHomeWallpaper
                 )
             }
 
-            val dragRamp = (dragExpandDistance / expandThresholdPx).coerceIn(0f, 1f)
-            val targetProgress = if (expanded) 1f else dragRamp
-            val expandProgress by animateFloatAsState(
-                targetValue = targetProgress,
-                animationSpec = spring(
-                    dampingRatio = 0.52f,
-                    stiffness = 240f
-                ),
-                label = "BentoMorphProgress"
-            )
+            val wordmarkToBentoGap = lerp(dynamicGap, 0.dp, expandProgress)
+            if (wordmarkToBentoGap > 0.dp) {
+                Spacer(Modifier.height(wordmarkToBentoGap))
+            }
 
             HubBentoGrid(
                 expandProgress = expandProgress,
+                compactHeight = dynamicCompactH,
                 onExpandRequest = {
                     notifyExpanded.value(true)
                 },
@@ -940,7 +955,8 @@ internal fun WelcomeHubStage(
                 onLearnMore = { uriHandler.openUri("https://github.com/Liliya2727/AZenith") }
             )
 
-            val bottomSpacer = lerp(16.dp, 32.dp, expandProgress.coerceIn(0f, 1f))
+            val restBottomSpacer = (stageH * 0.08f).coerceIn(16.dp, 36.dp)
+            val bottomSpacer = lerp(restBottomSpacer, 32.dp, expandProgress.coerceIn(0f, 1f))
             Spacer(Modifier.height(bottomSpacer))
         }
     }
@@ -992,6 +1008,7 @@ internal fun HomeWordmark(
     text: String,
     deviceName: String,
     chipsetName: String,
+    scaleRatio: Float = 1f,
     onOpenHomeWallpaper: () -> Unit = {}
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -1003,6 +1020,12 @@ internal fun HomeWordmark(
         ),
         label = "HomeWordmarkHold"
     )
+
+    val wordmarkSizeSp = (36f + 14f * (scaleRatio - 0.7f)).coerceIn(40f, 60f)
+    val wordmarkFontSize = wordmarkSizeSp.sp
+    val wordmarkLineHeight = (wordmarkSizeSp + 2f).sp
+    val badgeTopPad = (2.dp + 4.dp * (scaleRatio - 0.8f)).coerceIn(2.dp, 8.dp)
+    val penSize = (26.dp + 6.dp * (scaleRatio - 0.8f)).coerceIn(26.dp, 34.dp)
 
     Column(
         modifier = Modifier
@@ -1024,8 +1047,8 @@ internal fun HomeWordmark(
             Text(
                 text = text,
                 style = MaterialTheme.typography.displayLarge.copy(
-                    fontSize = 44.sp,
-                    lineHeight = 46.sp,
+                    fontSize = wordmarkFontSize,
+                    lineHeight = wordmarkLineHeight,
                     fontWeight = FontWeight.Black,
                     letterSpacing = (-1.0).sp
                 ),
@@ -1035,7 +1058,7 @@ internal fun HomeWordmark(
             Surface(
                 shape = CircleShape,
                 color = scheme.primaryContainer,
-                modifier = Modifier.padding(top = 2.dp)
+                modifier = Modifier.padding(top = badgeTopPad)
             ) {
                 Text(
                     text = "GAME SPACE",
@@ -1053,8 +1076,8 @@ internal fun HomeWordmark(
                 color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
                 contentColor = scheme.onSurfaceVariant,
                 modifier = Modifier
-                    .padding(top = 2.dp)
-                    .size(28.dp)
+                    .padding(top = badgeTopPad)
+                    .size(penSize)
                     .gamepadFocusOutline(shape = penShape, register = true)
                     .clip(penShape)
                     .clickable(onClick = onOpenHomeWallpaper)
@@ -1063,7 +1086,7 @@ internal fun HomeWordmark(
                     Icon(
                         imageVector = Icons.Rounded.Edit,
                         contentDescription = "Edit Home Wallpaper",
-                        modifier = Modifier.size(15.dp)
+                        modifier = Modifier.size(penSize * 0.54f)
                     )
                 }
             }
@@ -1071,7 +1094,8 @@ internal fun HomeWordmark(
         Text(
             text = "$deviceName \u00b7 $chipsetName",
             style = MaterialTheme.typography.labelMedium.copy(
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                fontSize = (11f + 2f * scaleRatio).coerceIn(12f, 15f).sp
             ),
             color = scheme.onSurfaceVariant.copy(alpha = 0.82f),
             maxLines = 1,
