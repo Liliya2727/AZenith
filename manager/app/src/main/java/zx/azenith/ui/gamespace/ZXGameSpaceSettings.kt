@@ -198,6 +198,7 @@ import zx.azenith.R
 import zx.azenith.ui.component.MediaBannerRenderer
 import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.component.gamepadFocusOutline
+import zx.azenith.ui.component.ScaleConfirmationDialog
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -806,6 +807,10 @@ internal fun SettingsAppearancePane() {
     var appScalePercent by remember {
         mutableIntStateOf(prefs.getInt("gamespace_app_scale", 85).coerceIn(60, 150))
     }
+    var confirmedScale by remember {
+        mutableIntStateOf(prefs.getInt("gamespace_app_scale", 85).coerceIn(60, 150))
+    }
+    var pendingScaleConfirm by remember { mutableStateOf<Int?>(null) }
     var wallpaperDimmingIntensity by remember {
         mutableIntStateOf(prefs.getInt("gamespace_wallpaper_dimming_intensity", 75).coerceIn(15, 100))
     }
@@ -857,7 +862,11 @@ internal fun SettingsAppearancePane() {
                     keyColorValue = prefs.getInt("key_color", 0)
                 }
                 "gamespace_app_scale" -> {
-                    appScalePercent = prefs.getInt("gamespace_app_scale", 85).coerceIn(60, 150)
+                    val updated = prefs.getInt("gamespace_app_scale", 85).coerceIn(60, 150)
+                    appScalePercent = updated
+                    if (pendingScaleConfirm == null) {
+                        confirmedScale = updated
+                    }
                 }
             }
         }
@@ -956,9 +965,12 @@ internal fun SettingsAppearancePane() {
 
         AppScaleSection(
             initialScale = appScalePercent,
-            onScaleCommitted = {
-                appScalePercent = it
-                prefs.edit().putInt("gamespace_app_scale", it).apply()
+            onScaleCommitted = { next ->
+                if (next != confirmedScale) {
+                    pendingScaleConfirm = next
+                    appScalePercent = next
+                    prefs.edit().putInt("gamespace_app_scale", next).apply()
+                }
             }
         )
 
@@ -974,6 +986,21 @@ internal fun SettingsAppearancePane() {
             onSelectPreset = { colorInt ->
                 keyColorValue = colorInt
                 prefs.edit().putInt("key_color", colorInt).apply()
+            }
+        )
+    }
+
+    pendingScaleConfirm?.let { pendingScale ->
+        ScaleConfirmationDialog(
+            newScalePercent = pendingScale,
+            onConfirm = {
+                confirmedScale = pendingScale
+                pendingScaleConfirm = null
+            },
+            onRevert = {
+                appScalePercent = confirmedScale
+                prefs.edit().putInt("gamespace_app_scale", confirmedScale).apply()
+                pendingScaleConfirm = null
             }
         )
     }

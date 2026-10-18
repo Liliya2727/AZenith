@@ -642,4 +642,9 @@
     <string name="str_project_license_desc">AZenith is free and open-source software, released under the Apache License 2.0.</string>
     <string name="str_view_full_license">View full license</string>
     <string name="str_view_on_github">View on GitHub</string>
+    <string name="scale_confirm_title">Keep this app scale?</string>
+    <string name="scale_confirm_body">App scale changed to %d%%. If the UI looks cluttered or broken, it will revert automatically.</string>
+    <string name="scale_confirm_countdown">Reverting in %d s…</string>
+    <string name="scale_confirm_revert">Revert</string>
+    <string name="scale_confirm_keep">Keep</string>
 </resources>
