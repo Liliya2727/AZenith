@@ -125,7 +125,8 @@ fun ZXGameSpaceHub(
     onApplyProfile: (String) -> Unit = {},
     onLaunch: (ApplistViewmodel.AppInfo) -> Unit,
     onExit: () -> Unit,
-    onExitApp: () -> Unit = {}
+    onExitApp: () -> Unit = {},
+    loading: Boolean = false
 ) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
@@ -701,7 +702,8 @@ fun ZXGameSpaceHub(
                                                 onOpenSettings = { tuningPkg = it.packageName },
                                                 onExpandedChange = { if (activeEntry == RibbonEntry.Library) libraryExpanded = it },
                                                 onClose = { selectedRibbonIndex = 0 },
-                                                onNavigateUp = { ribbonFocusRequester.requestFocus() }
+                                                onNavigateUp = { ribbonFocusRequester.requestFocus() },
+                                                loading = loading
                                             )
 
                                             RibbonStageType.WrapToFirst -> WrapToFirstStage(

@@ -136,7 +136,8 @@ fun ZXGameSpaceShell(
                 },
                 onLaunch = { app -> launchGame(context, app.packageName) },
                 onExit = { leaving = true },
-                onExitApp = onExitApp
+                onExitApp = onExitApp,
+                loading = applist.isRefreshing
             )
         }
 

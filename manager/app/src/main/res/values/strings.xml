@@ -174,6 +174,11 @@
     <string name="gamespace_mode_manual">Manual</string>
     <string name="gamespace_app_settings">App Settings</string>
     <string name="gamespace_library_close">Close library</string>
+    <string name="gamespace_library_loading">Loading apps…</string>
+    <string name="gamespace_library_no_enabled">No enabled apps yet</string>
+    <string name="gamespace_library_no_enabled_desc">Enable AZenith performance tuning for any app to see it here.</string>
+    <string name="gamespace_library_clear_filter">Show all apps</string>
+    <string name="gamespace_library_browse_all">Browse all apps</string>
     <string name="gamespace_search_hint">Type to search apps in Game Space</string>
     <string name="gamespace_search_empty">No apps match that</string>
     <string name="gamespace_search_close">Close search</string>
