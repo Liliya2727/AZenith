@@ -47,7 +47,6 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.blur.material3.Material3
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -844,16 +843,20 @@ internal fun NowPlayingPanelOverlay(
                             val item = playlist[index]
                             val isCurrent = item.id == track.id
                             val itemShape = RoundedCornerShape(12.dp)
+                            val itemBgColor = when {
+                                isCurrent -> scheme.secondaryContainer
+                                item.isDefault -> scheme.tertiaryContainer.copy(alpha = 0.45f)
+                                else -> Color.Transparent
+                            }
+                            val itemContentColor = when {
+                                isCurrent -> scheme.onSecondaryContainer
+                                item.isDefault -> scheme.onTertiaryContainer
+                                else -> scheme.onSurface
+                            }
                             Surface(
                                 shape = itemShape,
-                                color = if (isCurrent) scheme.secondaryContainer else Color.Transparent,
-                                contentColor = if (isCurrent) scheme.onSecondaryContainer else scheme.onSurface,
-                                border = if (item.isDefault) {
-                                    BorderStroke(
-                                        width = 1.dp,
-                                        color = if (isCurrent) scheme.primary.copy(alpha = 0.45f) else scheme.primary.copy(alpha = 0.25f)
-                                    )
-                                } else null,
+                                color = itemBgColor,
+                                contentColor = itemContentColor,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(itemShape)
@@ -877,7 +880,7 @@ internal fun NowPlayingPanelOverlay(
                                         Icon(
                                             imageVector = Icons.Rounded.AutoAwesome,
                                             contentDescription = null,
-                                            tint = scheme.primary,
+                                            tint = if (isCurrent) scheme.primary else scheme.tertiary,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     } else {

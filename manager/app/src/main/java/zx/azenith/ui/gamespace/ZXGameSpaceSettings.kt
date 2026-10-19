@@ -30,6 +30,7 @@ import zx.azenith.ui.component.gamepadKeyWatch
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkHorizontally
@@ -46,7 +47,6 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -113,7 +113,10 @@ import androidx.compose.material.icons.rounded.Gavel
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.HourglassEmpty
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Info
@@ -179,6 +182,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -3243,6 +3247,8 @@ internal fun SettingsAudioPane(
     val nowPlayingEnabled by BgmManager.isNowPlayingEnabled.collectAsStateWithLifecycle()
     val isShuffleEnabled by BgmManager.isShuffleEnabled.collectAsStateWithLifecycle()
     val stagedTracks by BgmManager.stagedTracks.collectAsStateWithLifecycle()
+    val playbackPositionMs by BgmManager.playbackPositionMs.collectAsStateWithLifecycle()
+    val currentAlbumArt by BgmManager.currentAlbumArt.collectAsStateWithLifecycle()
 
     var isImportingMusic by remember { mutableStateOf(false) }
     var stagingExpanded by remember { mutableStateOf(false) }
@@ -3316,6 +3322,195 @@ internal fun SettingsAudioPane(
             exit = fadeOut() + shrinkVertically()
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                val activePlayingTrack = currentTrack
+                val isNowPlayingVisible = isPlaying && activePlayingTrack != null
+
+                AnimatedVisibility(
+                    visible = isNowPlayingVisible,
+                    enter = fadeIn(animationSpec = tween(150)) + expandVertically(animationSpec = tween(150)),
+                    exit = ExitTransition.None
+                ) {
+                    if (activePlayingTrack != null) {
+                        val miniPlayerShape = RoundedCornerShape(16.dp)
+                        Surface(
+                            shape = miniPlayerShape,
+                            color = scheme.surfaceContainerHigh.copy(alpha = 0.95f),
+                            contentColor = scheme.onSurface,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .gamepadFocusOutline(shape = miniPlayerShape, register = true)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                val albumArt = currentAlbumArt
+                                val jacketShape = RoundedCornerShape(10.dp)
+                                Surface(
+                                    shape = jacketShape,
+                                    color = if (activePlayingTrack.isDefault) scheme.tertiaryContainer else scheme.primaryContainer,
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(jacketShape)
+                                ) {
+                                    if (albumArt != null) {
+                                        Image(
+                                            bitmap = albumArt.asImageBitmap(),
+                                            contentDescription = activePlayingTrack.title,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    } else {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = if (activePlayingTrack.isDefault) Icons.Rounded.AutoAwesome else Icons.Rounded.MusicNote,
+                                                contentDescription = null,
+                                                tint = if (activePlayingTrack.isDefault) scheme.onTertiaryContainer else scheme.onPrimaryContainer,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                val displayTitle = activePlayingTrack.title
+                                val displayArtist = activePlayingTrack.artist?.takeIf { it.isNotBlank() }
+                                    ?: if (activePlayingTrack.isDefault) "AZenith" else activePlayingTrack.fileName
+
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = displayTitle,
+                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = scheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false)
+                                    )
+                                    Text(
+                                        text = "—",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = scheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    )
+                                    Text(
+                                        text = displayArtist,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = scheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false)
+                                    )
+                                }
+
+                                val currentPosFormatted = BgmManager.formatTimeMs(playbackPositionMs)
+                                val totalDurMs = activePlayingTrack.durationMs
+                                val totalDurFormatted = if (totalDurMs > 0) {
+                                    BgmManager.formatTimeMs(totalDurMs)
+                                } else {
+                                    activePlayingTrack.formattedDuration.ifEmpty { "0:00" }
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = scheme.surfaceContainerHighest.copy(alpha = 0.55f)
+                                ) {
+                                    Text(
+                                        text = "$currentPosFormatted / $totalDurFormatted",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                            fontFeatureSettings = "tnum"
+                                        ),
+                                        color = scheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    if (playlist.size > 1) {
+                                        val prevShape = CircleShape
+                                        Surface(
+                                            shape = prevShape,
+                                            color = Color.Transparent,
+                                            contentColor = scheme.onSurfaceVariant,
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .clip(prevShape)
+                                                .gamepadFocusOutline(shape = prevShape, register = true)
+                                                .clickable {
+                                                    AudioUtil.playOk(context)
+                                                    BgmManager.playPreviousOrRestart(context)
+                                                }
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.SkipPrevious,
+                                                    contentDescription = "Previous",
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    val playShape = CircleShape
+                                    Surface(
+                                        shape = playShape,
+                                        color = scheme.primary,
+                                        contentColor = scheme.onPrimary,
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .clip(playShape)
+                                            .gamepadFocusOutline(shape = playShape, register = true)
+                                            .clickable {
+                                                AudioUtil.playOk(context)
+                                                BgmManager.togglePlayPause(context)
+                                            }
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+
+                                    if (playlist.size > 1) {
+                                        val nextShape = CircleShape
+                                        Surface(
+                                            shape = nextShape,
+                                            color = Color.Transparent,
+                                            contentColor = scheme.onSurfaceVariant,
+                                            modifier = Modifier
+                                                .size(32.dp)
+                                                .clip(nextShape)
+                                                .gamepadFocusOutline(shape = nextShape, register = true)
+                                                .clickable {
+                                                    AudioUtil.playOk(context)
+                                                    BgmManager.playNext(context)
+                                                }
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.SkipNext,
+                                                    contentDescription = "Next",
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 val volumeCardShape = RoundedCornerShape(18.dp)
                 Surface(
                     shape = volumeCardShape,
@@ -3630,12 +3825,21 @@ internal fun SettingsAudioPane(
                                                         ) + fadeOut(animationSpec = springBouncyFloat)
                                                     ) {
                                                         val trackItemShape = RoundedCornerShape(12.dp)
+                                                        val trackBgColor = if (track.isDefault) {
+                                                            scheme.tertiaryContainer.copy(alpha = 0.55f)
+                                                        } else {
+                                                            scheme.surfaceContainerHighest.copy(alpha = 0.6f)
+                                                        }
+                                                        val trackContentColor = if (track.isDefault) {
+                                                            scheme.onTertiaryContainer
+                                                        } else {
+                                                            scheme.onSurface
+                                                        }
+
                                                         Surface(
                                                             shape = trackItemShape,
-                                                            color = scheme.surfaceContainerHighest.copy(alpha = 0.6f),
-                                                            border = if (track.isDefault) {
-                                                                BorderStroke(1.dp, scheme.primary.copy(alpha = 0.35f))
-                                                            } else null,
+                                                            color = trackBgColor,
+                                                            contentColor = trackContentColor,
                                                             modifier = Modifier
                                                                 .fillMaxWidth()
                                                                 .gamepadFocusOutline(shape = trackItemShape, register = true)
@@ -3655,7 +3859,7 @@ internal fun SettingsAudioPane(
                                                                     Icon(
                                                                         imageVector = if (track.isDefault) Icons.Rounded.AutoAwesome else Icons.Rounded.MusicNote,
                                                                         contentDescription = null,
-                                                                        tint = if (track.isDefault) scheme.primary else scheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                                        tint = if (track.isDefault) scheme.tertiary else scheme.onSurfaceVariant.copy(alpha = 0.5f),
                                                                         modifier = Modifier.size(18.dp)
                                                                     )
                                                                 }
@@ -3678,13 +3882,13 @@ internal fun SettingsAudioPane(
                                                                             Icon(
                                                                                 imageVector = Icons.Rounded.AutoAwesome,
                                                                                 contentDescription = null,
-                                                                                tint = scheme.primary,
+                                                                                tint = scheme.tertiary,
                                                                                 modifier = Modifier.size(11.dp)
                                                                             )
                                                                             Text(
                                                                                 text = stringResource(R.string.bgm_default_track_badge),
                                                                                 style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                                                                                color = scheme.primary,
+                                                                                color = scheme.tertiary,
                                                                                 maxLines = 1,
                                                                                 overflow = TextOverflow.Ellipsis,
                                                                                 modifier = Modifier.weight(1f, fill = false)
@@ -4041,17 +4245,21 @@ internal fun SettingsAudioPane(
                                                     val isActive = track.id == currentTrack?.id
                                                     val trackItemShape = RoundedCornerShape(12.dp)
                                                     val realIndex = playlist.indexOfFirst { it.id == track.id }
+                                                    val trackBgColor = when {
+                                                        isActive -> scheme.secondaryContainer
+                                                        track.isDefault -> scheme.tertiaryContainer.copy(alpha = 0.55f)
+                                                        else -> scheme.surfaceContainerHighest.copy(alpha = 0.6f)
+                                                    }
+                                                    val trackContentColor = when {
+                                                        isActive -> scheme.onSecondaryContainer
+                                                        track.isDefault -> scheme.onTertiaryContainer
+                                                        else -> scheme.onSurface
+                                                    }
 
                                                     Surface(
                                                         shape = trackItemShape,
-                                                        color = if (isActive) scheme.secondaryContainer else scheme.surfaceContainerHighest.copy(alpha = 0.6f),
-                                                        contentColor = if (isActive) scheme.onSecondaryContainer else scheme.onSurface,
-                                                        border = if (track.isDefault) {
-                                                            BorderStroke(
-                                                                width = 1.dp,
-                                                                color = if (isActive) scheme.primary.copy(alpha = 0.45f) else scheme.primary.copy(alpha = 0.25f)
-                                                            )
-                                                        } else null,
+                                                        color = trackBgColor,
+                                                        contentColor = trackContentColor,
                                                         modifier = Modifier
                                                             .fillMaxWidth()
                                                             .gamepadFocusOutline(shape = trackItemShape, register = true)
@@ -4089,7 +4297,7 @@ internal fun SettingsAudioPane(
                                                                     Icon(
                                                                         imageVector = Icons.Rounded.AutoAwesome,
                                                                         contentDescription = null,
-                                                                        tint = scheme.primary,
+                                                                        tint = scheme.tertiary,
                                                                         modifier = Modifier.size(18.dp)
                                                                     )
                                                                 } else {
@@ -4120,13 +4328,13 @@ internal fun SettingsAudioPane(
                                                                         Icon(
                                                                             imageVector = Icons.Rounded.AutoAwesome,
                                                                             contentDescription = null,
-                                                                            tint = if (isActive) scheme.onSecondaryContainer.copy(alpha = 0.85f) else scheme.primary,
+                                                                            tint = if (isActive) scheme.onSecondaryContainer.copy(alpha = 0.85f) else scheme.tertiary,
                                                                             modifier = Modifier.size(11.dp)
                                                                         )
                                                                         Text(
                                                                             text = stringResource(R.string.bgm_default_track_badge),
                                                                             style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                                                                            color = if (isActive) scheme.onSecondaryContainer.copy(alpha = 0.85f) else scheme.primary,
+                                                                            color = if (isActive) scheme.onSecondaryContainer.copy(alpha = 0.85f) else scheme.tertiary,
                                                                             maxLines = 1,
                                                                             overflow = TextOverflow.Ellipsis,
                                                                             modifier = Modifier.weight(1f, fill = false)
