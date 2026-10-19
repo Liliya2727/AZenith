@@ -717,7 +717,7 @@ object BgmManager {
         _playlist.value = updated
 
         // Move to staging area (including default track)
-        _stagedTracks.value = _stagedTracks.value + trackToRemove
+        _stagedTracks.value = listOf(trackToRemove) + _stagedTracks.value.filterNot { it.id == trackId }
         saveStagedToPrefs(appContext)
 
         if (_currentTrack.value?.id == trackId) {
