@@ -801,7 +801,12 @@ fun ZXGameSpaceHub(
         NowPlayingPanelOverlay(
             visible = nowPlayingOpen,
             hazeState = overlayHazeState,
-            onClose = { nowPlayingOpen = false }
+            onClose = { nowPlayingOpen = false },
+            onNavigateToAudioSettings = {
+                nowPlayingOpen = false
+                selectedSettingsTab = SettingsSidebarTab.Audio
+                category = TopCategory.Settings
+            }
         )
 
         if (exitPrompt) {
