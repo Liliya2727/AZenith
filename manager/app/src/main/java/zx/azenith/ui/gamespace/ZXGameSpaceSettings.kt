@@ -110,6 +110,9 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.HourglassEmpty
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Inventory2
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.LibraryBooks
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.Memory
@@ -119,12 +122,14 @@ import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material.icons.rounded.RemoveCircleOutline
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.RocketLaunch
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.SettingsSuggest
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.SwapVerticalCircle
@@ -3226,6 +3231,8 @@ internal fun SettingsAudioPane(
     val currentTrack by BgmManager.currentTrack.collectAsStateWithLifecycle()
     val isPlaying by BgmManager.isPlaying.collectAsStateWithLifecycle()
     val nowPlayingEnabled by BgmManager.isNowPlayingEnabled.collectAsStateWithLifecycle()
+    val isShuffleEnabled by BgmManager.isShuffleEnabled.collectAsStateWithLifecycle()
+    val stagedTracks by BgmManager.stagedTracks.collectAsStateWithLifecycle()
 
     var isImportingMusic by remember { mutableStateOf(false) }
 
@@ -3413,39 +3420,77 @@ internal fun SettingsAudioPane(
                                         color = scheme.onSurface
                                     )
                                     Text(
-                                        text = if (playlist.size <= 1) "Single track looping" else "${playlist.size} tracks • Sequential loop",
+                                        text = when {
+                                            playlist.size <= 1 -> "Single track looping"
+                                            isShuffleEnabled -> "${playlist.size} tracks • Shuffle mode"
+                                            else -> "${playlist.size} tracks • Sequential loop"
+                                        },
                                         style = MaterialTheme.typography.bodySmall,
                                         color = scheme.onSurfaceVariant
                                     )
                                 }
                             }
 
-                            val addBtnShape = RoundedCornerShape(12.dp)
-                            Surface(
-                                shape = addBtnShape,
-                                color = scheme.primary,
-                                contentColor = scheme.onPrimary,
-                                modifier = Modifier
-                                    .gamepadFocusOutline(shape = addBtnShape, register = true)
-                                    .clip(addBtnShape)
-                                    .clickable {
-                                        audioPickerLauncher.launch(arrayOf("audio/*", "application/ogg"))
-                                    }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                val shuffleBtnShape = RoundedCornerShape(12.dp)
+                                Surface(
+                                    shape = shuffleBtnShape,
+                                    color = if (isShuffleEnabled) scheme.primaryContainer else scheme.surfaceContainerHighest,
+                                    contentColor = if (isShuffleEnabled) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
+                                    modifier = Modifier
+                                        .gamepadFocusOutline(shape = shuffleBtnShape, register = true)
+                                        .clip(shuffleBtnShape)
+                                        .clickable {
+                                            BgmManager.toggleShuffle(context)
+                                        }
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Add,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.bgm_add_track),
-                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Shuffle,
+                                            contentDescription = stringResource(R.string.bgm_shuffle),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.bgm_shuffle),
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
+                                        )
+                                    }
+                                }
+
+                                val addBtnShape = RoundedCornerShape(12.dp)
+                                Surface(
+                                    shape = addBtnShape,
+                                    color = scheme.primary,
+                                    contentColor = scheme.onPrimary,
+                                    modifier = Modifier
+                                        .gamepadFocusOutline(shape = addBtnShape, register = true)
+                                        .clip(addBtnShape)
+                                        .clickable {
+                                            audioPickerLauncher.launch(arrayOf("audio/*", "application/ogg"))
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Add,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.bgm_add_track),
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -3458,13 +3503,14 @@ internal fun SettingsAudioPane(
                         Column(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            playlist.forEach { track ->
+                            playlist.forEachIndexed { index, track ->
                                 val isActive = track.id == currentTrack?.id
-                                val trackItemShape = RoundedCornerShape(14.dp)
+                                val trackItemShape = RoundedCornerShape(12.dp)
 
                                 Surface(
                                     shape = trackItemShape,
-                                    color = if (isActive) scheme.primaryContainer.copy(alpha = 0.35f) else scheme.surfaceContainerHighest.copy(alpha = 0.6f),
+                                    color = if (isActive) scheme.secondaryContainer else scheme.surfaceContainerHighest.copy(alpha = 0.6f),
+                                    contentColor = if (isActive) scheme.onSecondaryContainer else scheme.onSurface,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .gamepadFocusOutline(shape = trackItemShape, register = true)
@@ -3478,7 +3524,7 @@ internal fun SettingsAudioPane(
                                             .fillMaxWidth()
                                             .padding(horizontal = 14.dp, vertical = 10.dp),
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
                                         Box(
                                             modifier = Modifier.size(24.dp),
@@ -3518,7 +3564,7 @@ internal fun SettingsAudioPane(
                                                     style = MaterialTheme.typography.bodyMedium.copy(
                                                         fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium
                                                     ),
-                                                    color = if (isActive) scheme.primary else scheme.onSurface,
+                                                    color = if (isActive) scheme.onSecondaryContainer else scheme.onSurface,
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis
                                                 )
@@ -3545,7 +3591,7 @@ internal fun SettingsAudioPane(
                                                 Text(
                                                     text = subtitle,
                                                     style = MaterialTheme.typography.bodySmall,
-                                                    color = scheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                                    color = if (isActive) scheme.onSecondaryContainer.copy(alpha = 0.75f) else scheme.onSurfaceVariant.copy(alpha = 0.75f),
                                                     maxLines = 1,
                                                     overflow = TextOverflow.Ellipsis
                                                 )
@@ -3556,18 +3602,65 @@ internal fun SettingsAudioPane(
                                             Text(
                                                 text = track.formattedDuration,
                                                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
-                                                color = scheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                                color = if (isActive) scheme.onSecondaryContainer.copy(alpha = 0.8f) else scheme.onSurfaceVariant.copy(alpha = 0.8f)
                                             )
                                         }
 
+                                        // Move controls
+                                        if (playlist.size > 1) {
+                                            if (index > 0) {
+                                                Surface(
+                                                    shape = CircleShape,
+                                                    color = Color.Transparent,
+                                                    modifier = Modifier
+                                                        .size(28.dp)
+                                                        .clip(CircleShape)
+                                                        .clickable {
+                                                            BgmManager.moveTrack(context, index, index - 1)
+                                                        }
+                                                ) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Icon(
+                                                            imageVector = Icons.Rounded.KeyboardArrowUp,
+                                                            contentDescription = stringResource(R.string.bgm_move_up),
+                                                            tint = if (isActive) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            if (index < playlist.lastIndex) {
+                                                Surface(
+                                                    shape = CircleShape,
+                                                    color = Color.Transparent,
+                                                    modifier = Modifier
+                                                        .size(28.dp)
+                                                        .clip(CircleShape)
+                                                        .clickable {
+                                                            BgmManager.moveTrack(context, index, index + 1)
+                                                        }
+                                                ) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Icon(
+                                                            imageVector = Icons.Rounded.KeyboardArrowDown,
+                                                            contentDescription = stringResource(R.string.bgm_move_down),
+                                                            tint = if (isActive) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        // Unstage track to staging area
                                         if (!track.isDefault || playlist.size > 1) {
                                             val deleteShape = CircleShape
                                             Surface(
                                                 shape = deleteShape,
                                                 color = Color.Transparent,
-                                                contentColor = scheme.error.copy(alpha = 0.8f),
+                                                contentColor = scheme.onSurfaceVariant.copy(alpha = 0.7f),
                                                 modifier = Modifier
-                                                    .size(36.dp)
+                                                    .size(32.dp)
                                                     .gamepadFocusOutline(shape = deleteShape, register = true)
                                                     .clip(deleteShape)
                                                     .clickable {
@@ -3576,8 +3669,8 @@ internal fun SettingsAudioPane(
                                             ) {
                                                 Box(contentAlignment = Alignment.Center) {
                                                     Icon(
-                                                        imageVector = Icons.Rounded.DeleteOutline,
-                                                        contentDescription = stringResource(R.string.bgm_delete_track),
+                                                        imageVector = Icons.Rounded.RemoveCircleOutline,
+                                                        contentDescription = stringResource(R.string.bgm_unstage_track),
                                                         modifier = Modifier.size(18.dp)
                                                     )
                                                 }
@@ -3619,6 +3712,183 @@ internal fun SettingsAudioPane(
                                         text = stringResource(R.string.bgm_reset_playlist),
                                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
                                     )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Staging Area Card
+                if (stagedTracks.isNotEmpty()) {
+                    val stagingCardShape = RoundedCornerShape(18.dp)
+                    Surface(
+                        shape = stagingCardShape,
+                        color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                        contentColor = scheme.onSurface,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .gamepadFocusOutline(shape = stagingCardShape, register = true)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = scheme.tertiaryContainer,
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Inventory2,
+                                                contentDescription = null,
+                                                tint = scheme.onTertiaryContainer,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                    Column {
+                                        Text(
+                                            text = stringResource(R.string.bgm_staging_area_title),
+                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                                            color = scheme.onSurface
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.bgm_staging_area_desc),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = scheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "${stagedTracks.size}",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.tertiary
+                                )
+                            }
+
+                            HorizontalDivider(
+                                color = scheme.outlineVariant.copy(alpha = 0.4f),
+                                thickness = 1.dp
+                            )
+
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                stagedTracks.forEach { track ->
+                                    val trackItemShape = RoundedCornerShape(12.dp)
+                                    Surface(
+                                        shape = trackItemShape,
+                                        color = scheme.surfaceContainerHighest.copy(alpha = 0.6f),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .gamepadFocusOutline(shape = trackItemShape, register = true)
+                                            .clip(trackItemShape)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.MusicNote,
+                                                contentDescription = null,
+                                                tint = scheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                modifier = Modifier.size(18.dp)
+                                            )
+
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = track.title,
+                                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                                        fontWeight = FontWeight.Medium
+                                                    ),
+                                                    color = scheme.onSurface,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                if (!track.isDefault) {
+                                                    val subtitle = track.artist ?: track.fileName
+                                                    Text(
+                                                        text = subtitle,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = scheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
+                                            }
+
+                                            if (track.formattedDuration.isNotEmpty()) {
+                                                Text(
+                                                    text = track.formattedDuration,
+                                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+                                                    color = scheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                                )
+                                            }
+
+                                            // Restore to playlist
+                                            val restoreShape = CircleShape
+                                            Surface(
+                                                shape = restoreShape,
+                                                color = scheme.primaryContainer,
+                                                contentColor = scheme.onPrimaryContainer,
+                                                modifier = Modifier
+                                                    .size(34.dp)
+                                                    .gamepadFocusOutline(shape = restoreShape, register = true)
+                                                    .clip(restoreShape)
+                                                    .clickable {
+                                                        AudioUtil.playOk(context)
+                                                        BgmManager.restoreFromStaging(context, track.id)
+                                                    }
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.Add,
+                                                        contentDescription = stringResource(R.string.bgm_restore_track),
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                            }
+
+                                            // Delete permanently
+                                            if (!track.isDefault) {
+                                                val deleteShape = CircleShape
+                                                Surface(
+                                                    shape = deleteShape,
+                                                    color = Color.Transparent,
+                                                    contentColor = scheme.error.copy(alpha = 0.8f),
+                                                    modifier = Modifier
+                                                        .size(34.dp)
+                                                        .gamepadFocusOutline(shape = deleteShape, register = true)
+                                                        .clip(deleteShape)
+                                                        .clickable {
+                                                            BgmManager.deletePermanently(context, track.id)
+                                                        }
+                                                ) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Icon(
+                                                            imageVector = Icons.Rounded.DeleteOutline,
+                                                            contentDescription = stringResource(R.string.bgm_delete_permanent),
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

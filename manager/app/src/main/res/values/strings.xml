@@ -387,6 +387,15 @@
     <string name="bgm_now_playing_play">Play</string>
     <string name="bgm_now_playing_pause">Pause</string>
     <string name="bgm_now_playing_playlist">Playlist</string>
+    <string name="bgm_staging_area_title">Staging Area</string>
+    <string name="bgm_staging_area_desc">Unstaged music. Tap + to restore to playlist, or delete permanently to free storage.</string>
+    <string name="bgm_restore_track">Restore to playlist</string>
+    <string name="bgm_delete_permanent">Delete permanently</string>
+    <string name="bgm_shuffle">Shuffle</string>
+    <string name="bgm_sequential">Sequential loop</string>
+    <string name="bgm_unstage_track">Move to staging area</string>
+    <string name="bgm_move_up">Move up</string>
+    <string name="bgm_move_down">Move down</string>
     <string name="section_current_status">Current Status</string>
     <string name="section_diagnostics">Diagnostics</string>
     <string name="section_display_render_settings">Display &amp; Render</string>
