@@ -343,32 +343,40 @@ object BgmManager {
         val rMode = if (repeatModeStr == "one") BgmRepeatMode.ONE else BgmRepeatMode.ALL
         val shuffleEnabled = prefs.getBoolean(PREF_BGM_SHUFFLE, false)
 
-        val loadedPlaylist = loadPlaylistFromPrefs(appContext, prefs)
         val loadedStaged = loadStagedFromPrefs(appContext, prefs)
-        val selected = loadedPlaylist.firstOrNull { it.id == activeId } ?: loadedPlaylist.firstOrNull() ?: BgmTrack.DEFAULT
+        val loadedPlaylist = loadPlaylistFromPrefs(appContext, prefs)
+        val finalPlaylist = if (loadedPlaylist.isEmpty() && loadedStaged.isEmpty()) {
+            listOf(BgmTrack.DEFAULT)
+        } else {
+            loadedPlaylist
+        }
+        val selected = finalPlaylist.firstOrNull { it.id == activeId } ?: finalPlaylist.firstOrNull()
 
         _isEnabled.value = enabled
         _volume.value = vol
         _isNowPlayingEnabled.value = nowPlayingEnabled
         _repeatMode.value = rMode
         _isShuffleEnabled.value = shuffleEnabled
-        _playlist.value = loadedPlaylist
+        _playlist.value = finalPlaylist
         _stagedTracks.value = loadedStaged
         _currentTrack.value = selected
         _songChangeNonce.value = 1L
         isInitialized = true
 
-        updateAlbumArtForTrack(appContext, selected)
-
-        if (enabled && isGameHubActive) {
-            playCurrentTrack(appContext)
+        if (selected != null) {
+            updateAlbumArtForTrack(appContext, selected)
+            if (enabled && isGameHubActive) {
+                playCurrentTrack(appContext)
+            }
         }
     }
 
     private fun loadPlaylistFromPrefs(context: Context, prefs: SharedPreferences): List<BgmTrack> {
         val rawJson = prefs.getString(PREF_BGM_PLAYLIST, null)
-        val list = if (rawJson.isNullOrBlank()) {
+        val list = if (rawJson == null) {
             listOf(BgmTrack.DEFAULT)
+        } else if (rawJson.isBlank()) {
+            emptyList()
         } else {
             try {
                 val array = JSONArray(rawJson)
@@ -376,7 +384,7 @@ object BgmManager {
                 for (i in 0 until array.length()) {
                     tracks.add(BgmTrack.fromJson(array.getJSONObject(i)))
                 }
-                if (tracks.isEmpty()) listOf(BgmTrack.DEFAULT) else tracks
+                tracks
             } catch (e: Exception) {
                 Log.e(TAG, "Error parsing playlist JSON", e)
                 listOf(BgmTrack.DEFAULT)
@@ -705,20 +713,22 @@ object BgmManager {
         val currentList = _playlist.value
         val trackToRemove = currentList.firstOrNull { it.id == trackId } ?: return
 
-        var updated = currentList.filterNot { it.id == trackId }
-        if (updated.isEmpty()) {
-            updated = listOf(BgmTrack.DEFAULT)
-        }
+        val updated = currentList.filterNot { it.id == trackId }
         _playlist.value = updated
 
-        if (!trackToRemove.isDefault) {
-            _stagedTracks.value = _stagedTracks.value + trackToRemove
-            saveStagedToPrefs(appContext)
-        }
+        // Move to staging area (including default track)
+        _stagedTracks.value = _stagedTracks.value + trackToRemove
+        saveStagedToPrefs(appContext)
 
         if (_currentTrack.value?.id == trackId) {
-            val fallback = updated.first()
-            selectTrack(appContext, fallback)
+            val fallback = updated.firstOrNull()
+            if (fallback != null) {
+                selectTrack(appContext, fallback)
+            } else {
+                _currentTrack.value = null
+                stopPlayback()
+                savePlaylistToPrefs(appContext)
+            }
         } else {
             savePlaylistToPrefs(appContext)
             if (updated.size <= 1 && _repeatMode.value != BgmRepeatMode.ONE) {
@@ -732,7 +742,7 @@ object BgmManager {
         val staged = _stagedTracks.value
         val trackToRestore = staged.firstOrNull { it.id == trackId } ?: return
 
-        if (trackToRestore.relativePath != null) {
+        if (!trackToRestore.isDefault && trackToRestore.relativePath != null) {
             val file = File(appContext.filesDir, "bgm_tracks/${trackToRestore.relativePath}")
             if (!file.exists()) {
                 _stagedTracks.value = staged.filterNot { it.id == trackId }
@@ -742,11 +752,14 @@ object BgmManager {
         }
 
         _stagedTracks.value = staged.filterNot { it.id == trackId }
-        _playlist.value = _playlist.value + trackToRestore
+        val updated = _playlist.value + trackToRestore
+        _playlist.value = updated
         saveStagedToPrefs(appContext)
         savePlaylistToPrefs(appContext)
 
-        if (_playlist.value.size > 1) {
+        if (_currentTrack.value == null) {
+            selectTrack(appContext, trackToRestore)
+        } else if (updated.size > 1) {
             mediaPlayer?.isLooping = _repeatMode.value == BgmRepeatMode.ONE
             if (_repeatMode.value != BgmRepeatMode.ONE) {
                 mediaPlayer?.setOnCompletionListener { playNext(appContext) }
@@ -759,7 +772,10 @@ object BgmManager {
         val staged = _stagedTracks.value
         val track = staged.firstOrNull { it.id == trackId } ?: return
 
-        if (!track.isDefault && track.relativePath != null) {
+        // Default track cannot be permanently deleted
+        if (track.isDefault) return
+
+        if (track.relativePath != null) {
             scope.launch(Dispatchers.IO) {
                 try {
                     val file = File(appContext.filesDir, "bgm_tracks/${track.relativePath}")

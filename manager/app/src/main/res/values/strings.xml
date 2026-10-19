@@ -399,6 +399,8 @@
     <string name="bgm_unstage_track">Move to staging area</string>
     <string name="bgm_move_up">Move up</string>
     <string name="bgm_move_down">Move down</string>
+    <string name="bgm_show_more">Show more</string>
+    <string name="bgm_show_less">Show less</string>
     <string name="section_current_status">Current Status</string>
     <string name="section_diagnostics">Diagnostics</string>
     <string name="section_display_render_settings">Display &amp; Render</string>

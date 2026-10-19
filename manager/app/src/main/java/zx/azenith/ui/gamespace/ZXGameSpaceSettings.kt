@@ -29,7 +29,9 @@ import androidx.compose.ui.input.key.type
 import zx.azenith.ui.component.gamepadKeyWatch
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -51,6 +53,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -101,7 +104,9 @@ import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
+import androidx.compose.animation.animateContentSize
 import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Gavel
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.GridView
@@ -185,6 +190,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -3235,6 +3241,10 @@ internal fun SettingsAudioPane(
     val stagedTracks by BgmManager.stagedTracks.collectAsStateWithLifecycle()
 
     var isImportingMusic by remember { mutableStateOf(false) }
+    var stagingExpanded by remember { mutableStateOf(false) }
+    var playlistExpanded by remember { mutableStateOf(false) }
+    val stagingScrollState = rememberScrollState()
+    val playlistScrollState = rememberScrollState()
 
     val audioPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
@@ -3377,217 +3387,650 @@ internal fun SettingsAudioPane(
                 }
 
                 // Split Screen: Left = Staging Area, Right = Live Playlist
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    // Left Column: Staging Area Card
-                    val stagingCardShape = RoundedCornerShape(18.dp)
-                    Surface(
-                        shape = stagingCardShape,
-                        color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
-                        contentColor = scheme.onSurface,
-                        modifier = Modifier
-                            .weight(1f)
-                            .gamepadFocusOutline(shape = stagingCardShape, register = true)
+                val springBouncyFloat = spring<Float>(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+                val springBouncyOffset = spring<IntOffset>(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+                val springBouncySize = spring<IntSize>(
+                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                )
+
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val totalWidth = maxWidth
+                    val gap = 14.dp
+                    val halfWidth = if (totalWidth > gap) (totalWidth - gap) / 2 else totalWidth
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top
                     ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        AnimatedVisibility(
+                            visible = stagedTracks.isNotEmpty(),
+                            enter = slideInHorizontally(
+                                animationSpec = springBouncyOffset,
+                                initialOffsetX = { -it }
+                            ) + expandHorizontally(
+                                animationSpec = springBouncySize,
+                                expandFrom = Alignment.Start
+                            ) + fadeIn(animationSpec = springBouncyFloat),
+                            exit = slideOutHorizontally(
+                                animationSpec = springBouncyOffset,
+                                targetOffsetX = { -it }
+                            ) + shrinkHorizontally(
+                                animationSpec = springBouncySize,
+                                shrinkTowards = Alignment.Start
+                            ) + fadeOut(animationSpec = springBouncyFloat)
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Surface(
-                                        shape = RoundedCornerShape(12.dp),
-                                        color = scheme.tertiaryContainer,
-                                        modifier = Modifier.size(40.dp)
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.Inventory2,
-                                                contentDescription = null,
-                                                tint = scheme.onTertiaryContainer,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                    }
-                                    Column {
-                                        Text(
-                                            text = stringResource(R.string.bgm_staging_area_title),
-                                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                                            color = scheme.onSurface
-                                        )
-                                        Text(
-                                            text = if (stagedTracks.isEmpty()) "No unstaged music" else "${stagedTracks.size} unplaced track(s)",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = scheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                                if (stagedTracks.isNotEmpty()) {
-                                    Surface(
-                                        shape = RoundedCornerShape(8.dp),
-                                        color = scheme.tertiaryContainer,
-                                        contentColor = scheme.onTertiaryContainer
-                                    ) {
-                                        Text(
-                                            text = "${stagedTracks.size}",
-                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                        )
-                                    }
-                                }
-                            }
-
-                            HorizontalDivider(
-                                color = scheme.outlineVariant.copy(alpha = 0.4f),
-                                thickness = 1.dp
-                            )
-
-                            if (stagedTracks.isEmpty()) {
-                                Column(
+                            Row(verticalAlignment = Alignment.Top) {
+                                val stagingCardShape = RoundedCornerShape(18.dp)
+                                Surface(
+                                    shape = stagingCardShape,
+                                    color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                                    contentColor = scheme.onSurface,
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 28.dp, horizontal = 12.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        .width(halfWidth)
+                                        .gamepadFocusOutline(shape = stagingCardShape, register = true)
                                 ) {
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = scheme.surfaceContainerHighest.copy(alpha = 0.6f),
-                                        modifier = Modifier.size(48.dp)
+                                    Column(
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .animateContentSize(animationSpec = springBouncySize),
+                                        verticalArrangement = Arrangement.spacedBy(14.dp)
                                     ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.Inventory2,
-                                                contentDescription = null,
-                                                tint = scheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                                modifier = Modifier.size(24.dp)
-                                            )
-                                        }
-                                    }
-                                    Text(
-                                        text = stringResource(R.string.bgm_staging_empty_title),
-                                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                                        color = scheme.onSurface
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.bgm_staging_empty_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = scheme.onSurfaceVariant.copy(alpha = 0.75f),
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
-                            } else {
-                                Column(
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    stagedTracks.forEach { track ->
-                                        val trackItemShape = RoundedCornerShape(12.dp)
-                                        Surface(
-                                            shape = trackItemShape,
-                                            color = scheme.surfaceContainerHighest.copy(alpha = 0.6f),
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .gamepadFocusOutline(shape = trackItemShape, register = true)
-                                                .clip(trackItemShape)
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
                                             Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(horizontal = 12.dp, vertical = 10.dp),
                                                 verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                                modifier = Modifier.weight(1f)
                                             ) {
-                                                Icon(
-                                                    imageVector = Icons.Rounded.MusicNote,
-                                                    contentDescription = null,
-                                                    tint = scheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-
+                                                Surface(
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    color = scheme.tertiaryContainer,
+                                                    modifier = Modifier.size(40.dp)
+                                                ) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Icon(
+                                                            imageVector = Icons.Rounded.Inventory2,
+                                                            contentDescription = null,
+                                                            tint = scheme.onTertiaryContainer,
+                                                            modifier = Modifier.size(20.dp)
+                                                        )
+                                                    }
+                                                }
                                                 Column(modifier = Modifier.weight(1f)) {
                                                     Text(
-                                                        text = track.title,
-                                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                                            fontWeight = FontWeight.Medium
-                                                        ),
+                                                        text = stringResource(R.string.bgm_staging_area_title),
+                                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                                                         color = scheme.onSurface,
                                                         maxLines = 1,
                                                         overflow = TextOverflow.Ellipsis
                                                     )
-                                                    if (!track.isDefault) {
-                                                        val subtitle = track.artist ?: track.fileName
-                                                        Text(
-                                                            text = subtitle,
-                                                            style = MaterialTheme.typography.bodySmall,
-                                                            color = scheme.onSurfaceVariant.copy(alpha = 0.75f),
-                                                            maxLines = 1,
-                                                            overflow = TextOverflow.Ellipsis
-                                                        )
-                                                    }
-                                                }
-
-                                                if (track.formattedDuration.isNotEmpty()) {
                                                     Text(
-                                                        text = track.formattedDuration,
-                                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
-                                                        color = scheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                                        text = "${stagedTracks.size} unplaced track(s)",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = scheme.onSurfaceVariant,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
                                                     )
                                                 }
+                                            }
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = scheme.tertiaryContainer,
+                                                contentColor = scheme.onTertiaryContainer
+                                            ) {
+                                                Text(
+                                                    text = "${stagedTracks.size}",
+                                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
 
-                                                // Restore to playlist
-                                                val restoreShape = CircleShape
+                                        HorizontalDivider(
+                                            color = scheme.outlineVariant.copy(alpha = 0.4f),
+                                            thickness = 1.dp
+                                        )
+
+                                        val visibleStaged = if (stagingExpanded) stagedTracks else stagedTracks.take(3)
+                                        val isStagingScrollable = stagingExpanded && stagedTracks.size > 5
+
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .then(
+                                                    if (isStagingScrollable) {
+                                                        Modifier
+                                                            .heightIn(max = 312.dp)
+                                                            .verticalScroll(stagingScrollState)
+                                                    } else {
+                                                        Modifier
+                                                    }
+                                                ),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            visibleStaged.forEach { track ->
+                                                val trackItemShape = RoundedCornerShape(12.dp)
                                                 Surface(
-                                                    shape = restoreShape,
-                                                    color = scheme.primaryContainer,
-                                                    contentColor = scheme.onPrimaryContainer,
+                                                    shape = trackItemShape,
+                                                    color = scheme.surfaceContainerHighest.copy(alpha = 0.6f),
                                                     modifier = Modifier
-                                                        .size(34.dp)
-                                                        .gamepadFocusOutline(shape = restoreShape, register = true)
-                                                        .clip(restoreShape)
-                                                        .clickable {
-                                                            AudioUtil.playOk(context)
-                                                            BgmManager.restoreFromStaging(context, track.id)
-                                                        }
+                                                        .fillMaxWidth()
+                                                        .gamepadFocusOutline(shape = trackItemShape, register = true)
+                                                        .clip(trackItemShape)
                                                 ) {
-                                                    Box(contentAlignment = Alignment.Center) {
+                                                    Row(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                                    ) {
                                                         Icon(
-                                                            imageVector = Icons.Rounded.Add,
-                                                            contentDescription = stringResource(R.string.bgm_restore_track),
+                                                            imageVector = Icons.Rounded.MusicNote,
+                                                            contentDescription = null,
+                                                            tint = scheme.onSurfaceVariant.copy(alpha = 0.5f),
                                                             modifier = Modifier.size(18.dp)
                                                         )
+
+                                                        Column(modifier = Modifier.weight(1f)) {
+                                                            Text(
+                                                                text = track.title,
+                                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                                    fontWeight = FontWeight.Medium
+                                                                ),
+                                                                color = scheme.onSurface,
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis
+                                                            )
+                                                            if (!track.isDefault) {
+                                                                val subtitle = track.artist ?: track.fileName
+                                                                Text(
+                                                                    text = subtitle,
+                                                                    style = MaterialTheme.typography.bodySmall,
+                                                                    color = scheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                                                    maxLines = 1,
+                                                                    overflow = TextOverflow.Ellipsis
+                                                                )
+                                                            }
+                                                        }
+
+                                                        if (track.formattedDuration.isNotEmpty()) {
+                                                            Text(
+                                                                text = track.formattedDuration,
+                                                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+                                                                color = scheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                                            )
+                                                        }
+
+                                                        val restoreShape = CircleShape
+                                                        Surface(
+                                                            shape = restoreShape,
+                                                            color = scheme.primaryContainer,
+                                                            contentColor = scheme.onPrimaryContainer,
+                                                            modifier = Modifier
+                                                                .size(34.dp)
+                                                                .gamepadFocusOutline(shape = restoreShape, register = true)
+                                                                .clip(restoreShape)
+                                                                .clickable {
+                                                                    AudioUtil.playOk(context)
+                                                                    BgmManager.restoreFromStaging(context, track.id)
+                                                                }
+                                                        ) {
+                                                            Box(contentAlignment = Alignment.Center) {
+                                                                Icon(
+                                                                    imageVector = Icons.Rounded.Add,
+                                                                    contentDescription = stringResource(R.string.bgm_restore_track),
+                                                                    modifier = Modifier.size(18.dp)
+                                                                )
+                                                            }
+                                                        }
+
+                                                        if (!track.isDefault) {
+                                                            val deleteShape = CircleShape
+                                                            Surface(
+                                                                shape = deleteShape,
+                                                                color = Color.Transparent,
+                                                                contentColor = scheme.error.copy(alpha = 0.8f),
+                                                                modifier = Modifier
+                                                                    .size(34.dp)
+                                                                    .gamepadFocusOutline(shape = deleteShape, register = true)
+                                                                    .clip(deleteShape)
+                                                                    .clickable {
+                                                                        BgmManager.deletePermanently(context, track.id)
+                                                                    }
+                                                        ) {
+                                                            Box(contentAlignment = Alignment.Center) {
+                                                                Icon(
+                                                                    imageVector = Icons.Rounded.DeleteOutline,
+                                                                    contentDescription = stringResource(R.string.bgm_delete_permanent),
+                                                                    modifier = Modifier.size(18.dp)
+                                                                )
+                                                            }
+                                                        }
                                                     }
                                                 }
+                                            }
+                                        }
+                                    }
 
-                                                // Delete permanently
-                                                if (!track.isDefault) {
+                                        if (stagedTracks.size > 3) {
+                                            val showMoreShape = RoundedCornerShape(10.dp)
+                                            Surface(
+                                                shape = showMoreShape,
+                                                color = scheme.surfaceContainerHighest.copy(alpha = 0.5f),
+                                                contentColor = scheme.primary,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .gamepadFocusOutline(shape = showMoreShape, register = true)
+                                                    .clip(showMoreShape)
+                                                    .clickable {
+                                                        stagingExpanded = !stagingExpanded
+                                                    }
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(vertical = 8.dp),
+                                                    horizontalArrangement = Arrangement.Center,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        text = stringResource(if (stagingExpanded) R.string.bgm_show_less else R.string.bgm_show_more),
+                                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
+                                                    )
+                                                    Spacer(Modifier.width(4.dp))
+                                                    Icon(
+                                                        imageVector = if (stagingExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                Spacer(Modifier.width(gap))
+                            }
+                        }
+
+                        val playlistCardShape = RoundedCornerShape(18.dp)
+                        Surface(
+                            shape = playlistCardShape,
+                            color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                            contentColor = scheme.onSurface,
+                            modifier = Modifier
+                                .weight(1f)
+                                .gamepadFocusOutline(shape = playlistCardShape, register = true)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .animateContentSize(animationSpec = springBouncySize),
+                                verticalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = scheme.primaryContainer,
+                                            modifier = Modifier.size(40.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.AutoMirrored.Rounded.QueueMusic,
+                                                    contentDescription = null,
+                                                    tint = scheme.onPrimaryContainer,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                        }
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = stringResource(R.string.bgm_playlist_title),
+                                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                                                color = scheme.onSurface,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                text = when {
+                                                    playlist.isEmpty() -> "No active tracks"
+                                                    playlist.size <= 1 -> "Single track looping"
+                                                    isShuffleEnabled -> "${playlist.size} tracks • Shuffle mode"
+                                                    else -> "${playlist.size} tracks • Sequential loop"
+                                                },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = scheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        if (playlist.isNotEmpty()) {
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = scheme.primaryContainer,
+                                                contentColor = scheme.onPrimaryContainer
+                                            ) {
+                                                Text(
+                                                    text = "${playlist.size}",
+                                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        val shuffleBtnShape = RoundedCornerShape(12.dp)
+                                        Surface(
+                                            shape = shuffleBtnShape,
+                                            color = if (isShuffleEnabled) scheme.primaryContainer else scheme.surfaceContainerHighest,
+                                            contentColor = if (isShuffleEnabled) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .gamepadFocusOutline(shape = shuffleBtnShape, register = true)
+                                                .clip(shuffleBtnShape)
+                                                .clickable {
+                                                    BgmManager.toggleShuffle(context)
+                                                }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.Shuffle,
+                                                    contentDescription = stringResource(R.string.bgm_shuffle),
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Spacer(Modifier.width(6.dp))
+                                                Text(
+                                                    text = stringResource(R.string.bgm_shuffle),
+                                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                                    maxLines = 1
+                                                )
+                                            }
+                                        }
+
+                                        val addBtnShape = RoundedCornerShape(12.dp)
+                                        Surface(
+                                            shape = addBtnShape,
+                                            color = scheme.primary,
+                                            contentColor = scheme.onPrimary,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .gamepadFocusOutline(shape = addBtnShape, register = true)
+                                                .clip(addBtnShape)
+                                                .clickable {
+                                                    audioPickerLauncher.launch(arrayOf("audio/*", "application/ogg"))
+                                                }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.Add,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                                Spacer(Modifier.width(6.dp))
+                                                Text(
+                                                    text = stringResource(R.string.bgm_add_track),
+                                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                                    maxLines = 1
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                HorizontalDivider(
+                                    color = scheme.outlineVariant.copy(alpha = 0.4f),
+                                    thickness = 1.dp
+                                )
+
+                                if (playlist.isEmpty()) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 24.dp, horizontal = 12.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = scheme.surfaceContainerHighest.copy(alpha = 0.6f),
+                                            modifier = Modifier.size(44.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.AutoMirrored.Rounded.QueueMusic,
+                                                    contentDescription = null,
+                                                    tint = scheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+                                        }
+                                        Text(
+                                            text = "Playlist is empty",
+                                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                                            color = scheme.onSurface
+                                        )
+                                        Text(
+                                            text = "Restore music from staging or tap Add Music",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = scheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                } else {
+                                    val visiblePlaylist = if (playlistExpanded) playlist else playlist.take(3)
+                                    val isPlaylistScrollable = playlistExpanded && playlist.size > 5
+
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .then(
+                                                if (isPlaylistScrollable) {
+                                                    Modifier
+                                                        .heightIn(max = 312.dp)
+                                                        .verticalScroll(playlistScrollState)
+                                                } else {
+                                                    Modifier
+                                                }
+                                            ),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        visiblePlaylist.forEach { track ->
+                                            val isActive = track.id == currentTrack?.id
+                                            val trackItemShape = RoundedCornerShape(12.dp)
+                                            val realIndex = playlist.indexOfFirst { it.id == track.id }
+
+                                            Surface(
+                                                shape = trackItemShape,
+                                                color = if (isActive) scheme.secondaryContainer else scheme.surfaceContainerHighest.copy(alpha = 0.6f),
+                                                contentColor = if (isActive) scheme.onSecondaryContainer else scheme.onSurface,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .gamepadFocusOutline(shape = trackItemShape, register = true)
+                                                    .clip(trackItemShape)
+                                                    .clickable {
+                                                        BgmManager.selectTrack(context, track)
+                                                    }
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier.size(24.dp),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        if (isActive && isPlaying) {
+                                                            Icon(
+                                                                imageVector = Icons.Rounded.GraphicEq,
+                                                                contentDescription = stringResource(R.string.bgm_playing),
+                                                                tint = scheme.primary,
+                                                                modifier = Modifier.size(20.dp)
+                                                            )
+                                                        } else if (isActive) {
+                                                            Icon(
+                                                                imageVector = Icons.Rounded.PlayArrow,
+                                                                contentDescription = stringResource(R.string.bgm_stopped),
+                                                                tint = scheme.primary,
+                                                                modifier = Modifier.size(20.dp)
+                                                            )
+                                                        } else {
+                                                            Icon(
+                                                                imageVector = Icons.Rounded.MusicNote,
+                                                                contentDescription = null,
+                                                                tint = scheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                                modifier = Modifier.size(18.dp)
+                                                            )
+                                                        }
+                                                    }
+
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Row(
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                        ) {
+                                                            Text(
+                                                                text = track.title,
+                                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium
+                                                                ),
+                                                                color = if (isActive) scheme.onSecondaryContainer else scheme.onSurface,
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis
+                                                            )
+                                                            if (track.isDefault) {
+                                                                Surface(
+                                                                    shape = RoundedCornerShape(6.dp),
+                                                                    color = scheme.secondaryContainer,
+                                                                    modifier = Modifier.padding(horizontal = 2.dp)
+                                                                ) {
+                                                                    Text(
+                                                                        text = "DEFAULT",
+                                                                        style = MaterialTheme.typography.labelSmall.copy(
+                                                                            fontWeight = FontWeight.Bold,
+                                                                            fontSize = 9.sp
+                                                                        ),
+                                                                        color = scheme.onSecondaryContainer,
+                                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
+                                                        if (!track.isDefault) {
+                                                            val subtitle = track.artist ?: track.fileName
+                                                            Text(
+                                                                text = subtitle,
+                                                                style = MaterialTheme.typography.bodySmall,
+                                                                color = if (isActive) scheme.onSecondaryContainer.copy(alpha = 0.75f) else scheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis
+                                                            )
+                                                        }
+                                                    }
+
+                                                    if (track.formattedDuration.isNotEmpty()) {
+                                                        Text(
+                                                            text = track.formattedDuration,
+                                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+                                                            color = if (isActive) scheme.onSecondaryContainer.copy(alpha = 0.8f) else scheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                                        )
+                                                    }
+
+                                                    if (playlist.size > 1 && realIndex in playlist.indices) {
+                                                        if (realIndex > 0) {
+                                                            Surface(
+                                                                shape = CircleShape,
+                                                                color = Color.Transparent,
+                                                                modifier = Modifier
+                                                                    .size(28.dp)
+                                                                    .clip(CircleShape)
+                                                                    .clickable {
+                                                                        BgmManager.moveTrack(context, realIndex, realIndex - 1)
+                                                                    }
+                                                            ) {
+                                                                Box(contentAlignment = Alignment.Center) {
+                                                                    Icon(
+                                                                        imageVector = Icons.Rounded.KeyboardArrowUp,
+                                                                        contentDescription = stringResource(R.string.bgm_move_up),
+                                                                        tint = if (isActive) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
+                                                                        modifier = Modifier.size(18.dp)
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
+                                                        if (realIndex < playlist.lastIndex) {
+                                                            Surface(
+                                                                shape = CircleShape,
+                                                                color = Color.Transparent,
+                                                                modifier = Modifier
+                                                                    .size(28.dp)
+                                                                    .clip(CircleShape)
+                                                                    .clickable {
+                                                                        BgmManager.moveTrack(context, realIndex, realIndex + 1)
+                                                                    }
+                                                            ) {
+                                                                Box(contentAlignment = Alignment.Center) {
+                                                                    Icon(
+                                                                        imageVector = Icons.Rounded.KeyboardArrowDown,
+                                                                        contentDescription = stringResource(R.string.bgm_move_down),
+                                                                        tint = if (isActive) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
+                                                                        modifier = Modifier.size(18.dp)
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+
                                                     val deleteShape = CircleShape
                                                     Surface(
                                                         shape = deleteShape,
                                                         color = Color.Transparent,
-                                                        contentColor = scheme.error.copy(alpha = 0.8f),
+                                                        contentColor = scheme.onSurfaceVariant.copy(alpha = 0.7f),
                                                         modifier = Modifier
-                                                            .size(34.dp)
+                                                            .size(32.dp)
                                                             .gamepadFocusOutline(shape = deleteShape, register = true)
                                                             .clip(deleteShape)
                                                             .clickable {
-                                                                BgmManager.deletePermanently(context, track.id)
+                                                                BgmManager.removeTrack(context, track.id)
                                                             }
                                                     ) {
                                                         Box(contentAlignment = Alignment.Center) {
                                                             Icon(
-                                                                imageVector = Icons.Rounded.DeleteOutline,
-                                                                contentDescription = stringResource(R.string.bgm_delete_permanent),
+                                                                imageVector = Icons.Rounded.RemoveCircleOutline,
+                                                                contentDescription = stringResource(R.string.bgm_unstage_track),
                                                                 modifier = Modifier.size(18.dp)
                                                             )
                                                         }
@@ -3596,354 +4039,81 @@ internal fun SettingsAudioPane(
                                             }
                                         }
                                     }
-                                }
-                            }
-                        }
-                    }
 
-                    // Right Column: Live Playlist Card
-                    val playlistCardShape = RoundedCornerShape(18.dp)
-                    Surface(
-                        shape = playlistCardShape,
-                        color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
-                        contentColor = scheme.onSurface,
-                        modifier = Modifier
-                            .weight(1f)
-                            .gamepadFocusOutline(shape = playlistCardShape, register = true)
-                    ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = scheme.primaryContainer,
-                                    modifier = Modifier.size(40.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Rounded.QueueMusic,
-                                            contentDescription = null,
-                                            tint = scheme.onPrimaryContainer,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                }
-                                Column {
-                                    Text(
-                                        text = stringResource(R.string.bgm_playlist_title),
-                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                                        color = scheme.onSurface
-                                    )
-                                    Text(
-                                        text = when {
-                                            playlist.size <= 1 -> "Single track looping"
-                                            isShuffleEnabled -> "${playlist.size} tracks • Shuffle mode"
-                                            else -> "${playlist.size} tracks • Sequential loop"
-                                        },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = scheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                val shuffleBtnShape = RoundedCornerShape(12.dp)
-                                Surface(
-                                    shape = shuffleBtnShape,
-                                    color = if (isShuffleEnabled) scheme.primaryContainer else scheme.surfaceContainerHighest,
-                                    contentColor = if (isShuffleEnabled) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
-                                    modifier = Modifier
-                                        .gamepadFocusOutline(shape = shuffleBtnShape, register = true)
-                                        .clip(shuffleBtnShape)
-                                        .clickable {
-                                            BgmManager.toggleShuffle(context)
-                                        }
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Shuffle,
-                                            contentDescription = stringResource(R.string.bgm_shuffle),
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.bgm_shuffle),
-                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
-                                        )
-                                    }
-                                }
-
-                                val addBtnShape = RoundedCornerShape(12.dp)
-                                Surface(
-                                    shape = addBtnShape,
-                                    color = scheme.primary,
-                                    contentColor = scheme.onPrimary,
-                                    modifier = Modifier
-                                        .gamepadFocusOutline(shape = addBtnShape, register = true)
-                                        .clip(addBtnShape)
-                                        .clickable {
-                                            audioPickerLauncher.launch(arrayOf("audio/*", "application/ogg"))
-                                        }
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Add,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.bgm_add_track),
-                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        HorizontalDivider(
-                            color = scheme.outlineVariant.copy(alpha = 0.4f),
-                            thickness = 1.dp
-                        )
-
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            playlist.forEachIndexed { index, track ->
-                                val isActive = track.id == currentTrack?.id
-                                val trackItemShape = RoundedCornerShape(12.dp)
-
-                                Surface(
-                                    shape = trackItemShape,
-                                    color = if (isActive) scheme.secondaryContainer else scheme.surfaceContainerHighest.copy(alpha = 0.6f),
-                                    contentColor = if (isActive) scheme.onSecondaryContainer else scheme.onSurface,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .gamepadFocusOutline(shape = trackItemShape, register = true)
-                                        .clip(trackItemShape)
-                                        .clickable {
-                                            BgmManager.selectTrack(context, track)
-                                        }
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                    ) {
-                                        Box(
-                                            modifier = Modifier.size(24.dp),
-                                            contentAlignment = Alignment.Center
+                                    if (playlist.size > 3) {
+                                        val showMoreShape = RoundedCornerShape(10.dp)
+                                        Surface(
+                                            shape = showMoreShape,
+                                            color = scheme.surfaceContainerHighest.copy(alpha = 0.5f),
+                                            contentColor = scheme.primary,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .gamepadFocusOutline(shape = showMoreShape, register = true)
+                                                .clip(showMoreShape)
+                                                .clickable {
+                                                    playlistExpanded = !playlistExpanded
+                                                }
                                         ) {
-                                            if (isActive && isPlaying) {
-                                                Icon(
-                                                    imageVector = Icons.Rounded.GraphicEq,
-                                                    contentDescription = stringResource(R.string.bgm_playing),
-                                                    tint = scheme.primary,
-                                                    modifier = Modifier.size(20.dp)
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(vertical = 8.dp),
+                                                horizontalArrangement = Arrangement.Center,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = stringResource(if (playlistExpanded) R.string.bgm_show_less else R.string.bgm_show_more),
+                                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
                                                 )
-                                            } else if (isActive) {
+                                                Spacer(Modifier.width(4.dp))
                                                 Icon(
-                                                    imageVector = Icons.Rounded.PlayArrow,
-                                                    contentDescription = stringResource(R.string.bgm_stopped),
-                                                    tint = scheme.primary,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                            } else {
-                                                Icon(
-                                                    imageVector = Icons.Rounded.MusicNote,
+                                                    imageVector = if (playlistExpanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
                                                     contentDescription = null,
-                                                    tint = scheme.onSurfaceVariant.copy(alpha = 0.5f),
                                                     modifier = Modifier.size(18.dp)
                                                 )
                                             }
                                         }
-
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                            ) {
-                                                Text(
-                                                    text = track.title,
-                                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium
-                                                    ),
-                                                    color = if (isActive) scheme.onSecondaryContainer else scheme.onSurface,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                                if (track.isDefault) {
-                                                    Surface(
-                                                        shape = RoundedCornerShape(6.dp),
-                                                        color = scheme.secondaryContainer,
-                                                        modifier = Modifier.padding(horizontal = 2.dp)
-                                                    ) {
-                                                        Text(
-                                                            text = "DEFAULT",
-                                                            style = MaterialTheme.typography.labelSmall.copy(
-                                                                fontWeight = FontWeight.Bold,
-                                                                fontSize = 9.sp
-                                                            ),
-                                                            color = scheme.onSecondaryContainer,
-                                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                            if (!track.isDefault) {
-                                                val subtitle = track.artist ?: track.fileName
-                                                Text(
-                                                    text = subtitle,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = if (isActive) scheme.onSecondaryContainer.copy(alpha = 0.75f) else scheme.onSurfaceVariant.copy(alpha = 0.75f),
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                        }
-
-                                        if (track.formattedDuration.isNotEmpty()) {
-                                            Text(
-                                                text = track.formattedDuration,
-                                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
-                                                color = if (isActive) scheme.onSecondaryContainer.copy(alpha = 0.8f) else scheme.onSurfaceVariant.copy(alpha = 0.8f)
-                                            )
-                                        }
-
-                                        // Move controls
-                                        if (playlist.size > 1) {
-                                            if (index > 0) {
-                                                Surface(
-                                                    shape = CircleShape,
-                                                    color = Color.Transparent,
-                                                    modifier = Modifier
-                                                        .size(28.dp)
-                                                        .clip(CircleShape)
-                                                        .clickable {
-                                                            BgmManager.moveTrack(context, index, index - 1)
-                                                        }
-                                                ) {
-                                                    Box(contentAlignment = Alignment.Center) {
-                                                        Icon(
-                                                            imageVector = Icons.Rounded.KeyboardArrowUp,
-                                                            contentDescription = stringResource(R.string.bgm_move_up),
-                                                            tint = if (isActive) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
-                                                            modifier = Modifier.size(18.dp)
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                            if (index < playlist.lastIndex) {
-                                                Surface(
-                                                    shape = CircleShape,
-                                                    color = Color.Transparent,
-                                                    modifier = Modifier
-                                                        .size(28.dp)
-                                                        .clip(CircleShape)
-                                                        .clickable {
-                                                            BgmManager.moveTrack(context, index, index + 1)
-                                                        }
-                                                ) {
-                                                    Box(contentAlignment = Alignment.Center) {
-                                                        Icon(
-                                                            imageVector = Icons.Rounded.KeyboardArrowDown,
-                                                            contentDescription = stringResource(R.string.bgm_move_down),
-                                                            tint = if (isActive) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
-                                                            modifier = Modifier.size(18.dp)
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        // Unstage track to staging area
-                                        if (!track.isDefault || playlist.size > 1) {
-                                            val deleteShape = CircleShape
-                                            Surface(
-                                                shape = deleteShape,
-                                                color = Color.Transparent,
-                                                contentColor = scheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                                modifier = Modifier
-                                                    .size(32.dp)
-                                                    .gamepadFocusOutline(shape = deleteShape, register = true)
-                                                    .clip(deleteShape)
-                                                    .clickable {
-                                                        BgmManager.removeTrack(context, track.id)
-                                                    }
-                                            ) {
-                                                Box(contentAlignment = Alignment.Center) {
-                                                    Icon(
-                                                        imageVector = Icons.Rounded.RemoveCircleOutline,
-                                                        contentDescription = stringResource(R.string.bgm_unstage_track),
-                                                        modifier = Modifier.size(18.dp)
-                                                    )
-                                                }
-                                            }
-                                        }
                                     }
                                 }
-                            }
-                        }
 
-                        if (playlist.size > 1 || playlist.any { !it.isDefault } || stagedTracks.isNotEmpty()) {
-                            val resetBtnShape = RoundedCornerShape(12.dp)
-                            Surface(
-                                shape = resetBtnShape,
-                                color = scheme.surfaceContainerHighest,
-                                contentColor = scheme.onSurfaceVariant,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .gamepadFocusOutline(shape = resetBtnShape, register = true)
-                                    .clip(resetBtnShape)
-                                    .clickable {
-                                        BgmManager.resetPlaylistToDefault(context)
+                                if (playlist.size > 1 || playlist.any { !it.isDefault } || stagedTracks.isNotEmpty()) {
+                                    val resetBtnShape = RoundedCornerShape(12.dp)
+                                    Surface(
+                                        shape = resetBtnShape,
+                                        color = scheme.surfaceContainerHighest,
+                                        contentColor = scheme.onSurfaceVariant,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .gamepadFocusOutline(shape = resetBtnShape, register = true)
+                                            .clip(resetBtnShape)
+                                            .clickable {
+                                                BgmManager.resetPlaylistToDefault(context)
+                                            }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 10.dp),
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.RestartAlt,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                text = stringResource(R.string.bgm_reset_playlist),
+                                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
+                                            )
+                                        }
                                     }
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 10.dp),
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.RestartAlt,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        text = stringResource(R.string.bgm_reset_playlist),
-                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
-                                    )
                                 }
                             }
                         }
                     }
                 }
-            }
 
 
                 SettingsSwitchCard(
