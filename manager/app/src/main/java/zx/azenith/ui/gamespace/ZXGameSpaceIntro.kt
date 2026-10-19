@@ -103,6 +103,14 @@ import kotlin.math.sin
 /** Total length of the Game Space expressive intro animation (5000ms). */
 const val GAME_SPACE_INTRO_MS = 5000
 
+/** How long 'Ready' is held after a skip before the exit fade starts. */
+private const val GAME_SPACE_SKIP_HOLD_MS = 650L
+
+private const val GAME_SPACE_SKIP_BURST_MS = 520
+
+/** Past the burst expansion curve (0.22) but short of the particle fade-out at 0.85. */
+private const val GAME_SPACE_SKIP_BURST_PROGRESS = 0.62f
+
 private val BOOT_STAGES = listOf(
     R.string.gamespace_boot_link,
     R.string.gamespace_boot_scan,
@@ -127,6 +135,7 @@ fun ZXGameSpaceIntro(
     val scope = rememberCoroutineScope()
     var stageIndex by remember { mutableIntStateOf(0) }
     var handedOff by remember { mutableStateOf(false) }
+    var skipRequested by remember { mutableStateOf(false) }
 
     val progress = remember { Animatable(0f) }
     val exitProgress = remember { Animatable(0f) }
@@ -152,7 +161,42 @@ fun ZXGameSpaceIntro(
         }
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(skipRequested) {
+        // Skipping lands on 'Ready' first: the loader morphs into the logo and bursts,
+        // instead of the whole screen fading out mid-load.
+        if (skipRequested) {
+            val fresh = stageIndex < BOOT_STAGES.lastIndex
+            stageIndex = BOOT_STAGES.lastIndex
+            runCatching { progress.snapTo(1f) }
+
+            if (fresh) {
+                launch {
+                    logoAlpha.animateTo(1f, tween(200, easing = LinearEasing))
+                }
+                launch {
+                    logoScale.snapTo(0.25f)
+                    logoScale.animateTo(
+                        targetValue = 1f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    )
+                }
+                launch {
+                    explosionProgress.animateTo(
+                        targetValue = GAME_SPACE_SKIP_BURST_PROGRESS,
+                        animationSpec = tween(GAME_SPACE_SKIP_BURST_MS, easing = LinearEasing)
+                    )
+                }
+
+                delay(GAME_SPACE_SKIP_HOLD_MS)
+            }
+
+            startExit()
+            return@LaunchedEffect
+        }
+
         // Linear overall progress progression (0 to 1 over 5s)
         launch {
             progress.animateTo(
@@ -211,10 +255,7 @@ fun ZXGameSpaceIntro(
             .fillMaxSize()
             .background(scheme.surface.copy(alpha = (1f - exitVal).coerceIn(0f, 1f)))
             .pointerInput(Unit) {
-                detectTapGestures {
-                    scope.launch { runCatching { progress.snapTo(1f) } }
-                    startExit()
-                }
+                detectTapGestures { skipRequested = true }
             },
         contentAlignment = Alignment.Center
     ) {
