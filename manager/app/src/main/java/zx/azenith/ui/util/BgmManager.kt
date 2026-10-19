@@ -133,6 +133,9 @@ object BgmManager {
     private val _playbackPositionMs = MutableStateFlow(0L)
     val playbackPositionMs: StateFlow<Long> = _playbackPositionMs.asStateFlow()
 
+    private val _songChangeNonce = MutableStateFlow(0L)
+    val songChangeNonce: StateFlow<Long> = _songChangeNonce.asStateFlow()
+
     private val _currentAlbumArt = MutableStateFlow<Bitmap?>(null)
     val currentAlbumArt: StateFlow<Bitmap?> = _currentAlbumArt.asStateFlow()
 
@@ -340,6 +343,7 @@ object BgmManager {
         _repeatMode.value = rMode
         _playlist.value = loadedPlaylist
         _currentTrack.value = selected
+        _songChangeNonce.value = 1L
         isInitialized = true
 
         updateAlbumArtForTrack(appContext, selected)
@@ -441,6 +445,7 @@ object BgmManager {
         val appContext = context.applicationContext
         _currentTrack.value = track
         _playbackPositionMs.value = 0L
+        _songChangeNonce.value += 1L
         updateAlbumArtForTrack(appContext, track)
         appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putString(PREF_BGM_ACTIVE_ID, track.id).apply()

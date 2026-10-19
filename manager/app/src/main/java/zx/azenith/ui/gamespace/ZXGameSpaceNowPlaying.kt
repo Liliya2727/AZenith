@@ -32,10 +32,12 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -46,6 +48,7 @@ import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.blur.material3.Material3
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -130,6 +133,7 @@ internal fun NowPlayingDot(
     val albumArt by BgmManager.currentAlbumArt.collectAsStateWithLifecycle()
     val isEnabled by BgmManager.isEnabled.collectAsStateWithLifecycle()
     val nowPlayingEnabled by BgmManager.isNowPlayingEnabled.collectAsStateWithLifecycle()
+    val songChangeNonce by BgmManager.songChangeNonce.collectAsStateWithLifecycle()
 
     if (!isEnabled || !nowPlayingEnabled || currentTrack == null) return
 
@@ -137,18 +141,51 @@ internal fun NowPlayingDot(
     val durationMs = track.durationMs.coerceAtLeast(1L)
     val progress = (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
 
-    // Expand briefly on track change
     var isExpanded by remember { mutableStateOf(false) }
-    var lastTrackId by remember { mutableStateOf(track.id) }
+    var lastObservedNonce by remember { mutableStateOf(songChangeNonce) }
+    var pendingExpandOnClose by remember { mutableStateOf(false) }
 
-    LaunchedEffect(track.id) {
-        if (track.id != lastTrackId) {
-            lastTrackId = track.id
+    // Ensures long titles complete a full marquee cycle before collapsing
+    val textLen = maxOf(track.title.length, (track.artist ?: "").length)
+    val expandDurationMs = if (textLen > 18) {
+        (3800L + (textLen - 18) * 160L).coerceIn(4500L, 9500L)
+    } else {
+        3800L
+    }
+
+    LaunchedEffect(songChangeNonce) {
+        if (songChangeNonce != lastObservedNonce && songChangeNonce > 0L) {
+            lastObservedNonce = songChangeNonce
+            if (isPanelOpen) {
+                pendingExpandOnClose = true
+            } else {
+                isExpanded = true
+                delay(expandDurationMs)
+                isExpanded = false
+            }
+        }
+    }
+
+    LaunchedEffect(isPanelOpen) {
+        if (!isPanelOpen && pendingExpandOnClose) {
+            pendingExpandOnClose = false
+            delay(280L)
             isExpanded = true
-            delay(3500L)
+            delay(expandDurationMs)
             isExpanded = false
         }
     }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "NowPlayingRotation")
+    val jacketRotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 5000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "JacketRotation"
+    )
 
     AnimatedVisibility(
         visible = !isPanelOpen,
@@ -174,19 +211,83 @@ internal fun NowPlayingDot(
                     AudioUtil.playOk(context)
                     onOpenPanel()
                 }
-                .animateContentSize(
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMediumLow
-                    )
-                )
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
-                // Album art / rotating music note with circular progress
+                // Anchored to right jacket; expands leftward without fighting parent bounds
+                AnimatedVisibility(
+                    visible = isExpanded,
+                    enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
+                            expandHorizontally(
+                                expandFrom = Alignment.End,
+                                animationSpec = spring(
+                                    dampingRatio = 0.82f,
+                                    stiffness = 380f
+                                )
+                            ),
+                    exit = fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMedium)) +
+                           shrinkHorizontally(
+                               shrinkTowards = Alignment.End,
+                               animationSpec = spring(
+                                   dampingRatio = 1.0f,
+                                   stiffness = 380f
+                               )
+                           )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(start = 10.dp, end = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier.width(128.dp),
+                            horizontalAlignment = Alignment.End
+                        ) {
+                            Text(
+                                text = track.title,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp,
+                                    lineHeight = 13.sp
+                                ),
+                                color = scheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Clip,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .basicMarquee(
+                                        iterations = Int.MAX_VALUE,
+                                        repeatDelayMillis = 1000,
+                                        initialDelayMillis = 600,
+                                        velocity = 35.dp
+                                    )
+                            )
+                            val subtitle = track.artist ?: track.fileName
+                            Text(
+                                text = subtitle,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 9.sp,
+                                    lineHeight = 11.sp
+                                ),
+                                color = scheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Clip,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .basicMarquee(
+                                        iterations = Int.MAX_VALUE,
+                                        repeatDelayMillis = 1000,
+                                        initialDelayMillis = 600,
+                                        velocity = 35.dp
+                                    )
+                            )
+                        }
+                    }
+                }
+
+                // Album art / rotating cover jacket with circular progress on the RIGHT
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier.size(30.dp)
@@ -207,74 +308,19 @@ internal fun NowPlayingDot(
                             contentDescription = track.title,
                             modifier = Modifier
                                 .size(22.dp)
-                                .clip(CircleShape),
+                                .clip(CircleShape)
+                                .then(if (isPlaying) Modifier.rotate(jacketRotation) else Modifier),
                             contentScale = ContentScale.Crop
                         )
                     } else {
-                        val infiniteTransition = rememberInfiniteTransition(label = "NowPlayingRotation")
-                        val rotation by infiniteTransition.animateFloat(
-                            initialValue = 0f,
-                            targetValue = 360f,
-                            animationSpec = infiniteRepeatable(
-                                animation = tween(durationMillis = 4000, easing = LinearEasing),
-                                repeatMode = RepeatMode.Restart
-                            ),
-                            label = "NoteRotation"
-                        )
                         Icon(
                             imageVector = Icons.Rounded.MusicNote,
                             contentDescription = track.title,
                             tint = scheme.primary,
                             modifier = Modifier
                                 .size(16.dp)
-                                .then(if (isPlaying) Modifier.rotate(rotation) else Modifier)
+                                .then(if (isPlaying) Modifier.rotate(jacketRotation) else Modifier)
                         )
-                    }
-                }
-
-                // Expanded info: title + artist
-                AnimatedVisibility(
-                    visible = isExpanded,
-                    enter = fadeIn(spring(stiffness = Spring.StiffnessMediumLow)) +
-                            slideInHorizontally(
-                                spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessMediumLow
-                                )
-                            ) { -it / 2 },
-                    exit = fadeOut(spring(stiffness = Spring.StiffnessMedium)) +
-                           slideOutHorizontally(
-                               spring(stiffness = Spring.StiffnessMedium)
-                           ) { -it / 2 }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(start = 6.dp, end = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.width(120.dp)) {
-                            Text(
-                                text = track.title,
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 10.sp,
-                                    lineHeight = 13.sp
-                                ),
-                                color = scheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            val subtitle = track.artist ?: track.fileName
-                            Text(
-                                text = subtitle,
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontSize = 9.sp,
-                                    lineHeight = 11.sp
-                                ),
-                                color = scheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
                     }
                 }
             }
