@@ -19,7 +19,6 @@
 package zx.azenith.ui.gamespace
 
 import android.graphics.Bitmap
-import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -98,7 +97,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -119,7 +117,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import zx.azenith.R
 import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.component.gamepadFocusOutline
@@ -203,14 +200,7 @@ internal fun NowPlayingDot(
         }
     }
 
-    // Stepped clock instead of a Compose animation, which pins the frame clock at panel rate.
-    val jacketRotation = remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(Unit) {
-        while (isActive) {
-            jacketRotation.floatValue = (SystemClock.uptimeMillis() % 5000L) / 5000f * 360f
-            delay(66L)
-        }
-    }
+    val jacketRotation = rememberGameSpaceClock()
 
     AnimatedVisibility(
         visible = !isPanelOpen,
@@ -356,7 +346,7 @@ internal fun NowPlayingDot(
                                     .size(22.dp)
                                     .clip(CircleShape)
                                     .graphicsLayer {
-                                        rotationZ = jacketRotation.floatValue
+                                        rotationZ = (jacketRotation.floatValue * 72f) % 360f
                                     },
                                 contentScale = ContentScale.Crop
                             )
@@ -368,7 +358,7 @@ internal fun NowPlayingDot(
                                 modifier = Modifier
                                     .size(16.dp)
                                     .graphicsLayer {
-                                        rotationZ = jacketRotation.floatValue
+                                        rotationZ = (jacketRotation.floatValue * 72f) % 360f
                                     }
                             )
                         }

@@ -19,7 +19,6 @@
 package zx.azenith.ui.gamespace
 
 import android.content.Context
-import android.os.SystemClock
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -45,9 +44,7 @@ import androidx.compose.material3.toPath
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.FloatState
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -77,8 +74,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.RoundedPolygon
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
 import zx.azenith.R
 import zx.azenith.ui.component.AppIconCache
@@ -466,14 +461,7 @@ private val FLOATING_MORPH_SHAPES: List<RoundedPolygon> by lazy {
 @Composable
 internal fun ZXGameSpaceFloatingShapes(modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
-    val clock = remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(Unit) {
-        val start = SystemClock.uptimeMillis()
-        while (isActive) {
-            clock.floatValue = (SystemClock.uptimeMillis() - start) / 1000f
-            delay(SHAPE_TICK_MS)
-        }
-    }
+    val clock = rememberGameSpaceClock()
     BoxWithConstraints(modifier = modifier) {
         val w = maxWidth
         val h = maxHeight
@@ -490,7 +478,6 @@ internal fun ZXGameSpaceFloatingShapes(modifier: Modifier = Modifier) {
     }
 }
 
-private const val SHAPE_TICK_MS = 33L
 private const val SHAPE_MORPH_MS = 1600f
 
 /** 0 -> 1 -> 0 over [durationMs] -- the reverse-repeat ramp the old infinite tweens had. */
