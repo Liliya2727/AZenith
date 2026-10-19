@@ -24,6 +24,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
@@ -142,25 +143,32 @@ internal fun NowPlayingDot(
     val progress = (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
 
     var isExpanded by remember { mutableStateOf(false) }
+    var displayedTrack by remember { mutableStateOf(track) }
     var lastObservedNonce by remember { mutableStateOf(songChangeNonce) }
     var pendingExpandOnClose by remember { mutableStateOf(false) }
 
-    // Ensures long titles complete a full marquee cycle before collapsing
-    val textLen = maxOf(track.title.length, (track.artist ?: "").length)
-    val expandDurationMs = if (textLen > 18) {
-        (3800L + (textLen - 18) * 160L).coerceIn(4500L, 9500L)
-    } else {
-        3800L
-    }
-
+    // Collapse first on track change while expanded to prevent abrupt metadata swap
     LaunchedEffect(songChangeNonce) {
         if (songChangeNonce != lastObservedNonce && songChangeNonce > 0L) {
             lastObservedNonce = songChangeNonce
             if (isPanelOpen) {
                 pendingExpandOnClose = true
+                displayedTrack = track
             } else {
+                if (isExpanded) {
+                    isExpanded = false
+                    delay(260L)
+                }
+                displayedTrack = track
+                val textLen = maxOf(track.title.length, (track.artist ?: "").length)
+                val duration = if (textLen > 18) {
+                    (3800L + (textLen - 18) * 160L).coerceIn(4500L, 9500L)
+                } else {
+                    3800L
+                }
+                delay(80L)
                 isExpanded = true
-                delay(expandDurationMs)
+                delay(duration)
                 isExpanded = false
             }
         }
@@ -170,8 +178,14 @@ internal fun NowPlayingDot(
         if (!isPanelOpen && pendingExpandOnClose) {
             pendingExpandOnClose = false
             delay(280L)
+            val textLen = maxOf(displayedTrack.title.length, (displayedTrack.artist ?: "").length)
+            val duration = if (textLen > 18) {
+                (3800L + (textLen - 18) * 160L).coerceIn(4500L, 9500L)
+            } else {
+                3800L
+            }
             isExpanded = true
-            delay(expandDurationMs)
+            delay(duration)
             isExpanded = false
         }
     }
@@ -252,7 +266,7 @@ internal fun NowPlayingDot(
                             horizontalAlignment = Alignment.End
                         ) {
                             Text(
-                                text = track.title,
+                                text = displayedTrack.title,
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 10.sp,
@@ -270,7 +284,7 @@ internal fun NowPlayingDot(
                                         velocity = 35.dp
                                     )
                             )
-                            val subtitle = track.artist ?: track.fileName
+                            val subtitle = displayedTrack.artist ?: displayedTrack.fileName
                             Text(
                                 text = subtitle,
                                 style = MaterialTheme.typography.labelSmall.copy(
@@ -307,26 +321,38 @@ internal fun NowPlayingDot(
                         strokeCap = StrokeCap.Round
                     )
 
-                    val artContent = albumArt
-                    if (artContent != null) {
-                        Image(
-                            bitmap = artContent.asImageBitmap(),
-                            contentDescription = track.title,
-                            modifier = Modifier
-                                .size(22.dp)
-                                .clip(CircleShape)
-                                .then(if (isPlaying) Modifier.rotate(jacketRotation) else Modifier),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Rounded.MusicNote,
-                            contentDescription = track.title,
-                            tint = scheme.primary,
-                            modifier = Modifier
-                                .size(16.dp)
-                                .then(if (isPlaying) Modifier.rotate(jacketRotation) else Modifier)
-                        )
+                    // Cross-morph between cover images and fallback icons
+                    AnimatedContent(
+                        targetState = albumArt,
+                        transitionSpec = {
+                            (fadeIn(animationSpec = tween(280, easing = FastOutSlowInEasing)) +
+                             scaleIn(initialScale = 0.85f, animationSpec = tween(280, easing = FastOutSlowInEasing))) togetherWith
+                            (fadeOut(animationSpec = tween(240, easing = FastOutSlowInEasing)) +
+                             scaleOut(targetScale = 0.85f, animationSpec = tween(240, easing = FastOutSlowInEasing)))
+                        },
+                        label = "JacketMorph",
+                        contentAlignment = Alignment.Center
+                    ) { art ->
+                        if (art != null) {
+                            Image(
+                                bitmap = art.asImageBitmap(),
+                                contentDescription = displayedTrack.title,
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clip(CircleShape)
+                                    .then(if (isPlaying) Modifier.rotate(jacketRotation) else Modifier),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Rounded.MusicNote,
+                                contentDescription = displayedTrack.title,
+                                tint = scheme.primary,
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .then(if (isPlaying) Modifier.rotate(jacketRotation) else Modifier)
+                            )
+                        }
                     }
                 }
             }
