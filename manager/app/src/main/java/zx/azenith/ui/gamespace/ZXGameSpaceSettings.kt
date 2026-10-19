@@ -3840,14 +3840,15 @@ internal fun SettingsAudioPane(
                                                     ) {
                                                         val trackItemShape = RoundedCornerShape(12.dp)
                                                         val trackBgColor = if (track.isDefault) {
-                                                            scheme.tertiaryContainer.copy(alpha = 0.55f)
+                                                            scheme.tertiaryContainer.copy(alpha = 0.45f)
                                                         } else {
                                                             scheme.surfaceContainerHighest.copy(alpha = 0.6f)
                                                         }
-                                                        val trackContentColor = if (track.isDefault) {
-                                                            scheme.onTertiaryContainer
+                                                        val trackContentColor = scheme.onSurface
+                                                        val trackMutedColor = if (track.isDefault) {
+                                                            scheme.onSurface.copy(alpha = 0.85f)
                                                         } else {
-                                                            scheme.onSurface
+                                                            scheme.onSurfaceVariant.copy(alpha = 0.8f)
                                                         }
 
                                                         Surface(
@@ -3896,13 +3897,13 @@ internal fun SettingsAudioPane(
                                                                             Icon(
                                                                                 imageVector = Icons.Rounded.AutoAwesome,
                                                                                 contentDescription = null,
-                                                                                tint = scheme.tertiary,
+                                                                                tint = trackMutedColor,
                                                                                 modifier = Modifier.size(11.dp)
                                                                             )
                                                                             Text(
                                                                                 text = stringResource(R.string.bgm_default_track_badge),
                                                                                 style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                                                                                color = scheme.tertiary,
+                                                                                color = trackMutedColor,
                                                                                 maxLines = 1,
                                                                                 overflow = TextOverflow.Ellipsis,
                                                                                 modifier = Modifier.weight(1f, fill = false)
@@ -3924,7 +3925,7 @@ internal fun SettingsAudioPane(
                                                                     Text(
                                                                         text = track.formattedDuration,
                                                                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
-                                                                        color = scheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                                                        color = trackMutedColor
                                                                     )
                                                                 }
 
@@ -4261,13 +4262,15 @@ internal fun SettingsAudioPane(
                                                     val realIndex = playlist.indexOfFirst { it.id == track.id }
                                                     val trackBgColor = when {
                                                         isActive -> scheme.secondaryContainer
-                                                        track.isDefault -> scheme.tertiaryContainer.copy(alpha = 0.55f)
+                                                        track.isDefault -> scheme.tertiaryContainer.copy(alpha = 0.45f)
                                                         else -> scheme.surfaceContainerHighest.copy(alpha = 0.6f)
                                                     }
-                                                    val trackContentColor = when {
+                                                    val trackContentColor = if (isActive) scheme.onSecondaryContainer else scheme.onSurface
+                                                    // onTertiaryContainer is a mid tone and lands at 2:1 on its own container, so the theme row takes the surface ink instead.
+                                                    val trackControlTint = when {
                                                         isActive -> scheme.onSecondaryContainer
-                                                        track.isDefault -> scheme.onTertiaryContainer
-                                                        else -> scheme.onSurface
+                                                        track.isDefault -> scheme.onSurface
+                                                        else -> scheme.onSurfaceVariant
                                                     }
 
                                                     Surface(
@@ -4342,13 +4345,13 @@ internal fun SettingsAudioPane(
                                                                         Icon(
                                                                             imageVector = Icons.Rounded.AutoAwesome,
                                                                             contentDescription = null,
-                                                                            tint = if (isActive) scheme.onSecondaryContainer.copy(alpha = 0.85f) else scheme.tertiary,
+                                                                            tint = trackControlTint.copy(alpha = 0.85f),
                                                                             modifier = Modifier.size(11.dp)
                                                                         )
                                                                         Text(
                                                                             text = stringResource(R.string.bgm_default_track_badge),
                                                                             style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                                                                            color = if (isActive) scheme.onSecondaryContainer.copy(alpha = 0.85f) else scheme.tertiary,
+                                                                            color = trackControlTint.copy(alpha = 0.85f),
                                                                             maxLines = 1,
                                                                             overflow = TextOverflow.Ellipsis,
                                                                             modifier = Modifier.weight(1f, fill = false)
@@ -4370,7 +4373,7 @@ internal fun SettingsAudioPane(
                                                                 Text(
                                                                     text = track.formattedDuration,
                                                                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
-                                                                    color = if (isActive) scheme.onSecondaryContainer.copy(alpha = 0.8f) else scheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                                                    color = trackControlTint.copy(alpha = 0.85f)
                                                                 )
                                                             }
 
@@ -4390,7 +4393,7 @@ internal fun SettingsAudioPane(
                                                                             Icon(
                                                                                 imageVector = Icons.Rounded.KeyboardArrowUp,
                                                                                 contentDescription = stringResource(R.string.bgm_move_up),
-                                                                                tint = if (isActive) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
+                                                                                tint = trackControlTint,
                                                                                 modifier = Modifier.size(18.dp)
                                                                             )
                                                                         }
@@ -4411,7 +4414,7 @@ internal fun SettingsAudioPane(
                                                                             Icon(
                                                                                 imageVector = Icons.Rounded.KeyboardArrowDown,
                                                                                 contentDescription = stringResource(R.string.bgm_move_down),
-                                                                                tint = if (isActive) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
+                                                                                tint = trackControlTint,
                                                                                 modifier = Modifier.size(18.dp)
                                                                             )
                                                                         }
@@ -4423,7 +4426,7 @@ internal fun SettingsAudioPane(
                                                             Surface(
                                                                 shape = deleteShape,
                                                                 color = Color.Transparent,
-                                                                contentColor = scheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                                                contentColor = trackControlTint.copy(alpha = 0.9f),
                                                                 modifier = Modifier
                                                                     .size(32.dp)
                                                                     .gamepadFocusOutline(shape = deleteShape, register = true)
