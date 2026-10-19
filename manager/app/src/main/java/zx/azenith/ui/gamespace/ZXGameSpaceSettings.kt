@@ -30,12 +30,12 @@ import zx.azenith.ui.component.gamepadKeyWatch
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.spring
@@ -3323,12 +3323,26 @@ internal fun SettingsAudioPane(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 val activePlayingTrack = currentTrack
-                val isNowPlayingVisible = isPlaying && activePlayingTrack != null
+                // Tied to the selected track rather than to playback, so pausing keeps the bar up;
+                // only losing the track (removed, nothing left to play) takes it away.
+                val isNowPlayingVisible = activePlayingTrack != null
+
+                val nowPlayingSlide = spring<IntSize>(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow,
+                    visibilityThreshold = IntSize.VisibilityThreshold
+                )
 
                 AnimatedVisibility(
                     visible = isNowPlayingVisible,
-                    enter = fadeIn(animationSpec = tween(150)) + expandVertically(animationSpec = tween(150)),
-                    exit = ExitTransition.None
+                    enter = fadeIn(animationSpec = tween(160)) + expandVertically(
+                        animationSpec = nowPlayingSlide,
+                        expandFrom = Alignment.Top
+                    ),
+                    exit = fadeOut(animationSpec = tween(160)) + shrinkVertically(
+                        animationSpec = nowPlayingSlide,
+                        shrinkTowards = Alignment.Top
+                    )
                 ) {
                     if (activePlayingTrack != null) {
                         val miniPlayerShape = RoundedCornerShape(16.dp)
