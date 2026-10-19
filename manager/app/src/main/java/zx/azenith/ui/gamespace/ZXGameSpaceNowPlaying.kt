@@ -217,23 +217,29 @@ internal fun NowPlayingDot(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
-                // Anchored to right jacket; expands leftward without fighting parent bounds
+                // Overshoot spring animates container and content on expansion
                 AnimatedVisibility(
                     visible = isExpanded,
                     enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
                             expandHorizontally(
                                 expandFrom = Alignment.End,
                                 animationSpec = spring(
-                                    dampingRatio = 0.82f,
-                                    stiffness = 380f
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
                                 )
-                            ),
+                            ) +
+                            slideInHorizontally(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            ) { it / 3 },
                     exit = fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMedium)) +
                            shrinkHorizontally(
                                shrinkTowards = Alignment.End,
                                animationSpec = spring(
-                                   dampingRatio = 1.0f,
-                                   stiffness = 380f
+                                   dampingRatio = Spring.DampingRatioNoBouncy,
+                                   stiffness = Spring.StiffnessMedium
                                )
                            )
                 ) {
