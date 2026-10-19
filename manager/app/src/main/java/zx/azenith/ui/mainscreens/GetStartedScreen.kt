@@ -251,11 +251,6 @@ fun GetStartedScreen(navController: NavController, onCompleted: () -> Unit = {})
     val coroutineScope = rememberCoroutineScope()
     val totalPages = 4
 
-    val canGoNext = when (currentPage) {
-        1 -> rootAccessGranted == true
-        else -> true
-    }
-
     LaunchedEffect(currentPage) {
         if (currentPage == 1 && rootAccessGranted == null) {
             isCheckingRoot = true
@@ -353,7 +348,6 @@ fun GetStartedScreen(navController: NavController, onCompleted: () -> Unit = {})
 
                             Button(
                                 onClick = {
-                                    if (!canGoNext) return@Button
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
 
                                     if (currentPage < totalPages - 1) {
@@ -380,8 +374,8 @@ fun GetStartedScreen(navController: NavController, onCompleted: () -> Unit = {})
                                     }
                                 },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (canGoNext) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                                    contentColor = if (canGoNext) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
                                 ),
                                 shape = RoundedCornerShape(20.dp),
                                 modifier = Modifier

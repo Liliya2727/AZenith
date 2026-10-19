@@ -123,7 +123,7 @@ object BgmManager {
     private val _isEnabled = MutableStateFlow(true)
     val isEnabled: StateFlow<Boolean> = _isEnabled.asStateFlow()
 
-    private val _volume = MutableStateFlow(25)
+    private val _volume = MutableStateFlow(100)
     val volume: StateFlow<Int> = _volume.asStateFlow()
 
     private val _isNowPlayingEnabled = MutableStateFlow(true)

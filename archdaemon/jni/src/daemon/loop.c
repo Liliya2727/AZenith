@@ -162,6 +162,7 @@ int main_daemon(void) {
                     ctx.pid_retries = 0;
                     ctx.has_applied_renderer = false;
                     ctx.need_profile_checkup = true;
+                    handle_dynamic_bypass(&ctx);
                 }
             } else if (ctx.cur_mode != BALANCED_PROFILE && ctx.cur_mode != ECO_MODE) {
                 ctx.need_profile_checkup = false;

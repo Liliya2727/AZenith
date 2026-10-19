@@ -271,6 +271,8 @@ bool process_inotify_events(int inotify_fd, DaemonContext* ctx, int timeout_ms) 
  * @param ctx Pointer to DaemonContext structure.
  */
 void handle_dynamic_bypass(DaemonContext* ctx) {
+    bool bypass_before = ctx->bypass_applied;
+
     if (strcmp(ctx->config_bypasspath, "UNSUPPORTED") != 0 && strlen(ctx->config_bypasspath) > 0) {
         if (ctx->cur_mode == PERFORMANCE_PROFILE) {
             int threshold = ctx->config_bypasschgthreshold;
@@ -309,4 +311,7 @@ void handle_dynamic_bypass(DaemonContext* ctx) {
             ctx->bypass_applied = false;
         }
     }
+
+    if (bypass_before != ctx->bypass_applied && ctx->cur_mode == PERFORMANCE_PROFILE)
+        save_daemon_state(ctx);
 }
