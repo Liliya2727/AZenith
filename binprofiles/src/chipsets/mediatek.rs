@@ -20,7 +20,7 @@ use std::fs;
 use std::path::Path;
 
 /// PPM policies that act as frequency limiters.
-const PPM_LIMIT_POLICIES: [&str; 4] = ["FORCE_LIMIT", "PWR_THRO", "THERMAL", "USER_LIMIT"];
+const PPM_LIMIT_POLICIES: [&str; 2] = ["PWR_THRO", "THERMAL"];
 
 /// Knobs that ignore GPU power/thermal limits.
 const GPU_POWER_LIMITED_KNOBS: [&str; 5] = [
