@@ -401,6 +401,9 @@
     <string name="bgm_move_down">Move down</string>
     <string name="bgm_show_more">Show more</string>
     <string name="bgm_show_less">Show less</string>
+    <string name="bgm_default_track_badge">Official Theme • Built-in</string>
+    <string name="bgm_restore_all">Restore All</string>
+    <string name="bgm_clear_all">Clear All</string>
     <string name="section_current_status">Current Status</string>
     <string name="section_diagnostics">Diagnostics</string>
     <string name="section_display_render_settings">Display &amp; Render</string>

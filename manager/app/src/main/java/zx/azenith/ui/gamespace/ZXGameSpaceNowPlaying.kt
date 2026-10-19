@@ -47,6 +47,7 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.hazeBlur
 import dev.chrisbanes.haze.blur.material3.Material3
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
@@ -71,6 +72,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteOutline
@@ -846,6 +848,12 @@ internal fun NowPlayingPanelOverlay(
                                 shape = itemShape,
                                 color = if (isCurrent) scheme.secondaryContainer else Color.Transparent,
                                 contentColor = if (isCurrent) scheme.onSecondaryContainer else scheme.onSurface,
+                                border = if (item.isDefault) {
+                                    BorderStroke(
+                                        width = 1.dp,
+                                        color = if (isCurrent) scheme.primary.copy(alpha = 0.45f) else scheme.primary.copy(alpha = 0.25f)
+                                    )
+                                } else null,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(itemShape)
@@ -863,6 +871,13 @@ internal fun NowPlayingPanelOverlay(
                                     if (isCurrent && isPlaying) {
                                         NowPlayingBars(
                                             color = scheme.primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    } else if (item.isDefault) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.AutoAwesome,
+                                            contentDescription = null,
+                                            tint = scheme.primary,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     } else {
@@ -883,7 +898,11 @@ internal fun NowPlayingPanelOverlay(
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
-                                        val sub = item.artist ?: item.fileName
+                                        val sub = if (item.isDefault) {
+                                            stringResource(R.string.bgm_default_track_badge)
+                                        } else {
+                                            item.artist ?: item.fileName
+                                        }
                                         Text(
                                             text = sub,
                                             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
