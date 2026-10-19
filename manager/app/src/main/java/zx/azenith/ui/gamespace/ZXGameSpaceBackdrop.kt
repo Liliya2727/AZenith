@@ -19,14 +19,9 @@
 package zx.azenith.ui.gamespace
 
 import android.content.Context
+import android.os.SystemClock
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -49,8 +44,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.toPath
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -460,10 +457,23 @@ private val FLOATING_MORPH_SHAPES: List<RoundedPolygon> by lazy {
 
 /**
  * Ambient Material 3 shapes floating and morphing across the homescreen stage.
+ *
+ * Every value here is a function of one stepped clock. A Compose animation would hold the
+ * frame clock at the panel rate, and a frame on this backdrop costs ~4 ms of CPU on the
+ * target device: five shapes at 120 fps measured 102% of a core, at 12 fps they are ~12%.
+ * The drift is ~5 dp/s, so 80 ms steps are invisible.
  */
 @Composable
 internal fun ZXGameSpaceFloatingShapes(modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
+    val clock = remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        val start = SystemClock.uptimeMillis()
+        while (isActive) {
+            clock.floatValue = (SystemClock.uptimeMillis() - start) / 1000f
+            delay(SHAPE_TICK_MS)
+        }
+    }
     BoxWithConstraints(modifier = modifier) {
         val w = maxWidth
         val h = maxHeight
@@ -473,86 +483,81 @@ internal fun ZXGameSpaceFloatingShapes(modifier: Modifier = Modifier) {
             FloatingShapeItem(
                 config = config,
                 color = config.colorProvider(scheme),
+                clock = clock,
                 modifier = Modifier.offset(x = posX, y = posY)
             )
         }
     }
 }
 
+private const val SHAPE_TICK_MS = 33L
+private const val SHAPE_MORPH_MS = 1600f
+
+/** 0 -> 1 -> 0 over [durationMs] -- the reverse-repeat ramp the old infinite tweens had. */
+private fun reverseRamp(seconds: Float, durationMs: Int): Float {
+    val u = (seconds * 1000f / durationMs) % 2f
+    return if (u <= 1f) u else 2f - u
+}
+
+/** Hold time after a morph; derived from the config so each shape keeps its own rhythm. */
+private fun morphPauseMs(config: FloatingShapeConfig): Float =
+    3800f + ((config.relX * 10000f).toInt() % 4200)
+
+/** Which pool entry the shape holds during [cycle]; cycle 0 is the configured start shape. */
+private fun shapeIndexAt(config: FloatingShapeConfig, cycle: Int): Int {
+    if (cycle <= 0) return FLOATING_MORPH_SHAPES.indexOf(config.initialShape).coerceAtLeast(0)
+    var x = cycle * 1103515245 + (config.relX * 1000f).toInt()
+    x = x xor (x shl 13)
+    x = x xor (x shr 17)
+    x = x xor (x shl 5)
+    return (x and 0x7fffffff) % FLOATING_MORPH_SHAPES.size
+}
+
 @Composable
 private fun FloatingShapeItem(
     config: FloatingShapeConfig,
     color: Color,
+    clock: FloatState,
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "FloatingShape_${config.relX}")
     val density = LocalDensity.current
     val floatDistPx = with(density) { config.floatDistDp.toPx() }
-
-    val floatOffsetY by infiniteTransition.animateFloat(
-        initialValue = -floatDistPx,
-        targetValue = floatDistPx,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = config.floatDurationMs, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "FloatY"
-    )
-
-    val floatOffsetX by infiniteTransition.animateFloat(
-        initialValue = -floatDistPx * 0.65f,
-        targetValue = floatDistPx * 0.65f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = (config.floatDurationMs * 1.35f).roundToInt(), easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "FloatX"
-    )
-
-    val rotationAngle by infiniteTransition.animateFloat(
-        initialValue = -14f,
-        targetValue = 24f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = config.rotDurationMs, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "FloatRot"
-    )
-
-    var currentShape by remember { mutableStateOf(config.initialShape) }
-    var activeMorph by remember { mutableStateOf(Morph(config.initialShape, config.initialShape)) }
-    val morphProgress = remember { Animatable(1f) }
-
-    LaunchedEffect(Unit) {
-        delay(config.staggerDelayMs)
-        while (isActive) {
-            val next = FLOATING_MORPH_SHAPES.filter { it !== currentShape }.random()
-            activeMorph = Morph(currentShape, next)
-            morphProgress.snapTo(0f)
-            morphProgress.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(durationMillis = 1600, easing = FastOutSlowInEasing)
-            )
-            currentShape = next
-            val pause = kotlin.random.Random.nextLong(3800L, 8000L)
-            delay(pause)
-        }
-    }
-
     val path = remember { Path() }
     val matrix = remember { Matrix() }
+    val morphs = remember { HashMap<Int, Morph>() }
 
     Box(
         modifier = modifier
             .graphicsLayer {
-                translationX = floatOffsetX
-                translationY = floatOffsetY
-                rotationZ = rotationAngle
+                val t = clock.floatValue
+                translationX =
+                    (reverseRamp(t, (config.floatDurationMs * 1.35f).roundToInt()) * 2f - 1f) * floatDistPx * 0.65f
+                translationY =
+                    (FastOutSlowInEasing.transform(reverseRamp(t, config.floatDurationMs)) * 2f - 1f) * floatDistPx
+                rotationZ = -14f + 38f * reverseRamp(t, config.rotDurationMs)
             }
             .size(config.size)
             .drawBehind {
+                val elapsed = (clock.floatValue * 1000f - config.staggerDelayMs).coerceAtLeast(0f)
+                val cycleMs = SHAPE_MORPH_MS + morphPauseMs(config)
+                val cycle = (elapsed / cycleMs).toInt()
+                val phase = elapsed - cycle * cycleMs
+                val toIndex = shapeIndexAt(config, cycle)
+                val fromIndex = shapeIndexAt(config, cycle - 1)
+                val progress = (phase / SHAPE_MORPH_MS).coerceIn(0f, 1f)
                 path.rewind()
-                val outline = activeMorph.toPath(morphProgress.value.coerceIn(0f, 1f), path)
+                // A settled shape is a zero-distance morph, so one path builder covers both cases.
+                val morphKey =
+                    if (progress >= 1f || fromIndex == toIndex) toIndex * 64 + toIndex
+                    else fromIndex * 64 + toIndex
+                val morph = morphs.getOrPut(morphKey) {
+                    if (morphKey == toIndex * 64 + toIndex) {
+                        Morph(FLOATING_MORPH_SHAPES[toIndex], FLOATING_MORPH_SHAPES[toIndex])
+                    } else {
+                        Morph(FLOATING_MORPH_SHAPES[fromIndex], FLOATING_MORPH_SHAPES[toIndex])
+                    }
+                }
+                val outline = morph.toPath(if (morphKey == toIndex * 64 + toIndex) 1f else progress, path)
                 matrix.reset()
                 matrix.scale(this.size.width, this.size.height)
                 outline.transform(matrix)

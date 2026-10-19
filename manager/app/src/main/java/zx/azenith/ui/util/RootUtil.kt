@@ -124,8 +124,18 @@ object RootUtils {
         val daemonFile = SuFile(DAEMON_PROFILE_PATH)
         if (daemonFile.exists()) {
             val content = daemonFile.newInputStream().bufferedReader().use { it.readText() }
+            // The mirror is written into the very directory FileObserver watches, so an
+            // unconditional write re-fires the observer that called us -- ~20 root shells a
+            // second, forever. Only write when the value actually moved.
+            if (content == readMirror()) return
             writeRootFile(PROFILE_PATH, content)
         }
+    }
+
+    private fun readMirror(): String? = try {
+        File(PROFILE_PATH).takeIf { it.exists() }?.readText()
+    } catch (e: Exception) {
+        null
     }
 
     fun getModuleVersionCode(): Int {
@@ -245,7 +255,9 @@ object RootUtils {
             ?: PropertyUtils.get("persist.sys.azenithconf.AIenabled")
 
     fun getCurrentProfileValue(): String {
-        val appMirror = readRootFile(PROFILE_PATH)?.trim()
+        // The mirror is the app's own file; a plain read costs nothing, a SuFile read
+        // spawns a root shell command every time a profile event lands.
+        val appMirror = readMirror()?.trim()
         if (!appMirror.isNullOrEmpty()) return appMirror
         return readRootFile(DAEMON_PROFILE_PATH)?.trim().orEmpty()
     }

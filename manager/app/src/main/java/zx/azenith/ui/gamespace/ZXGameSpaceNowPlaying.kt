@@ -19,6 +19,7 @@
 package zx.azenith.ui.gamespace
 
 import android.graphics.Bitmap
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -97,16 +98,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -116,6 +119,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import zx.azenith.R
 import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.component.gamepadFocusOutline
@@ -141,7 +145,7 @@ internal fun NowPlayingDot(
 
     val currentTrack by BgmManager.currentTrack.collectAsStateWithLifecycle()
     val isPlaying by BgmManager.isPlaying.collectAsStateWithLifecycle()
-    val positionMs by BgmManager.playbackPositionMs.collectAsStateWithLifecycle()
+    val positionMsState = BgmManager.playbackPositionMs.collectAsStateWithLifecycle()
     val albumArt by BgmManager.currentAlbumArt.collectAsStateWithLifecycle()
     val isEnabled by BgmManager.isEnabled.collectAsStateWithLifecycle()
     val nowPlayingEnabled by BgmManager.isNowPlayingEnabled.collectAsStateWithLifecycle()
@@ -150,8 +154,6 @@ internal fun NowPlayingDot(
     if (!isEnabled || !nowPlayingEnabled || currentTrack == null) return
 
     val track = currentTrack ?: return
-    val durationMs = track.durationMs.coerceAtLeast(1L)
-    val progress = (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
 
     var isExpanded by remember { mutableStateOf(false) }
     var displayedTrack by remember { mutableStateOf(track) }
@@ -201,16 +203,14 @@ internal fun NowPlayingDot(
         }
     }
 
-    val infiniteTransition = rememberInfiniteTransition(label = "NowPlayingRotation")
-    val jacketRotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 5000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "JacketRotation"
-    )
+    // Stepped clock instead of a Compose animation, which pins the frame clock at panel rate.
+    val jacketRotation = remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        while (isActive) {
+            jacketRotation.floatValue = (SystemClock.uptimeMillis() % 5000L) / 5000f * 360f
+            delay(66L)
+        }
+    }
 
     AnimatedVisibility(
         visible = !isPanelOpen,
@@ -324,7 +324,10 @@ internal fun NowPlayingDot(
                     modifier = Modifier.size(30.dp)
                 ) {
                     CircularProgressIndicator(
-                        progress = { progress },
+                        progress = {
+                            val duration = track.durationMs.coerceAtLeast(1L)
+                            (positionMsState.value.toFloat() / duration).coerceIn(0f, 1f)
+                        },
                         modifier = Modifier.fillMaxSize(),
                         color = scheme.primary.copy(alpha = 0.8f),
                         trackColor = scheme.outlineVariant.copy(alpha = 0.3f),
@@ -345,13 +348,16 @@ internal fun NowPlayingDot(
                         contentAlignment = Alignment.Center
                     ) { art ->
                         if (art != null) {
+                            val bitmap = remember(art) { art.asImageBitmap() }
                             Image(
-                                bitmap = art.asImageBitmap(),
+                                bitmap = bitmap,
                                 contentDescription = displayedTrack.title,
                                 modifier = Modifier
                                     .size(22.dp)
                                     .clip(CircleShape)
-                                    .then(if (isPlaying) Modifier.rotate(jacketRotation) else Modifier),
+                                    .graphicsLayer {
+                                        rotationZ = jacketRotation.floatValue
+                                    },
                                 contentScale = ContentScale.Crop
                             )
                         } else {
@@ -361,7 +367,9 @@ internal fun NowPlayingDot(
                                 tint = scheme.primary,
                                 modifier = Modifier
                                     .size(16.dp)
-                                    .then(if (isPlaying) Modifier.rotate(jacketRotation) else Modifier)
+                                    .graphicsLayer {
+                                        rotationZ = jacketRotation.floatValue
+                                    }
                             )
                         }
                     }
@@ -384,22 +392,8 @@ internal fun NowPlayingPanelOverlay(
 ) {
     BackHandler(enabled = visible, onBack = onClose)
 
-    val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
     val motion = MaterialTheme.motionScheme
-
-    val currentTrack by BgmManager.currentTrack.collectAsStateWithLifecycle()
-    val isPlaying by BgmManager.isPlaying.collectAsStateWithLifecycle()
-    val positionMs by BgmManager.playbackPositionMs.collectAsStateWithLifecycle()
-    val albumArt by BgmManager.currentAlbumArt.collectAsStateWithLifecycle()
-    val playlist by BgmManager.playlist.collectAsStateWithLifecycle()
-    val repeatMode by BgmManager.repeatMode.collectAsStateWithLifecycle()
-    val isShuffleEnabled by BgmManager.isShuffleEnabled.collectAsStateWithLifecycle()
-    val volume by BgmManager.volume.collectAsStateWithLifecycle()
-
-    val track = currentTrack ?: BgmTrack.DEFAULT
-    val durationMs = track.durationMs.coerceAtLeast(1L)
-    val progress = (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
 
     // Scrim
     AnimatedVisibility(
@@ -438,12 +432,42 @@ internal fun NowPlayingPanelOverlay(
         ) + fadeOut(animationSpec = motion.defaultEffectsSpec()),
         modifier = Modifier.fillMaxSize()
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(end = 24.dp, top = 16.dp, bottom = 16.dp),
-            contentAlignment = Alignment.CenterEnd
-        ) {
+        NowPlayingPanelContent(
+            hazeState = hazeState,
+            onClose = onClose,
+            onNavigateToAudioSettings = onNavigateToAudioSettings
+        )
+    }
+}
+
+@Composable
+private fun NowPlayingPanelContent(
+    hazeState: HazeState?,
+    onClose: () -> Unit,
+    onNavigateToAudioSettings: (() -> Unit)?
+) {
+    val context = LocalContext.current
+    val scheme = MaterialTheme.colorScheme
+
+    val currentTrack by BgmManager.currentTrack.collectAsStateWithLifecycle()
+    val isPlaying by BgmManager.isPlaying.collectAsStateWithLifecycle()
+    val positionMs by BgmManager.playbackPositionMs.collectAsStateWithLifecycle()
+    val albumArt by BgmManager.currentAlbumArt.collectAsStateWithLifecycle()
+    val playlist by BgmManager.playlist.collectAsStateWithLifecycle()
+    val repeatMode by BgmManager.repeatMode.collectAsStateWithLifecycle()
+    val isShuffleEnabled by BgmManager.isShuffleEnabled.collectAsStateWithLifecycle()
+    val volume by BgmManager.volume.collectAsStateWithLifecycle()
+
+    val track = currentTrack ?: BgmTrack.DEFAULT
+    val durationMs = track.durationMs.coerceAtLeast(1L)
+    val progress = (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(end = 24.dp, top = 16.dp, bottom = 16.dp),
+        contentAlignment = Alignment.CenterEnd
+    ) {
             Surface(
                 shape = RoundedCornerShape(28.dp),
                 color = scheme.surfaceContainerLow,
@@ -539,8 +563,9 @@ internal fun NowPlayingPanelOverlay(
                     ) {
                         val artContent = albumArt
                         if (artContent != null) {
+                            val bitmap = remember(artContent) { artContent.asImageBitmap() }
                             Image(
-                                bitmap = artContent.asImageBitmap(),
+                                bitmap = bitmap,
                                 contentDescription = track.title,
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
@@ -932,7 +957,6 @@ internal fun NowPlayingPanelOverlay(
             }
         }
     }
-}
 
 /**
  * Animated equalizer bars for the currently playing track in the playlist.
@@ -943,19 +967,19 @@ private fun NowPlayingBars(
     modifier: Modifier = Modifier
 ) {
     val transition = rememberInfiniteTransition(label = "EqBars")
-    val bar1 by transition.animateFloat(
+    val bar1 = transition.animateFloat(
         initialValue = 0.3f, targetValue = 1f,
         animationSpec = infiniteRepeatable(
             tween(400, easing = LinearEasing), RepeatMode.Reverse
         ), label = "bar1"
     )
-    val bar2 by transition.animateFloat(
+    val bar2 = transition.animateFloat(
         initialValue = 0.6f, targetValue = 0.2f,
         animationSpec = infiniteRepeatable(
             tween(350, easing = LinearEasing), RepeatMode.Reverse
         ), label = "bar2"
     )
-    val bar3 by transition.animateFloat(
+    val bar3 = transition.animateFloat(
         initialValue = 0.4f, targetValue = 0.9f,
         animationSpec = infiniteRepeatable(
             tween(500, easing = LinearEasing), RepeatMode.Reverse
@@ -967,11 +991,15 @@ private fun NowPlayingBars(
         horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalAlignment = Alignment.Bottom
     ) {
-        listOf(bar1, bar2, bar3).forEach { height ->
+        listOf(bar1, bar2, bar3).forEach { barState ->
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxHeight(height)
+                    .fillMaxHeight()
+                    .graphicsLayer {
+                        scaleY = barState.value
+                        transformOrigin = TransformOrigin(0.5f, 1f)
+                    }
                     .clip(RoundedCornerShape(1.dp))
                     .background(color)
             )

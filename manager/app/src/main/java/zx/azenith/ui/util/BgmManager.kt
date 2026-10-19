@@ -223,7 +223,7 @@ object BgmManager {
                         _playbackPositionMs.value = player.currentPosition.toLong()
                     } catch (_: Exception) {}
                 }
-                delay(250L)
+                delay(500L)
             }
         }
     }
