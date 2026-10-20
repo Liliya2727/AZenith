@@ -106,7 +106,7 @@ data class BgmTrack(
             id = "default",
             title = "AZenith Theme",
             artist = null,
-            durationMs = 134374L,
+            durationMs = 386000L,
             fileName = "bgm.ogg",
             relativePath = null,
             isDefault = true
@@ -396,7 +396,7 @@ object BgmManager {
             if (track.isDefault) {
                 if (track.durationMs <= 0L) {
                     needsResave = true
-                    track.copy(durationMs = 134374L)
+                    track.copy(durationMs = 386000L)
                 } else track
             } else if (track.relativePath != null) {
                 val file = File(context.filesDir, "bgm_tracks/${track.relativePath}")
