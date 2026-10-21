@@ -1027,10 +1027,9 @@ private fun LargePlayerContent(
                 .fillMaxWidth()
                 .height(26.dp),
             onValueChange = { scrubFraction = it },
-            onValueChangeFinished = {
-                val target = scrubFraction ?: 0f
+            onValueChangeFinished = { fraction ->
                 scrubFraction = null
-                BgmManager.seekTo((target * durationMs).toLong())
+                BgmManager.seekTo((fraction * durationMs).toLong())
                 fireTapHaptic(haptic)
             }
         )
@@ -1237,10 +1236,9 @@ private fun ExpandedPlayerContent(
                 .fillMaxWidth()
                 .height(26.dp),
             onValueChange = { scrubFraction = it },
-            onValueChangeFinished = {
-                val target = scrubFraction ?: 0f
+            onValueChangeFinished = { fraction ->
                 scrubFraction = null
-                BgmManager.seekTo((target * durationMs).toLong())
+                BgmManager.seekTo((fraction * durationMs).toLong())
                 fireTapHaptic(haptic)
             }
         )
@@ -1468,10 +1466,9 @@ private fun CompactPlayerContent(
                 .fillMaxWidth()
                 .height(22.dp),
             onValueChange = { scrubFraction = it },
-            onValueChangeFinished = {
-                val target = scrubFraction ?: 0f
+            onValueChangeFinished = { fraction ->
                 scrubFraction = null
-                BgmManager.seekTo((target * durationMs).toLong())
+                BgmManager.seekTo((fraction * durationMs).toLong())
                 fireTapHaptic(haptic)
             }
         )
@@ -1651,7 +1648,7 @@ private fun ExpressiveSquigglySeekbar(
     progress: Float,
     isPlaying: Boolean,
     onValueChange: (Float) -> Unit,
-    onValueChangeFinished: () -> Unit = {},
+    onValueChangeFinished: (Float) -> Unit = {},
     modifier: Modifier = Modifier,
     activeColor: Color = MaterialTheme.colorScheme.primary,
     inactiveColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest
@@ -1695,7 +1692,7 @@ private fun ExpressiveSquigglySeekbar(
                 detectTapGestures { offset ->
                     val newFraction = (offset.x / size.width).coerceIn(0f, 1f)
                     onValueChange(newFraction)
-                    onValueChangeFinished()
+                    onValueChangeFinished(newFraction)
                 }
             }
             .pointerInput(Unit) {
@@ -1712,11 +1709,11 @@ private fun ExpressiveSquigglySeekbar(
                     },
                     onDragEnd = {
                         isDragging = false
-                        onValueChangeFinished()
+                        onValueChangeFinished(dragProgress)
                     },
                     onDragCancel = {
                         isDragging = false
-                        onValueChangeFinished()
+                        onValueChangeFinished(dragProgress)
                     }
                 )
             }

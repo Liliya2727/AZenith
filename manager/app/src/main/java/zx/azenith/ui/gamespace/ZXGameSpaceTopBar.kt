@@ -545,22 +545,10 @@ internal fun ZXGameSpaceTopBar(
             )
 
             // Material 3 Expressive Unified System Status Capsule (Clock & Battery)
-            val capsuleOffsetX by animateDpAsState(
-                targetValue = if (hasNowPlaying && isNowPlayingOpen) 46.dp else 0.dp,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = 320f
-                ),
-                label = "StatusCapsuleOffset"
-            )
-
             Surface(
                 shape = CircleShape,
                 color = scheme.surfaceContainerHigh,
                 modifier = Modifier
-                    .graphicsLayer {
-                        translationX = with(density) { capsuleOffsetX.toPx() }
-                    }
                     .onGloballyPositioned { coords ->
                         if (coords.size.width > 0) cachedCapsuleWidthPx = coords.size.width.toFloat()
                     }

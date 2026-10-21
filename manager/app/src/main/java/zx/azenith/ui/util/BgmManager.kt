@@ -273,7 +273,8 @@ object BgmManager {
     fun seekTo(positionMs: Long) {
         mediaPlayer?.let { player ->
             try {
-                player.seekTo(positionMs.toInt())
+                // Seek closest prevents OGG/Opus sync frame snapback
+                player.seekTo(positionMs, MediaPlayer.SEEK_CLOSEST)
                 _playbackPositionMs.value = positionMs
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to seek to $positionMs", e)
@@ -335,7 +336,32 @@ object BgmManager {
         }
     }
 
+    fun getDefaultBgmFile(context: Context): File {
+        val tracksDir = File(context.filesDir, "bgm_tracks").apply { if (!exists()) mkdirs() }
+        val target = File(tracksDir, "default_bgm.ogg")
+        if (!target.exists() || target.length() == 0L) {
+            try {
+                // Standalone file avoids Stagefright APK zip offset seeking bugs
+                context.resources.openRawResource(R.raw.bgm).use { input ->
+                    java.io.FileOutputStream(target).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to copy default BGM to file", e)
+            }
+        }
+        return target
+    }
+
     fun extractRawResourceDuration(context: Context, resId: Int): Long {
+        if (resId == R.raw.bgm) {
+            val file = getDefaultBgmFile(context)
+            if (file.exists() && file.length() > 0L) {
+                val dur = extractMetadata(file).durationMs
+                if (dur > 0L) return dur
+            }
+        }
         val retriever = MediaMetadataRetriever()
         return try {
             val afd = context.resources.openRawResourceFd(resId)
@@ -620,9 +646,14 @@ object BgmManager {
             )
 
             if (track.isDefault) {
-                val afd = context.resources.openRawResourceFd(R.raw.bgm)
-                player.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
-                afd.close()
+                val file = getDefaultBgmFile(context)
+                if (file.exists() && file.length() > 0L) {
+                    player.setDataSource(file.absolutePath)
+                } else {
+                    val afd = context.resources.openRawResourceFd(R.raw.bgm)
+                    player.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+                    afd.close()
+                }
             } else {
                 val file = File(context.filesDir, "bgm_tracks/${track.relativePath}")
                 if (!file.exists()) {
