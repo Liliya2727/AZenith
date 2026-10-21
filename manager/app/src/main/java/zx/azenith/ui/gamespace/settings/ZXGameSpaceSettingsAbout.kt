@@ -41,8 +41,8 @@ import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Gavel
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.LibraryBooks
-import androidx.compose.material.icons.rounded.OpenInNew
+import androidx.compose.material.icons.automirrored.rounded.LibraryBooks
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -275,7 +275,7 @@ internal fun SettingsAboutPane(
             )
 
             SettingsActionCard(
-                icon = Icons.Rounded.LibraryBooks,
+                icon = Icons.AutoMirrored.Rounded.LibraryBooks,
                 title = stringResource(R.string.str_libraries_used),
                 summary = stringResource(R.string.str_libraries_hint),
                 onClick = { showLibrariesDialog = true }
@@ -425,7 +425,7 @@ internal fun SettingsAboutPane(
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(
-                                imageVector = Icons.Rounded.OpenInNew,
+                                imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -456,7 +456,7 @@ internal fun SettingsAboutPane(
                     }
 
                     SettingsActionCard(
-                        icon = Icons.Rounded.LibraryBooks,
+                        icon = Icons.AutoMirrored.Rounded.LibraryBooks,
                         title = stringResource(R.string.str_libraries_used),
                         summary = stringResource(R.string.str_libraries_hint),
                         onClick = {
@@ -503,7 +503,7 @@ internal fun SettingsAboutPane(
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
-                                        imageVector = Icons.Rounded.LibraryBooks,
+                                        imageVector = Icons.AutoMirrored.Rounded.LibraryBooks,
                                         contentDescription = null,
                                         tint = scheme.onPrimaryContainer,
                                         modifier = Modifier.size(20.dp)
