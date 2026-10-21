@@ -396,24 +396,44 @@ object BgmManager {
         }
 
         var needsResave = false
-        val enriched = list.map { track ->
+        val validTracks = mutableListOf<BgmTrack>()
+        for (track in list) {
             if (track.isDefault) {
-                if (track.durationMs <= 0L) {
-                    needsResave = true
-                    track.copy(durationMs = 134374L)
-                } else track
+                validTracks.add(
+                    if (track.durationMs <= 0L) {
+                        needsResave = true
+                        track.copy(durationMs = 134374L)
+                    } else track
+                )
             } else if (track.relativePath != null) {
                 val file = File(context.filesDir, "bgm_tracks/${track.relativePath}")
-                if (file.exists() && (track.durationMs <= 0L || track.artist == null)) {
-                    val meta = extractMetadata(file)
+                if (file.exists() && file.length() > 0) {
+                    if (track.durationMs <= 0L || track.artist == null) {
+                        val meta = extractMetadata(file)
+                        needsResave = true
+                        validTracks.add(
+                            track.copy(
+                                title = meta.title ?: track.title,
+                                artist = meta.artist ?: track.artist,
+                                durationMs = if (meta.durationMs > 0) meta.durationMs else track.durationMs
+                            )
+                        )
+                    } else {
+                        validTracks.add(track)
+                    }
+                } else {
                     needsResave = true
-                    track.copy(
-                        title = meta.title ?: track.title,
-                        artist = meta.artist ?: track.artist,
-                        durationMs = if (meta.durationMs > 0) meta.durationMs else track.durationMs
-                    )
-                } else track
-            } else track
+                }
+            } else {
+                needsResave = true
+            }
+        }
+
+        val enriched = if (validTracks.isEmpty()) {
+            needsResave = true
+            listOf(BgmTrack.DEFAULT)
+        } else {
+            validTracks
         }
 
         if (needsResave) {
@@ -443,7 +463,15 @@ object BgmManager {
             for (i in 0 until array.length()) {
                 tracks.add(BgmTrack.fromJson(array.getJSONObject(i)))
             }
-            tracks
+            val valid = tracks.filter { track ->
+                track.isDefault || (track.relativePath != null && File(context.filesDir, "bgm_tracks/${track.relativePath}").let { it.exists() && it.length() > 0 })
+            }
+            if (valid.size != tracks.size) {
+                val newArray = JSONArray()
+                valid.forEach { newArray.put(it.toJson()) }
+                prefs.edit().putString(PREF_BGM_STAGED, newArray.toString()).apply()
+            }
+            valid
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing staged JSON", e)
             emptyList()
@@ -723,6 +751,7 @@ object BgmManager {
         // Move to staging area (including default track)
         _stagedTracks.value = listOf(trackToRemove) + _stagedTracks.value.filterNot { it.id == trackId }
         saveStagedToPrefs(appContext)
+        savePlaylistToPrefs(appContext)
 
         if (_currentTrack.value?.id == trackId) {
             val fallback = updated.firstOrNull()
@@ -731,10 +760,8 @@ object BgmManager {
             } else {
                 _currentTrack.value = null
                 stopPlayback()
-                savePlaylistToPrefs(appContext)
             }
         } else {
-            savePlaylistToPrefs(appContext)
             if (updated.size <= 1 && _repeatMode.value != BgmRepeatMode.ONE) {
                 mediaPlayer?.isLooping = true
             }
@@ -774,19 +801,18 @@ object BgmManager {
     fun deletePermanently(context: Context, trackId: String) {
         val appContext = context.applicationContext
         val staged = _stagedTracks.value
-        val track = staged.firstOrNull { it.id == trackId } ?: return
+        val inPlaylist = _playlist.value.firstOrNull { it.id == trackId }
+        val track = staged.firstOrNull { it.id == trackId } ?: inPlaylist ?: return
 
         // Default track cannot be permanently deleted
         if (track.isDefault) return
 
         if (track.relativePath != null) {
-            scope.launch(Dispatchers.IO) {
-                try {
-                    val file = File(appContext.filesDir, "bgm_tracks/${track.relativePath}")
-                    if (file.exists()) file.delete()
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to delete staged track file", e)
-                }
+            val file = File(appContext.filesDir, "bgm_tracks/${track.relativePath}")
+            try {
+                if (file.exists()) file.delete()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to delete track file", e)
             }
         }
 
@@ -796,6 +822,16 @@ object BgmManager {
 
         _stagedTracks.value = staged.filterNot { it.id == trackId }
         saveStagedToPrefs(appContext)
+
+        if (inPlaylist != null) {
+            val updated = _playlist.value.filterNot { it.id == trackId }
+            _playlist.value = updated
+            savePlaylistToPrefs(appContext)
+            if (_currentTrack.value?.id == trackId) {
+                val fallback = updated.firstOrNull() ?: BgmTrack.DEFAULT
+                selectTrack(appContext, fallback)
+            }
+        }
     }
 
     fun moveTrack(context: Context, fromIndex: Int, toIndex: Int) {
@@ -824,16 +860,17 @@ object BgmManager {
         _currentAlbumArt.value = null
         _stagedTracks.value = emptyList()
         saveStagedToPrefs(appContext)
-        val tracksDir = File(appContext.filesDir, "bgm_tracks")
-        scope.launch(Dispatchers.IO) {
-            try {
-                tracksDir.deleteRecursively()
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to clear tracks directory", e)
-            }
-        }
+
         _playlist.value = listOf(BgmTrack.DEFAULT)
+        savePlaylistToPrefs(appContext)
         selectTrack(appContext, BgmTrack.DEFAULT)
+
+        val tracksDir = File(appContext.filesDir, "bgm_tracks")
+        try {
+            tracksDir.deleteRecursively()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to clear tracks directory", e)
+        }
     }
 
     private fun queryDisplayName(context: Context, uri: Uri): String? {
