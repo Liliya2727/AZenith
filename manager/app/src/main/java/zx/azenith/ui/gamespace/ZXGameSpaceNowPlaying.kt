@@ -71,8 +71,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -140,6 +143,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.chrisbanes.haze.HazeState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.pow
 import kotlin.math.roundToInt
 import zx.azenith.R
 import zx.azenith.ui.component.gamepadFocusOutline
@@ -164,10 +169,14 @@ private enum class NowPlayingLayoutMode {
  */
 @Composable
 internal fun NowPlayingDot(
+    visible: Boolean = true,
     isPanelOpen: Boolean = false,
     canExpand: Boolean = true,
     onOpenPanel: () -> Unit,
-    onPositioned: (Rect) -> Unit = {}
+    onPositioned: (Rect) -> Unit = {},
+    onEmergenceImpulse: () -> Unit = {},
+    onMergeImpact: () -> Unit = {},
+    onCollapseImpulse: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
@@ -180,14 +189,29 @@ internal fun NowPlayingDot(
     val nowPlayingEnabled by BgmManager.isNowPlayingEnabled.collectAsStateWithLifecycle()
     val songChangeNonce by BgmManager.songChangeNonce.collectAsStateWithLifecycle()
 
-    if (!isEnabled || !nowPlayingEnabled || currentTrack == null) return
-
-    val track = currentTrack ?: return
+    var lastValidTrack by remember { mutableStateOf<BgmTrack?>(currentTrack ?: BgmTrack.DEFAULT) }
+    LaunchedEffect(currentTrack) {
+        if (currentTrack != null) {
+            lastValidTrack = currentTrack
+        }
+    }
+    val track = currentTrack ?: lastValidTrack ?: return
 
     val density = LocalDensity.current
+    var isPresent by remember { mutableStateOf(visible) }
+    var prevVisible by remember { mutableStateOf<Boolean?>(null) }
+
+    val slotWidthDp = remember { Animatable(if (visible) 38f else 0f) }
+    val gapWidthDp = remember { Animatable(if (visible) 8f else 0f) }
+    val dropletOffsetX = remember { Animatable(0f) }
+    val dropletScaleX = remember { Animatable(1f) }
+    val dropletScaleY = remember { Animatable(1f) }
+    val dropletAlpha = remember { Animatable(if (visible) 1f else 0f) }
+
     val bounceScale = remember { Animatable(1f) }
     val bounceOffsetY = remember { Animatable(0f) }
     val bounceAlpha = remember { Animatable(1f) }
+
     var isFirstComposition by remember { mutableStateOf(true) }
 
     var isExpanded by remember { mutableStateOf(false) }
@@ -195,12 +219,170 @@ internal fun NowPlayingDot(
     var lastObservedNonce by remember { mutableStateOf(songChangeNonce) }
     var wasPanelOpen by remember { mutableStateOf(isPanelOpen) }
 
+    LaunchedEffect(visible) {
+        if (prevVisible == null) {
+            prevVisible = visible
+            if (visible) {
+                dropletAlpha.snapTo(1f)
+                dropletOffsetX.snapTo(0f)
+                slotWidthDp.snapTo(38f)
+                gapWidthDp.snapTo(8f)
+            } else {
+                dropletAlpha.snapTo(0f)
+                slotWidthDp.snapTo(0f)
+                gapWidthDp.snapTo(0f)
+            }
+            return@LaunchedEffect
+        }
+        if (visible == prevVisible) return@LaunchedEffect
+        prevVisible = visible
+
+        if (visible) {
+            // Emergence: morph like a fallen water drop separating from status capsule
+            isPresent = true
+            isExpanded = false
+            dropletAlpha.snapTo(1f)
+            dropletOffsetX.snapTo(with(density) { -46.dp.toPx() })
+            dropletScaleX.snapTo(1.0f)
+            dropletScaleY.snapTo(1.0f)
+            slotWidthDp.snapTo(0f)
+            gapWidthDp.snapTo(0f)
+
+            // Step 1: Open slot and animate droplet out of capsule
+            launch {
+                gapWidthDp.animateTo(
+                    targetValue = 8f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
+            }
+            launch {
+                slotWidthDp.animateTo(
+                    targetValue = 38f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
+            }
+            launch {
+                dropletOffsetX.animateTo(
+                    targetValue = 0f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
+            }
+
+            // Step 2: Liquid stretch & snap squash wobble
+            launch {
+                dropletScaleX.animateTo(1.15f, tween(75, easing = FastOutSlowInEasing))
+                onEmergenceImpulse()
+                dropletScaleX.animateTo(
+                    targetValue = 1f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
+            }
+            launch {
+                dropletScaleY.animateTo(0.90f, tween(75, easing = FastOutSlowInEasing))
+                dropletScaleY.animateTo(
+                    targetValue = 1f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
+            }
+
+            // Always emerge cleanly as a compact dot on first opening or toggle
+            isExpanded = false
+        } else {
+            // Dismissal: morph like two water droplets merging into one
+            if (isExpanded) {
+                isExpanded = false
+                delay(140L)
+            }
+
+            // Move into capsule and collapse slot & gap
+            launch {
+                gapWidthDp.animateTo(
+                    targetValue = 0f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
+            }
+            launch {
+                slotWidthDp.animateTo(
+                    targetValue = 0f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
+            }
+            launch {
+                dropletOffsetX.animateTo(
+                    targetValue = with(density) { -46.dp.toPx() },
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
+            }
+            launch {
+                dropletScaleX.animateTo(
+                    targetValue = 0.70f,
+                    animationSpec = tween(100, easing = FastOutSlowInEasing)
+                )
+                dropletScaleX.animateTo(
+                    targetValue = 1.0f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
+            }
+            launch {
+                dropletScaleY.animateTo(
+                    targetValue = 1.20f,
+                    animationSpec = tween(100, easing = FastOutSlowInEasing)
+                )
+                dropletScaleY.animateTo(
+                    targetValue = 1.0f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
+            }
+
+            delay(100L)
+            onMergeImpact()
+
+            delay(220L)
+            dropletAlpha.snapTo(0f)
+            isPresent = false
+        }
+    }
+
     LaunchedEffect(songChangeNonce) {
         if (songChangeNonce != lastObservedNonce && songChangeNonce > 0L) {
             lastObservedNonce = songChangeNonce
             if (!isPanelOpen && canExpand) {
                 if (isExpanded) {
                     isExpanded = false
+                    launch {
+                        delay(100L)
+                        onCollapseImpulse()
+                    }
                     delay(220L)
                 }
                 displayedTrack = track
@@ -214,6 +396,10 @@ internal fun NowPlayingDot(
                 isExpanded = true
                 delay(duration)
                 isExpanded = false
+                launch {
+                    delay(100L)
+                    onCollapseImpulse()
+                }
             } else {
                 displayedTrack = track
                 isExpanded = false
@@ -228,7 +414,14 @@ internal fun NowPlayingDot(
         }
         if (isPanelOpen) {
             wasPanelOpen = true
+            val wasExp = isExpanded
             isExpanded = false
+            if (wasExp) {
+                launch {
+                    delay(100L)
+                    onCollapseImpulse()
+                }
+            }
             launch {
                 bounceScale.animateTo(
                     targetValue = 0.68f,
@@ -296,37 +489,157 @@ internal fun NowPlayingDot(
                 }
                 delay(duration)
                 isExpanded = false
+                launch {
+                    delay(100L)
+                    onCollapseImpulse()
+                }
             } else {
                 isExpanded = false
             }
         }
     }
 
+    if (!isPresent) return
+
     val jacketRotation = rememberGameSpaceClock()
     val effectiveExpanded = isExpanded && canExpand
 
-    Box(
-        modifier = Modifier.onGloballyPositioned { coords ->
-            if (coords.isAttached && coords.size.width > 0 && coords.size.height > 0) {
-                val bounds = coords.boundsInRoot()
-                if (bounds.width > 0f && bounds.height > 0f) {
-                    onPositioned(bounds)
+    val insideCapsuleDistancePx = with(density) { 46.dp.toPx() }
+    val contentAlpha = (1f - (abs(dropletOffsetX.value) / insideCapsuleDistancePx)).coerceIn(0f, 1f)
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (gapWidthDp.value > 0.01f) {
+            Spacer(modifier = Modifier.width(gapWidthDp.value.dp))
+        }
+
+        Box(
+            modifier = Modifier
+                .then(
+                    if (slotWidthDp.value < 37.5f) {
+                        Modifier.width(slotWidthDp.value.dp)
+                    } else {
+                        Modifier.wrapContentWidth()
+                    }
+                )
+                .height(38.dp)
+                .onGloballyPositioned { coords ->
+                    if (coords.isAttached && coords.size.width > 0 && coords.size.height > 0) {
+                        val bounds = coords.boundsInRoot()
+                        if (bounds.width > 0f && bounds.height > 0f) {
+                            onPositioned(bounds)
+                        }
+                    }
+                }
+        ) {
+            // Liquid bridge drawn between status capsule and emerging/merging droplet
+            val bridgeAlpha = dropletAlpha.value
+            if (bridgeAlpha > 0.01f && slotWidthDp.value < 37.5f) {
+                Canvas(
+                    modifier = Modifier
+                        .requiredHeight(38.dp)
+                        .requiredWidth(38.dp)
+                ) {
+                    val H = size.height
+                    val R = H / 2f
+                    val cy = R
+
+                    val cxDrop = R + dropletOffsetX.value
+                    val cxCap = -gapWidthDp.value.dp.toPx() - R
+                    val d = cxDrop - cxCap
+
+                val dTouch = 2f * R
+                val dSnap = 44.dp.toPx()
+
+                if (d in 0.5f..dSnap) {
+                    val bridgePath = Path()
+                    val bridgeColor = scheme.surfaceContainerHigh.copy(alpha = bridgeAlpha)
+
+                    if (d <= dTouch) {
+                        bridgePath.moveTo(cxCap, cy - R)
+                        bridgePath.lineTo(cxDrop, cy - R)
+                        bridgePath.arcTo(
+                            rect = Rect(cxDrop - R, cy - R, cxDrop + R, cy + R),
+                            startAngleDegrees = -90f,
+                            sweepAngleDegrees = 180f,
+                            forceMoveTo = false
+                        )
+                        bridgePath.lineTo(cxCap, cy + R)
+                        bridgePath.arcTo(
+                            rect = Rect(cxCap - R, cy - R, cxCap + R, cy + R),
+                            startAngleDegrees = 90f,
+                            sweepAngleDegrees = 180f,
+                            forceMoveTo = false
+                        )
+                        bridgePath.close()
+                        drawPath(bridgePath, color = bridgeColor)
+                    } else {
+                        val stretch = ((d - dTouch) / (dSnap - dTouch)).coerceIn(0f, 1f)
+                        val waistHalf = R * (1f - stretch).pow(0.75f)
+                        val midX = (cxCap + cxDrop) / 2f
+
+                        bridgePath.moveTo(cxCap, cy - R)
+                        bridgePath.cubicTo(
+                            cxCap + R * 0.4f, cy - R,
+                            midX - 4.dp.toPx(), cy - waistHalf,
+                            midX, cy - waistHalf
+                        )
+                        bridgePath.cubicTo(
+                            midX + 4.dp.toPx(), cy - waistHalf,
+                            cxDrop - R * 0.4f, cy - R,
+                            cxDrop, cy - R
+                        )
+                        bridgePath.arcTo(
+                            rect = Rect(cxDrop - R, cy - R, cxDrop + R, cy + R),
+                            startAngleDegrees = -90f,
+                            sweepAngleDegrees = 180f,
+                            forceMoveTo = false
+                        )
+                        bridgePath.lineTo(cxDrop, cy + R)
+                        bridgePath.cubicTo(
+                            cxDrop - R * 0.4f, cy + R,
+                            midX + 4.dp.toPx(), cy + waistHalf,
+                            midX, cy + waistHalf
+                        )
+                        bridgePath.cubicTo(
+                            midX - 4.dp.toPx(), cy + waistHalf,
+                            cxCap + R * 0.4f, cy + R,
+                            cxCap, cy + R
+                        )
+                        bridgePath.arcTo(
+                            rect = Rect(cxCap - R, cy - R, cxCap + R, cy + R),
+                            startAngleDegrees = 90f,
+                            sweepAngleDegrees = 180f,
+                            forceMoveTo = false
+                        )
+                        bridgePath.close()
+                        drawPath(bridgePath, color = bridgeColor)
+                    }
                 }
             }
         }
-    ) {
+
         Surface(
             shape = CircleShape,
-            color = if (effectiveExpanded) scheme.surfaceContainerHigh else scheme.surfaceContainer,
+            color = scheme.surfaceContainerHigh,
             modifier = Modifier
+                .requiredHeight(38.dp)
+                .then(
+                    if (slotWidthDp.value < 37.5f) {
+                        Modifier.requiredWidth(38.dp)
+                    } else {
+                        Modifier.wrapContentWidth()
+                    }
+                )
                 .graphicsLayer {
-                    scaleX = bounceScale.value
-                    scaleY = bounceScale.value
+                    scaleX = bounceScale.value * dropletScaleX.value
+                    scaleY = bounceScale.value * dropletScaleY.value
+                    translationX = dropletOffsetX.value
                     translationY = bounceOffsetY.value
-                    alpha = bounceAlpha.value
-                    transformOrigin = TransformOrigin(1f, 0.5f)
+                    alpha = bounceAlpha.value * dropletAlpha.value
+                    transformOrigin = if (isPanelOpen || wasPanelOpen) TransformOrigin(1f, 0.5f) else TransformOrigin(0.5f, 0.5f)
                 }
-                .height(38.dp)
                 .clip(CircleShape)
                 .gamepadFocusOutline(shape = CircleShape, register = !isPanelOpen)
                 .then(
@@ -339,7 +652,11 @@ internal fun NowPlayingDot(
                 )
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 4.dp),
+                modifier = Modifier
+                    .padding(horizontal = 4.dp)
+                    .graphicsLayer {
+                        alpha = contentAlpha
+                    },
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
@@ -474,6 +791,7 @@ internal fun NowPlayingDot(
             }
         }
     }
+}
 }
 }
 

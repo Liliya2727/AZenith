@@ -22,10 +22,12 @@ import android.view.KeyEvent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -95,7 +97,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -166,6 +170,7 @@ internal fun ZXGameSpaceTopBar(
     val scheme = MaterialTheme.colorScheme
     val density = LocalDensity.current
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     val bgmEnabled by BgmManager.isEnabled.collectAsStateWithLifecycle()
     val bgmNowPlayingEnabled by BgmManager.isNowPlayingEnabled.collectAsStateWithLifecycle()
@@ -228,7 +233,7 @@ internal fun ZXGameSpaceTopBar(
 
         val activeLeftWidthDp = tabsWidthDp + (if (showLogo) 12.dp + logoWidthDp else 0.dp)
         val availableForNowPlaying = totalBarWidthDp - (activeLeftWidthDp + 24.dp + searchWidth + 8.dp + 38.dp + 8.dp + capsuleWidthDp + 8.dp)
-        val canExpandNowPlaying = hasNowPlaying && !searchOpen && (availableForNowPlaying >= 195.dp)
+        val canExpandNowPlaying = hasNowPlaying && !searchOpen && (availableForNowPlaying >= 120.dp)
 
         Row(
             modifier = Modifier
@@ -544,53 +549,44 @@ internal fun ZXGameSpaceTopBar(
                 }
             )
 
-            // Material 3 Expressive Unified System Status Capsule (Clock & Battery)
-            Surface(
-                shape = CircleShape,
-                color = scheme.surfaceContainerHigh,
-                modifier = Modifier
-                    .onGloballyPositioned { coords ->
-                        if (coords.size.width > 0) cachedCapsuleWidthPx = coords.size.width.toFloat()
-                    }
-                    .height(38.dp)
-                    .clip(CircleShape)
-                    .gamepadFocusOutline(shape = CircleShape, register = true)
-                    .clickable {
-                        if (searchOpen) onSearchClose()
-                        onStatusClick()
-                    }
+            // Material 3 Expressive Unified System Status Capsule (Clock & Battery) and Now Playing
+            val capsuleNudgeX = remember { Animatable(0f) }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = clock,
-                        style = MaterialTheme.typography.labelLarge.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 0.2.sp
-                        ),
-                        color = scheme.onSurface
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .size(3.5.dp)
-                            .clip(CircleShape)
-                            .background(scheme.outlineVariant.copy(alpha = 0.7f))
-                    )
-
-                    Android16BatteryIcon(
-                        level = battery.level,
-                        isCharging = battery.isCharging,
-                        modifier = Modifier.semantics {
-                            contentDescription = "Battery ${battery.level}%${if (battery.isCharging) ", Charging" else ""}"
+                Surface(
+                    shape = CircleShape,
+                    color = scheme.surfaceContainerHigh,
+                    modifier = Modifier
+                        .graphicsLayer {
+                            translationX = capsuleNudgeX.value
                         }
-                    )
+                        .onGloballyPositioned { coords ->
+                            if (coords.size.width > 0) cachedCapsuleWidthPx = coords.size.width.toFloat()
+                        }
+                        .height(38.dp)
+                        .clip(CircleShape)
+                        .gamepadFocusOutline(shape = CircleShape, register = true)
+                        .clickable {
+                            if (searchOpen) onSearchClose()
+                            onStatusClick()
+                        }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = clock,
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 0.2.sp
+                            ),
+                            color = scheme.onSurface
+                        )
 
-                    val tempC = battery.temperatureC
-                    if (tempC != null) {
                         Box(
                             modifier = Modifier
                                 .size(3.5.dp)
@@ -598,39 +594,95 @@ internal fun ZXGameSpaceTopBar(
                                 .background(scheme.outlineVariant.copy(alpha = 0.7f))
                         )
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(3.dp)
-                        ) {
-                            val tempColor = when {
-                                tempC >= 45f -> scheme.error
-                                tempC >= 39f -> Color(0xFFFF9800)
-                                else -> scheme.onSurfaceVariant
+                        Android16BatteryIcon(
+                            level = battery.level,
+                            isCharging = battery.isCharging,
+                            modifier = Modifier.semantics {
+                                contentDescription = "Battery ${battery.level}%${if (battery.isCharging) ", Charging" else ""}"
                             }
-                            Icon(
-                                imageVector = Icons.Rounded.Thermostat,
-                                contentDescription = "Battery Temperature",
-                                tint = tempColor,
-                                modifier = Modifier.size(15.dp)
+                        )
+
+                        val tempC = battery.temperatureC
+                        if (tempC != null) {
+                            Box(
+                                modifier = Modifier
+                                    .size(3.5.dp)
+                                    .clip(CircleShape)
+                                    .background(scheme.outlineVariant.copy(alpha = 0.7f))
                             )
-                            Text(
-                                text = "${tempC.roundToInt()}°C",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontWeight = FontWeight.Bold
-                                ),
-                                color = tempColor
-                            )
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                val tempColor = when {
+                                    tempC >= 45f -> scheme.error
+                                    tempC >= 39f -> Color(0xFFFF9800)
+                                    else -> scheme.onSurfaceVariant
+                                }
+                                Icon(
+                                    imageVector = Icons.Rounded.Thermostat,
+                                    contentDescription = "Battery Temperature",
+                                    tint = tempColor,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Text(
+                                    text = "${tempC.roundToInt()}°C",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    color = tempColor
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            if (hasNowPlaying) {
                 NowPlayingDot(
+                    visible = hasNowPlaying,
                     isPanelOpen = isNowPlayingOpen,
                     canExpand = canExpandNowPlaying,
                     onOpenPanel = onNowPlayingClick,
-                    onPositioned = onNowPlayingAnchor
+                    onPositioned = onNowPlayingAnchor,
+                    onEmergenceImpulse = {
+                        coroutineScope.launch {
+                            capsuleNudgeX.snapTo(0f)
+                            capsuleNudgeX.animateTo(
+                                targetValue = 0f,
+                                initialVelocity = with(density) { -160.dp.toPx() },
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            )
+                        }
+                    },
+                    onMergeImpact = {
+                        coroutineScope.launch {
+                            capsuleNudgeX.snapTo(0f)
+                            capsuleNudgeX.animateTo(
+                                targetValue = 0f,
+                                initialVelocity = with(density) { -130.dp.toPx() },
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            )
+                        }
+                    },
+                    onCollapseImpulse = {
+                        coroutineScope.launch {
+                            capsuleNudgeX.snapTo(0f)
+                            capsuleNudgeX.animateTo(
+                                targetValue = 0f,
+                                initialVelocity = with(density) { 130.dp.toPx() },
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            )
+                        }
+                    }
                 )
             }
         }
