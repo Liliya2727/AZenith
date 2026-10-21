@@ -3390,8 +3390,7 @@ internal fun SettingsAudioPane(
                                 }
 
                                 val displayTitle = activePlayingTrack.title
-                                val displayArtist = activePlayingTrack.artist?.takeIf { it.isNotBlank() }
-                                    ?: if (activePlayingTrack.isDefault) "AZenith" else activePlayingTrack.fileName
+                                val displayArtist = activePlayingTrack.displayArtist
 
                                 Row(
                                     modifier = Modifier.weight(1f),

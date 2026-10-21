@@ -49,9 +49,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -98,6 +101,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -147,6 +151,7 @@ import zx.azenith.ui.util.fireTapHaptic
  * Adaptive layout modes for the NowPlaying dialog depending on available vertical height.
  */
 private enum class NowPlayingLayoutMode {
+    LARGE,
     EXPANDED,
     COMPACT,
     ULTRA_COMPACT
@@ -193,7 +198,7 @@ internal fun NowPlayingDot(
                     delay(260L)
                 }
                 displayedTrack = track
-                val textLen = maxOf(track.title.length, (track.artist ?: "").length)
+                val textLen = maxOf(track.title.length, track.displayArtist.length)
                 val duration = if (textLen > 18) {
                     (3800L + (textLen - 18) * 160L).coerceIn(4500L, 9500L)
                 } else {
@@ -211,7 +216,7 @@ internal fun NowPlayingDot(
         if (!isPanelOpen && pendingExpandOnClose) {
             pendingExpandOnClose = false
             delay(280L)
-            val textLen = maxOf(displayedTrack.title.length, (displayedTrack.artist ?: "").length)
+            val textLen = maxOf(displayedTrack.title.length, displayedTrack.displayArtist.length)
             val duration = if (textLen > 18) {
                 (3800L + (textLen - 18) * 160L).coerceIn(4500L, 9500L)
             } else {
@@ -295,7 +300,7 @@ internal fun NowPlayingDot(
                                     velocity = 35.dp
                                 )
                         )
-                        val subtitle = displayedTrack.artist ?: displayedTrack.fileName
+                        val subtitle = displayedTrack.displayArtist
                         Text(
                             text = subtitle,
                             style = MaterialTheme.typography.labelSmall.copy(
@@ -433,12 +438,14 @@ internal fun NowPlayingPanelOverlay(
 
         // Select adaptive layout mode strictly based on available height in Compose DP
         val layoutMode = when {
-            availableHeight < 210.dp -> NowPlayingLayoutMode.ULTRA_COMPACT
-            availableHeight < 330.dp -> NowPlayingLayoutMode.COMPACT
-            else -> NowPlayingLayoutMode.EXPANDED
+            availableHeight < 190.dp -> NowPlayingLayoutMode.ULTRA_COMPACT
+            availableHeight < 290.dp -> NowPlayingLayoutMode.COMPACT
+            availableHeight < 380.dp -> NowPlayingLayoutMode.EXPANDED
+            else -> NowPlayingLayoutMode.LARGE
         }
 
         val dialogWidth = when (layoutMode) {
+            NowPlayingLayoutMode.LARGE -> minOf(360.dp, screenWidth - 24.dp)
             NowPlayingLayoutMode.EXPANDED -> minOf(350.dp, screenWidth - 24.dp)
             NowPlayingLayoutMode.COMPACT -> minOf(340.dp, screenWidth - 24.dp)
             NowPlayingLayoutMode.ULTRA_COMPACT -> minOf(320.dp, screenWidth - 24.dp)
@@ -529,20 +536,23 @@ private fun NowPlayingDialogWindow(
     val playlistProgress = remember { Animatable(0f) }
 
     val collapsedHeight = when (layoutMode) {
-        NowPlayingLayoutMode.EXPANDED -> 310.dp
-        NowPlayingLayoutMode.COMPACT -> 175.dp
+        NowPlayingLayoutMode.LARGE -> if (availableHeight >= 460.dp) 410.dp else 385.dp
+        NowPlayingLayoutMode.EXPANDED -> 295.dp
+        NowPlayingLayoutMode.COMPACT -> 170.dp
         NowPlayingLayoutMode.ULTRA_COMPACT -> 110.dp
     }
     val maxExpandedHeight = when (layoutMode) {
-        NowPlayingLayoutMode.EXPANDED -> minOf(availableHeight, 330.dp).coerceAtLeast(310.dp)
-        NowPlayingLayoutMode.COMPACT -> minOf(availableHeight, 275.dp).coerceAtLeast(175.dp)
-        NowPlayingLayoutMode.ULTRA_COMPACT -> minOf(availableHeight, 220.dp).coerceAtLeast(110.dp)
+        NowPlayingLayoutMode.LARGE -> minOf(availableHeight, 490.dp).coerceAtLeast(collapsedHeight)
+        NowPlayingLayoutMode.EXPANDED -> minOf(availableHeight, 350.dp).coerceAtLeast(collapsedHeight)
+        NowPlayingLayoutMode.COMPACT -> minOf(availableHeight, 280.dp).coerceAtLeast(collapsedHeight)
+        NowPlayingLayoutMode.ULTRA_COMPACT -> minOf(availableHeight, 220.dp).coerceAtLeast(collapsedHeight)
     }
 
     val currentCardHeight = collapsedHeight + (maxExpandedHeight - collapsedHeight) * playlistProgress.value
     val triggerBarHeight = 44.dp
-    val maxDragDistanceDp = currentCardHeight - triggerBarHeight
-    val maxDragDistancePx = with(density) { maxDragDistanceDp.toPx() }
+    val totalTravelDp = (collapsedHeight - triggerBarHeight).coerceAtLeast(1.dp)
+    val totalTravelPx = with(density) { totalTravelDp.toPx() }
+    val updatedTotalTravelPx by rememberUpdatedState(totalTravelPx)
 
     Box(
         modifier = Modifier
@@ -557,6 +567,19 @@ private fun NowPlayingDialogWindow(
                 .padding(bottom = triggerBarHeight)
         ) {
             when (layoutMode) {
+                NowPlayingLayoutMode.LARGE -> {
+                    LargePlayerContent(
+                        track = track,
+                        albumArt = albumArt,
+                        isPlaying = isPlaying,
+                        durationMs = durationMs,
+                        progress = progress,
+                        positionMs = positionMs,
+                        repeatMode = repeatMode,
+                        isShuffleEnabled = isShuffleEnabled,
+                        availableHeight = availableHeight
+                    )
+                }
                 NowPlayingLayoutMode.EXPANDED -> {
                     ExpandedPlayerContent(
                         track = track,
@@ -588,7 +611,7 @@ private fun NowPlayingDialogWindow(
         }
 
         // LAYER 2: Draggable pull-up Playlist Sheet (opens UPWARDS, covering seekbar & controls)
-        val currentSheetOffsetY = (maxDragDistancePx * (1f - playlistProgress.value)).roundToInt()
+        val currentSheetOffsetY = (totalTravelPx * (1f - playlistProgress.value)).roundToInt()
 
         Surface(
             shape = RoundedCornerShape(
@@ -610,56 +633,49 @@ private fun NowPlayingDialogWindow(
                         .fillMaxWidth()
                         .height(triggerBarHeight)
                         .padding(horizontal = 14.dp)
-                        .pointerInput(currentCardHeight) {
-                            detectVerticalDragGestures(
-                                onVerticalDrag = { change, dragAmount ->
-                                    change.consume()
-                                    val maxDist = maxDragDistancePx.coerceAtLeast(1f)
-                                    val delta = -dragAmount / maxDist
-                                    val newProgress = (playlistProgress.value + delta).coerceIn(0f, 1f)
-                                    coroutineScope.launch {
-                                        playlistProgress.snapTo(newProgress)
-                                    }
-                                },
-                                onDragEnd = {
-                                    coroutineScope.launch {
-                                        val target = if (playlistProgress.value > 0.35f) 1f else 0f
-                                        playlistProgress.animateTo(
-                                            targetValue = target,
-                                            animationSpec = spring(
-                                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                stiffness = Spring.StiffnessMediumLow
-                                            )
-                                        )
-                                    }
-                                },
-                                onDragCancel = {
-                                    coroutineScope.launch {
-                                        val target = if (playlistProgress.value > 0.35f) 1f else 0f
-                                        playlistProgress.animateTo(
-                                            targetValue = target,
-                                            animationSpec = spring(
-                                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                stiffness = Spring.StiffnessMediumLow
-                                            )
-                                        )
-                                    }
+                        .draggable(
+                            orientation = Orientation.Vertical,
+                            state = rememberDraggableState { deltaPx ->
+                                val deltaFraction = -deltaPx / updatedTotalTravelPx
+                                val nextProgress = (playlistProgress.value + deltaFraction).coerceIn(0f, 1f)
+                                coroutineScope.launch {
+                                    playlistProgress.snapTo(nextProgress)
                                 }
-                            )
-                        }
-                        .clickable {
-                            coroutineScope.launch {
-                                AudioUtil.playOk(context)
-                                val target = if (playlistProgress.value > 0.5f) 0f else 1f
-                                playlistProgress.animateTo(
-                                    targetValue = target,
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                                        stiffness = Spring.StiffnessMediumLow
+                            },
+                            onDragStopped = { velocity ->
+                                coroutineScope.launch {
+                                    val target = when {
+                                        velocity < -350f -> 1f
+                                        velocity > 350f -> 0f
+                                        else -> if (playlistProgress.value > 0.4f) 1f else 0f
+                                    }
+                                    playlistProgress.animateTo(
+                                        targetValue = target,
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                            stiffness = Spring.StiffnessMediumLow
+                                        )
                                     )
-                                )
+                                }
                             }
-                        },
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {
+                                coroutineScope.launch {
+                                    AudioUtil.playOk(context)
+                                    val target = if (playlistProgress.value > 0.5f) 0f else 1f
+                                    playlistProgress.animateTo(
+                                        targetValue = target,
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                            stiffness = Spring.StiffnessMediumLow
+                                        )
+                                    )
+                                }
+                            }
+                        ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(
@@ -686,10 +702,10 @@ private fun NowPlayingDialogWindow(
                     // Center subtle drag handle pill
                     Box(
                         modifier = Modifier
-                            .width(32.dp)
+                            .width(36.dp)
                             .height(4.dp)
                             .clip(CircleShape)
-                            .background(scheme.onSurfaceVariant.copy(alpha = 0.35f))
+                            .background(scheme.onSurfaceVariant.copy(alpha = 0.45f))
                     )
 
                     Spacer(Modifier.weight(1f))
@@ -738,44 +754,16 @@ private fun NowPlayingDialogWindow(
                         items(playlist.size, key = { index -> playlist[index].id }) { index ->
                             val item = playlist[index]
                             val isCurrent = item.id == track.id
-                            val isFirst = index == 0
-                            val isLast = index == playlist.size - 1
-                            val itemBg = when {
-                                isCurrent -> scheme.secondaryContainer.copy(alpha = 0.65f)
-                                item.isDefault -> scheme.tertiaryContainer.copy(alpha = 0.45f)
-                                else -> Color.Transparent
-                            }
-                            val itemShape = when {
-                                isCurrent && isFirst -> RoundedCornerShape(
-                                    topStart = 18.dp, topEnd = 18.dp, bottomStart = 8.dp, bottomEnd = 8.dp
-                                )
-                                !isCurrent && isLast -> RoundedCornerShape(
-                                    topStart = 8.dp, topEnd = 8.dp, bottomStart = 18.dp, bottomEnd = 18.dp
-                                )
-                                else -> RoundedCornerShape(8.dp)
-                            }
-
-                            val interactionSource = remember { MutableInteractionSource() }
-                            val isPressed by interactionSource.collectIsPressedAsState()
-                            val rowScale by animateFloatAsState(
-                                targetValue = if (isPressed) 0.95f else 1f,
-                                animationSpec = spring(dampingRatio = 0.50f, stiffness = 500f),
-                                label = "QueueRowPress"
-                            )
+                            val itemBg = if (isCurrent) scheme.secondaryContainer.copy(alpha = 0.55f) else Color.Transparent
 
                             Surface(
-                                shape = itemShape,
+                                shape = RoundedCornerShape(12.dp),
                                 color = itemBg,
                                 contentColor = if (isCurrent) scheme.onSecondaryContainer else scheme.onSurface,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .graphicsLayer {
-                                        scaleX = rowScale
-                                        scaleY = rowScale
-                                        transformOrigin = TransformOrigin(0.5f, 0.5f)
-                                    }
                                     .clickable(
-                                        interactionSource = interactionSource,
+                                        interactionSource = remember { MutableInteractionSource() },
                                         indication = null,
                                         onClick = {
                                             AudioUtil.playOk(context)
@@ -806,7 +794,7 @@ private fun NowPlayingDialogWindow(
                                             contentDescription = null,
                                             tint = when {
                                                 isCurrent -> scheme.primary
-                                                item.isDefault -> scheme.tertiary
+                                                item.isDefault -> scheme.primary.copy(alpha = 0.8f)
                                                 else -> scheme.onSurfaceVariant.copy(alpha = 0.6f)
                                             },
                                             modifier = Modifier.size(16.dp)
@@ -818,7 +806,7 @@ private fun NowPlayingDialogWindow(
                                             text = item.title,
                                             style = MaterialTheme.typography.labelSmall.copy(
                                                 fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
-                                                fontSize = 11.sp,
+                                                fontSize = 11.5.sp,
                                                 lineHeight = 14.sp
                                             ),
                                             color = if (isCurrent) scheme.onSecondaryContainer else scheme.onSurface,
@@ -826,9 +814,8 @@ private fun NowPlayingDialogWindow(
                                             overflow = TextOverflow.Ellipsis
                                         )
                                         Text(
-                                            text = if (item.isDefault) stringResource(R.string.bgm_default_track_badge)
-                                            else item.artist ?: item.fileName,
-                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 12.sp),
+                                            text = item.displayArtist,
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.5.sp, lineHeight = 12.sp),
                                             color = if (isCurrent) scheme.onSecondaryContainer.copy(alpha = 0.8f)
                                             else scheme.onSurfaceVariant,
                                             maxLines = 1,
@@ -855,8 +842,222 @@ private fun NowPlayingDialogWindow(
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Player Contents (Expanded, Compact, Ultra-Compact)
+// Player Contents (Large, Expanded, Compact, Ultra-Compact)
 // ──────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun LargePlayerContent(
+    track: BgmTrack,
+    albumArt: Bitmap?,
+    isPlaying: Boolean,
+    durationMs: Long,
+    progress: Float,
+    positionMs: Long,
+    repeatMode: BgmRepeatMode,
+    isShuffleEnabled: Boolean,
+    availableHeight: Dp
+) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val scheme = MaterialTheme.colorScheme
+
+    val artSize = if (availableHeight >= 460.dp) 150.dp else 135.dp
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Hero Album Cover Art
+        ExpressiveJacket(
+            art = albumArt,
+            track = track,
+            isPlaying = isPlaying,
+            size = artSize,
+            onClick = { AudioUtil.playOk(context) }
+        )
+
+        Spacer(Modifier.height(10.dp))
+
+        // Title & Artist
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = track.title,
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 17.5.sp,
+                    lineHeight = 21.sp,
+                    letterSpacing = (-0.3).sp
+                ),
+                color = scheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.basicMarquee(
+                    iterations = Int.MAX_VALUE,
+                    repeatDelayMillis = 1000,
+                    initialDelayMillis = 600,
+                    velocity = 40.dp
+                )
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = track.displayArtist,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 13.sp,
+                    lineHeight = 16.sp
+                ),
+                color = scheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // Squiggly seekbar with timestamps
+        var scrubFraction by remember { mutableStateOf<Float?>(null) }
+        val shownFraction = scrubFraction ?: progress
+
+        ExpressiveSquigglySeekbar(
+            progress = shownFraction,
+            isPlaying = isPlaying,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(28.dp),
+            onValueChange = { scrubFraction = it },
+            onValueChangeFinished = {
+                val target = scrubFraction ?: 0f
+                scrubFraction = null
+                BgmManager.seekTo((target * durationMs).toLong())
+                fireTapHaptic(haptic)
+            }
+        )
+
+        Spacer(Modifier.height(2.dp))
+
+        val elapsedMs = (shownFraction * durationMs).toLong()
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = BgmManager.formatTimeMs(elapsedMs),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 10.sp,
+                    fontFeatureSettings = "tnum"
+                ),
+                color = scheme.onSurfaceVariant
+            )
+            Text(
+                text = track.formattedDuration.ifEmpty { "0:00" },
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 10.sp,
+                    fontFeatureSettings = "tnum"
+                ),
+                color = scheme.onSurfaceVariant
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // 5-button transport controls
+        val repeatIcon = if (repeatMode == BgmRepeatMode.ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(58.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ExpressiveToggleButton(
+                icon = repeatIcon,
+                contentDescription = if (repeatMode == BgmRepeatMode.ONE)
+                    stringResource(R.string.bgm_now_playing_repeat_one)
+                else stringResource(R.string.bgm_now_playing_repeat_all),
+                isActive = repeatMode == BgmRepeatMode.ONE,
+                activeColor = scheme.tertiaryContainer,
+                activeContent = scheme.onTertiaryContainer,
+                inactiveColor = Color.Transparent,
+                inactiveContent = scheme.onSurfaceVariant,
+                defaultShape = RoundedCornerShape(21.dp),
+                activeShape = RoundedCornerShape(12.dp),
+                size = 40.dp,
+                iconSize = 19.dp,
+                rotationDegrees = if (repeatMode == BgmRepeatMode.ONE) 180f else 0f,
+                onClick = { BgmManager.toggleRepeatMode(context) }
+            )
+
+            ExpressiveNudgeButton(
+                icon = Icons.Rounded.SkipPrevious,
+                contentDescription = stringResource(R.string.bgm_now_playing_previous),
+                nudgeDp = (-4).dp,
+                tint = scheme.onSurface,
+                container = scheme.surfaceContainerHighest,
+                size = 50.dp,
+                iconSize = 22.dp,
+                defaultShape = RoundedCornerShape(25.dp),
+                pressedShape = RoundedCornerShape(13.dp),
+                onClick = {
+                    AudioUtil.playOk(context)
+                    BgmManager.playPreviousOrRestart(context)
+                }
+            )
+
+            ExpressivePlayPauseButton(
+                isPlaying = isPlaying,
+                tint = scheme.onPrimary,
+                container = scheme.primary,
+                size = if (isPlaying) 74.dp else 62.dp,
+                height = 58.dp,
+                iconSize = 26.dp,
+                onClick = {
+                    AudioUtil.playOk(context)
+                    BgmManager.togglePlayPause(context)
+                }
+            )
+
+            ExpressiveNudgeButton(
+                icon = Icons.Rounded.SkipNext,
+                contentDescription = stringResource(R.string.bgm_now_playing_next),
+                nudgeDp = 4.dp,
+                tint = scheme.onSurface,
+                container = scheme.surfaceContainerHighest,
+                size = 50.dp,
+                iconSize = 22.dp,
+                defaultShape = RoundedCornerShape(25.dp),
+                pressedShape = RoundedCornerShape(13.dp),
+                onClick = {
+                    AudioUtil.playOk(context)
+                    BgmManager.playNext(context)
+                }
+            )
+
+            ExpressiveToggleButton(
+                icon = Icons.Rounded.Shuffle,
+                contentDescription = stringResource(R.string.bgm_shuffle),
+                isActive = isShuffleEnabled,
+                activeColor = scheme.tertiaryContainer,
+                activeContent = scheme.onTertiaryContainer,
+                inactiveColor = Color.Transparent,
+                inactiveContent = scheme.onSurfaceVariant,
+                defaultShape = RoundedCornerShape(21.dp),
+                activeShape = RoundedCornerShape(12.dp),
+                size = 40.dp,
+                iconSize = 19.dp,
+                rotationDegrees = 0f,
+                onClick = { BgmManager.toggleShuffle(context) }
+            )
+        }
+    }
+}
 
 @Composable
 private fun ExpandedPlayerContent(
@@ -913,7 +1114,7 @@ private fun ExpandedPlayerContent(
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = track.artist ?: track.fileName,
+                    text = track.displayArtist,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Medium,
                         fontSize = 13.sp,
@@ -1110,7 +1311,7 @@ private fun CompactPlayerContent(
                 )
                 Spacer(Modifier.height(1.dp))
                 Text(
-                    text = track.artist ?: track.fileName,
+                    text = track.displayArtist,
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontSize = 11.sp,
                         lineHeight = 14.sp
@@ -1240,7 +1441,7 @@ private fun UltraCompactPlayerContent(
                 )
             )
             Text(
-                text = track.artist ?: track.fileName,
+                text = track.displayArtist,
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                 color = scheme.onSurfaceVariant,
                 maxLines = 1,
@@ -1292,12 +1493,16 @@ private fun ExpressiveJacket(
     art: Bitmap?,
     track: BgmTrack,
     isPlaying: Boolean,
+    size: Dp = 56.dp,
     onClick: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
 
+    val isLarge = size > 80.dp
+    val defaultCorner = if (isLarge) 30.dp else 28.dp
+    val activeCorner = if (isLarge) 20.dp else 16.dp
     val jacketCorner by animateDpAsState(
-        targetValue = if (isPlaying) 16.dp else 28.dp,
+        targetValue = if (isPlaying) activeCorner else defaultCorner,
         animationSpec = spring(dampingRatio = 0.65f, stiffness = 600f),
         label = "JacketCorner"
     )
@@ -1305,7 +1510,7 @@ private fun ExpressiveJacket(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.88f else 1f,
+        targetValue = if (isPressed) 0.92f else 1f,
         animationSpec = spring(dampingRatio = 0.52f, stiffness = 500f),
         label = "JacketPress"
     )
@@ -1313,8 +1518,9 @@ private fun ExpressiveJacket(
     Surface(
         shape = RoundedCornerShape(jacketCorner),
         color = scheme.surfaceContainerHighest,
+        shadowElevation = if (isLarge) 6.dp else 0.dp,
         modifier = Modifier
-            .size(56.dp)
+            .size(size)
             .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
             .clickable(
                 interactionSource = interactionSource,
@@ -1335,8 +1541,8 @@ private fun ExpressiveJacket(
                 Icon(
                     imageVector = if (track.isDefault) Icons.Rounded.AutoAwesome else Icons.Rounded.MusicNote,
                     contentDescription = null,
-                    tint = if (track.isDefault) scheme.onTertiaryContainer else scheme.primary,
-                    modifier = Modifier.size(24.dp)
+                    tint = if (track.isDefault) scheme.tertiary else scheme.primary,
+                    modifier = Modifier.size(if (isLarge) size * 0.40f else 24.dp)
                 )
             }
         }

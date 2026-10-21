@@ -81,6 +81,10 @@ data class BgmTrack(
             }
         }
 
+    val displayArtist: String
+        get() = if (isDefault) "Zenith" else (artist?.takeIf { it.isNotBlank() } ?: fileName)
+
+
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("title", title)
