@@ -438,9 +438,9 @@ internal fun NowPlayingPanelOverlay(
 
         // Select adaptive layout mode strictly based on available height in Compose DP
         val layoutMode = when {
-            availableHeight < 190.dp -> NowPlayingLayoutMode.ULTRA_COMPACT
-            availableHeight < 290.dp -> NowPlayingLayoutMode.COMPACT
-            availableHeight < 380.dp -> NowPlayingLayoutMode.EXPANDED
+            availableHeight < 150.dp -> NowPlayingLayoutMode.ULTRA_COMPACT
+            availableHeight < 240.dp -> NowPlayingLayoutMode.COMPACT
+            availableHeight < 350.dp -> NowPlayingLayoutMode.EXPANDED
             else -> NowPlayingLayoutMode.LARGE
         }
 
@@ -536,16 +536,16 @@ private fun NowPlayingDialogWindow(
     val playlistProgress = remember { Animatable(0f) }
 
     val collapsedHeight = when (layoutMode) {
-        NowPlayingLayoutMode.LARGE -> if (availableHeight >= 460.dp) 410.dp else 385.dp
-        NowPlayingLayoutMode.EXPANDED -> 295.dp
-        NowPlayingLayoutMode.COMPACT -> 170.dp
-        NowPlayingLayoutMode.ULTRA_COMPACT -> 110.dp
+        NowPlayingLayoutMode.LARGE -> if (availableHeight >= 460.dp) 365.dp else 340.dp
+        NowPlayingLayoutMode.EXPANDED -> 230.dp
+        NowPlayingLayoutMode.COMPACT -> 138.dp
+        NowPlayingLayoutMode.ULTRA_COMPACT -> 94.dp
     }
     val maxExpandedHeight = when (layoutMode) {
-        NowPlayingLayoutMode.LARGE -> minOf(availableHeight, 490.dp).coerceAtLeast(collapsedHeight)
-        NowPlayingLayoutMode.EXPANDED -> minOf(availableHeight, 350.dp).coerceAtLeast(collapsedHeight)
+        NowPlayingLayoutMode.LARGE -> minOf(availableHeight, 480.dp).coerceAtLeast(collapsedHeight)
+        NowPlayingLayoutMode.EXPANDED -> minOf(availableHeight, 360.dp).coerceAtLeast(collapsedHeight)
         NowPlayingLayoutMode.COMPACT -> minOf(availableHeight, 280.dp).coerceAtLeast(collapsedHeight)
-        NowPlayingLayoutMode.ULTRA_COMPACT -> minOf(availableHeight, 220.dp).coerceAtLeast(collapsedHeight)
+        NowPlayingLayoutMode.ULTRA_COMPACT -> minOf(availableHeight, 200.dp).coerceAtLeast(collapsedHeight)
     }
 
     val currentCardHeight = collapsedHeight + (maxExpandedHeight - collapsedHeight) * playlistProgress.value
@@ -861,12 +861,12 @@ private fun LargePlayerContent(
     val haptic = LocalHapticFeedback.current
     val scheme = MaterialTheme.colorScheme
 
-    val artSize = if (availableHeight >= 460.dp) 150.dp else 135.dp
+    val artSize = if (availableHeight >= 460.dp) 140.dp else 125.dp
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 20.dp, vertical = 10.dp),
+            .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Hero Album Cover Art
@@ -878,7 +878,7 @@ private fun LargePlayerContent(
             onClick = { AudioUtil.playOk(context) }
         )
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(8.dp))
 
         // Title & Artist
         Column(
@@ -917,7 +917,7 @@ private fun LargePlayerContent(
             )
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(6.dp))
 
         // Squiggly seekbar with timestamps
         var scrubFraction by remember { mutableStateOf<Float?>(null) }
@@ -928,7 +928,7 @@ private fun LargePlayerContent(
             isPlaying = isPlaying,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(28.dp),
+                .height(26.dp),
             onValueChange = { scrubFraction = it },
             onValueChangeFinished = {
                 val target = scrubFraction ?: 0f
@@ -966,14 +966,14 @@ private fun LargePlayerContent(
             )
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(6.dp))
 
         // 5-button transport controls
         val repeatIcon = if (repeatMode == BgmRepeatMode.ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(58.dp),
+                .height(54.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -987,10 +987,10 @@ private fun LargePlayerContent(
                 activeContent = scheme.onTertiaryContainer,
                 inactiveColor = Color.Transparent,
                 inactiveContent = scheme.onSurfaceVariant,
-                defaultShape = RoundedCornerShape(21.dp),
+                defaultShape = RoundedCornerShape(19.dp),
                 activeShape = RoundedCornerShape(12.dp),
-                size = 40.dp,
-                iconSize = 19.dp,
+                size = 38.dp,
+                iconSize = 18.dp,
                 rotationDegrees = if (repeatMode == BgmRepeatMode.ONE) 180f else 0f,
                 onClick = { BgmManager.toggleRepeatMode(context) }
             )
@@ -1001,10 +1001,10 @@ private fun LargePlayerContent(
                 nudgeDp = (-4).dp,
                 tint = scheme.onSurface,
                 container = scheme.surfaceContainerHighest,
-                size = 50.dp,
-                iconSize = 22.dp,
-                defaultShape = RoundedCornerShape(25.dp),
-                pressedShape = RoundedCornerShape(13.dp),
+                size = 48.dp,
+                iconSize = 21.dp,
+                defaultShape = RoundedCornerShape(24.dp),
+                pressedShape = RoundedCornerShape(12.dp),
                 onClick = {
                     AudioUtil.playOk(context)
                     BgmManager.playPreviousOrRestart(context)
@@ -1015,9 +1015,9 @@ private fun LargePlayerContent(
                 isPlaying = isPlaying,
                 tint = scheme.onPrimary,
                 container = scheme.primary,
-                size = if (isPlaying) 74.dp else 62.dp,
-                height = 58.dp,
-                iconSize = 26.dp,
+                size = if (isPlaying) 68.dp else 56.dp,
+                height = 54.dp,
+                iconSize = 25.dp,
                 onClick = {
                     AudioUtil.playOk(context)
                     BgmManager.togglePlayPause(context)
@@ -1030,10 +1030,10 @@ private fun LargePlayerContent(
                 nudgeDp = 4.dp,
                 tint = scheme.onSurface,
                 container = scheme.surfaceContainerHighest,
-                size = 50.dp,
-                iconSize = 22.dp,
-                defaultShape = RoundedCornerShape(25.dp),
-                pressedShape = RoundedCornerShape(13.dp),
+                size = 48.dp,
+                iconSize = 21.dp,
+                defaultShape = RoundedCornerShape(24.dp),
+                pressedShape = RoundedCornerShape(12.dp),
                 onClick = {
                     AudioUtil.playOk(context)
                     BgmManager.playNext(context)
@@ -1048,10 +1048,10 @@ private fun LargePlayerContent(
                 activeContent = scheme.onTertiaryContainer,
                 inactiveColor = Color.Transparent,
                 inactiveContent = scheme.onSurfaceVariant,
-                defaultShape = RoundedCornerShape(21.dp),
+                defaultShape = RoundedCornerShape(19.dp),
                 activeShape = RoundedCornerShape(12.dp),
-                size = 40.dp,
-                iconSize = 19.dp,
+                size = 38.dp,
+                iconSize = 18.dp,
                 rotationDegrees = 0f,
                 onClick = { BgmManager.toggleShuffle(context) }
             )
@@ -1077,7 +1077,7 @@ private fun ExpandedPlayerContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 18.dp, vertical = 12.dp)
+            .padding(start = 18.dp, end = 18.dp, top = 8.dp, bottom = 4.dp)
     ) {
         // Header: Album cover + title + artist (NO X close button)
         Row(
@@ -1127,7 +1127,7 @@ private fun ExpandedPlayerContent(
             }
         }
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(8.dp))
 
         // Squiggly seekbar with timestamps
         var scrubFraction by remember { mutableStateOf<Float?>(null) }
@@ -1138,7 +1138,7 @@ private fun ExpandedPlayerContent(
             isPlaying = isPlaying,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(30.dp),
+                .height(26.dp),
             onValueChange = { scrubFraction = it },
             onValueChangeFinished = {
                 val target = scrubFraction ?: 0f
@@ -1176,14 +1176,14 @@ private fun ExpandedPlayerContent(
             )
         }
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(6.dp))
 
         // 5-button transport controls
         val repeatIcon = if (repeatMode == BgmRepeatMode.ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(60.dp),
+                .height(54.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -1197,10 +1197,10 @@ private fun ExpandedPlayerContent(
                 activeContent = scheme.onTertiaryContainer,
                 inactiveColor = Color.Transparent,
                 inactiveContent = scheme.onSurfaceVariant,
-                defaultShape = RoundedCornerShape(21.dp),
+                defaultShape = RoundedCornerShape(19.dp),
                 activeShape = RoundedCornerShape(12.dp),
-                size = 40.dp,
-                iconSize = 19.dp,
+                size = 38.dp,
+                iconSize = 18.dp,
                 rotationDegrees = if (repeatMode == BgmRepeatMode.ONE) 180f else 0f,
                 onClick = { BgmManager.toggleRepeatMode(context) }
             )
@@ -1211,10 +1211,10 @@ private fun ExpandedPlayerContent(
                 nudgeDp = (-4).dp,
                 tint = scheme.onSurface,
                 container = scheme.surfaceContainerHighest,
-                size = 50.dp,
-                iconSize = 22.dp,
-                defaultShape = RoundedCornerShape(25.dp),
-                pressedShape = RoundedCornerShape(13.dp),
+                size = 48.dp,
+                iconSize = 21.dp,
+                defaultShape = RoundedCornerShape(24.dp),
+                pressedShape = RoundedCornerShape(12.dp),
                 onClick = {
                     AudioUtil.playOk(context)
                     BgmManager.playPreviousOrRestart(context)
@@ -1225,9 +1225,9 @@ private fun ExpandedPlayerContent(
                 isPlaying = isPlaying,
                 tint = scheme.onPrimary,
                 container = scheme.primary,
-                size = if (isPlaying) 74.dp else 62.dp,
-                height = 58.dp,
-                iconSize = 26.dp,
+                size = if (isPlaying) 68.dp else 56.dp,
+                height = 54.dp,
+                iconSize = 25.dp,
                 onClick = {
                     AudioUtil.playOk(context)
                     BgmManager.togglePlayPause(context)
@@ -1240,10 +1240,10 @@ private fun ExpandedPlayerContent(
                 nudgeDp = 4.dp,
                 tint = scheme.onSurface,
                 container = scheme.surfaceContainerHighest,
-                size = 50.dp,
-                iconSize = 22.dp,
-                defaultShape = RoundedCornerShape(25.dp),
-                pressedShape = RoundedCornerShape(13.dp),
+                size = 48.dp,
+                iconSize = 21.dp,
+                defaultShape = RoundedCornerShape(24.dp),
+                pressedShape = RoundedCornerShape(12.dp),
                 onClick = {
                     AudioUtil.playOk(context)
                     BgmManager.playNext(context)
@@ -1258,10 +1258,10 @@ private fun ExpandedPlayerContent(
                 activeContent = scheme.onTertiaryContainer,
                 inactiveColor = Color.Transparent,
                 inactiveContent = scheme.onSurfaceVariant,
-                defaultShape = RoundedCornerShape(21.dp),
+                defaultShape = RoundedCornerShape(19.dp),
                 activeShape = RoundedCornerShape(12.dp),
-                size = 40.dp,
-                iconSize = 19.dp,
+                size = 38.dp,
+                iconSize = 18.dp,
                 rotationDegrees = 0f,
                 onClick = { BgmManager.toggleShuffle(context) }
             )
@@ -1284,7 +1284,7 @@ private fun CompactPlayerContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 2.dp)
     ) {
         // One-line title + artist on left, huge Pause + Next on right (NO X close button)
         Row(
@@ -1324,14 +1324,14 @@ private fun CompactPlayerContent(
 
             Spacer(Modifier.width(10.dp))
 
-            // Huge Pause button on the right
+            // Pause button on the right
             ExpressivePlayPauseButton(
                 isPlaying = isPlaying,
                 tint = scheme.onPrimary,
                 container = scheme.primary,
-                size = if (isPlaying) 60.dp else 52.dp,
-                height = 46.dp,
-                iconSize = 24.dp,
+                size = if (isPlaying) 54.dp else 46.dp,
+                height = 42.dp,
+                iconSize = 22.dp,
                 onClick = {
                     AudioUtil.playOk(context)
                     BgmManager.togglePlayPause(context)
@@ -1347,10 +1347,10 @@ private fun CompactPlayerContent(
                 nudgeDp = 4.dp,
                 tint = scheme.onSurface,
                 container = scheme.surfaceContainerHighest,
-                size = 46.dp,
-                iconSize = 22.dp,
-                defaultShape = RoundedCornerShape(23.dp),
-                pressedShape = RoundedCornerShape(12.dp),
+                size = 42.dp,
+                iconSize = 20.dp,
+                defaultShape = RoundedCornerShape(21.dp),
+                pressedShape = RoundedCornerShape(10.dp),
                 onClick = {
                     AudioUtil.playOk(context)
                     BgmManager.playNext(context)
@@ -1358,7 +1358,7 @@ private fun CompactPlayerContent(
             )
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(5.dp))
 
         // Seekbar below this one-line layout
         var scrubFraction by remember { mutableStateOf<Float?>(null) }
@@ -1369,7 +1369,7 @@ private fun CompactPlayerContent(
             isPlaying = isPlaying,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(26.dp),
+                .height(22.dp),
             onValueChange = { scrubFraction = it },
             onValueChangeFinished = {
                 val target = scrubFraction ?: 0f
@@ -1391,7 +1391,7 @@ private fun CompactPlayerContent(
                 text = BgmManager.formatTimeMs(elapsedMs),
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 10.sp,
+                    fontSize = 9.5.sp,
                     fontFeatureSettings = "tnum"
                 ),
                 color = scheme.onSurfaceVariant
@@ -1400,7 +1400,7 @@ private fun CompactPlayerContent(
                 text = track.formattedDuration.ifEmpty { "0:00" },
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 10.sp,
+                    fontSize = 9.5.sp,
                     fontFeatureSettings = "tnum"
                 ),
                 color = scheme.onSurfaceVariant
@@ -1420,7 +1420,7 @@ private fun UltraCompactPlayerContent(
     Row(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 14.dp, vertical = 6.dp),
+            .padding(horizontal = 14.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -1455,9 +1455,9 @@ private fun UltraCompactPlayerContent(
             isPlaying = isPlaying,
             tint = scheme.onPrimary,
             container = scheme.primary,
-            size = 48.dp,
-            height = 42.dp,
-            iconSize = 22.dp,
+            size = 44.dp,
+            height = 38.dp,
+            iconSize = 20.dp,
             onClick = {
                 AudioUtil.playOk(context)
                 BgmManager.togglePlayPause(context)
@@ -1472,9 +1472,9 @@ private fun UltraCompactPlayerContent(
             nudgeDp = 3.dp,
             tint = scheme.onSurface,
             container = scheme.surfaceContainerHighest,
-            size = 42.dp,
-            iconSize = 20.dp,
-            defaultShape = RoundedCornerShape(21.dp),
+            size = 38.dp,
+            iconSize = 18.dp,
+            defaultShape = RoundedCornerShape(19.dp),
             pressedShape = RoundedCornerShape(10.dp),
             onClick = {
                 AudioUtil.playOk(context)
