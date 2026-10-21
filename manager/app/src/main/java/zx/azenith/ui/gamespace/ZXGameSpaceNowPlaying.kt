@@ -165,6 +165,7 @@ private enum class NowPlayingLayoutMode {
 @Composable
 internal fun NowPlayingDot(
     isPanelOpen: Boolean = false,
+    canExpand: Boolean = true,
     onOpenPanel: () -> Unit,
     onPositioned: (Rect) -> Unit = {}
 ) {
@@ -197,7 +198,7 @@ internal fun NowPlayingDot(
     LaunchedEffect(songChangeNonce) {
         if (songChangeNonce != lastObservedNonce && songChangeNonce > 0L) {
             lastObservedNonce = songChangeNonce
-            if (!isPanelOpen) {
+            if (!isPanelOpen && canExpand) {
                 if (isExpanded) {
                     isExpanded = false
                     delay(220L)
@@ -215,6 +216,7 @@ internal fun NowPlayingDot(
                 isExpanded = false
             } else {
                 displayedTrack = track
+                isExpanded = false
             }
         }
     }
@@ -226,6 +228,7 @@ internal fun NowPlayingDot(
         }
         if (isPanelOpen) {
             wasPanelOpen = true
+            isExpanded = false
             launch {
                 bounceScale.animateTo(
                     targetValue = 0.68f,
@@ -283,75 +286,65 @@ internal fun NowPlayingDot(
                 )
             }
 
-            isExpanded = true
-            val textLen = maxOf(displayedTrack.title.length, displayedTrack.displayArtist.length)
-            val duration = if (textLen > 18) {
-                (3500L + (textLen - 18) * 150L).coerceIn(4000L, 8000L)
+            if (canExpand) {
+                isExpanded = true
+                val textLen = maxOf(displayedTrack.title.length, displayedTrack.displayArtist.length)
+                val duration = if (textLen > 18) {
+                    (3500L + (textLen - 18) * 150L).coerceIn(4000L, 8000L)
+                } else {
+                    3500L
+                }
+                delay(duration)
+                isExpanded = false
             } else {
-                3500L
+                isExpanded = false
             }
-            delay(duration)
-            isExpanded = false
         }
     }
 
     val jacketRotation = rememberGameSpaceClock()
+    val effectiveExpanded = isExpanded && canExpand
 
-    AnimatedVisibility(
-        visible = !isPanelOpen,
-        enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
-                expandHorizontally(
-                    expandFrom = Alignment.End,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMediumLow
-                    )
-                ),
-        exit = fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMedium)) +
-               shrinkHorizontally(
-                   shrinkTowards = Alignment.End,
-                   animationSpec = spring(
-                       dampingRatio = Spring.DampingRatioMediumBouncy,
-                       stiffness = Spring.StiffnessMediumLow
-                   )
-               )
-    ) {
-        Box(
-            modifier = Modifier.onGloballyPositioned { coords ->
-                if (!isPanelOpen && coords.isAttached && coords.size.width > 0 && coords.size.height > 0) {
-                    val bounds = coords.boundsInRoot()
-                    if (bounds.width > 0f && bounds.height > 0f) {
-                        onPositioned(bounds)
-                    }
+    Box(
+        modifier = Modifier.onGloballyPositioned { coords ->
+            if (coords.isAttached && coords.size.width > 0 && coords.size.height > 0) {
+                val bounds = coords.boundsInRoot()
+                if (bounds.width > 0f && bounds.height > 0f) {
+                    onPositioned(bounds)
                 }
             }
+        }
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = if (effectiveExpanded) scheme.surfaceContainerHigh else scheme.surfaceContainer,
+            modifier = Modifier
+                .graphicsLayer {
+                    scaleX = bounceScale.value
+                    scaleY = bounceScale.value
+                    translationY = bounceOffsetY.value
+                    alpha = bounceAlpha.value
+                    transformOrigin = TransformOrigin(1f, 0.5f)
+                }
+                .height(38.dp)
+                .clip(CircleShape)
+                .gamepadFocusOutline(shape = CircleShape, register = !isPanelOpen)
+                .then(
+                    if (!isPanelOpen) {
+                        Modifier.clickable {
+                            AudioUtil.playOk(context)
+                            onOpenPanel()
+                        }
+                    } else Modifier
+                )
         ) {
-            Surface(
-                shape = CircleShape,
-                color = if (isExpanded) scheme.surfaceContainerHigh else scheme.surfaceContainer,
-                modifier = Modifier
-                    .graphicsLayer {
-                        scaleX = bounceScale.value
-                        scaleY = bounceScale.value
-                        translationY = bounceOffsetY.value
-                        alpha = bounceAlpha.value
-                        transformOrigin = TransformOrigin(1f, 0.5f)
-                    }
-                    .height(38.dp)
-                    .clip(CircleShape)
-                    .gamepadFocusOutline(shape = CircleShape, register = true)
-                    .clickable {
-                        AudioUtil.playOk(context)
-                        onOpenPanel()
-                    }
-            ) {
             Row(
                 modifier = Modifier.padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
                 AnimatedVisibility(
-                    visible = isExpanded,
+                    visible = effectiveExpanded,
                     enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
                             expandHorizontally(
                                 expandFrom = Alignment.End,
@@ -372,7 +365,7 @@ internal fun NowPlayingDot(
                                animationSpec = spring(
                                    dampingRatio = Spring.DampingRatioMediumBouncy,
                                    stiffness = Spring.StiffnessMediumLow
-                               )
+                                )
                            )
                 ) {
                 Row(
@@ -481,7 +474,6 @@ internal fun NowPlayingDot(
             }
         }
     }
-}
 }
 }
 

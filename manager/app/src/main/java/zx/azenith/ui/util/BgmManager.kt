@@ -110,7 +110,7 @@ data class BgmTrack(
             id = "default",
             title = "AZenith Theme",
             artist = null,
-            durationMs = 386000L,
+            durationMs = 386855L,
             fileName = "bgm.ogg",
             relativePath = null,
             isDefault = true
@@ -225,6 +225,13 @@ object BgmManager {
                 if (player != null) {
                     try {
                         _playbackPositionMs.value = player.currentPosition.toLong()
+                        val liveDuration = player.duration.toLong()
+                        val cur = _currentTrack.value
+                        if (liveDuration > 0L && cur != null && cur.durationMs != liveDuration) {
+                            val updated = cur.copy(durationMs = liveDuration)
+                            _currentTrack.value = updated
+                            _playlist.value = _playlist.value.map { if (it.id == cur.id) updated else it }
+                        }
                     } catch (_: Exception) {}
                 }
                 delay(500L)
@@ -328,6 +335,24 @@ object BgmManager {
         }
     }
 
+    fun extractRawResourceDuration(context: Context, resId: Int): Long {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            val afd = context.resources.openRawResourceFd(resId)
+            retriever.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+            afd.close()
+            val durationStr = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+            durationStr?.toLongOrNull() ?: 0L
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to extract duration from raw res $resId", e)
+            0L
+        } finally {
+            try {
+                retriever.release()
+            } catch (_: Exception) {}
+        }
+    }
+
     @Synchronized
     fun init(context: Context) {
         if (isInitialized) return
@@ -347,14 +372,16 @@ object BgmManager {
         val rMode = if (repeatModeStr == "one") BgmRepeatMode.ONE else BgmRepeatMode.ALL
         val shuffleEnabled = prefs.getBoolean(PREF_BGM_SHUFFLE, false)
 
+        val defaultDuration = extractRawResourceDuration(appContext, R.raw.bgm).takeIf { it > 0L } ?: 386855L
+        val normalizedDefault = BgmTrack.DEFAULT.copy(durationMs = defaultDuration)
         val loadedStaged = loadStagedFromPrefs(appContext, prefs)
         val loadedPlaylist = loadPlaylistFromPrefs(appContext, prefs)
         val finalPlaylist = if (loadedPlaylist.isEmpty() && loadedStaged.isEmpty()) {
-            listOf(BgmTrack.DEFAULT)
+            listOf(normalizedDefault)
         } else {
             loadedPlaylist
         }
-        val selected = finalPlaylist.firstOrNull { it.id == activeId } ?: finalPlaylist.firstOrNull()
+        val selected = finalPlaylist.firstOrNull { it.id == activeId } ?: finalPlaylist.firstOrNull() ?: normalizedDefault
 
         _isEnabled.value = enabled
         _volume.value = vol
@@ -377,8 +404,9 @@ object BgmManager {
 
     private fun loadPlaylistFromPrefs(context: Context, prefs: SharedPreferences): List<BgmTrack> {
         val rawJson = prefs.getString(PREF_BGM_PLAYLIST, null)
+        val defaultDuration = extractRawResourceDuration(context, R.raw.bgm).takeIf { it > 0L } ?: 386855L
         val list = if (rawJson == null) {
-            listOf(BgmTrack.DEFAULT)
+            listOf(BgmTrack.DEFAULT.copy(durationMs = defaultDuration))
         } else if (rawJson.isBlank()) {
             emptyList()
         } else {
@@ -391,7 +419,7 @@ object BgmManager {
                 tracks
             } catch (e: Exception) {
                 Log.e(TAG, "Error parsing playlist JSON", e)
-                listOf(BgmTrack.DEFAULT)
+                listOf(BgmTrack.DEFAULT.copy(durationMs = defaultDuration))
             }
         }
 
@@ -399,12 +427,12 @@ object BgmManager {
         val validTracks = mutableListOf<BgmTrack>()
         for (track in list) {
             if (track.isDefault) {
-                validTracks.add(
-                    if (track.durationMs <= 0L) {
-                        needsResave = true
-                        track.copy(durationMs = 134374L)
-                    } else track
-                )
+                if (track.durationMs <= 0L || track.durationMs == 134374L || track.durationMs != defaultDuration) {
+                    needsResave = true
+                    validTracks.add(track.copy(durationMs = defaultDuration))
+                } else {
+                    validTracks.add(track)
+                }
             } else if (track.relativePath != null) {
                 val file = File(context.filesDir, "bgm_tracks/${track.relativePath}")
                 if (file.exists() && file.length() > 0) {
@@ -431,7 +459,7 @@ object BgmManager {
 
         val enriched = if (validTracks.isEmpty()) {
             needsResave = true
-            listOf(BgmTrack.DEFAULT)
+            listOf(BgmTrack.DEFAULT.copy(durationMs = defaultDuration))
         } else {
             validTracks
         }
@@ -457,6 +485,7 @@ object BgmManager {
     private fun loadStagedFromPrefs(context: Context, prefs: SharedPreferences): List<BgmTrack> {
         val rawJson = prefs.getString(PREF_BGM_STAGED, null)
         if (rawJson.isNullOrBlank()) return emptyList()
+        val defaultDuration = extractRawResourceDuration(context, R.raw.bgm).takeIf { it > 0L } ?: 386855L
         return try {
             val array = JSONArray(rawJson)
             val tracks = mutableListOf<BgmTrack>()
@@ -465,6 +494,10 @@ object BgmManager {
             }
             val valid = tracks.filter { track ->
                 track.isDefault || (track.relativePath != null && File(context.filesDir, "bgm_tracks/${track.relativePath}").let { it.exists() && it.length() > 0 })
+            }.map { track ->
+                if (track.isDefault && (track.durationMs <= 0L || track.durationMs == 134374L || track.durationMs != defaultDuration)) {
+                    track.copy(durationMs = defaultDuration)
+                } else track
             }
             if (valid.size != tracks.size) {
                 val newArray = JSONArray()
@@ -518,12 +551,16 @@ object BgmManager {
 
     fun selectTrack(context: Context, track: BgmTrack) {
         val appContext = context.applicationContext
-        _currentTrack.value = track
+        val resolvedTrack = if (track.isDefault && (track.durationMs <= 0L || track.durationMs == 134374L)) {
+            val dur = extractRawResourceDuration(appContext, R.raw.bgm).takeIf { it > 0L } ?: 386855L
+            track.copy(durationMs = dur)
+        } else track
+        _currentTrack.value = resolvedTrack
         _playbackPositionMs.value = 0L
         _songChangeNonce.value += 1L
-        updateAlbumArtForTrack(appContext, track)
+        updateAlbumArtForTrack(appContext, resolvedTrack)
         appContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit().putString(PREF_BGM_ACTIVE_ID, track.id).apply()
+            .edit().putString(PREF_BGM_ACTIVE_ID, resolvedTrack.id).apply()
 
         if (_isEnabled.value && isGameHubActive) {
             playCurrentTrack(appContext)
@@ -617,6 +654,13 @@ object BgmManager {
             }
 
             player.prepare()
+            val actualDuration = player.duration.toLong()
+            if (actualDuration > 0L && track.durationMs != actualDuration) {
+                val updatedTrack = track.copy(durationMs = actualDuration)
+                _currentTrack.value = updatedTrack
+                _playlist.value = _playlist.value.map { if (it.id == track.id) updatedTrack else it }
+                savePlaylistToPrefs(context)
+            }
             player.start()
             mediaPlayer = player
             _isPlaying.value = true
@@ -844,11 +888,14 @@ object BgmManager {
     }
 
     fun restoreDefaultTrack(context: Context) {
+        val appContext = context.applicationContext
         val currentList = _playlist.value
-        if (currentList.none { it.id == BgmTrack.DEFAULT.id }) {
-            val updated = listOf(BgmTrack.DEFAULT) + currentList
+        val defaultDuration = extractRawResourceDuration(appContext, R.raw.bgm).takeIf { it > 0L } ?: 386855L
+        val defaultTrack = BgmTrack.DEFAULT.copy(durationMs = defaultDuration)
+        if (currentList.none { it.id == defaultTrack.id }) {
+            val updated = listOf(defaultTrack) + currentList
             _playlist.value = updated
-            savePlaylistToPrefs(context.applicationContext)
+            savePlaylistToPrefs(appContext)
         }
     }
 
@@ -861,9 +908,11 @@ object BgmManager {
         _stagedTracks.value = emptyList()
         saveStagedToPrefs(appContext)
 
-        _playlist.value = listOf(BgmTrack.DEFAULT)
+        val defaultDuration = extractRawResourceDuration(appContext, R.raw.bgm).takeIf { it > 0L } ?: 386855L
+        val defaultTrack = BgmTrack.DEFAULT.copy(durationMs = defaultDuration)
+        _playlist.value = listOf(defaultTrack)
         savePlaylistToPrefs(appContext)
-        selectTrack(appContext, BgmTrack.DEFAULT)
+        selectTrack(appContext, defaultTrack)
 
         val tracksDir = File(appContext.filesDir, "bgm_tracks")
         try {

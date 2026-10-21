@@ -133,6 +133,8 @@ import zx.azenith.ui.component.gamepadKeyWatch
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import zx.azenith.ui.viewmodel.ApplistViewmodel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import zx.azenith.ui.util.BgmManager
 
 private const val SEARCH_RESULT_CAP = 6
 
@@ -164,6 +166,11 @@ internal fun ZXGameSpaceTopBar(
     val scheme = MaterialTheme.colorScheme
     val density = LocalDensity.current
     val context = LocalContext.current
+
+    val bgmEnabled by BgmManager.isEnabled.collectAsStateWithLifecycle()
+    val bgmNowPlayingEnabled by BgmManager.isNowPlayingEnabled.collectAsStateWithLifecycle()
+    val bgmCurrentTrack by BgmManager.currentTrack.collectAsStateWithLifecycle()
+    val hasNowPlaying = bgmEnabled && bgmNowPlayingEnabled && bgmCurrentTrack != null
 
     var tabsWidthPx by remember { mutableFloatStateOf(0f) }
     var cachedLogoWidthPx by remember { mutableFloatStateOf(0f) }
@@ -218,6 +225,10 @@ internal fun ZXGameSpaceTopBar(
 
         val shouldCollapseForSearch = wouldOverlap && (searchOpen || (!searchMorphedBack && searchWidth > 38.5.dp))
         val showLogo = isHomeLogoGone && !shouldCollapseForSearch
+
+        val activeLeftWidthDp = tabsWidthDp + (if (showLogo) 12.dp + logoWidthDp else 0.dp)
+        val availableForNowPlaying = totalBarWidthDp - (activeLeftWidthDp + 24.dp + searchWidth + 8.dp + 38.dp + 8.dp + capsuleWidthDp + 8.dp)
+        val canExpandNowPlaying = hasNowPlaying && !searchOpen && (availableForNowPlaying >= 195.dp)
 
         Row(
             modifier = Modifier
@@ -534,43 +545,21 @@ internal fun ZXGameSpaceTopBar(
             )
 
             // Material 3 Expressive Unified System Status Capsule (Clock & Battery)
-            val capsuleNudgeX = remember { Animatable(0f) }
-            var isFirstComposition by remember { mutableStateOf(true) }
-
-            LaunchedEffect(isNowPlayingOpen) {
-                if (isFirstComposition) {
-                    isFirstComposition = false
-                    return@LaunchedEffect
-                }
-                if (isNowPlayingOpen) {
-                    // Dot moved out: chip slides right into empty space with overshoot spring
-                    capsuleNudgeX.animateTo(
-                        targetValue = 0f,
-                        initialVelocity = with(density) { 420.dp.toPx() },
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = 320f
-                        )
-                    )
-                } else {
-                    // Dot returns: chip gets pushed left with overshoot spring
-                    capsuleNudgeX.animateTo(
-                        targetValue = 0f,
-                        initialVelocity = with(density) { -420.dp.toPx() },
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioMediumBouncy,
-                            stiffness = 320f
-                        )
-                    )
-                }
-            }
+            val capsuleOffsetX by animateDpAsState(
+                targetValue = if (hasNowPlaying && isNowPlayingOpen) 46.dp else 0.dp,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = 320f
+                ),
+                label = "StatusCapsuleOffset"
+            )
 
             Surface(
                 shape = CircleShape,
                 color = scheme.surfaceContainerHigh,
                 modifier = Modifier
                     .graphicsLayer {
-                        translationX = capsuleNudgeX.value
+                        translationX = with(density) { capsuleOffsetX.toPx() }
                     }
                     .onGloballyPositioned { coords ->
                         if (coords.size.width > 0) cachedCapsuleWidthPx = coords.size.width.toFloat()
@@ -648,11 +637,14 @@ internal fun ZXGameSpaceTopBar(
                 }
             }
 
-            NowPlayingDot(
-                isPanelOpen = isNowPlayingOpen,
-                onOpenPanel = onNowPlayingClick,
-                onPositioned = onNowPlayingAnchor
-            )
+            if (hasNowPlaying) {
+                NowPlayingDot(
+                    isPanelOpen = isNowPlayingOpen,
+                    canExpand = canExpandNowPlaying,
+                    onOpenPanel = onNowPlayingClick,
+                    onPositioned = onNowPlayingAnchor
+                )
+            }
         }
     }
 }
