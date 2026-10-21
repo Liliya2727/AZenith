@@ -95,6 +95,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -154,6 +155,7 @@ internal fun ZXGameSpaceTopBar(
     onStatusClick: () -> Unit = {},
     isNowPlayingOpen: Boolean = false,
     onNowPlayingClick: () -> Unit = {},
+    onNowPlayingAnchor: (Rect) -> Unit = {},
     onLogoClick: (() -> Unit)? = null,
     onExit: () -> Unit
 ) {
@@ -612,7 +614,8 @@ internal fun ZXGameSpaceTopBar(
 
             NowPlayingDot(
                 isPanelOpen = isNowPlayingOpen,
-                onOpenPanel = onNowPlayingClick
+                onOpenPanel = onNowPlayingClick,
+                onPositioned = onNowPlayingAnchor
             )
         }
     }

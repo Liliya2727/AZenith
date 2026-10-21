@@ -35,6 +35,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.runtime.SideEffect
 import androidx.compose.foundation.background
@@ -179,6 +180,7 @@ fun ZXGameSpaceHub(
     var searchQuery by remember { mutableStateOf("") }
     var quickSettingsOpen by remember { mutableStateOf(false) }
     var nowPlayingOpen by remember { mutableStateOf(false) }
+    var nowPlayingAnchor by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     var pendingLaunchApp by remember { mutableStateOf<ApplistViewmodel.AppInfo?>(null) }
     var sidePanelPromptOpen by remember { mutableStateOf(false) }
     val requestAppLaunch: (ApplistViewmodel.AppInfo) -> Unit = { app ->
@@ -483,6 +485,7 @@ fun ZXGameSpaceHub(
                     searchQuery = ""
                     nowPlayingOpen = !nowPlayingOpen
                 },
+                onNowPlayingAnchor = { nowPlayingAnchor = it },
                 onLogoClick = {
                     searchOpen = false
                     searchQuery = ""
@@ -797,9 +800,10 @@ fun ZXGameSpaceHub(
             onClose = { quickSettingsOpen = false }
         )
 
-        // Floating Now Playing Media Panel (overlay on right side, with haze blur)
+        // Floating Now Playing Media Panel (morphing popover anchored to dot)
         NowPlayingPanelOverlay(
             visible = nowPlayingOpen,
+            anchor = nowPlayingAnchor,
             hazeState = overlayHazeState,
             onClose = { nowPlayingOpen = false },
             onNavigateToAudioSettings = {
