@@ -23,7 +23,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -38,13 +37,11 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
@@ -54,6 +51,7 @@ import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -66,19 +64,16 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.MusicNote
@@ -102,6 +97,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -124,7 +120,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -132,15 +127,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.blur.HazeBlurStyle
-import dev.chrisbanes.haze.blur.hazeBlur
-import dev.chrisbanes.haze.blur.material3.Material3
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import zx.azenith.R
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.util.AudioUtil
@@ -150,7 +144,7 @@ import zx.azenith.ui.util.BgmTrack
 import zx.azenith.ui.util.fireTapHaptic
 
 /**
- * Responsive layout modes for the NowPlaying dialog depending on scale & screen dimensions.
+ * Adaptive layout modes for the NowPlaying dialog depending on available vertical height.
  */
 private enum class NowPlayingLayoutMode {
     EXPANDED,
@@ -386,6 +380,7 @@ internal fun NowPlayingDot(
  * Floating morphing dialog for Now Playing.
  * Morphs smoothly from the status dot using an overshoot spring animation.
  * Adaptively fits and re-layouts dynamically based on screen scale and height.
+ * The playlist opens UPWARDS covering controls, preserving vertical space.
  */
 @Composable
 internal fun NowPlayingPanelOverlay(
@@ -399,7 +394,6 @@ internal fun NowPlayingPanelOverlay(
 
     val scheme = MaterialTheme.colorScheme
     val density = LocalDensity.current
-    val config = LocalConfiguration.current
 
     val morphProgress = remember { Animatable(0f) }
     LaunchedEffect(visible) {
@@ -407,7 +401,7 @@ internal fun NowPlayingPanelOverlay(
             morphProgress.animateTo(
                 1f,
                 animationSpec = spring(
-                    dampingRatio = 0.65f,
+                    dampingRatio = 0.62f,
                     stiffness = 380f
                 )
             )
@@ -425,54 +419,45 @@ internal fun NowPlayingPanelOverlay(
     val progress = morphProgress.value
     if (!visible && progress <= 0.005f) return
 
-    val scrimAlpha by animateFloatAsState(
-        targetValue = if (visible) 0.35f else 0f,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-        label = "NowPlayingScrim"
-    )
-
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val screenWidth = maxWidth
         val screenHeight = maxHeight
-        val isScaleConstrained = density.fontScale > 1.15f || config.densityDpi >= 440
 
-        // Determine dialog width and position based on screen constraints
-        val dialogWidth = when {
-            screenWidth < 360.dp -> screenWidth - 24.dp
-            isScaleConstrained -> minOf(330.dp, screenWidth - 24.dp)
-            else -> minOf(350.dp, screenWidth - 32.dp)
-        }
-
-        // Anchor-based positioning
         val margin = 12.dp
         val dotTopDp = anchor?.let { with(density) { it.bottom.toDp() } } ?: 54.dp
         val dotCenterXDp = anchor?.let { with(density) { it.center.x.toDp() } } ?: (screenWidth - 32.dp)
         val dotRightDp = anchor?.let { with(density) { it.right.toDp() } } ?: screenWidth
 
-        val dialogTop = (dotTopDp + 8.dp).coerceIn(8.dp, screenHeight - 140.dp)
-        val idealRight = dotRightDp + 4.dp
-        val clampedRight = idealRight.coerceIn(dialogWidth + margin, screenWidth - margin)
-        val dialogLeft = clampedRight - dialogWidth
-        val availableHeight = (screenHeight - dialogTop - margin).coerceAtLeast(140.dp)
+        val dialogTop = (dotTopDp + 8.dp).coerceIn(8.dp, screenHeight - 120.dp)
+        val availableHeight = (screenHeight - dialogTop - margin).coerceAtLeast(100.dp)
 
-        // Select adaptive layout mode based on remaining height and screen density
+        // Select adaptive layout mode strictly based on available height in Compose DP
         val layoutMode = when {
-            availableHeight < 240.dp || screenHeight < 360.dp -> NowPlayingLayoutMode.ULTRA_COMPACT
-            availableHeight < 380.dp || isScaleConstrained -> NowPlayingLayoutMode.COMPACT
+            availableHeight < 210.dp -> NowPlayingLayoutMode.ULTRA_COMPACT
+            availableHeight < 330.dp -> NowPlayingLayoutMode.COMPACT
             else -> NowPlayingLayoutMode.EXPANDED
         }
 
-        // Morphing scale and translation origin
+        val dialogWidth = when (layoutMode) {
+            NowPlayingLayoutMode.EXPANDED -> minOf(350.dp, screenWidth - 24.dp)
+            NowPlayingLayoutMode.COMPACT -> minOf(340.dp, screenWidth - 24.dp)
+            NowPlayingLayoutMode.ULTRA_COMPACT -> minOf(320.dp, screenWidth - 24.dp)
+        }
+
+        val idealRight = dotRightDp + 4.dp
+        val clampedRight = idealRight.coerceIn(dialogWidth + margin, screenWidth - margin)
+        val dialogLeft = clampedRight - dialogWidth
+
+        // Morphing scale and translation origin pivoted at dot
         val tipFractionX = ((dotCenterXDp - dialogLeft) / dialogWidth).coerceIn(0.1f, 0.9f)
         val scale = 0.15f + 0.85f * progress
-        val translationY = (1f - progress) * -24f * density.density
-        val contentAlpha = (progress / 0.28f).coerceIn(0f, 1f)
+        val translationY = (1f - progress) * -20f * density.density
+        val contentAlpha = (progress / 0.25f).coerceIn(0f, 1f)
 
-        // Background scrim dismiss layer
+        // Fully transparent dismiss layer: Outside click closes the modal without darkening the screen
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(scheme.scrim.copy(alpha = scrimAlpha))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -489,30 +474,11 @@ internal fun NowPlayingPanelOverlay(
                     )
             ) {
                 Surface(
-                    shape = RoundedCornerShape(32.dp),
+                    shape = RoundedCornerShape(28.dp),
                     color = scheme.surfaceContainerHigh,
-                    shadowElevation = 8.dp,
+                    shadowElevation = 10.dp,
                     modifier = Modifier
                         .width(dialogWidth)
-                        .heightIn(max = availableHeight)
-                        .animateContentSize(
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            )
-                        )
-                        .then(
-                            if (hazeState != null) {
-                                Modifier.hazeBlur(
-                                    input = HazeInput.Sources(hazeState),
-                                    style = HazeBlurStyle.Material3(
-                                        containerColor = scheme.surfaceContainerHigh.copy(alpha = 0.92f)
-                                    ) {
-                                        blurRadius(28.dp)
-                                    }
-                                )
-                            } else Modifier
-                        )
                         .graphicsLayer {
                             scaleX = scale
                             scaleY = scale
@@ -521,12 +487,10 @@ internal fun NowPlayingPanelOverlay(
                             this.translationY = translationY
                         }
                 ) {
-                    NowPlayingAdaptiveContent(
+                    NowPlayingDialogWindow(
                         layoutMode = layoutMode,
                         dialogWidth = dialogWidth,
-                        availableHeight = availableHeight,
-                        onClose = onClose,
-                        onNavigateToAudioSettings = onNavigateToAudioSettings
+                        availableHeight = availableHeight
                     )
                 }
             }
@@ -535,19 +499,19 @@ internal fun NowPlayingPanelOverlay(
 }
 
 /**
- * Renders Now Playing content according to the calculated [NowPlayingLayoutMode].
+ * Manages the player content and the pull-up playlist sheet that opens UPWARDS.
  */
 @Composable
-private fun NowPlayingAdaptiveContent(
+private fun NowPlayingDialogWindow(
     layoutMode: NowPlayingLayoutMode,
     dialogWidth: Dp,
-    availableHeight: Dp,
-    onClose: () -> Unit,
-    onNavigateToAudioSettings: (() -> Unit)?
+    availableHeight: Dp
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val scheme = MaterialTheme.colorScheme
+    val density = LocalDensity.current
+    val coroutineScope = rememberCoroutineScope()
 
     val currentTrack by BgmManager.currentTrack.collectAsStateWithLifecycle()
     val isPlaying by BgmManager.isPlaying.collectAsStateWithLifecycle()
@@ -561,731 +525,766 @@ private fun NowPlayingAdaptiveContent(
     val durationMs = track.durationMs.coerceAtLeast(1L)
     val progress = (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
 
-    var isPlaylistExpanded by rememberSaveable { mutableStateOf(false) }
+    // Pull-up playlist progress (0f = collapsed at bottom, 1f = fully covering dialog)
+    val playlistProgress = remember { Animatable(0f) }
+
+    val collapsedHeight = when (layoutMode) {
+        NowPlayingLayoutMode.EXPANDED -> 310.dp
+        NowPlayingLayoutMode.COMPACT -> 175.dp
+        NowPlayingLayoutMode.ULTRA_COMPACT -> 110.dp
+    }
+    val maxExpandedHeight = when (layoutMode) {
+        NowPlayingLayoutMode.EXPANDED -> minOf(availableHeight, 330.dp).coerceAtLeast(310.dp)
+        NowPlayingLayoutMode.COMPACT -> minOf(availableHeight, 275.dp).coerceAtLeast(175.dp)
+        NowPlayingLayoutMode.ULTRA_COMPACT -> minOf(availableHeight, 220.dp).coerceAtLeast(110.dp)
+    }
+
+    val currentCardHeight = collapsedHeight + (maxExpandedHeight - collapsedHeight) * playlistProgress.value
+    val triggerBarHeight = 44.dp
+    val maxDragDistanceDp = currentCardHeight - triggerBarHeight
+    val maxDragDistancePx = with(density) { maxDragDistanceDp.toPx() }
+
+    Box(
+        modifier = Modifier
+            .width(dialogWidth)
+            .height(currentCardHeight)
+            .clip(RoundedCornerShape(28.dp))
+    ) {
+        // LAYER 1: Player controls underneath
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = triggerBarHeight)
+        ) {
+            when (layoutMode) {
+                NowPlayingLayoutMode.EXPANDED -> {
+                    ExpandedPlayerContent(
+                        track = track,
+                        albumArt = albumArt,
+                        isPlaying = isPlaying,
+                        durationMs = durationMs,
+                        progress = progress,
+                        positionMs = positionMs,
+                        repeatMode = repeatMode,
+                        isShuffleEnabled = isShuffleEnabled
+                    )
+                }
+                NowPlayingLayoutMode.COMPACT -> {
+                    CompactPlayerContent(
+                        track = track,
+                        isPlaying = isPlaying,
+                        durationMs = durationMs,
+                        progress = progress,
+                        positionMs = positionMs
+                    )
+                }
+                NowPlayingLayoutMode.ULTRA_COMPACT -> {
+                    UltraCompactPlayerContent(
+                        track = track,
+                        isPlaying = isPlaying
+                    )
+                }
+            }
+        }
+
+        // LAYER 2: Draggable pull-up Playlist Sheet (opens UPWARDS, covering seekbar & controls)
+        val currentSheetOffsetY = (maxDragDistancePx * (1f - playlistProgress.value)).roundToInt()
+
+        Surface(
+            shape = RoundedCornerShape(
+                topStart = 24.dp,
+                topEnd = 24.dp,
+                bottomStart = 28.dp,
+                bottomEnd = 28.dp
+            ),
+            color = scheme.surfaceContainerHighest,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(currentCardHeight)
+                .offset { IntOffset(0, currentSheetOffsetY) }
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Header & Drag Handle (44 dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(triggerBarHeight)
+                        .padding(horizontal = 14.dp)
+                        .pointerInput(currentCardHeight) {
+                            detectVerticalDragGestures(
+                                onVerticalDrag = { change, dragAmount ->
+                                    change.consume()
+                                    val maxDist = maxDragDistancePx.coerceAtLeast(1f)
+                                    val delta = -dragAmount / maxDist
+                                    val newProgress = (playlistProgress.value + delta).coerceIn(0f, 1f)
+                                    coroutineScope.launch {
+                                        playlistProgress.snapTo(newProgress)
+                                    }
+                                },
+                                onDragEnd = {
+                                    coroutineScope.launch {
+                                        val target = if (playlistProgress.value > 0.35f) 1f else 0f
+                                        playlistProgress.animateTo(
+                                            targetValue = target,
+                                            animationSpec = spring(
+                                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                stiffness = Spring.StiffnessMediumLow
+                                            )
+                                        )
+                                    }
+                                },
+                                onDragCancel = {
+                                    coroutineScope.launch {
+                                        val target = if (playlistProgress.value > 0.35f) 1f else 0f
+                                        playlistProgress.animateTo(
+                                            targetValue = target,
+                                            animationSpec = spring(
+                                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                stiffness = Spring.StiffnessMediumLow
+                                            )
+                                        )
+                                    }
+                                }
+                            )
+                        }
+                        .clickable {
+                            coroutineScope.launch {
+                                AudioUtil.playOk(context)
+                                val target = if (playlistProgress.value > 0.5f) 0f else 1f
+                                playlistProgress.animateTo(
+                                    targetValue = target,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessMediumLow
+                                    )
+                                )
+                            }
+                        },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.bgm_now_playing_playlist),
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.5.sp
+                            ),
+                            color = scheme.onSurface
+                        )
+                        ExpressiveBadge(
+                            text = "${playlist.size}",
+                            container = scheme.secondaryContainer,
+                            content = scheme.onSecondaryContainer
+                        )
+                    }
+
+                    Spacer(Modifier.weight(1f))
+
+                    // Center subtle drag handle pill
+                    Box(
+                        modifier = Modifier
+                            .width(32.dp)
+                            .height(4.dp)
+                            .clip(CircleShape)
+                            .background(scheme.onSurfaceVariant.copy(alpha = 0.35f))
+                    )
+
+                    Spacer(Modifier.weight(1f))
+
+                    // Right trigger action indicator
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = if (playlistProgress.value > 0.5f) {
+                                stringResource(R.string.bgm_now_playing_title)
+                            } else {
+                                stringResource(R.string.bgm_view_playlist)
+                            },
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.sp
+                            ),
+                            color = scheme.onSurfaceVariant
+                        )
+                        Icon(
+                            imageVector = if (playlistProgress.value > 0.5f) {
+                                Icons.Rounded.KeyboardArrowDown
+                            } else {
+                                Icons.Rounded.KeyboardArrowUp
+                            },
+                            contentDescription = null,
+                            tint = scheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                // Playlist Track List (visible as sheet is pulled up)
+                if (playlistProgress.value > 0.05f) {
+                    val listAlpha = ((playlistProgress.value - 0.1f) / 0.9f).coerceIn(0f, 1f)
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .padding(horizontal = 12.dp, vertical = 2.dp)
+                            .graphicsLayer { alpha = listAlpha },
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(playlist.size, key = { index -> playlist[index].id }) { index ->
+                            val item = playlist[index]
+                            val isCurrent = item.id == track.id
+                            val isFirst = index == 0
+                            val isLast = index == playlist.size - 1
+                            val itemBg = when {
+                                isCurrent -> scheme.secondaryContainer.copy(alpha = 0.65f)
+                                item.isDefault -> scheme.tertiaryContainer.copy(alpha = 0.45f)
+                                else -> Color.Transparent
+                            }
+                            val itemShape = when {
+                                isCurrent && isFirst -> RoundedCornerShape(
+                                    topStart = 18.dp, topEnd = 18.dp, bottomStart = 8.dp, bottomEnd = 8.dp
+                                )
+                                !isCurrent && isLast -> RoundedCornerShape(
+                                    topStart = 8.dp, topEnd = 8.dp, bottomStart = 18.dp, bottomEnd = 18.dp
+                                )
+                                else -> RoundedCornerShape(8.dp)
+                            }
+
+                            val interactionSource = remember { MutableInteractionSource() }
+                            val isPressed by interactionSource.collectIsPressedAsState()
+                            val rowScale by animateFloatAsState(
+                                targetValue = if (isPressed) 0.95f else 1f,
+                                animationSpec = spring(dampingRatio = 0.50f, stiffness = 500f),
+                                label = "QueueRowPress"
+                            )
+
+                            Surface(
+                                shape = itemShape,
+                                color = itemBg,
+                                contentColor = if (isCurrent) scheme.onSecondaryContainer else scheme.onSurface,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .graphicsLayer {
+                                        scaleX = rowScale
+                                        scaleY = rowScale
+                                        transformOrigin = TransformOrigin(0.5f, 0.5f)
+                                    }
+                                    .clickable(
+                                        interactionSource = interactionSource,
+                                        indication = null,
+                                        onClick = {
+                                            AudioUtil.playOk(context)
+                                            BgmManager.selectTrack(context, item)
+                                            // Collapse sheet back down to reveal player controls
+                                            coroutineScope.launch {
+                                                playlistProgress.animateTo(
+                                                    targetValue = 0f,
+                                                    animationSpec = spring(
+                                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                                        stiffness = Spring.StiffnessMediumLow
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    )
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    if (isCurrent && isPlaying) {
+                                        NowPlayingBars(color = scheme.primary, modifier = Modifier.size(15.dp))
+                                    } else {
+                                        Icon(
+                                            imageVector = if (item.isDefault) Icons.Rounded.AutoAwesome else Icons.Rounded.MusicNote,
+                                            contentDescription = null,
+                                            tint = when {
+                                                isCurrent -> scheme.primary
+                                                item.isDefault -> scheme.tertiary
+                                                else -> scheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                            },
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = item.title,
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                                                fontSize = 11.sp,
+                                                lineHeight = 14.sp
+                                            ),
+                                            color = if (isCurrent) scheme.onSecondaryContainer else scheme.onSurface,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = if (item.isDefault) stringResource(R.string.bgm_default_track_badge)
+                                            else item.artist ?: item.fileName,
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 12.sp),
+                                            color = if (isCurrent) scheme.onSecondaryContainer.copy(alpha = 0.8f)
+                                            else scheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+
+                                    if (item.formattedDuration.isNotEmpty()) {
+                                        Text(
+                                            text = item.formattedDuration,
+                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                            color = if (isCurrent) scheme.onSecondaryContainer.copy(alpha = 0.9f)
+                                            else scheme.onSurfaceVariant.copy(alpha = 0.75f)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Player Contents (Expanded, Compact, Ultra-Compact)
+// ──────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun ExpandedPlayerContent(
+    track: BgmTrack,
+    albumArt: Bitmap?,
+    isPlaying: Boolean,
+    durationMs: Long,
+    progress: Float,
+    positionMs: Long,
+    repeatMode: BgmRepeatMode,
+    isShuffleEnabled: Boolean
+) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val scheme = MaterialTheme.colorScheme
 
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 18.dp, vertical = 14.dp)
-            .wrapContentHeight(unbounded = false)
+            .fillMaxSize()
+            .padding(horizontal = 18.dp, vertical = 12.dp)
     ) {
-        when (layoutMode) {
-            NowPlayingLayoutMode.EXPANDED -> {
-                // Header: Album cover, title + artist, and close button
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    ExpressiveJacket(
-                        art = albumArt,
-                        track = track,
-                        isPlaying = isPlaying,
-                        isPlaylistExpanded = isPlaylistExpanded,
-                        onClick = { AudioUtil.playOk(context) }
+        // Header: Album cover + title + artist (NO X close button)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ExpressiveJacket(
+                art = albumArt,
+                track = track,
+                isPlaying = isPlaying,
+                onClick = { AudioUtil.playOk(context) }
+            )
+
+            Spacer(Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = track.title,
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 17.sp,
+                        lineHeight = 21.sp,
+                        letterSpacing = (-0.3).sp
+                    ),
+                    color = scheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.basicMarquee(
+                        iterations = Int.MAX_VALUE,
+                        repeatDelayMillis = 1000,
+                        initialDelayMillis = 600,
+                        velocity = 40.dp
                     )
-
-                    Spacer(Modifier.width(12.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = track.title,
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 18.sp,
-                                lineHeight = 22.sp
-                            ),
-                            color = scheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                repeatDelayMillis = 1000,
-                                initialDelayMillis = 600,
-                                velocity = 40.dp
-                            )
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = track.artist ?: track.fileName,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 14.sp,
-                                lineHeight = 18.sp
-                            ),
-                            color = scheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                    Spacer(Modifier.width(8.dp))
-
-                    ExpressiveCloseButton(
-                        tint = scheme.onSurfaceVariant,
-                        container = scheme.surfaceContainerHighest,
-                        onClick = {
-                            AudioUtil.playCancel(context)
-                            onClose()
-                        }
-                    )
-                }
-
-                Spacer(Modifier.height(14.dp))
-
-                // Seek bar with squiggly waveform
-                AnimatedVisibility(
-                    visible = !isPlaylistExpanded,
-                    enter = expandVertically(
-                        animationSpec = spring(dampingRatio = 0.60f, stiffness = 420f),
-                        expandFrom = Alignment.Top
-                    ) + fadeIn(tween(160)),
-                    exit = shrinkVertically(
-                        animationSpec = spring(dampingRatio = 0.72f, stiffness = 450f),
-                        shrinkTowards = Alignment.Top
-                    ) + fadeOut(tween(120))
-                ) {
-                    Column {
-                        var scrubFraction by remember { mutableStateOf<Float?>(null) }
-                        val shownFraction = scrubFraction ?: progress
-
-                        ExpressiveSquigglySeekbar(
-                            progress = shownFraction,
-                            isPlaying = isPlaying,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(32.dp),
-                            onValueChange = { scrubFraction = it },
-                            onValueChangeFinished = {
-                                val target = scrubFraction ?: 0f
-                                scrubFraction = null
-                                BgmManager.seekTo((target * durationMs).toLong())
-                                fireTapHaptic(haptic)
-                            }
-                        )
-
-                        Spacer(Modifier.height(4.dp))
-
-                        val elapsedMs = (shownFraction * durationMs).toLong()
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = BgmManager.formatTimeMs(elapsedMs),
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontFeatureSettings = "tnum"
-                                ),
-                                color = scheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = track.formattedDuration.ifEmpty { "0:00" },
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontFeatureSettings = "tnum"
-                                ),
-                                color = scheme.onSurfaceVariant
-                            )
-                        }
-
-                        Spacer(Modifier.height(14.dp))
-
-                        // Full 5-button transport controls
-                        val repeatIcon = if (repeatMode == BgmRepeatMode.ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(64.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            ExpressiveToggleButton(
-                                icon = repeatIcon,
-                                contentDescription = if (repeatMode == BgmRepeatMode.ONE)
-                                    stringResource(R.string.bgm_now_playing_repeat_one)
-                                else stringResource(R.string.bgm_now_playing_repeat_all),
-                                isActive = repeatMode == BgmRepeatMode.ONE,
-                                activeColor = scheme.tertiaryContainer,
-                                activeContent = scheme.onTertiaryContainer,
-                                inactiveColor = Color.Transparent,
-                                inactiveContent = scheme.onSurfaceVariant,
-                                defaultShape = RoundedCornerShape(21.dp),
-                                activeShape = RoundedCornerShape(12.dp),
-                                size = 42.dp,
-                                iconSize = 20.dp,
-                                rotationDegrees = if (repeatMode == BgmRepeatMode.ONE) 180f else 0f,
-                                onClick = { BgmManager.toggleRepeatMode(context) }
-                            )
-
-                            ExpressiveNudgeButton(
-                                icon = Icons.Rounded.SkipPrevious,
-                                contentDescription = stringResource(R.string.bgm_now_playing_previous),
-                                nudgeDp = (-4).dp,
-                                tint = scheme.onSurface,
-                                container = scheme.surfaceContainerHighest,
-                                size = 52.dp,
-                                iconSize = 22.dp,
-                                defaultShape = RoundedCornerShape(26.dp),
-                                pressedShape = RoundedCornerShape(14.dp),
-                                onClick = {
-                                    AudioUtil.playOk(context)
-                                    BgmManager.playPreviousOrRestart(context)
-                                }
-                            )
-
-                            ExpressivePlayPauseButton(
-                                isPlaying = isPlaying,
-                                tint = scheme.onPrimary,
-                                container = scheme.primary,
-                                size = if (isPlaying) 76.dp else 64.dp,
-                                height = 64.dp,
-                                iconSize = 28.dp,
-                                onClick = {
-                                    AudioUtil.playOk(context)
-                                    BgmManager.togglePlayPause(context)
-                                }
-                            )
-
-                            ExpressiveNudgeButton(
-                                icon = Icons.Rounded.SkipNext,
-                                contentDescription = stringResource(R.string.bgm_now_playing_next),
-                                nudgeDp = 4.dp,
-                                tint = scheme.onSurface,
-                                container = scheme.surfaceContainerHighest,
-                                size = 52.dp,
-                                iconSize = 22.dp,
-                                defaultShape = RoundedCornerShape(26.dp),
-                                pressedShape = RoundedCornerShape(14.dp),
-                                onClick = {
-                                    AudioUtil.playOk(context)
-                                    BgmManager.playNext(context)
-                                }
-                            )
-
-                            ExpressiveToggleButton(
-                                icon = Icons.Rounded.Shuffle,
-                                contentDescription = stringResource(R.string.bgm_shuffle),
-                                isActive = isShuffleEnabled,
-                                activeColor = scheme.tertiaryContainer,
-                                activeContent = scheme.onTertiaryContainer,
-                                inactiveColor = Color.Transparent,
-                                inactiveContent = scheme.onSurfaceVariant,
-                                defaultShape = RoundedCornerShape(21.dp),
-                                activeShape = RoundedCornerShape(12.dp),
-                                size = 42.dp,
-                                iconSize = 20.dp,
-                                rotationDegrees = 0f,
-                                onClick = { BgmManager.toggleShuffle(context) }
-                            )
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(14.dp))
-
-                // Bottom playlist pull-up trigger
-                PlaylistTriggerBar(
-                    playlist = playlist,
-                    isPlaylistExpanded = isPlaylistExpanded,
-                    onExpand = { isPlaylistExpanded = true },
-                    onNavigateToAudioSettings = onNavigateToAudioSettings
                 )
-
-                Spacer(Modifier.height(6.dp))
-
-                PlaylistExpandedSection(
-                    visible = isPlaylistExpanded,
-                    playlist = playlist,
-                    track = track,
-                    isPlaying = isPlaying,
-                    onCollapse = { isPlaylistExpanded = false },
-                    maxListHeight = (availableHeight - 250.dp).coerceIn(120.dp, 280.dp)
-                )
-            }
-
-            NowPlayingLayoutMode.COMPACT -> {
-                // Adaptive Compact: One-line music name & artist with huge Pause + Next on the right
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    ExpressiveCloseButton(
-                        tint = scheme.onSurfaceVariant,
-                        container = scheme.surfaceContainerHighest,
-                        size = 36.dp,
-                        iconSize = 18.dp,
-                        onClick = {
-                            AudioUtil.playCancel(context)
-                            onClose()
-                        }
-                    )
-
-                    Spacer(Modifier.width(10.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = track.title,
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp,
-                                lineHeight = 19.sp
-                            ),
-                            color = scheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                repeatDelayMillis = 1000,
-                                initialDelayMillis = 600,
-                                velocity = 35.dp
-                            )
-                        )
-                        Text(
-                            text = track.artist ?: track.fileName,
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 11.5.sp,
-                                lineHeight = 15.sp
-                            ),
-                            color = scheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                    Spacer(Modifier.width(8.dp))
-
-                    // Huge Pause and Next button on the right
-                    ExpressivePlayPauseButton(
-                        isPlaying = isPlaying,
-                        tint = scheme.onPrimary,
-                        container = scheme.primary,
-                        size = if (isPlaying) 58.dp else 52.dp,
-                        height = 48.dp,
-                        iconSize = 24.dp,
-                        onClick = {
-                            AudioUtil.playOk(context)
-                            BgmManager.togglePlayPause(context)
-                        }
-                    )
-
-                    Spacer(Modifier.width(6.dp))
-
-                    ExpressiveNudgeButton(
-                        icon = Icons.Rounded.SkipNext,
-                        contentDescription = stringResource(R.string.bgm_now_playing_next),
-                        nudgeDp = 4.dp,
-                        tint = scheme.onSurface,
-                        container = scheme.surfaceContainerHighest,
-                        size = 46.dp,
-                        iconSize = 22.dp,
-                        defaultShape = RoundedCornerShape(23.dp),
-                        pressedShape = RoundedCornerShape(12.dp),
-                        onClick = {
-                            AudioUtil.playOk(context)
-                            BgmManager.playNext(context)
-                        }
-                    )
-                }
-
-                Spacer(Modifier.height(10.dp))
-
-                // Seek bar below this one-line layout
-                var scrubFraction by remember { mutableStateOf<Float?>(null) }
-                val shownFraction = scrubFraction ?: progress
-
-                ExpressiveSquigglySeekbar(
-                    progress = shownFraction,
-                    isPlaying = isPlaying,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(28.dp),
-                    onValueChange = { scrubFraction = it },
-                    onValueChangeFinished = {
-                        val target = scrubFraction ?: 0f
-                        scrubFraction = null
-                        BgmManager.seekTo((target * durationMs).toLong())
-                        fireTapHaptic(haptic)
-                    }
-                )
-
                 Spacer(Modifier.height(2.dp))
-
-                val elapsedMs = (shownFraction * durationMs).toLong()
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = BgmManager.formatTimeMs(elapsedMs),
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 10.sp,
-                            fontFeatureSettings = "tnum"
-                        ),
-                        color = scheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = track.formattedDuration.ifEmpty { "0:00" },
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 10.sp,
-                            fontFeatureSettings = "tnum"
-                        ),
-                        color = scheme.onSurfaceVariant
-                    )
-                }
-
-                Spacer(Modifier.height(10.dp))
-
-                // Below is the hidden playlist and can be pulled up if user wants to see
-                PlaylistTriggerBar(
-                    playlist = playlist,
-                    isPlaylistExpanded = isPlaylistExpanded,
-                    onExpand = { isPlaylistExpanded = true },
-                    onNavigateToAudioSettings = onNavigateToAudioSettings
-                )
-
-                Spacer(Modifier.height(4.dp))
-
-                PlaylistExpandedSection(
-                    visible = isPlaylistExpanded,
-                    playlist = playlist,
-                    track = track,
-                    isPlaying = isPlaying,
-                    onCollapse = { isPlaylistExpanded = false },
-                    maxListHeight = (availableHeight - 190.dp).coerceIn(100.dp, 220.dp)
+                Text(
+                    text = track.artist ?: track.fileName,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 13.sp,
+                        lineHeight = 17.sp
+                    ),
+                    color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-
-            NowPlayingLayoutMode.ULTRA_COMPACT -> {
-                // Ultra compact (extreme density or narrow view): minimal single-line bar
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    ExpressiveCloseButton(
-                        tint = scheme.onSurfaceVariant,
-                        container = scheme.surfaceContainerHighest,
-                        size = 32.dp,
-                        iconSize = 16.dp,
-                        onClick = {
-                            AudioUtil.playCancel(context)
-                            onClose()
-                        }
-                    )
-
-                    Spacer(Modifier.width(8.dp))
-
-                    Text(
-                        text = track.title,
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                        color = scheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier
-                            .weight(1f)
-                            .basicMarquee(
-                                iterations = Int.MAX_VALUE,
-                                repeatDelayMillis = 1000,
-                                initialDelayMillis = 600,
-                                velocity = 35.dp
-                            )
-                    )
-
-                    Spacer(Modifier.width(8.dp))
-
-                    ExpressivePlayPauseButton(
-                        isPlaying = isPlaying,
-                        tint = scheme.onPrimary,
-                        container = scheme.primary,
-                        size = 46.dp,
-                        height = 40.dp,
-                        iconSize = 20.dp,
-                        onClick = {
-                            AudioUtil.playOk(context)
-                            BgmManager.togglePlayPause(context)
-                        }
-                    )
-
-                    Spacer(Modifier.width(6.dp))
-
-                    ExpressiveNudgeButton(
-                        icon = Icons.Rounded.SkipNext,
-                        contentDescription = stringResource(R.string.bgm_now_playing_next),
-                        nudgeDp = 3.dp,
-                        tint = scheme.onSurface,
-                        container = scheme.surfaceContainerHighest,
-                        size = 40.dp,
-                        iconSize = 18.dp,
-                        defaultShape = RoundedCornerShape(20.dp),
-                        pressedShape = RoundedCornerShape(10.dp),
-                        onClick = {
-                            AudioUtil.playOk(context)
-                            BgmManager.playNext(context)
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Shared: Playlist trigger bar & expandable section
-// ──────────────────────────────────────────────────────────────────────────────
-
-@Composable
-private fun PlaylistTriggerBar(
-    playlist: List<BgmTrack>,
-    isPlaylistExpanded: Boolean,
-    onExpand: () -> Unit,
-    onNavigateToAudioSettings: (() -> Unit)?
-) {
-    val context = LocalContext.current
-    val scheme = MaterialTheme.colorScheme
-
-    val triggerBarModifier = Modifier
-        .fillMaxWidth()
-        .height(44.dp)
-        .clip(RoundedCornerShape(18.dp))
-        .background(scheme.surfaceContainerHighest)
-        .padding(horizontal = 14.dp)
-        .expressiveBounceClickable(pressedScale = 0.94f, onClick = {
-            AudioUtil.playOk(context)
-            onExpand()
-        })
-        .pointerInput(Unit) {
-            detectTapGestures {
-                AudioUtil.playOk(context)
-                onExpand()
-            }
         }
 
-    Row(
-        modifier = triggerBarModifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
+        Spacer(Modifier.height(10.dp))
+
+        // Squiggly seekbar with timestamps
+        var scrubFraction by remember { mutableStateOf<Float?>(null) }
+        val shownFraction = scrubFraction ?: progress
+
+        ExpressiveSquigglySeekbar(
+            progress = shownFraction,
+            isPlaying = isPlaying,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(30.dp),
+            onValueChange = { scrubFraction = it },
+            onValueChangeFinished = {
+                val target = scrubFraction ?: 0f
+                scrubFraction = null
+                BgmManager.seekTo((target * durationMs).toLong())
+                fireTapHaptic(haptic)
+            }
+        )
+
+        Spacer(Modifier.height(2.dp))
+
+        val elapsedMs = (shownFraction * durationMs).toLong()
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = stringResource(R.string.bgm_now_playing_playlist),
-                style = MaterialTheme.typography.titleSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
-                ),
-                color = scheme.onSurface
-            )
-            ExpressiveBadge(
-                text = "${playlist.size}",
-                container = scheme.secondaryContainer,
-                content = scheme.onSecondaryContainer
-            )
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.bgm_view_playlist),
-                style = MaterialTheme.typography.labelMedium.copy(
+                text = BgmManager.formatTimeMs(elapsedMs),
+                style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 12.sp
+                    fontSize = 10.sp,
+                    fontFeatureSettings = "tnum"
                 ),
                 color = scheme.onSurfaceVariant
             )
-            Icon(
-                imageVector = Icons.Rounded.KeyboardArrowUp,
-                contentDescription = null,
-                tint = scheme.onSurfaceVariant,
-                modifier = Modifier.size(16.dp)
+            Text(
+                text = track.formattedDuration.ifEmpty { "0:00" },
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 10.sp,
+                    fontFeatureSettings = "tnum"
+                ),
+                color = scheme.onSurfaceVariant
+            )
+        }
+
+        Spacer(Modifier.height(10.dp))
+
+        // 5-button transport controls
+        val repeatIcon = if (repeatMode == BgmRepeatMode.ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(60.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ExpressiveToggleButton(
+                icon = repeatIcon,
+                contentDescription = if (repeatMode == BgmRepeatMode.ONE)
+                    stringResource(R.string.bgm_now_playing_repeat_one)
+                else stringResource(R.string.bgm_now_playing_repeat_all),
+                isActive = repeatMode == BgmRepeatMode.ONE,
+                activeColor = scheme.tertiaryContainer,
+                activeContent = scheme.onTertiaryContainer,
+                inactiveColor = Color.Transparent,
+                inactiveContent = scheme.onSurfaceVariant,
+                defaultShape = RoundedCornerShape(21.dp),
+                activeShape = RoundedCornerShape(12.dp),
+                size = 40.dp,
+                iconSize = 19.dp,
+                rotationDegrees = if (repeatMode == BgmRepeatMode.ONE) 180f else 0f,
+                onClick = { BgmManager.toggleRepeatMode(context) }
+            )
+
+            ExpressiveNudgeButton(
+                icon = Icons.Rounded.SkipPrevious,
+                contentDescription = stringResource(R.string.bgm_now_playing_previous),
+                nudgeDp = (-4).dp,
+                tint = scheme.onSurface,
+                container = scheme.surfaceContainerHighest,
+                size = 50.dp,
+                iconSize = 22.dp,
+                defaultShape = RoundedCornerShape(25.dp),
+                pressedShape = RoundedCornerShape(13.dp),
+                onClick = {
+                    AudioUtil.playOk(context)
+                    BgmManager.playPreviousOrRestart(context)
+                }
+            )
+
+            ExpressivePlayPauseButton(
+                isPlaying = isPlaying,
+                tint = scheme.onPrimary,
+                container = scheme.primary,
+                size = if (isPlaying) 74.dp else 62.dp,
+                height = 58.dp,
+                iconSize = 26.dp,
+                onClick = {
+                    AudioUtil.playOk(context)
+                    BgmManager.togglePlayPause(context)
+                }
+            )
+
+            ExpressiveNudgeButton(
+                icon = Icons.Rounded.SkipNext,
+                contentDescription = stringResource(R.string.bgm_now_playing_next),
+                nudgeDp = 4.dp,
+                tint = scheme.onSurface,
+                container = scheme.surfaceContainerHighest,
+                size = 50.dp,
+                iconSize = 22.dp,
+                defaultShape = RoundedCornerShape(25.dp),
+                pressedShape = RoundedCornerShape(13.dp),
+                onClick = {
+                    AudioUtil.playOk(context)
+                    BgmManager.playNext(context)
+                }
+            )
+
+            ExpressiveToggleButton(
+                icon = Icons.Rounded.Shuffle,
+                contentDescription = stringResource(R.string.bgm_shuffle),
+                isActive = isShuffleEnabled,
+                activeColor = scheme.tertiaryContainer,
+                activeContent = scheme.onTertiaryContainer,
+                inactiveColor = Color.Transparent,
+                inactiveContent = scheme.onSurfaceVariant,
+                defaultShape = RoundedCornerShape(21.dp),
+                activeShape = RoundedCornerShape(12.dp),
+                size = 40.dp,
+                iconSize = 19.dp,
+                rotationDegrees = 0f,
+                onClick = { BgmManager.toggleShuffle(context) }
             )
         }
     }
 }
 
 @Composable
-private fun PlaylistExpandedSection(
-    visible: Boolean,
-    playlist: List<BgmTrack>,
+private fun CompactPlayerContent(
     track: BgmTrack,
     isPlaying: Boolean,
-    onCollapse: () -> Unit,
-    maxListHeight: Dp
+    durationMs: Long,
+    progress: Float,
+    positionMs: Long
 ) {
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val scheme = MaterialTheme.colorScheme
 
-    AnimatedVisibility(
-        visible = visible,
-        enter = expandVertically(
-            animationSpec = spring(dampingRatio = 0.62f, stiffness = 400f),
-            expandFrom = Alignment.Top
-        ) + fadeIn(tween(160)),
-        exit = shrinkVertically(
-            animationSpec = spring(dampingRatio = 0.72f, stiffness = 450f),
-            shrinkTowards = Alignment.Top
-        ) + fadeOut(tween(120))
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.bgm_now_playing_playlist),
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
-                        ),
-                        color = scheme.onSurface
+        // One-line title + artist on left, huge Pause + Next on right (NO X close button)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = track.title,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        lineHeight = 19.sp
+                    ),
+                    color = scheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.basicMarquee(
+                        iterations = Int.MAX_VALUE,
+                        repeatDelayMillis = 1000,
+                        initialDelayMillis = 600,
+                        velocity = 35.dp
                     )
-                    ExpressiveBadge(
-                        text = "${playlist.size}",
-                        container = scheme.surfaceContainerHighest,
-                        content = scheme.onSurfaceVariant
-                    )
-                }
-
-                ExpressiveViewPlaylistToggle(
-                    isExpanded = true,
-                    onClick = {
-                        AudioUtil.playOk(context)
-                        onCollapse()
-                    },
-                    container = scheme.secondaryContainer,
-                    content = scheme.onSecondaryContainer
+                )
+                Spacer(Modifier.height(1.dp))
+                Text(
+                    text = track.artist ?: track.fileName,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp
+                    ),
+                    color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.width(10.dp))
 
-            LazyColumn(
-                modifier = Modifier
-                    .heightIn(min = 90.dp, max = maxListHeight)
-                    .animateContentSize(
-                        animationSpec = spring(dampingRatio = 0.65f, stiffness = 400f)
-                    ),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                items(playlist.size, key = { index -> playlist[index].id }) { index ->
-                    val item = playlist[index]
-                    val isCurrent = item.id == track.id
-                    val isFirst = index == 0
-                    val isLast = index == playlist.size - 1
-                    val itemBg = when {
-                        isCurrent -> scheme.secondaryContainer.copy(alpha = 0.65f)
-                        item.isDefault -> scheme.tertiaryContainer.copy(alpha = 0.45f)
-                        else -> Color.Transparent
-                    }
-                    val itemShape = when {
-                        isCurrent && isFirst -> RoundedCornerShape(
-                            topStart = 20.dp, topEnd = 20.dp, bottomStart = 8.dp, bottomEnd = 8.dp
-                        )
-                        !isCurrent && isLast -> RoundedCornerShape(
-                            topStart = 8.dp, topEnd = 8.dp, bottomStart = 20.dp, bottomEnd = 20.dp
-                        )
-                        else -> RoundedCornerShape(8.dp)
-                    }
-                    val interactionSource = remember { MutableInteractionSource() }
-                    val isPressed by interactionSource.collectIsPressedAsState()
-                    val rowScale by animateFloatAsState(
-                        targetValue = if (isPressed) 0.94f else 1f,
-                        animationSpec = spring(dampingRatio = 0.50f, stiffness = 500f),
-                        label = "QueueRowPress"
-                    )
-                    Surface(
-                        shape = itemShape,
-                        color = itemBg,
-                        contentColor = if (isCurrent) scheme.onSecondaryContainer else scheme.onSurface,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .graphicsLayer {
-                                scaleX = rowScale
-                                scaleY = rowScale
-                                transformOrigin = TransformOrigin(0.5f, 0.5f)
-                            }
-                            .clickable(
-                                interactionSource = interactionSource,
-                                indication = null,
-                                onClick = {
-                                    AudioUtil.playOk(context)
-                                    BgmManager.selectTrack(context, item)
-                                    onCollapse()
-                                }
-                            )
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            if (isCurrent && isPlaying) {
-                                NowPlayingBars(color = scheme.primary, modifier = Modifier.size(15.dp))
-                            } else {
-                                Icon(
-                                    imageVector = if (item.isDefault) Icons.Rounded.AutoAwesome else Icons.Rounded.MusicNote,
-                                    contentDescription = null,
-                                    tint = when {
-                                        isCurrent -> scheme.primary
-                                        item.isDefault -> scheme.tertiary
-                                        else -> scheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                    },
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = item.title,
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
-                                        fontSize = 11.sp,
-                                        lineHeight = 14.sp
-                                    ),
-                                    color = if (isCurrent) scheme.onSecondaryContainer else scheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = if (item.isDefault) stringResource(R.string.bgm_default_track_badge)
-                                    else item.artist ?: item.fileName,
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 12.sp),
-                                    color = if (isCurrent) scheme.onSecondaryContainer.copy(alpha = 0.8f)
-                                    else scheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            if (item.formattedDuration.isNotEmpty()) {
-                                Text(
-                                    text = item.formattedDuration,
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                    color = if (isCurrent) scheme.onSecondaryContainer.copy(alpha = 0.9f)
-                                    else scheme.onSurfaceVariant.copy(alpha = 0.75f)
-                                )
-                            }
-                        }
-                    }
+            // Huge Pause button on the right
+            ExpressivePlayPauseButton(
+                isPlaying = isPlaying,
+                tint = scheme.onPrimary,
+                container = scheme.primary,
+                size = if (isPlaying) 60.dp else 52.dp,
+                height = 46.dp,
+                iconSize = 24.dp,
+                onClick = {
+                    AudioUtil.playOk(context)
+                    BgmManager.togglePlayPause(context)
                 }
+            )
+
+            Spacer(Modifier.width(6.dp))
+
+            // Next button
+            ExpressiveNudgeButton(
+                icon = Icons.Rounded.SkipNext,
+                contentDescription = stringResource(R.string.bgm_now_playing_next),
+                nudgeDp = 4.dp,
+                tint = scheme.onSurface,
+                container = scheme.surfaceContainerHighest,
+                size = 46.dp,
+                iconSize = 22.dp,
+                defaultShape = RoundedCornerShape(23.dp),
+                pressedShape = RoundedCornerShape(12.dp),
+                onClick = {
+                    AudioUtil.playOk(context)
+                    BgmManager.playNext(context)
+                }
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // Seekbar below this one-line layout
+        var scrubFraction by remember { mutableStateOf<Float?>(null) }
+        val shownFraction = scrubFraction ?: progress
+
+        ExpressiveSquigglySeekbar(
+            progress = shownFraction,
+            isPlaying = isPlaying,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(26.dp),
+            onValueChange = { scrubFraction = it },
+            onValueChangeFinished = {
+                val target = scrubFraction ?: 0f
+                scrubFraction = null
+                BgmManager.seekTo((target * durationMs).toLong())
+                fireTapHaptic(haptic)
             }
+        )
+
+        Spacer(Modifier.height(1.dp))
+
+        val elapsedMs = (shownFraction * durationMs).toLong()
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = BgmManager.formatTimeMs(elapsedMs),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 10.sp,
+                    fontFeatureSettings = "tnum"
+                ),
+                color = scheme.onSurfaceVariant
+            )
+            Text(
+                text = track.formattedDuration.ifEmpty { "0:00" },
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 10.sp,
+                    fontFeatureSettings = "tnum"
+                ),
+                color = scheme.onSurfaceVariant
+            )
         }
     }
 }
 
+@Composable
+private fun UltraCompactPlayerContent(
+    track: BgmTrack,
+    isPlaying: Boolean
+) {
+    val context = LocalContext.current
+    val scheme = MaterialTheme.colorScheme
+
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = track.title,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                ),
+                color = scheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.basicMarquee(
+                    iterations = Int.MAX_VALUE,
+                    repeatDelayMillis = 1000,
+                    initialDelayMillis = 600,
+                    velocity = 35.dp
+                )
+            )
+            Text(
+                text = track.artist ?: track.fileName,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                color = scheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Spacer(Modifier.width(10.dp))
+
+        ExpressivePlayPauseButton(
+            isPlaying = isPlaying,
+            tint = scheme.onPrimary,
+            container = scheme.primary,
+            size = 48.dp,
+            height = 42.dp,
+            iconSize = 22.dp,
+            onClick = {
+                AudioUtil.playOk(context)
+                BgmManager.togglePlayPause(context)
+            }
+        )
+
+        Spacer(Modifier.width(6.dp))
+
+        ExpressiveNudgeButton(
+            icon = Icons.Rounded.SkipNext,
+            contentDescription = stringResource(R.string.bgm_now_playing_next),
+            nudgeDp = 3.dp,
+            tint = scheme.onSurface,
+            container = scheme.surfaceContainerHighest,
+            size = 42.dp,
+            iconSize = 20.dp,
+            defaultShape = RoundedCornerShape(21.dp),
+            pressedShape = RoundedCornerShape(10.dp),
+            onClick = {
+                AudioUtil.playOk(context)
+                BgmManager.playNext(context)
+            }
+        )
+    }
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
-// Expressive Atoms (Jacket, Close Button, Squiggly Seekbar, Controls)
+// Expressive Atoms
 // ──────────────────────────────────────────────────────────────────────────────
 
 @Composable
@@ -1293,20 +1292,14 @@ private fun ExpressiveJacket(
     art: Bitmap?,
     track: BgmTrack,
     isPlaying: Boolean,
-    isPlaylistExpanded: Boolean,
     onClick: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
 
     val jacketCorner by animateDpAsState(
-        targetValue = if (isPlaying) 18.dp else 32.dp,
+        targetValue = if (isPlaying) 16.dp else 28.dp,
         animationSpec = spring(dampingRatio = 0.65f, stiffness = 600f),
         label = "JacketCorner"
-    )
-    val jacketScale by animateFloatAsState(
-        targetValue = if (isPlaylistExpanded) 0.76f else 1f,
-        animationSpec = spring(dampingRatio = 0.65f, stiffness = 600f),
-        label = "JacketScale"
     )
 
     val interactionSource = remember { MutableInteractionSource() }
@@ -1321,8 +1314,8 @@ private fun ExpressiveJacket(
         shape = RoundedCornerShape(jacketCorner),
         color = scheme.surfaceContainerHighest,
         modifier = Modifier
-            .size(if (isPlaylistExpanded) 52.dp else 66.dp)
-            .graphicsLayer { scaleX = jacketScale * pressScale; scaleY = jacketScale * pressScale }
+            .size(56.dp)
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -1343,64 +1336,13 @@ private fun ExpressiveJacket(
                     imageVector = if (track.isDefault) Icons.Rounded.AutoAwesome else Icons.Rounded.MusicNote,
                     contentDescription = null,
                     tint = if (track.isDefault) scheme.onTertiaryContainer else scheme.primary,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
     }
 }
 
-@Composable
-private fun ExpressiveCloseButton(
-    tint: Color,
-    container: Color,
-    onClick: () -> Unit,
-    size: Dp = 40.dp,
-    iconSize: Dp = 20.dp
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-
-    val corner by animateDpAsState(
-        targetValue = if (isPressed) 12.dp else 20.dp,
-        animationSpec = spring(dampingRatio = 0.65f, stiffness = 600f),
-        label = "CloseCorner"
-    )
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.82f else 1f,
-        animationSpec = spring(dampingRatio = 0.52f, stiffness = 500f),
-        label = "CloseScale"
-    )
-
-    Surface(
-        shape = RoundedCornerShape(corner),
-        color = container,
-        contentColor = tint,
-        modifier = Modifier
-            .size(size)
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            )
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = Icons.Rounded.Close,
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier.size(iconSize)
-            )
-        }
-    }
-}
-
-/**
- * Material 3 Expressive squiggly seekbar.
- * Draws a playful sinusoidal wave on the active side and a straight rail on the inactive side.
- * A neat vertical pill acts as the scrubbing thumb.
- */
 @Composable
 private fun ExpressiveSquigglySeekbar(
     progress: Float,
@@ -1426,7 +1368,7 @@ private fun ExpressiveSquigglySeekbar(
         label = "ThumbWidth"
     )
     val thumbHeightDp by animateDpAsState(
-        targetValue = if (isDragging) 28.dp else 20.dp,
+        targetValue = if (isDragging) 26.dp else 18.dp,
         animationSpec = spring(dampingRatio = 0.52f, stiffness = 600f),
         label = "ThumbHeight"
     )
@@ -1445,7 +1387,7 @@ private fun ExpressiveSquigglySeekbar(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(30.dp)
+            .height(28.dp)
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
                     val newFraction = (offset.x / size.width).coerceIn(0f, 1f)
@@ -1479,7 +1421,7 @@ private fun ExpressiveSquigglySeekbar(
         val strokeWidthPx = 4.dp.toPx()
         val thumbWidthPx = thumbWidthDp.toPx()
         val thumbHeightPx = thumbHeightDp.toPx()
-        val gapPx = 8.dp.toPx()
+        val gapPx = 7.dp.toPx()
         val wavelengthPx = 22.dp.toPx()
         val amplitudePx = amplitudeDp.toPx()
         val centerY = size.height / 2f
@@ -1487,7 +1429,7 @@ private fun ExpressiveSquigglySeekbar(
         val usableWidth = (size.width - thumbWidthPx).coerceAtLeast(1f)
         val thumbCenterX = (thumbWidthPx / 2f) + (usableWidth * currentFraction)
 
-        // 1. Active squiggly wave (left of vertical-bar thumb)
+        // Active squiggly wave (left of vertical-bar thumb)
         val activeEndX = (thumbCenterX - thumbWidthPx / 2f - gapPx).coerceAtLeast(0f)
         if (activeEndX > 0f) {
             val wavePath = Path()
@@ -1506,7 +1448,7 @@ private fun ExpressiveSquigglySeekbar(
             )
         }
 
-        // 2. Inactive flat track + end-stop dot (right of vertical-bar thumb)
+        // Inactive flat track + end-stop dot (right of vertical-bar thumb)
         val inactiveStartX = (thumbCenterX + thumbWidthPx / 2f + gapPx).coerceAtMost(size.width)
         val trackEndX = size.width - (strokeWidthPx / 2f)
         if (inactiveStartX < trackEndX) {
@@ -1524,7 +1466,7 @@ private fun ExpressiveSquigglySeekbar(
             )
         }
 
-        // 3. Vertical bar thumb
+        // Vertical bar thumb
         drawRect(
             color = activeColor,
             topLeft = Offset(
@@ -1693,17 +1635,17 @@ private fun ExpressivePlayPauseButton(
     val isPressed by interactionSource.collectIsPressedAsState()
 
     val corner by animateDpAsState(
-        targetValue = if (isPlaying) 20.dp else 32.dp,
+        targetValue = if (isPlaying) 18.dp else 28.dp,
         animationSpec = spring(dampingRatio = 0.65f, stiffness = 600f),
         label = "PlayPauseCorner"
     )
     val pressedCorner by animateDpAsState(
-        targetValue = 14.dp,
+        targetValue = 13.dp,
         animationSpec = spring(dampingRatio = 0.65f, stiffness = 600f),
         label = "PlayPausePressedCorner"
     )
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.85f else 1f,
+        targetValue = if (isPressed) 0.86f else 1f,
         animationSpec = spring(dampingRatio = 0.52f, stiffness = 500f),
         label = "PlayPauseScale"
     )
@@ -1722,7 +1664,7 @@ private fun ExpressivePlayPauseButton(
                 scaleY = scale
                 transformOrigin = TransformOrigin(0.5f, 0.5f)
             }
-            .expressiveBounceClickable(pressedScale = 0.85f, onClick = onClick)
+            .expressiveBounceClickable(pressedScale = 0.86f, onClick = onClick)
     ) {
         Box(
             contentAlignment = Alignment.Center,
@@ -1756,7 +1698,7 @@ private fun ExpressiveBadge(
         shape = RoundedCornerShape(50),
         color = container,
         contentColor = content,
-        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
     ) {
         Text(
             text = text,
@@ -1765,53 +1707,6 @@ private fun ExpressiveBadge(
                 fontSize = 10.sp
             )
         )
-    }
-}
-
-@Composable
-private fun ExpressiveViewPlaylistToggle(
-    isExpanded: Boolean,
-    onClick: () -> Unit,
-    container: Color,
-    content: Color
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.86f else 1f,
-        animationSpec = spring(dampingRatio = 0.52f, stiffness = 500f),
-        label = "ViewPlaylistScale"
-    )
-
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = container,
-        contentColor = content,
-        modifier = Modifier
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .expressiveBounceClickable(pressedScale = 0.86f, onClick = onClick)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            if (!isExpanded) {
-                Text(
-                    text = stringResource(R.string.bgm_view_playlist),
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 9.sp
-                    )
-                )
-            }
-            Icon(
-                imageVector = if (isExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp)
-            )
-        }
     }
 }
 
