@@ -21,6 +21,7 @@ package zx.azenith.ui.gamespace
 import android.view.KeyEvent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -107,6 +108,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
@@ -532,10 +534,46 @@ internal fun ZXGameSpaceTopBar(
             )
 
             // Material 3 Expressive Unified System Status Capsule (Clock & Battery)
+            val capsuleNudgeX = remember { Animatable(0f) }
+            var wasNowPlayingOpen by remember { mutableStateOf(isNowPlayingOpen) }
+
+            LaunchedEffect(isNowPlayingOpen) {
+                if (isNowPlayingOpen != wasNowPlayingOpen) {
+                    val opened = isNowPlayingOpen
+                    wasNowPlayingOpen = opened
+                    if (opened) {
+                        // Dot moved out into floating dialog: chip slides right into empty space with overshoot spring
+                        capsuleNudgeX.snapTo(0f)
+                        capsuleNudgeX.animateTo(
+                            targetValue = 0f,
+                            initialVelocity = 480f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            )
+                        )
+                    } else {
+                        // Dot returns to top bar in expanded state: chip gets pushed left with overshoot spring
+                        capsuleNudgeX.snapTo(0f)
+                        capsuleNudgeX.animateTo(
+                            targetValue = 0f,
+                            initialVelocity = -480f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            )
+                        )
+                    }
+                }
+            }
+
             Surface(
                 shape = CircleShape,
                 color = scheme.surfaceContainerHigh,
                 modifier = Modifier
+                    .graphicsLayer {
+                        translationX = capsuleNudgeX.value
+                    }
                     .onGloballyPositioned { coords ->
                         if (coords.size.width > 0) cachedCapsuleWidthPx = coords.size.width.toFloat()
                     }

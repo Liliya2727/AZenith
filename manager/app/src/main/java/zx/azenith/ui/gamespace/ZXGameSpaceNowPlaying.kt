@@ -43,6 +43,8 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -184,95 +186,152 @@ internal fun NowPlayingDot(
     var isExpanded by remember { mutableStateOf(false) }
     var displayedTrack by remember { mutableStateOf(track) }
     var lastObservedNonce by remember { mutableStateOf(songChangeNonce) }
-    var pendingExpandOnClose by remember { mutableStateOf(false) }
+    var wasPanelOpen by remember { mutableStateOf(isPanelOpen) }
 
     LaunchedEffect(songChangeNonce) {
         if (songChangeNonce != lastObservedNonce && songChangeNonce > 0L) {
             lastObservedNonce = songChangeNonce
-            if (isPanelOpen) {
-                pendingExpandOnClose = true
-                displayedTrack = track
-            } else {
+            if (!isPanelOpen) {
                 if (isExpanded) {
                     isExpanded = false
-                    delay(260L)
+                    delay(220L)
                 }
                 displayedTrack = track
                 val textLen = maxOf(track.title.length, track.displayArtist.length)
                 val duration = if (textLen > 18) {
-                    (3800L + (textLen - 18) * 160L).coerceIn(4500L, 9500L)
+                    (3500L + (textLen - 18) * 150L).coerceIn(4000L, 8000L)
                 } else {
-                    3800L
+                    3500L
                 }
-                delay(80L)
+                delay(60L)
                 isExpanded = true
                 delay(duration)
                 isExpanded = false
+            } else {
+                displayedTrack = track
             }
         }
     }
 
     LaunchedEffect(isPanelOpen) {
-        if (!isPanelOpen && pendingExpandOnClose) {
-            pendingExpandOnClose = false
-            delay(280L)
+        if (isPanelOpen) {
+            wasPanelOpen = true
+        } else if (wasPanelOpen) {
+            wasPanelOpen = false
+            displayedTrack = currentTrack ?: track
+            // Transform back into topbar in the expanded state with overshoot spring
+            isExpanded = true
             val textLen = maxOf(displayedTrack.title.length, displayedTrack.displayArtist.length)
             val duration = if (textLen > 18) {
-                (3800L + (textLen - 18) * 160L).coerceIn(4500L, 9500L)
+                (3500L + (textLen - 18) * 150L).coerceIn(4000L, 8000L)
             } else {
-                3800L
+                3500L
             }
-            isExpanded = true
             delay(duration)
+            // After music title and artist is shown, finally collapse to dot
             isExpanded = false
         }
     }
 
     val jacketRotation = rememberGameSpaceClock()
 
-    Surface(
-        shape = CircleShape,
-        color = if (isExpanded) scheme.surfaceContainerHigh else scheme.surfaceContainer,
-        modifier = Modifier
-            .height(38.dp)
-            .clip(CircleShape)
-            .onGloballyPositioned { onPositioned(it.boundsInRoot()) }
-            .gamepadFocusOutline(shape = CircleShape, register = true)
-            .clickable {
-                AudioUtil.playOk(context)
-                onOpenPanel()
-            }
+    AnimatedVisibility(
+        visible = !isPanelOpen,
+        enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
+                expandHorizontally(
+                    expandFrom = Alignment.End,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                ) +
+                slideInVertically(
+                    initialOffsetY = { it / 2 },
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                ) +
+                scaleIn(
+                    initialScale = 0.75f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                ),
+        exit = fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMedium)) +
+               shrinkHorizontally(
+                   shrinkTowards = Alignment.End,
+                   animationSpec = spring(
+                       dampingRatio = Spring.DampingRatioMediumBouncy,
+                       stiffness = Spring.StiffnessMediumLow
+                   )
+               ) +
+               slideOutVertically(
+                   targetOffsetY = { it / 2 },
+                   animationSpec = spring(
+                       dampingRatio = Spring.DampingRatioMediumBouncy,
+                       stiffness = Spring.StiffnessMediumLow
+                   )
+               ) +
+               scaleOut(
+                   targetScale = 0.75f,
+                   animationSpec = spring(
+                       dampingRatio = Spring.DampingRatioMediumBouncy,
+                       stiffness = Spring.StiffnessMediumLow
+                   )
+               )
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+        Surface(
+            shape = CircleShape,
+            color = if (isExpanded) scheme.surfaceContainerHigh else scheme.surfaceContainer,
+            modifier = Modifier
+                .height(38.dp)
+                .clip(CircleShape)
+                .onGloballyPositioned { coords ->
+                    if (!isPanelOpen && coords.isAttached && coords.size.width > 0 && coords.size.height > 0) {
+                        val bounds = coords.boundsInRoot()
+                        if (bounds.width > 0f && bounds.height > 0f) {
+                            onPositioned(bounds)
+                        }
+                    }
+                }
+                .gamepadFocusOutline(shape = CircleShape, register = true)
+                .clickable {
+                    AudioUtil.playOk(context)
+                    onOpenPanel()
+                }
         ) {
-            AnimatedVisibility(
-                visible = isExpanded,
-                enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
-                        expandHorizontally(
-                            expandFrom = Alignment.End,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            )
-                        ) +
-                        slideInHorizontally(
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            )
-                        ) { it / 3 },
-                exit = fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMedium)) +
-                       shrinkHorizontally(
-                           shrinkTowards = Alignment.End,
-                           animationSpec = spring(
-                               dampingRatio = Spring.DampingRatioNoBouncy,
-                               stiffness = Spring.StiffnessMedium
-                           )
-                       )
+            Row(
+                modifier = Modifier.padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
+                AnimatedVisibility(
+                    visible = isExpanded,
+                    enter = fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) +
+                            expandHorizontally(
+                                expandFrom = Alignment.End,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            ) +
+                            slideInHorizontally(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            ) { it / 3 },
+                    exit = fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMedium)) +
+                           shrinkHorizontally(
+                               shrinkTowards = Alignment.End,
+                               animationSpec = spring(
+                                   dampingRatio = Spring.DampingRatioMediumBouncy,
+                                   stiffness = Spring.StiffnessMediumLow
+                               )
+                           )
+                ) {
                 Row(
                     modifier = Modifier.padding(start = 10.dp, end = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -380,6 +439,7 @@ internal fun NowPlayingDot(
         }
     }
 }
+}
 
 /**
  * Floating morphing dialog for Now Playing.
@@ -414,15 +474,15 @@ internal fun NowPlayingPanelOverlay(
             morphProgress.animateTo(
                 0f,
                 animationSpec = spring(
-                    dampingRatio = 0.95f,
-                    stiffness = 700f
+                    dampingRatio = 0.62f,
+                    stiffness = 420f
                 )
             )
         }
     }
 
     val progress = morphProgress.value
-    if (!visible && progress <= 0.005f) return
+    if (!visible && !morphProgress.isRunning && progress <= 0.005f) return
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val screenWidth = maxWidth
@@ -457,7 +517,7 @@ internal fun NowPlayingPanelOverlay(
 
         // Morphing scale and translation origin pivoted at dot
         val tipFractionX = ((dotCenterXDp - dialogLeft) / dialogWidth).coerceIn(0.1f, 0.9f)
-        val scale = 0.15f + 0.85f * progress
+        val scale = (0.15f + 0.85f * progress).coerceAtLeast(0.01f)
         val translationY = (1f - progress) * -20f * density.density
         val contentAlpha = (progress / 0.25f).coerceIn(0f, 1f)
 
