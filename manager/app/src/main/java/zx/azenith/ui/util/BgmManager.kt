@@ -110,7 +110,7 @@ data class BgmTrack(
             id = "default",
             title = "AZenith Theme",
             artist = null,
-            durationMs = 134374L,
+            durationMs = 386000L,
             fileName = "bgm.ogg",
             relativePath = null,
             isDefault = true
