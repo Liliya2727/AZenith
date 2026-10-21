@@ -804,6 +804,7 @@ fun ZXGameSpaceHub(
         NowPlayingPanelOverlay(
             visible = nowPlayingOpen,
             anchor = nowPlayingAnchor,
+            endSafePad = endSafePad,
             hazeState = overlayHazeState,
             onClose = { nowPlayingOpen = false },
             onNavigateToAudioSettings = {

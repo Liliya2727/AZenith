@@ -535,35 +535,33 @@ internal fun ZXGameSpaceTopBar(
 
             // Material 3 Expressive Unified System Status Capsule (Clock & Battery)
             val capsuleNudgeX = remember { Animatable(0f) }
-            var wasNowPlayingOpen by remember { mutableStateOf(isNowPlayingOpen) }
+            var isFirstComposition by remember { mutableStateOf(true) }
 
             LaunchedEffect(isNowPlayingOpen) {
-                if (isNowPlayingOpen != wasNowPlayingOpen) {
-                    val opened = isNowPlayingOpen
-                    wasNowPlayingOpen = opened
-                    if (opened) {
-                        // Dot moved out into floating dialog: chip slides right into empty space with overshoot spring
-                        capsuleNudgeX.snapTo(0f)
-                        capsuleNudgeX.animateTo(
-                            targetValue = 0f,
-                            initialVelocity = 480f,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            )
+                if (isFirstComposition) {
+                    isFirstComposition = false
+                    return@LaunchedEffect
+                }
+                if (isNowPlayingOpen) {
+                    // Dot moved out: chip slides right into empty space with overshoot spring
+                    capsuleNudgeX.animateTo(
+                        targetValue = 0f,
+                        initialVelocity = with(density) { 420.dp.toPx() },
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = 320f
                         )
-                    } else {
-                        // Dot returns to top bar in expanded state: chip gets pushed left with overshoot spring
-                        capsuleNudgeX.snapTo(0f)
-                        capsuleNudgeX.animateTo(
-                            targetValue = 0f,
-                            initialVelocity = -480f,
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            )
+                    )
+                } else {
+                    // Dot returns: chip gets pushed left with overshoot spring
+                    capsuleNudgeX.animateTo(
+                        targetValue = 0f,
+                        initialVelocity = with(density) { -420.dp.toPx() },
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = 320f
                         )
-                    }
+                    )
                 }
             }
 

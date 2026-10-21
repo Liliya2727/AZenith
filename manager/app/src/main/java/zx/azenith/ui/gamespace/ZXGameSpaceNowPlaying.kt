@@ -183,6 +183,12 @@ internal fun NowPlayingDot(
 
     val track = currentTrack ?: return
 
+    val density = LocalDensity.current
+    val bounceScale = remember { Animatable(1f) }
+    val bounceOffsetY = remember { Animatable(0f) }
+    val bounceAlpha = remember { Animatable(1f) }
+    var isFirstComposition by remember { mutableStateOf(true) }
+
     var isExpanded by remember { mutableStateOf(false) }
     var displayedTrack by remember { mutableStateOf(track) }
     var lastObservedNonce by remember { mutableStateOf(songChangeNonce) }
@@ -214,12 +220,69 @@ internal fun NowPlayingDot(
     }
 
     LaunchedEffect(isPanelOpen) {
+        if (isFirstComposition) {
+            isFirstComposition = false
+            return@LaunchedEffect
+        }
         if (isPanelOpen) {
             wasPanelOpen = true
+            launch {
+                bounceScale.animateTo(
+                    targetValue = 0.68f,
+                    animationSpec = spring(
+                        dampingRatio = 0.7f,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                )
+            }
+            launch {
+                bounceOffsetY.animateTo(
+                    targetValue = with(density) { 20.dp.toPx() },
+                    animationSpec = spring(
+                        dampingRatio = 0.7f,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                )
+            }
+            launch {
+                bounceAlpha.animateTo(
+                    targetValue = 0f,
+                    animationSpec = tween(160)
+                )
+            }
         } else if (wasPanelOpen) {
             wasPanelOpen = false
             displayedTrack = currentTrack ?: track
-            // Transform back into topbar in the expanded state with overshoot spring
+
+            bounceScale.snapTo(0.68f)
+            bounceOffsetY.snapTo(with(density) { 22.dp.toPx() })
+            bounceAlpha.snapTo(0.35f)
+
+            launch {
+                bounceAlpha.animateTo(
+                    targetValue = 1f,
+                    animationSpec = spring(stiffness = Spring.StiffnessMedium)
+                )
+            }
+            launch {
+                bounceScale.animateTo(
+                    targetValue = 1f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
+            }
+            launch {
+                bounceOffsetY.animateTo(
+                    targetValue = 0f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
+            }
+
             isExpanded = true
             val textLen = maxOf(displayedTrack.title.length, displayedTrack.displayArtist.length)
             val duration = if (textLen > 18) {
@@ -228,7 +291,6 @@ internal fun NowPlayingDot(
                 3500L
             }
             delay(duration)
-            // After music title and artist is shown, finally collapse to dot
             isExpanded = false
         }
     }
@@ -244,20 +306,6 @@ internal fun NowPlayingDot(
                         dampingRatio = Spring.DampingRatioMediumBouncy,
                         stiffness = Spring.StiffnessMediumLow
                     )
-                ) +
-                slideInVertically(
-                    initialOffsetY = { it / 2 },
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMediumLow
-                    )
-                ) +
-                scaleIn(
-                    initialScale = 0.75f,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMediumLow
-                    )
                 ),
         exit = fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMedium)) +
                shrinkHorizontally(
@@ -266,42 +314,37 @@ internal fun NowPlayingDot(
                        dampingRatio = Spring.DampingRatioMediumBouncy,
                        stiffness = Spring.StiffnessMediumLow
                    )
-               ) +
-               slideOutVertically(
-                   targetOffsetY = { it / 2 },
-                   animationSpec = spring(
-                       dampingRatio = Spring.DampingRatioMediumBouncy,
-                       stiffness = Spring.StiffnessMediumLow
-                   )
-               ) +
-               scaleOut(
-                   targetScale = 0.75f,
-                   animationSpec = spring(
-                       dampingRatio = Spring.DampingRatioMediumBouncy,
-                       stiffness = Spring.StiffnessMediumLow
-                   )
                )
     ) {
-        Surface(
-            shape = CircleShape,
-            color = if (isExpanded) scheme.surfaceContainerHigh else scheme.surfaceContainer,
-            modifier = Modifier
-                .height(38.dp)
-                .clip(CircleShape)
-                .onGloballyPositioned { coords ->
-                    if (!isPanelOpen && coords.isAttached && coords.size.width > 0 && coords.size.height > 0) {
-                        val bounds = coords.boundsInRoot()
-                        if (bounds.width > 0f && bounds.height > 0f) {
-                            onPositioned(bounds)
-                        }
+        Box(
+            modifier = Modifier.onGloballyPositioned { coords ->
+                if (!isPanelOpen && coords.isAttached && coords.size.width > 0 && coords.size.height > 0) {
+                    val bounds = coords.boundsInRoot()
+                    if (bounds.width > 0f && bounds.height > 0f) {
+                        onPositioned(bounds)
                     }
                 }
-                .gamepadFocusOutline(shape = CircleShape, register = true)
-                .clickable {
-                    AudioUtil.playOk(context)
-                    onOpenPanel()
-                }
+            }
         ) {
+            Surface(
+                shape = CircleShape,
+                color = if (isExpanded) scheme.surfaceContainerHigh else scheme.surfaceContainer,
+                modifier = Modifier
+                    .graphicsLayer {
+                        scaleX = bounceScale.value
+                        scaleY = bounceScale.value
+                        translationY = bounceOffsetY.value
+                        alpha = bounceAlpha.value
+                        transformOrigin = TransformOrigin(1f, 0.5f)
+                    }
+                    .height(38.dp)
+                    .clip(CircleShape)
+                    .gamepadFocusOutline(shape = CircleShape, register = true)
+                    .clickable {
+                        AudioUtil.playOk(context)
+                        onOpenPanel()
+                    }
+            ) {
             Row(
                 modifier = Modifier.padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -440,6 +483,7 @@ internal fun NowPlayingDot(
     }
 }
 }
+}
 
 /**
  * Floating morphing dialog for Now Playing.
@@ -451,6 +495,7 @@ internal fun NowPlayingDot(
 internal fun NowPlayingPanelOverlay(
     visible: Boolean,
     anchor: Rect? = null,
+    endSafePad: Dp = 32.dp,
     hazeState: HazeState? = null,
     onClose: () -> Unit,
     onNavigateToAudioSettings: (() -> Unit)? = null
@@ -490,8 +535,8 @@ internal fun NowPlayingPanelOverlay(
 
         val margin = 12.dp
         val dotTopDp = anchor?.let { with(density) { it.bottom.toDp() } } ?: 54.dp
-        val dotCenterXDp = anchor?.let { with(density) { it.center.x.toDp() } } ?: (screenWidth - 32.dp)
-        val dotRightDp = anchor?.let { with(density) { it.right.toDp() } } ?: screenWidth
+        val dotCenterXDp = anchor?.let { with(density) { it.center.x.toDp() } } ?: (screenWidth - endSafePad - 19.dp)
+        val dotRightDp = anchor?.let { with(density) { it.right.toDp() } } ?: (screenWidth - endSafePad)
 
         val dialogTop = (dotTopDp + 8.dp).coerceIn(8.dp, screenHeight - 120.dp)
         val availableHeight = (screenHeight - dialogTop - margin).coerceAtLeast(100.dp)
@@ -511,7 +556,7 @@ internal fun NowPlayingPanelOverlay(
             NowPlayingLayoutMode.ULTRA_COMPACT -> minOf(320.dp, screenWidth - 24.dp)
         }
 
-        val idealRight = dotRightDp + 4.dp
+        val idealRight = dotRightDp
         val clampedRight = idealRight.coerceIn(dialogWidth + margin, screenWidth - margin)
         val dialogLeft = clampedRight - dialogWidth
 
