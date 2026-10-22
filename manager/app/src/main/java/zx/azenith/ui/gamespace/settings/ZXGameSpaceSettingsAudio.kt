@@ -28,6 +28,7 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
@@ -271,6 +272,7 @@ internal fun SettingsAudioPane(
                 AudioAdvancedBgmSubPane(
                     nowPlayingEnabled = nowPlayingEnabled,
                     onNowPlayingToggle = { BgmManager.setNowPlayingEnabled(context, it) },
+                    bgmVolume = bgmVolume,
                     stagedTracks = stagedTracks,
                     playlist = playlist,
                     currentTrack = currentTrack,
@@ -357,6 +359,30 @@ private fun AudioMainSubPane(
 
     var sfxVolume by remember { mutableIntStateOf(SoundEffectsState.volume.intValue) }
 
+    val sfxBottomCorner by animateDpAsState(
+        targetValue = if (soundEffectsEnabled) blockSmallCorner else blockLargeCorner,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "SfxBottomCorner"
+    )
+    val sfxCardShape = RoundedCornerShape(
+        topStart = blockLargeCorner,
+        topEnd = blockLargeCorner,
+        bottomStart = sfxBottomCorner,
+        bottomEnd = sfxBottomCorner
+    )
+
+    val bgmBottomCorner by animateDpAsState(
+        targetValue = if (bgmEnabled) blockSmallCorner else blockLargeCorner,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "BgmBottomCorner"
+    )
+    val bgmCardShape = RoundedCornerShape(
+        topStart = blockLargeCorner,
+        topEnd = blockLargeCorner,
+        bottomStart = bgmBottomCorner,
+        bottomEnd = bgmBottomCorner
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -400,7 +426,7 @@ private fun AudioMainSubPane(
                 summary = stringResource(R.string.sound_effects_desc),
                 checked = soundEffectsEnabled,
                 onCheckedChange = onSoundEffectsToggle,
-                shape = blockTopShape
+                shape = sfxCardShape
             )
 
             AnimatedVisibility(
@@ -408,30 +434,32 @@ private fun AudioMainSubPane(
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
-                VolumeSliderCard(
-                    title = stringResource(R.string.sound_effects_volume),
-                    description = stringResource(R.string.sound_effects_volume_desc),
-                    icon = Icons.AutoMirrored.Rounded.VolumeUp,
-                    volume = sfxVolume,
-                    onVolumeChange = {
-                        sfxVolume = it
-                        setSoundEffectsVolume(context, it)
-                    },
-                    onVolumeChangeFinished = {
-                        setSoundEffectsVolume(context, it)
-                        AudioUtil.playOk(context)
-                    },
-                    shape = blockMiddleShape
-                )
-            }
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    VolumeSliderCard(
+                        title = stringResource(R.string.sound_effects_volume),
+                        description = stringResource(R.string.sound_effects_volume_desc),
+                        icon = Icons.AutoMirrored.Rounded.VolumeUp,
+                        volume = sfxVolume,
+                        onVolumeChange = {
+                            sfxVolume = it
+                            setSoundEffectsVolume(context, it)
+                        },
+                        onVolumeChangeFinished = {
+                            setSoundEffectsVolume(context, it)
+                            AudioUtil.playOk(context)
+                        },
+                        shape = blockMiddleShape
+                    )
 
-            SettingsActionCard(
-                icon = Icons.Rounded.Tune,
-                title = stringResource(R.string.sound_effects_advanced),
-                summary = stringResource(R.string.sound_effects_advanced_desc),
-                onClick = onOpenAdvancedSfx,
-                shape = blockBottomShape
-            )
+                    SettingsActionCard(
+                        icon = Icons.Rounded.Tune,
+                        title = stringResource(R.string.sound_effects_advanced),
+                        summary = stringResource(R.string.sound_effects_advanced_desc),
+                        onClick = onOpenAdvancedSfx,
+                        shape = blockBottomShape
+                    )
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(6.dp))
@@ -459,7 +487,7 @@ private fun AudioMainSubPane(
                 summary = stringResource(R.string.bgm_desc),
                 checked = bgmEnabled,
                 onCheckedChange = onBgmToggle,
-                shape = blockTopShape
+                shape = bgmCardShape
             )
 
             AnimatedVisibility(
@@ -504,16 +532,16 @@ private fun AudioMainSubPane(
                         },
                         shape = blockMiddleShape
                     )
+
+                    SettingsActionCard(
+                        icon = Icons.AutoMirrored.Rounded.QueueMusic,
+                        title = stringResource(R.string.bgm_advanced),
+                        summary = stringResource(R.string.bgm_advanced_desc),
+                        onClick = onOpenAdvancedBgm,
+                        shape = blockBottomShape
+                    )
                 }
             }
-
-            SettingsActionCard(
-                icon = Icons.AutoMirrored.Rounded.QueueMusic,
-                title = stringResource(R.string.bgm_advanced),
-                summary = stringResource(R.string.bgm_advanced_desc),
-                onClick = onOpenAdvancedBgm,
-                shape = blockBottomShape
-            )
         }
     }
 }
@@ -633,6 +661,7 @@ private fun AudioAdvancedSoundEffectsSubPane(
 private fun AudioAdvancedBgmSubPane(
     nowPlayingEnabled: Boolean,
     onNowPlayingToggle: (Boolean) -> Unit,
+    bgmVolume: Int,
     stagedTracks: List<BgmTrack>,
     playlist: List<BgmTrack>,
     currentTrack: BgmTrack?,
@@ -656,6 +685,20 @@ private fun AudioAdvancedBgmSubPane(
             title = stringResource(R.string.bgm_advanced),
             subtitle = "Playlist management, staging area, and floating dot",
             onBackClick = onBackClick
+        )
+
+        VolumeSliderCard(
+            title = stringResource(R.string.bgm_volume),
+            description = stringResource(R.string.bgm_volume_desc),
+            icon = Icons.Rounded.GraphicEq,
+            volume = bgmVolume,
+            onVolumeChange = {
+                BgmManager.setVolume(context, it)
+            },
+            onVolumeChangeFinished = {
+                BgmManager.setVolume(context, it)
+            },
+            shape = blockSingleShape
         )
 
         SettingsSwitchCard(
