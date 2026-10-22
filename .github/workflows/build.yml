@@ -63,6 +63,12 @@ jobs:
           java-version: "21"
           distribution: temurin
           
+      - name: Build Binder Resolver APK
+        working-directory: ./binder_resolver
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon clean assembleRelease
+          
       - name: Stage Binder Resolver APK
         run: |
           APK=$(find binder_resolver/app/build/outputs/apk/release -name "*.apk" | head -n 1)
@@ -70,8 +76,8 @@ jobs:
             echo "binder_resolver APK not found" >&2
             exit 1
           fi
-          cp "$APK" archdaemon/binder_resolver.apk
-          ls -l archdaemon/binder_resolver.apk
+          cp "$APK" sysdaemon/binder_resolver.apk
+          ls -l sysdaemon/binder_resolver.apk
 
       - name: Compile Daemon
         working-directory: ./archdaemon
