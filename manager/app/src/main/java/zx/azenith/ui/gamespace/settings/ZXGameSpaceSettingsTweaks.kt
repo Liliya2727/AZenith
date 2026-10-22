@@ -16,14 +16,21 @@
 
 package zx.azenith.ui.gamespace.settings
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -43,20 +50,34 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlin.math.roundToInt
 import zx.azenith.R
 import zx.azenith.ui.component.gamepadFocusOutline
+import zx.azenith.ui.gamespace.AdaptiveSettingsGrid
 import zx.azenith.ui.gamespace.SettingsActionCard
 import zx.azenith.ui.gamespace.SettingsSwitchCard
+import zx.azenith.ui.gamespace.springPressBounce
+import zx.azenith.ui.util.AudioUtil
 import zx.azenith.ui.util.getSupportedRefreshRatesPicker
 import zx.azenith.ui.viewmodel.TweakViewModel
 
@@ -90,6 +111,7 @@ internal fun SettingsTweaksPane(
 ) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
+    val density = LocalDensity.current
     val scrollState = rememberScrollState()
 
     LaunchedEffect(Unit) {
@@ -102,7 +124,7 @@ internal fun SettingsTweaksPane(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
-            .padding(20.dp),
+            .padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Row(
@@ -124,58 +146,125 @@ internal fun SettingsTweaksPane(
             }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        val profiles = listOf(
+            Triple("1", R.string.Profile_Performance, R.drawable.ic_performance),
+            Triple("2", R.string.Profile_Balanced, R.drawable.ic_balanced),
+            Triple("3", R.string.Profile_ECO_mode, R.drawable.ic_eco)
+        )
+        val activeValue = if (profileValue.isBlank()) "2" else profileValue
+
+        var positions by remember { mutableStateOf(mapOf<String, Pair<Float, Float>>()) }
+        val currentPillPos = positions[activeValue] ?: (0f to 0f)
+
+        val animatedPillX by animateFloatAsState(
+            targetValue = currentPillPos.first,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            ),
+            label = "ProfilePillX"
+        )
+        val animatedPillWidth by animateFloatAsState(
+            targetValue = currentPillPos.second,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            ),
+            label = "ProfilePillWidth"
+        )
+
+        val containerShape = RoundedCornerShape(22.dp)
+        Surface(
+            shape = containerShape,
+            color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            val profiles = listOf(
-                Triple("1", R.string.Profile_Performance, R.drawable.ic_performance),
-                Triple("2", R.string.Profile_Balanced, R.drawable.ic_balanced),
-                Triple("3", R.string.Profile_ECO_mode, R.drawable.ic_eco)
-            )
-            profiles.forEach { (value, labelRes, iconRes) ->
-                val active = profileValue == value || (value == "2" && profileValue.isBlank())
-                val shape = RoundedCornerShape(18.dp)
-                Surface(
-                    shape = shape,
-                    color = if (active) scheme.primaryContainer else scheme.surfaceContainerHigh.copy(alpha = 0.85f),
-                    contentColor = if (active) scheme.onPrimaryContainer else scheme.onSurface,
-                    modifier = Modifier
-                        .weight(1f)
-                        .gamepadFocusOutline(shape = shape, register = true)
-                        .clip(shape)
-                        .clickable { onApplyProfile(value) }
+            Box(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
+                if (animatedPillWidth > 0f) {
+                    val pillShape = RoundedCornerShape(18.dp)
+                    Surface(
+                        shape = pillShape,
+                        color = scheme.primaryContainer,
+                        modifier = Modifier
+                            .offset { IntOffset(animatedPillX.roundToInt(), 0) }
+                            .width(with(density) { animatedPillWidth.toDp() })
+                            .height(52.dp)
+                    ) {}
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(iconRes),
-                            contentDescription = null,
-                            tint = if (active) scheme.onPrimaryContainer else scheme.primary,
-                            modifier = Modifier.size(24.dp)
+                    profiles.forEach { (value, labelRes, iconRes) ->
+                        val active = activeValue == value
+                        val pillItemShape = RoundedCornerShape(18.dp)
+                        val iconScale by animateFloatAsState(
+                            targetValue = if (active) 1.08f else 1f,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            ),
+                            label = "ProfileIconScale"
                         )
-                        Text(
-                            text = stringResource(labelRes),
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+
+                        Surface(
+                            shape = pillItemShape,
+                            color = Color.Transparent,
+                            contentColor = if (active) scheme.onPrimaryContainer else scheme.onSurface,
+                            modifier = Modifier
+                                .weight(1f)
+                                .onGloballyPositioned { coordinates ->
+                                    val parentX = coordinates.positionInParent().x
+                                    val width = coordinates.size.width.toFloat()
+                                    if (positions[value]?.first != parentX || positions[value]?.second != width) {
+                                        positions = positions + (value to (parentX to width))
+                                    }
+                                }
+                                .gamepadFocusOutline(shape = pillItemShape, register = true)
+                                .clip(pillItemShape)
+                                .springPressBounce(pressedScale = 0.95f)
+                                .clickable {
+                                    AudioUtil.playOk(context)
+                                    onApplyProfile(value)
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(iconRes),
+                                    contentDescription = null,
+                                    tint = if (active) scheme.onPrimaryContainer else scheme.primary,
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .graphicsLayer {
+                                            scaleX = iconScale
+                                            scaleY = iconScale
+                                        }
+                                )
+                                Text(
+                                    text = stringResource(labelRes),
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(start = 10.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
+        val cards = listOf<@Composable () -> Unit>(
+            {
                 SettingsSwitchCard(
                     icon = Icons.Rounded.Speed,
                     title = stringResource(R.string.perf_lite_mode),
@@ -183,33 +272,8 @@ internal fun SettingsTweaksPane(
                     checked = tweakViewModel.liteState ?: false,
                     onCheckedChange = { tweakViewModel.updateLiteMode(it) }
                 )
-                SettingsSwitchCard(
-                    icon = Icons.Rounded.RocketLaunch,
-                    title = stringResource(R.string.game_preload),
-                    summary = stringResource(R.string.game_preload_desc),
-                    checked = tweakViewModel.preloadState ?: false,
-                    onCheckedChange = { tweakViewModel.updatePreloadMode(it) }
-                )
-                SettingsSwitchCard(
-                    icon = Icons.Rounded.CleaningServices,
-                    title = stringResource(R.string.memory_killer),
-                    summary = stringResource(R.string.memory_killer_desc),
-                    checked = tweakViewModel.memKillerState ?: false,
-                    onCheckedChange = { tweakViewModel.updateMemoryKiller(it) }
-                )
-                SettingsSwitchCard(
-                    icon = Icons.Rounded.SwapVerticalCircle,
-                    title = stringResource(R.string.app_priority_control),
-                    summary = stringResource(R.string.app_priority_control_desc),
-                    checked = tweakViewModel.appPriorState ?: false,
-                    onCheckedChange = { tweakViewModel.updateAppPriority(it) }
-                )
-            }
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
+            },
+            {
                 SettingsSwitchCard(
                     icon = Icons.Rounded.DoNotDisturbOn,
                     title = stringResource(R.string.dnd_mode_gaming),
@@ -217,6 +281,17 @@ internal fun SettingsTweaksPane(
                     checked = tweakViewModel.dndState ?: false,
                     onCheckedChange = { tweakViewModel.updateDndMode(it) }
                 )
+            },
+            {
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.RocketLaunch,
+                    title = stringResource(R.string.game_preload),
+                    summary = stringResource(R.string.game_preload_desc),
+                    checked = tweakViewModel.preloadState ?: false,
+                    onCheckedChange = { tweakViewModel.updatePreloadMode(it) }
+                )
+            },
+            {
                 SettingsSwitchCard(
                     icon = Icons.Rounded.ContentCut,
                     title = stringResource(R.string.trim_filesystem),
@@ -224,6 +299,17 @@ internal fun SettingsTweaksPane(
                     checked = tweakViewModel.fstrimState ?: false,
                     onCheckedChange = { tweakViewModel.updateFstrim(it) }
                 )
+            },
+            {
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.CleaningServices,
+                    title = stringResource(R.string.memory_killer),
+                    summary = stringResource(R.string.memory_killer_desc),
+                    checked = tweakViewModel.memKillerState ?: false,
+                    onCheckedChange = { tweakViewModel.updateMemoryKiller(it) }
+                )
+            },
+            {
                 SettingsSwitchCard(
                     icon = Icons.Rounded.ThermostatAuto,
                     title = stringResource(R.string.thermalcore_service),
@@ -231,7 +317,17 @@ internal fun SettingsTweaksPane(
                     checked = tweakViewModel.thermalState ?: false,
                     onCheckedChange = { tweakViewModel.updateThermalCore(it) }
                 )
-
+            },
+            {
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.SwapVerticalCircle,
+                    title = stringResource(R.string.app_priority_control),
+                    summary = stringResource(R.string.app_priority_control_desc),
+                    checked = tweakViewModel.appPriorState ?: false,
+                    onCheckedChange = { tweakViewModel.updateAppPriority(it) }
+                )
+            },
+            {
                 SettingsActionCard(
                     icon = Icons.Rounded.WebStories,
                     title = stringResource(R.string.refreshrates),
@@ -247,6 +343,8 @@ internal fun SettingsTweaksPane(
                         }
                     }
                 )
+            },
+            {
                 SettingsActionCard(
                     icon = Icons.Rounded.SettingsSuggest,
                     title = stringResource(R.string.renderengine),
@@ -263,6 +361,12 @@ internal fun SettingsTweaksPane(
                     }
                 )
             }
-        }
+        )
+
+        AdaptiveSettingsGrid(
+            items = cards,
+            minColumnWidth = 260.dp,
+            spacing = 10.dp
+        )
     }
 }

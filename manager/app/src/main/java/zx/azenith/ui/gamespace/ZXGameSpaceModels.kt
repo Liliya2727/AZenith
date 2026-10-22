@@ -36,6 +36,7 @@ import android.os.BatteryManager
 import android.os.Build
 import android.view.InputDevice
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AddHome
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.BrightnessAuto
@@ -189,6 +190,12 @@ internal val SETTINGS_SEARCH_ITEMS = listOf(
         summaryRes = R.string.save_log_desc,
         tab = SettingsSidebarTab.General,
         icon = Icons.Rounded.Save
+    ),
+    SettingsSearchItem(
+        titleRes = R.string.show_icon,
+        summaryText = "Show the AZenith launcher icon on the home screen",
+        tab = SettingsSidebarTab.General,
+        icon = Icons.Rounded.AddHome
     ),
 
     // Tweaks

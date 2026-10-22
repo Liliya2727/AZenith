@@ -524,6 +524,7 @@ internal fun SettingsAudioPane(
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                     val totalWidth = maxWidth
                     val gap = 14.dp
+                    val isStacked = stagedTracks.isNotEmpty() && totalWidth < 820.dp
                     val halfWidth = if (totalWidth > gap) (totalWidth - gap) / 2 else totalWidth
 
                     Row(
@@ -547,14 +548,18 @@ internal fun SettingsAudioPane(
                                 shrinkTowards = Alignment.Start
                             ) + fadeOut(animationSpec = springBouncyFloat)
                         ) {
+                            val stagingCardShape = RoundedCornerShape(18.dp)
+                            val stagingModifier = if (isStacked) {
+                                Modifier.fillMaxWidth()
+                            } else {
+                                Modifier.width(halfWidth)
+                            }
                             Row(verticalAlignment = Alignment.Top) {
-                                val stagingCardShape = RoundedCornerShape(18.dp)
                                 Surface(
                                     shape = stagingCardShape,
                                     color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
                                     contentColor = scheme.onSurface,
-                                    modifier = Modifier
-                                        .width(halfWidth)
+                                    modifier = stagingModifier
                                         .gamepadFocusOutline(shape = stagingCardShape, register = true)
                                 ) {
                                     Column(
@@ -933,17 +938,24 @@ internal fun SettingsAudioPane(
                                         }
                                     }
                                 }
-                                Spacer(Modifier.width(gap))
+                                if (!isStacked) {
+                                    Spacer(Modifier.width(gap))
+                                }
                             }
                         }
 
                         val playlistCardShape = RoundedCornerShape(18.dp)
+                        val playlistModifier = if (isStacked) {
+                            Modifier.fillMaxWidth()
+                        } else {
+                            Modifier.weight(1f)
+                        }
+
                         Surface(
                             shape = playlistCardShape,
                             color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
                             contentColor = scheme.onSurface,
-                            modifier = Modifier
-                                .weight(1f)
+                            modifier = playlistModifier
                                 .gamepadFocusOutline(shape = playlistCardShape, register = true)
                         ) {
                             Column(

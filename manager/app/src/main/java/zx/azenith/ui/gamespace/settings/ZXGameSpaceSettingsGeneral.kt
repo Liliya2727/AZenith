@@ -16,6 +16,9 @@
 
 package zx.azenith.ui.gamespace.settings
 
+import android.content.ComponentName
+import android.content.pm.PackageManager
+import zx.azenith.ui.mainscreens.isLauncherIconEnabled
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,6 +29,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AddHome
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.HourglassEmpty
 import androidx.compose.material.icons.rounded.Info
@@ -56,6 +60,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.launch
 import zx.azenith.R
+import zx.azenith.ui.gamespace.AdaptiveSettingsGrid
 import zx.azenith.ui.gamespace.SettingsActionCard
 import zx.azenith.ui.gamespace.SettingsSwitchCard
 import zx.azenith.ui.util.dumpDiagnosticLogs
@@ -82,13 +87,14 @@ internal fun SettingsGeneralPane(
     val coroutineScope = rememberCoroutineScope()
     var statusFeedback by remember { mutableStateOf<String?>(null) }
     val scrollState = rememberScrollState()
+    var isLauncherVisible by remember { mutableStateOf(isLauncherIconEnabled(context)) }
     val scheme = MaterialTheme.colorScheme
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
-            .padding(20.dp),
+            .padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Row(
@@ -124,14 +130,8 @@ internal fun SettingsGeneralPane(
             }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
+        val cards = listOf<@Composable () -> Unit>(
+            {
                 SettingsSwitchCard(
                     icon = Icons.Rounded.NotificationsActive,
                     title = stringResource(R.string.show_notifications),
@@ -139,33 +139,8 @@ internal fun SettingsGeneralPane(
                     checked = uiState.profileNotifications,
                     onCheckedChange = { settingsViewModel.setProfileNotifications(it) }
                 )
-                SettingsSwitchCard(
-                    icon = Icons.Rounded.Vibration,
-                    title = stringResource(R.string.tap_haptic_feedback),
-                    summary = "Tactile impulse feedback on interactive taps and toggles",
-                    checked = uiState.tapHaptic,
-                    onCheckedChange = { settingsViewModel.onTapHapticToggle(it) }
-                )
-                SettingsSwitchCard(
-                    icon = Icons.Rounded.Info,
-                    title = stringResource(R.string.show_toast),
-                    summary = "Display brief toast notifications on profile and state switches",
-                    checked = uiState.stateToast,
-                    onCheckedChange = { settingsViewModel.setShowToast(it) }
-                )
-                SettingsSwitchCard(
-                    icon = Icons.Rounded.BugReport,
-                    title = stringResource(R.string.allow_verbose_log),
-                    summary = "Write extended debug diagnostics to /data/adb/.config/AZenith",
-                    checked = uiState.debugMode,
-                    onCheckedChange = { settingsViewModel.setDebugMode(it) }
-                )
-            }
-
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
+            },
+            {
                 SettingsSwitchCard(
                     icon = Icons.Rounded.Memory,
                     title = stringResource(R.string.disable_auto_mode),
@@ -173,6 +148,17 @@ internal fun SettingsGeneralPane(
                     checked = uiState.autoMode,
                     onCheckedChange = { settingsViewModel.setAutoMode(it) }
                 )
+            },
+            {
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.Vibration,
+                    title = stringResource(R.string.tap_haptic_feedback),
+                    summary = "Tactile impulse feedback on interactive taps and toggles",
+                    checked = uiState.tapHaptic,
+                    onCheckedChange = { settingsViewModel.onTapHapticToggle(it) }
+                )
+            },
+            {
                 SettingsSwitchCard(
                     icon = Icons.Rounded.Security,
                     title = stringResource(R.string.disable_tweak),
@@ -180,6 +166,17 @@ internal fun SettingsGeneralPane(
                     checked = uiState.disableTweak,
                     onCheckedChange = { settingsViewModel.setDisableTweak(it) }
                 )
+            },
+            {
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.Info,
+                    title = stringResource(R.string.show_toast),
+                    summary = "Display brief toast notifications on profile and state switches",
+                    checked = uiState.stateToast,
+                    onCheckedChange = { settingsViewModel.setShowToast(it) }
+                )
+            },
+            {
                 SettingsSwitchCard(
                     icon = Icons.Rounded.HourglassEmpty,
                     title = stringResource(R.string.profile_timeout),
@@ -187,8 +184,42 @@ internal fun SettingsGeneralPane(
                     checked = uiState.profileTimeout,
                     onCheckedChange = { settingsViewModel.setProfileTimeout(it) }
                 )
+            },
+            {
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.BugReport,
+                    title = stringResource(R.string.allow_verbose_log),
+                    summary = "Write extended debug diagnostics to /data/adb/.config/AZenith",
+                    checked = uiState.debugMode,
+                    onCheckedChange = { settingsViewModel.setDebugMode(it) }
+                )
+            },
+            {
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.AddHome,
+                    title = stringResource(R.string.show_icon),
+                    summary = "Show the AZenith launcher icon on the home screen",
+                    checked = isLauncherVisible,
+                    onCheckedChange = { isChecked ->
+                        isLauncherVisible = isChecked
+                        val pkg = context.packageManager
+                        val componentName = ComponentName(context.packageName, "${context.packageName}.Launcher")
+                        val newState = if (isChecked) {
+                            PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                        } else {
+                            PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                        }
+                        pkg.setComponentEnabledSetting(componentName, newState, PackageManager.DONT_KILL_APP)
+                    }
+                )
             }
-        }
+        )
+
+        AdaptiveSettingsGrid(
+            items = cards,
+            minColumnWidth = 260.dp,
+            spacing = 10.dp
+        )
 
         Text(
             text = stringResource(R.string.section_diagnostics).uppercase(),
@@ -200,41 +231,46 @@ internal fun SettingsGeneralPane(
             modifier = Modifier.padding(top = 4.dp)
         )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            SettingsActionCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Rounded.RestartAlt,
-                title = stringResource(R.string.restart_service),
-                summary = stringResource(R.string.restart_service_desc),
-                onClick = {
-                    Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service --rerun").submit { res ->
-                        statusFeedback = if (res.isSuccess) {
-                            context.getString(R.string.toast_restarting_service)
-                        } else {
-                            "Restart failed"
+        val diagnosticCards = listOf<@Composable () -> Unit>(
+            {
+                SettingsActionCard(
+                    icon = Icons.Rounded.RestartAlt,
+                    title = stringResource(R.string.restart_service),
+                    summary = stringResource(R.string.restart_service_desc),
+                    onClick = {
+                        Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service --rerun").submit { res ->
+                            statusFeedback = if (res.isSuccess) {
+                                context.getString(R.string.toast_restarting_service)
+                            } else {
+                                "Restart failed"
+                            }
                         }
                     }
-                }
-            )
-            SettingsActionCard(
-                modifier = Modifier.weight(1f),
-                icon = Icons.Rounded.Save,
-                title = stringResource(R.string.save_log),
-                summary = stringResource(R.string.save_log_desc),
-                onClick = {
-                    coroutineScope.launch {
-                        val file = dumpDiagnosticLogs(context, saveToDownloads = true)
-                        statusFeedback = if (file != null && file.exists()) {
-                            context.getString(R.string.toast_log_saved)
-                        } else {
-                            context.getString(R.string.toast_log_save_fail)
+                )
+            },
+            {
+                SettingsActionCard(
+                    icon = Icons.Rounded.Save,
+                    title = stringResource(R.string.save_log),
+                    summary = stringResource(R.string.save_log_desc),
+                    onClick = {
+                        coroutineScope.launch {
+                            val file = dumpDiagnosticLogs(context, saveToDownloads = true)
+                            statusFeedback = if (file != null && file.exists()) {
+                                context.getString(R.string.toast_log_saved)
+                            } else {
+                                context.getString(R.string.toast_log_save_fail)
+                            }
                         }
                     }
-                }
-            )
-        }
+                )
+            }
+        )
+
+        AdaptiveSettingsGrid(
+            items = diagnosticCards,
+            minColumnWidth = 260.dp,
+            spacing = 10.dp
+        )
     }
 }

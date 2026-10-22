@@ -21,6 +21,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -78,6 +79,7 @@ import zx.azenith.BuildConfig
 import zx.azenith.R
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.gamespace.SettingsActionCard
+import zx.azenith.ui.gamespace.springPressBounce
 import zx.azenith.ui.util.tapHaptic
 
 @Composable
@@ -196,6 +198,7 @@ internal fun SettingsAboutPane(
                         contentColor = scheme.onPrimaryContainer,
                         modifier = Modifier
                             .weight(1f)
+                            .springPressBounce()
                             .gamepadFocusOutline(shape = btnShape, register = true)
                             .clip(btnShape)
                             .clickable { uriHandler.openUri("https://t.me/ArchHavenDisc") }
@@ -226,6 +229,7 @@ internal fun SettingsAboutPane(
                         contentColor = scheme.onSurface,
                         modifier = Modifier
                             .weight(1f)
+                            .springPressBounce()
                             .gamepadFocusOutline(shape = btnShape, register = true)
                             .clip(btnShape)
                             .clickable { uriHandler.openUri("https://t.me/ZeshArch") }
@@ -254,92 +258,203 @@ internal fun SettingsAboutPane(
             }
         }
 
-        // 2. Open Source Section
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(
-                text = stringResource(R.string.str_open_source).uppercase(),
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.2.sp
-                ),
-                color = scheme.primary,
-                modifier = Modifier.padding(start = 4.dp)
-            )
+        // 2. Adaptive Content Split (Stacked on < 800.dp, Two-Column on >= 800.dp)
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            if (maxWidth >= 800.dp) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    // Left Column: Open Source
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.str_open_source).uppercase(),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.2.sp
+                            ),
+                            color = scheme.primary,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
 
-            SettingsActionCard(
-                icon = Icons.Rounded.Gavel,
-                title = stringResource(R.string.str_licenses),
-                summary = stringResource(R.string.str_apache_license_2),
-                trailingBadge = "Apache 2.0",
-                onClick = { showLicensesDialog = true }
-            )
+                        SettingsActionCard(
+                            icon = Icons.Rounded.Gavel,
+                            title = stringResource(R.string.str_licenses),
+                            summary = stringResource(R.string.str_apache_license_2),
+                            trailingBadge = "Apache 2.0",
+                            onClick = { showLicensesDialog = true }
+                        )
 
-            SettingsActionCard(
-                icon = Icons.AutoMirrored.Rounded.LibraryBooks,
-                title = stringResource(R.string.str_libraries_used),
-                summary = stringResource(R.string.str_libraries_hint),
-                onClick = { showLibrariesDialog = true }
-            )
+                        SettingsActionCard(
+                            icon = Icons.AutoMirrored.Rounded.LibraryBooks,
+                            title = stringResource(R.string.str_libraries_used),
+                            summary = stringResource(R.string.str_libraries_hint),
+                            onClick = { showLibrariesDialog = true }
+                        )
 
-            SettingsActionCard(
-                icon = Icons.Rounded.Code,
-                title = stringResource(R.string.str_source_code),
-                summary = stringResource(R.string.str_view_the_source_code_on_github),
-                onClick = { uriHandler.openUri("https://github.com/Liliya2727/AZenith") }
-            )
-        }
+                        SettingsActionCard(
+                            icon = Icons.Rounded.Code,
+                            title = stringResource(R.string.str_source_code),
+                            summary = stringResource(R.string.str_view_the_source_code_on_github),
+                            onClick = { uriHandler.openUri("https://github.com/Liliya2727/AZenith") }
+                        )
+                    }
 
-        // 3. Maintainer Section
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(
-                text = stringResource(R.string.str_maintainer).uppercase(),
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.2.sp
-                ),
-                color = scheme.primary,
-                modifier = Modifier.padding(start = 4.dp)
-            )
+                    // Right Column: Maintainer & Collaborators
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(
+                                text = stringResource(R.string.str_maintainer).uppercase(),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.2.sp
+                                ),
+                                color = scheme.primary,
+                                modifier = Modifier.padding(start = 4.dp)
+                            )
 
-            DeveloperCreditCard(
-                avatarRes = R.drawable.avatar_liliya,
-                name = stringResource(R.string.str_liliya),
-                role = stringResource(R.string.str_creator_maintainer),
-                githubUrl = "https://github.com/Liliya2727",
-                telegramUrl = "https://t.me/Zexshia",
-                onOpenUrl = { uriHandler.openUri(it) }
-            )
-        }
+                            DeveloperCreditCard(
+                                avatarRes = R.drawable.avatar_liliya,
+                                name = stringResource(R.string.str_liliya),
+                                role = stringResource(R.string.str_creator_maintainer),
+                                githubUrl = "https://github.com/Liliya2727",
+                                telegramUrl = "https://t.me/Zexshia",
+                                onOpenUrl = { uriHandler.openUri(it) }
+                            )
+                        }
 
-        // 4. Collaborators Section
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(
-                text = stringResource(R.string.str_collaborators).uppercase(),
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.2.sp
-                ),
-                color = scheme.primary,
-                modifier = Modifier.padding(start = 4.dp)
-            )
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(
+                                text = stringResource(R.string.str_collaborators).uppercase(),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.2.sp
+                                ),
+                                color = scheme.primary,
+                                modifier = Modifier.padding(start = 4.dp)
+                            )
 
-            DeveloperCreditCard(
-                avatarRes = R.drawable.avatar_xia,
-                name = stringResource(R.string.str_rianixia),
-                role = stringResource(R.string.str_co_maintainer),
-                githubUrl = "https://github.com/ryanistr",
-                telegramUrl = "https://t.me/rianixia",
-                onOpenUrl = { uriHandler.openUri(it) }
-            )
+                            DeveloperCreditCard(
+                                avatarRes = R.drawable.avatar_xia,
+                                name = stringResource(R.string.str_rianixia),
+                                role = stringResource(R.string.str_co_maintainer),
+                                githubUrl = "https://github.com/ryanistr",
+                                telegramUrl = "https://t.me/rianixia",
+                                onOpenUrl = { uriHandler.openUri(it) }
+                            )
 
-            DeveloperCreditCard(
-                avatarRes = R.drawable.avatar_kanao,
-                name = stringResource(R.string.str_kanaochar),
-                role = stringResource(R.string.str_co_maintainer),
-                githubUrl = "https://github.com/kanaodnd",
-                telegramUrl = "https://t.me/kanaochar",
-                onOpenUrl = { uriHandler.openUri(it) }
-            )
+                            DeveloperCreditCard(
+                                avatarRes = R.drawable.avatar_kanao,
+                                name = stringResource(R.string.str_kanaochar),
+                                role = stringResource(R.string.str_co_maintainer),
+                                githubUrl = "https://github.com/kanaodnd",
+                                telegramUrl = "https://t.me/kanaochar",
+                                onOpenUrl = { uriHandler.openUri(it) }
+                            )
+                        }
+                    }
+                }
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Open Source Section
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = stringResource(R.string.str_open_source).uppercase(),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.2.sp
+                            ),
+                            color = scheme.primary,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+
+                        SettingsActionCard(
+                            icon = Icons.Rounded.Gavel,
+                            title = stringResource(R.string.str_licenses),
+                            summary = stringResource(R.string.str_apache_license_2),
+                            trailingBadge = "Apache 2.0",
+                            onClick = { showLicensesDialog = true }
+                        )
+
+                        SettingsActionCard(
+                            icon = Icons.AutoMirrored.Rounded.LibraryBooks,
+                            title = stringResource(R.string.str_libraries_used),
+                            summary = stringResource(R.string.str_libraries_hint),
+                            onClick = { showLibrariesDialog = true }
+                        )
+
+                        SettingsActionCard(
+                            icon = Icons.Rounded.Code,
+                            title = stringResource(R.string.str_source_code),
+                            summary = stringResource(R.string.str_view_the_source_code_on_github),
+                            onClick = { uriHandler.openUri("https://github.com/Liliya2727/AZenith") }
+                        )
+                    }
+
+                    // Maintainer Section
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = stringResource(R.string.str_maintainer).uppercase(),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.2.sp
+                            ),
+                            color = scheme.primary,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+
+                        DeveloperCreditCard(
+                            avatarRes = R.drawable.avatar_liliya,
+                            name = stringResource(R.string.str_liliya),
+                            role = stringResource(R.string.str_creator_maintainer),
+                            githubUrl = "https://github.com/Liliya2727",
+                            telegramUrl = "https://t.me/Zexshia",
+                            onOpenUrl = { uriHandler.openUri(it) }
+                        )
+                    }
+
+                    // Collaborators Section
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = stringResource(R.string.str_collaborators).uppercase(),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.2.sp
+                            ),
+                            color = scheme.primary,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+
+                        DeveloperCreditCard(
+                            avatarRes = R.drawable.avatar_xia,
+                            name = stringResource(R.string.str_rianixia),
+                            role = stringResource(R.string.str_co_maintainer),
+                            githubUrl = "https://github.com/ryanistr",
+                            telegramUrl = "https://t.me/rianixia",
+                            onOpenUrl = { uriHandler.openUri(it) }
+                        )
+
+                        DeveloperCreditCard(
+                            avatarRes = R.drawable.avatar_kanao,
+                            name = stringResource(R.string.str_kanaochar),
+                            role = stringResource(R.string.str_co_maintainer),
+                            githubUrl = "https://github.com/kanaodnd",
+                            telegramUrl = "https://t.me/kanaochar",
+                            onOpenUrl = { uriHandler.openUri(it) }
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -615,6 +730,7 @@ private fun DeveloperCreditCard(
                     color = scheme.surfaceContainerHighest,
                     modifier = Modifier
                         .size(40.dp)
+                        .springPressBounce()
                         .gamepadFocusOutline(shape = iconBtnShape, register = true)
                         .clip(iconBtnShape)
                         .clickable { onOpenUrl(githubUrl) }
@@ -634,6 +750,7 @@ private fun DeveloperCreditCard(
                     color = scheme.surfaceContainerHighest,
                     modifier = Modifier
                         .size(40.dp)
+                        .springPressBounce()
                         .gamepadFocusOutline(shape = iconBtnShape, register = true)
                         .clip(iconBtnShape)
                         .clickable { onOpenUrl(telegramUrl) }
