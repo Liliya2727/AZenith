@@ -122,9 +122,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zx.azenith.R
-import zx.azenith.ui.component.RefreshRatePickerDialog
-import zx.azenith.ui.component.RendererDialog
-import zx.azenith.ui.component.RootAppDialog
 import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.gamespace.AdaptiveSettingsGrid
@@ -137,6 +134,7 @@ import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.RebootManager
 import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.util.getChipsetVendor
+import zx.azenith.ui.util.getSupportedRefreshRatesPicker
 import zx.azenith.ui.viewmodel.AutoModeBus
 import zx.azenith.ui.viewmodel.TweakViewModel
 
@@ -754,27 +752,46 @@ private fun TweaksMainSubPane(
         }
     }
 
-    RootAppDialog {
-        RefreshRatePickerDialog(
-            show = showRefreshRateDialog,
-            onDismiss = { showRefreshRateDialog = false },
-            onRefreshRatePicker = { rate ->
-                tweakViewModel.executeSetRefreshRates(rate, context)
-                showRefreshRateDialog = false
+    if (showRefreshRateDialog) {
+        val options = remember(context) { getSupportedRefreshRatesPicker(context) }
+        val currentRateStr = (tweakViewModel.currentRefreshRate ?: refreshHz).toString()
+        val selectedIndex = options.indexOfFirst { it.equals(currentRateStr, ignoreCase = true) }.coerceAtLeast(0)
+        ChoiceSelectionDialog(
+            title = stringResource(R.string.RefreshRatePicker_Select),
+            options = options.map { context.getString(R.string.refresh_rate_format, it) },
+            selectedIndex = selectedIndex,
+            onSelect = { idx ->
+                options.getOrNull(idx)?.let { rate ->
+                    tweakViewModel.executeSetRefreshRates(rate, context)
+                }
             },
-            currentRefreshRate = (tweakViewModel.currentRefreshRate ?: refreshHz).toString()
+            onDismiss = { showRefreshRateDialog = false }
         )
     }
 
-    RootAppDialog {
-        RendererDialog(
-            show = showRendererDialog,
-            onDismiss = { showRendererDialog = false },
-            onRenderer = { renderer ->
-                tweakViewModel.executeSetRenderer(renderer, context)
-                showRendererDialog = false
+    if (showRendererDialog) {
+        val rendererOptions = listOf(
+            context.getString(R.string.Renderer_Default) to "default",
+            context.getString(R.string.renderer_skia_vk) to "skiavk",
+            context.getString(R.string.renderer_skia_vk_threaded) to "skiavkthreaded",
+            context.getString(R.string.renderer_skiagl) to "skiagl",
+            context.getString(R.string.renderer_skiagl_threaded) to "skiaglthreaded",
+            context.getString(R.string.renderer_opengl_es) to "opengl",
+            context.getString(R.string.renderer_opengl_es_threaded) to "openglthreaded",
+            context.getString(R.string.Renderer_Vulkan) to "vulkan"
+        )
+        val currentRenderer = tweakViewModel.currentRenderer ?: "default"
+        val selectedIndex = rendererOptions.indexOfFirst { it.second.equals(currentRenderer, ignoreCase = true) }.coerceAtLeast(0)
+        ChoiceSelectionDialog(
+            title = stringResource(R.string.Renderer_Select),
+            options = rendererOptions.map { it.first },
+            selectedIndex = selectedIndex,
+            onSelect = { idx ->
+                rendererOptions.getOrNull(idx)?.let { (_, reason) ->
+                    tweakViewModel.executeSetRenderer(reason, context)
+                }
             },
-            currentRenderer = tweakViewModel.currentRenderer
+            onDismiss = { showRendererDialog = false }
         )
     }
 }
