@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+
 package zx.azenith.ui.gamespace.settings
 
 import androidx.compose.animation.AnimatedVisibility
@@ -52,8 +54,10 @@ import androidx.compose.material.icons.rounded.SettingsSuggest
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SwapVerticalCircle
 import androidx.compose.material.icons.rounded.ThermostatAuto
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -369,10 +373,9 @@ internal fun SettingsTweaksPane(
                                         horizontalArrangement = Arrangement.Center
                                     ) {
                                         if (isApplyingThis) {
-                                            CircularProgressIndicator(
-                                                strokeWidth = 2.dp,
+                                            LoadingIndicator(
                                                 color = if (isTarget) scheme.onPrimaryContainer else scheme.primary,
-                                                modifier = Modifier.size(18.dp)
+                                                modifier = Modifier.size(20.dp)
                                             )
                                         } else {
                                             Icon(
@@ -408,12 +411,21 @@ internal fun SettingsTweaksPane(
                         enter = fadeIn() + expandVertically(),
                         exit = fadeOut() + shrinkVertically()
                     ) {
-                        Text(
-                            text = "Applying ${when (pendingProfileValue) { "1" -> "Performance"; "3" -> "ECO"; else -> "Balanced" }} profile...",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                            color = scheme.primary,
-                            modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
-                        )
+                        Row(
+                            modifier = Modifier.padding(top = 4.dp, bottom = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            LoadingIndicator(
+                                color = scheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Applying ${when (pendingProfileValue) { "1" -> "Performance"; "3" -> "ECO"; else -> "Balanced" }} profile...",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = scheme.primary
+                            )
+                        }
                     }
                 }
             }
