@@ -1,0 +1,16 @@
+[package]
+name = "sys_azenith-appmonitoring"
+version = "1.0.0"
+edition = "2024"
+description = "AZenith System Monitors"
+
+[dependencies]
+libc = "0.2"
+signal-hook = "0.3"
+
+[profile.release]
+opt-level = 'z'
+lto = true
+codegen-units = 1
+panic = 'abort'
+strip = true
