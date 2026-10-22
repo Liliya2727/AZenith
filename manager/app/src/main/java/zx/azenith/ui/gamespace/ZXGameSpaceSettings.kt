@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -145,13 +146,14 @@ internal fun Modifier.springPressBounce(
 /**
  * Adaptive multi-column layout for setting items.
  * Switches between 1, 2, or 3 columns based on measured available stage width.
+ * Uses row-aligned chunking so cards stay strictly symmetrical without vertical drift.
  */
 @Composable
 internal fun AdaptiveSettingsGrid(
     items: List<@Composable () -> Unit>,
     modifier: Modifier = Modifier,
-    minColumnWidth: Dp = 270.dp,
-    spacing: Dp = 12.dp
+    minColumnWidth: Dp = 340.dp,
+    spacing: Dp = 10.dp
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val availableWidth = maxWidth
@@ -161,35 +163,29 @@ internal fun AdaptiveSettingsGrid(
             else -> 3
         }
 
-        if (columns == 1) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(spacing)
-            ) {
-                items.forEach { item ->
-                    item()
-                }
-            }
-        } else {
-            val chunkedItems = remember(items, columns) {
-                val colsList = List(columns) { mutableListOf<@Composable () -> Unit>() }
-                items.forEachIndexed { index, item ->
-                    colsList[index % columns].add(item)
-                }
-                colsList
-            }
+        val rows = remember(items, columns) { items.chunked(columns) }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(spacing)
-            ) {
-                chunkedItems.forEach { colItems ->
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(spacing)
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(spacing)
+        ) {
+            rows.forEach { rowItems ->
+                if (columns == 1) {
+                    rowItems.first().invoke()
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(spacing)
                     ) {
-                        colItems.forEach { item ->
-                            item()
+                        rowItems.forEach { item ->
+                            Box(modifier = Modifier.weight(1f)) {
+                                item()
+                            }
+                        }
+                        if (rowItems.size < columns) {
+                            repeat(columns - rowItems.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                 }
@@ -216,7 +212,7 @@ internal fun ZXGameSpaceSettingsStage(
     val context = LocalContext.current
 
     BoxWithConstraints(modifier = modifier) {
-        val isCompactLandscape = maxWidth < 820.dp
+        val isCompactLandscape = maxWidth < 920.dp
         val sidebarWidth = if (isCompactLandscape) 78.dp else 220.dp
 
         Row(
@@ -457,6 +453,7 @@ internal fun SettingsSwitchCard(
         contentColor = scheme.onSurface,
         modifier = modifier
             .fillMaxWidth()
+            .defaultMinSize(minHeight = 72.dp)
             .springPressBounce(pressedScale = 0.97f)
             .gamepadFocusOutline(shape = shape, register = true)
             .clip(shape)
@@ -471,21 +468,21 @@ internal fun SettingsSwitchCard(
             }
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Surface(
                 shape = iconBoxShape,
                 color = iconBgColor,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(38.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = iconTint,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
@@ -496,7 +493,10 @@ internal fun SettingsSwitchCard(
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        lineHeight = 18.sp
+                    ),
                     color = scheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -504,9 +504,9 @@ internal fun SettingsSwitchCard(
                 if (!summary.isNullOrBlank()) {
                     Text(
                         text = summary,
-                        style = MaterialTheme.typography.bodySmall.copy(lineHeight = 16.sp),
+                        style = MaterialTheme.typography.bodySmall.copy(lineHeight = 15.sp),
                         color = scheme.onSurfaceVariant.copy(alpha = 0.82f),
-                        maxLines = 2,
+                        maxLines = 3,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
@@ -599,6 +599,7 @@ internal fun SettingsActionCard(
         contentColor = scheme.onSurface,
         modifier = modifier
             .fillMaxWidth()
+            .defaultMinSize(minHeight = 72.dp)
             .springPressBounce(pressedScale = 0.97f)
             .gamepadFocusOutline(shape = shape, register = true)
             .clip(shape)
@@ -608,21 +609,21 @@ internal fun SettingsActionCard(
             }
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Surface(
                 shape = iconShape,
                 color = scheme.secondaryContainer,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(38.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = scheme.onSecondaryContainer,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
@@ -633,7 +634,10 @@ internal fun SettingsActionCard(
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        lineHeight = 18.sp
+                    ),
                     color = scheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -641,9 +645,9 @@ internal fun SettingsActionCard(
                 if (!summary.isNullOrBlank()) {
                     Text(
                         text = summary,
-                        style = MaterialTheme.typography.bodySmall.copy(lineHeight = 16.sp),
+                        style = MaterialTheme.typography.bodySmall.copy(lineHeight = 15.sp),
                         color = scheme.onSurfaceVariant.copy(alpha = 0.82f),
-                        maxLines = 2,
+                        maxLines = 3,
                         overflow = TextOverflow.Ellipsis
                     )
                 }

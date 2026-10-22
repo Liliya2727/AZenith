@@ -232,7 +232,7 @@ internal fun SettingsTweaksPane(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 14.dp, vertical = 14.dp),
+                                    .padding(horizontal = 8.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.Center
                             ) {
@@ -241,7 +241,7 @@ internal fun SettingsTweaksPane(
                                     contentDescription = null,
                                     tint = if (active) scheme.onPrimaryContainer else scheme.primary,
                                     modifier = Modifier
-                                        .size(22.dp)
+                                        .size(20.dp)
                                         .graphicsLayer {
                                             scaleX = iconScale
                                             scaleY = iconScale
@@ -254,7 +254,7 @@ internal fun SettingsTweaksPane(
                                     ),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(start = 10.dp)
+                                    modifier = Modifier.padding(start = 6.dp)
                                 )
                             }
                         }
@@ -365,7 +365,7 @@ internal fun SettingsTweaksPane(
 
         AdaptiveSettingsGrid(
             items = cards,
-            minColumnWidth = 260.dp,
+            minColumnWidth = 340.dp,
             spacing = 10.dp
         )
     }

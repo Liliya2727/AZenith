@@ -217,7 +217,7 @@ internal fun SettingsGeneralPane(
 
         AdaptiveSettingsGrid(
             items = cards,
-            minColumnWidth = 260.dp,
+            minColumnWidth = 340.dp,
             spacing = 10.dp
         )
 
@@ -269,7 +269,7 @@ internal fun SettingsGeneralPane(
 
         AdaptiveSettingsGrid(
             items = diagnosticCards,
-            minColumnWidth = 260.dp,
+            minColumnWidth = 340.dp,
             spacing = 10.dp
         )
     }
