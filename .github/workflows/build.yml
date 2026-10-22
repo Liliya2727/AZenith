@@ -140,6 +140,15 @@ jobs:
           else
             cargo ndk -t arm64-v8a -t armeabi-v7a build --release
           fi
+          
+      - name: Compile AZenith Binder Monitor
+        working-directory: ./sysdaemon
+        run: |
+          if [ "$V_TYPE" == "experimental" ]; then
+            cargo ndk -t arm64-v8a -t armeabi-v7a build
+          else
+            cargo ndk -t arm64-v8a -t armeabi-v7a build --release
+          fi
 
       - name: Build Manager APK
         working-directory: ./manager
