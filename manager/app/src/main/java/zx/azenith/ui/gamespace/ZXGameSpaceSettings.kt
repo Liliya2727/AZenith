@@ -434,7 +434,8 @@ internal fun SettingsSwitchCard(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     summary: String? = null,
-    shape: Shape = RoundedCornerShape(20.dp)
+    shape: Shape = RoundedCornerShape(20.dp),
+    enabled: Boolean = true
 ) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
@@ -458,23 +459,27 @@ internal fun SettingsSwitchCard(
 
     Surface(
         shape = shape,
-        color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
-        contentColor = scheme.onSurface,
+        color = scheme.surfaceContainerHigh.copy(alpha = if (enabled) 0.85f else 0.45f),
+        contentColor = if (enabled) scheme.onSurface else scheme.onSurface.copy(alpha = 0.5f),
         modifier = modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 72.dp)
-            .springPressBounce(pressedScale = 0.97f)
-            .gamepadFocusOutline(shape = shape, register = true)
+            .then(if (enabled) Modifier.springPressBounce(pressedScale = 0.97f) else Modifier)
+            .gamepadFocusOutline(shape = shape, register = enabled)
             .clip(shape)
-            .clickable {
-                val newVal = !checked
-                if (newVal) {
-                    AudioUtil.playOk(context)
-                } else {
-                    AudioUtil.playCancel(context)
-                }
-                onCheckedChange(newVal)
-            }
+            .then(
+                if (enabled) {
+                    Modifier.clickable {
+                        val newVal = !checked
+                        if (newVal) {
+                            AudioUtil.playOk(context)
+                        } else {
+                            AudioUtil.playCancel(context)
+                        }
+                        onCheckedChange(newVal)
+                    }
+                } else Modifier
+            )
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
@@ -523,7 +528,8 @@ internal fun SettingsSwitchCard(
 
             GameSpaceSwitch(
                 checked = checked,
-                onCheckedChange = null
+                onCheckedChange = null,
+                enabled = enabled
             )
         }
     }
