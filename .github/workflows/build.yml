@@ -16,6 +16,7 @@ on:
       - "binprofiles/**"
       - "binutils/**"
       - "binpreferenced/**"
+      - "sysdaemon/**"
       - "mainfiles/**"
       - "preloadbin/**"
       - "thermalcore/**"
@@ -55,6 +56,22 @@ jobs:
         uses: nttld/setup-ndk@v1.6.0
         with:
           ndk-version: r29
+         
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: "17"
+          distribution: temurin
+          
+      - name: Stage Binder Resolver APK
+        run: |
+          APK=$(find binder_resolver/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          if [ -z "$APK" ]; then
+            echo "binder_resolver APK not found" >&2
+            exit 1
+          fi
+          cp "$APK" archdaemon/binder_resolver.apk
+          ls -l archdaemon/binder_resolver.apk
 
       - name: Compile Daemon
         working-directory: ./archdaemon
@@ -117,12 +134,6 @@ jobs:
           else
             cargo ndk -t arm64-v8a -t armeabi-v7a build --release
           fi
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v5
-        with:
-          java-version: "17"
-          distribution: temurin
 
       - name: Build Manager APK
         working-directory: ./manager
