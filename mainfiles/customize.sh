@@ -191,6 +191,7 @@ extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-rianixiathermalcore" "$TMPDIR"
 extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-utilityconf" "$TMPDIR"
 extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-preferencedtweaks" "$TMPDIR"
 extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-preloadbin" "$TMPDIR"
+extract "$ZIPFILE" "libs/$ARCH_TMP/sys.azenith-appmonitoring" "$TMPDIR"
 cp "$TMPDIR/libs/$ARCH_TMP/"* "$MODPATH/system/bin/"
 rm -rf "$TMPDIR/libs"
 echo "- All binaries installed successfully"
@@ -265,6 +266,7 @@ if [ "$KSU" = "true" ] || [ "$APATCH" = "true" ]; then
 			ln -sf "$BIN_PATH/sys.azenith-utilityconf" "$dir/sys.azenith-utilityconf"
 			ln -sf "$BIN_PATH/sys.azenith-preferencedtweaks" "$dir/sys.azenith-preferencedtweaks"
 			ln -sf "$BIN_PATH/sys.azenith-preloadbin" "$dir/sys.azenith-preloadbin"
+			ln -sf "$BIN_PATH/sys.azenith-preloadbin" "$dir/sys.azenith-appmonitoring"
             ln -sf "$BIN_PATH/sys.azenith-rianixiathermalcore" "$dir/sys.azenith-rianixiathermalcore"
 		}
 	done
