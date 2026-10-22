@@ -58,6 +58,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -432,11 +433,11 @@ internal fun SettingsSwitchCard(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    summary: String? = null
+    summary: String? = null,
+    shape: Shape = RoundedCornerShape(20.dp)
 ) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(20.dp)
 
     val iconBoxShape = if (checked) {
         RoundedCornerShape(12.dp)
@@ -594,11 +595,11 @@ internal fun SettingsActionCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     summary: String? = null,
-    trailingBadge: String? = null
+    trailingBadge: String? = null,
+    shape: Shape = RoundedCornerShape(20.dp)
 ) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(20.dp)
     val iconShape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 8.dp, bottomStart = 8.dp)
 
     Surface(

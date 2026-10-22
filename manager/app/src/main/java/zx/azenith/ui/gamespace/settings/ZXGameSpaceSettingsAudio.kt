@@ -104,6 +104,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -126,7 +127,6 @@ import kotlinx.coroutines.launch
 import zx.azenith.R
 import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.component.gamepadFocusOutline
-import zx.azenith.ui.gamespace.AdaptiveSettingsGrid
 import zx.azenith.ui.gamespace.SettingsActionCard
 import zx.azenith.ui.gamespace.SettingsSwitchCard
 import zx.azenith.ui.util.AudioUtil
@@ -145,6 +145,24 @@ internal enum class AudioSubTab {
     AdvancedSoundEffects,
     AdvancedBgm
 }
+
+private val blockLargeCorner = 22.dp
+private val blockSmallCorner = 4.dp
+
+private val blockTopShape = RoundedCornerShape(
+    topStart = blockLargeCorner,
+    topEnd = blockLargeCorner,
+    bottomStart = blockSmallCorner,
+    bottomEnd = blockSmallCorner
+)
+private val blockMiddleShape = RoundedCornerShape(blockSmallCorner)
+private val blockBottomShape = RoundedCornerShape(
+    topStart = blockSmallCorner,
+    topEnd = blockSmallCorner,
+    bottomStart = blockLargeCorner,
+    bottomEnd = blockLargeCorner
+)
+private val blockSingleShape = RoundedCornerShape(blockLargeCorner)
 
 @Composable
 internal fun ZXGameSpaceSettingsAudio(
@@ -370,41 +388,51 @@ private fun AudioMainSubPane(
             modifier = Modifier.padding(start = 4.dp, top = 4.dp)
         )
 
-        SettingsSwitchCard(
-            icon = Icons.AutoMirrored.Rounded.VolumeUp,
-            title = stringResource(R.string.sound_effects),
-            summary = stringResource(R.string.sound_effects_desc),
-            checked = soundEffectsEnabled,
-            onCheckedChange = onSoundEffectsToggle
-        )
-
-        AnimatedVisibility(
-            visible = soundEffectsEnabled,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(blockLargeCorner)),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            VolumeSliderCard(
-                title = stringResource(R.string.sound_effects_volume),
-                description = stringResource(R.string.sound_effects_volume_desc),
+            SettingsSwitchCard(
                 icon = Icons.AutoMirrored.Rounded.VolumeUp,
-                volume = sfxVolume,
-                onVolumeChange = {
-                    sfxVolume = it
-                    setSoundEffectsVolume(context, it)
-                },
-                onVolumeChangeFinished = {
-                    setSoundEffectsVolume(context, it)
-                    AudioUtil.playOk(context)
-                }
+                title = stringResource(R.string.sound_effects),
+                summary = stringResource(R.string.sound_effects_desc),
+                checked = soundEffectsEnabled,
+                onCheckedChange = onSoundEffectsToggle,
+                shape = blockTopShape
+            )
+
+            AnimatedVisibility(
+                visible = soundEffectsEnabled,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                VolumeSliderCard(
+                    title = stringResource(R.string.sound_effects_volume),
+                    description = stringResource(R.string.sound_effects_volume_desc),
+                    icon = Icons.AutoMirrored.Rounded.VolumeUp,
+                    volume = sfxVolume,
+                    onVolumeChange = {
+                        sfxVolume = it
+                        setSoundEffectsVolume(context, it)
+                    },
+                    onVolumeChangeFinished = {
+                        setSoundEffectsVolume(context, it)
+                        AudioUtil.playOk(context)
+                    },
+                    shape = blockMiddleShape
+                )
+            }
+
+            SettingsActionCard(
+                icon = Icons.Rounded.Tune,
+                title = stringResource(R.string.sound_effects_advanced),
+                summary = stringResource(R.string.sound_effects_advanced_desc),
+                onClick = onOpenAdvancedSfx,
+                shape = blockBottomShape
             )
         }
-
-        SettingsActionCard(
-            icon = Icons.Rounded.Tune,
-            title = stringResource(R.string.sound_effects_advanced),
-            summary = stringResource(R.string.sound_effects_advanced_desc),
-            onClick = onOpenAdvancedSfx
-        )
 
         Spacer(modifier = Modifier.height(6.dp))
 
@@ -419,63 +447,74 @@ private fun AudioMainSubPane(
             modifier = Modifier.padding(start = 4.dp, top = 4.dp)
         )
 
-        SettingsSwitchCard(
-            icon = Icons.Rounded.MusicNote,
-            title = stringResource(R.string.bgm_title),
-            summary = stringResource(R.string.bgm_desc),
-            checked = bgmEnabled,
-            onCheckedChange = onBgmToggle
-        )
-
-        AnimatedVisibility(
-            visible = bgmEnabled,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(blockLargeCorner)),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                if (currentTrack != null) {
-                    AudioMiniPlayerBar(
-                        currentTrack = currentTrack,
-                        currentAlbumArt = currentAlbumArt,
-                        playbackPositionMs = playbackPositionMs,
-                        isPlaying = isPlaying,
-                        playlistSize = playlistSize,
-                        onPrevClick = {
-                            AudioUtil.playOk(context)
-                            BgmManager.playPreviousOrRestart(context)
+            SettingsSwitchCard(
+                icon = Icons.Rounded.MusicNote,
+                title = stringResource(R.string.bgm_title),
+                summary = stringResource(R.string.bgm_desc),
+                checked = bgmEnabled,
+                onCheckedChange = onBgmToggle,
+                shape = blockTopShape
+            )
+
+            AnimatedVisibility(
+                visible = bgmEnabled,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    if (currentTrack != null) {
+                        AudioMiniPlayerBar(
+                            currentTrack = currentTrack,
+                            currentAlbumArt = currentAlbumArt,
+                            playbackPositionMs = playbackPositionMs,
+                            isPlaying = isPlaying,
+                            playlistSize = playlistSize,
+                            onPrevClick = {
+                                AudioUtil.playOk(context)
+                                BgmManager.playPreviousOrRestart(context)
+                            },
+                            onTogglePlayClick = {
+                                AudioUtil.playOk(context)
+                                BgmManager.togglePlayPause(context)
+                            },
+                            onNextClick = {
+                                AudioUtil.playOk(context)
+                                BgmManager.playNext(context)
+                            },
+                            shape = blockMiddleShape
+                        )
+                    }
+
+                    VolumeSliderCard(
+                        title = stringResource(R.string.bgm_volume),
+                        description = stringResource(R.string.bgm_volume_desc),
+                        icon = Icons.Rounded.GraphicEq,
+                        volume = bgmVolume,
+                        onVolumeChange = {
+                            BgmManager.setVolume(context, it)
                         },
-                        onTogglePlayClick = {
-                            AudioUtil.playOk(context)
-                            BgmManager.togglePlayPause(context)
+                        onVolumeChangeFinished = {
+                            BgmManager.setVolume(context, it)
                         },
-                        onNextClick = {
-                            AudioUtil.playOk(context)
-                            BgmManager.playNext(context)
-                        }
+                        shape = blockMiddleShape
                     )
                 }
-
-                VolumeSliderCard(
-                    title = stringResource(R.string.bgm_volume),
-                    description = stringResource(R.string.bgm_volume_desc),
-                    icon = Icons.Rounded.GraphicEq,
-                    volume = bgmVolume,
-                    onVolumeChange = {
-                        BgmManager.setVolume(context, it)
-                    },
-                    onVolumeChangeFinished = {
-                        BgmManager.setVolume(context, it)
-                    }
-                )
             }
-        }
 
-        SettingsActionCard(
-            icon = Icons.AutoMirrored.Rounded.QueueMusic,
-            title = stringResource(R.string.bgm_advanced),
-            summary = stringResource(R.string.bgm_advanced_desc),
-            onClick = onOpenAdvancedBgm
-        )
+            SettingsActionCard(
+                icon = Icons.AutoMirrored.Rounded.QueueMusic,
+                title = stringResource(R.string.bgm_advanced),
+                summary = stringResource(R.string.bgm_advanced_desc),
+                onClick = onOpenAdvancedBgm,
+                shape = blockBottomShape
+            )
+        }
     }
 }
 
@@ -518,7 +557,8 @@ private fun AudioAdvancedSoundEffectsSubPane(
             onVolumeChangeFinished = {
                 setSoundEffectsVolume(context, it)
                 AudioUtil.playOk(context)
-            }
+            },
+            shape = blockSingleShape
         )
 
         Text(
@@ -531,62 +571,61 @@ private fun AudioAdvancedSoundEffectsSubPane(
             modifier = Modifier.padding(start = 4.dp, top = 4.dp)
         )
 
-        AdaptiveSettingsGrid(
-            items = listOf(
-                {
-                    SettingsSwitchCard(
-                        icon = Icons.Rounded.TouchApp,
-                        title = stringResource(R.string.sound_effects_tap),
-                        summary = stringResource(R.string.sound_effects_tap_desc),
-                        checked = tapSoundEnabled,
-                        onCheckedChange = {
-                            tapSoundEnabled = it
-                            setTapSoundEnabled(context, it)
-                            if (it) AudioUtil.playOk(context)
-                        }
-                    )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(blockLargeCorner)),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            SettingsSwitchCard(
+                icon = Icons.Rounded.TouchApp,
+                title = stringResource(R.string.sound_effects_tap),
+                summary = stringResource(R.string.sound_effects_tap_desc),
+                checked = tapSoundEnabled,
+                onCheckedChange = {
+                    tapSoundEnabled = it
+                    setTapSoundEnabled(context, it)
+                    if (it) AudioUtil.playOk(context)
                 },
-                {
-                    SettingsSwitchCard(
-                        icon = Icons.Rounded.SwapVerticalCircle,
-                        title = stringResource(R.string.sound_effects_scroll),
-                        summary = stringResource(R.string.sound_effects_scroll_desc),
-                        checked = scrollSoundEnabled,
-                        onCheckedChange = {
-                            scrollSoundEnabled = it
-                            setScrollSoundEnabled(context, it)
-                            if (it) AudioUtil.playScroll(context)
-                        }
-                    )
-                },
-                {
-                    SettingsSwitchCard(
-                        icon = Icons.Rounded.Cancel,
-                        title = stringResource(R.string.sound_effects_cancel),
-                        summary = stringResource(R.string.sound_effects_cancel_desc),
-                        checked = cancelSoundEnabled,
-                        onCheckedChange = {
-                            cancelSoundEnabled = it
-                            setCancelSoundEnabled(context, it)
-                            if (it) AudioUtil.playCancel(context)
-                        }
-                    )
-                },
-                {
-                    SettingsSwitchCard(
-                        icon = Icons.Rounded.Notifications,
-                        title = stringResource(R.string.sound_effects_notice),
-                        summary = stringResource(R.string.sound_effects_notice_desc),
-                        checked = noticeSoundEnabled,
-                        onCheckedChange = {
-                            noticeSoundEnabled = it
-                            setNoticeSoundEnabled(context, it)
-                            if (it) AudioUtil.playNotice(context)
-                        }
-                    )
-                }
+                shape = blockTopShape
             )
-        )
+            SettingsSwitchCard(
+                icon = Icons.Rounded.SwapVerticalCircle,
+                title = stringResource(R.string.sound_effects_scroll),
+                summary = stringResource(R.string.sound_effects_scroll_desc),
+                checked = scrollSoundEnabled,
+                onCheckedChange = {
+                    scrollSoundEnabled = it
+                    setScrollSoundEnabled(context, it)
+                    if (it) AudioUtil.playScroll(context)
+                },
+                shape = blockMiddleShape
+            )
+            SettingsSwitchCard(
+                icon = Icons.Rounded.Cancel,
+                title = stringResource(R.string.sound_effects_cancel),
+                summary = stringResource(R.string.sound_effects_cancel_desc),
+                checked = cancelSoundEnabled,
+                onCheckedChange = {
+                    cancelSoundEnabled = it
+                    setCancelSoundEnabled(context, it)
+                    if (it) AudioUtil.playCancel(context)
+                },
+                shape = blockMiddleShape
+            )
+            SettingsSwitchCard(
+                icon = Icons.Rounded.Notifications,
+                title = stringResource(R.string.sound_effects_notice),
+                summary = stringResource(R.string.sound_effects_notice_desc),
+                checked = noticeSoundEnabled,
+                onCheckedChange = {
+                    noticeSoundEnabled = it
+                    setNoticeSoundEnabled(context, it)
+                    if (it) AudioUtil.playNotice(context)
+                },
+                shape = blockBottomShape
+            )
+        }
     }
 }
 
@@ -734,19 +773,20 @@ private fun VolumeSliderCard(
     volume: Int,
     onVolumeChange: (Int) -> Unit,
     onVolumeChangeFinished: (Int) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    shape: Shape = RoundedCornerShape(18.dp)
 ) {
     val scheme = MaterialTheme.colorScheme
-    val volumeCardShape = RoundedCornerShape(18.dp)
     var sliderVolume by remember(volume) { mutableIntStateOf(volume) }
 
     Surface(
-        shape = volumeCardShape,
+        shape = shape,
         color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
         contentColor = scheme.onSurface,
         modifier = modifier
             .fillMaxWidth()
-            .gamepadFocusOutline(shape = volumeCardShape, register = true)
+            .clip(shape)
+            .gamepadFocusOutline(shape = shape, register = true)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -828,18 +868,19 @@ private fun AudioMiniPlayerBar(
     onPrevClick: () -> Unit,
     onTogglePlayClick: () -> Unit,
     onNextClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    shape: Shape = RoundedCornerShape(16.dp)
 ) {
     val scheme = MaterialTheme.colorScheme
-    val miniPlayerShape = RoundedCornerShape(16.dp)
 
     Surface(
-        shape = miniPlayerShape,
-        color = scheme.surfaceContainerHigh.copy(alpha = 0.95f),
+        shape = shape,
+        color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
         contentColor = scheme.onSurface,
         modifier = modifier
             .fillMaxWidth()
-            .gamepadFocusOutline(shape = miniPlayerShape, register = true)
+            .clip(shape)
+            .gamepadFocusOutline(shape = shape, register = true)
     ) {
         Row(
             modifier = Modifier
