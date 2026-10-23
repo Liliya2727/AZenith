@@ -300,14 +300,6 @@ internal fun ZXGameSpaceAppSettingsOverlay(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .hazeBlur(
-                        input = HazeInput.Sources(hazeState),
-                        style = HazeBlurStyle.Material3(
-                            containerColor = scheme.surfaceContainerLowest.copy(alpha = 0.62f)
-                        ) {
-                            blurRadius(28.dp)
-                        }
-                    )
                     .padding(start = startPad, end = endPad, top = topPad, bottom = bottomPad)
             ) {
                 Row(
@@ -1011,14 +1003,6 @@ internal fun ZXGameSpaceWallpaperOverlay(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .hazeBlur(
-                        input = HazeInput.Sources(hazeState),
-                        style = HazeBlurStyle.Material3(
-                            containerColor = scheme.surfaceContainerLowest.copy(alpha = 0.62f)
-                        ) {
-                            blurRadius(28.dp)
-                        }
-                    )
                     .padding(start = startPad, end = endPad, top = topPad, bottom = bottomPad)
             ) {
                 Row(
