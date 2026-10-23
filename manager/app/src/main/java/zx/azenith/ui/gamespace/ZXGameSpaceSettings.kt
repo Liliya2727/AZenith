@@ -227,7 +227,7 @@ internal fun ZXGameSpaceSettingsStage(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 4.dp, bottom = 0.dp),
+                .padding(top = 4.dp, bottom = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Surface(

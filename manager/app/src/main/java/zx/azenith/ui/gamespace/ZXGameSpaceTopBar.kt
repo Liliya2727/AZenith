@@ -1067,7 +1067,7 @@ internal fun ZXGameSpaceSearchPane(
         tonalElevation = 4.dp,
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 4.dp, bottom = 0.dp)
+            .padding(top = 4.dp, bottom = 14.dp)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,

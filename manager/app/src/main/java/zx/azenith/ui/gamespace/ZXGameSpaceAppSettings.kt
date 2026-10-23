@@ -292,7 +292,7 @@ internal fun ZXGameSpaceAppSettingsOverlay(
         val startPad = maxOf(24.dp, insets.calculateStartPadding(layoutDirection))
         val endPad = maxOf(24.dp, insets.calculateEndPadding(layoutDirection))
         val topPad = maxOf(18.dp, insets.calculateTopPadding())
-        val bottomPad = 0.dp
+        val bottomPad = 14.dp
 
         CompositionLocalProvider(
             LocalContentColor provides scheme.onSurface
@@ -996,7 +996,7 @@ internal fun ZXGameSpaceWallpaperOverlay(
         val startPad = maxOf(24.dp, insets.calculateStartPadding(layoutDirection))
         val endPad = maxOf(24.dp, insets.calculateEndPadding(layoutDirection))
         val topPad = maxOf(18.dp, insets.calculateTopPadding())
-        val bottomPad = 0.dp
+        val bottomPad = 14.dp
 
         val isOverrideActive = selectedMode != "default"
         val modeBadgeText = when (selectedMode) {
