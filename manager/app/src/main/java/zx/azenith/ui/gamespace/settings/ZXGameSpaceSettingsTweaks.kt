@@ -57,6 +57,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Bolt
@@ -122,6 +123,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import zx.azenith.R
+import androidx.compose.material3.HorizontalDivider
 import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.gamespace.AdaptiveSettingsGrid
@@ -129,7 +131,9 @@ import zx.azenith.ui.gamespace.SettingsActionCard
 import zx.azenith.ui.gamespace.SettingsSwitchCard
 import zx.azenith.ui.gamespace.springPressBounce
 import zx.azenith.ui.subscreens.ColorPreset
+import zx.azenith.ui.subscreens.ColorSliderItem
 import zx.azenith.ui.util.AudioUtil
+import zx.azenith.ui.util.DebugUtils
 import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.RebootManager
 import zx.azenith.ui.util.RootUtils
@@ -296,6 +300,13 @@ private fun TweaksMainSubPane(
 
     var showRefreshRateDialog by remember { mutableStateOf(false) }
     var showRendererDialog by remember { mutableStateOf(false) }
+
+    var isFullModeEnabled by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        isFullModeEnabled = withContext(Dispatchers.IO) {
+            DebugUtils.isFullModeEnabled()
+        }
+    }
 
     val socVendor = remember { getChipsetVendor(context) }
     val isMediaTek = socVendor == "mediatek"
@@ -596,35 +607,36 @@ private fun TweaksMainSubPane(
         // --- 2. Quick Optimizations ---
         TweaksSectionHeader(stringResource(R.string.section_performance))
 
-        val cards = listOf<@Composable () -> Unit>(
-            {
-                SettingsSwitchCard(
-                    icon = Icons.Rounded.Speed,
-                    title = stringResource(R.string.perf_lite_mode),
-                    summary = stringResource(R.string.perf_lite_mode_desc),
-                    checked = tweakViewModel.liteState ?: false,
-                    onCheckedChange = { tweakViewModel.updateLiteMode(it) }
-                )
-            },
-            {
-                SettingsSwitchCard(
-                    icon = Icons.Rounded.RocketLaunch,
-                    title = stringResource(R.string.game_preload),
-                    summary = stringResource(R.string.game_preload_desc),
-                    checked = tweakViewModel.preloadState ?: false,
-                    onCheckedChange = { tweakViewModel.updatePreloadMode(it) }
-                )
-            },
-            {
-                SettingsSwitchCard(
-                    icon = Icons.Rounded.DoNotDisturbOn,
-                    title = stringResource(R.string.dnd_mode_gaming),
-                    summary = stringResource(R.string.dnd_mode_gaming_desc),
-                    checked = tweakViewModel.dndState ?: false,
-                    onCheckedChange = { tweakViewModel.updateDndMode(it) }
-                )
-            },
-            {
+        val cards = mutableListOf<@Composable () -> Unit>()
+        cards.add {
+            SettingsSwitchCard(
+                icon = Icons.Rounded.Speed,
+                title = stringResource(R.string.perf_lite_mode),
+                summary = stringResource(R.string.perf_lite_mode_desc),
+                checked = tweakViewModel.liteState ?: false,
+                onCheckedChange = { tweakViewModel.updateLiteMode(it) }
+            )
+        }
+        cards.add {
+            SettingsSwitchCard(
+                icon = Icons.Rounded.RocketLaunch,
+                title = stringResource(R.string.game_preload),
+                summary = stringResource(R.string.game_preload_desc),
+                checked = tweakViewModel.preloadState ?: false,
+                onCheckedChange = { tweakViewModel.updatePreloadMode(it) }
+            )
+        }
+        cards.add {
+            SettingsSwitchCard(
+                icon = Icons.Rounded.DoNotDisturbOn,
+                title = stringResource(R.string.dnd_mode_gaming),
+                summary = stringResource(R.string.dnd_mode_gaming_desc),
+                checked = tweakViewModel.dndState ?: false,
+                onCheckedChange = { tweakViewModel.updateDndMode(it) }
+            )
+        }
+        if (isFullModeEnabled) {
+            cards.add {
                 SettingsSwitchCard(
                     icon = Icons.Rounded.ContentCut,
                     title = stringResource(R.string.trim_filesystem),
@@ -632,8 +644,8 @@ private fun TweaksMainSubPane(
                     checked = tweakViewModel.fstrimState ?: false,
                     onCheckedChange = { tweakViewModel.updateFstrim(it) }
                 )
-            },
-            {
+            }
+            cards.add {
                 SettingsSwitchCard(
                     icon = Icons.Rounded.CleaningServices,
                     title = stringResource(R.string.memory_killer),
@@ -641,17 +653,19 @@ private fun TweaksMainSubPane(
                     checked = tweakViewModel.memKillerState ?: false,
                     onCheckedChange = { tweakViewModel.updateMemoryKiller(it) }
                 )
-            },
-            {
-                SettingsSwitchCard(
-                    icon = Icons.Rounded.ThermostatAuto,
-                    title = stringResource(R.string.thermalcore_service),
-                    summary = stringResource(R.string.thermalcore_service_desc),
-                    checked = tweakViewModel.thermalState ?: false,
-                    onCheckedChange = { tweakViewModel.updateThermalCore(it) }
-                )
-            },
-            {
+            }
+        }
+        cards.add {
+            SettingsSwitchCard(
+                icon = Icons.Rounded.ThermostatAuto,
+                title = stringResource(R.string.thermalcore_service),
+                summary = stringResource(R.string.thermalcore_service_desc),
+                checked = tweakViewModel.thermalState ?: false,
+                onCheckedChange = { tweakViewModel.updateThermalCore(it) }
+            )
+        }
+        if (isFullModeEnabled) {
+            cards.add {
                 SettingsSwitchCard(
                     icon = Icons.Rounded.SwapVerticalCircle,
                     title = stringResource(R.string.app_priority_control),
@@ -660,7 +674,7 @@ private fun TweaksMainSubPane(
                     onCheckedChange = { tweakViewModel.updateAppPriority(it) }
                 )
             }
-        )
+        }
 
         AdaptiveSettingsGrid(
             items = cards,
@@ -680,9 +694,10 @@ private fun TweaksMainSubPane(
             SettingsActionCard(
                 icon = Icons.Rounded.WebStories,
                 title = stringResource(R.string.refreshrates),
-                summary = "Display refresh rate switcher and live rate locking",
+                summary = stringResource(R.string.refreshrates_desc),
                 trailingBadge = "${tweakViewModel.currentRefreshRate ?: refreshHz} Hz",
-                onClick = { showRefreshRateDialog = true },
+                onClick = { if (isFullModeEnabled) showRefreshRateDialog = true },
+                enabled = isFullModeEnabled,
                 shape = blockTopShape
             )
 
@@ -752,7 +767,7 @@ private fun TweaksMainSubPane(
         }
     }
 
-    if (showRefreshRateDialog) {
+    if (showRefreshRateDialog && isFullModeEnabled) {
         val options = remember(context) { getSupportedRefreshRatesPicker(context) }
         val currentRateStr = (tweakViewModel.currentRefreshRate ?: refreshHz).toString()
         val selectedIndex = options.indexOfFirst { it.equals(currentRateStr, ignoreCase = true) }.coerceAtLeast(0)
@@ -1238,6 +1253,7 @@ private fun PreferencedTweaksSubPane(
     val isMediaTek = socVendor == "mediatek"
     val isSnapdragon = socVendor == "qualcomm"
 
+    var isFullModeEnabled by remember { mutableStateOf(false) }
     var schedTunes by remember { mutableStateOf(false) }
     var waltTunes by remember { mutableStateOf(false) }
     var sflState by remember { mutableStateOf(false) }
@@ -1249,6 +1265,7 @@ private fun PreferencedTweaksSubPane(
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
+            isFullModeEnabled = DebugUtils.isFullModeEnabled()
             schedTunes = PropertyUtils.get("persist.sys.azenithconf.schedtunes", "0") == "1"
             waltTunes = PropertyUtils.get("persist.sys.azenithconf.walttunes", "0") == "1"
             sflState = PropertyUtils.get("persist.sys.azenithconf.SFL", "0") == "1"
@@ -1266,6 +1283,145 @@ private fun PreferencedTweaksSubPane(
             RebootManager.captureBaselineOnce("pref_logd", disableLogd)
             RebootManager.captureBaselineOnce("pref_malisched", maliSched)
             RebootManager.captureBaselineOnce("pref_DThermal", disableThermal)
+        }
+    }
+
+    val cards = mutableListOf<@Composable (Shape) -> Unit>()
+
+    cards.add { shape ->
+        SettingsSwitchCard(
+            icon = Icons.Rounded.Tune,
+            title = stringResource(R.string.sched_tunes),
+            summary = stringResource(R.string.sched_tunes_desc),
+            checked = schedTunes,
+            onCheckedChange = { isChecked ->
+                schedTunes = isChecked
+                PropertyUtils.set("persist.sys.azenithconf.schedtunes", if (isChecked) "1" else "0")
+                RebootManager.checkAgainstBaseline("pref_schedtunes", isChecked)
+                if (isChecked && waltTunes) {
+                    waltTunes = false
+                    PropertyUtils.set("persist.sys.azenithconf.walttunes", "0")
+                    RebootManager.checkAgainstBaseline("pref_walttunes", false)
+                }
+            },
+            shape = shape
+        )
+    }
+
+    cards.add { shape ->
+        SettingsSwitchCard(
+            icon = Icons.Rounded.Timeline,
+            title = stringResource(R.string.walt_tunes),
+            summary = if (isSnapdragon) stringResource(R.string.walt_tunes_desc) else stringResource(R.string.str_unavailable_snapdragon),
+            checked = waltTunes,
+            enabled = isSnapdragon,
+            onCheckedChange = { isChecked ->
+                waltTunes = isChecked
+                PropertyUtils.set("persist.sys.azenithconf.walttunes", if (isChecked) "1" else "0")
+                RebootManager.checkAgainstBaseline("pref_walttunes", isChecked)
+                if (isChecked && schedTunes) {
+                    schedTunes = false
+                    PropertyUtils.set("persist.sys.azenithconf.schedtunes", "0")
+                    RebootManager.checkAgainstBaseline("pref_schedtunes", false)
+                }
+            },
+            shape = shape
+        )
+    }
+
+    cards.add { shape ->
+        SettingsSwitchCard(
+            icon = Icons.Rounded.Layers,
+            title = stringResource(R.string.sfl_latency),
+            summary = stringResource(R.string.sfl_latency_desc),
+            checked = sflState,
+            onCheckedChange = { isChecked ->
+                sflState = isChecked
+                PropertyUtils.set("persist.sys.azenithconf.SFL", if (isChecked) "1" else "0")
+                RebootManager.checkAgainstBaseline("pref_SFL", isChecked)
+            },
+            shape = shape
+        )
+    }
+
+    if (isFullModeEnabled) {
+        cards.add { shape ->
+            SettingsSwitchCard(
+                icon = Icons.Rounded.Bolt,
+                title = stringResource(R.string.jit_compilation),
+                summary = stringResource(R.string.jit_compilation_desc),
+                checked = jitState,
+                onCheckedChange = { isChecked ->
+                    jitState = isChecked
+                    PropertyUtils.set("persist.sys.azenithconf.justintime", if (isChecked) "1" else "0")
+                    RebootManager.checkAgainstBaseline("pref_justintime", isChecked)
+                },
+                shape = shape
+            )
+        }
+
+        cards.add { shape ->
+            SettingsSwitchCard(
+                icon = Icons.Rounded.TrackChanges,
+                title = stringResource(R.string.disable_trace),
+                summary = stringResource(R.string.disable_trace_desc),
+                checked = disableTrace,
+                onCheckedChange = { isChecked ->
+                    disableTrace = isChecked
+                    PropertyUtils.set("persist.sys.azenithconf.disabletrace", if (isChecked) "1" else "0")
+                    RebootManager.checkAgainstBaseline("pref_disabletrace", isChecked)
+                },
+                shape = shape
+            )
+        }
+
+        cards.add { shape ->
+            SettingsSwitchCard(
+                icon = Icons.AutoMirrored.Rounded.Notes,
+                title = stringResource(R.string.disable_logging),
+                summary = stringResource(R.string.disable_logging_desc),
+                checked = disableLogd,
+                onCheckedChange = { isChecked ->
+                    disableLogd = isChecked
+                    PropertyUtils.set("persist.sys.azenithconf.logd", if (isChecked) "1" else "0")
+                    RebootManager.checkAgainstBaseline("pref_logd", isChecked)
+                },
+                shape = shape
+            )
+        }
+    }
+
+    cards.add { shape ->
+        SettingsSwitchCard(
+            icon = Icons.Rounded.DeveloperBoard,
+            title = stringResource(R.string.gpu_mali),
+            summary = if (isMediaTek) stringResource(R.string.gpu_mali_desc) else stringResource(R.string.str_unavailable_mediatek),
+            checked = maliSched,
+            enabled = isMediaTek,
+            onCheckedChange = { isChecked ->
+                maliSched = isChecked
+                PropertyUtils.set("persist.sys.azenithconf.malisched", if (isChecked) "1" else "0")
+                RebootManager.checkAgainstBaseline("pref_malisched", isChecked)
+            },
+            shape = shape
+        )
+    }
+
+    if (isFullModeEnabled && isMediaTek) {
+        cards.add { shape ->
+            SettingsSwitchCard(
+                icon = Icons.Rounded.Thermostat,
+                title = stringResource(R.string.disable_thermals),
+                summary = if (isMediaTek) stringResource(R.string.disable_thermals_desc) else stringResource(R.string.str_unavailable_mediatek),
+                checked = disableThermal,
+                enabled = isMediaTek,
+                onCheckedChange = { isChecked ->
+                    disableThermal = isChecked
+                    PropertyUtils.set("persist.sys.azenithconf.DThermal", if (isChecked) "1" else "0")
+                    RebootManager.checkAgainstBaseline("pref_DThermal", isChecked)
+                },
+                shape = shape
+            )
         }
     }
 
@@ -1290,122 +1446,15 @@ private fun PreferencedTweaksSubPane(
                 .clip(RoundedCornerShape(blockLargeCorner)),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            SettingsSwitchCard(
-                icon = Icons.Rounded.Tune,
-                title = stringResource(R.string.sched_tunes),
-                summary = stringResource(R.string.sched_tunes_desc),
-                checked = schedTunes,
-                onCheckedChange = { isChecked ->
-                    schedTunes = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.schedtunes", if (isChecked) "1" else "0")
-                    RebootManager.checkAgainstBaseline("pref_schedtunes", isChecked)
-                    if (isChecked && waltTunes) {
-                        waltTunes = false
-                        PropertyUtils.set("persist.sys.azenithconf.walttunes", "0")
-                        RebootManager.checkAgainstBaseline("pref_walttunes", false)
-                    }
-                },
-                shape = blockTopShape
-            )
-
-            SettingsSwitchCard(
-                icon = Icons.Rounded.Timeline,
-                title = stringResource(R.string.walt_tunes),
-                summary = if (isSnapdragon) stringResource(R.string.walt_tunes_desc) else stringResource(R.string.str_unavailable_snapdragon),
-                checked = waltTunes,
-                enabled = isSnapdragon,
-                onCheckedChange = { isChecked ->
-                    waltTunes = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.walttunes", if (isChecked) "1" else "0")
-                    RebootManager.checkAgainstBaseline("pref_walttunes", isChecked)
-                    if (isChecked && schedTunes) {
-                        schedTunes = false
-                        PropertyUtils.set("persist.sys.azenithconf.schedtunes", "0")
-                        RebootManager.checkAgainstBaseline("pref_schedtunes", false)
-                    }
-                },
-                shape = blockMiddleShape
-            )
-
-            SettingsSwitchCard(
-                icon = Icons.Rounded.Layers,
-                title = stringResource(R.string.sfl_latency),
-                summary = stringResource(R.string.sfl_latency_desc),
-                checked = sflState,
-                onCheckedChange = { isChecked ->
-                    sflState = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.SFL", if (isChecked) "1" else "0")
-                    RebootManager.checkAgainstBaseline("pref_SFL", isChecked)
-                },
-                shape = blockMiddleShape
-            )
-
-            SettingsSwitchCard(
-                icon = Icons.Rounded.Bolt,
-                title = stringResource(R.string.jit_compilation),
-                summary = stringResource(R.string.jit_compilation_desc),
-                checked = jitState,
-                onCheckedChange = { isChecked ->
-                    jitState = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.justintime", if (isChecked) "1" else "0")
-                    RebootManager.checkAgainstBaseline("pref_justintime", isChecked)
-                },
-                shape = blockMiddleShape
-            )
-
-            SettingsSwitchCard(
-                icon = Icons.Rounded.TrackChanges,
-                title = stringResource(R.string.disable_trace),
-                summary = stringResource(R.string.disable_trace_desc),
-                checked = disableTrace,
-                onCheckedChange = { isChecked ->
-                    disableTrace = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.disabletrace", if (isChecked) "1" else "0")
-                    RebootManager.checkAgainstBaseline("pref_disabletrace", isChecked)
-                },
-                shape = blockMiddleShape
-            )
-
-            SettingsSwitchCard(
-                icon = Icons.AutoMirrored.Rounded.ArrowBack,
-                title = stringResource(R.string.disable_logging),
-                summary = stringResource(R.string.disable_logging_desc),
-                checked = disableLogd,
-                onCheckedChange = { isChecked ->
-                    disableLogd = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.logd", if (isChecked) "1" else "0")
-                    RebootManager.checkAgainstBaseline("pref_logd", isChecked)
-                },
-                shape = blockMiddleShape
-            )
-
-            SettingsSwitchCard(
-                icon = Icons.Rounded.DeveloperBoard,
-                title = stringResource(R.string.gpu_mali),
-                summary = if (isMediaTek) stringResource(R.string.gpu_mali_desc) else stringResource(R.string.str_unavailable_mediatek),
-                checked = maliSched,
-                enabled = isMediaTek,
-                onCheckedChange = { isChecked ->
-                    maliSched = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.malisched", if (isChecked) "1" else "0")
-                    RebootManager.checkAgainstBaseline("pref_malisched", isChecked)
-                },
-                shape = blockMiddleShape
-            )
-
-            SettingsSwitchCard(
-                icon = Icons.Rounded.Thermostat,
-                title = stringResource(R.string.disable_thermals),
-                summary = if (isMediaTek) stringResource(R.string.disable_thermals_desc) else stringResource(R.string.str_unavailable_mediatek),
-                checked = disableThermal,
-                enabled = isMediaTek,
-                onCheckedChange = { isChecked ->
-                    disableThermal = isChecked
-                    PropertyUtils.set("persist.sys.azenithconf.DThermal", if (isChecked) "1" else "0")
-                    RebootManager.checkAgainstBaseline("pref_DThermal", isChecked)
-                },
-                shape = blockBottomShape
-            )
+            cards.forEachIndexed { index, cardComposable ->
+                val shape = when {
+                    cards.size == 1 -> RoundedCornerShape(blockLargeCorner)
+                    index == 0 -> blockTopShape
+                    index == cards.size - 1 -> blockBottomShape
+                    else -> blockMiddleShape
+                }
+                cardComposable(shape)
+            }
         }
     }
 }
@@ -1502,8 +1551,33 @@ private fun DisplayColorSubPane(
     val scheme = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
 
-    var selectedPreset by remember { mutableStateOf(ColorPreset.DEFAULT) }
-    var satMultiplier by remember { mutableFloatStateOf(1000f) }
+    var redVal by remember { mutableFloatStateOf(1000f) }
+    var greenVal by remember { mutableFloatStateOf(1000f) }
+    var blueVal by remember { mutableFloatStateOf(1000f) }
+    var satVal by remember { mutableFloatStateOf(1000f) }
+    var selectedPreset by remember { mutableStateOf<ColorPreset?>(ColorPreset.DEFAULT) }
+
+    val matchingPreset = remember(redVal, greenVal, blueVal, satVal) {
+        ColorPreset.entries.firstOrNull { preset ->
+            preset != ColorPreset.CUSTOM &&
+            preset.r == redVal && preset.g == greenVal && preset.b == blueVal && preset.s == satVal
+        }
+    }
+
+    val isCustomMode = selectedPreset == ColorPreset.CUSTOM || matchingPreset == null
+
+    val applyRGB = { r: Float, g: Float, b: Float ->
+        Shell.cmd("service call SurfaceFlinger 1015 i32 1 f ${r / 1000f} f 0 f 0 f 0 f 0 f ${g / 1000f} f 0 f 0 f 0 f 0 f ${b / 1000f} f 0 f 0 f 0 f 0 f 1").submit()
+    }
+
+    val applySat = { s: Float ->
+        Shell.cmd("service call SurfaceFlinger 1022 f ${s / 1000f}").submit()
+    }
+
+    val saveToProp = {
+        val config = "${redVal.toInt()} ${greenVal.toInt()} ${blueVal.toInt()} ${satVal.toInt()}"
+        PropertyUtils.set("persist.sys.azenithconf.schemeconfig", config)
+    }
 
     LaunchedEffect(Unit) {
         val raw = withContext(Dispatchers.IO) {
@@ -1512,21 +1586,30 @@ private fun DisplayColorSubPane(
         if (raw.isNotEmpty()) {
             val parts = raw.split(" ").mapNotNull { it.toFloatOrNull() }
             if (parts.size >= 4) {
-                satMultiplier = parts[3].coerceIn(500f, 2000f)
+                redVal = parts[0]
+                greenVal = parts[1]
+                blueVal = parts[2]
+                satVal = parts[3]
             }
         }
         selectedPreset = ColorPreset.entries.firstOrNull { preset ->
-            preset != ColorPreset.CUSTOM && (preset.s - satMultiplier) < 10f && (satMultiplier - preset.s) < 10f
+            preset != ColorPreset.CUSTOM &&
+            preset.r == redVal && preset.g == greenVal && preset.b == blueVal && preset.s == satVal
         } ?: ColorPreset.CUSTOM
     }
 
-    val applyPreset: (ColorPreset) -> Unit = { preset ->
-        selectedPreset = preset
-        if (preset != ColorPreset.CUSTOM) {
-            satMultiplier = preset.s
-            Shell.cmd("service call SurfaceFlinger 1022 f ${preset.s / 1000f}").submit()
-            val config = "${preset.r.toInt()} ${preset.g.toInt()} ${preset.b.toInt()} ${preset.s.toInt()}"
-            PropertyUtils.set("persist.sys.azenithconf.schemeconfig", config)
+    val onPresetSelected: (ColorPreset) -> Unit = { preset ->
+        if (preset == ColorPreset.CUSTOM) {
+            selectedPreset = ColorPreset.CUSTOM
+        } else {
+            redVal = preset.r
+            greenVal = preset.g
+            blueVal = preset.b
+            satVal = preset.s
+            applyRGB(redVal, greenVal, blueVal)
+            applySat(satVal)
+            saveToProp()
+            selectedPreset = preset
         }
     }
 
@@ -1539,11 +1622,11 @@ private fun DisplayColorSubPane(
     ) {
         TweaksSubTabHeader(
             title = stringResource(R.string.color_scheme),
-            subtitle = "Display surface saturation profiles and hardware KCAL calibration",
+            subtitle = stringResource(R.string.str_adjust_and_calibrate_your_scre),
             onBackClick = onBackClick
         )
 
-        TweaksSectionHeader("Saturation Presets")
+        TweaksSectionHeader(stringResource(R.string.presets))
 
         Surface(
             shape = RoundedCornerShape(22.dp),
@@ -1556,14 +1639,8 @@ private fun DisplayColorSubPane(
                     .padding(8.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                listOf(
-                    ColorPreset.DEFAULT,
-                    ColorPreset.VIVID,
-                    ColorPreset.WARM,
-                    ColorPreset.COOL,
-                    ColorPreset.AMOLED
-                ).forEach { preset ->
-                    val isSelected = selectedPreset == preset
+                ColorPreset.entries.forEach { preset ->
+                    val isSelected = (selectedPreset ?: matchingPreset) == preset
                     Surface(
                         shape = RoundedCornerShape(14.dp),
                         color = if (isSelected) scheme.primaryContainer else Color.Transparent,
@@ -1571,7 +1648,7 @@ private fun DisplayColorSubPane(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(14.dp))
-                            .clickable { applyPreset(preset) }
+                            .clickable { onPresetSelected(preset) }
                             .gamepadFocusOutline(shape = RoundedCornerShape(14.dp), register = true)
                     ) {
                         Box(
@@ -1590,63 +1667,84 @@ private fun DisplayColorSubPane(
             }
         }
 
-        TweaksSectionHeader("Saturation Multiplier")
+        TweaksSectionHeader(stringResource(R.string.color_scheme))
 
         Surface(
             shape = RoundedCornerShape(22.dp),
             color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "Surface Saturation",
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                            color = scheme.onSurface
-                        )
-                        Text(
-                            text = "Direct SurfaceFlinger compositor color matrix boost",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = scheme.onSurfaceVariant.copy(alpha = 0.82f)
-                        )
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = scheme.primaryContainer
-                    ) {
-                        Text(
-                            text = String.format("%.2fx", satMultiplier / 1000f),
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = scheme.onPrimaryContainer,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-
-                ZenithSlider(
-                    value = satMultiplier,
+            Column {
+                ColorSliderItem(
+                    label = stringResource(R.string.color_red),
+                    summary = stringResource(R.string.color_red_desc),
+                    value = redVal,
+                    accentColor = Color(0xFFEF5350),
+                    enabled = isCustomMode,
                     onValueChange = {
-                        satMultiplier = it
+                        redVal = it
                         selectedPreset = ColorPreset.CUSTOM
-                        Shell.cmd("service call SurfaceFlinger 1022 f ${it / 1000f}").submit()
+                        applyRGB(redVal, greenVal, blueVal)
                     },
-                    onValueChangeFinished = {
-                        val config = "1000 1000 1000 ${satMultiplier.toInt()}"
-                        PropertyUtils.set("persist.sys.azenithconf.schemeconfig", config)
+                    onFinish = { saveToProp() }
+                )
+                HorizontalDivider(
+                    color = scheme.outlineVariant.copy(alpha = 0.35f),
+                    thickness = 1.dp
+                )
+                ColorSliderItem(
+                    label = stringResource(R.string.color_green),
+                    summary = stringResource(R.string.color_green_desc),
+                    value = greenVal,
+                    accentColor = Color(0xFF66BB6A),
+                    enabled = isCustomMode,
+                    onValueChange = {
+                        greenVal = it
+                        selectedPreset = ColorPreset.CUSTOM
+                        applyRGB(redVal, greenVal, blueVal)
                     },
-                    valueRange = 500f..2000f,
-                    steps = 14
+                    onFinish = { saveToProp() }
+                )
+                HorizontalDivider(
+                    color = scheme.outlineVariant.copy(alpha = 0.35f),
+                    thickness = 1.dp
+                )
+                ColorSliderItem(
+                    label = stringResource(R.string.color_blue),
+                    summary = stringResource(R.string.color_blue_desc),
+                    value = blueVal,
+                    accentColor = Color(0xFF42A5F5),
+                    enabled = isCustomMode,
+                    onValueChange = {
+                        blueVal = it
+                        selectedPreset = ColorPreset.CUSTOM
+                        applyRGB(redVal, greenVal, blueVal)
+                    },
+                    onFinish = { saveToProp() }
                 )
             }
+        }
+
+        TweaksSectionHeader(stringResource(R.string.color_saturation))
+
+        Surface(
+            shape = RoundedCornerShape(22.dp),
+            color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            ColorSliderItem(
+                label = stringResource(R.string.color_saturation),
+                summary = stringResource(R.string.color_saturation_desc),
+                value = satVal,
+                accentColor = scheme.primary,
+                enabled = isCustomMode,
+                onValueChange = {
+                    satVal = it
+                    selectedPreset = ColorPreset.CUSTOM
+                    applySat(satVal)
+                },
+                onFinish = { saveToProp() }
+            )
         }
     }
 }

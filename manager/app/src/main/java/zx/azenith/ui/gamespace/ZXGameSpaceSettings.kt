@@ -602,7 +602,8 @@ internal fun SettingsActionCard(
     modifier: Modifier = Modifier,
     summary: String? = null,
     trailingBadge: String? = null,
-    shape: Shape = RoundedCornerShape(20.dp)
+    shape: Shape = RoundedCornerShape(20.dp),
+    enabled: Boolean = true
 ) {
     val context = LocalContext.current
     val scheme = MaterialTheme.colorScheme
@@ -610,15 +611,15 @@ internal fun SettingsActionCard(
 
     Surface(
         shape = shape,
-        color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
-        contentColor = scheme.onSurface,
+        color = scheme.surfaceContainerHigh.copy(alpha = if (enabled) 0.85f else 0.55f),
+        contentColor = if (enabled) scheme.onSurface else scheme.onSurface.copy(alpha = 0.6f),
         modifier = modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 72.dp)
-            .springPressBounce(pressedScale = 0.97f)
-            .gamepadFocusOutline(shape = shape, register = true)
+            .then(if (enabled) Modifier.springPressBounce(pressedScale = 0.97f) else Modifier)
+            .then(if (enabled) Modifier.gamepadFocusOutline(shape = shape, register = true) else Modifier)
             .clip(shape)
-            .clickable {
+            .clickable(enabled = enabled) {
                 AudioUtil.playOk(context)
                 onClick()
             }
@@ -630,14 +631,14 @@ internal fun SettingsActionCard(
         ) {
             Surface(
                 shape = iconShape,
-                color = scheme.secondaryContainer,
+                color = if (enabled) scheme.secondaryContainer else scheme.surfaceContainerHighest,
                 modifier = Modifier.size(38.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = scheme.onSecondaryContainer,
+                        tint = if (enabled) scheme.onSecondaryContainer else scheme.onSurfaceVariant.copy(alpha = 0.6f),
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -653,7 +654,7 @@ internal fun SettingsActionCard(
                         fontWeight = FontWeight.SemiBold,
                         lineHeight = 18.sp
                     ),
-                    color = scheme.onSurface,
+                    color = if (enabled) scheme.onSurface else scheme.onSurface.copy(alpha = 0.7f),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -661,7 +662,7 @@ internal fun SettingsActionCard(
                     Text(
                         text = summary,
                         style = MaterialTheme.typography.bodySmall.copy(lineHeight = 15.sp),
-                        color = scheme.onSurfaceVariant.copy(alpha = 0.82f),
+                        color = scheme.onSurfaceVariant.copy(alpha = if (enabled) 0.82f else 0.5f),
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -671,7 +672,7 @@ internal fun SettingsActionCard(
             if (!trailingBadge.isNullOrBlank()) {
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = scheme.primaryContainer
+                    color = if (enabled) scheme.primaryContainer else scheme.surfaceContainerHighest
                 ) {
                     Text(
                         text = trailingBadge,
@@ -679,11 +680,11 @@ internal fun SettingsActionCard(
                             fontWeight = FontWeight.Bold,
                             fontFeatureSettings = "tnum"
                         ),
-                        color = scheme.onPrimaryContainer,
+                        color = if (enabled) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                     )
                 }
-            } else {
+            } else if (enabled) {
                 Icon(
                     imageVector = Icons.Rounded.ChevronRight,
                     contentDescription = null,
