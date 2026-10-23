@@ -18,6 +18,7 @@
 
 package zx.azenith.ui.gamespace.settings
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -37,6 +38,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,6 +49,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -60,14 +63,20 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.BatteryChargingFull
+import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Cable
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CleaningServices
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.DeveloperBoard
 import androidx.compose.material.icons.rounded.DoNotDisturbOn
+import androidx.compose.material.icons.rounded.FolderOpen
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Layers
+import androidx.compose.material.icons.rounded.ManageSearch
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Power
 import androidx.compose.material.icons.rounded.RocketLaunch
@@ -79,7 +88,11 @@ import androidx.compose.material.icons.rounded.ThermostatAuto
 import androidx.compose.material.icons.rounded.Timeline
 import androidx.compose.material.icons.rounded.TrackChanges
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material.icons.rounded.WebStories
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -88,10 +101,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -109,6 +124,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -116,6 +132,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fox2code.androidansi.ktx.parseAsAnsiAnnotatedString
+import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
@@ -822,26 +840,61 @@ private fun BypassChargingSubPane(
     val scheme = MaterialTheme.colorScheme
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
+    val logScrollState = rememberScrollState()
 
     var bypassPath by remember { mutableStateOf("") }
     var bypassState by remember { mutableStateOf(false) }
     var thresholdValue by remember { mutableFloatStateOf(20f) }
-    var testFeedback by remember { mutableStateOf<String?>(null) }
-    var isTesting by remember { mutableStateOf(false) }
+
+    var availableNodes by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+    var isLoadingNodes by remember { mutableStateOf(true) }
+    var showNodePicker by remember { mutableStateOf(false) }
+
+    var isRunningDiagnostic by remember { mutableStateOf(false) }
+    val diagnosticLogs = remember { mutableStateListOf<String>() }
+    var showConsole by remember { mutableStateOf(false) }
+    var foundWorkingNode by remember { mutableStateOf<String?>(null) }
+
+    var activeNodeTestFeedback by remember { mutableStateOf<String?>(null) }
+    var isTestingActiveNode by remember { mutableStateOf(false) }
 
     var batteryCapacity by remember { mutableIntStateOf(0) }
     var batteryTempC by remember { mutableFloatStateOf(0f) }
     var isCharging by remember { mutableStateOf(false) }
+
+    fun refreshNodes() {
+        isLoadingNodes = true
+        scope.launch(Dispatchers.IO) {
+            val output = Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service -bpl").exec().out
+            val parsedList = output
+                .map { it.replace("\\u001B\\[[;\\d]*m".toRegex(), "") }
+                .filter { it.contains("FOUND") && !it.contains("NOT FOUND") }
+                .map { line ->
+                    val parts = line.split("|")
+                    val name = parts.getOrNull(0)?.trim() ?: "UNKNOWN"
+                    val path = parts.getOrNull(2)?.trim() ?: ""
+                    Pair(name, path)
+                }
+            withContext(Dispatchers.Main) {
+                availableNodes = parsedList
+                isLoadingNodes = false
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             bypassPath = PropertyUtils.get("persist.sys.azenithconf.bypasspath", "")
             bypassState = PropertyUtils.get("persist.sys.azenithconf.bypasschg", "0") == "1"
             val rawThreshold = PropertyUtils.get("persist.sys.azenithconf.bypasschgthreshold", "20")
-            thresholdValue = rawThreshold.toFloatOrNull()?.coerceIn(20f, 100f) ?: 20f
+            thresholdValue = rawThreshold.toFloatOrNull()?.coerceIn(20f, 50f) ?: 20f
+        }
+        refreshNodes()
+    }
 
-            try {
-                val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context?, intent: Intent?) {
                 if (intent != null) {
                     val rawLevel = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
                     val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
@@ -856,12 +909,26 @@ private fun BypassChargingSubPane(
                         batteryTempC = rawTemp / 10f
                     }
                 }
-            } catch (_: Exception) {}
+            }
+        }
+        context.registerReceiver(receiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        onDispose {
+            try { context.unregisterReceiver(receiver) } catch (_: Exception) {}
         }
     }
 
+    LaunchedEffect(diagnosticLogs.size) {
+        if (diagnosticLogs.isNotEmpty()) {
+            logScrollState.animateScrollTo(logScrollState.maxValue)
+        }
+    }
+
+    val isNeedSetup = bypassPath.isEmpty() || bypassPath == "NEED_SETUP"
+    val isUnsupported = bypassPath == "UNSUPPORTED"
+    val isConfigured = !isNeedSetup && !isUnsupported && bypassPath.isNotBlank()
+
     val bypassBottomCorner by animateDpAsState(
-        targetValue = if (bypassState) blockSmallCorner else blockLargeCorner,
+        targetValue = if (bypassState && isConfigured) blockSmallCorner else blockLargeCorner,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "BypassBottomCorner"
     )
@@ -871,6 +938,36 @@ private fun BypassChargingSubPane(
         bottomStart = bypassBottomCorner,
         bottomEnd = bypassBottomCorner
     )
+
+    fun runCompatibilityCheck() {
+        diagnosticLogs.clear()
+        isRunningDiagnostic = true
+        showConsole = true
+        foundWorkingNode = null
+
+        scope.launch(Dispatchers.IO) {
+            val callbackList = object : CallbackList<String>() {
+                override fun onAddElement(line: String) {
+                    scope.launch(Dispatchers.Main.immediate) {
+                        diagnosticLogs.add(line)
+                    }
+                }
+            }
+
+            val binaryPath = "/data/adb/modules/AZenith/system/bin/sys.azenith-service"
+            Shell.cmd("$binaryPath -cbc 2>&1").to(callbackList).submit {
+                isRunningDiagnostic = false
+                refreshNodes()
+
+                val successRegex = "Found working node:\\s*(\\S+)".toRegex()
+                val cleanLogs = diagnosticLogs.map { it.replace("\u001B\\[[;\\d]*m".toRegex(), "") }
+                val detected = cleanLogs.firstNotNullOfOrNull { successRegex.find(it)?.groupValues?.get(1) }
+                if (detected != null) {
+                    foundWorkingNode = detected
+                }
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -937,6 +1034,77 @@ private fun BypassChargingSubPane(
             }
         }
 
+        // Setup Required Banner
+        if (isNeedSetup) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = scheme.tertiaryContainer.copy(alpha = 0.85f),
+                contentColor = scheme.onTertiaryContainer,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Warning,
+                        contentDescription = null,
+                        tint = scheme.onTertiaryContainer,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "Initial Hardware Setup Required",
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onTertiaryContainer
+                        )
+                        Text(
+                            text = stringResource(R.string.str_bypass_need_setup),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = scheme.onTertiaryContainer.copy(alpha = 0.85f)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Unsupported Hardware Banner
+        if (isUnsupported) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = scheme.errorContainer.copy(alpha = 0.85f),
+                contentColor = scheme.onErrorContainer,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Block,
+                        contentDescription = null,
+                        tint = scheme.onErrorContainer,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "Hardware Unsupported",
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onErrorContainer
+                        )
+                        Text(
+                            text = stringResource(R.string.bypass_not_supported),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = scheme.onErrorContainer.copy(alpha = 0.85f)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Controls Section
         TweaksSectionHeader("Bypass Charging Controls")
 
         Column(
@@ -948,8 +1116,13 @@ private fun BypassChargingSubPane(
             SettingsSwitchCard(
                 icon = Icons.Rounded.BatteryChargingFull,
                 title = stringResource(R.string.enable_bypass_charge),
-                summary = stringResource(R.string.enable_bypass_charge_desc),
-                checked = bypassState,
+                summary = when {
+                    isUnsupported -> stringResource(R.string.bypass_not_supported)
+                    isNeedSetup -> "Hardware setup required before enabling"
+                    else -> stringResource(R.string.enable_bypass_charge_desc)
+                },
+                checked = bypassState && isConfigured,
+                enabled = isConfigured,
                 onCheckedChange = { isChecked ->
                     bypassState = isChecked
                     val strVal = if (isChecked) "1" else "0"
@@ -962,55 +1135,327 @@ private fun BypassChargingSubPane(
             )
 
             AnimatedVisibility(
-                visible = bypassState,
+                visible = bypassState && isConfigured,
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically()
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    BypassThresholdSliderCard(
-                        threshold = thresholdValue,
-                        onThresholdChange = { thresholdValue = it },
-                        onThresholdChangeFinished = { finalVal ->
-                            val roundVal = finalVal.roundToInt()
-                            PropertyUtils.set("persist.sys.azenithconf.bypasschgthreshold", roundVal.toString())
-                            scope.launch(Dispatchers.IO) {
-                                RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasschgthreshold", "$roundVal\n")
+                BypassThresholdSliderCard(
+                    threshold = thresholdValue,
+                    enabled = isConfigured,
+                    onThresholdChange = { thresholdValue = it },
+                    onThresholdChangeFinished = { finalVal ->
+                        val roundVal = finalVal.roundToInt()
+                        PropertyUtils.set("persist.sys.azenithconf.bypasschgthreshold", roundVal.toString())
+                        scope.launch(Dispatchers.IO) {
+                            RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasschgthreshold", "$roundVal\n")
+                        }
+                    },
+                    shape = blockBottomShape
+                )
+            }
+        }
+
+        // Hardware Configuration Section
+        TweaksSectionHeader("Hardware Node Configuration")
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(blockLargeCorner)),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            val nodePathDesc = availableNodes.find { it.first == bypassPath }?.second
+            SettingsActionCard(
+                icon = Icons.Rounded.Cable,
+                title = "Hardware Bypass Node",
+                summary = when {
+                    isNeedSetup -> "Tap to bind from ${availableNodes.size} detected nodes or scan below"
+                    isUnsupported -> "No supported charging switch nodes detected"
+                    else -> "$bypassPath${if (nodePathDesc != null) " ($nodePathDesc)" else ""}"
+                },
+                trailingBadge = when {
+                    isNeedSetup -> "Need Setup"
+                    isUnsupported -> "Unsupported"
+                    else -> bypassPath
+                },
+                enabled = availableNodes.isNotEmpty(),
+                onClick = { showNodePicker = true },
+                shape = if (isConfigured) blockTopShape else blockSingleShape
+            )
+
+            if (isConfigured) {
+                SettingsActionCard(
+                    icon = Icons.Rounded.Power,
+                    title = "Test Cutoff on [$bypassPath]",
+                    summary = activeNodeTestFeedback ?: "Execute 10-second hardware cutoff test on current node",
+                    trailingBadge = if (isTestingActiveNode) "Testing..." else "Test Node",
+                    enabled = isCharging && !isTestingActiveNode && !isRunningDiagnostic,
+                    onClick = {
+                        isTestingActiveNode = true
+                        activeNodeTestFeedback = "Testing cutoff on $bypassPath for 10s..."
+                        Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service -tb $bypassPath 2>&1").submit { res ->
+                            isTestingActiveNode = false
+                            val success = res.out.any { it.contains("[SUCCESS]") }
+                            activeNodeTestFeedback = if (success) {
+                                "Cutoff verified on $bypassPath (0 mA achieved)"
+                            } else {
+                                "Cutoff test failed or current didn't stop"
                             }
-                        },
-                        shape = blockMiddleShape
-                    )
+                        }
+                    },
+                    shape = blockBottomShape
+                )
+            }
+        }
 
-                    SettingsActionCard(
-                        icon = Icons.Rounded.Cable,
-                        title = "Hardware Bypass Path",
-                        summary = bypassPath.ifEmpty { "Auto-detected charging switch sysfs node" },
-                        trailingBadge = if (bypassPath.isNotBlank()) "Node Bound" else "Auto",
-                        onClick = {},
-                        shape = blockMiddleShape
-                    )
+        // Hardware Diagnostics Section
+        TweaksSectionHeader("Hardware Diagnostics")
 
-                    SettingsActionCard(
-                        icon = Icons.Rounded.Power,
-                        title = "Test Hardware Compatibility",
-                        summary = testFeedback ?: "Validate charging cutoff control against system kernel",
-                        trailingBadge = if (isTesting) "Testing..." else "Run Test",
-                        onClick = {
-                            if (!isTesting) {
-                                isTesting = true
-                                testFeedback = "Executing hardware probe..."
-                                Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service --testbypass").submit { res ->
-                                    isTesting = false
-                                    testFeedback = if (res.isSuccess) {
-                                        val output = res.out.joinToString(" ").trim()
-                                        if (output.isNotBlank()) output else "Hardware test passed"
-                                    } else {
-                                        "Bypass test failed or unsupported"
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(blockLargeCorner)),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            SettingsActionCard(
+                icon = Icons.Rounded.ManageSearch,
+                title = "Run Compatibility Diagnostics",
+                summary = when {
+                    !isCharging -> "Connect charger to run diagnostic probe"
+                    isRunningDiagnostic -> "Probing charging nodes (10s per candidate)..."
+                    else -> "Automatically test 78 hardware nodes to find working cutoff"
+                },
+                trailingBadge = if (isRunningDiagnostic) "Testing..." else "Start Diagnostic",
+                enabled = isCharging && !isRunningDiagnostic && !isTestingActiveNode,
+                onClick = { runCompatibilityCheck() },
+                shape = if (diagnosticLogs.isNotEmpty() && showConsole) blockTopShape else blockSingleShape
+            )
+
+            AnimatedVisibility(
+                visible = diagnosticLogs.isNotEmpty() && showConsole,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Surface(
+                    shape = blockBottomShape,
+                    color = scheme.surfaceContainerLowest,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Box(modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(12.dp)
+                                .verticalScroll(logScrollState)
+                                .horizontalScroll(rememberScrollState())
+                        ) {
+                            diagnosticLogs.forEach { line ->
+                                Text(
+                                    text = line.parseAsAnsiAnnotatedString(),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 11.sp,
+                                        lineHeight = 16.sp
+                                    ),
+                                    color = Color.White,
+                                    softWrap = false
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = CircleShape,
+                            color = scheme.surfaceContainerHigh.copy(alpha = 0.8f),
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(8.dp)
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .clickable { showConsole = false }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = "Close",
+                                    tint = scheme.onSurface,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Node Picker Dialog
+    if (showNodePicker) {
+        Dialog(onDismissRequest = { showNodePicker = false }) {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = scheme.surfaceContainerHigh,
+                contentColor = scheme.onSurface,
+                tonalElevation = 6.dp,
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .clip(RoundedCornerShape(24.dp))
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Select Hardware Bypass Node",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.onSurface
+                    )
+                    Text(
+                        text = "Charging switch nodes detected on this kernel (${availableNodes.size} available):",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant
+                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 300.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        if (availableNodes.isEmpty()) {
+                            Text(
+                                text = if (isLoadingNodes) "Scanning hardware paths..." else "No compatible nodes detected",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = scheme.onSurfaceVariant,
+                                modifier = Modifier.padding(vertical = 12.dp)
+                            )
+                        } else {
+                            availableNodes.forEach { (nodeName, nodePath) ->
+                                val isSelected = bypassPath == nodeName
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = if (isSelected) scheme.primaryContainer else scheme.surfaceContainerLow,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .clickable {
+                                            bypassPath = nodeName
+                                            PropertyUtils.set("persist.sys.azenithconf.bypasspath", nodeName)
+                                            scope.launch(Dispatchers.IO) {
+                                                RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath", "$nodeName\n")
+                                            }
+                                            showNodePicker = false
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = nodeName,
+                                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                                color = if (isSelected) scheme.onPrimaryContainer else scheme.onSurface
+                                            )
+                                            Text(
+                                                text = nodePath,
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                                color = if (isSelected) scheme.onPrimaryContainer.copy(alpha = 0.8f) else scheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        if (isSelected) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Check,
+                                                contentDescription = null,
+                                                tint = scheme.onPrimaryContainer,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
-                        },
-                        shape = blockBottomShape
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Button(
+                            onClick = { showNodePicker = false },
+                            colors = ButtonDefaults.textButtonColors()
+                        ) {
+                            Text("Cancel", color = scheme.outline)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Found Working Node Confirmation Dialog
+    foundWorkingNode?.let { node ->
+        Dialog(onDismissRequest = { foundWorkingNode = null }) {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = scheme.surfaceContainerHigh,
+                contentColor = scheme.onSurface,
+                tonalElevation = 6.dp,
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .clip(RoundedCornerShape(24.dp))
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.CheckCircle,
+                            contentDescription = null,
+                            tint = scheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text(
+                            text = "Working Node Found",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onSurface
+                        )
+                    }
+                    Text(
+                        text = "Automated diagnostics confirmed cutoff control using node [$node]. Apply this node as the active hardware bypass target?",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = scheme.onSurfaceVariant
                     )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = { foundWorkingNode = null },
+                            colors = ButtonDefaults.textButtonColors()
+                        ) {
+                            Text("Dismiss", color = scheme.outline)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                bypassPath = node
+                                PropertyUtils.set("persist.sys.azenithconf.bypasspath", node)
+                                scope.launch(Dispatchers.IO) {
+                                    RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath", "$node\n")
+                                }
+                                foundWorkingNode = null
+                            }
+                        ) {
+                            Text("Apply Node")
+                        }
+                    }
                 }
             }
         }
@@ -1910,15 +2355,16 @@ private fun BypassThresholdSliderCard(
     onThresholdChange: (Float) -> Unit,
     onThresholdChangeFinished: (Float) -> Unit,
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(20.dp)
+    shape: Shape = RoundedCornerShape(20.dp),
+    enabled: Boolean = true
 ) {
     val scheme = MaterialTheme.colorScheme
-    var sliderValue by remember(threshold) { mutableFloatStateOf(threshold) }
+    var sliderValue by remember(threshold) { mutableFloatStateOf(threshold.coerceIn(20f, 50f)) }
 
     Surface(
         shape = shape,
-        color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
-        contentColor = scheme.onSurface,
+        color = scheme.surfaceContainerHigh.copy(alpha = if (enabled) 0.85f else 0.55f),
+        contentColor = if (enabled) scheme.onSurface else scheme.onSurface.copy(alpha = 0.6f),
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
@@ -1939,26 +2385,26 @@ private fun BypassThresholdSliderCard(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = scheme.primaryContainer,
+                        color = if (enabled) scheme.primaryContainer else scheme.surfaceContainerHighest,
                         modifier = Modifier.size(38.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Rounded.BatteryChargingFull,
                                 contentDescription = null,
-                                tint = scheme.onPrimaryContainer,
+                                tint = if (enabled) scheme.onPrimaryContainer else scheme.onSurfaceVariant.copy(alpha = 0.6f),
                                 modifier = Modifier.size(20.dp)
                             )
                         }
                     }
                     Column {
                         Text(
-                            text = "Bypass Cutoff Threshold",
+                            text = stringResource(R.string.charging_threshold),
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                             color = scheme.onSurface
                         )
                         Text(
-                            text = "Target battery capacity to engage bypass charging",
+                            text = stringResource(R.string.charging_threshold_desc),
                             style = MaterialTheme.typography.bodySmall,
                             color = scheme.onSurfaceVariant.copy(alpha = 0.82f)
                         )
@@ -1967,12 +2413,12 @@ private fun BypassThresholdSliderCard(
 
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = scheme.primaryContainer
+                    color = if (enabled) scheme.primaryContainer else scheme.surfaceContainerHighest
                 ) {
                     Text(
                         text = "${sliderValue.roundToInt()}%",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = scheme.onPrimaryContainer,
+                        color = if (enabled) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
@@ -1980,14 +2426,26 @@ private fun BypassThresholdSliderCard(
 
             ZenithSlider(
                 value = sliderValue,
+                enabled = enabled,
                 onValueChange = {
-                    sliderValue = it
-                    onThresholdChange(it)
+                    val step = 5f
+                    val snapped = (it / step).roundToInt() * step
+                    val finalVal = snapped.coerceIn(20f, 50f)
+                    sliderValue = finalVal
+                    onThresholdChange(finalVal)
                 },
                 onValueChangeFinished = { onThresholdChangeFinished(sliderValue) },
-                valueRange = 20f..100f,
-                steps = 15
+                valueRange = 20f..50f,
+                steps = 5
             )
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("20%", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant.copy(alpha = 0.6f))
+                Text("50%", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant.copy(alpha = 0.6f))
+            }
         }
     }
 }
