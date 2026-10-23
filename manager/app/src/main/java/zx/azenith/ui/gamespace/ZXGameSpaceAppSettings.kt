@@ -138,6 +138,7 @@ import androidx.compose.ui.draw.blur
 import kotlin.math.roundToInt
 import zx.azenith.ui.component.AppIconImage
 import zx.azenith.ui.component.ExpressiveDropdownItem
+import zx.azenith.ui.component.ExpressiveInfoCard
 import zx.azenith.ui.component.ExpressiveList
 import zx.azenith.ui.component.ExpressiveListItem
 import zx.azenith.ui.component.ExpressiveSliderItem
@@ -686,6 +687,24 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                         verticalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
                                         item {
+                                            ExpressiveInfoCard(
+                                                leadingContent = {
+                                                    Icon(
+                                                        imageVector = Icons.Rounded.Info,
+                                                        contentDescription = null,
+                                                        tint = scheme.primary,
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                }
+                                            ) {
+                                                Text(
+                                                    text = stringResource(R.string.str_app_specific_settings_will_ove),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = scheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                        item {
                                             Text(
                                                 text = stringResource(R.string.section_performance).uppercase(),
                                                 style = MaterialTheme.typography.labelSmall.copy(
@@ -914,6 +933,27 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                                         }
                                                     }
                                                 )
+                                            }
+                                        }
+                                        if (isFullModeEnabled) {
+                                            item {
+                                                ExpressiveInfoCard(
+                                                    containerColor = scheme.primaryContainer,
+                                                    leadingContent = {
+                                                        Icon(
+                                                            imageVector = Icons.Rounded.Info,
+                                                            contentDescription = null,
+                                                            tint = scheme.onPrimaryContainer,
+                                                            modifier = Modifier.size(20.dp)
+                                                        )
+                                                    }
+                                                ) {
+                                                    Text(
+                                                        text = stringResource(R.string.str_by_using_per_app_refresh_rate),
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = scheme.onPrimaryContainer
+                                                    )
+                                                }
                                             }
                                         }
                                     }
