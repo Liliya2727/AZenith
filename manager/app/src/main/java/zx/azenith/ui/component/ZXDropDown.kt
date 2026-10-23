@@ -17,19 +17,11 @@
 package zx.azenith.ui.component
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -231,15 +223,48 @@ fun <T> ZXDropDownMenu(
             .coerceIn(minWidth.toPx(), maxWidth.toPx())
             .toDp()
     }
+    val menuWidthPx = with(density) { menuWidth.toPx() }
 
     // Decided from the option count, never from the measured height: the enter spec would
-    // otherwise be rebuilt mid-animation and restart every time the menu settles.
+    // otherwise be rebuilt mid-animation and restart every time the panel settles.
     val estimatedHeight = with(density) {
         (options.size * 52.dp.toPx() + 16.dp.toPx()).coerceAtMost(344.dp.toPx())
     }
-    val flipsUp = anchor != null &&
+    // An unmeasured overlay must never flip: the flip is derived from the room left below the
+    // row, and a zero height reads as no room at all.
+    val flipsUp = anchor != null && overlayHeight > 0f &&
         anchor.bottom - overlayOrigin.y + gapPx + estimatedHeight > overlayHeight &&
         anchor.top - overlayOrigin.y - gapPx - estimatedHeight > 0f
+
+    // Where the panel sits, in the overlay's own coordinates. Deterministic -- never the
+    // measured height -- so the enter spec is built once. A position that moves between
+    // frames rebuilds the spec and restarts the transition, which is what left the expand
+    // clip frozen half-open and the panel showing one row.
+    val menuLeft = if (anchor == null) {
+        0f
+    } else {
+        (anchor.right - overlayOrigin.x - menuWidthPx).coerceIn(
+            0f,
+            (overlayWidth - menuWidthPx).coerceAtLeast(0f)
+        )
+    }
+    val menuTop = if (anchor == null) {
+        0f
+    } else if (flipsUp) {
+        anchor.top - overlayOrigin.y - gapPx - estimatedHeight
+    } else {
+        anchor.bottom - overlayOrigin.y + gapPx
+    }
+
+    // The panel grows and scales out of the row that opened it: the pivot is that row's
+    // centre projected into the panel's own space, so the motion is anchored to the row
+    // wherever it sits rather than to a hard-coded edge.
+    val originY = if (anchor == null || estimatedHeight <= 0f) {
+        0.5f
+    } else {
+        val rowCentre = (anchor.top + anchor.bottom) / 2f - overlayOrigin.y - menuTop
+        (rowCentre / estimatedHeight).coerceIn(0f, 1f)
+    }
 
     Box(
         modifier = modifier
@@ -250,58 +275,53 @@ fun <T> ZXDropDownMenu(
                 overlayHeight = coordinates.size.height.toFloat()
             }
     ) {
-        // Both halves read one transition state so the scrim and the menu share a lifecycle:
-        // while collapsed nothing is composed, and the rows underneath stay tappable.
-        val transitionState = remember { MutableTransitionState(false) }
-        transitionState.targetState = state.expanded
+        // Driven by animateFloatAsState rather than AnimatedVisibility. This menu is hosted
+        // inside other animated containers (an AnimatedContent stage, an AnimatedVisibility
+        // panel), and a transition owned here is the only one their machinery cannot swallow
+        // -- a nested AnimatedVisibility inside an already-settled parent has been observed
+        // skipping its enter entirely. Both values are read in the draw phase, so nothing
+        // recomposes per frame.
+        val panelScale by animateFloatAsState(
+            targetValue = if (state.expanded) 1f else 0.86f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioLowBouncy,
+                stiffness = Spring.StiffnessMediumLow
+            ),
+            label = "ZXDropDownScale"
+        )
+        val fade by animateFloatAsState(
+            targetValue = if (state.expanded) 1f else 0f,
+            animationSpec = tween(
+                durationMillis = if (state.expanded) 110 else 90,
+                easing = if (state.expanded) Motion.EmphasizedDecelerate else Motion.EmphasizedAccelerate
+            ),
+            label = "ZXDropDownFade"
+        )
 
-        AnimatedVisibility(
-            visibleState = transitionState,
-            enter = fadeIn(animationSpec = tween(durationMillis = 140, easing = Motion.EmphasizedDecelerate)),
-            exit = fadeOut(animationSpec = tween(durationMillis = 110, easing = Motion.EmphasizedAccelerate))
-        ) {
+        // Held composed only while something is on screen, so the rows underneath stay
+        // tappable while the exit is allowed to finish.
+        var render by remember { mutableStateOf(false) }
+        LaunchedEffect(state.expanded) {
+            if (state.expanded) {
+                render = true
+            } else {
+                delay(160)
+                render = false
+            }
+        }
+
+        if (render) {
+            val scrimInteraction = remember { MutableInteractionSource() }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
+                        interactionSource = scrimInteraction,
                         indication = null,
                         onClick = dismissWithCancel
                     )
             )
-        }
 
-        AnimatedVisibility(
-            visibleState = transitionState,
-            enter = fadeIn(
-                animationSpec = tween(durationMillis = 110, easing = Motion.EmphasizedDecelerate)
-            ) + expandVertically(
-                // The clip grows from the anchor edge, so the panel reads as unfolding out of
-                // the row rather than being scaled down into place.
-                expandFrom = if (flipsUp) Alignment.Bottom else Alignment.Top,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                )
-            ) + scaleIn(
-                initialScale = 0.9f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                ),
-                transformOrigin = TransformOrigin(0.5f, if (flipsUp) 1f else 0f)
-            ),
-            exit = fadeOut(
-                animationSpec = tween(durationMillis = 90, easing = Motion.EmphasizedAccelerate)
-            ) + shrinkVertically(
-                shrinkTowards = if (flipsUp) Alignment.Bottom else Alignment.Top,
-                animationSpec = tween(durationMillis = 120, easing = Motion.EmphasizedAccelerate)
-            ) + scaleOut(
-                targetScale = 0.94f,
-                animationSpec = tween(durationMillis = 90, easing = Motion.EmphasizedAccelerate),
-                transformOrigin = TransformOrigin(0.5f, if (flipsUp) 1f else 0f)
-            )
-        ) {
             Surface(
                 shape = RoundedCornerShape(20.dp),
                 color = scheme.surfaceContainerHigh,
@@ -309,24 +329,17 @@ fun <T> ZXDropDownMenu(
                 tonalElevation = 3.dp,
                 shadowElevation = 8.dp,
                 modifier = Modifier
-                    .offset {
-                        val current = state.anchor ?: return@offset IntOffset.Zero
-                        val menuWidthPx = with(density) { menuWidth.toPx() }
-                        val left = current.left - overlayOrigin.x
-                        val x = left.coerceIn(
-                            0f,
-                            (overlayWidth - menuWidthPx).coerceAtLeast(0f)
-                        )
-                        val below = current.bottom - overlayOrigin.y + gapPx
-                        val y = if (flipsUp) {
-                            current.top - overlayOrigin.y - gapPx - menuViewport
-                        } else {
-                            below
-                        }
-                        IntOffset(x.roundToInt(), y.roundToInt())
-                    }
+                    .offset { IntOffset(menuLeft.roundToInt(), menuTop.roundToInt()) }
                     .width(menuWidth)
                     .heightIn(max = 344.dp)
+                    .graphicsLayer {
+                        // Scale cannot crop, so the panel can no longer be truncated the way
+                        // the clip-based expandVertically transition truncated it.
+                        alpha = fade
+                        scaleX = panelScale
+                        scaleY = panelScale
+                        transformOrigin = TransformOrigin(1f, originY)
+                    }
                     .onGloballyPositioned { menuViewport = it.size.height.toFloat() }
             ) {
                 Column(

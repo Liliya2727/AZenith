@@ -902,109 +902,115 @@ internal fun WelcomeHubStage(
         suspended
     }
 
-    BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(stageGate)
-            .pointerInput(Unit) {
-                awaitEachGesture {
-                    try {
-                        awaitFirstDown(requireUnconsumed = false)
-                        do {
-                            val event = awaitPointerEvent()
-                        } while (event.changes.any { it.pressed })
-                    } finally {
-                        dragExpandDistance = 0f
-                    }
-                }
-            }
-    ) {
-        val stageH = maxHeight
-        val dynamicCompactH = (stageH * 0.22f).coerceIn(52.dp, 72.dp)
-        val restBottomSpacer = (14.dp + 4.dp * (scaleRatio - 0.8f)).coerceIn(12.dp, 20.dp)
-        val dynamicGap = (stageH * 0.04f).coerceIn(4.dp, 12.dp)
-        val dynamicRestTopRoom = (stageH - dynamicCompactH - dynamicGap - restBottomSpacer)
-            .coerceAtLeast(32.dp)
-
-        val topRoom by animateDpAsState(
-            targetValue = if (expanded) 12.dp else dynamicRestTopRoom,
-            animationSpec = spring(
-                dampingRatio = 0.52f,
-                stiffness = 240f
-            ),
-            label = "WelcomeTopRoom"
-        )
-
-        val targetProgress = if (expanded) 1f else 0f
-        val expandProgress by animateFloatAsState(
-            targetValue = targetProgress,
-            animationSpec = spring(
-                dampingRatio = 0.52f,
-                stiffness = 240f
-            ),
-            label = "BentoMorphProgress"
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scroll)
-        ) {
-            Box(
+    // The menu's overlay must sit in a plain full-size Box. As a direct child of the
+    // AnimatedContent stage it inherited the stage's measured bounds, which are the content's
+    // size rather than the stage's, and the panel was clipped to them. The settings panes
+    // already wrap their content this way and render full height.
+    Box(modifier = Modifier.fillMaxSize()) {
+            BoxWithConstraints(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(topRoom)
-                    .clipToBounds(),
-                contentAlignment = Alignment.BottomStart
+                    .fillMaxSize()
+                    .nestedScroll(stageGate)
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            try {
+                                awaitFirstDown(requireUnconsumed = false)
+                                do {
+                                    val event = awaitPointerEvent()
+                                } while (event.changes.any { it.pressed })
+                            } finally {
+                                dragExpandDistance = 0f
+                            }
+                        }
+                    }
             ) {
-                HomeWordmark(
-                    scroll = scroll,
-                    held = expanded,
-                    text = wordmark,
-                    deviceName = deviceName,
-                    chipsetName = chipsetName,
-                    scaleRatio = scaleRatio,
-                    onOpenHomeWallpaper = onOpenHomeWallpaper
-                )
-            }
+            val stageH = maxHeight
+            val dynamicCompactH = (stageH * 0.22f).coerceIn(52.dp, 72.dp)
+            val restBottomSpacer = (14.dp + 4.dp * (scaleRatio - 0.8f)).coerceIn(12.dp, 20.dp)
+            val dynamicGap = (stageH * 0.04f).coerceIn(4.dp, 12.dp)
+            val dynamicRestTopRoom = (stageH - dynamicCompactH - dynamicGap - restBottomSpacer)
+                .coerceAtLeast(32.dp)
 
-            val wordmarkToBentoGap = lerp(dynamicGap, 0.dp, expandProgress)
-            if (wordmarkToBentoGap > 0.dp) {
-                Spacer(Modifier.height(wordmarkToBentoGap))
-            }
-
-            HubBentoGrid(
-                expandProgress = expandProgress,
-                compactHeight = dynamicCompactH,
-                onExpandRequest = {
-                    notifyExpanded.value(true)
-                },
-                moduleInstalled = moduleInstalled,
-                moduleValue = moduleValue,
-                servicePid = service.second.takeIf { moduleInstalled == true && it.isNotBlank() },
-                rootGranted = rootGranted,
-                rootValue = rootValue,
-                profile = profile,
-                profileValue = profileValue,
-                isManualMode = isManualMode,
-                isProfileApplying = isProfileApplying,
-                onProfileClick = if (isManualMode && !isProfileApplying) {
-                    { profileDropDown.show() }
-                } else null,
-                profileDropDownState = profileDropDown,
-                deviceName = deviceName,
-                chipsetName = chipsetName,
-                refreshHz = refreshHz,
-                gamesCount = games.size,
-                allAppsCount = allAppsCount,
-                onOpenSettings = onOpenSettings,
-                onOpenLibrary = onOpenLibrary,
-                onSupport = { uriHandler.openUri("https://t.me/ZeshArch") },
-                onLearnMore = { uriHandler.openUri("https://github.com/Liliya2727/AZenith") }
+            val topRoom by animateDpAsState(
+                targetValue = if (expanded) 12.dp else dynamicRestTopRoom,
+                animationSpec = spring(
+                    dampingRatio = 0.52f,
+                    stiffness = 240f
+                ),
+                label = "WelcomeTopRoom"
             )
 
-            val bottomSpacer = lerp(restBottomSpacer, 32.dp, expandProgress.coerceIn(0f, 1f))
-            Spacer(Modifier.height(bottomSpacer))
+            val targetProgress = if (expanded) 1f else 0f
+            val expandProgress by animateFloatAsState(
+                targetValue = targetProgress,
+                animationSpec = spring(
+                    dampingRatio = 0.52f,
+                    stiffness = 240f
+                ),
+                label = "BentoMorphProgress"
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scroll)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(topRoom)
+                        .clipToBounds(),
+                    contentAlignment = Alignment.BottomStart
+                ) {
+                    HomeWordmark(
+                        scroll = scroll,
+                        held = expanded,
+                        text = wordmark,
+                        deviceName = deviceName,
+                        chipsetName = chipsetName,
+                        scaleRatio = scaleRatio,
+                        onOpenHomeWallpaper = onOpenHomeWallpaper
+                    )
+                }
+
+                val wordmarkToBentoGap = lerp(dynamicGap, 0.dp, expandProgress)
+                if (wordmarkToBentoGap > 0.dp) {
+                    Spacer(Modifier.height(wordmarkToBentoGap))
+                }
+
+                HubBentoGrid(
+                    expandProgress = expandProgress,
+                    compactHeight = dynamicCompactH,
+                    onExpandRequest = {
+                        notifyExpanded.value(true)
+                    },
+                    moduleInstalled = moduleInstalled,
+                    moduleValue = moduleValue,
+                    servicePid = service.second.takeIf { moduleInstalled == true && it.isNotBlank() },
+                    rootGranted = rootGranted,
+                    rootValue = rootValue,
+                    profile = profile,
+                    profileValue = profileValue,
+                    isManualMode = isManualMode,
+                    isProfileApplying = isProfileApplying,
+                    onProfileClick = if (isManualMode && !isProfileApplying) {
+                        { profileDropDown.show() }
+                    } else null,
+                    profileDropDownState = profileDropDown,
+                    deviceName = deviceName,
+                    chipsetName = chipsetName,
+                    refreshHz = refreshHz,
+                    gamesCount = games.size,
+                    allAppsCount = allAppsCount,
+                    onOpenSettings = onOpenSettings,
+                    onOpenLibrary = onOpenLibrary,
+                    onSupport = { uriHandler.openUri("https://t.me/ZeshArch") },
+                    onLearnMore = { uriHandler.openUri("https://github.com/Liliya2727/AZenith") }
+                )
+
+                val bottomSpacer = lerp(restBottomSpacer, 32.dp, expandProgress.coerceIn(0f, 1f))
+                Spacer(Modifier.height(bottomSpacer))
+            }
         }
     }
 
