@@ -42,6 +42,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -200,6 +201,25 @@ internal fun ZXGameSpaceAppSettingsOverlay(
         if (activePkg != null) {
             viewModel.loadConfig()
         }
+    }
+
+    // Edge-to-edge stationary scrim: smoothly dims and blurs underlying UI and prevents tap-through
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = motion.defaultEffectsSpec()),
+        exit = fadeOut(animationSpec = motion.defaultEffectsSpec()),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(scheme.scrim.copy(alpha = 0.45f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onClose
+                )
+        )
     }
 
     AnimatedVisibility(
@@ -891,6 +911,25 @@ internal fun ZXGameSpaceWallpaperOverlay(
     var activePkg by remember { mutableStateOf(packageName) }
     if (packageName != null) {
         activePkg = packageName
+    }
+
+    // Edge-to-edge stationary scrim: smoothly dims and blurs underlying UI and prevents tap-through
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = motion.defaultEffectsSpec()),
+        exit = fadeOut(animationSpec = motion.defaultEffectsSpec()),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(scheme.scrim.copy(alpha = 0.45f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onClose
+                )
+        )
     }
 
     AnimatedVisibility(
