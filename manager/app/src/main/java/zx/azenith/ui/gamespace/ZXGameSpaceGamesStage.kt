@@ -196,13 +196,13 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 import zx.azenith.R
-import zx.azenith.ui.component.AZenithSheet
 import zx.azenith.ui.component.AppIconImage
 import zx.azenith.ui.component.MediaBannerRenderer
-import zx.azenith.ui.component.SheetItem
-import zx.azenith.ui.component.SheetRowStyle
 import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.component.gamepadScreenEntry
+import zx.azenith.ui.component.ZXDropDownMenu
+import zx.azenith.ui.component.rememberZXDropDownState
+import zx.azenith.ui.component.zxDropDownAnchor
 import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.RootUtils
 import zx.azenith.ui.viewmodel.AutoModeBus
@@ -861,9 +861,9 @@ internal fun WelcomeHubStage(
     }
 
     val isManualMode = autoMode == "0"
-    var showProfileSheet by remember { mutableStateOf(false) }
+    val profileDropDown = rememberZXDropDownState()
     LaunchedEffect(isManualMode) {
-        if (!isManualMode) showProfileSheet = false
+        if (!isManualMode) profileDropDown.dismiss()
     }
 
     var pendingProfileValue by remember { mutableStateOf<String?>(null) }
@@ -989,8 +989,9 @@ internal fun WelcomeHubStage(
                 isManualMode = isManualMode,
                 isProfileApplying = isProfileApplying,
                 onProfileClick = if (isManualMode && !isProfileApplying) {
-                    { showProfileSheet = true }
+                    { profileDropDown.show() }
                 } else null,
+                profileDropDownState = profileDropDown,
                 deviceName = deviceName,
                 chipsetName = chipsetName,
                 refreshHz = refreshHz,
@@ -1007,44 +1008,57 @@ internal fun WelcomeHubStage(
         }
     }
 
-    val profileOptions = listOf(
-        Triple("1", R.string.Profile_Performance, Icons.Rounded.OfflineBolt),
-        Triple("2", R.string.Profile_Balanced, Icons.Rounded.Water),
-        Triple("3", R.string.Profile_ECO_mode, Icons.Rounded.EnergySavingsLeaf)
-    )
-    val profileSummaries = listOf(
-        "Maximum CPU/GPU clock frequencies and low-latency governor",
-        "Adaptive daily performance and thermal efficiency",
-        "Power-saving frequency cap for extended battery life"
+    val profileModes = listOf(
+        ProfileMode(
+            value = "1",
+            label = stringResource(R.string.Profile_Performance),
+            summary = "Maximum CPU/GPU clock frequencies and low-latency governor",
+            icon = Icons.Rounded.OfflineBolt
+        ),
+        ProfileMode(
+            value = "2",
+            label = stringResource(R.string.Profile_Balanced),
+            summary = "Adaptive daily performance and thermal efficiency",
+            icon = Icons.Rounded.Water
+        ),
+        ProfileMode(
+            value = "3",
+            label = stringResource(R.string.Profile_ECO_mode),
+            summary = "Power-saving frequency cap for extended battery life",
+            icon = Icons.Rounded.EnergySavingsLeaf
+        )
     )
 
-    AZenithSheet(
-        show = showProfileSheet,
-        onDismiss = { showProfileSheet = false },
-        title = stringResource(R.string.Profile_Select),
-        subtitle = stringResource(R.string.current_profile),
-        style = SheetRowStyle.SingleSelect,
-        items = profileOptions.mapIndexed { idx, (value, titleRes, icon) ->
-            SheetItem(
-                label = stringResource(titleRes),
-                summary = profileSummaries[idx],
-                icon = icon,
-                selected = profileValue == value || (value == "2" && profileValue.isBlank())
-            )
+    // Rendered outside the scrolling Column: the menu has to overlay the whole stage, and a
+    // child of a verticalScroll is clipped to the scroll viewport.
+    ZXDropDownMenu(
+        state = profileDropDown,
+        options = profileModes,
+        selectedOption = profileModes.firstOrNull {
+            it.value == profileValue || (it.value == "2" && profileValue.isBlank())
         },
-        onItemClick = { index ->
-            if (index in profileOptions.indices) {
-                val target = profileOptions[index].first
-                if (target != profileValue) {
-                    pendingProfileValue = target
-                    isProfileApplying = true
-                }
-                onApplyProfile(target)
+        onOptionSelected = { mode ->
+            if (mode.value != profileValue) {
+                pendingProfileValue = mode.value
+                isProfileApplying = true
             }
-            showProfileSheet = false
-        }
+            onApplyProfile(mode.value)
+        },
+        optionLabel = { it.label },
+        optionSupporting = { it.summary },
+        optionIcon = { it.icon },
+        minWidth = 300.dp,
+        maxWidth = 460.dp
     )
 }
+
+/** One entry in the home profile picker. */
+private data class ProfileMode(
+    val value: String,
+    val label: String,
+    val summary: String,
+    val icon: ImageVector
+)
 
 /** The wordmark at rest: hero size while the sheet is whole. */
 @Composable

@@ -143,8 +143,12 @@ import zx.azenith.ui.component.ExpressiveListItem
 import zx.azenith.ui.component.ExpressiveSliderItem
 import zx.azenith.ui.component.LeadingIcon
 import zx.azenith.ui.component.MediaBannerRenderer
+import zx.azenith.ui.component.ZXDropDownMenu
+import zx.azenith.ui.component.ZXDropDownState
 import zx.azenith.ui.component.ZenithSlider
 import zx.azenith.ui.component.gamepadFocusOutline
+import zx.azenith.ui.component.rememberZXDropDownState
+import zx.azenith.ui.component.zxDropDownAnchor
 import zx.azenith.ui.subscreens.getAppDetails
 import zx.azenith.ui.subscreens.isGameCategory
 import zx.azenith.ui.util.AppConfig
@@ -665,167 +669,55 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                 }
                             } else {
                                 val displayConfig = config ?: AppConfig()
-                                LazyColumn(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentPadding = PaddingValues(18.dp),
-                                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    item {
-                                        Text(
-                                            text = stringResource(R.string.section_performance).uppercase(),
-                                            style = MaterialTheme.typography.labelSmall.copy(
-                                                fontWeight = FontWeight.Bold,
-                                                letterSpacing = 1.2.sp
-                                            ),
-                                            color = scheme.primary
-                                        )
-                                    }
-                                    item {
-                                        ExpressiveList(
-                                            content = listOf {
-                                                ExpressiveDropdownItem(
-                                                    icon = Icons.Rounded.Speed,
-                                                    title = stringResource(R.string.perf_lite_mode),
-                                                    summary = stringResource(R.string.perf_lite_mode_desc_short),
-                                                    items = booleanModes,
-                                                    selectedIndex = getBoolIndex(displayConfig.perf_lite_mode),
-                                                    onItemSelected = { index ->
-                                                        val value = listOf("default", "true", "false")[index]
-                                                        viewModel.updateSetting(pkg, "perf_lite_mode", value)
-                                                    }
-                                                )
-                                            }
-                                        )
-                                    }
 
-                                    item {
-                                        Text(
-                                            text = stringResource(R.string.section_additionalsettings).uppercase(),
-                                            style = MaterialTheme.typography.labelSmall.copy(
-                                                fontWeight = FontWeight.Bold,
-                                                letterSpacing = 1.2.sp
-                                            ),
-                                            color = scheme.primary,
-                                            modifier = Modifier.padding(top = 4.dp)
-                                        )
-                                    }
-                                    item {
-                                        ExpressiveList(
-                                            content = buildList {
-                                                if (bypassSupported) {
-                                                    add {
-                                                        ExpressiveDropdownItem(
-                                                            icon = Icons.Rounded.Cable,
-                                                            title = stringResource(R.string.bcharging),
-                                                            summary = stringResource(R.string.enable_bypass_charge_desc),
-                                                            items = booleanModes,
-                                                            selectedIndex = getBoolIndex(displayConfig.bypass_charging),
-                                                            onItemSelected = { index ->
-                                                                val value = listOf("default", "true", "false")[index]
-                                                                viewModel.updateSetting(pkg, "bypass_charging", value)
-                                                            }
-                                                        )
-                                                    }
-                                                }
-                                                add {
-                                                    ExpressiveDropdownItem(
-                                                        icon = Icons.Rounded.RocketLaunch,
-                                                        title = stringResource(R.string.game_preload),
-                                                        summary = stringResource(R.string.game_preload_desc),
-                                                        items = booleanModes,
-                                                        selectedIndex = getBoolIndex(displayConfig.game_preload),
-                                                        onItemSelected = { index ->
-                                                            val value = listOf("default", "true", "false")[index]
-                                                            viewModel.updateSetting(pkg, "game_preload", value)
-                                                        }
-                                                    )
-                                                }
-                                                if (isFullModeEnabled) {
-                                                    add {
-                                                        ExpressiveDropdownItem(
-                                                            icon = Icons.Rounded.SwapVerticalCircle,
-                                                            title = stringResource(R.string.app_priority),
-                                                            summary = stringResource(R.string.app_priority_desc),
-                                                            items = booleanModes,
-                                                            selectedIndex = getBoolIndex(displayConfig.app_priority),
-                                                            onItemSelected = { index ->
-                                                                val value = listOf("default", "true", "false")[index]
-                                                                viewModel.updateSetting(pkg, "app_priority", value)
-                                                            }
-                                                        )
-                                                    }
-                                                }
-                                                add {
-                                                    ExpressiveDropdownItem(
-                                                        icon = Icons.Rounded.DoNotDisturbOn,
-                                                        title = stringResource(R.string.dnd_mode),
-                                                        summary = stringResource(R.string.dnd_mode_desc),
-                                                        items = booleanModes,
-                                                        selectedIndex = getBoolIndex(displayConfig.dnd_on_gaming),
-                                                        onItemSelected = { index ->
-                                                            val value = listOf("default", "true", "false")[index]
-                                                            viewModel.updateSetting(pkg, "dnd_on_gaming", value)
-                                                        }
-                                                    )
-                                                }
-                                            }
-                                        )
-                                    }
+                                val liteModeMenu = rememberZXDropDownState()
+                                val bypassMenu = rememberZXDropDownState()
+                                val preloadMenu = rememberZXDropDownState()
+                                val priorityMenu = rememberZXDropDownState()
+                                val dndMenu = rememberZXDropDownState()
+                                val refreshMenu = rememberZXDropDownState()
+                                val rendererMenu = rememberZXDropDownState()
+                                val boolValues = listOf("default", "true", "false")
 
-                                    item {
-                                        Text(
-                                            text = stringResource(R.string.section_display_render_settings).uppercase(),
-                                            style = MaterialTheme.typography.labelSmall.copy(
-                                                fontWeight = FontWeight.Bold,
-                                                letterSpacing = 1.2.sp
-                                            ),
-                                            color = scheme.primary,
-                                            modifier = Modifier.padding(top = 4.dp)
-                                        )
-                                    }
-                                    item {
-                                        ExpressiveList(
-                                            content = buildList {
-                                                if (isFullModeEnabled) {
-                                                    add {
-                                                        ExpressiveDropdownItem(
-                                                            icon = Icons.Rounded.WebStories,
-                                                            title = stringResource(R.string.refreshrates),
-                                                            summary = stringResource(R.string.refreshrates_desc),
-                                                            items = dynamicRefreshDisplayModes,
-                                                            selectedIndex = rawRefreshModes.indexOfFirst {
-                                                                it.equals(displayConfig.refresh_rate, ignoreCase = true)
-                                                            }.coerceAtLeast(0),
-                                                            onItemSelected = { index ->
-                                                                val value = rawRefreshModes[index]
-                                                                viewModel.updateSetting(pkg, "refresh_rate", value)
-                                                            }
-                                                        )
-                                                    }
-                                                }
-                                                add {
-                                                    ExpressiveDropdownItem(
-                                                        icon = Icons.Rounded.Layers,
-                                                        title = stringResource(R.string.renderengine),
-                                                        summary = stringResource(R.string.renderengine_desc),
-                                                        items = rendererModes,
-                                                        selectedIndex = rendererValues.indexOfFirst {
-                                                            it.equals(displayConfig.renderer, ignoreCase = true)
-                                                        }.coerceAtLeast(0),
-                                                        onItemSelected = { index ->
-                                                            val value = rendererValues[index]
-                                                            viewModel.updateSetting(pkg, "renderer", value)
-                                                        }
-                                                    )
-                                                }
-                                            }
-                                        )
-                                    }
-
-                                    if (isGameApp) {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(18.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
                                         item {
                                             Text(
-                                                text = stringResource(R.string.section_resolution_settings).uppercase(),
+                                                text = stringResource(R.string.section_performance).uppercase(),
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    letterSpacing = 1.2.sp
+                                                ),
+                                                color = scheme.primary
+                                            )
+                                        }
+                                        item {
+                                            ExpressiveList(
+                                                content = listOf {
+                                                    ExpressiveDropdownItem(
+                                                        icon = Icons.Rounded.Speed,
+                                                        title = stringResource(R.string.perf_lite_mode),
+                                                        summary = stringResource(R.string.perf_lite_mode_desc_short),
+                                                        items = booleanModes,
+                                                        selectedIndex = getBoolIndex(displayConfig.perf_lite_mode),
+                                                        onItemSelected = { index ->
+                                                            val value = listOf("default", "true", "false")[index]
+                                                            viewModel.updateSetting(pkg, "perf_lite_mode", value)
+                                                        },
+                                                        modifier = Modifier.zxDropDownAnchor(liteModeMenu),
+                                                        externalMenuState = liteModeMenu
+                                                    )
+                                                }
+                                            )
+                                        }
+
+                                        item {
+                                            Text(
+                                                text = stringResource(R.string.section_additionalsettings).uppercase(),
                                                 style = MaterialTheme.typography.labelSmall.copy(
                                                     fontWeight = FontWeight.Bold,
                                                     letterSpacing = 1.2.sp
@@ -837,57 +729,258 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                         item {
                                             ExpressiveList(
                                                 content = buildList {
-                                                    add {
-                                                        val currentDownscaleIndex = rawDownscaleSteps
-                                                            .indexOf(displayConfig.resolution_downscale)
-                                                            .coerceAtLeast(0)
-                                                        var downscaleSliderPos by remember(displayConfig.resolution_downscale) {
-                                                            mutableFloatStateOf(currentDownscaleIndex.toFloat())
+                                                    if (bypassSupported) {
+                                                        add {
+                                                            ExpressiveDropdownItem(
+                                                                icon = Icons.Rounded.Cable,
+                                                                title = stringResource(R.string.bcharging),
+                                                                summary = stringResource(R.string.enable_bypass_charge_desc),
+                                                                items = booleanModes,
+                                                                selectedIndex = getBoolIndex(displayConfig.bypass_charging),
+                                                                onItemSelected = { index ->
+                                                                    val value = listOf("default", "true", "false")[index]
+                                                                    viewModel.updateSetting(pkg, "bypass_charging", value)
+                                                                },
+                                                                modifier = Modifier.zxDropDownAnchor(bypassMenu),
+                                                                externalMenuState = bypassMenu
+                                                            )
                                                         }
-                                                        ExpressiveSliderItem(
-                                                            icon = Icons.Rounded.AspectRatio,
-                                                            title = stringResource(R.string.resolution_downscale_title),
-                                                            subtitle = stringResource(R.string.resolution_downscale_desc),
-                                                            badgeText = downscaleDisplaySteps.getOrElse(downscaleSliderPos.toInt()) { defaultLabel },
-                                                            sliderPosition = downscaleSliderPos,
-                                                            valueRange = 0f..(rawDownscaleSteps.size - 1).toFloat(),
-                                                            steps = rawDownscaleSteps.size - 2,
-                                                            onValueChange = { downscaleSliderPos = it },
-                                                            onValueChangeFinished = {
-                                                                val value = rawDownscaleSteps[downscaleSliderPos.toInt()]
-                                                                viewModel.updateSetting(pkg, "resolution_downscale", value)
-                                                            }
-                                                        )
                                                     }
                                                     add {
-                                                        val currentFpsIndex = rawFpsSteps
-                                                            .indexOf(displayConfig.resolution_fps)
-                                                            .coerceAtLeast(0)
-                                                        var fpsSliderPos by remember(displayConfig.resolution_fps) {
-                                                            mutableFloatStateOf(currentFpsIndex.toFloat())
+                                                        ExpressiveDropdownItem(
+                                                            icon = Icons.Rounded.RocketLaunch,
+                                                            title = stringResource(R.string.game_preload),
+                                                            summary = stringResource(R.string.game_preload_desc),
+                                                            items = booleanModes,
+                                                            selectedIndex = getBoolIndex(displayConfig.game_preload),
+                                                            onItemSelected = { index ->
+                                                                val value = listOf("default", "true", "false")[index]
+                                                                viewModel.updateSetting(pkg, "game_preload", value)
+                                                            },
+                                                            modifier = Modifier.zxDropDownAnchor(preloadMenu),
+                                                            externalMenuState = preloadMenu
+                                                        )
+                                                    }
+                                                    if (isFullModeEnabled) {
+                                                        add {
+                                                            ExpressiveDropdownItem(
+                                                                icon = Icons.Rounded.SwapVerticalCircle,
+                                                                title = stringResource(R.string.app_priority),
+                                                                summary = stringResource(R.string.app_priority_desc),
+                                                                items = booleanModes,
+                                                                selectedIndex = getBoolIndex(displayConfig.app_priority),
+                                                                onItemSelected = { index ->
+                                                                    val value = listOf("default", "true", "false")[index]
+                                                                    viewModel.updateSetting(pkg, "app_priority", value)
+                                                                },
+                                                                modifier = Modifier.zxDropDownAnchor(priorityMenu),
+                                                                externalMenuState = priorityMenu
+                                                            )
                                                         }
-                                                        val downscaleIsOff = displayConfig.resolution_downscale == "default"
-                                                        ExpressiveSliderItem(
-                                                            icon = Icons.Rounded.Speed,
-                                                            title = stringResource(R.string.resolution_fps_target_title),
-                                                            subtitle = stringResource(R.string.resolution_fps_target_desc),
-                                                            badgeText = "${fpsDisplaySteps.getOrElse(fpsSliderPos.toInt()) { "60" }}fps",
-                                                            sliderPosition = fpsSliderPos,
-                                                            valueRange = 0f..(rawFpsSteps.size - 1).toFloat(),
-                                                            steps = rawFpsSteps.size - 2,
-                                                            enabled = !downscaleIsOff,
-                                                            onValueChange = { fpsSliderPos = it },
-                                                            onValueChangeFinished = {
-                                                                val value = rawFpsSteps[fpsSliderPos.toInt()]
-                                                                viewModel.updateSetting(pkg, "resolution_fps", value)
-                                                            }
+                                                    }
+                                                    add {
+                                                        ExpressiveDropdownItem(
+                                                            icon = Icons.Rounded.DoNotDisturbOn,
+                                                            title = stringResource(R.string.dnd_mode),
+                                                            summary = stringResource(R.string.dnd_mode_desc),
+                                                            items = booleanModes,
+                                                            selectedIndex = getBoolIndex(displayConfig.dnd_on_gaming),
+                                                            onItemSelected = { index ->
+                                                                val value = listOf("default", "true", "false")[index]
+                                                                viewModel.updateSetting(pkg, "dnd_on_gaming", value)
+                                                            },
+                                                            modifier = Modifier.zxDropDownAnchor(dndMenu),
+                                                            externalMenuState = dndMenu
                                                         )
                                                     }
                                                 }
                                             )
                                         }
+
+                                        item {
+                                            Text(
+                                                text = stringResource(R.string.section_display_render_settings).uppercase(),
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    letterSpacing = 1.2.sp
+                                                ),
+                                                color = scheme.primary,
+                                                modifier = Modifier.padding(top = 4.dp)
+                                            )
+                                        }
+                                        item {
+                                            ExpressiveList(
+                                                content = buildList {
+                                                    if (isFullModeEnabled) {
+                                                        add {
+                                                            ExpressiveDropdownItem(
+                                                                icon = Icons.Rounded.WebStories,
+                                                                title = stringResource(R.string.refreshrates),
+                                                                summary = stringResource(R.string.refreshrates_desc),
+                                                                items = dynamicRefreshDisplayModes,
+                                                                selectedIndex = rawRefreshModes.indexOfFirst {
+                                                                    it.equals(displayConfig.refresh_rate, ignoreCase = true)
+                                                                }.coerceAtLeast(0),
+                                                                onItemSelected = { index ->
+                                                                    val value = rawRefreshModes[index]
+                                                                    viewModel.updateSetting(pkg, "refresh_rate", value)
+                                                                },
+                                                                modifier = Modifier.zxDropDownAnchor(refreshMenu),
+                                                                externalMenuState = refreshMenu
+                                                            )
+                                                        }
+                                                    }
+                                                    add {
+                                                        ExpressiveDropdownItem(
+                                                            icon = Icons.Rounded.Layers,
+                                                            title = stringResource(R.string.renderengine),
+                                                            summary = stringResource(R.string.renderengine_desc),
+                                                            items = rendererModes,
+                                                            selectedIndex = rendererValues.indexOfFirst {
+                                                                it.equals(displayConfig.renderer, ignoreCase = true)
+                                                            }.coerceAtLeast(0),
+                                                            onItemSelected = { index ->
+                                                                val value = rendererValues[index]
+                                                                viewModel.updateSetting(pkg, "renderer", value)
+                                                            },
+                                                            modifier = Modifier.zxDropDownAnchor(rendererMenu),
+                                                            externalMenuState = rendererMenu
+                                                        )
+                                                    }
+                                                }
+                                            )
+                                        }
+
+                                        if (isGameApp) {
+                                            item {
+                                                Text(
+                                                    text = stringResource(R.string.section_resolution_settings).uppercase(),
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        fontWeight = FontWeight.Bold,
+                                                        letterSpacing = 1.2.sp
+                                                    ),
+                                                    color = scheme.primary,
+                                                    modifier = Modifier.padding(top = 4.dp)
+                                                )
+                                            }
+                                            item {
+                                                ExpressiveList(
+                                                    content = buildList {
+                                                        add {
+                                                            val currentDownscaleIndex = rawDownscaleSteps
+                                                                .indexOf(displayConfig.resolution_downscale)
+                                                                .coerceAtLeast(0)
+                                                            var downscaleSliderPos by remember(displayConfig.resolution_downscale) {
+                                                                mutableFloatStateOf(currentDownscaleIndex.toFloat())
+                                                            }
+                                                            ExpressiveSliderItem(
+                                                                icon = Icons.Rounded.AspectRatio,
+                                                                title = stringResource(R.string.resolution_downscale_title),
+                                                                subtitle = stringResource(R.string.resolution_downscale_desc),
+                                                                badgeText = downscaleDisplaySteps.getOrElse(downscaleSliderPos.toInt()) { defaultLabel },
+                                                                sliderPosition = downscaleSliderPos,
+                                                                valueRange = 0f..(rawDownscaleSteps.size - 1).toFloat(),
+                                                                steps = rawDownscaleSteps.size - 2,
+                                                                onValueChange = { downscaleSliderPos = it },
+                                                                onValueChangeFinished = {
+                                                                    val value = rawDownscaleSteps[downscaleSliderPos.toInt()]
+                                                                    viewModel.updateSetting(pkg, "resolution_downscale", value)
+                                                                }
+                                                            )
+                                                        }
+                                                        add {
+                                                            val currentFpsIndex = rawFpsSteps
+                                                                .indexOf(displayConfig.resolution_fps)
+                                                                .coerceAtLeast(0)
+                                                            var fpsSliderPos by remember(displayConfig.resolution_fps) {
+                                                                mutableFloatStateOf(currentFpsIndex.toFloat())
+                                                            }
+                                                            val downscaleIsOff = displayConfig.resolution_downscale == "default"
+                                                            ExpressiveSliderItem(
+                                                                icon = Icons.Rounded.Speed,
+                                                                title = stringResource(R.string.resolution_fps_target_title),
+                                                                subtitle = stringResource(R.string.resolution_fps_target_desc),
+                                                                badgeText = "${fpsDisplaySteps.getOrElse(fpsSliderPos.toInt()) { "60" }}fps",
+                                                                sliderPosition = fpsSliderPos,
+                                                                valueRange = 0f..(rawFpsSteps.size - 1).toFloat(),
+                                                                steps = rawFpsSteps.size - 2,
+                                                                enabled = !downscaleIsOff,
+                                                                onValueChange = { fpsSliderPos = it },
+                                                                onValueChangeFinished = {
+                                                                    val value = rawFpsSteps[fpsSliderPos.toInt()]
+                                                                    viewModel.updateSetting(pkg, "resolution_fps", value)
+                                                                }
+                                                            )
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                        }
                                     }
+                                // Hoisted out of the LazyColumn: an in-window overlay inside a
+                                // lazy item is clipped to the list viewport.
+                                @Composable
+                                fun boolMenu(
+                                    state: ZXDropDownState,
+                                    key: String,
+                                    current: String?
+                                ) = ZXDropDownMenu(
+                                    state = state,
+                                    options = booleanModes,
+                                    selectedOption = booleanModes.getOrNull(getBoolIndex(current)),
+                                    onOptionSelected = { label ->
+                                        val index = booleanModes.indexOf(label)
+                                        if (index >= 0) viewModel.updateSetting(pkg, key, boolValues[index])
+                                    },
+                                    minWidth = 260.dp
+                                )
+
+                                boolMenu(liteModeMenu, "perf_lite_mode", displayConfig.perf_lite_mode)
+                                if (bypassSupported) {
+                                    boolMenu(bypassMenu, "bypass_charging", displayConfig.bypass_charging)
                                 }
+                                boolMenu(preloadMenu, "game_preload", displayConfig.game_preload)
+                                if (isFullModeEnabled) {
+                                    boolMenu(priorityMenu, "app_priority", displayConfig.app_priority)
+                                }
+                                boolMenu(dndMenu, "dnd_on_gaming", displayConfig.dnd_on_gaming)
+
+                                if (isFullModeEnabled) {
+                                    ZXDropDownMenu(
+                                        state = refreshMenu,
+                                        options = dynamicRefreshDisplayModes,
+                                        selectedOption = dynamicRefreshDisplayModes.getOrNull(
+                                            rawRefreshModes.indexOfFirst {
+                                                it.equals(displayConfig.refresh_rate, ignoreCase = true)
+                                            }.coerceAtLeast(0)
+                                        ),
+                                        onOptionSelected = { label ->
+                                            val index = dynamicRefreshDisplayModes.indexOf(label)
+                                            if (index >= 0) {
+                                                viewModel.updateSetting(pkg, "refresh_rate", rawRefreshModes[index])
+                                            }
+                                        },
+                                        minWidth = 260.dp
+                                    )
+                                }
+
+                                ZXDropDownMenu(
+                                    state = rendererMenu,
+                                    options = rendererModes,
+                                    selectedOption = rendererModes.getOrNull(
+                                        rendererValues.indexOfFirst {
+                                            it.equals(displayConfig.renderer, ignoreCase = true)
+                                        }.coerceAtLeast(0)
+                                    ),
+                                    onOptionSelected = { label ->
+                                        val index = rendererModes.indexOf(label)
+                                        if (index >= 0) viewModel.updateSetting(pkg, "renderer", rendererValues[index])
+                                    },
+                                    minWidth = 280.dp,
+                                    maxWidth = 420.dp
+                                )
+                                }
+
                             }
                         }
                     }

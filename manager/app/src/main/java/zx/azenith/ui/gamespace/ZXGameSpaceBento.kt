@@ -121,6 +121,8 @@ import kotlinx.coroutines.delay
 import zx.azenith.R
 import zx.azenith.ui.component.GamepadFocusNav
 import zx.azenith.ui.component.GamepadInput
+import zx.azenith.ui.component.ZXDropDownState
+import zx.azenith.ui.component.zxDropDownAnchor
 import kotlin.math.roundToInt
 
 private val BENTO_GAP = 12.dp
@@ -507,6 +509,7 @@ internal fun HubBentoGrid(
     isManualMode: Boolean,
     isProfileApplying: Boolean,
     onProfileClick: (() -> Unit)?,
+    profileDropDownState: ZXDropDownState? = null,
     deviceName: String,
     chipsetName: String,
     refreshHz: Int,
@@ -533,7 +536,8 @@ internal fun HubBentoGrid(
             isManualMode = isManualMode,
             isApplying = isProfileApplying,
             onClick = onProfileClick,
-            onExpandClick = onExpandRequest
+            onExpandClick = onExpandRequest,
+            modifier = profileDropDownState?.let { Modifier.zxDropDownAnchor(it) } ?: Modifier
         )
 
         val moduleMissing = moduleInstalled == false

@@ -147,7 +147,10 @@ import zx.azenith.ui.component.gamepadFocusOutline
 import zx.azenith.ui.gamespace.AdaptiveSettingsGrid
 import zx.azenith.ui.gamespace.SettingsActionCard
 import zx.azenith.ui.gamespace.SettingsSwitchCard
+import zx.azenith.ui.component.ZXDropDownMenu
+import zx.azenith.ui.component.rememberZXDropDownState
 import zx.azenith.ui.gamespace.springPressBounce
+import zx.azenith.ui.component.zxDropDownAnchor
 import zx.azenith.ui.subscreens.ColorPreset
 import zx.azenith.ui.subscreens.ColorSliderItem
 import zx.azenith.ui.util.AudioUtil
@@ -316,8 +319,8 @@ private fun TweaksMainSubPane(
     val density = LocalDensity.current
     val scrollState = rememberScrollState()
 
-    var showRefreshRateDialog by remember { mutableStateOf(false) }
-    var showRendererDialog by remember { mutableStateOf(false) }
+    val refreshRateDropDown = rememberZXDropDownState()
+    val rendererDropDown = rememberZXDropDownState()
 
     var isFullModeEnabled by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -372,459 +375,451 @@ private fun TweaksMainSubPane(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(18.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        Column {
-            Text(
-                text = stringResource(R.string.nav_tweaks),
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                color = scheme.onSurface
-            )
-            Text(
-                text = "Kernel governor, scheduling optimizations, and hardware accelerators",
-                style = MaterialTheme.typography.bodySmall,
-                color = scheme.onSurfaceVariant.copy(alpha = 0.82f)
-            )
-        }
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Column {
+                Text(
+                    text = stringResource(R.string.nav_tweaks),
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.onSurface
+                )
+                Text(
+                    text = "Kernel governor, scheduling optimizations, and hardware accelerators",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.onSurfaceVariant.copy(alpha = 0.82f)
+                )
+            }
 
-        // --- 1. Profile Section ---
-        if (!isManualMode) {
-            val autoCardShape = RoundedCornerShape(22.dp)
-            Surface(
-                shape = autoCardShape,
-                color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+            // --- 1. Profile Section ---
+            if (!isManualMode) {
+                val autoCardShape = RoundedCornerShape(22.dp)
+                Surface(
+                    shape = autoCardShape,
+                    color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = scheme.primaryContainer,
-                        modifier = Modifier.size(42.dp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Rounded.AutoAwesome,
-                                contentDescription = null,
-                                tint = scheme.onPrimaryContainer,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = scheme.primaryContainer,
+                            modifier = Modifier.size(42.dp)
                         ) {
-                            Text(
-                                text = "Auto Mode",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                color = scheme.onSurface
-                            )
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = scheme.surfaceContainerHighest
-                            ) {
-                                Text(
-                                    text = when (profileValue) {
-                                        "1" -> stringResource(R.string.Profile_Performance)
-                                        "3" -> stringResource(R.string.Profile_ECO_mode)
-                                        else -> stringResource(R.string.Profile_Balanced)
-                                    },
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = scheme.primary,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Rounded.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = scheme.onPrimaryContainer,
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
                         }
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = "Turn on 'Disable auto mode' in General settings to manually change performance profiles.",
-                            style = MaterialTheme.typography.bodySmall.copy(lineHeight = 15.sp),
-                            color = scheme.onSurfaceVariant.copy(alpha = 0.82f)
-                        )
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "Auto Mode",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.onSurface
+                                )
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = scheme.surfaceContainerHighest
+                                ) {
+                                    Text(
+                                        text = when (profileValue) {
+                                            "1" -> stringResource(R.string.Profile_Performance)
+                                            "3" -> stringResource(R.string.Profile_ECO_mode)
+                                            else -> stringResource(R.string.Profile_Balanced)
+                                        },
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = scheme.primary,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = "Turn on 'Disable auto mode' in General settings to manually change performance profiles.",
+                                style = MaterialTheme.typography.bodySmall.copy(lineHeight = 15.sp),
+                                color = scheme.onSurfaceVariant.copy(alpha = 0.82f)
+                            )
+                        }
                     }
                 }
-            }
-        } else {
-            val profiles = listOf(
-                Triple("1", R.string.Profile_Performance, R.drawable.ic_performance),
-                Triple("2", R.string.Profile_Balanced, R.drawable.ic_balanced),
-                Triple("3", R.string.Profile_ECO_mode, R.drawable.ic_eco)
-            )
-            val currentTarget = pendingProfileValue ?: if (profileValue.isBlank()) "2" else profileValue
+            } else {
+                val profiles = listOf(
+                    Triple("1", R.string.Profile_Performance, R.drawable.ic_performance),
+                    Triple("2", R.string.Profile_Balanced, R.drawable.ic_balanced),
+                    Triple("3", R.string.Profile_ECO_mode, R.drawable.ic_eco)
+                )
+                val currentTarget = pendingProfileValue ?: if (profileValue.isBlank()) "2" else profileValue
 
-            var positions by remember { mutableStateOf(mapOf<String, Pair<Float, Float>>()) }
-            val currentPillPos = positions[currentTarget] ?: (0f to 0f)
+                var positions by remember { mutableStateOf(mapOf<String, Pair<Float, Float>>()) }
+                val currentPillPos = positions[currentTarget] ?: (0f to 0f)
 
-            val animatedPillX by animateFloatAsState(
-                targetValue = currentPillPos.first,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                ),
-                label = "ProfilePillX"
-            )
-            val animatedPillWidth by animateFloatAsState(
-                targetValue = currentPillPos.second,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
-                    stiffness = Spring.StiffnessMediumLow
-                ),
-                label = "ProfilePillWidth"
-            )
+                val animatedPillX by animateFloatAsState(
+                    targetValue = currentPillPos.first,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioLowBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    ),
+                    label = "ProfilePillX"
+                )
+                val animatedPillWidth by animateFloatAsState(
+                    targetValue = currentPillPos.second,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioLowBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    ),
+                    label = "ProfilePillWidth"
+                )
 
-            val containerShape = RoundedCornerShape(22.dp)
-            val pillItemShape = RoundedCornerShape(18.dp)
+                val containerShape = RoundedCornerShape(22.dp)
+                val pillItemShape = RoundedCornerShape(18.dp)
 
-            Surface(
-                shape = containerShape,
-                color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(4.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Surface(
+                    shape = containerShape,
+                    color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(IntrinsicSize.Min)
+                    Column(
+                        modifier = Modifier.padding(4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        if (animatedPillWidth > 0f) {
-                            Surface(
-                                shape = pillItemShape,
-                                color = scheme.primaryContainer,
-                                modifier = Modifier
-                                    .offset { IntOffset(animatedPillX.roundToInt(), 0) }
-                                    .width(with(density) { animatedPillWidth.toDp() })
-                                    .fillMaxHeight()
-                            ) {}
-                        }
-
-                        Row(
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(IntrinsicSize.Min),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                .height(IntrinsicSize.Min)
                         ) {
-                            profiles.forEach { (value, labelRes, iconRes) ->
-                                val isTarget = currentTarget == value
-                                val isApplyingThis = isProfileApplying && pendingProfileValue == value
-
-                                val iconScale by animateFloatAsState(
-                                    targetValue = if (isTarget) 1.08f else 1f,
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                                        stiffness = Spring.StiffnessMediumLow
-                                    ),
-                                    label = "ProfileIconScale"
-                                )
-
-                                Box(
+                            if (animatedPillWidth > 0f) {
+                                Surface(
+                                    shape = pillItemShape,
+                                    color = scheme.primaryContainer,
                                     modifier = Modifier
-                                        .weight(1f)
+                                        .offset { IntOffset(animatedPillX.roundToInt(), 0) }
+                                        .width(with(density) { animatedPillWidth.toDp() })
                                         .fillMaxHeight()
-                                        .onGloballyPositioned { coordinates ->
-                                            val parentX = coordinates.positionInParent().x
-                                            val width = coordinates.size.width.toFloat()
-                                            if (positions[value]?.first != parentX || positions[value]?.second != width) {
-                                                positions = positions + (value to (parentX to width))
-                                            }
-                                        }
-                                        .clip(pillItemShape)
-                                        .springPressBounce(pressedScale = 0.95f)
-                                        .clickable {
-                                            if (!isProfileApplying && currentTarget != value) {
-                                                AudioUtil.playOk(context)
-                                                pendingProfileValue = value
-                                                isProfileApplying = true
-                                                onApplyProfile(value)
-                                            }
-                                        }
-                                        .gamepadFocusOutline(shape = pillItemShape, register = true),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Row(
+                                ) {}
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(IntrinsicSize.Min),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                profiles.forEach { (value, labelRes, iconRes) ->
+                                    val isTarget = currentTarget == value
+                                    val isApplyingThis = isProfileApplying && pendingProfileValue == value
+
+                                    val iconScale by animateFloatAsState(
+                                        targetValue = if (isTarget) 1.08f else 1f,
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                            stiffness = Spring.StiffnessMediumLow
+                                        ),
+                                        label = "ProfileIconScale"
+                                    )
+
+                                    Box(
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 8.dp, vertical = 12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center
+                                            .weight(1f)
+                                            .fillMaxHeight()
+                                            .onGloballyPositioned { coordinates ->
+                                                val parentX = coordinates.positionInParent().x
+                                                val width = coordinates.size.width.toFloat()
+                                                if (positions[value]?.first != parentX || positions[value]?.second != width) {
+                                                    positions = positions + (value to (parentX to width))
+                                                }
+                                            }
+                                            .clip(pillItemShape)
+                                            .springPressBounce(pressedScale = 0.95f)
+                                            .clickable {
+                                                if (!isProfileApplying && currentTarget != value) {
+                                                    AudioUtil.playOk(context)
+                                                    pendingProfileValue = value
+                                                    isProfileApplying = true
+                                                    onApplyProfile(value)
+                                                }
+                                            }
+                                            .gamepadFocusOutline(shape = pillItemShape, register = true),
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        if (isApplyingThis) {
-                                            LoadingIndicator(
-                                                color = if (isTarget) scheme.onPrimaryContainer else scheme.primary,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        } else {
-                                            Icon(
-                                                painter = painterResource(iconRes),
-                                                contentDescription = null,
-                                                tint = if (isTarget) scheme.onPrimaryContainer else scheme.primary,
-                                                modifier = Modifier
-                                                    .size(20.dp)
-                                                    .graphicsLayer {
-                                                        scaleX = iconScale
-                                                        scaleY = iconScale
-                                                    }
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 8.dp, vertical = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.Center
+                                        ) {
+                                            if (isApplyingThis) {
+                                                LoadingIndicator(
+                                                    color = if (isTarget) scheme.onPrimaryContainer else scheme.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            } else {
+                                                Icon(
+                                                    painter = painterResource(iconRes),
+                                                    contentDescription = null,
+                                                    tint = if (isTarget) scheme.onPrimaryContainer else scheme.primary,
+                                                    modifier = Modifier
+                                                        .size(20.dp)
+                                                        .graphicsLayer {
+                                                            scaleX = iconScale
+                                                            scaleY = iconScale
+                                                        }
+                                                )
+                                            }
+                                            Text(
+                                                text = stringResource(labelRes),
+                                                style = MaterialTheme.typography.titleSmall.copy(
+                                                    fontWeight = if (isTarget) FontWeight.Bold else FontWeight.Medium
+                                                ),
+                                                color = if (isTarget) scheme.onPrimaryContainer else scheme.onSurface,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.padding(start = 6.dp)
                                             )
                                         }
-                                        Text(
-                                            text = stringResource(labelRes),
-                                            style = MaterialTheme.typography.titleSmall.copy(
-                                                fontWeight = if (isTarget) FontWeight.Bold else FontWeight.Medium
-                                            ),
-                                            color = if (isTarget) scheme.onPrimaryContainer else scheme.onSurface,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.padding(start = 6.dp)
-                                        )
                                     }
                                 }
                             }
                         }
-                    }
 
-                    AnimatedVisibility(
-                        visible = isProfileApplying,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(top = 4.dp, bottom = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        AnimatedVisibility(
+                            visible = isProfileApplying,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
                         ) {
-                            LoadingIndicator(
-                                color = scheme.primary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = "Applying ${when (pendingProfileValue) { "1" -> "Performance"; "3" -> "ECO"; else -> "Balanced" }} profile...",
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                                color = scheme.primary
-                            )
+                            Row(
+                                modifier = Modifier.padding(top = 4.dp, bottom = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                LoadingIndicator(
+                                    color = scheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "Applying ${when (pendingProfileValue) { "1" -> "Performance"; "3" -> "ECO"; else -> "Balanced" }} profile...",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                    color = scheme.primary
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
 
-        // --- 2. Quick Optimizations ---
-        TweaksSectionHeader(stringResource(R.string.section_performance))
+            // --- 2. Quick Optimizations ---
+            TweaksSectionHeader(stringResource(R.string.section_performance))
 
-        val cards = mutableListOf<@Composable () -> Unit>()
-        cards.add {
-            SettingsSwitchCard(
-                icon = Icons.Rounded.Speed,
-                title = stringResource(R.string.perf_lite_mode),
-                summary = stringResource(R.string.perf_lite_mode_desc),
-                checked = tweakViewModel.liteState ?: false,
-                onCheckedChange = { tweakViewModel.updateLiteMode(it) }
-            )
-        }
-        cards.add {
-            SettingsSwitchCard(
-                icon = Icons.Rounded.RocketLaunch,
-                title = stringResource(R.string.game_preload),
-                summary = stringResource(R.string.game_preload_desc),
-                checked = tweakViewModel.preloadState ?: false,
-                onCheckedChange = { tweakViewModel.updatePreloadMode(it) }
-            )
-        }
-        cards.add {
-            SettingsSwitchCard(
-                icon = Icons.Rounded.DoNotDisturbOn,
-                title = stringResource(R.string.dnd_mode_gaming),
-                summary = stringResource(R.string.dnd_mode_gaming_desc),
-                checked = tweakViewModel.dndState ?: false,
-                onCheckedChange = { tweakViewModel.updateDndMode(it) }
-            )
-        }
-        if (isFullModeEnabled) {
+            val cards = mutableListOf<@Composable () -> Unit>()
             cards.add {
                 SettingsSwitchCard(
-                    icon = Icons.Rounded.ContentCut,
-                    title = stringResource(R.string.trim_filesystem),
-                    summary = stringResource(R.string.trim_filesystem_desc),
-                    checked = tweakViewModel.fstrimState ?: false,
-                    onCheckedChange = { tweakViewModel.updateFstrim(it) }
-                )
-            }
-            cards.add {
-                SettingsSwitchCard(
-                    icon = Icons.Rounded.CleaningServices,
-                    title = stringResource(R.string.memory_killer),
-                    summary = stringResource(R.string.memory_killer_desc),
-                    checked = tweakViewModel.memKillerState ?: false,
-                    onCheckedChange = { tweakViewModel.updateMemoryKiller(it) }
-                )
-            }
-        }
-        cards.add {
-            SettingsSwitchCard(
-                icon = Icons.Rounded.ThermostatAuto,
-                title = stringResource(R.string.thermalcore_service),
-                summary = stringResource(R.string.thermalcore_service_desc),
-                checked = tweakViewModel.thermalState ?: false,
-                onCheckedChange = { tweakViewModel.updateThermalCore(it) }
-            )
-        }
-        if (isFullModeEnabled) {
-            cards.add {
-                SettingsSwitchCard(
-                    icon = Icons.Rounded.SwapVerticalCircle,
-                    title = stringResource(R.string.app_priority_control),
-                    summary = stringResource(R.string.app_priority_control_desc),
-                    checked = tweakViewModel.appPriorState ?: false,
-                    onCheckedChange = { tweakViewModel.updateAppPriority(it) }
-                )
-            }
-        }
-
-        AdaptiveSettingsGrid(
-            items = cards,
-            minColumnWidth = 340.dp,
-            spacing = 10.dp
-        )
-
-        // --- 3. Display & Rendering Subsystems ---
-        TweaksSectionHeader("Display & Rendering")
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(blockLargeCorner)),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            SettingsActionCard(
-                icon = Icons.Rounded.WebStories,
-                title = stringResource(R.string.refreshrates),
-                summary = stringResource(R.string.refreshrates_desc),
-                trailingBadge = "${tweakViewModel.currentRefreshRate ?: refreshHz} Hz",
-                onClick = { if (isFullModeEnabled) showRefreshRateDialog = true },
-                enabled = isFullModeEnabled,
-                shape = blockTopShape
-            )
-
-            SettingsActionCard(
-                icon = Icons.Rounded.SettingsSuggest,
-                title = stringResource(R.string.renderengine),
-                summary = "HWUI 2D graphics hardware compositing pipeline",
-                trailingBadge = (tweakViewModel.currentRenderer ?: "Default").uppercase(),
-                onClick = { showRendererDialog = true },
-                shape = blockMiddleShape
-            )
-
-            SettingsActionCard(
-                icon = Icons.Rounded.Palette,
-                title = stringResource(R.string.color_scheme),
-                summary = "Display surface color calibration and hardware saturation",
-                trailingBadge = "KCAL",
-                onClick = { onNavigateToSubTab(TweaksSubTab.DisplayColor) },
-                shape = blockBottomShape
-            )
-        }
-
-        // --- 4. Advanced Hardware Subsystems ---
-        TweaksSectionHeader(stringResource(R.string.section_addons))
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(blockLargeCorner)),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            SettingsActionCard(
-                icon = Icons.Rounded.Cable,
-                title = stringResource(R.string.bcharging),
-                summary = stringResource(R.string.bcharging_desc),
-                trailingBadge = if (bypassEnabled) "Active" else null,
-                onClick = { onNavigateToSubTab(TweaksSubTab.BypassCharging) },
-                shape = blockTopShape
-            )
-
-            SettingsActionCard(
-                icon = Icons.Rounded.Tune,
-                title = stringResource(R.string.gov_settings),
-                summary = stringResource(R.string.gov_settingsdesc),
-                onClick = { onNavigateToSubTab(TweaksSubTab.Governors) },
-                shape = blockMiddleShape
-            )
-
-            SettingsActionCard(
-                icon = Icons.Rounded.Layers,
-                title = stringResource(R.string.prefs),
-                summary = stringResource(R.string.prefsdesc),
-                onClick = { onNavigateToSubTab(TweaksSubTab.Preferenced) },
-                shape = if (isMediaTek) blockMiddleShape else blockBottomShape
-            )
-
-            if (isMediaTek) {
-                SettingsActionCard(
                     icon = Icons.Rounded.Speed,
-                    title = stringResource(R.string.str_fpsgo_settings),
-                    summary = stringResource(R.string.str_fpsgo_desc),
-                    trailingBadge = "MediaTek",
-                    onClick = { onNavigateToSubTab(TweaksSubTab.FpsGo) },
+                    title = stringResource(R.string.perf_lite_mode),
+                    summary = stringResource(R.string.perf_lite_mode_desc),
+                    checked = tweakViewModel.liteState ?: false,
+                    onCheckedChange = { tweakViewModel.updateLiteMode(it) }
+                )
+            }
+            cards.add {
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.RocketLaunch,
+                    title = stringResource(R.string.game_preload),
+                    summary = stringResource(R.string.game_preload_desc),
+                    checked = tweakViewModel.preloadState ?: false,
+                    onCheckedChange = { tweakViewModel.updatePreloadMode(it) }
+                )
+            }
+            cards.add {
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.DoNotDisturbOn,
+                    title = stringResource(R.string.dnd_mode_gaming),
+                    summary = stringResource(R.string.dnd_mode_gaming_desc),
+                    checked = tweakViewModel.dndState ?: false,
+                    onCheckedChange = { tweakViewModel.updateDndMode(it) }
+                )
+            }
+            if (isFullModeEnabled) {
+                cards.add {
+                    SettingsSwitchCard(
+                        icon = Icons.Rounded.ContentCut,
+                        title = stringResource(R.string.trim_filesystem),
+                        summary = stringResource(R.string.trim_filesystem_desc),
+                        checked = tweakViewModel.fstrimState ?: false,
+                        onCheckedChange = { tweakViewModel.updateFstrim(it) }
+                    )
+                }
+                cards.add {
+                    SettingsSwitchCard(
+                        icon = Icons.Rounded.CleaningServices,
+                        title = stringResource(R.string.memory_killer),
+                        summary = stringResource(R.string.memory_killer_desc),
+                        checked = tweakViewModel.memKillerState ?: false,
+                        onCheckedChange = { tweakViewModel.updateMemoryKiller(it) }
+                    )
+                }
+            }
+            cards.add {
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.ThermostatAuto,
+                    title = stringResource(R.string.thermalcore_service),
+                    summary = stringResource(R.string.thermalcore_service_desc),
+                    checked = tweakViewModel.thermalState ?: false,
+                    onCheckedChange = { tweakViewModel.updateThermalCore(it) }
+                )
+            }
+            if (isFullModeEnabled) {
+                cards.add {
+                    SettingsSwitchCard(
+                        icon = Icons.Rounded.SwapVerticalCircle,
+                        title = stringResource(R.string.app_priority_control),
+                        summary = stringResource(R.string.app_priority_control_desc),
+                        checked = tweakViewModel.appPriorState ?: false,
+                        onCheckedChange = { tweakViewModel.updateAppPriority(it) }
+                    )
+                }
+            }
+
+            AdaptiveSettingsGrid(
+                items = cards,
+                minColumnWidth = 340.dp,
+                spacing = 10.dp
+            )
+
+            // --- 3. Display & Rendering Subsystems ---
+            TweaksSectionHeader("Display & Rendering")
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(blockLargeCorner)),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                SettingsActionCard(
+                    icon = Icons.Rounded.WebStories,
+                    title = stringResource(R.string.refreshrates),
+                    summary = stringResource(R.string.refreshrates_desc),
+                    trailingBadge = "${tweakViewModel.currentRefreshRate ?: refreshHz} Hz",
+                    onClick = { if (isFullModeEnabled) refreshRateDropDown.show() },
+                    modifier = Modifier.zxDropDownAnchor(refreshRateDropDown),
+                    enabled = isFullModeEnabled,
+                    shape = blockTopShape
+                )
+
+                SettingsActionCard(
+                    icon = Icons.Rounded.SettingsSuggest,
+                    title = stringResource(R.string.renderengine),
+                    summary = "HWUI 2D graphics hardware compositing pipeline",
+                    trailingBadge = (tweakViewModel.currentRenderer ?: "Default").uppercase(),
+                    onClick = { rendererDropDown.show() },
+                    modifier = Modifier.zxDropDownAnchor(rendererDropDown),
+                    shape = blockMiddleShape
+                )
+
+                SettingsActionCard(
+                    icon = Icons.Rounded.Palette,
+                    title = stringResource(R.string.color_scheme),
+                    summary = "Display surface color calibration and hardware saturation",
+                    trailingBadge = "KCAL",
+                    onClick = { onNavigateToSubTab(TweaksSubTab.DisplayColor) },
                     shape = blockBottomShape
                 )
             }
+
+            // --- 4. Advanced Hardware Subsystems ---
+            TweaksSectionHeader(stringResource(R.string.section_addons))
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(blockLargeCorner)),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                SettingsActionCard(
+                    icon = Icons.Rounded.Cable,
+                    title = stringResource(R.string.bcharging),
+                    summary = stringResource(R.string.bcharging_desc),
+                    trailingBadge = if (bypassEnabled) "Active" else null,
+                    onClick = { onNavigateToSubTab(TweaksSubTab.BypassCharging) },
+                    shape = blockTopShape
+                )
+
+                SettingsActionCard(
+                    icon = Icons.Rounded.Tune,
+                    title = stringResource(R.string.gov_settings),
+                    summary = stringResource(R.string.gov_settingsdesc),
+                    onClick = { onNavigateToSubTab(TweaksSubTab.Governors) },
+                    shape = blockMiddleShape
+                )
+
+                SettingsActionCard(
+                    icon = Icons.Rounded.Layers,
+                    title = stringResource(R.string.prefs),
+                    summary = stringResource(R.string.prefsdesc),
+                    onClick = { onNavigateToSubTab(TweaksSubTab.Preferenced) },
+                    shape = if (isMediaTek) blockMiddleShape else blockBottomShape
+                )
+
+                if (isMediaTek) {
+                    SettingsActionCard(
+                        icon = Icons.Rounded.Speed,
+                        title = stringResource(R.string.str_fpsgo_settings),
+                        summary = stringResource(R.string.str_fpsgo_desc),
+                        trailingBadge = "MediaTek",
+                        onClick = { onNavigateToSubTab(TweaksSubTab.FpsGo) },
+                        shape = blockBottomShape
+                    )
+                }
+            }
         }
-    }
 
-    if (showRefreshRateDialog && isFullModeEnabled) {
-        val options = remember(context) { getSupportedRefreshRatesPicker(context) }
+        val refreshRates = remember(context) { getSupportedRefreshRatesPicker(context) }
         val currentRateStr = (tweakViewModel.currentRefreshRate ?: refreshHz).toString()
-        val selectedIndex = options.indexOfFirst { it.equals(currentRateStr, ignoreCase = true) }.coerceAtLeast(0)
-        ChoiceSelectionDialog(
-            title = stringResource(R.string.RefreshRatePicker_Select),
-            options = options.map { context.getString(R.string.refresh_rate_format, it) },
-            selectedIndex = selectedIndex,
-            onSelect = { idx ->
-                options.getOrNull(idx)?.let { rate ->
-                    tweakViewModel.executeSetRefreshRates(rate, context)
-                }
-            },
-            onDismiss = { showRefreshRateDialog = false }
+        ZXDropDownMenu(
+            state = refreshRateDropDown,
+            options = refreshRates,
+            selectedOption = refreshRates.firstOrNull { it.equals(currentRateStr, ignoreCase = true) },
+            onOptionSelected = { rate -> tweakViewModel.executeSetRefreshRates(rate, context) },
+            optionLabel = { context.getString(R.string.refresh_rate_format, it) }
         )
-    }
 
-    if (showRendererDialog) {
-        val rendererOptions = listOf(
-            context.getString(R.string.Renderer_Default) to "default",
-            context.getString(R.string.renderer_skia_vk) to "skiavk",
-            context.getString(R.string.renderer_skia_vk_threaded) to "skiavkthreaded",
-            context.getString(R.string.renderer_skiagl) to "skiagl",
-            context.getString(R.string.renderer_skiagl_threaded) to "skiaglthreaded",
-            context.getString(R.string.renderer_opengl_es) to "opengl",
-            context.getString(R.string.renderer_opengl_es_threaded) to "openglthreaded",
-            context.getString(R.string.Renderer_Vulkan) to "vulkan"
-        )
+        val rendererOptions = remember(context) {
+            listOf(
+                context.getString(R.string.Renderer_Default) to "default",
+                context.getString(R.string.renderer_skia_vk) to "skiavk",
+                context.getString(R.string.renderer_skia_vk_threaded) to "skiavkthreaded",
+                context.getString(R.string.renderer_skiagl) to "skiagl",
+                context.getString(R.string.renderer_skiagl_threaded) to "skiaglthreaded",
+                context.getString(R.string.renderer_opengl_es) to "opengl",
+                context.getString(R.string.renderer_opengl_es_threaded) to "openglthreaded",
+                context.getString(R.string.Renderer_Vulkan) to "vulkan"
+            )
+        }
         val currentRenderer = tweakViewModel.currentRenderer ?: "default"
-        val selectedIndex = rendererOptions.indexOfFirst { it.second.equals(currentRenderer, ignoreCase = true) }.coerceAtLeast(0)
-        ChoiceSelectionDialog(
-            title = stringResource(R.string.Renderer_Select),
-            options = rendererOptions.map { it.first },
-            selectedIndex = selectedIndex,
-            onSelect = { idx ->
-                rendererOptions.getOrNull(idx)?.let { (_, reason) ->
-                    tweakViewModel.executeSetRenderer(reason, context)
-                }
-            },
-            onDismiss = { showRendererDialog = false }
+        ZXDropDownMenu(
+            state = rendererDropDown,
+            options = rendererOptions,
+            selectedOption = rendererOptions.firstOrNull { it.second.equals(currentRenderer, ignoreCase = true) },
+            onOptionSelected = { (_, reason) -> tweakViewModel.executeSetRenderer(reason, context) },
+            optionLabel = { it.first }
         )
     }
 }
@@ -848,7 +843,7 @@ private fun BypassChargingSubPane(
 
     var availableNodes by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     var isLoadingNodes by remember { mutableStateOf(true) }
-    var showNodePicker by remember { mutableStateOf(false) }
+    val nodePickerDropDown = rememberZXDropDownState()
 
     var isRunningDiagnostic by remember { mutableStateOf(false) }
     val diagnosticLogs = remember { mutableStateListOf<String>() }
@@ -969,430 +964,343 @@ private fun BypassChargingSubPane(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        TweaksSubTabHeader(
-            title = stringResource(R.string.bcharging),
-            subtitle = "Power device directly from adapter without battery degradation",
-            onBackClick = onBackClick
-        )
-
-        // Live Telemetry Card
-        Surface(
-            shape = RoundedCornerShape(22.dp),
-            color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
-            modifier = Modifier.fillMaxWidth()
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "CAPACITY",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = scheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    )
-                    Text(
-                        text = "$batteryCapacity%",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = scheme.primary
-                    )
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "TEMPERATURE",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = scheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    )
-                    Text(
-                        text = if (batteryTempC > 0f) "${batteryTempC}°C" else "--",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = scheme.primary
-                    )
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "POWER STATE",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = scheme.onSurfaceVariant.copy(alpha = 0.7f)
-                    )
-                    Text(
-                        text = if (isCharging) "Plugged In" else "Discharging",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = if (isCharging) scheme.primary else scheme.onSurface
-                    )
-                }
-            }
-        }
+            TweaksSubTabHeader(
+                title = stringResource(R.string.bcharging),
+                subtitle = "Power device directly from adapter without battery degradation",
+                onBackClick = onBackClick
+            )
 
-        // Setup Required Banner
-        if (isNeedSetup) {
+            // Live Telemetry Card
             Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = scheme.tertiaryContainer.copy(alpha = 0.85f),
-                contentColor = scheme.onTertiaryContainer,
+                shape = RoundedCornerShape(22.dp),
+                color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceAround,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Warning,
-                        contentDescription = null,
-                        tint = scheme.onTertiaryContainer,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "Initial Hardware Setup Required",
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                            color = scheme.onTertiaryContainer
+                            text = "CAPACITY",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onSurfaceVariant.copy(alpha = 0.7f)
                         )
                         Text(
-                            text = stringResource(R.string.str_bypass_need_setup),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = scheme.onTertiaryContainer.copy(alpha = 0.85f)
+                            text = "$batteryCapacity%",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.primary
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "TEMPERATURE",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = if (batteryTempC > 0f) "${batteryTempC}°C" else "--",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.primary
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "POWER STATE",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = if (isCharging) "Plugged In" else "Discharging",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = if (isCharging) scheme.primary else scheme.onSurface
                         )
                     }
                 }
             }
-        }
 
-        // Unsupported Hardware Banner
-        if (isUnsupported) {
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = scheme.errorContainer.copy(alpha = 0.85f),
-                contentColor = scheme.onErrorContainer,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Block,
-                        contentDescription = null,
-                        tint = scheme.onErrorContainer,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = "Hardware Unsupported",
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                            color = scheme.onErrorContainer
-                        )
-                        Text(
-                            text = stringResource(R.string.bypass_not_supported),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = scheme.onErrorContainer.copy(alpha = 0.85f)
-                        )
-                    }
-                }
-            }
-        }
-
-        // Controls Section
-        TweaksSectionHeader("Bypass Charging Controls")
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(blockLargeCorner)),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            SettingsSwitchCard(
-                icon = Icons.Rounded.BatteryChargingFull,
-                title = stringResource(R.string.enable_bypass_charge),
-                summary = when {
-                    isUnsupported -> stringResource(R.string.bypass_not_supported)
-                    isNeedSetup -> "Hardware setup required before enabling"
-                    else -> stringResource(R.string.enable_bypass_charge_desc)
-                },
-                checked = bypassState && isConfigured,
-                enabled = isConfigured,
-                onCheckedChange = { isChecked ->
-                    bypassState = isChecked
-                    val strVal = if (isChecked) "1" else "0"
-                    PropertyUtils.set("persist.sys.azenithconf.bypasschg", strVal)
-                    scope.launch(Dispatchers.IO) {
-                        RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasschg", "$strVal\n")
-                    }
-                },
-                shape = masterSwitchShape
-            )
-
-            AnimatedVisibility(
-                visible = bypassState && isConfigured,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
-            ) {
-                BypassThresholdSliderCard(
-                    threshold = thresholdValue,
-                    enabled = isConfigured,
-                    onThresholdChange = { thresholdValue = it },
-                    onThresholdChangeFinished = { finalVal ->
-                        val roundVal = finalVal.roundToInt()
-                        PropertyUtils.set("persist.sys.azenithconf.bypasschgthreshold", roundVal.toString())
-                        scope.launch(Dispatchers.IO) {
-                            RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasschgthreshold", "$roundVal\n")
-                        }
-                    },
-                    shape = blockBottomShape
-                )
-            }
-        }
-
-        // Hardware Configuration Section
-        TweaksSectionHeader("Hardware Node Configuration")
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(blockLargeCorner)),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            val nodePathDesc = availableNodes.find { it.first == bypassPath }?.second
-            SettingsActionCard(
-                icon = Icons.Rounded.Cable,
-                title = "Hardware Bypass Node",
-                summary = when {
-                    isNeedSetup -> "Tap to bind from ${availableNodes.size} detected nodes or scan below"
-                    isUnsupported -> "No supported charging switch nodes detected"
-                    else -> "$bypassPath${if (nodePathDesc != null) " ($nodePathDesc)" else ""}"
-                },
-                trailingBadge = when {
-                    isNeedSetup -> "Need Setup"
-                    isUnsupported -> "Unsupported"
-                    else -> bypassPath
-                },
-                enabled = availableNodes.isNotEmpty(),
-                onClick = { showNodePicker = true },
-                shape = if (isConfigured) blockTopShape else blockSingleShape
-            )
-
-            if (isConfigured) {
-                SettingsActionCard(
-                    icon = Icons.Rounded.Power,
-                    title = "Test Cutoff on [$bypassPath]",
-                    summary = activeNodeTestFeedback ?: "Execute 10-second hardware cutoff test on current node",
-                    trailingBadge = if (isTestingActiveNode) "Testing..." else "Test Node",
-                    enabled = isCharging && !isTestingActiveNode && !isRunningDiagnostic,
-                    onClick = {
-                        isTestingActiveNode = true
-                        activeNodeTestFeedback = "Testing cutoff on $bypassPath for 10s..."
-                        Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service -tb $bypassPath 2>&1").submit { res ->
-                            isTestingActiveNode = false
-                            val success = res.out.any { it.contains("[SUCCESS]") }
-                            activeNodeTestFeedback = if (success) {
-                                "Cutoff verified on $bypassPath (0 mA achieved)"
-                            } else {
-                                "Cutoff test failed or current didn't stop"
-                            }
-                        }
-                    },
-                    shape = blockBottomShape
-                )
-            }
-        }
-
-        // Hardware Diagnostics Section
-        TweaksSectionHeader("Hardware Diagnostics")
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(blockLargeCorner)),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            SettingsActionCard(
-                icon = Icons.Rounded.ManageSearch,
-                title = "Run Compatibility Diagnostics",
-                summary = when {
-                    !isCharging -> "Connect charger to run diagnostic probe"
-                    isRunningDiagnostic -> "Probing charging nodes (10s per candidate)..."
-                    else -> "Automatically test 78 hardware nodes to find working cutoff"
-                },
-                trailingBadge = if (isRunningDiagnostic) "Testing..." else "Start Diagnostic",
-                enabled = isCharging && !isRunningDiagnostic && !isTestingActiveNode,
-                onClick = { runCompatibilityCheck() },
-                shape = if (diagnosticLogs.isNotEmpty() && showConsole) blockTopShape else blockSingleShape
-            )
-
-            AnimatedVisibility(
-                visible = diagnosticLogs.isNotEmpty() && showConsole,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
-            ) {
+            // Setup Required Banner
+            if (isNeedSetup) {
                 Surface(
-                    shape = blockBottomShape,
-                    color = scheme.surfaceContainerLowest,
+                    shape = RoundedCornerShape(20.dp),
+                    color = scheme.tertiaryContainer.copy(alpha = 0.85f),
+                    contentColor = scheme.onTertiaryContainer,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Box(modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(12.dp)
-                                .verticalScroll(logScrollState)
-                                .horizontalScroll(rememberScrollState())
-                        ) {
-                            diagnosticLogs.forEach { line ->
-                                Text(
-                                    text = line.parseAsAnsiAnnotatedString(),
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontFamily = FontFamily.Monospace,
-                                        fontSize = 11.sp,
-                                        lineHeight = 16.sp
-                                    ),
-                                    color = Color.White,
-                                    softWrap = false
-                                )
-                            }
-                        }
-
-                        Surface(
-                            shape = CircleShape,
-                            color = scheme.surfaceContainerHigh.copy(alpha = 0.8f),
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(8.dp)
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .clickable { showConsole = false }
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Close,
-                                    contentDescription = "Close",
-                                    tint = scheme.onSurface,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Warning,
+                            contentDescription = null,
+                            tint = scheme.onTertiaryContainer,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "Initial Hardware Setup Required",
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                color = scheme.onTertiaryContainer
+                            )
+                            Text(
+                                text = stringResource(R.string.str_bypass_need_setup),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.onTertiaryContainer.copy(alpha = 0.85f)
+                            )
                         }
                     }
                 }
             }
-        }
-    }
 
-    // Node Picker Dialog
-    if (showNodePicker) {
-        Dialog(onDismissRequest = { showNodePicker = false }) {
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = scheme.surfaceContainerHigh,
-                contentColor = scheme.onSurface,
-                tonalElevation = 6.dp,
-                modifier = Modifier
-                    .fillMaxWidth(0.92f)
-                    .clip(RoundedCornerShape(24.dp))
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+            // Unsupported Hardware Banner
+            if (isUnsupported) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = scheme.errorContainer.copy(alpha = 0.85f),
+                    contentColor = scheme.onErrorContainer,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = "Select Hardware Bypass Node",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = scheme.onSurface
-                    )
-                    Text(
-                        text = "Charging switch nodes detected on this kernel (${availableNodes.size} available):",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = scheme.onSurfaceVariant
-                    )
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 300.dp)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (availableNodes.isEmpty()) {
+                        Icon(
+                            imageVector = Icons.Rounded.Block,
+                            contentDescription = null,
+                            tint = scheme.onErrorContainer,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
-                                text = if (isLoadingNodes) "Scanning hardware paths..." else "No compatible nodes detected",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = scheme.onSurfaceVariant,
-                                modifier = Modifier.padding(vertical = 12.dp)
+                                text = "Hardware Unsupported",
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                color = scheme.onErrorContainer
                             )
-                        } else {
-                            availableNodes.forEach { (nodeName, nodePath) ->
-                                val isSelected = bypassPath == nodeName
-                                Surface(
-                                    shape = RoundedCornerShape(14.dp),
-                                    color = if (isSelected) scheme.primaryContainer else scheme.surfaceContainerLow,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .clickable {
-                                            bypassPath = nodeName
-                                            PropertyUtils.set("persist.sys.azenithconf.bypasspath", nodeName)
-                                            scope.launch(Dispatchers.IO) {
-                                                RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath", "$nodeName\n")
-                                            }
-                                            showNodePicker = false
-                                        }
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = nodeName,
-                                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                                color = if (isSelected) scheme.onPrimaryContainer else scheme.onSurface
-                                            )
-                                            Text(
-                                                text = nodePath,
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                                color = if (isSelected) scheme.onPrimaryContainer.copy(alpha = 0.8f) else scheme.onSurfaceVariant,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                        if (isSelected) {
-                                            Icon(
-                                                imageVector = Icons.Rounded.Check,
-                                                contentDescription = null,
-                                                tint = scheme.onPrimaryContainer,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                    }
+                            Text(
+                                text = stringResource(R.string.bypass_not_supported),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = scheme.onErrorContainer.copy(alpha = 0.85f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Controls Section
+            TweaksSectionHeader("Bypass Charging Controls")
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(blockLargeCorner)),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                SettingsSwitchCard(
+                    icon = Icons.Rounded.BatteryChargingFull,
+                    title = stringResource(R.string.enable_bypass_charge),
+                    summary = when {
+                        isUnsupported -> stringResource(R.string.bypass_not_supported)
+                        isNeedSetup -> "Hardware setup required before enabling"
+                        else -> stringResource(R.string.enable_bypass_charge_desc)
+                    },
+                    checked = bypassState && isConfigured,
+                    enabled = isConfigured,
+                    onCheckedChange = { isChecked ->
+                        bypassState = isChecked
+                        val strVal = if (isChecked) "1" else "0"
+                        PropertyUtils.set("persist.sys.azenithconf.bypasschg", strVal)
+                        scope.launch(Dispatchers.IO) {
+                            RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasschg", "$strVal\n")
+                        }
+                    },
+                    shape = masterSwitchShape
+                )
+
+                AnimatedVisibility(
+                    visible = bypassState && isConfigured,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    BypassThresholdSliderCard(
+                        threshold = thresholdValue,
+                        enabled = isConfigured,
+                        onThresholdChange = { thresholdValue = it },
+                        onThresholdChangeFinished = { finalVal ->
+                            val roundVal = finalVal.roundToInt()
+                            PropertyUtils.set("persist.sys.azenithconf.bypasschgthreshold", roundVal.toString())
+                            scope.launch(Dispatchers.IO) {
+                                RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasschgthreshold", "$roundVal\n")
+                            }
+                        },
+                        shape = blockBottomShape
+                    )
+                }
+            }
+
+            // Hardware Configuration Section
+            TweaksSectionHeader("Hardware Node Configuration")
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(blockLargeCorner)),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                val nodePathDesc = availableNodes.find { it.first == bypassPath }?.second
+                SettingsActionCard(
+                    icon = Icons.Rounded.Cable,
+                    title = "Hardware Bypass Node",
+                    summary = when {
+                        isNeedSetup -> "Tap to bind from ${availableNodes.size} detected nodes or scan below"
+                        isUnsupported -> "No supported charging switch nodes detected"
+                        else -> "$bypassPath${if (nodePathDesc != null) " ($nodePathDesc)" else ""}"
+                    },
+                    trailingBadge = when {
+                        isNeedSetup -> "Need Setup"
+                        isUnsupported -> "Unsupported"
+                        else -> bypassPath
+                    },
+                    enabled = availableNodes.isNotEmpty(),
+                    onClick = { nodePickerDropDown.show() },
+                    modifier = Modifier.zxDropDownAnchor(nodePickerDropDown),
+                    shape = if (isConfigured) blockTopShape else blockSingleShape
+                )
+
+                if (isConfigured) {
+                    SettingsActionCard(
+                        icon = Icons.Rounded.Power,
+                        title = "Test Cutoff on [$bypassPath]",
+                        summary = activeNodeTestFeedback ?: "Execute 10-second hardware cutoff test on current node",
+                        trailingBadge = if (isTestingActiveNode) "Testing..." else "Test Node",
+                        enabled = isCharging && !isTestingActiveNode && !isRunningDiagnostic,
+                        onClick = {
+                            isTestingActiveNode = true
+                            activeNodeTestFeedback = "Testing cutoff on $bypassPath for 10s..."
+                            Shell.cmd("/data/adb/modules/AZenith/system/bin/sys.azenith-service -tb $bypassPath 2>&1").submit { res ->
+                                isTestingActiveNode = false
+                                val success = res.out.any { it.contains("[SUCCESS]") }
+                                activeNodeTestFeedback = if (success) {
+                                    "Cutoff verified on $bypassPath (0 mA achieved)"
+                                } else {
+                                    "Cutoff test failed or current didn't stop"
+                                }
+                            }
+                        },
+                        shape = blockBottomShape
+                    )
+                }
+            }
+
+            // Hardware Diagnostics Section
+            TweaksSectionHeader("Hardware Diagnostics")
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(blockLargeCorner)),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                SettingsActionCard(
+                    icon = Icons.Rounded.ManageSearch,
+                    title = "Run Compatibility Diagnostics",
+                    summary = when {
+                        !isCharging -> "Connect charger to run diagnostic probe"
+                        isRunningDiagnostic -> "Probing charging nodes (10s per candidate)..."
+                        else -> "Automatically test 78 hardware nodes to find working cutoff"
+                    },
+                    trailingBadge = if (isRunningDiagnostic) "Testing..." else "Start Diagnostic",
+                    enabled = isCharging && !isRunningDiagnostic && !isTestingActiveNode,
+                    onClick = { runCompatibilityCheck() },
+                    shape = if (diagnosticLogs.isNotEmpty() && showConsole) blockTopShape else blockSingleShape
+                )
+
+                AnimatedVisibility(
+                    visible = diagnosticLogs.isNotEmpty() && showConsole,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    Surface(
+                        shape = blockBottomShape,
+                        color = scheme.surfaceContainerLowest,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(12.dp)
+                                    .verticalScroll(logScrollState)
+                                    .horizontalScroll(rememberScrollState())
+                            ) {
+                                diagnosticLogs.forEach { line ->
+                                    Text(
+                                        text = line.parseAsAnsiAnnotatedString(),
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontFamily = FontFamily.Monospace,
+                                            fontSize = 11.sp,
+                                            lineHeight = 16.sp
+                                        ),
+                                        color = Color.White,
+                                        softWrap = false
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                shape = CircleShape,
+                                color = scheme.surfaceContainerHigh.copy(alpha = 0.8f),
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(8.dp)
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .clickable { showConsole = false }
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Close,
+                                        contentDescription = "Close",
+                                        tint = scheme.onSurface,
+                                        modifier = Modifier.size(16.dp)
+                                    )
                                 }
                             }
                         }
                     }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        Button(
-                            onClick = { showNodePicker = false },
-                            colors = ButtonDefaults.textButtonColors()
-                        ) {
-                            Text("Cancel", color = scheme.outline)
-                        }
-                    }
                 }
             }
         }
-    }
+
+        ZXDropDownMenu(
+            state = nodePickerDropDown,
+            options = availableNodes,
+            selectedOption = availableNodes.firstOrNull { it.first == bypassPath },
+            onOptionSelected = { (nodeName, _) ->
+                bypassPath = nodeName
+                PropertyUtils.set("persist.sys.azenithconf.bypasspath", nodeName)
+                scope.launch(Dispatchers.IO) {
+                    RootUtils.writeRootFile("/data/adb/.config/AZenith/bypasschgconfig/bypasspath", "$nodeName\n")
+                }
+            },
+            optionLabel = { it.first },
+            optionSupporting = { it.second },
+            minWidth = 300.dp,
+            maxWidth = 460.dp
+        )
 
     // Found Working Node Confirmation Dialog
     foundWorkingNode?.let { node ->
@@ -1460,6 +1368,7 @@ private fun BypassChargingSubPane(
             }
         }
     }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1473,154 +1382,83 @@ private fun GovernorsSubPane(
     val scheme = MaterialTheme.colorScheme
     val scrollState = rememberScrollState()
 
-    var choiceDialogTitle by remember { mutableStateOf<String?>(null) }
-    var choiceDialogOptions by remember { mutableStateOf<List<String>>(emptyList()) }
-    var choiceDialogSelectedIndex by remember { mutableIntStateOf(0) }
-    var choiceDialogOnSelect by remember { mutableStateOf<((Int) -> Unit)?>(null) }
+    val defaultGovDropDown = rememberZXDropDownState()
+    val performanceGovDropDown = rememberZXDropDownState()
+    val powersaveGovDropDown = rememberZXDropDownState()
+    val balancedIODropDown = rememberZXDropDownState()
+    val performanceIODropDown = rememberZXDropDownState()
+    val powersaveIODropDown = rememberZXDropDownState()
+    val balancedMaliDropDown = rememberZXDropDownState()
+    val performanceMaliDropDown = rememberZXDropDownState()
+    val powersaveMaliDropDown = rememberZXDropDownState()
 
     val govs = tweakViewModel.availableGovernors ?: emptyList()
     val ioScheds = tweakViewModel.availableIOSchedulers ?: emptyList()
     val maliGovs = tweakViewModel.availableMaliGovernors ?: emptyList()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        TweaksSubTabHeader(
-            title = stringResource(R.string.gov_settings),
-            subtitle = "CPU frequency scaling, I/O schedulers, and GPU driver policies",
-            onBackClick = onBackClick
-        )
-
-        // --- CPU Scaling Section ---
-        TweaksSectionHeader(stringResource(R.string.default_cpu_gov))
-
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(blockLargeCorner)),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            FreqOffsetSliderCard(
-                initialIndex = tweakViewModel.freqOffsetIndex ?: 0f,
-                labels = tweakViewModel.offsetLabels,
-                onSaved = { tweakViewModel.saveFreqOffset(it) },
-                shape = blockTopShape
+            TweaksSubTabHeader(
+                title = stringResource(R.string.gov_settings),
+                subtitle = "CPU frequency scaling, I/O schedulers, and GPU driver policies",
+                onBackClick = onBackClick
             )
 
-            SettingsActionCard(
-                icon = Icons.Rounded.Tune,
-                title = stringResource(R.string.default_cpu_gov),
-                summary = stringResource(R.string.default_cpu_gov_desc),
-                trailingBadge = tweakViewModel.defaultGovIndex?.let { govs.getOrNull(it) } ?: "Auto",
-                onClick = {
-                    if (govs.isNotEmpty()) {
-                        choiceDialogTitle = "Default CPU Governor"
-                        choiceDialogOptions = govs
-                        choiceDialogSelectedIndex = tweakViewModel.defaultGovIndex ?: 0
-                        choiceDialogOnSelect = { tweakViewModel.updateDefaultGovernor(it) }
-                    }
-                },
-                shape = blockMiddleShape
-            )
+            // --- CPU Scaling Section ---
+            TweaksSectionHeader(stringResource(R.string.default_cpu_gov))
 
-            SettingsActionCard(
-                icon = Icons.Rounded.Bolt,
-                title = stringResource(R.string.performance_cpu_gov),
-                summary = stringResource(R.string.performance_cpu_gov_desc),
-                trailingBadge = tweakViewModel.performanceGovIndex?.let { govs.getOrNull(it) } ?: "Auto",
-                onClick = {
-                    if (govs.isNotEmpty()) {
-                        choiceDialogTitle = "Performance CPU Governor"
-                        choiceDialogOptions = govs
-                        choiceDialogSelectedIndex = tweakViewModel.performanceGovIndex ?: 0
-                        choiceDialogOnSelect = { tweakViewModel.updatePerformanceGovernor(it) }
-                    }
-                },
-                shape = blockMiddleShape
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(blockLargeCorner)),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                FreqOffsetSliderCard(
+                    initialIndex = tweakViewModel.freqOffsetIndex ?: 0f,
+                    labels = tweakViewModel.offsetLabels,
+                    onSaved = { tweakViewModel.saveFreqOffset(it) },
+                    shape = blockTopShape
+                )
 
-            SettingsActionCard(
-                icon = Icons.Rounded.Speed,
-                title = stringResource(R.string.powersave_cpu_gov),
-                summary = stringResource(R.string.powersave_cpu_gov_desc),
-                trailingBadge = tweakViewModel.powersaveGovIndex?.let { govs.getOrNull(it) } ?: "Auto",
-                onClick = {
-                    if (govs.isNotEmpty()) {
-                        choiceDialogTitle = "Powersave CPU Governor"
-                        choiceDialogOptions = govs
-                        choiceDialogSelectedIndex = tweakViewModel.powersaveGovIndex ?: 0
-                        choiceDialogOnSelect = { tweakViewModel.updatePowersaveGovernor(it) }
-                    }
-                },
-                shape = blockBottomShape
-            )
-        }
+                SettingsActionCard(
+                    icon = Icons.Rounded.Tune,
+                    title = stringResource(R.string.default_cpu_gov),
+                    summary = stringResource(R.string.default_cpu_gov_desc),
+                    trailingBadge = tweakViewModel.defaultGovIndex?.let { govs.getOrNull(it) } ?: "Auto",
+                    onClick = { if (govs.isNotEmpty()) defaultGovDropDown.show() },
+                    modifier = Modifier.zxDropDownAnchor(defaultGovDropDown),
+                    shape = blockMiddleShape
+                )
 
-        // --- I/O Schedulers Section ---
-        TweaksSectionHeader(stringResource(R.string.io_settings))
+                SettingsActionCard(
+                    icon = Icons.Rounded.Bolt,
+                    title = stringResource(R.string.performance_cpu_gov),
+                    summary = stringResource(R.string.performance_cpu_gov_desc),
+                    trailingBadge = tweakViewModel.performanceGovIndex?.let { govs.getOrNull(it) } ?: "Auto",
+                    onClick = { if (govs.isNotEmpty()) performanceGovDropDown.show() },
+                    modifier = Modifier.zxDropDownAnchor(performanceGovDropDown),
+                    shape = blockMiddleShape
+                )
 
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(blockLargeCorner)),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            SettingsActionCard(
-                icon = Icons.Rounded.Layers,
-                title = stringResource(R.string.balanced_io_scheduler),
-                summary = "Storage queue scheduler applied in Balanced profile",
-                trailingBadge = tweakViewModel.balancedIOIndex?.let { ioScheds.getOrNull(it) } ?: "Auto",
-                onClick = {
-                    if (ioScheds.isNotEmpty()) {
-                        choiceDialogTitle = "Balanced I/O Scheduler"
-                        choiceDialogOptions = ioScheds
-                        choiceDialogSelectedIndex = tweakViewModel.balancedIOIndex ?: 0
-                        choiceDialogOnSelect = { tweakViewModel.updateBalancedIO(it) }
-                    }
-                },
-                shape = blockTopShape
-            )
+                SettingsActionCard(
+                    icon = Icons.Rounded.Speed,
+                    title = stringResource(R.string.powersave_cpu_gov),
+                    summary = stringResource(R.string.powersave_cpu_gov_desc),
+                    trailingBadge = tweakViewModel.powersaveGovIndex?.let { govs.getOrNull(it) } ?: "Auto",
+                    onClick = { if (govs.isNotEmpty()) powersaveGovDropDown.show() },
+                    modifier = Modifier.zxDropDownAnchor(powersaveGovDropDown),
+                    shape = blockBottomShape
+                )
+            }
 
-            SettingsActionCard(
-                icon = Icons.Rounded.Bolt,
-                title = stringResource(R.string.performance_io_scheduler),
-                summary = "Storage queue scheduler applied in Performance profile",
-                trailingBadge = tweakViewModel.performanceIOIndex?.let { ioScheds.getOrNull(it) } ?: "Auto",
-                onClick = {
-                    if (ioScheds.isNotEmpty()) {
-                        choiceDialogTitle = "Performance I/O Scheduler"
-                        choiceDialogOptions = ioScheds
-                        choiceDialogSelectedIndex = tweakViewModel.performanceIOIndex ?: 0
-                        choiceDialogOnSelect = { tweakViewModel.updatePerformanceIO(it) }
-                    }
-                },
-                shape = blockMiddleShape
-            )
-
-            SettingsActionCard(
-                icon = Icons.Rounded.Speed,
-                title = stringResource(R.string.powersave_io_scheduler),
-                summary = "Storage queue scheduler applied in Powersave profile",
-                trailingBadge = tweakViewModel.powersaveIOIndex?.let { ioScheds.getOrNull(it) } ?: "Auto",
-                onClick = {
-                    if (ioScheds.isNotEmpty()) {
-                        choiceDialogTitle = "Powersave I/O Scheduler"
-                        choiceDialogOptions = ioScheds
-                        choiceDialogSelectedIndex = tweakViewModel.powersaveIOIndex ?: 0
-                        choiceDialogOnSelect = { tweakViewModel.updatePowersaveIO(it) }
-                    }
-                },
-                shape = blockBottomShape
-            )
-        }
-
-        // --- Mali GPU Governors (If Available) ---
-        if (tweakViewModel.isMaliGpuAvailable == true && maliGovs.isNotEmpty()) {
-            TweaksSectionHeader("Mali GPU Governors")
+            // --- I/O Schedulers Section ---
+            TweaksSectionHeader(stringResource(R.string.io_settings))
 
             Column(
                 modifier = Modifier
@@ -1629,58 +1467,135 @@ private fun GovernorsSubPane(
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 SettingsActionCard(
-                    icon = Icons.Rounded.DeveloperBoard,
-                    title = stringResource(R.string.balanced_mali_gov),
-                    summary = "Mali driver governor applied in Balanced profile",
-                    trailingBadge = tweakViewModel.balancedMaliGovIndex?.let { maliGovs.getOrNull(it) } ?: "Auto",
-                    onClick = {
-                        choiceDialogTitle = "Balanced Mali GPU Governor"
-                        choiceDialogOptions = maliGovs
-                        choiceDialogSelectedIndex = tweakViewModel.balancedMaliGovIndex ?: 0
-                        choiceDialogOnSelect = { tweakViewModel.updateBalancedMaliGov(it) }
-                    },
+                    icon = Icons.Rounded.Layers,
+                    title = stringResource(R.string.balanced_io_scheduler),
+                    summary = "Storage queue scheduler applied in Balanced profile",
+                    trailingBadge = tweakViewModel.balancedIOIndex?.let { ioScheds.getOrNull(it) } ?: "Auto",
+                    onClick = { if (ioScheds.isNotEmpty()) balancedIODropDown.show() },
+                    modifier = Modifier.zxDropDownAnchor(balancedIODropDown),
                     shape = blockTopShape
                 )
 
                 SettingsActionCard(
                     icon = Icons.Rounded.Bolt,
-                    title = stringResource(R.string.performance_mali_gov),
-                    summary = "Mali driver governor applied in Performance profile",
-                    trailingBadge = tweakViewModel.performanceMaliGovIndex?.let { maliGovs.getOrNull(it) } ?: "Auto",
-                    onClick = {
-                        choiceDialogTitle = "Performance Mali GPU Governor"
-                        choiceDialogOptions = maliGovs
-                        choiceDialogSelectedIndex = tweakViewModel.performanceMaliGovIndex ?: 0
-                        choiceDialogOnSelect = { tweakViewModel.updatePerformanceMaliGov(it) }
-                    },
+                    title = stringResource(R.string.performance_io_scheduler),
+                    summary = "Storage queue scheduler applied in Performance profile",
+                    trailingBadge = tweakViewModel.performanceIOIndex?.let { ioScheds.getOrNull(it) } ?: "Auto",
+                    onClick = { if (ioScheds.isNotEmpty()) performanceIODropDown.show() },
+                    modifier = Modifier.zxDropDownAnchor(performanceIODropDown),
                     shape = blockMiddleShape
                 )
 
                 SettingsActionCard(
                     icon = Icons.Rounded.Speed,
-                    title = stringResource(R.string.powersave_mali_gov),
-                    summary = "Mali driver governor applied in Powersave profile",
-                    trailingBadge = tweakViewModel.powersaveMaliGovIndex?.let { maliGovs.getOrNull(it) } ?: "Auto",
-                    onClick = {
-                        choiceDialogTitle = "Powersave Mali GPU Governor"
-                        choiceDialogOptions = maliGovs
-                        choiceDialogSelectedIndex = tweakViewModel.powersaveMaliGovIndex ?: 0
-                        choiceDialogOnSelect = { tweakViewModel.updatePowersaveMaliGov(it) }
-                    },
+                    title = stringResource(R.string.powersave_io_scheduler),
+                    summary = "Storage queue scheduler applied in Powersave profile",
+                    trailingBadge = tweakViewModel.powersaveIOIndex?.let { ioScheds.getOrNull(it) } ?: "Auto",
+                    onClick = { if (ioScheds.isNotEmpty()) powersaveIODropDown.show() },
+                    modifier = Modifier.zxDropDownAnchor(powersaveIODropDown),
                     shape = blockBottomShape
                 )
             }
-        }
-    }
 
-    choiceDialogTitle?.let { title ->
-        ChoiceSelectionDialog(
-            title = title,
-            options = choiceDialogOptions,
-            selectedIndex = choiceDialogSelectedIndex,
-            onSelect = { choiceDialogOnSelect?.invoke(it) },
-            onDismiss = { choiceDialogTitle = null }
+            // --- Mali GPU Governors (If Available) ---
+            if (tweakViewModel.isMaliGpuAvailable == true && maliGovs.isNotEmpty()) {
+                TweaksSectionHeader("Mali GPU Governors")
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(blockLargeCorner)),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    SettingsActionCard(
+                        icon = Icons.Rounded.DeveloperBoard,
+                        title = stringResource(R.string.balanced_mali_gov),
+                        summary = "Mali driver governor applied in Balanced profile",
+                        trailingBadge = tweakViewModel.balancedMaliGovIndex?.let { maliGovs.getOrNull(it) } ?: "Auto",
+                        onClick = { balancedMaliDropDown.show() },
+                        modifier = Modifier.zxDropDownAnchor(balancedMaliDropDown),
+                        shape = blockTopShape
+                    )
+
+                    SettingsActionCard(
+                        icon = Icons.Rounded.Bolt,
+                        title = stringResource(R.string.performance_mali_gov),
+                        summary = "Mali driver governor applied in Performance profile",
+                        trailingBadge = tweakViewModel.performanceMaliGovIndex?.let { maliGovs.getOrNull(it) } ?: "Auto",
+                        onClick = { performanceMaliDropDown.show() },
+                        modifier = Modifier.zxDropDownAnchor(performanceMaliDropDown),
+                        shape = blockMiddleShape
+                    )
+
+                    SettingsActionCard(
+                        icon = Icons.Rounded.Speed,
+                        title = stringResource(R.string.powersave_mali_gov),
+                        summary = "Mali driver governor applied in Powersave profile",
+                        trailingBadge = tweakViewModel.powersaveMaliGovIndex?.let { maliGovs.getOrNull(it) } ?: "Auto",
+                        onClick = { powersaveMaliDropDown.show() },
+                        modifier = Modifier.zxDropDownAnchor(powersaveMaliDropDown),
+                        shape = blockBottomShape
+                    )
+                }
+            }
+        }
+
+        ZXDropDownMenu(
+            state = defaultGovDropDown,
+            options = govs,
+            selectedOption = tweakViewModel.defaultGovIndex?.let { govs.getOrNull(it) },
+            onOptionSelected = { tweakViewModel.updateDefaultGovernor(govs.indexOf(it)) }
         )
+        ZXDropDownMenu(
+            state = performanceGovDropDown,
+            options = govs,
+            selectedOption = tweakViewModel.performanceGovIndex?.let { govs.getOrNull(it) },
+            onOptionSelected = { tweakViewModel.updatePerformanceGovernor(govs.indexOf(it)) }
+        )
+        ZXDropDownMenu(
+            state = powersaveGovDropDown,
+            options = govs,
+            selectedOption = tweakViewModel.powersaveGovIndex?.let { govs.getOrNull(it) },
+            onOptionSelected = { tweakViewModel.updatePowersaveGovernor(govs.indexOf(it)) }
+        )
+        ZXDropDownMenu(
+            state = balancedIODropDown,
+            options = ioScheds,
+            selectedOption = tweakViewModel.balancedIOIndex?.let { ioScheds.getOrNull(it) },
+            onOptionSelected = { tweakViewModel.updateBalancedIO(ioScheds.indexOf(it)) }
+        )
+        ZXDropDownMenu(
+            state = performanceIODropDown,
+            options = ioScheds,
+            selectedOption = tweakViewModel.performanceIOIndex?.let { ioScheds.getOrNull(it) },
+            onOptionSelected = { tweakViewModel.updatePerformanceIO(ioScheds.indexOf(it)) }
+        )
+        ZXDropDownMenu(
+            state = powersaveIODropDown,
+            options = ioScheds,
+            selectedOption = tweakViewModel.powersaveIOIndex?.let { ioScheds.getOrNull(it) },
+            onOptionSelected = { tweakViewModel.updatePowersaveIO(ioScheds.indexOf(it)) }
+        )
+        if (tweakViewModel.isMaliGpuAvailable == true) {
+            ZXDropDownMenu(
+                state = balancedMaliDropDown,
+                options = maliGovs,
+                selectedOption = tweakViewModel.balancedMaliGovIndex?.let { maliGovs.getOrNull(it) },
+                onOptionSelected = { tweakViewModel.updateBalancedMaliGov(maliGovs.indexOf(it)) }
+            )
+            ZXDropDownMenu(
+                state = performanceMaliDropDown,
+                options = maliGovs,
+                selectedOption = tweakViewModel.performanceMaliGovIndex?.let { maliGovs.getOrNull(it) },
+                onOptionSelected = { tweakViewModel.updatePerformanceMaliGov(maliGovs.indexOf(it)) }
+            )
+            ZXDropDownMenu(
+                state = powersaveMaliDropDown,
+                options = maliGovs,
+                selectedOption = tweakViewModel.powersaveMaliGovIndex?.let { maliGovs.getOrNull(it) },
+                onOptionSelected = { tweakViewModel.updatePowersaveMaliGov(maliGovs.indexOf(it)) }
+            )
+        }
     }
 }
 
@@ -2445,83 +2360,6 @@ private fun BypassThresholdSliderCard(
             ) {
                 Text("20%", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant.copy(alpha = 0.6f))
                 Text("50%", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant.copy(alpha = 0.6f))
-            }
-        }
-    }
-}
-
-@Composable
-private fun ChoiceSelectionDialog(
-    title: String,
-    options: List<String>,
-    selectedIndex: Int,
-    onSelect: (Int) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val scheme = MaterialTheme.colorScheme
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = scheme.surfaceContainerHigh,
-            contentColor = scheme.onSurface,
-            tonalElevation = 6.dp,
-            modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .clip(RoundedCornerShape(24.dp))
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(20.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = scheme.onSurface
-                )
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    options.forEachIndexed { index, option ->
-                        val isSelected = index == selectedIndex
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) scheme.primaryContainer else Color.Transparent,
-                            contentColor = if (isSelected) scheme.onPrimaryContainer else scheme.onSurface,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable {
-                                    onSelect(index)
-                                    onDismiss()
-                                }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = option,
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                )
-                                if (isSelected) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Check,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
             }
         }
     }

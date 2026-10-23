@@ -107,6 +107,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import zx.azenith.ui.component.GamepadFocusRoot
+import zx.azenith.ui.component.ZXDropDownNav
 import zx.azenith.ui.util.TapHapticState
 import zx.azenith.ui.util.AudioUtil
 import zx.azenith.ui.util.getChipsetName
@@ -302,7 +303,13 @@ fun ZXGameSpaceHub(
                         }
                         KeyEvent.KEYCODE_BUTTON_B,
                         KeyEvent.KEYCODE_ESCAPE -> {
-                            handleBack()
+                            // A menu overlays the shell, so the pad's back closes the menu
+                            // instead of walking out of the screen underneath it.
+                            if (ZXDropDownNav.isActive) {
+                                ZXDropDownNav.dismissTop()
+                            } else {
+                                handleBack()
+                            }
                             true
                         }
                         KeyEvent.KEYCODE_DPAD_UP -> {

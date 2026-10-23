@@ -500,6 +500,7 @@ fun ExpressiveSwitchItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpressiveDropdownItem(
+    modifier: Modifier = Modifier,
     icon: ImageVector? = null,
     title: String,
     summary: String? = null,
@@ -507,8 +508,12 @@ fun ExpressiveDropdownItem(
     enabled: Boolean = true,
     selectedIndex: Int,
     onItemSelected: (Int) -> Unit,
+    externalMenuState: ZXDropDownState? = null,
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    // With an external state the caller renders the menu outside whatever scrolls this row,
+    // because an in-window overlay inside a lazy item is clipped to the list viewport.
+    val ownState = remember { ZXDropDownState() }
+    val menuState = externalMenuState ?: ownState
 
     val hasItems = items.isNotEmpty()
     val safeIndex = if (hasItems) {
@@ -521,9 +526,10 @@ fun ExpressiveDropdownItem(
     ExpressiveListItem(
         modifier = Modifier
             .animateContentSize()
+            .then(modifier)
             .then(
                 if (enabled) {
-                    Modifier.clickable { expanded = true }
+                    Modifier.clickable { menuState.show() }
                 } else {
                     Modifier
                 }
@@ -542,9 +548,9 @@ fun ExpressiveDropdownItem(
         }
     )
 
-    if (hasItems) {
+    if (hasItems && externalMenuState == null) {
         OptionPickerSheet(
-            show = expanded,
+            show = menuState.expanded,
             title = title,
             subtitle = summary,
             items = items,
@@ -555,7 +561,7 @@ fun ExpressiveDropdownItem(
                     onItemSelected(index)
                 }
             },
-            onDismiss = { expanded = false },
+            onDismiss = { menuState.dismiss() },
         )
     }
 }
