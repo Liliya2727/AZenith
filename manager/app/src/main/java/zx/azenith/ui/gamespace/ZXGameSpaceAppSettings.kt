@@ -213,7 +213,15 @@ internal fun ZXGameSpaceAppSettingsOverlay(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(scheme.scrim.copy(alpha = 0.45f))
+                .hazeBlur(
+                    input = HazeInput.Sources(hazeState),
+                    style = HazeBlurStyle.Material3(
+                        containerColor = scheme.surfaceContainerLowest.copy(alpha = 0.55f)
+                    ) {
+                        blurRadius(28.dp)
+                    }
+                )
+                .background(scheme.scrim.copy(alpha = 0.40f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -923,7 +931,15 @@ internal fun ZXGameSpaceWallpaperOverlay(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(scheme.scrim.copy(alpha = 0.45f))
+                .hazeBlur(
+                    input = HazeInput.Sources(hazeState),
+                    style = HazeBlurStyle.Material3(
+                        containerColor = scheme.surfaceContainerLowest.copy(alpha = 0.55f)
+                    ) {
+                        blurRadius(28.dp)
+                    }
+                )
+                .background(scheme.scrim.copy(alpha = 0.40f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,

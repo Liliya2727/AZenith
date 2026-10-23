@@ -337,7 +337,7 @@ fun ZXGameSpaceHub(
             modifier = Modifier
                 .fillMaxSize()
                 .hazeSource(backdropHazeState)
-                .hazeSource(overlayHazeState)
+                .hazeSource(overlayHazeState, zIndex = 0f)
         ) {
             ZXGameSpaceStageBackdrop(
                 entry = activeEntry
@@ -348,12 +348,10 @@ fun ZXGameSpaceHub(
         val isHomescreenScrolled = category == TopCategory.Games && activeEntry == RibbonEntry.Welcome && (homeExpanded || welcomeScroll.value > 10)
         val isLibrary = category == TopCategory.Games && activeEntry == RibbonEntry.Library
         val isSettings = category == TopCategory.Settings
-        val isOverlayOpen = tuningPkg != null || wallpaperPkg != null || sidePanelPromptOpen
 
         val targetBlurAlpha = when {
             isSettings -> 1f
             isLibrary -> 1f
-            isOverlayOpen -> 1f
             searchOpen -> 1f
             isHomescreenScrolled -> {
                 if (homeExpanded) 1f else (welcomeScroll.value.toFloat() / 180f).coerceIn(0f, 1f)
@@ -422,6 +420,7 @@ fun ZXGameSpaceHub(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .hazeSource(overlayHazeState, zIndex = 1f)
                 .padding(
                     start = startSafePad,
                     end = endSafePad,
@@ -525,7 +524,6 @@ fun ZXGameSpaceHub(
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .hazeSource(overlayHazeState)
                             ) {
                                 val isRibbonVisible = !searchOpen &&
                                     !(activeEntry == RibbonEntry.Welcome && homeExpanded) &&
