@@ -40,12 +40,15 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -71,6 +74,8 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.OpenInFull
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -138,6 +143,7 @@ class ZXFloatingAppSession(
     var heightPx by mutableIntStateOf(initialHeightPx)
     var isResizing by mutableStateOf(false)
     var isDragging by mutableStateOf(false)
+    var isPendingMinimizeToIcon by mutableStateOf(false)
     var lastActiveTimestampMs by mutableLongStateOf(System.currentTimeMillis())
 
     var virtualDisplayId: Int = -1
@@ -650,6 +656,9 @@ class ZXFloatingAppManager(
                             GESTURE_RESIZE_LEFT, GESTURE_RESIZE_RIGHT -> {
                                 session.isResizing = false
                                 gestureMode = GESTURE_NONE
+                                if (ev.action == MotionEvent.ACTION_CANCEL) {
+                                    session.isPendingMinimizeToIcon = false
+                                }
                                 settleSessionResize(session)
                                 return true
                             }
@@ -754,18 +763,20 @@ class ZXFloatingAppManager(
         val deltaH = (signedDx * 0.45f + dyPx * 0.85f).roundToInt()
         val rawTargetH = startH + deltaH
 
-        // Shrinking past the mini limit transitions directly into minimized icon mode
-        if (rawTargetH < (miniH * 0.78f)) {
-            minimizeSessionToIcon(session)
-            return
-        }
+        // Shrinking past 86% of mini height visually indicates intent to minimize to icon.
+        // It does NOT minimize immediately: it displays the icon preview.
+        // If user enlarges it again, isPendingMinimizeToIcon cancels!
+        val iconThresholdH = (miniH * 0.86f).roundToInt()
+        val isShrunkToIcon = rawTargetH < iconThresholdH
+        session.isPendingMinimizeToIcon = isShrunkToIcon
 
-        val targetH = rawTargetH.coerceIn((miniH * 0.82f).roundToInt(), largeH)
-        val targetTier = resolveNearestSizeTier(targetH)
+        val minPreviewH = (miniH * 0.62f).roundToInt()
+        val targetH = rawTargetH.coerceIn(minPreviewH, largeH)
+        val targetTier = if (isShrunkToIcon) FloatingSizeState.MINI else resolveNearestSizeTier(targetH)
         val density = dm.density
         val borderPx = (4f * density).roundToInt()
-        val topBarPx = if (targetTier == FloatingSizeState.MINI) 0 else (34f * density).roundToInt()
-        val contentH = (targetH - borderPx - topBarPx).coerceAtLeast((100 * density).roundToInt())
+        val topBarPx = if (targetTier == FloatingSizeState.MINI || isShrunkToIcon) 0 else (34f * density).roundToInt()
+        val contentH = (targetH - borderPx - topBarPx).coerceAtLeast((72 * density).roundToInt())
         val contentW = (contentH * PORTRAIT_ASPECT_RATIO).roundToInt()
         val targetW = contentW + borderPx
 
@@ -783,8 +794,9 @@ class ZXFloatingAppManager(
     }
 
     fun settleSessionResize(session: ZXFloatingAppSession) {
-        val (_, miniH) = computeDimensionsForState(FloatingSizeState.MINI)
-        if (session.heightPx < (miniH * 0.88f)) {
+        val willMinimize = session.isPendingMinimizeToIcon
+        session.isPendingMinimizeToIcon = false
+        if (willMinimize) {
             minimizeSessionToIcon(session)
         } else {
             val settledTier = resolveNearestSizeTier(session.heightPx)
@@ -1177,16 +1189,25 @@ private fun FloatingAppWindowContent(
     session: ZXFloatingAppSession,
     manager: ZXFloatingAppManager
 ) {
+    val scheme = MaterialTheme.colorScheme
     val isMini = session.sizeState == FloatingSizeState.MINI
-    val cornerRadius = if (isMini) 18.dp else 22.dp
+    val isPendingIcon = session.isPendingMinimizeToIcon
+    val cornerRadius by animateDpAsState(
+        targetValue = if (isPendingIcon) 26.dp else if (isMini) 18.dp else 22.dp,
+        label = "cornerRadius"
+    )
     val borderColor by animateColorAsState(
-        targetValue = if (session.isResizing || session.isDragging) {
-            FloatingAccentPrimary.copy(alpha = 0.85f)
-        } else {
-            Color(0xFF56423F)
+        targetValue = when {
+            isPendingIcon -> scheme.primary
+            session.isResizing || session.isDragging -> scheme.primary.copy(alpha = 0.85f)
+            else -> scheme.outlineVariant.copy(alpha = 0.50f)
         },
         animationSpec = tween(150),
         label = "floatingBorderColor"
+    )
+    val borderThickness by animateDpAsState(
+        targetValue = if (isPendingIcon) 2.5.dp else 2.dp,
+        label = "floatingBorderThickness"
     )
 
     Box(
@@ -1194,14 +1215,13 @@ private fun FloatingAppWindowContent(
             .fillMaxSize()
             .shadow(14.dp, RoundedCornerShape(cornerRadius), clip = false)
             .clip(RoundedCornerShape(cornerRadius))
-            .background(Color(0xFF1A1312))
-            .border(2.dp, borderColor, RoundedCornerShape(cornerRadius))
+            .background(scheme.surfaceContainerLowest)
+            .border(borderThickness, borderColor, RoundedCornerShape(cornerRadius))
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Top bar (shown in SMALL, NORMAL, and LARGE; hidden in MINI square box mode)
-            if (!isMini) {
+            // Top bar (shown in SMALL, NORMAL, and LARGE; hidden in MINI square box mode or pending icon)
+            if (!isMini && !isPendingIcon) {
                 FloatingWindowTopBar(
-                    onBack = { manager.dispatchBackToSession(session) },
                     onFullScreen = { manager.expandSessionToFullscreen(session) },
                     onClose = { manager.closeSession(session) }
                 )
@@ -1259,7 +1279,7 @@ private fun FloatingAppWindowContent(
                             }
 
                             setOnTouchListener { v, event ->
-                                if (session.sizeState == FloatingSizeState.MINI) {
+                                if (session.sizeState == FloatingSizeState.MINI || session.isPendingMinimizeToIcon) {
                                     false
                                 } else {
                                     manager.dispatchTouchToVirtualDisplay(
@@ -1286,17 +1306,61 @@ private fun FloatingAppWindowContent(
             }
         }
 
-        // Bottom-left corner resize indicator on floating border
-        CornerResizeIndicator(
-            isLeftCorner = true,
-            modifier = Modifier.align(Alignment.BottomStart)
-        )
+        // Pending Minimize to Icon Visual Preview Overlay
+        AnimatedVisibility(
+            visible = isPendingIcon,
+            enter = fadeIn(animationSpec = tween(120)),
+            exit = fadeOut(animationSpec = tween(120))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.65f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = scheme.surfaceContainerHigh.copy(alpha = 0.95f),
+                    border = BorderStroke(2.dp, scheme.primary),
+                    modifier = Modifier.size(54.dp),
+                    shadowElevation = 8.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        if (session.iconBitmap != null) {
+                            Image(
+                                bitmap = session.iconBitmap,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Rounded.Apps,
+                                contentDescription = null,
+                                tint = scheme.primary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
 
-        // Bottom-right corner resize indicator on floating border
-        CornerResizeIndicator(
-            isLeftCorner = false,
-            modifier = Modifier.align(Alignment.BottomEnd)
-        )
+        // Bottom-left corner resize indicator on floating border
+        if (!isPendingIcon) {
+            CornerResizeIndicator(
+                isLeftCorner = true,
+                modifier = Modifier.align(Alignment.BottomStart)
+            )
+
+            // Bottom-right corner resize indicator on floating border
+            CornerResizeIndicator(
+                isLeftCorner = false,
+                modifier = Modifier.align(Alignment.BottomEnd)
+            )
+        }
     }
 }
 
@@ -1326,36 +1390,27 @@ private fun applyPortraitTransform(textureView: TextureView, viewW: Int, viewH: 
 
 @Composable
 private fun FloatingWindowTopBar(
-    onBack: () -> Unit,
     onFullScreen: () -> Unit,
     onClose: () -> Unit
 ) {
+    val scheme = MaterialTheme.colorScheme
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(34.dp)
-            .background(Color(0xFF241B1A))
-            .padding(horizontal = 6.dp)
+            .background(scheme.surfaceContainerHigh.copy(alpha = 0.90f))
+            .padding(horizontal = 8.dp)
     ) {
-        // Left controls: Back & Fullscreen (icons only, no app name)
+        // Left control: Fullscreen
         Row(
             modifier = Modifier.align(Alignment.CenterStart),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TopBarIconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
-                    contentDescription = null,
-                    tint = FloatingIconMuted,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
             TopBarIconButton(onClick = onFullScreen) {
                 Icon(
                     imageVector = Icons.Rounded.OpenInFull,
                     contentDescription = null,
-                    tint = FloatingIconMuted,
+                    tint = scheme.onSurfaceVariant,
                     modifier = Modifier.size(13.dp)
                 )
             }
@@ -1368,7 +1423,7 @@ private fun FloatingWindowTopBar(
                 .width(36.dp)
                 .height(4.dp)
                 .clip(CircleShape)
-                .background(FloatingIconMuted.copy(alpha = 0.55f))
+                .background(scheme.outline.copy(alpha = 0.45f))
         )
 
         // Right control: Close (minimize is triggered by resizing smaller into icon mode)
@@ -1379,7 +1434,7 @@ private fun FloatingWindowTopBar(
                 Icon(
                     imageVector = Icons.Rounded.Close,
                     contentDescription = null,
-                    tint = FloatingAccentPrimary,
+                    tint = scheme.error,
                     modifier = Modifier.size(15.dp)
                 )
             }

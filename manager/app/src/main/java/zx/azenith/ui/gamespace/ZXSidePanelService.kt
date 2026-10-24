@@ -18,7 +18,12 @@
 
 package zx.azenith.ui.gamespace
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.Service
+import android.content.pm.ServiceInfo
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
@@ -209,7 +214,11 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     packageName?.let { putExtra(EXTRA_PACKAGE_NAME, it) }
                     appLabel?.let { putExtra(EXTRA_APP_LABEL, it) }
                 }
-                context.startService(intent)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    ContextCompat.startForegroundService(context, intent)
+                } else {
+                    context.startService(intent)
+                }
             } catch (e: Exception) {
                 android.util.Log.e("ZXSidePanelService", "Failed to start service", e)
             }
@@ -327,6 +336,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     override fun onCreate() {
         super.onCreate()
         isServiceActive = true
+        startForegroundNotification()
         savedStateRegistryController.performRestore(null)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
@@ -396,6 +406,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        startForegroundNotification()
         val action = intent?.action ?: ACTION_SHOW
         when (action) {
             ACTION_SHOW -> {
@@ -476,7 +487,54 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         store.clear()
         serviceScope.cancel()
+        runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
+        }
         super.onDestroy()
+    }
+
+    private fun startForegroundNotification() {
+        val channelId = "gamespace_overlay_service_channel"
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "Game Space",
+                NotificationManager.IMPORTANCE_MIN
+            ).apply {
+                description = "Game Space overlay service"
+                setShowBadge(false)
+            }
+            nm.createNotificationChannel(channel)
+        }
+        val notification = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(zx.azenith.R.mipmap.ic_launcher)
+            .setContentTitle("Game Space")
+            .setContentText("Game Space overlay active")
+            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setOngoing(true)
+            .setSilent(true)
+            .build()
+
+        runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val fgsType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                } else {
+                    0
+                }
+                startForeground(1001, notification, fgsType)
+            } else {
+                startForeground(1001, notification)
+            }
+        }.onFailure { e ->
+            android.util.Log.w("ZXSidePanelService", "startForeground failed: ${e.message}")
+        }
     }
 
     private fun computeHandleBarHeightDp(): Float {

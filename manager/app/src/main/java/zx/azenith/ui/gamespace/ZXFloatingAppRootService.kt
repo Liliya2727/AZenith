@@ -57,6 +57,7 @@ class ZXFloatingAppRootService : RootService() {
 
         private const val SYSTEM_UID = 1000
         private const val FLAG_PUBLIC = DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC
+        private const val FLAG_OWN_CONTENT_ONLY = DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY
         private const val FLAG_SUPPORTS_TOUCH = 1 shl 6
         private const val FLAG_DESTROY_CONTENT_ON_REMOVAL = 1 shl 8
         private const val FLAG_TRUSTED = 1 shl 10
@@ -350,10 +351,11 @@ class ZXFloatingAppRootService : RootService() {
     ): Int {
         Log.i("ZXFloatRoot", "createTrustedVirtualDisplay: $name (${width}x${height}@$dpi)")
         val flagCandidates = intArrayOf(
-            FLAG_PUBLIC or FLAG_TRUSTED or FLAG_SUPPORTS_TOUCH or FLAG_DESTROY_CONTENT_ON_REMOVAL or FLAG_ALWAYS_UNLOCKED,
-            FLAG_PUBLIC or FLAG_TRUSTED or FLAG_SUPPORTS_TOUCH or FLAG_DESTROY_CONTENT_ON_REMOVAL,
-            FLAG_PUBLIC or FLAG_SUPPORTS_TOUCH or FLAG_DESTROY_CONTENT_ON_REMOVAL,
-            FLAG_PUBLIC,
+            FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY or FLAG_TRUSTED or FLAG_SUPPORTS_TOUCH or FLAG_DESTROY_CONTENT_ON_REMOVAL or FLAG_ALWAYS_UNLOCKED,
+            FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY or FLAG_TRUSTED or FLAG_SUPPORTS_TOUCH or FLAG_DESTROY_CONTENT_ON_REMOVAL,
+            FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY or FLAG_SUPPORTS_TOUCH or FLAG_DESTROY_CONTENT_ON_REMOVAL,
+            FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY,
+            FLAG_OWN_CONTENT_ONLY,
             0
         )
 

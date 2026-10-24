@@ -86,7 +86,11 @@ class ZenithReceiver : BroadcastReceiver() {
                         this.action = zx.azenith.ui.gamespace.ZXSidePanelService.ACTION_OPEN_FLOATING_APP
                         putExtra(zx.azenith.ui.gamespace.ZXSidePanelService.EXTRA_PACKAGE_NAME, openFloatingPkg)
                     }
-                    context.startService(floatIntent)
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        androidx.core.content.ContextCompat.startForegroundService(context, floatIntent)
+                    } else {
+                        context.startService(floatIntent)
+                    }
                 }
             }
 
