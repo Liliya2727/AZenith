@@ -23,7 +23,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import kotlin.random.Random
 
 data class SidePanelQuickTool(
@@ -70,9 +72,9 @@ data class SidePanelCrosshairState(
 }
 
 data class SidePanelAppItem(
-    val id: String,
+    val packageName: String,
     val name: String,
-    val icon: String
+    val iconBitmap: ImageBitmap? = null
 )
 
 data class SidePanelWidgetMeta(
@@ -133,8 +135,15 @@ class ZXSidePanelStateHolder {
 
     var hudOffsetX by mutableFloatStateOf(0f)
     var hudOffsetY by mutableFloatStateOf(0f)
-    var appWindowOffsetX by mutableFloatStateOf(0f)
-    var appWindowOffsetY by mutableFloatStateOf(0f)
+
+    // Widget Drag-and-Drop State (Edit Mode)
+    var draggingWidgetId by mutableStateOf<String?>(null)
+    var draggingFromLibrary by mutableStateOf(false)
+    var draggingSourceIndex by mutableIntStateOf(-1)
+    var dragPointerInWorkspace by mutableStateOf(Offset.Zero)
+    var dragGrabOffset by mutableStateOf(Offset.Zero)
+    var dropTargetIndex by mutableIntStateOf(-1)
+    var isHoveringLibraryDropZone by mutableStateOf(false)
 
     val quickTools = mutableStateListOf(
         SidePanelQuickTool(id = "screenshot", name = "Screenshot", icon = "screenshot_region", active = false),
@@ -152,17 +161,11 @@ class ZXSidePanelStateHolder {
 
     var crosshair by mutableStateOf(SidePanelCrosshairState())
 
-    val allApps: List<SidePanelAppItem> = listOf(
-        SidePanelAppItem(id = "whatsapp", name = "WhatsApp", icon = "chat"),
-        SidePanelAppItem(id = "browser", name = "Browser", icon = "public"),
-        SidePanelAppItem(id = "files", name = "Files", icon = "folder_open"),
-        SidePanelAppItem(id = "discord", name = "Discord", icon = "forum"),
-        SidePanelAppItem(id = "calc", name = "Calculator", icon = "calculate"),
-        SidePanelAppItem(id = "music", name = "Music", icon = "music_note")
-    )
-
-    val quickApps = mutableStateListOf("whatsapp")
-    var floatingAppId by mutableStateOf<String?>(null)
+    val installedApps = mutableStateListOf<SidePanelAppItem>()
+    val quickApps = mutableStateListOf<String>()
+    var defaultQuickApps: List<String> = emptyList()
+    var onQuickAppsChanged: ((List<String>) -> Unit)? = null
+    var onLaunchAppRequest: ((String) -> Unit)? = null
 
     val activeWidgets = mutableStateListOf(
         "fpsHeader",
@@ -344,10 +347,11 @@ class ZXSidePanelStateHolder {
         if (activeSubscreen != null) {
             activeSubscreen = null
         }
+        cancelWidgetDrag()
         val next = force ?: !editMode
         editMode = next
         if (next) {
-            showToast("Edit mode enabled — drag widgets or use the right panel", "edit")
+            showToast("Edit mode enabled — drag widgets to reorder or drop", "edit")
         }
     }
 
@@ -381,10 +385,82 @@ class ZXSidePanelStateHolder {
             }
             "appsManager" -> {
                 quickApps.clear()
-                quickApps.add("whatsapp")
-                showToast("App list reset", "restart_alt")
+                quickApps.addAll(defaultQuickApps)
+                onQuickAppsChanged?.invoke(quickApps.toList())
+                showToast("App shortcuts reset", "restart_alt")
             }
         }
+    }
+
+    fun startWidgetDrag(
+        widgetId: String,
+        fromLibrary: Boolean,
+        sourceIndex: Int,
+        initialPointerInWorkspace: Offset,
+        grabOffset: Offset
+    ) {
+        draggingWidgetId = widgetId
+        draggingFromLibrary = fromLibrary
+        draggingSourceIndex = sourceIndex
+        dragPointerInWorkspace = initialPointerInWorkspace
+        dragGrabOffset = grabOffset
+        dropTargetIndex = if (fromLibrary) 0 else sourceIndex.coerceIn(0, activeWidgets.size.coerceAtLeast(1) - 1)
+        isHoveringLibraryDropZone = false
+    }
+
+    fun updateWidgetDrag(
+        pointerInWorkspace: Offset,
+        targetIndex: Int,
+        hoveringLibrary: Boolean
+    ) {
+        if (draggingWidgetId == null) return
+        dragPointerInWorkspace = pointerInWorkspace
+        isHoveringLibraryDropZone = hoveringLibrary
+        if (!hoveringLibrary && targetIndex >= 0) {
+            val maxIdx = if (draggingFromLibrary) activeWidgets.size else (activeWidgets.size - 1).coerceAtLeast(0)
+            dropTargetIndex = targetIndex.coerceIn(0, maxIdx)
+        }
+    }
+
+    fun commitWidgetDrag() {
+        val wId = draggingWidgetId ?: return
+        val fromLib = draggingFromLibrary
+        val srcIdx = draggingSourceIndex
+        val dstIdx = dropTargetIndex
+        val hoverLib = isHoveringLibraryDropZone
+
+        draggingWidgetId = null
+        draggingFromLibrary = false
+        draggingSourceIndex = -1
+        dropTargetIndex = -1
+        isHoveringLibraryDropZone = false
+
+        val title = widgetCatalog[wId]?.title ?: wId
+        if (fromLib) {
+            if (!hoverLib) {
+                libraryWidgets.remove(wId)
+                if (!activeWidgets.contains(wId)) {
+                    val insertIdx = dstIdx.coerceIn(0, activeWidgets.size)
+                    activeWidgets.add(insertIdx, wId)
+                    showToast("Placed $title", "add_circle")
+                }
+            }
+        } else {
+            if (hoverLib) {
+                removeWidgetToLibrary(wId)
+            } else if (srcIdx in activeWidgets.indices && dstIdx in activeWidgets.indices && srcIdx != dstIdx) {
+                moveActiveWidget(srcIdx, dstIdx)
+                showToast("Moved $title", "drag_indicator")
+            }
+        }
+    }
+
+    fun cancelWidgetDrag() {
+        draggingWidgetId = null
+        draggingFromLibrary = false
+        draggingSourceIndex = -1
+        dropTargetIndex = -1
+        isHoveringLibraryDropZone = false
     }
 
     fun removeWidgetToLibrary(widgetId: String) {
@@ -397,10 +473,11 @@ class ZXSidePanelStateHolder {
         }
     }
 
-    fun addWidgetFromLibrary(widgetId: String) {
+    fun addWidgetFromLibrary(widgetId: String, atIndex: Int = 0) {
         if (libraryWidgets.remove(widgetId)) {
             if (!activeWidgets.contains(widgetId)) {
-                activeWidgets.add(0, widgetId)
+                val idx = atIndex.coerceIn(0, activeWidgets.size)
+                activeWidgets.add(idx, widgetId)
             }
             val title = widgetCatalog[widgetId]?.title ?: widgetId
             showToast("Added $title", "add_circle")
@@ -598,27 +675,16 @@ class ZXSidePanelStateHolder {
         floatingHudVisible = !floatingHudVisible
     }
 
-    fun toggleFloatingAppWindow(appId: String) {
-        if (floatingAppId == appId) {
-            closeFloatingAppWindow()
-            return
-        }
-        floatingAppId = appId
-        val app = allApps.find { it.id == appId }
-        if (app != null) {
-            showToast("Opened ${app.name}", app.icon)
-        }
+    fun launchQuickApp(packageName: String) {
+        onLaunchAppRequest?.invoke(packageName)
     }
 
-    fun closeFloatingAppWindow() {
-        floatingAppId = null
-    }
-
-    fun toggleQuickApp(appId: String) {
-        if (quickApps.contains(appId)) {
-            quickApps.remove(appId)
+    fun toggleQuickApp(packageName: String) {
+        if (quickApps.contains(packageName)) {
+            quickApps.remove(packageName)
         } else {
-            quickApps.add(appId)
+            quickApps.add(packageName)
         }
+        onQuickAppsChanged?.invoke(quickApps.toList())
     }
 }

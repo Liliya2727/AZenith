@@ -207,6 +207,9 @@ internal fun SettingsAppearancePane(
     var sidePanelSensitivity by remember {
         mutableIntStateOf(prefs.getInt("gamespace_sidepanel_sensitivity", 65).coerceIn(20, 100))
     }
+    var sidePanelLength by remember {
+        mutableIntStateOf(prefs.getInt("gamespace_sidepanel_length", 50).coerceIn(20, 100))
+    }
     var colorModeValue by remember { mutableIntStateOf(prefs.getInt("color_mode", ColorMode.SYSTEM.value)) }
     var keyColorValue by remember { mutableIntStateOf(prefs.getInt("key_color", 0)) }
     var appScalePercent by remember {
@@ -244,6 +247,9 @@ internal fun SettingsAppearancePane(
                 }
                 "gamespace_sidepanel_sensitivity" -> {
                     sidePanelSensitivity = prefs.getInt("gamespace_sidepanel_sensitivity", 65).coerceIn(20, 100)
+                }
+                "gamespace_sidepanel_length" -> {
+                    sidePanelLength = prefs.getInt("gamespace_sidepanel_length", 50).coerceIn(20, 100)
                 }
                 "gamespace_wallpaper_dimming_intensity" -> {
                     wallpaperDimmingIntensity = prefs.getInt("gamespace_wallpaper_dimming_intensity", 75).coerceIn(15, 100)
@@ -312,6 +318,7 @@ internal fun SettingsAppearancePane(
         CustomizeSidePanelSection(
             sidePanelSide = sidePanelSide,
             initialSensitivity = sidePanelSensitivity,
+            initialLength = sidePanelLength,
             onSideChanged = {
                 sidePanelSide = it
                 prefs.edit().putString("gamespace_sidepanel_side", it).apply()
@@ -319,6 +326,10 @@ internal fun SettingsAppearancePane(
             onSensitivityCommitted = {
                 sidePanelSensitivity = it
                 prefs.edit().putInt("gamespace_sidepanel_sensitivity", it).apply()
+            },
+            onLengthCommitted = {
+                sidePanelLength = it
+                prefs.edit().putInt("gamespace_sidepanel_length", it).apply()
             }
         )
 
@@ -415,11 +426,14 @@ internal fun SettingsAppearancePane(
 private fun CustomizeSidePanelSection(
     sidePanelSide: String,
     initialSensitivity: Int,
+    initialLength: Int,
     onSideChanged: (String) -> Unit,
-    onSensitivityCommitted: (Int) -> Unit
+    onSensitivityCommitted: (Int) -> Unit,
+    onLengthCommitted: (Int) -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
     var sliderSensitivity by remember(initialSensitivity) { mutableIntStateOf(initialSensitivity) }
+    var sliderLength by remember(initialLength) { mutableIntStateOf(initialLength) }
 
     Surface(
         shape = RoundedCornerShape(24.dp),
@@ -550,7 +564,7 @@ private fun CustomizeSidePanelSection(
                                                         else Alignment.CenterEnd
                                                     )
                                                     .width(5.dp)
-                                                    .height(24.dp)
+                                                    .height((11f + (sliderLength / 100f) * 16f).dp)
                                                     .clip(CircleShape)
                                                     .background(
                                                         if (selected) scheme.primary else scheme.onSurfaceVariant
@@ -700,6 +714,116 @@ private fun CustomizeSidePanelSection(
                                     .height(28.dp)
                             )
                         }
+                    }
+                }
+            }
+
+            // Bottom Row: Edge Bar Length (Dynamically scaled to screen size)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(24.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Edge Bar Length",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.onSurface
+                    )
+                    Text(
+                        text = "${sliderLength}%",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.primary
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = scheme.surfaceContainerHighest,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val lengthPresets = listOf(
+                                "Compact" to 30,
+                                "Balanced" to 50,
+                                "Long" to 80
+                            )
+                            lengthPresets.forEach { (label, targetVal) ->
+                                val selected = when (targetVal) {
+                                    30 -> sliderLength <= 38
+                                    80 -> sliderLength >= 68
+                                    else -> sliderLength in 39..67
+                                }
+                                val pillRadius by animateIntAsState(
+                                    targetValue = if (selected) 50 else 26,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioLowBouncy,
+                                        stiffness = Spring.StiffnessMediumLow
+                                    ),
+                                    label = "LengthPresetRadius"
+                                )
+                                val pillShape = RoundedCornerShape(percent = pillRadius)
+                                Surface(
+                                    shape = pillShape,
+                                    color = if (selected) scheme.primary else scheme.surfaceContainerLow,
+                                    contentColor = if (selected) scheme.onPrimary else scheme.onSurface,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .gamepadFocusOutline(shape = pillShape, register = true)
+                                        .clip(pillShape)
+                                        .clickable {
+                                            sliderLength = targetVal
+                                            onLengthCommitted(targetVal)
+                                        }
+                                ) {
+                                    Box(
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = FontWeight.Bold
+                                            ),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        ZenithSlider(
+                            value = sliderLength.toFloat(),
+                            onValueChange = { raw ->
+                                val snapped = ((raw / 5f).roundToInt() * 5).coerceIn(20, 100)
+                                if (snapped != sliderLength) {
+                                    sliderLength = snapped
+                                }
+                            },
+                            onValueChangeFinished = {
+                                onLengthCommitted(sliderLength)
+                            },
+                            valueRange = 20f..100f,
+                            steps = 15,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(28.dp)
+                        )
                     }
                 }
             }

@@ -23,10 +23,13 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +43,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -56,12 +60,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -94,66 +103,73 @@ fun SidePanelWidgetContent(
 fun EditModeWidgetCard(
     widgetId: String,
     index: Int,
-    totalCount: Int,
     state: ZXSidePanelStateHolder,
+    onStartDrag: (grabOffset: Offset, cardOriginInRoot: Offset) -> Unit,
+    onDragMove: (pointerInRoot: Offset) -> Unit,
+    onEndDrag: () -> Unit,
+    onCancelDrag: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val meta = state.widgetCatalog[widgetId] ?: return
     val scheme = MaterialTheme.colorScheme
-    var isDragging by remember { mutableStateOf(false) }
-    var dragAccumulatedY by remember { mutableFloatStateOf(0f) }
+    var cardRootOrigin by remember { mutableStateOf(Offset.Zero) }
+    var headerRootOrigin by remember { mutableStateOf(Offset.Zero) }
+    var lastPointerInRoot by remember { mutableStateOf(Offset.Zero) }
 
-    val cardScale by animateFloatAsState(
-        targetValue = if (isDragging) 0.96f else 1f,
-        animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMedium),
-        label = "EditWidgetScale"
-    )
-    val cardAlpha by animateFloatAsState(
-        targetValue = if (isDragging) 0.65f else 1f,
-        animationSpec = tween(durationMillis = 150),
-        label = "EditWidgetAlpha"
-    )
+    val isBeingDragged = state.draggingWidgetId == widgetId && !state.draggingFromLibrary
 
     M3WidgetCard(
         contentPadding = PaddingValues(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = modifier.graphicsLayer {
-            scaleX = cardScale
-            scaleY = cardScale
-            alpha = cardAlpha
-        }
+        modifier = modifier
+            .onGloballyPositioned { coords ->
+                cardRootOrigin = coords.positionInRoot()
+            }
+            .graphicsLayer {
+                alpha = if (isBeingDragged) 0.22f else 1f
+                scaleX = if (isBeingDragged) 0.96f else 1f
+                scaleY = if (isBeingDragged) 0.96f else 1f
+            }
+            .pointerInput(widgetId, index) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { localOffset ->
+                        val startInRoot = cardRootOrigin + localOffset
+                        lastPointerInRoot = startInRoot
+                        onStartDrag(localOffset, cardRootOrigin)
+                    },
+                    onDragEnd = { onEndDrag() },
+                    onDragCancel = { onCancelDrag() },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        lastPointerInRoot += dragAmount
+                        onDragMove(lastPointerInRoot)
+                    }
+                )
+            }
     ) {
-        // Edit Bar Header
+        // Edit Bar Header (Immediate Drag Handle)
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = scheme.surfaceContainerHigh,
             modifier = Modifier
                 .fillMaxWidth()
-                .pointerInput(widgetId, index, totalCount) {
-                    detectVerticalDragGestures(
-                        onDragStart = {
-                            isDragging = true
-                            dragAccumulatedY = 0f
+                .onGloballyPositioned { coords ->
+                    headerRootOrigin = coords.positionInRoot()
+                }
+                .pointerInput(widgetId, index) {
+                    detectDragGestures(
+                        onDragStart = { localOffset ->
+                            val startInRoot = headerRootOrigin + localOffset
+                            val grabInCard = startInRoot - cardRootOrigin
+                            lastPointerInRoot = startInRoot
+                            onStartDrag(grabInCard, cardRootOrigin)
                         },
-                        onDragEnd = {
-                            isDragging = false
-                            dragAccumulatedY = 0f
-                        },
-                        onDragCancel = {
-                            isDragging = false
-                            dragAccumulatedY = 0f
-                        },
-                        onVerticalDrag = { change, dragAmount ->
+                        onDragEnd = { onEndDrag() },
+                        onDragCancel = { onCancelDrag() },
+                        onDrag = { change, dragAmount ->
                             change.consume()
-                            dragAccumulatedY += dragAmount
-                            val stepThreshold = 76.dp.toPx()
-                            if (dragAccumulatedY > stepThreshold && index < totalCount - 1) {
-                                state.moveActiveWidget(index, index + 1)
-                                dragAccumulatedY = 0f
-                            } else if (dragAccumulatedY < -stepThreshold && index > 0) {
-                                state.moveActiveWidget(index, index - 1)
-                                dragAccumulatedY = 0f
-                            }
+                            lastPointerInRoot += dragAmount
+                            onDragMove(lastPointerInRoot)
                         }
                     )
                 }
@@ -176,13 +192,21 @@ fun EditModeWidgetCard(
                         tint = scheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
-                    Text(
-                        text = meta.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = scheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = meta.title,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = scheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "Drag bar to move",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = scheme.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                    }
                 }
 
                 Surface(
@@ -210,7 +234,7 @@ fun EditModeWidgetCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .graphicsLayer { alpha = 0.9f }
+                .graphicsLayer { alpha = 0.88f }
                 .pointerInput(Unit) {
                     awaitPointerEventScope {
                         while (true) {
@@ -225,6 +249,208 @@ fun EditModeWidgetCard(
                 state = state,
                 isMerged = false
             )
+        }
+    }
+}
+
+@Composable
+fun WidgetDropLandingPlaceholder(
+    widgetId: String,
+    state: ZXSidePanelStateHolder,
+    modifier: Modifier = Modifier
+) {
+    val meta = state.widgetCatalog[widgetId] ?: return
+    val scheme = MaterialTheme.colorScheme
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(92.dp)
+            .clip(RoundedCornerShape(28.dp))
+            .background(scheme.primaryContainer.copy(alpha = 0.18f))
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val strokePx = 2.dp.toPx()
+            val dashPx = 10.dp.toPx()
+            val gapPx = 6.dp.toPx()
+            drawRoundRect(
+                color = scheme.primary.copy(alpha = 0.85f),
+                topLeft = Offset(strokePx / 2f, strokePx / 2f),
+                size = androidx.compose.ui.geometry.Size(
+                    size.width - strokePx,
+                    size.height - strokePx
+                ),
+                cornerRadius = CornerRadius(28.dp.toPx(), 28.dp.toPx()),
+                style = Stroke(
+                    width = strokePx,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashPx, gapPx), 0f)
+                )
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = scheme.primaryContainer,
+                modifier = Modifier.size(42.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = ZXSidePanelIcons.get(meta.icon),
+                        contentDescription = null,
+                        tint = scheme.onPrimaryContainer,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Drop ${meta.title} here",
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "Release finger to settle widget into this slot",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DraggedWidgetMockupOverlay(
+    widgetId: String,
+    state: ZXSidePanelStateHolder,
+    modifier: Modifier = Modifier
+) {
+    val meta = state.widgetCatalog[widgetId] ?: return
+    val scheme = MaterialTheme.colorScheme
+    val isHoverLibrary = state.isHoveringLibraryDropZone
+
+    Surface(
+        shape = RoundedCornerShape(28.dp),
+        color = scheme.surfaceContainerHighest.copy(alpha = 0.96f),
+        border = BorderStroke(
+            width = 2.dp,
+            color = if (isHoverLibrary) scheme.error else scheme.primary
+        ),
+        shadowElevation = 28.dp,
+        modifier = modifier
+            .width(320.dp)
+            .graphicsLayer {
+                scaleX = 1.03f
+                scaleY = 1.03f
+            }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = if (isHoverLibrary) scheme.errorContainer else scheme.primaryContainer,
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = ZXSidePanelIcons.get(meta.icon),
+                                contentDescription = null,
+                                tint = if (isHoverLibrary) scheme.onErrorContainer else scheme.onPrimaryContainer,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = meta.title,
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = if (isHoverLibrary) "Release to move to library" else meta.subtitle,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isHoverLibrary) scheme.error else scheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = CircleShape,
+                    color = if (isHoverLibrary) scheme.error else scheme.primary
+                ) {
+                    Text(
+                        text = if (isHoverLibrary) "Store" else "Moving",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = if (isHoverLibrary) scheme.onError else scheme.onPrimary,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            // Miniature visual mockup skeleton of the widget being carried
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = scheme.surfaceContainerLow,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(0.45f)
+                            .height(10.dp)
+                            .clip(CircleShape)
+                            .background(scheme.primary.copy(alpha = 0.45f))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .weight(0.35f)
+                            .height(10.dp)
+                            .clip(CircleShape)
+                            .background(scheme.secondaryContainer)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .weight(0.2f)
+                            .height(10.dp)
+                            .clip(CircleShape)
+                            .background(scheme.surfaceContainerHighest)
+                    )
+                }
+            }
         }
     }
 }
@@ -1722,90 +1948,143 @@ fun AppsManagerSubscreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = "Floating Apps",
-                style = MaterialTheme.typography.titleSmall,
-                color = scheme.onSurfaceVariant
-            )
-
-            Column(
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                state.allApps.chunked(3).forEach { rowApps ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        rowApps.forEach { app ->
-                            val isAdded = state.quickApps.contains(app.id)
-                            val containerColor by animateColorAsState(
-                                targetValue = if (isAdded) scheme.primaryContainer else scheme.surfaceContainerHigh,
-                                animationSpec = tween(durationMillis = 250),
-                                label = "AppCellContainer"
-                            )
-                            val contentColor by animateColorAsState(
-                                targetValue = if (isAdded) scheme.onPrimaryContainer else scheme.onSurface,
-                                animationSpec = tween(durationMillis = 250),
-                                label = "AppCellContent"
-                            )
-                            val shape = RoundedCornerShape(20.dp)
+                Column {
+                    Text(
+                        text = "Quick Launch Apps",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = scheme.onSurface
+                    )
+                    Text(
+                        text = "Tap an app in the sidebar to open it directly",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = scheme.onSurfaceVariant
+                    )
+                }
+                Surface(
+                    shape = CircleShape,
+                    color = scheme.secondaryContainer
+                ) {
+                    Text(
+                        text = "${state.quickApps.size} pinned",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
 
-                            Surface(
-                                shape = shape,
-                                color = containerColor,
-                                contentColor = contentColor,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(shape)
-                                    .clickable { state.toggleQuickApp(app.id) }
-                            ) {
-                                Box(modifier = Modifier.fillMaxWidth()) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(12.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = ZXSidePanelIcons.get(app.icon),
-                                            contentDescription = app.name,
-                                            tint = contentColor,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                        Text(
-                                            text = app.name,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = contentColor,
-                                            textAlign = TextAlign.Center,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                    }
+            if (state.installedApps.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Loading installed apps...",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    state.installedApps.chunked(3).forEach { rowApps ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            rowApps.forEach { app ->
+                                val isAdded = state.quickApps.contains(app.packageName)
+                                val containerColor by animateColorAsState(
+                                    targetValue = if (isAdded) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                                    animationSpec = tween(durationMillis = 250),
+                                    label = "AppCellContainer"
+                                )
+                                val contentColor by animateColorAsState(
+                                    targetValue = if (isAdded) scheme.onPrimaryContainer else scheme.onSurface,
+                                    animationSpec = tween(durationMillis = 250),
+                                    label = "AppCellContent"
+                                )
+                                val shape = RoundedCornerShape(20.dp)
 
-                                    // Top-Right Add/Remove Badge
-                                    Box(
-                                        modifier = Modifier
-                                            .align(Alignment.TopEnd)
-                                            .padding(top = 6.dp, end = 6.dp)
-                                            .size(20.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                if (isAdded) scheme.primary
-                                                else scheme.surfaceContainerHighest
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = ZXSidePanelIcons.get(if (isAdded) "remove" else "add"),
-                                            contentDescription = null,
-                                            tint = if (isAdded) scheme.onPrimary else scheme.onSurface,
-                                            modifier = Modifier.size(14.dp)
-                                        )
+                                Surface(
+                                    shape = shape,
+                                    color = containerColor,
+                                    contentColor = contentColor,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(shape)
+                                        .clickable { state.toggleQuickApp(app.packageName) }
+                                ) {
+                                    Box(modifier = Modifier.fillMaxWidth()) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 8.dp, vertical = 12.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            if (app.iconBitmap != null) {
+                                                Image(
+                                                    bitmap = app.iconBitmap,
+                                                    contentDescription = app.name,
+                                                    contentScale = ContentScale.Fit,
+                                                    modifier = Modifier
+                                                        .size(34.dp)
+                                                        .clip(RoundedCornerShape(10.dp))
+                                                )
+                                            } else {
+                                                Icon(
+                                                    imageVector = ZXSidePanelIcons.get("grid_view"),
+                                                    contentDescription = app.name,
+                                                    tint = contentColor,
+                                                    modifier = Modifier.size(28.dp)
+                                                )
+                                            }
+                                            Text(
+                                                text = app.name,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = contentColor,
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        }
+
+                                        // Top-Right Add/Remove Badge
+                                        Box(
+                                            modifier = Modifier
+                                                .align(Alignment.TopEnd)
+                                                .padding(top = 6.dp, end = 6.dp)
+                                                .size(20.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    if (isAdded) scheme.primary
+                                                    else scheme.surfaceContainerHighest
+                                                ),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = ZXSidePanelIcons.get(if (isAdded) "check" else "add"),
+                                                contentDescription = null,
+                                                tint = if (isAdded) scheme.onPrimary else scheme.onSurface,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                        }
                                     }
                                 }
+                            }
+                            repeat(3 - rowApps.size) {
+                                Spacer(modifier = Modifier.weight(1f))
                             }
                         }
                     }
