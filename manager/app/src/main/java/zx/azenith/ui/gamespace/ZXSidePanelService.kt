@@ -63,6 +63,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -1917,12 +1918,21 @@ private fun SwipeEdgeHandle(
     )
     val barColor by animateColorAsState(
         targetValue = if (isPressed || morphProgress > 0.05f) {
-            scheme.primary
+            scheme.primary.copy(alpha = 0.85f)
         } else {
-            scheme.onSurface.copy(alpha = 0.42f)
+            scheme.primary.copy(alpha = 0.28f)
         },
         animationSpec = tween(durationMillis = 180),
         label = "SwipeEdgeBarColor"
+    )
+    val outlineColor by animateColorAsState(
+        targetValue = if (isPressed || morphProgress > 0.05f) {
+            scheme.primary
+        } else {
+            scheme.primary.copy(alpha = 0.60f)
+        },
+        animationSpec = tween(durationMillis = 180),
+        label = "SwipeEdgeBarOutline"
     )
 
     val dynamicHeight = (barHeightDp * (1f + morphProgress * 0.45f)).dp
@@ -1948,8 +1958,15 @@ private fun SwipeEdgeHandle(
                 }
                 .width(barWidth)
                 .height(dynamicHeight)
-                .clip(pillShape)
-                .background(barColor)
+                .border(
+                    width = 1.dp,
+                    color = outlineColor,
+                    shape = pillShape
+                )
+                .background(
+                    color = barColor,
+                    shape = pillShape
+                )
         )
     }
 }
