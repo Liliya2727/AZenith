@@ -66,6 +66,10 @@
         <service
             android:name=".ui.gamespace.ZXSidePanelService"
             android:exported="false" />
+
+        <service
+            android:name=".ui.gamespace.ZXFloatingAppRootService"
+            android:exported="false" />
         
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"

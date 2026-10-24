@@ -237,6 +237,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
     private var windowManager: WindowManager? = null
     private var audioManager: AudioManager? = null
+    private var floatingAppManager: ZXFloatingAppManager? = null
     private var rootOverlayView: View? = null
     private var crosshairView: ComposeView? = null
     private var hudView: View? = null
@@ -338,6 +339,21 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+        floatingAppManager = ZXFloatingAppManager(
+            context = this,
+            windowManager = windowManager!!,
+            lifecycleOwner = this,
+            viewModelStoreOwner = this,
+            savedStateRegistryOwner = this,
+            scope = serviceScope,
+            checkRootGranted = { checkRootGranted() },
+            resolveAppIcon = { pkg ->
+                panelState.installedApps.firstOrNull { it.packageName == pkg }?.iconBitmap
+                    ?: runCatching {
+                        drawableToImageBitmap(packageManager.getApplicationIcon(pkg), 96)
+                    }.getOrNull()
+            }
+        ).also { it.prebindRootServiceIfPossible() }
 
         // Ensure app-local API mirror directory exists and is world-accessible for the daemon
         runCatching {
@@ -472,23 +488,16 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
     }
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        floatingAppManager?.onConfigurationChanged()
+    }
+
     private fun launchExternalApp(pkg: String) {
-        val appLabel = panelState.installedApps.find { it.packageName == pkg }?.name ?: pkg
         collapsePanel()
         serviceScope.launch {
-            delay(120)
-            try {
-                val launchIntent = packageManager.getLaunchIntentForPackage(pkg)?.apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
-                }
-                if (launchIntent != null) {
-                    startActivity(launchIntent)
-                } else {
-                    panelState.showToast("Cannot launch $appLabel", "close")
-                }
-            } catch (_: Exception) {
-                panelState.showToast("Failed to launch $appLabel", "close")
-            }
+            delay(140)
+            floatingAppManager?.openFloatingApp(pkg)
         }
     }
 
@@ -848,6 +857,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     }
 
     private fun detachOverlay() {
+        floatingAppManager?.destroyAllSessions()
         if (!isViewAttached) return
         try {
             crosshairView?.let { windowManager?.removeView(it) }
@@ -1025,11 +1035,18 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     }
 
                     if (!focusedPkg.isNullOrBlank()) {
+                        val isHostedFloatingApp = floatingAppManager?.isPackageHosted(focusedPkg) == true
                         val isConfiguredGame = focusedPkg != packageName &&
                             !isLauncherPackage(focusedPkg) &&
                             (isConfiguredAzGame(focusedPkg, rootGranted) || focusedPkg == pendingLaunchPkg)
 
-                        if (screenAwake && isConfiguredGame) {
+                        if (screenAwake && isHostedFloatingApp) {
+                            withContext(Dispatchers.Main) {
+                                attachOverlayIfNeeded()
+                                isHandleVisible = true
+                                startFpsChoreographer()
+                            }
+                        } else if (screenAwake && isConfiguredGame) {
                             val switchedGame = activeGamePackage != focusedPkg
                             val label = if (switchedGame || activeGameLabel == null) resolveAppLabel(focusedPkg) else activeGameLabel
                             withContext(Dispatchers.Main) {
