@@ -687,22 +687,22 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                         verticalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
                                         item {
-                                            ExpressiveInfoCard(
-                                                leadingContent = {
-                                                    Icon(
-                                                        imageVector = Icons.Rounded.Info,
-                                                        contentDescription = null,
-                                                        tint = scheme.primary,
-                                                        modifier = Modifier.size(20.dp)
+                                            ExpressiveList(
+                                                content = listOf {
+                                                    ExpressiveInfoCard(
+                                                        supportingContent = {
+                                                            Text(
+                                                                text = stringResource(R.string.str_app_specific_settings_will_ove)
+                                                            )
+                                                        },
+                                                        leadingContent = {
+                                                            LeadingIcon(icon = Icons.Rounded.Info)
+                                                        },
+                                                        containerColor = scheme.surfaceContainerLow,
+                                                        onClick = {}
                                                     )
                                                 }
-                                            ) {
-                                                Text(
-                                                    text = stringResource(R.string.str_app_specific_settings_will_ove),
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = scheme.onSurfaceVariant
-                                                )
-                                            }
+                                            )
                                         }
                                         item {
                                             Text(
@@ -937,23 +937,22 @@ internal fun ZXGameSpaceAppSettingsOverlay(
                                         }
                                         if (isFullModeEnabled) {
                                             item {
-                                                ExpressiveInfoCard(
-                                                    containerColor = scheme.primaryContainer,
-                                                    leadingContent = {
-                                                        Icon(
-                                                            imageVector = Icons.Rounded.Info,
-                                                            contentDescription = null,
-                                                            tint = scheme.onPrimaryContainer,
-                                                            modifier = Modifier.size(20.dp)
+                                                ExpressiveList(
+                                                    content = listOf {
+                                                        ExpressiveInfoCard(
+                                                            supportingContent = {
+                                                                Text(
+                                                                    text = stringResource(R.string.str_by_using_per_app_refresh_rate)
+                                                                )
+                                                            },
+                                                            leadingContent = {
+                                                                LeadingIcon(icon = Icons.Rounded.Info)
+                                                            },
+                                                            containerColor = scheme.surfaceContainerLow,
+                                                            onClick = {}
                                                         )
                                                     }
-                                                ) {
-                                                    Text(
-                                                        text = stringResource(R.string.str_by_using_per_app_refresh_rate),
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = scheme.onPrimaryContainer
-                                                    )
-                                                }
+                                                )
                                             }
                                         }
                                     }
