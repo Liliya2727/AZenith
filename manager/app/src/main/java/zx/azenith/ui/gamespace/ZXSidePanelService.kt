@@ -82,6 +82,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -2049,7 +2050,8 @@ private fun SidepanelWorkspaceRow(
     var rightDrawerRootBounds by remember { mutableStateOf(Rect.Zero) }
 
     val editCardBoundsMap = remember { mutableStateMapOf<String, Rect>() }
-    val editDragBarBoundsMap = remember { mutableStateMapOf<String, Rect>() }
+    val editRemoveBtnBoundsMap = remember { mutableStateMapOf<String, Rect>() }
+    val editResizeGripBoundsMap = remember { mutableStateMapOf<String, Rect>() }
     val libraryCardBoundsMap = remember { mutableStateMapOf<String, Rect>() }
     val libraryAddBtnBoundsMap = remember { mutableStateMapOf<String, Rect>() }
 
@@ -2059,9 +2061,10 @@ private fun SidepanelWorkspaceRow(
     }
     LaunchedEffect(firstVisibleIndex, state.editMode, state.activeSubscreen) {
         if (!state.editMode && state.activeSubscreen == null) {
-            val block = feedBlocks.getOrNull(firstVisibleIndex)
-            if (block != null && block.category != state.activeScrollCategory) {
-                state.activeScrollCategory = block.category
+            val wId = state.activeWidgets.getOrNull(firstVisibleIndex)
+            val category = wId?.let { state.widgetCatalog[it]?.category }
+            if (category != null && category != state.activeScrollCategory) {
+                state.activeScrollCategory = category
             }
         }
     }
@@ -2072,33 +2075,51 @@ private fun SidepanelWorkspaceRow(
             rightDrawerRootBounds.width > 0f &&
             rightDrawerRootBounds.contains(pointerInRoot)
 
-        val relY = pointerInRoot.y - mainFeedRootBounds.top
-        val visibleItems = feedListState.layoutInfo.visibleItemsInfo
+        val edgeZonePx = 72f * density.density
+        val topZone = mainFeedRootBounds.top + edgeZonePx
+        val bottomZone = mainFeedRootBounds.bottom - edgeZonePx
+        val inTopScrollZone = pointerInRoot.y < topZone && feedListState.canScrollBackward
+        val inBottomScrollZone = pointerInRoot.y > bottomZone && feedListState.canScrollForward
+
         val maxIdx = if (state.draggingFromLibrary) {
             state.activeWidgets.size
         } else {
             (state.activeWidgets.size - 1).coerceAtLeast(0)
         }
 
-        val computedIndex = if (visibleItems.isEmpty()) {
-            0
-        } else {
-            val placeholderItem = visibleItems.firstOrNull { item ->
-                item.key.toString().startsWith("edit_drop_placeholder_")
-            }
-            if (placeholderItem != null &&
-                relY >= placeholderItem.offset &&
-                relY <= (placeholderItem.offset + placeholderItem.size)
-            ) {
-                state.dropTargetIndex.coerceIn(0, maxIdx)
-            } else {
-                val aboveItem = visibleItems.firstOrNull { item ->
-                    relY < (item.offset + item.size / 2f)
+        val computedIndex = when {
+            overLibrary -> -1
+            inTopScrollZone -> 0
+            inBottomScrollZone -> maxIdx
+            else -> {
+                val candidates = state.activeWidgets.mapNotNull { wId ->
+                    val rect = editCardBoundsMap[wId]
+                    if (rect != null && rect.width > 0f) wId to rect else null
                 }
-                if (aboveItem != null) {
-                    aboveItem.index.coerceIn(0, maxIdx)
+                if (candidates.isEmpty()) {
+                    0
                 } else {
-                    (visibleItems.last().index + 1).coerceIn(0, maxIdx)
+                    val matching = candidates.firstOrNull { (_, rect) ->
+                        pointerInRoot.y >= rect.top && pointerInRoot.y <= rect.bottom
+                    } ?: candidates.minByOrNull { (_, rect) ->
+                        if (pointerInRoot.y < rect.top) rect.top - pointerInRoot.y
+                        else pointerInRoot.y - rect.bottom
+                    }
+                    if (matching != null) {
+                        val (wId, rect) = matching
+                        val itemIdx = state.activeWidgets.indexOf(wId)
+                        if (itemIdx >= 0) {
+                            if (pointerInRoot.x > rect.center.x) {
+                                (itemIdx + 1).coerceIn(0, maxIdx)
+                            } else {
+                                itemIdx.coerceIn(0, maxIdx)
+                            }
+                        } else {
+                            0
+                        }
+                    } else {
+                        0
+                    }
                 }
             }
         }
@@ -2133,10 +2154,7 @@ private fun SidepanelWorkspaceRow(
                 }
 
                 if (abs(scrollDelta) > 0.5f) {
-                    val consumed = feedListState.scrollBy(scrollDelta)
-                    if (abs(consumed) > 0.5f) {
-                        updateDragFromRootPointer(workspaceRootOrigin + state.dragPointerInWorkspace)
-                    }
+                    feedListState.scrollBy(scrollDelta)
                 }
             }
             delay(16L)
@@ -2149,18 +2167,11 @@ private fun SidepanelWorkspaceRow(
         }
         state.activeScrollCategory = categoryName
         coroutineScope.launch {
-            if (state.editMode) {
-                val idx = state.activeWidgets.indexOfFirst { wId ->
-                    state.widgetCatalog[wId]?.category == categoryName
-                }
-                if (idx >= 0) {
-                    feedListState.animateScrollToItem(idx)
-                }
-            } else {
-                val idx = feedBlocks.indexOfFirst { it.category == categoryName }
-                if (idx >= 0) {
-                    feedListState.animateScrollToItem(idx)
-                }
+            val idx = state.activeWidgets.indexOfFirst { wId ->
+                state.widgetCatalog[wId]?.category == categoryName
+            }
+            if (idx >= 0) {
+                feedListState.animateScrollToItem(idx)
             }
         }
     }
@@ -2180,8 +2191,6 @@ private fun SidepanelWorkspaceRow(
             .onGloballyPositioned { coords ->
                 workspaceRootOrigin = coords.positionInRoot()
             }
-            // Stationary workspace-level gesture handler so unmounting an active card into a drop placeholder
-            // never cancels the active drag, and dragging only starts from the top drag bar or library card.
             .pointerInput(state.editMode) {
                 if (!state.editMode) return@pointerInput
                 awaitEachGesture {
@@ -2190,10 +2199,14 @@ private fun SidepanelWorkspaceRow(
 
                     val hitActiveId = if (state.activeSubscreen == null && mainFeedRootBounds.contains(downInRoot)) {
                         state.activeWidgets.firstOrNull { wId ->
-                            val barRect = editDragBarBoundsMap[wId]
-                            barRect != null &&
-                                barRect.width > 0f &&
-                                barRect.inflate(6f).contains(downInRoot)
+                            val cardRect = editCardBoundsMap[wId]
+                            val removeRect = editRemoveBtnBoundsMap[wId]
+                            val gripRect = editResizeGripBoundsMap[wId]
+                            cardRect != null &&
+                                cardRect.width > 0f &&
+                                cardRect.contains(downInRoot) &&
+                                (removeRect == null || !removeRect.inflate(4f).contains(downInRoot)) &&
+                                (gripRect == null || !gripRect.inflate(6f).contains(downInRoot))
                         }
                     } else {
                         null
@@ -2237,12 +2250,10 @@ private fun SidepanelWorkspaceRow(
                                 dragStarted = true
                                 change.consume()
                                 if (hitActiveId != null) {
-                                    val cardRect = editCardBoundsMap[hitActiveId]
-                                        ?: editDragBarBoundsMap[hitActiveId]
-                                        ?: Rect(downInRoot, 0f)
+                                    val cardRect = editCardBoundsMap[hitActiveId] ?: Rect(downInRoot, 0f)
                                     val srcIdx = state.activeWidgets.indexOf(hitActiveId).coerceAtLeast(0)
                                     val grabOffset = (downInRoot - cardRect.topLeft).let {
-                                        Offset(it.x.coerceIn(20f, 260f), it.y.coerceIn(12f, 44f))
+                                        Offset(it.x.coerceIn(10f, (cardRect.width - 10f).coerceAtLeast(10f)), it.y.coerceIn(10f, (cardRect.height - 10f).coerceAtLeast(10f)))
                                     }
                                     state.startWidgetDrag(
                                         widgetId = hitActiveId,
@@ -2279,9 +2290,10 @@ private fun SidepanelWorkspaceRow(
                 onClick = {}
             )
     ) {
-        val reportActiveCardBounds: (String, Rect, Rect) -> Unit = { wId, cardRect, barRect ->
+        val reportActiveCardBounds: (String, Rect, Rect, Rect) -> Unit = { wId, cardRect, removeBtnRect, gripRect ->
             editCardBoundsMap[wId] = cardRect
-            editDragBarBoundsMap[wId] = barRect
+            editRemoveBtnBoundsMap[wId] = removeBtnRect
+            editResizeGripBoundsMap[wId] = gripRect
         }
         val reportLibraryCardBounds: (String, Rect, Rect) -> Unit = { wId, cardRect, addBtnRect ->
             libraryCardBoundsMap[wId] = cardRect
@@ -2480,6 +2492,20 @@ private fun SidepanelWorkspaceRow(
                             (state.dragPointerInWorkspace.y - state.dragGrabOffset.y).roundToInt()
                         )
                     }
+            )
+        }
+
+        // Falling / Dropping Widget Animation Overlay
+        val droppingId = state.droppingWidgetId
+        if (droppingId != null) {
+            DroppingWidgetAnimationOverlay(
+                widgetId = droppingId,
+                state = state,
+                initialOffset = state.droppingWidgetOffset,
+                onFinished = {
+                    state.droppingWidgetId = null
+                },
+                modifier = Modifier.align(Alignment.TopStart)
             )
         }
     }
@@ -2695,6 +2721,16 @@ private sealed interface EditFeedRenderEntry {
     }
 }
 
+private data class EditFeedRow(
+    val key: String,
+    val items: List<EditFeedRenderEntry>
+)
+
+private data class NormalFeedRow(
+    val key: String,
+    val widgetIds: List<String>
+)
+
 @Composable
 private fun MainSidepanelContent(
     state: ZXSidePanelStateHolder,
@@ -2703,7 +2739,7 @@ private fun MainSidepanelContent(
     feedBlocks: List<SidePanelFeedBlock>,
     feedListState: androidx.compose.foundation.lazy.LazyListState,
     onFeedBoundsChanged: (Rect) -> Unit,
-    onReportActiveCardBounds: (widgetId: String, cardBoundsInRoot: Rect, dragBarBoundsInRoot: Rect) -> Unit,
+    onReportActiveCardBounds: (widgetId: String, cardBoundsInRoot: Rect, removeBtnBoundsInRoot: Rect, resizeGripBoundsInRoot: Rect) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -2740,6 +2776,62 @@ private fun MainSidepanelContent(
                 }
                 result
             }
+        }
+    }
+
+    val editRows by remember {
+        derivedStateOf {
+            val rows = mutableListOf<EditFeedRow>()
+            var currentRow = mutableListOf<EditFeedRenderEntry>()
+            var currentSpan = 0
+
+            for (entry in editEntries) {
+                val wId = when (entry) {
+                    is EditFeedRenderEntry.ActiveCard -> entry.widgetId
+                    is EditFeedRenderEntry.DropPlaceholder -> entry.widgetId
+                }
+                val span = state.getWidgetSpan(wId)
+                if (currentSpan + span <= 3) {
+                    currentRow.add(entry)
+                    currentSpan += span
+                } else {
+                    if (currentRow.isNotEmpty()) {
+                        rows.add(EditFeedRow(currentRow.joinToString("_") { it.key }, currentRow))
+                    }
+                    currentRow = mutableListOf(entry)
+                    currentSpan = span
+                }
+            }
+            if (currentRow.isNotEmpty()) {
+                rows.add(EditFeedRow(currentRow.joinToString("_") { it.key }, currentRow))
+            }
+            rows
+        }
+    }
+
+    val normalRows by remember {
+        derivedStateOf {
+            val rows = mutableListOf<NormalFeedRow>()
+            var currentRow = mutableListOf<String>()
+            var currentSpan = 0
+
+            for (wId in state.activeWidgets) {
+                val span = state.getWidgetSpan(wId)
+                if (currentSpan + span <= 3) {
+                    currentRow.add(wId)
+                    currentSpan += span
+                } else {
+                    if (currentRow.isNotEmpty()) {
+                        rows.add(NormalFeedRow(currentRow.joinToString("_"), currentRow))
+                    }
+                    currentRow = mutableListOf(wId)
+                    currentSpan = span
+                }
+            }
+            if (currentRow.isNotEmpty()) {
+                rows.add(NormalFeedRow(currentRow.joinToString("_"), currentRow))
+            }
+            rows
         }
     }
 
@@ -3051,44 +3143,69 @@ private fun MainSidepanelContent(
                                     .fillMaxSize()
                                     .padding(horizontal = 4.dp),
                                 contentPadding = PaddingValues(bottom = 24.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 items(
-                                    items = editEntries,
+                                    items = editRows,
                                     key = { it.key }
-                                ) { entry ->
-                                    when (entry) {
-                                        is EditFeedRenderEntry.DropPlaceholder -> {
-                                            WidgetDropLandingPlaceholder(
-                                                widgetId = entry.widgetId,
-                                                state = state,
-                                                modifier = Modifier.animateItem(
-                                                    placementSpec = spring(
-                                                        dampingRatio = 0.78f,
-                                                        stiffness = Spring.StiffnessMediumLow
-                                                    )
-                                                )
-                                            )
+                                ) { row ->
+                                    val rowSpanSum = row.items.sumOf { entry ->
+                                        val wId = when (entry) {
+                                            is EditFeedRenderEntry.ActiveCard -> entry.widgetId
+                                            is EditFeedRenderEntry.DropPlaceholder -> entry.widgetId
                                         }
-                                        is EditFeedRenderEntry.ActiveCard -> {
-                                            EditModeWidgetCard(
-                                                widgetId = entry.widgetId,
-                                                index = entry.originalIndex,
-                                                state = state,
-                                                onReportBounds = { cardBounds, dragBarBounds ->
-                                                    onReportActiveCardBounds(
-                                                        entry.widgetId,
-                                                        cardBounds,
-                                                        dragBarBounds
-                                                    )
-                                                },
-                                                modifier = Modifier.animateItem(
-                                                    placementSpec = spring(
-                                                        dampingRatio = 0.78f,
-                                                        stiffness = Spring.StiffnessMediumLow
-                                                    )
+                                        state.getWidgetSpan(wId)
+                                    }
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .animateItem(
+                                                placementSpec = spring(
+                                                    dampingRatio = 0.78f,
+                                                    stiffness = Spring.StiffnessMediumLow
                                                 )
-                                            )
+                                            ),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        row.items.forEach { entry ->
+                                            val wId = when (entry) {
+                                                is EditFeedRenderEntry.ActiveCard -> entry.widgetId
+                                                is EditFeedRenderEntry.DropPlaceholder -> entry.widgetId
+                                            }
+                                            val span = state.getWidgetSpan(wId)
+                                            Box(
+                                                modifier = Modifier.weight(span.toFloat())
+                                            ) {
+                                                when (entry) {
+                                                    is EditFeedRenderEntry.DropPlaceholder -> {
+                                                        WidgetDropLandingPlaceholder(
+                                                            widgetId = entry.widgetId,
+                                                            state = state,
+                                                            span = span
+                                                        )
+                                                    }
+                                                    is EditFeedRenderEntry.ActiveCard -> {
+                                                        EditModeWidgetCard(
+                                                            widgetId = entry.widgetId,
+                                                            index = entry.originalIndex,
+                                                            state = state,
+                                                            span = span,
+                                                            onReportBounds = { cardBounds, removeBtnBounds, resizeGripBounds ->
+                                                                onReportActiveCardBounds(
+                                                                    entry.widgetId,
+                                                                    cardBounds,
+                                                                    removeBtnBounds,
+                                                                    resizeGripBounds
+                                                                )
+                                                            }
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (rowSpanSum < 3) {
+                                            Spacer(modifier = Modifier.weight((3 - rowSpanSum).toFloat()))
                                         }
                                     }
                                 }
@@ -3100,39 +3217,40 @@ private fun MainSidepanelContent(
                                     .fillMaxSize()
                                     .padding(horizontal = 4.dp),
                                 contentPadding = PaddingValues(bottom = 16.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 items(
-                                    items = feedBlocks,
-                                    key = { block ->
-                                        when (block) {
-                                            is SidePanelFeedBlock.Single -> block.widgetId
-                                            is SidePanelFeedBlock.Merged -> block.groupIds.joinToString(",")
-                                        }
-                                    }
-                                ) { block ->
-                                    when (block) {
-                                        is SidePanelFeedBlock.Single -> {
-                                            SidePanelWidgetContent(
-                                                widgetId = block.widgetId,
-                                                state = state,
-                                                isMerged = false
-                                            )
-                                        }
-                                        is SidePanelFeedBlock.Merged -> {
-                                            val isSliders = block.mergeGroup == "sliders"
-                                            M3WidgetCard(
-                                                contentPadding = if (isSliders) PaddingValues(16.dp) else PaddingValues(14.dp),
-                                                verticalArrangement = Arrangement.spacedBy(if (isSliders) 14.dp else 12.dp)
+                                    items = normalRows,
+                                    key = { it.key }
+                                ) { row ->
+                                    val rowSpanSum = row.widgetIds.sumOf { state.getWidgetSpan(it) }
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .animateItem(
+                                                placementSpec = spring(
+                                                    dampingRatio = 0.78f,
+                                                    stiffness = Spring.StiffnessMediumLow
+                                                )
+                                            ),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        row.widgetIds.forEach { wId ->
+                                            val span = state.getWidgetSpan(wId)
+                                            Box(
+                                                modifier = Modifier.weight(span.toFloat())
                                             ) {
-                                                block.groupIds.forEach { wId ->
-                                                    SidePanelWidgetContent(
-                                                        widgetId = wId,
-                                                        state = state,
-                                                        isMerged = true
-                                                    )
-                                                }
+                                                SidePanelWidgetContent(
+                                                    widgetId = wId,
+                                                    state = state,
+                                                    isMerged = false,
+                                                    span = span
+                                                )
                                             }
+                                        }
+                                        if (rowSpanSum < 3) {
+                                            Spacer(modifier = Modifier.weight((3 - rowSpanSum).toFloat()))
                                         }
                                     }
                                 }

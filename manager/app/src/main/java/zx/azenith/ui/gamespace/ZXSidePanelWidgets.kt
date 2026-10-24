@@ -19,6 +19,7 @@
 package zx.azenith.ui.gamespace
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -41,12 +42,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.VolumeDown
+import androidx.compose.material.icons.automirrored.rounded.VolumeMute
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.BrightnessHigh
+import androidx.compose.material.icons.rounded.BrightnessLow
+import androidx.compose.material.icons.rounded.BrightnessMedium
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -63,41 +72,50 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import zx.azenith.ui.component.ZenithSlider
 
 @Composable
 fun SidePanelWidgetContent(
     widgetId: String,
     state: ZXSidePanelStateHolder,
-    isMerged: Boolean = false
+    isMerged: Boolean = false,
+    span: Int = state.getWidgetSpan(widgetId)
 ) {
     when (widgetId) {
-        "fpsHeader" -> FpsMeterWidget(state, isMerged)
-        "speedometers" -> SpeedometersWidget(state, isMerged)
-        "profileSwitch" -> ProfileSegmentedWidget(state, isMerged)
-        "brightnessSlider" -> BrightnessSliderWidget(state, isMerged)
-        "volumeSlider" -> VolumeSliderWidget(state, isMerged)
-        "quickTools" -> QuickToolsWidget(state)
-        "antiInterference" -> AntiInterferenceWidget(state)
-        "liveMonitor" -> LiveMonitorWidget(state)
-        "crosshair" -> CrosshairWidget(state)
-        "displayTouch" -> DisplayTouchWidget(state)
-        "networkPing" -> NetworkPingWidget(state)
-        "thermalBattery" -> ThermalBatteryWidget(state)
+        "fpsHeader" -> FpsMeterWidget(state, isMerged, span)
+        "speedometers" -> SpeedometersWidget(state, isMerged, span)
+        "profileSwitch" -> ProfileSegmentedWidget(state, isMerged, span)
+        "brightnessSlider" -> BrightnessSliderWidget(state, isMerged, span)
+        "volumeSlider" -> VolumeSliderWidget(state, isMerged, span)
+        "quickTools" -> QuickToolsWidget(state, span)
+        "antiInterference" -> AntiInterferenceWidget(state, span)
+        "liveMonitor" -> LiveMonitorWidget(state, span)
+        "crosshair" -> CrosshairWidget(state, span)
+        "displayTouch" -> DisplayTouchWidget(state, span)
+        "networkPing" -> NetworkPingWidget(state, span)
+        "thermalBattery" -> ThermalBatteryWidget(state, span)
     }
 }
 
@@ -106,25 +124,25 @@ fun EditModeWidgetCard(
     widgetId: String,
     index: Int,
     state: ZXSidePanelStateHolder,
-    onReportBounds: (cardBoundsInRoot: Rect, dragBarBoundsInRoot: Rect) -> Unit,
+    span: Int = state.getWidgetSpan(widgetId),
+    onReportBounds: (cardBoundsInRoot: Rect, removeBtnBoundsInRoot: Rect, resizeGripBoundsInRoot: Rect) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val meta = state.widgetCatalog[widgetId] ?: return
     val scheme = MaterialTheme.colorScheme
+    val haptic = LocalHapticFeedback.current
     var cardBounds by remember { mutableStateOf(Rect.Zero) }
-    var dragBarBounds by remember { mutableStateOf(Rect.Zero) }
+    var removeBtnBounds by remember { mutableStateOf(Rect.Zero) }
+    var resizeGripBounds by remember { mutableStateOf(Rect.Zero) }
 
     val isBeingDragged = state.draggingWidgetId == widgetId && !state.draggingFromLibrary
 
-    M3WidgetCard(
-        contentPadding = PaddingValues(12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+    Box(
         modifier = modifier
+            .fillMaxWidth()
             .onGloballyPositioned { coords ->
                 cardBounds = coords.boundsInRoot()
-                if (dragBarBounds != Rect.Zero) {
-                    onReportBounds(cardBounds, dragBarBounds)
-                }
+                onReportBounds(cardBounds, removeBtnBounds, resizeGripBounds)
             }
             .graphicsLayer {
                 alpha = if (isBeingDragged) 0.22f else 1f
@@ -132,109 +150,144 @@ fun EditModeWidgetCard(
                 scaleY = if (isBeingDragged) 0.96f else 1f
             }
     ) {
-        // Edit Bar Header (Only this top bar initiates widget drag; swiping body scrolls normally)
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = scheme.surfaceContainerHigh,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .onGloballyPositioned { coords ->
-                            dragBarBounds = coords.boundsInRoot()
-                            if (cardBounds != Rect.Zero) {
-                                onReportBounds(cardBounds, dragBarBounds)
-                            }
-                        },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = ZXSidePanelIcons.get("drag_indicator"),
-                        contentDescription = null,
-                        tint = scheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = meta.title,
-                            style = MaterialTheme.typography.titleSmall,
-                            color = scheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = "Drag bar to move",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = scheme.onSurfaceVariant,
-                            maxLines = 1
-                        )
-                    }
-                }
-
-                Surface(
-                    shape = CircleShape,
-                    color = scheme.errorContainer,
-                    contentColor = scheme.onErrorContainer,
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .clickable { state.removeWidgetToLibrary(widgetId) }
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = ZXSidePanelIcons.get("remove"),
-                            contentDescription = "Remove widget",
-                            tint = scheme.onErrorContainer,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        // Disabled Inner Widget Preview (allows vertical LazyColumn scrolling while blocking taps & horizontal sliders)
+        // Disabled Inner Widget Preview (entire surface is draggable directly)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .graphicsLayer { alpha = 0.88f }
-                .pointerInput(Unit) {
+                .graphicsLayer { alpha = 0.94f }
+        ) {
+            SidePanelWidgetContent(
+                widgetId = widgetId,
+                state = state,
+                isMerged = false,
+                span = span
+            )
+        }
+
+        // Circular '-' Remove Button at Top-Right
+        Surface(
+            shape = CircleShape,
+            color = scheme.errorContainer,
+            contentColor = scheme.onErrorContainer,
+            shadowElevation = 4.dp,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(6.dp)
+                .size(26.dp)
+                .clip(CircleShape)
+                .onGloballyPositioned { coords ->
+                    removeBtnBounds = coords.boundsInRoot()
+                    onReportBounds(cardBounds, removeBtnBounds, resizeGripBounds)
+                }
+                .clickable {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    state.removeWidgetToLibrary(widgetId)
+                }
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = ZXSidePanelIcons.get("remove"),
+                    contentDescription = "Remove widget",
+                    tint = scheme.onErrorContainer,
+                    modifier = Modifier.size(15.dp)
+                )
+            }
+        }
+
+        // Corner Mirrored 'L' Resize Grip at Bottom-Right
+        Box(
+            contentAlignment = Alignment.BottomEnd,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(bottom = 4.dp, end = 4.dp)
+                .size(34.dp)
+                .clip(RoundedCornerShape(bottomEnd = 16.dp))
+                .onGloballyPositioned { coords ->
+                    resizeGripBounds = coords.boundsInRoot()
+                    onReportBounds(cardBounds, removeBtnBounds, resizeGripBounds)
+                }
+                .pointerInput(widgetId) {
                     awaitEachGesture {
-                        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                        var isVerticalScroll = false
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        var totalDx = 0f
+                        var dragged = false
+                        val initialSpan = state.getWidgetSpan(widgetId)
+                        var currentSpan = initialSpan
+                        val stepThreshold = 44.dp.toPx()
+
                         while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            val event = awaitPointerEvent()
                             val change = event.changes.firstOrNull { it.id == down.id } ?: break
                             if (!change.pressed) {
-                                if (!isVerticalScroll) {
-                                    change.consume()
+                                if (!dragged) {
+                                    state.cycleWidgetSpan(widgetId)
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 }
                                 break
                             }
-                            val dy = abs(change.position.y - down.position.y)
-                            val dx = abs(change.position.x - down.position.x)
-                            if (dy > viewConfiguration.touchSlop && dy >= dx * 0.8f) {
-                                isVerticalScroll = true
-                            } else if (!isVerticalScroll && dx > viewConfiguration.touchSlop * 0.5f) {
+                            val dx = change.position.x - down.position.x
+                            totalDx = dx
+                            if (abs(totalDx) > viewConfiguration.touchSlop) {
+                                dragged = true
                                 change.consume()
+                                val stepChange = (totalDx / stepThreshold).toInt()
+                                val targetSpan = (initialSpan + stepChange).coerceIn(1, 3)
+                                if (targetSpan != currentSpan) {
+                                    currentSpan = targetSpan
+                                    state.setWidgetSpan(widgetId, targetSpan)
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
                             }
                         }
                     }
                 }
         ) {
-            SidePanelWidgetContent(
-                widgetId = widgetId,
-                state = state,
-                isMerged = false
-            )
+            Canvas(modifier = Modifier.size(22.dp).padding(3.dp)) {
+                val strokeW = 2.4.dp.toPx()
+                val w = size.width
+                val h = size.height
+                val cornerRadius = 3.dp.toPx()
+                val gripColor = scheme.primary
+
+                // Outer mirrored 'L' corner bracket: _|
+                val path = Path().apply {
+                    moveTo(w * 0.35f, h - strokeW / 2f)
+                    lineTo(w - cornerRadius, h - strokeW / 2f)
+                    quadraticTo(w, h - strokeW / 2f, w, h - cornerRadius)
+                    lineTo(w, h * 0.35f)
+                }
+                drawPath(
+                    path = path,
+                    color = gripColor,
+                    style = Stroke(
+                        width = strokeW,
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
+                )
+
+                // Inner mirrored 'L' corner bracket
+                val innerPath = Path().apply {
+                    moveTo(w * 0.65f, h - strokeW * 2.5f)
+                    lineTo(w - cornerRadius - strokeW * 1.4f, h - strokeW * 2.5f)
+                    quadraticTo(
+                        w - strokeW * 1.4f,
+                        h - strokeW * 2.5f,
+                        w - strokeW * 1.4f,
+                        h - cornerRadius - strokeW * 1.4f
+                    )
+                    lineTo(w - strokeW * 1.4f, h * 0.65f)
+                }
+                drawPath(
+                    path = innerPath,
+                    color = gripColor.copy(alpha = 0.65f),
+                    style = Stroke(
+                        width = strokeW * 0.85f,
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
+                )
+            }
         }
     }
 }
@@ -243,16 +296,18 @@ fun EditModeWidgetCard(
 fun WidgetDropLandingPlaceholder(
     widgetId: String,
     state: ZXSidePanelStateHolder,
+    span: Int = 3,
     modifier: Modifier = Modifier
 ) {
     val meta = state.widgetCatalog[widgetId] ?: return
     val scheme = MaterialTheme.colorScheme
+    val targetHeight = if (span == 1) 96.dp else if (span == 2) 90.dp else 84.dp
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(92.dp)
-            .clip(RoundedCornerShape(28.dp))
+            .height(targetHeight)
+            .clip(RoundedCornerShape(24.dp))
             .background(scheme.primaryContainer.copy(alpha = 0.18f))
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -261,12 +316,7 @@ fun WidgetDropLandingPlaceholder(
             val gapPx = 6.dp.toPx()
             drawRoundRect(
                 color = scheme.primary.copy(alpha = 0.85f),
-                topLeft = Offset(strokePx / 2f, strokePx / 2f),
-                size = androidx.compose.ui.geometry.Size(
-                    size.width - strokePx,
-                    size.height - strokePx
-                ),
-                cornerRadius = CornerRadius(28.dp.toPx(), 28.dp.toPx()),
+                cornerRadius = CornerRadius(24.dp.toPx(), 24.dp.toPx()),
                 style = Stroke(
                     width = strokePx,
                     pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashPx, gapPx), 0f)
@@ -276,40 +326,122 @@ fun WidgetDropLandingPlaceholder(
 
         Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 18.dp),
+                .align(Alignment.Center)
+                .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = scheme.primaryContainer,
-                modifier = Modifier.size(42.dp)
+            Icon(
+                imageVector = ZXSidePanelIcons.get(meta.icon),
+                contentDescription = null,
+                tint = scheme.primary,
+                modifier = Modifier.size(if (span == 1) 22.dp else 20.dp)
+            )
+            if (span >= 2) {
+                Text(
+                    text = "Drop here",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.primary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DroppingWidgetAnimationOverlay(
+    widgetId: String,
+    state: ZXSidePanelStateHolder,
+    initialOffset: Offset,
+    onFinished: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val meta = state.widgetCatalog[widgetId] ?: run {
+        onFinished()
+        return
+    }
+    val scheme = MaterialTheme.colorScheme
+    val animProgress = remember { Animatable(0f) }
+
+    androidx.compose.runtime.LaunchedEffect(widgetId) {
+        animProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(
+                dampingRatio = 0.74f,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        )
+        onFinished()
+    }
+
+    val progress = animProgress.value
+    val currentScale = 1.04f - (0.04f * progress)
+    val currentAlpha = (1f - ((progress - 0.72f) / 0.28f)).coerceIn(0f, 1f)
+    val dropYShift = progress * 16.dp.value
+
+    Surface(
+        shape = RoundedCornerShape(28.dp),
+        color = scheme.surfaceContainerHighest.copy(alpha = 0.96f),
+        border = BorderStroke(
+            width = (2.dp.value * (1f - progress)).coerceAtLeast(0.5f).dp,
+            color = scheme.primary.copy(alpha = (1f - progress).coerceIn(0f, 1f))
+        ),
+        shadowElevation = (28.dp.value * (1f - progress)).coerceAtLeast(0f).dp,
+        modifier = modifier
+            .offset {
+                IntOffset(
+                    initialOffset.x.roundToInt(),
+                    (initialOffset.y + dropYShift).roundToInt()
+                )
+            }
+            .widthIn(min = 240.dp, max = 304.dp)
+            .graphicsLayer {
+                scaleX = currentScale
+                scaleY = currentScale
+                alpha = currentAlpha
+            }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = ZXSidePanelIcons.get(meta.icon),
-                        contentDescription = null,
-                        tint = scheme.onPrimaryContainer,
-                        modifier = Modifier.size(20.dp)
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = scheme.primaryContainer,
+                    modifier = Modifier.size(38.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = ZXSidePanelIcons.get(meta.icon),
+                            contentDescription = null,
+                            tint = scheme.onPrimaryContainer,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = meta.title,
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = meta.subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = scheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Drop ${meta.title} here",
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                    color = scheme.primary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "Release finger to settle widget into this slot",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = scheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
             }
         }
     }
@@ -426,9 +558,41 @@ fun DraggedWidgetMockupOverlay(
 @Composable
 private fun FpsMeterWidget(
     state: ZXSidePanelStateHolder,
-    isMerged: Boolean
+    isMerged: Boolean,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = ZXSidePanelIcons.get("speed"),
+                    contentDescription = null,
+                    tint = scheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "${state.currentFps}",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.primary
+                )
+                Text(
+                    text = "FPS",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
     val inner: @Composable () -> Unit = {
         Row(
             modifier = Modifier
@@ -490,9 +654,40 @@ private fun FpsMeterWidget(
 @Composable
 private fun SpeedometersWidget(
     state: ZXSidePanelStateHolder,
-    isMerged: Boolean
+    isMerged: Boolean,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("CPU", style = MaterialTheme.typography.labelSmall, color = scheme.primary)
+                    Text("${state.cpuLoad}%", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = scheme.primary)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("GPU", style = MaterialTheme.typography.labelSmall, color = scheme.tertiary)
+                    Text("${state.gpuLoad}%", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = scheme.tertiary)
+                }
+            }
+        }
+        return
+    }
+
     val inner: @Composable () -> Unit = {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -534,9 +729,60 @@ private fun SpeedometersWidget(
 @Composable
 private fun ProfileSegmentedWidget(
     state: ZXSidePanelStateHolder,
-    isMerged: Boolean
+    isMerged: Boolean,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
+    if (span == 1) {
+        val currentTitle = when (state.activeProfile) {
+            "saving" -> "Saving"
+            "balanced" -> "Balanced"
+            else -> "Perf"
+        }
+        val currentIcon = when (state.activeProfile) {
+            "saving" -> "eco"
+            "balanced" -> "balance"
+            else -> "bolt"
+        }
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        val next = when (state.activeProfile) {
+                            "saving" -> "balanced"
+                            "balanced" -> "performance"
+                            else -> "saving"
+                        }
+                        state.selectPerformanceProfile(next)
+                    },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = ZXSidePanelIcons.get(currentIcon),
+                    contentDescription = null,
+                    tint = scheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = currentTitle,
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.primary
+                )
+                Text(
+                    text = "Mode",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
     val perfLabel = if (state.isLiteMode) "Perf Lite" else "Performance"
     val profiles = listOf(
         "saving" to "Power saving",
@@ -682,15 +928,56 @@ private fun ProfileSegmentedWidget(
 @Composable
 private fun BrightnessSliderWidget(
     state: ZXSidePanelStateHolder,
-    isMerged: Boolean
+    isMerged: Boolean,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
-    val inner: @Composable () -> Unit = {
-        Column(modifier = Modifier.fillMaxWidth()) {
+    val brightnessFraction = (state.brightness / 100f).coerceIn(0.05f, 1f)
+    val brightnessIcon = when {
+        brightnessFraction < 0.33f -> Icons.Rounded.BrightnessLow
+        brightnessFraction < 0.66f -> Icons.Rounded.BrightnessMedium
+        else -> Icons.Rounded.BrightnessHigh
+    }
+
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = brightnessIcon,
+                    contentDescription = null,
+                    tint = scheme.tertiary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "${state.brightness}%",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.tertiary
+                )
+                Text(
+                    text = "Brightness",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
+    if (isMerged) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 2.dp)
+        ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 4.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -699,64 +986,106 @@ private fun BrightnessSliderWidget(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
-                        imageVector = ZXSidePanelIcons.get("light_mode"),
+                        imageVector = brightnessIcon,
                         contentDescription = null,
-                        tint = scheme.primary,
-                        modifier = Modifier.size(18.dp)
+                        tint = scheme.tertiary,
+                        modifier = Modifier.size(20.dp)
                     )
                     Text(
                         text = "Brightness",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = scheme.onSurfaceVariant
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = scheme.onSurface
                     )
                 }
                 Text(
                     text = "${state.brightness}%",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = scheme.primary
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.tertiary
                 )
             }
 
-            M3ExpressiveLinearSlider(
-                value = state.brightness.toFloat(),
-                min = 10f,
-                max = 100f,
-                step = 1f,
-                variant = M3SliderVariant.Primary,
-                onValueChange = { state.updateHorizontalBrightness(it.roundToInt()) }
+            Spacer(Modifier.height(4.dp))
+
+            ZenithSlider(
+                value = brightnessFraction,
+                onValueChange = { newFraction ->
+                    state.updateHorizontalBrightness((newFraction * 100).roundToInt().coerceIn(5, 100))
+                },
+                onValueChangeFinished = {},
+                accent = scheme.tertiary,
+                modifier = Modifier.fillMaxWidth()
             )
         }
-    }
-
-    if (isMerged) {
-        inner()
     } else {
-        M3WidgetCard(
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
-        ) {
-            inner()
-        }
+        BentoSliderCard(
+            icon = brightnessIcon,
+            title = "Brightness",
+            valuePercent = state.brightness,
+            accent = scheme.tertiary,
+            value = brightnessFraction,
+            onValueChange = { newFraction ->
+                state.updateHorizontalBrightness((newFraction * 100).roundToInt().coerceIn(5, 100))
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
 @Composable
 private fun VolumeSliderWidget(
     state: ZXSidePanelStateHolder,
-    isMerged: Boolean
+    isMerged: Boolean,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
-    val volumeIconName = when {
-        state.muted -> "volume_off"
-        state.volume < 50 -> "volume_down"
-        else -> "volume_up"
+    val volFraction = if (state.muted) 0f else (state.volume / 100f).coerceIn(0f, 1f)
+    val volumeIcon = when {
+        state.muted || volFraction <= 0.01f -> Icons.AutoMirrored.Rounded.VolumeMute
+        volFraction < 0.5f -> Icons.AutoMirrored.Rounded.VolumeDown
+        else -> Icons.AutoMirrored.Rounded.VolumeUp
     }
 
-    val inner: @Composable () -> Unit = {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Row(
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+        ) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 4.dp),
+                    .clickable { state.toggleMuteAudio() },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = volumeIcon,
+                    contentDescription = null,
+                    tint = scheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = if (state.muted) "Muted" else "${state.volume}%",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.primary
+                )
+                Text(
+                    text = "Volume",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
+    if (isMerged) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 2.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -770,51 +1099,120 @@ private fun VolumeSliderWidget(
                     )
                 ) {
                     Icon(
-                        imageVector = ZXSidePanelIcons.get(volumeIconName),
+                        imageVector = volumeIcon,
                         contentDescription = null,
-                        tint = scheme.secondary,
-                        modifier = Modifier.size(18.dp)
+                        tint = scheme.primary,
+                        modifier = Modifier.size(20.dp)
                     )
                     Text(
                         text = "Volume",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = scheme.onSurfaceVariant
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = scheme.onSurface
                     )
                 }
                 Text(
-                    text = "${state.volume}%",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = scheme.secondary
+                    text = if (state.muted) "0%" else "${state.volume}%",
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.primary
                 )
             }
 
-            M3ExpressiveLinearSlider(
-                value = state.volume.toFloat(),
-                min = 0f,
-                max = 100f,
-                step = 1f,
-                variant = M3SliderVariant.Secondary,
-                onValueChange = { state.updateHorizontalVolume(it.roundToInt()) }
+            Spacer(Modifier.height(4.dp))
+
+            ZenithSlider(
+                value = volFraction,
+                onValueChange = { newFraction ->
+                    state.updateHorizontalVolume((newFraction * 100).roundToInt().coerceIn(0, 100))
+                },
+                onValueChangeFinished = {},
+                accent = scheme.primary,
+                modifier = Modifier.fillMaxWidth()
             )
         }
-    }
-
-    if (isMerged) {
-        inner()
     } else {
-        M3WidgetCard(
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
-        ) {
-            inner()
-        }
+        BentoSliderCard(
+            icon = volumeIcon,
+            title = "Volume",
+            valuePercent = if (state.muted) 0 else state.volume,
+            accent = scheme.primary,
+            value = volFraction,
+            onValueChange = { newFraction ->
+                state.updateHorizontalVolume((newFraction * 100).roundToInt().coerceIn(0, 100))
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
 @Composable
 private fun QuickToolsWidget(
-    state: ZXSidePanelStateHolder
+    state: ZXSidePanelStateHolder,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(6.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    state.quickTools.take(2).forEach { tool ->
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (tool.active) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { state.triggerQuickTool(tool.id) }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get(tool.icon),
+                                    contentDescription = tool.name,
+                                    tint = if (tool.active) scheme.onPrimaryContainer else scheme.onSurface,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    state.quickTools.drop(2).take(2).forEach { tool ->
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (tool.active) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { state.triggerQuickTool(tool.id) }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get(tool.icon),
+                                    contentDescription = tool.name,
+                                    tint = if (tool.active) scheme.onPrimaryContainer else scheme.onSurface,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return
+    }
+
     M3WidgetCard(
         contentPadding = PaddingValues(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -901,9 +1299,73 @@ private fun QuickToolsWidget(
 
 @Composable
 private fun AntiInterferenceWidget(
-    state: ZXSidePanelStateHolder
+    state: ZXSidePanelStateHolder,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(6.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    state.antiInterference.take(2).forEach { item ->
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (item.active) scheme.errorContainer else scheme.surfaceContainerHigh,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { state.toggleAntiInterference(item.id) }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get(item.icon),
+                                    contentDescription = item.name,
+                                    tint = if (item.active) scheme.onErrorContainer else scheme.onSurface,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    state.antiInterference.drop(2).take(2).forEach { item ->
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (item.active) scheme.errorContainer else scheme.surfaceContainerHigh,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { state.toggleAntiInterference(item.id) }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get(item.icon),
+                                    contentDescription = item.name,
+                                    tint = if (item.active) scheme.onErrorContainer else scheme.onSurface,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return
+    }
+
     M3WidgetCard(
         contentPadding = PaddingValues(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -972,9 +1434,43 @@ private fun AntiInterferenceWidget(
 
 @Composable
 private fun LiveMonitorWidget(
-    state: ZXSidePanelStateHolder
+    state: ZXSidePanelStateHolder,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { state.toggleFloatingHud() },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = ZXSidePanelIcons.get("monitoring"),
+                    contentDescription = null,
+                    tint = if (state.liveMonitor.enabled) scheme.primary else scheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = if (state.liveMonitor.enabled) "ON" else "OFF",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = if (state.liveMonitor.enabled) scheme.primary else scheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Monitor",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
     val styles = remember {
         listOf(
             "line" to "One line",
@@ -1108,9 +1604,43 @@ private fun LiveMonitorWidget(
 
 @Composable
 private fun CrosshairWidget(
-    state: ZXSidePanelStateHolder
+    state: ZXSidePanelStateHolder,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { state.toggleCrosshairQuick() },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = ZXSidePanelIcons.get("my_location"),
+                    contentDescription = null,
+                    tint = if (state.crosshair.enabled) scheme.primary else scheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = if (state.crosshair.enabled) "ON" else "OFF",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = if (state.crosshair.enabled) scheme.primary else scheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Crosshair",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
     val styles = remember {
         listOf(
             "dot" to "Dot",
@@ -1243,9 +1773,45 @@ private fun CrosshairWidget(
 
 @Composable
 private fun DisplayTouchWidget(
-    state: ZXSidePanelStateHolder
+    state: ZXSidePanelStateHolder,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { state.openSubscreen("display") },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = ZXSidePanelIcons.get("display_settings"),
+                    contentDescription = null,
+                    tint = scheme.secondary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = state.visualFilter.replaceFirstChar { it.uppercase() },
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.secondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "Color",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
     val filters = remember {
         listOf(
             "standard" to "Standard",
@@ -1379,9 +1945,41 @@ private fun DisplayTouchWidget(
 
 @Composable
 private fun NetworkPingWidget(
-    state: ZXSidePanelStateHolder
+    state: ZXSidePanelStateHolder,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = ZXSidePanelIcons.get("wifi_tethering"),
+                    contentDescription = null,
+                    tint = scheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "${state.pingMs}ms",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.primary
+                )
+                Text(
+                    text = "Ping",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
     M3WidgetCard(
         contentPadding = PaddingValues(16.dp)
     ) {
@@ -1426,10 +2024,43 @@ private fun NetworkPingWidget(
 
 @Composable
 private fun ThermalBatteryWidget(
-    state: ZXSidePanelStateHolder
+    state: ZXSidePanelStateHolder,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
     val isActive = state.isBypassChargingActive
+
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = ZXSidePanelIcons.get("thermostat"),
+                    contentDescription = null,
+                    tint = if (isActive) scheme.tertiary else scheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "${state.tempCelsius}°C",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = if (isActive) scheme.tertiary else scheme.primary
+                )
+                Text(
+                    text = "${state.batteryLevel}%",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
     M3WidgetCard(
         contentPadding = PaddingValues(16.dp)
     ) {
