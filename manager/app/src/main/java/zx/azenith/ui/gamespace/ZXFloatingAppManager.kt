@@ -96,6 +96,8 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import android.util.Log
+import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ipc.RootService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -161,6 +163,7 @@ class ZXFloatingAppManager(
         private const val VIRTUAL_PORTRAIT_WIDTH = 900
         private const val VIRTUAL_PORTRAIT_HEIGHT = 1600
         private const val VIRTUAL_PORTRAIT_DPI = 320
+        private const val PORTRAIT_ASPECT_RATIO = 9f / 16f
 
         private const val GESTURE_NONE = 0
         private const val GESTURE_TOPBAR_PENDING = 1
@@ -168,6 +171,10 @@ class ZXFloatingAppManager(
         private const val GESTURE_MINI_MOVE = 3
         private const val GESTURE_RESIZE_LEFT = 4
         private const val GESTURE_RESIZE_RIGHT = 5
+    }
+
+    init {
+        prebindRootServiceIfPossible()
     }
 
     val sessions = mutableStateListOf<ZXFloatingAppSession>()
@@ -411,47 +418,45 @@ class ZXFloatingAppManager(
         val screenH = dm.heightPixels
         val isLandscapeScreen = screenW > screenH
 
-        val availW = (screenW - (20 * density)).coerceAtLeast(220 * density)
-        val availH = (screenH - (20 * density)).coerceAtLeast(220 * density)
+        val availW = (screenW - (24 * density)).coerceAtLeast(200 * density)
+        val availH = (screenH - (24 * density)).coerceAtLeast(200 * density)
 
         return when (state) {
             FloatingSizeState.MINI -> {
-                val minDim = min(availW, availH)
-                val side = (minDim * 0.31f).coerceIn(98 * density, 128 * density).roundToInt()
-                Pair(side, side)
+                val h = if (isLandscapeScreen) {
+                    (availH * 0.36f).coerceIn(150 * density, 240 * density)
+                } else {
+                    ((availW * 0.36f) / PORTRAIT_ASPECT_RATIO).coerceIn(150 * density, 240 * density)
+                }
+                val w = (h * PORTRAIT_ASPECT_RATIO).roundToInt()
+                Pair(w, h.roundToInt())
             }
             FloatingSizeState.SMALL -> {
-                if (isLandscapeScreen) {
-                    val h = (availH * 0.62f).coerceIn(190 * density, 340 * density)
-                    val w = (h * 0.63f).coerceAtMost(availW * 0.45f)
-                    Pair(w.roundToInt(), h.roundToInt())
+                val h = if (isLandscapeScreen) {
+                    (availH * 0.54f).coerceIn(210 * density, 360 * density)
                 } else {
-                    val w = (availW * 0.54f).coerceIn(175 * density, 260 * density)
-                    val h = (w * 1.62f).coerceAtMost(availH * 0.54f)
-                    Pair(w.roundToInt(), h.roundToInt())
+                    ((availW * 0.54f) / PORTRAIT_ASPECT_RATIO).coerceIn(210 * density, 380 * density)
                 }
+                val w = (h * PORTRAIT_ASPECT_RATIO).roundToInt()
+                Pair(w, h.roundToInt())
             }
             FloatingSizeState.NORMAL -> {
-                if (isLandscapeScreen) {
-                    val h = (availH * 0.79f).coerceIn(240 * density, 430 * density)
-                    val w = (h * 0.63f).coerceAtMost(availW * 0.58f)
-                    Pair(w.roundToInt(), h.roundToInt())
+                val h = if (isLandscapeScreen) {
+                    (availH * 0.74f).coerceIn(290 * density, 470 * density)
                 } else {
-                    val w = (availW * 0.70f).coerceIn(220 * density, 330 * density)
-                    val h = (w * 1.62f).coerceAtMost(availH * 0.70f)
-                    Pair(w.roundToInt(), h.roundToInt())
+                    ((availW * 0.72f) / PORTRAIT_ASPECT_RATIO).coerceIn(290 * density, 490 * density)
                 }
+                val w = (h * PORTRAIT_ASPECT_RATIO).roundToInt()
+                Pair(w, h.roundToInt())
             }
             FloatingSizeState.LARGE -> {
-                if (isLandscapeScreen) {
-                    val h = (availH * 0.96f).coerceIn(280 * density, 540 * density)
-                    val w = (h * 0.65f).coerceAtMost(availW * 0.75f)
-                    Pair(w.roundToInt(), h.roundToInt())
+                val h = if (isLandscapeScreen) {
+                    (availH * 0.90f).coerceIn(360 * density, 580 * density)
                 } else {
-                    val w = (availW * 0.88f).coerceIn(270 * density, 420 * density)
-                    val h = (w * 1.62f).coerceAtMost(availH * 0.86f)
-                    Pair(w.roundToInt(), h.roundToInt())
+                    ((availW * 0.88f) / PORTRAIT_ASPECT_RATIO).coerceIn(360 * density, 600 * density)
                 }
+                val w = (h * PORTRAIT_ASPECT_RATIO).roundToInt()
+                Pair(w, h.roundToInt())
             }
             FloatingSizeState.MINIMIZED -> Pair(1, 1)
         }
@@ -741,24 +746,21 @@ class ZXFloatingAppManager(
         fromLeftCorner: Boolean
     ) {
         val dm = context.resources.displayMetrics
-        val (miniW, miniH) = computeDimensionsForState(FloatingSizeState.MINI)
-        val (smallW, smallH) = computeDimensionsForState(FloatingSizeState.SMALL)
-        val (largeW, largeH) = computeDimensionsForState(FloatingSizeState.LARGE)
+        val (_, miniH) = computeDimensionsForState(FloatingSizeState.MINI)
+        val (_, largeH) = computeDimensionsForState(FloatingSizeState.LARGE)
 
         val signedDx = if (fromLeftCorner) -dxPx else dxPx
         val deltaH = (signedDx * 0.45f + dyPx * 0.85f).roundToInt()
-        val targetH = (startH + deltaH).coerceIn(miniH, largeH)
+        val rawTargetH = startH + deltaH
 
-        // Smoothly interpolate width: square in MINI range, portrait aspect in SMALL..LARGE range
-        val targetW = if (targetH <= smallH) {
-            val frac = ((targetH - miniH).toFloat() / (smallH - miniH).coerceAtLeast(1).toFloat())
-                .coerceIn(0f, 1f)
-            (miniW + (smallW - miniW) * frac).roundToInt()
-        } else {
-            val frac = ((targetH - smallH).toFloat() / (largeH - smallH).coerceAtLeast(1).toFloat())
-                .coerceIn(0f, 1f)
-            (smallW + (largeW - smallW) * frac).roundToInt()
+        // Shrinking past the mini limit transitions directly into minimized icon mode
+        if (rawTargetH < (miniH * 0.78f)) {
+            minimizeSessionToIcon(session)
+            return
         }
+
+        val targetH = rawTargetH.coerceIn((miniH * 0.82f).roundToInt(), largeH)
+        val targetW = (targetH * PORTRAIT_ASPECT_RATIO).roundToInt()
 
         session.widthPx = targetW
         session.heightPx = targetH
@@ -774,8 +776,13 @@ class ZXFloatingAppManager(
     }
 
     fun settleSessionResize(session: ZXFloatingAppSession) {
-        val settledTier = resolveNearestSizeTier(session.heightPx)
-        applySizePreset(session, settledTier)
+        val (_, miniH) = computeDimensionsForState(FloatingSizeState.MINI)
+        if (session.heightPx < (miniH * 0.88f)) {
+            minimizeSessionToIcon(session)
+        } else {
+            val settledTier = resolveNearestSizeTier(session.heightPx)
+            applySizePreset(session, settledTier)
+        }
     }
 
     private fun resolveNearestSizeTier(currentHeightPx: Int): FloatingSizeState {
@@ -803,13 +810,13 @@ class ZXFloatingAppManager(
 
         scope.launch(Dispatchers.IO) {
             val hasRoot = checkRootGranted()
-            if (hasRoot) {
+            if (hasRoot && rootClient == null) {
                 withContext(Dispatchers.Main) {
                     bindRootServiceIfNeeded()
                 }
                 var waitTicks = 0
-                while (rootClient == null && waitTicks < 24) {
-                    delay(80)
+                while (rootClient == null && waitTicks < 35) {
+                    delay(100)
                     waitTicks++
                 }
             }
@@ -844,31 +851,34 @@ class ZXFloatingAppManager(
                 withContext(Dispatchers.Main) {
                     runCatching {
                         val dm = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+                        // Private virtual display with no OWN_CONTENT_ONLY restrictions
                         val vd = dm.createVirtualDisplay(
                             "AZenithFloat_${session.sessionId}",
                             VIRTUAL_PORTRAIT_WIDTH,
                             VIRTUAL_PORTRAIT_HEIGHT,
                             VIRTUAL_PORTRAIT_DPI,
                             surface,
-                            DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC or
-                                DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY
+                            0
                         )
                         if (vd != null) {
                             session.localVirtualDisplay = vd
-                            session.virtualDisplayId = vd.display.displayId
+                            val displayId = vd.display.displayId
+                            session.virtualDisplayId = displayId
                             val launchIntent = context.packageManager
                                 .getLaunchIntentForPackage(session.packageName)
-                                ?.apply {
-                                    addFlags(
-                                        Intent.FLAG_ACTIVITY_NEW_TASK or
-                                            Intent.FLAG_ACTIVITY_MULTIPLE_TASK
-                                    )
+                            val component = launchIntent?.component?.flattenToShortString()
+
+                            if (component != null && hasRoot) {
+                                scope.launch(Dispatchers.IO) {
+                                    runCatching {
+                                        Shell.cmd(
+                                            "cmd window set-ignore-orientation-request -d $displayId true",
+                                            "cmd window set-fix-to-user-rotation -d $displayId enabled",
+                                            "cmd window user-rotation -d $displayId lock 0",
+                                            "cmd activity start-activity --user 0 --display $displayId -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -f 0x18008000 -n $component"
+                                        ).exec()
+                                    }
                                 }
-                            if (launchIntent != null) {
-                                val opts = ActivityOptions.makeBasic().apply {
-                                    launchDisplayId = vd.display.displayId
-                                }
-                                context.startActivity(launchIntent, opts.toBundle())
                             }
                         }
                     }
@@ -945,14 +955,40 @@ class ZXFloatingAppManager(
             InputDevice.SOURCE_TOUCHSCREEN,
             rawEvent.flags
         )
-        client.injectMotionEvent(displayId, mapped)
+        if (client != null && client.isBinderAlive) {
+            client.injectMotionEvent(displayId, mapped)
+        } else {
+            val actionStr = when (rawEvent.actionMasked) {
+                MotionEvent.ACTION_DOWN -> "DOWN"
+                MotionEvent.ACTION_MOVE -> "MOVE"
+                MotionEvent.ACTION_UP -> "UP"
+                MotionEvent.ACTION_CANCEL -> "CANCEL"
+                else -> null
+            }
+            if (actionStr != null) {
+                val mappedX = coords[0].x.toInt()
+                val mappedY = coords[0].y.toInt()
+                scope.launch(Dispatchers.IO) {
+                    runCatching {
+                        Shell.cmd("input -d $displayId motionevent $actionStr $mappedX $mappedY").exec()
+                    }
+                }
+            }
+        }
         mapped.recycle()
     }
 
     fun dispatchBackToSession(session: ZXFloatingAppSession) {
         val displayId = session.virtualDisplayId
         if (displayId > 0) {
-            rootClient?.injectBack(displayId)
+            val client = rootClient
+            if (client != null && client.isBinderAlive) {
+                client.injectBack(displayId)
+            } else {
+                scope.launch(Dispatchers.IO) {
+                    runCatching { Shell.cmd("input -d $displayId keyevent 4").exec() }
+                }
+            }
         }
     }
 
@@ -1146,7 +1182,6 @@ private fun FloatingAppWindowContent(
                 FloatingWindowTopBar(
                     onBack = { manager.dispatchBackToSession(session) },
                     onFullScreen = { manager.expandSessionToFullscreen(session) },
-                    onMinimize = { manager.minimizeSessionToIcon(session) },
                     onClose = { manager.closeSession(session) }
                 )
             }
@@ -1237,7 +1272,6 @@ private fun applyPortraitTransform(textureView: TextureView, viewW: Int, viewH: 
 private fun FloatingWindowTopBar(
     onBack: () -> Unit,
     onFullScreen: () -> Unit,
-    onMinimize: () -> Unit,
     onClose: () -> Unit
 ) {
     Box(
@@ -1281,20 +1315,10 @@ private fun FloatingWindowTopBar(
                 .background(FloatingIconMuted.copy(alpha = 0.55f))
         )
 
-        // Right controls: Minimize to Icon & Close
-        Row(
-            modifier = Modifier.align(Alignment.CenterEnd),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // Right control: Close (minimize is triggered by resizing smaller into icon mode)
+        Box(
+            modifier = Modifier.align(Alignment.CenterEnd)
         ) {
-            TopBarIconButton(onClick = onMinimize) {
-                Icon(
-                    imageVector = Icons.Rounded.Remove,
-                    contentDescription = null,
-                    tint = FloatingIconMuted,
-                    modifier = Modifier.size(15.dp)
-                )
-            }
             TopBarIconButton(onClick = onClose) {
                 Icon(
                     imageVector = Icons.Rounded.Close,

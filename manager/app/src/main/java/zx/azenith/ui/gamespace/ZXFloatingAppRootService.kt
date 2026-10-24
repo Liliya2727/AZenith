@@ -29,6 +29,7 @@ import android.os.Looper
 import android.os.Parcel
 import android.os.SystemClock
 import android.system.Os
+import android.util.Log
 import android.view.InputDevice
 import android.view.InputEvent
 import android.view.KeyCharacterMap
@@ -56,7 +57,6 @@ class ZXFloatingAppRootService : RootService() {
 
         private const val SYSTEM_UID = 1000
         private const val FLAG_PUBLIC = DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC
-        private const val FLAG_OWN_CONTENT_ONLY = DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY
         private const val FLAG_SUPPORTS_TOUCH = 1 shl 6
         private const val FLAG_DESTROY_CONTENT_ON_REMOVAL = 1 shl 8
         private const val FLAG_TRUSTED = 1 shl 10
@@ -77,11 +77,21 @@ class ZXFloatingAppRootService : RootService() {
         super.onCreate()
         runCatching { HiddenApiBypass.addHiddenApiExemptions("") }
         runCatching {
+            Os.setuid(SYSTEM_UID)
+            Os.setgid(SYSTEM_UID)
+        }.onFailure {
+            runCatching { Os.seteuid(SYSTEM_UID) }
+        }
+        runCatching {
             sysContext = createPackageContext("android", Context.CONTEXT_IGNORE_SECURITY)
         }
         runCatching {
             val imClass = InputManager::class.java
-            inputManagerInstance = imClass.getDeclaredMethod("getInstance").invoke(null)
+            inputManagerInstance = runCatching {
+                getSystemService(Context.INPUT_SERVICE)
+            }.getOrNull() ?: runCatching {
+                imClass.getDeclaredMethod("getInstance").invoke(null)
+            }.getOrNull()
             injectInputMethod = imClass.getDeclaredMethod(
                 "injectInputEvent",
                 InputEvent::class.java,
@@ -92,8 +102,6 @@ class ZXFloatingAppRootService : RootService() {
                 Int::class.javaPrimitiveType
             ).apply { isAccessible = true }
         }
-        // Keep main thread euid at SYSTEM_UID so kernel binder transactions carry UID 1000
-        runCatching { Os.seteuid(SYSTEM_UID) }
     }
 
     override fun onBind(intent: Intent): IBinder {
@@ -172,26 +180,6 @@ class ZXFloatingAppRootService : RootService() {
         super.onDestroy()
     }
 
-    private fun <T> runOnMainAsSystem(block: () -> T): T {
-        if (Looper.myLooper() == Looper.getMainLooper()) {
-            runCatching { Os.seteuid(SYSTEM_UID) }
-            return block()
-        }
-        var result: T? = null
-        val latch = CountDownLatch(1)
-        mainHandler.post {
-            try {
-                runCatching { Os.seteuid(SYSTEM_UID) }
-                result = block()
-            } finally {
-                latch.countDown()
-            }
-        }
-        latch.await(2500, TimeUnit.MILLISECONDS)
-        @Suppress("UNCHECKED_CAST")
-        return result as T
-    }
-
     private fun createTrustedVirtualDisplay(
         name: String,
         width: Int,
@@ -199,71 +187,45 @@ class ZXFloatingAppRootService : RootService() {
         dpi: Int,
         surface: Surface?
     ): Int {
-        return runOnMainAsSystem {
-            val sysDm = sysContext?.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
-            val fallbackDm = getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
+        Log.i("ZXFloatRoot", "createTrustedVirtualDisplay: $name (${width}x${height}@$dpi)")
+        val flagCandidates = intArrayOf(
+            FLAG_PUBLIC or FLAG_TRUSTED or FLAG_SUPPORTS_TOUCH or FLAG_DESTROY_CONTENT_ON_REMOVAL or FLAG_ALWAYS_UNLOCKED,
+            FLAG_PUBLIC or FLAG_TRUSTED or FLAG_SUPPORTS_TOUCH or FLAG_DESTROY_CONTENT_ON_REMOVAL,
+            FLAG_PUBLIC or FLAG_SUPPORTS_TOUCH or FLAG_DESTROY_CONTENT_ON_REMOVAL,
+            FLAG_PUBLIC,
+            0
+        )
 
-            val flagCandidates = intArrayOf(
-                FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY or FLAG_SUPPORTS_TOUCH or
-                    FLAG_DESTROY_CONTENT_ON_REMOVAL or FLAG_TRUSTED or
-                    FLAG_OWN_DISPLAY_GROUP or FLAG_ALWAYS_UNLOCKED,
-                FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY or FLAG_SUPPORTS_TOUCH or
-                    FLAG_DESTROY_CONTENT_ON_REMOVAL or FLAG_TRUSTED,
-                FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY or FLAG_SUPPORTS_TOUCH or
-                    FLAG_DESTROY_CONTENT_ON_REMOVAL,
-                FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY
-            )
+        val dm = (sysContext ?: this).getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
+        if (dm != null) {
+            for (flags in flagCandidates) {
+                val vd = runCatching {
+                    dm.createVirtualDisplay(name, width, height, dpi, surface, flags)
+                }.onFailure {
+                    Log.w("ZXFloatRoot", "Failed to create display with flags 0x${flags.toString(16)}: ${it.message}")
+                }.getOrNull()
 
-            if (sysDm != null) {
-                for (candidateFlags in flagCandidates) {
-                    val vd = runCatching {
-                        sysDm.createVirtualDisplay(name, width, height, dpi, surface, candidateFlags)
-                    }.getOrNull()
-                    if (vd != null) {
-                        val id = vd.display.displayId
-                        virtualDisplays[id] = vd
-                        enforcePortraitOnDisplay(id)
-                        return@runOnMainAsSystem id
-                    }
+                if (vd != null) {
+                    val id = vd.display.displayId
+                    Log.i("ZXFloatRoot", "VirtualDisplay created: id=$id flags=0x${flags.toString(16)}")
+                    virtualDisplays[id] = vd
+                    enforcePortraitOnDisplay(id)
+                    return id
                 }
             }
-
-            if (fallbackDm != null) {
-                val appUid = applicationInfo.uid
-                runCatching { Os.seteuid(appUid) }
-                try {
-                    val vd = runCatching {
-                        fallbackDm.createVirtualDisplay(
-                            name,
-                            width,
-                            height,
-                            dpi,
-                            surface,
-                            FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY
-                        )
-                    }.getOrNull()
-                    if (vd != null) {
-                        val id = vd.display.displayId
-                        virtualDisplays[id] = vd
-                        enforcePortraitOnDisplay(id)
-                        return@runOnMainAsSystem id
-                    }
-                } finally {
-                    runCatching { Os.seteuid(SYSTEM_UID) }
-                }
-            }
-            -1
         }
+        Log.e("ZXFloatRoot", "All VirtualDisplay candidates failed")
+        return -1
     }
 
     private fun setVirtualDisplaySurface(displayId: Int, surface: Surface?) {
-        runOnMainAsSystem {
+        mainHandler.post {
             virtualDisplays[displayId]?.surface = surface
         }
     }
 
     private fun releaseVirtualDisplay(displayId: Int) {
-        runOnMainAsSystem {
+        mainHandler.post {
             virtualDisplays.remove(displayId)?.let { vd ->
                 runCatching { vd.surface = null }
                 runCatching { vd.release() }
@@ -334,6 +296,7 @@ class ZXFloatingAppRootService : RootService() {
 
     private fun launchPackageOnDisplay(pkg: String, displayId: Int) {
         if (pkg.isBlank() || displayId <= 0) return
+        Log.i("ZXFloatRoot", "launchPackageOnDisplay: pkg=$pkg displayId=$displayId")
         ioExecutor.execute {
             try {
                 val pm = packageManager
@@ -355,32 +318,13 @@ class ZXFloatingAppRootService : RootService() {
                         .waitFor(1000, TimeUnit.MILLISECONDS)
                 }
 
-                var startedViaContext = false
-                if (launchIntent != null) {
-                    startedViaContext = runOnMainAsSystem {
-                        try {
-                            val opts = ActivityOptions.makeBasic().apply {
-                                launchDisplayId = displayId
-                            }
-                            (sysContext ?: this@ZXFloatingAppRootService).startActivity(
-                                launchIntent,
-                                opts.toBundle()
-                            )
-                            true
-                        } catch (_: Exception) {
-                            false
-                        }
-                    }
-                }
-
-                if (!startedViaContext && component != null) {
+                if (component != null) {
                     val startCmd = "cmd activity start-activity --user 0 --display $displayId " +
                         "-a android.intent.action.MAIN -c android.intent.category.LAUNCHER " +
                         "-f 0x18008000 -n $component >/dev/null 2>&1"
-                    runCatching {
-                        Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", startCmd))
-                            .waitFor(1500, TimeUnit.MILLISECONDS)
-                    }
+                    Log.i("ZXFloatRoot", "Executing startCmd on display $displayId: $startCmd")
+                    Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", startCmd))
+                        .waitFor(1500, TimeUnit.MILLISECONDS)
                 }
 
                 // Re-apply portrait lock after Activity startup in case onResume calls setRequestedOrientation
@@ -389,7 +333,8 @@ class ZXFloatingAppRootService : RootService() {
                     Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", lockCmd))
                         .waitFor(1000, TimeUnit.MILLISECONDS)
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.e("ZXFloatRoot", "Error in launchPackageOnDisplay", e)
             }
         }
     }
