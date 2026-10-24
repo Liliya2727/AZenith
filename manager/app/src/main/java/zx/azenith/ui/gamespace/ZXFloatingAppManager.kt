@@ -117,9 +117,6 @@ import kotlin.math.hypot
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-private val FloatingAccentPrimary = Color(0xFFFFB3AC)
-private val FloatingIconMuted = Color(0xFFD7C1BE)
-
 enum class FloatingSizeState {
     LARGE,
     NORMAL,
@@ -866,7 +863,6 @@ class ZXFloatingAppManager(
                 if (createdDisplayId > 0) {
                     session.virtualDisplayId = createdDisplayId
                     client.launchAppOnDisplay(session.packageName, createdDisplayId)
-                    startSessionTaskMonitor(session)
                 }
             }
 
@@ -902,7 +898,6 @@ class ZXFloatingAppManager(
                                         ).exec()
                                     }
                                 }
-                                startSessionTaskMonitor(session)
                             }
                         }
                     }
@@ -931,38 +926,6 @@ class ZXFloatingAppManager(
         session.localVirtualDisplay = null
         runCatching { session.renderSurface?.release() }
         session.renderSurface = null
-    }
-
-    private fun startSessionTaskMonitor(session: ZXFloatingAppSession) {
-        scope.launch(Dispatchers.IO) {
-            delay(6000)
-            while (sessions.contains(session) && session.virtualDisplayId > 0) {
-                delay(3000)
-                if (session.sizeState == FloatingSizeState.MINIMIZED) continue
-                val displayId = session.virtualDisplayId
-                if (displayId <= 0 || !sessions.contains(session)) break
-                val client = rootClient
-                val hasTasks = if (client != null && client.isBinderAlive) {
-                    client.hasTasksOnDisplay(displayId)
-                } else {
-                    val out = runCatching {
-                        Shell.cmd("dumpsys activity activities").exec().out.joinToString("\n")
-                    }.getOrDefault("")
-                    val section = Regex("""Display #$displayId\b.*?(?=Display #|\z)""", RegexOption.DOT_MATCHES_ALL)
-                        .find(out)?.value.orEmpty()
-                    if (section.isEmpty()) false else section.contains("Task{") || section.contains("TaskRecord{")
-                }
-                if (!hasTasks) {
-                    Log.i("ZXFloatingAppManager", "No active tasks on display $displayId, auto-closing session")
-                    withContext(Dispatchers.Main) {
-                        if (sessions.contains(session) && session.sizeState != FloatingSizeState.MINIMIZED) {
-                            closeSession(session)
-                        }
-                    }
-                    break
-                }
-            }
-        }
     }
 
     fun dispatchTouchToVirtualDisplay(
@@ -1269,7 +1232,7 @@ private fun FloatingAppWindowContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .background(Color(0xFF120D0C)),
+                    .background(scheme.surfaceContainerLowest),
                 contentAlignment = Alignment.Center
             ) {
                 var hasDrawnFrame by remember { mutableStateOf(false) }
@@ -1346,7 +1309,7 @@ private fun FloatingAppWindowContent(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color(0xFF120D0C)),
+                            .background(scheme.surfaceContainerLowest),
                         contentAlignment = Alignment.Center
                     ) {
                         if (session.iconBitmap != null) {
@@ -1380,7 +1343,7 @@ private fun FloatingAppWindowContent(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.65f)),
+                    .background(scheme.scrim.copy(alpha = 0.65f)),
                 contentAlignment = Alignment.Center
             ) {
                 Surface(
@@ -1496,11 +1459,12 @@ private fun TopBarIconButton(
     onClick: () -> Unit,
     content: @Composable () -> Unit
 ) {
+    val scheme = MaterialTheme.colorScheme
     Box(
         modifier = Modifier
             .size(24.dp)
             .clip(CircleShape)
-            .background(Color(0xFF332625))
+            .background(scheme.surfaceContainerHighest.copy(alpha = 0.85f))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -1513,6 +1477,7 @@ private fun CornerResizeIndicator(
     isLeftCorner: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val scheme = MaterialTheme.colorScheme
     Box(modifier = modifier.size(28.dp)) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val strokePx = 3.dp.toPx()
@@ -1523,14 +1488,14 @@ private fun CornerResizeIndicator(
 
             if (isLeftCorner) {
                 drawLine(
-                    color = FloatingAccentPrimary,
+                    color = scheme.primary,
                     start = Offset(inset, h - inset - armLen),
                     end = Offset(inset, h - inset),
                     strokeWidth = strokePx,
                     cap = StrokeCap.Round
                 )
                 drawLine(
-                    color = FloatingAccentPrimary,
+                    color = scheme.primary,
                     start = Offset(inset, h - inset),
                     end = Offset(inset + armLen, h - inset),
                     strokeWidth = strokePx,
@@ -1538,14 +1503,14 @@ private fun CornerResizeIndicator(
                 )
             } else {
                 drawLine(
-                    color = FloatingAccentPrimary,
+                    color = scheme.primary,
                     start = Offset(w - inset, h - inset - armLen),
                     end = Offset(w - inset, h - inset),
                     strokeWidth = strokePx,
                     cap = StrokeCap.Round
                 )
                 drawLine(
-                    color = FloatingAccentPrimary,
+                    color = scheme.primary,
                     start = Offset(w - inset - armLen, h - inset),
                     end = Offset(w - inset, h - inset),
                     strokeWidth = strokePx,
@@ -1558,6 +1523,7 @@ private fun CornerResizeIndicator(
 
 @Composable
 private fun MinimizedIconStackOverlay(manager: ZXFloatingAppManager) {
+    val scheme = MaterialTheme.colorScheme
     val minimized = manager.sessions.filter { it.sizeState == FloatingSizeState.MINIMIZED }
     if (minimized.isEmpty()) return
 
@@ -1567,8 +1533,8 @@ private fun MinimizedIconStackOverlay(manager: ZXFloatingAppManager) {
         modifier = Modifier
             .shadow(12.dp, RoundedCornerShape(18.dp), clip = false)
             .clip(RoundedCornerShape(18.dp))
-            .background(Color(0xEE211918))
-            .border(1.5.dp, Color(0xFF56423F), RoundedCornerShape(18.dp))
+            .background(scheme.surfaceContainerHigh.copy(alpha = 0.95f))
+            .border(1.5.dp, scheme.outlineVariant.copy(alpha = 0.70f), RoundedCornerShape(18.dp))
             .padding(6.dp)
     ) {
         if (minimized.size == 1) {
@@ -1618,7 +1584,7 @@ private fun MinimizedIconStackOverlay(manager: ZXFloatingAppManager) {
                         modifier = Modifier
                             .size(36.dp)
                             .align(Alignment.TopStart)
-                            .border(1.5.dp, Color(0xFF211918), RoundedCornerShape(11.dp))
+                            .border(1.5.dp, scheme.surfaceContainerHigh, RoundedCornerShape(11.dp))
                     )
                 }
             }
@@ -1657,10 +1623,12 @@ private fun MinimizedAppIconTile(
     iconBitmap: ImageBitmap?,
     modifier: Modifier = Modifier
 ) {
+    val scheme = MaterialTheme.colorScheme
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF2F2321)),
+            .background(scheme.surfaceContainerHighest)
+            .border(1.dp, scheme.outlineVariant.copy(alpha = 0.50f), RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center
     ) {
         if (iconBitmap != null) {
@@ -1674,7 +1642,7 @@ private fun MinimizedAppIconTile(
             Icon(
                 imageVector = Icons.Rounded.Apps,
                 contentDescription = null,
-                tint = FloatingAccentPrimary,
+                tint = scheme.primary,
                 modifier = Modifier.size(22.dp)
             )
         }

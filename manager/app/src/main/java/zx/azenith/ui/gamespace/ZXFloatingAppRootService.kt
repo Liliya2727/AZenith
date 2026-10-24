@@ -364,7 +364,6 @@ class ZXFloatingAppRootService : RootService() {
     ): Int {
         Log.i("ZXFloatRoot", "createTrustedVirtualDisplay: $name (${width}x${height}@$dpi)")
         val flagCandidates = intArrayOf(
-            FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY or FLAG_TRUSTED or FLAG_SUPPORTS_TOUCH or FLAG_DESTROY_CONTENT_ON_REMOVAL or FLAG_ALWAYS_UNLOCKED or FLAG_OWN_DISPLAY_GROUP or FLAG_SHOULD_SHOW_SYSTEM_DECORATIONS,
             FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY or FLAG_TRUSTED or FLAG_SUPPORTS_TOUCH or FLAG_DESTROY_CONTENT_ON_REMOVAL or FLAG_ALWAYS_UNLOCKED or FLAG_OWN_DISPLAY_GROUP,
             FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY or FLAG_TRUSTED or FLAG_SUPPORTS_TOUCH or FLAG_DESTROY_CONTENT_ON_REMOVAL or FLAG_ALWAYS_UNLOCKED,
             FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY or FLAG_TRUSTED or FLAG_SUPPORTS_TOUCH or FLAG_DESTROY_CONTENT_ON_REMOVAL,
@@ -530,31 +529,21 @@ class ZXFloatingAppRootService : RootService() {
                         .waitFor(1000, TimeUnit.MILLISECONDS)
                 }
 
-                // 2. Check if an active task for this package already exists on display 0 and is visible
-                val stackCmd = "am stack list"
-                val stackOut = runCatching {
-                    Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", stackCmd))
-                        .inputStream.bufferedReader().readText()
-                }.getOrDefault("")
-                val display0Section = Regex("""RootTask[^\n]*displayId=0[^\n]*\n(?:\s+[^\n]*\n)*""")
-                    .findAll(stackOut)
-                    .map { it.value }
-                    .firstOrNull { it.contains("${pkg}/") && it.contains("visible=true") }
-                val taskMatch = if (display0Section != null) {
-                    Regex("""taskId=(\d+):\s*${Regex.escape(pkg)}/""").find(display0Section)
-                } else null
-                if (taskMatch != null) {
-                    val existingTaskId = taskMatch.groupValues[1]
-                    Log.i("ZXFloatRoot", "Moving active task $existingTaskId for $pkg from display 0 to display $displayId")
-                    val moveCmd = "am display move-stack $existingTaskId $displayId >/dev/null 2>&1; " +
-                        "am stack move-task $existingTaskId $existingTaskId true >/dev/null 2>&1"
-                    runCatching {
-                        Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", moveCmd))
-                            .waitFor(800, TimeUnit.MILLISECONDS)
-                    }
+                // 2. Direct root launch via cmd activity ensures reliable placement on virtual display
+                if (component != null) {
+                    val startCmd = "cmd activity start-activity --user 0 --display $displayId --windowingMode 1 " +
+                        "--activity-multiple-task --activity-reorder-to-front -a android.intent.action.MAIN -c android.intent.category.LAUNCHER " +
+                        "-f 0x18008000 -n $component"
+                    Log.i("ZXFloatRoot", "Executing startCmd on display $displayId: $startCmd")
+                    val proc = Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", startCmd))
+                    proc.waitFor(1200, TimeUnit.MILLISECONDS)
+                } else {
+                    val amPkgCmd = "am start --user 0 --display $displayId --windowingMode 1 -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p $pkg"
+                    Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", amPkgCmd))
+                        .waitFor(1200, TimeUnit.MILLISECONDS)
                 }
 
-                // 3. Launch via sysContext (holding system UID 1000 'android' authority)
+                // 3. Fallback launch via sysContext
                 val opts = ActivityOptions.makeBasic().apply {
                     launchDisplayId = displayId
                 }
@@ -570,19 +559,8 @@ class ZXFloatingAppRootService : RootService() {
                             Intent.FLAG_ACTIVITY_MULTIPLE_TASK
                     )
                 }
-                val sysLaunchSuccess = runCatching {
+                runCatching {
                     (sysContext ?: this@ZXFloatingAppRootService).startActivity(intent, opts.toBundle())
-                    true
-                }.getOrDefault(false)
-
-                // 4. Fallback via cmd activity if sysContext was not available or threw
-                if (!sysLaunchSuccess && component != null) {
-                    val startCmd = "cmd activity start-activity --user 0 --display $displayId --windowingMode 1 " +
-                        "--activity-multiple-task --activity-reorder-to-front -a android.intent.action.MAIN -c android.intent.category.LAUNCHER " +
-                        "-f 0x10000000 -n $component"
-                    Log.i("ZXFloatRoot", "Executing startCmd on display $displayId: $startCmd")
-                    val proc = Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", startCmd))
-                    proc.waitFor(1200, TimeUnit.MILLISECONDS)
                 }
 
                 // 5. Ensure orientation stays locked and keyguard dismissed

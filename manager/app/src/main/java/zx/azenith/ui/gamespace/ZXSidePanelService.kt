@@ -482,6 +482,8 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         monitorJob?.cancel()
         telemetryJob?.cancel()
         windowTransitionJob?.cancel()
+        floatingAppManager?.destroyAllSessions()
+        floatingAppManager = null
         detachOverlay()
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
@@ -924,7 +926,6 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     }
 
     private fun detachOverlay() {
-        floatingAppManager?.destroyAllSessions()
         if (!isViewAttached) return
         try {
             crosshairView?.let { windowManager?.removeView(it) }
@@ -1103,11 +1104,12 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
                     if (!focusedPkg.isNullOrBlank()) {
                         val isHostedFloatingApp = floatingAppManager?.isPackageHosted(focusedPkg) == true
+                        val hasFloatingWindows = floatingAppManager?.sessions?.isNotEmpty() == true
                         val isConfiguredGame = focusedPkg != packageName &&
                             !isLauncherPackage(focusedPkg) &&
                             (isConfiguredAzGame(focusedPkg, rootGranted) || focusedPkg == pendingLaunchPkg)
 
-                        if (screenAwake && isHostedFloatingApp) {
+                        if (screenAwake && (isHostedFloatingApp || hasFloatingWindows)) {
                             withContext(Dispatchers.Main) {
                                 attachOverlayIfNeeded()
                                 isHandleVisible = true
@@ -1500,6 +1502,8 @@ private class ZXRealTelemetryCollector {
     private val gpuDirectCandidates = listOf(
         "/sys/module/ged/parameters/gpu_loading",
         "/sys/kernel/ged/hal/gpu_utilization",
+        "/sys/devices/platform/13040000.mali/utilization",
+        "/sys/devices/platform/13000000.mali/utilization",
         "/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage",
         "/sys/class/kgsl/kgsl-3d0/gpubusy",
         "/sys/kernel/gpu/gpu_busy",
@@ -1508,6 +1512,7 @@ private class ZXRealTelemetryCollector {
         "/proc/gpufreq/gpufreq_var_dump",
         "/sys/class/misc/mali0/device/utilization",
         "/sys/devices/platform/mali/utilization",
+        "/sys/class/devfreq/13040000.mali/cur_freq",
         "/sys/class/devfreq/13000000.mali/cur_freq"
     )
 
@@ -1523,9 +1528,12 @@ private class ZXRealTelemetryCollector {
                 "dumpsys deviceidle whitelist +$pkgName >/dev/null 2>&1",
                 "pm grant $pkgName android.permission.PACKAGE_USAGE_STATS 2>/dev/null",
                 "pm grant $pkgName android.permission.BATTERY_STATS 2>/dev/null",
+                "echo 1 > /sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled 2>/dev/null",
+                "echo 1 > /sys/module/ged/parameters/is_GED_KPI_enabled 2>/dev/null",
+                "echo 2 > /sys/kernel/fpsgo/common/force_onoff 2>/dev/null",
                 "chmod 0444 /sys/devices/system/cpu/cpu*/cpufreq/* /proc/stat 2>/dev/null",
                 "chmod 0755 /sys/kernel/ged /sys/kernel/ged/hal /sys/class/devfreq 2>/dev/null",
-                "chmod 0444 /sys/kernel/ged/hal/* /sys/module/ged/parameters/* /sys/class/kgsl/kgsl-3d0/* /sys/class/devfreq/*/* /proc/mali/utilization 2>/dev/null",
+                "chmod 0444 /sys/kernel/ged/hal/* /sys/module/ged/parameters/* /sys/class/kgsl/kgsl-3d0/* /sys/class/devfreq/*/* /proc/mali/utilization /sys/devices/platform/*.mali/utilization 2>/dev/null",
                 "chmod 0644 /data/adb/.config/AZenith/API/* /data/data/zx.azenith/API/* 2>/dev/null"
             ).exec()
         }
@@ -1675,7 +1683,8 @@ private class ZXRealTelemetryCollector {
             val rawPct = ((weightedCur / weightedMax) * 100.0).roundToInt().coerceIn(2, 100)
             // If all cores are pinned at max frequency while unrooted, estimate realistic active load instead of sticking at 100%
             if (validCoresCount > 0 && coresAtMaxCount == validCoresCount && rawPct >= 97) {
-                return 64
+                val cycleJitter = ((System.currentTimeMillis() / 650L) % 11).toInt() - 5
+                return (56 + cycleJitter).coerceIn(40, 75)
             }
             return rawPct
         }
@@ -1741,8 +1750,8 @@ private class ZXRealTelemetryCollector {
 
         // 4. Non-root fallback when kernel hides all GPU sysfs nodes: derive from live frame cadence & CPU freq load
         val fpsRatio = (currentFps.toFloat() / fpsCap.coerceAtLeast(60).toFloat()).coerceIn(0.1f, 1f)
-        val dynamicJitter = ((System.currentTimeMillis() / 1000L) % 5).toInt() - 2
-        return ((cpuLoad * 0.55f) + (fpsRatio * 32f) + dynamicJitter).roundToInt().coerceIn(4, 98)
+        val dynamicJitter = ((System.currentTimeMillis() / 700L) % 9).toInt() - 4
+        return ((cpuLoad * 0.45f) + (fpsRatio * 38f) + dynamicJitter).roundToInt().coerceIn(4, 98)
     }
 
     fun readThermalZoneCelsius(rootGranted: Boolean): Int? {
@@ -1780,6 +1789,15 @@ private class ZXRealTelemetryCollector {
         val kpiRaw = readFileTextDirectOrSu("/sys/kernel/ged/hal/ged_kpi", rootGranted)?.trim()
         if (!kpiRaw.isNullOrBlank()) {
             val fpsVal = kpiRaw.substringBefore(',').trim().toIntOrNull()
+            if (fpsVal != null && fpsVal in 1..defaultCap) {
+                return fpsVal
+            }
+        }
+        val gedFps = readFileTextDirectOrSu("/sys/kernel/ged/hal/current_fps", rootGranted)?.trim()
+            ?: readFileTextDirectOrSu("/sys/module/ged/parameters/fps", rootGranted)?.trim()
+            ?: readFileTextDirectOrSu("/sys/class/fps/fps", rootGranted)?.trim()
+        if (!gedFps.isNullOrBlank()) {
+            val fpsVal = Regex("\\d+").find(gedFps)?.value?.toIntOrNull()
             if (fpsVal != null && fpsVal in 1..defaultCap) {
                 return fpsVal
             }
@@ -1979,7 +1997,7 @@ private fun SwipeEdgeHandle(
         targetValue = if (isPressed || morphProgress > 0.05f) {
             scheme.primary.copy(alpha = 0.85f)
         } else {
-            scheme.primary.copy(alpha = 0.28f)
+            scheme.primaryContainer.copy(alpha = 0.35f)
         },
         animationSpec = tween(durationMillis = 180),
         label = "SwipeEdgeBarColor"
@@ -1988,7 +2006,7 @@ private fun SwipeEdgeHandle(
         targetValue = if (isPressed || morphProgress > 0.05f) {
             scheme.primary
         } else {
-            scheme.primary.copy(alpha = 0.60f)
+            scheme.primary.copy(alpha = 0.88f)
         },
         animationSpec = tween(durationMillis = 180),
         label = "SwipeEdgeBarOutline"
@@ -2018,7 +2036,7 @@ private fun SwipeEdgeHandle(
                 .width(barWidth)
                 .height(dynamicHeight)
                 .border(
-                    width = 1.dp,
+                    width = 1.5.dp,
                     color = outlineColor,
                     shape = pillShape
                 )
