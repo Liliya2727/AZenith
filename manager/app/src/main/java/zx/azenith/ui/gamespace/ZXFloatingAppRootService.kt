@@ -17,6 +17,7 @@
 package zx.azenith.ui.gamespace
 
 import android.app.ActivityOptions
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.hardware.display.DisplayManager
@@ -54,12 +55,17 @@ class ZXFloatingAppRootService : RootService() {
         const val TRANSACTION_INJECT_BACK = IBinder.FIRST_CALL_TRANSACTION + 5
         const val TRANSACTION_LAUNCH_APP = IBinder.FIRST_CALL_TRANSACTION + 6
         const val TRANSACTION_ENFORCE_PORTRAIT = IBinder.FIRST_CALL_TRANSACTION + 7
+        const val TRANSACTION_HAS_TASKS = IBinder.FIRST_CALL_TRANSACTION + 8
 
         private const val SYSTEM_UID = 1000
         private const val FLAG_PUBLIC = DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC
+        private const val FLAG_PRESENTATION = DisplayManager.VIRTUAL_DISPLAY_FLAG_PRESENTATION
         private const val FLAG_OWN_CONTENT_ONLY = DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY
+        private const val FLAG_CAN_SHOW_WITH_INSECURE_KEYGUARD = 1 shl 5
         private const val FLAG_SUPPORTS_TOUCH = 1 shl 6
+        private const val FLAG_ROTATES_WITH_CONTENT = 1 shl 7
         private const val FLAG_DESTROY_CONTENT_ON_REMOVAL = 1 shl 8
+        private const val FLAG_SHOULD_SHOW_SYSTEM_DECORATIONS = 1 shl 9
         private const val FLAG_TRUSTED = 1 shl 10
         private const val FLAG_OWN_DISPLAY_GROUP = 1 shl 11
         private const val FLAG_ALWAYS_UNLOCKED = 1 shl 12
@@ -162,7 +168,6 @@ class ZXFloatingAppRootService : RootService() {
                         val displayId = data.readInt()
                         val event = MotionEvent.CREATOR.createFromParcel(data)
                         injectMotionOnDisplay(displayId, event)
-                        runCatching { event.recycle() }
                         return true
                     }
                     TRANSACTION_INJECT_BACK -> {
@@ -185,6 +190,14 @@ class ZXFloatingAppRootService : RootService() {
                         val displayId = data.readInt()
                         enforcePortraitOnDisplay(displayId)
                         reply?.writeNoException()
+                        return true
+                    }
+                    TRANSACTION_HAS_TASKS -> {
+                        data.enforceInterface(DESCRIPTOR)
+                        val displayId = data.readInt()
+                        val has = hasTasksOnDisplay(displayId)
+                        reply?.writeNoException()
+                        reply?.writeInt(if (has) 1 else 0)
                         return true
                     }
                 }
@@ -351,10 +364,12 @@ class ZXFloatingAppRootService : RootService() {
     ): Int {
         Log.i("ZXFloatRoot", "createTrustedVirtualDisplay: $name (${width}x${height}@$dpi)")
         val flagCandidates = intArrayOf(
+            FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY or FLAG_TRUSTED or FLAG_SUPPORTS_TOUCH or FLAG_DESTROY_CONTENT_ON_REMOVAL or FLAG_ALWAYS_UNLOCKED or FLAG_OWN_DISPLAY_GROUP or FLAG_SHOULD_SHOW_SYSTEM_DECORATIONS,
+            FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY or FLAG_TRUSTED or FLAG_SUPPORTS_TOUCH or FLAG_DESTROY_CONTENT_ON_REMOVAL or FLAG_ALWAYS_UNLOCKED or FLAG_OWN_DISPLAY_GROUP,
             FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY or FLAG_TRUSTED or FLAG_SUPPORTS_TOUCH or FLAG_DESTROY_CONTENT_ON_REMOVAL or FLAG_ALWAYS_UNLOCKED,
             FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY or FLAG_TRUSTED or FLAG_SUPPORTS_TOUCH or FLAG_DESTROY_CONTENT_ON_REMOVAL,
-            FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY or FLAG_SUPPORTS_TOUCH or FLAG_DESTROY_CONTENT_ON_REMOVAL,
-            FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY,
+            FLAG_PUBLIC or FLAG_OWN_CONTENT_ONLY or FLAG_DESTROY_CONTENT_ON_REMOVAL,
+            FLAG_OWN_CONTENT_ONLY or FLAG_DESTROY_CONTENT_ON_REMOVAL,
             FLAG_OWN_CONTENT_ONLY,
             0
         )
@@ -492,8 +507,7 @@ class ZXFloatingAppRootService : RootService() {
                 val launchIntent = pm.getLaunchIntentForPackage(pkg)?.apply {
                     addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
-                            Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            Intent.FLAG_ACTIVITY_MULTIPLE_TASK
                     )
                 }
                 var component = launchIntent?.component?.flattenToShortString()
@@ -505,48 +519,95 @@ class ZXFloatingAppRootService : RootService() {
                     }
                 }
 
-                // Lock virtual display rotation to portrait before starting the activity
+                // 1. Lock orientation to portrait and ensure display is unfrozen
                 val lockCmd = "cmd window set-ignore-orientation-request -d $displayId true; " +
                     "cmd window set-fix-to-user-rotation -d $displayId enabled; " +
-                    "cmd window user-rotation -d $displayId lock 0"
+                    "cmd window user-rotation -d $displayId lock 0; " +
+                    "cmd window set-display-windowing-mode -d $displayId 1; " +
+                    "cmd window dismiss-keyguard"
                 runCatching {
                     Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", lockCmd))
                         .waitFor(1000, TimeUnit.MILLISECONDS)
                 }
 
-                if (component != null) {
+                // 2. Check if an active task for this package already exists on display 0 and is visible
+                val stackCmd = "am stack list"
+                val stackOut = runCatching {
+                    Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", stackCmd))
+                        .inputStream.bufferedReader().readText()
+                }.getOrDefault("")
+                val display0Section = Regex("""RootTask[^\n]*displayId=0[^\n]*\n(?:\s+[^\n]*\n)*""")
+                    .findAll(stackOut)
+                    .map { it.value }
+                    .firstOrNull { it.contains("${pkg}/") && it.contains("visible=true") }
+                val taskMatch = if (display0Section != null) {
+                    Regex("""taskId=(\d+):\s*${Regex.escape(pkg)}/""").find(display0Section)
+                } else null
+                if (taskMatch != null) {
+                    val existingTaskId = taskMatch.groupValues[1]
+                    Log.i("ZXFloatRoot", "Moving active task $existingTaskId for $pkg from display 0 to display $displayId")
+                    val moveCmd = "am display move-stack $existingTaskId $displayId >/dev/null 2>&1; " +
+                        "am stack move-task $existingTaskId $existingTaskId true >/dev/null 2>&1"
+                    runCatching {
+                        Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", moveCmd))
+                            .waitFor(800, TimeUnit.MILLISECONDS)
+                    }
+                }
+
+                // 3. Launch via sysContext (holding system UID 1000 'android' authority)
+                val opts = ActivityOptions.makeBasic().apply {
+                    launchDisplayId = displayId
+                }
+                val intent = (launchIntent ?: Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                    setPackage(pkg)
+                    if (component != null) {
+                        setComponent(ComponentName.unflattenFromString(component))
+                    }
+                }).apply {
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+                    )
+                }
+                val sysLaunchSuccess = runCatching {
+                    (sysContext ?: this@ZXFloatingAppRootService).startActivity(intent, opts.toBundle())
+                    true
+                }.getOrDefault(false)
+
+                // 4. Fallback via cmd activity if sysContext was not available or threw
+                if (!sysLaunchSuccess && component != null) {
                     val startCmd = "cmd activity start-activity --user 0 --display $displayId --windowingMode 1 " +
-                        "--activity-multiple-task -a android.intent.action.MAIN -c android.intent.category.LAUNCHER " +
-                        "-f 0x18080000 -n $component"
+                        "--activity-multiple-task --activity-reorder-to-front -a android.intent.action.MAIN -c android.intent.category.LAUNCHER " +
+                        "-f 0x10000000 -n $component"
                     Log.i("ZXFloatRoot", "Executing startCmd on display $displayId: $startCmd")
                     val proc = Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", startCmd))
-                    val out = proc.inputStream.bufferedReader().readText().trim()
-                    val err = proc.errorStream.bufferedReader().readText().trim()
-                    proc.waitFor(1500, TimeUnit.MILLISECONDS)
-                    Log.i("ZXFloatRoot", "startCmd finished: exit=${proc.exitValue()} out='$out' err='$err'")
-
-                    if (proc.exitValue() != 0) {
-                        val amCmd = "am start --user 0 --display $displayId --windowingMode 1 " +
-                            "--activity-multiple-task -a android.intent.action.MAIN -c android.intent.category.LAUNCHER " +
-                            "-f 0x18080000 -n $component"
-                        Log.i("ZXFloatRoot", "Falling back to amCmd on display $displayId: $amCmd")
-                        val amProc = Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", amCmd))
-                        amProc.waitFor(1500, TimeUnit.MILLISECONDS)
-                    }
-                } else {
-                    Log.w("ZXFloatRoot", "Could not resolve component for $pkg")
+                    proc.waitFor(1200, TimeUnit.MILLISECONDS)
                 }
 
-                // Re-apply portrait lock after Activity startup in case onResume calls setRequestedOrientation
-                Thread.sleep(650L)
+                // 5. Ensure orientation stays locked and keyguard dismissed
+                Thread.sleep(400L)
                 runCatching {
                     Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", lockCmd))
-                        .waitFor(1000, TimeUnit.MILLISECONDS)
+                        .waitFor(800, TimeUnit.MILLISECONDS)
                 }
             } catch (e: Exception) {
                 Log.e("ZXFloatRoot", "Error in launchPackageOnDisplay", e)
             }
         }
+    }
+
+    private fun hasTasksOnDisplay(displayId: Int): Boolean {
+        if (displayId <= 0) return false
+        return runCatching {
+            val proc = Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", "dumpsys activity activities"))
+            val out = proc.inputStream.bufferedReader().readText()
+            proc.waitFor(800, TimeUnit.MILLISECONDS)
+            val sectionRegex = Regex("""Display #$displayId\b.*?(?=Display #|\z)""", RegexOption.DOT_MATCHES_ALL)
+            val section = sectionRegex.find(out)?.value.orEmpty()
+            if (section.isEmpty()) return false
+            section.contains("Task{") || section.contains("TaskRecord{")
+        }.getOrDefault(true)
     }
 }
 
@@ -691,6 +752,29 @@ class ZXFloatingDisplayRootClient(private val remote: IBinder) {
             remote.transact(ZXFloatingAppRootService.TRANSACTION_ENFORCE_PORTRAIT, data, reply, 0)
             reply.readException()
         } catch (_: Exception) {
+        } finally {
+            data.recycle()
+            reply.recycle()
+        }
+    }
+
+    fun hasTasksOnDisplay(displayId: Int): Boolean {
+        if (displayId <= 0) return false
+        val data = Parcel.obtain()
+        val reply = Parcel.obtain()
+        return try {
+            data.writeInterfaceToken(DESCRIPTOR)
+            data.writeInt(displayId)
+            remote.transact(
+                ZXFloatingAppRootService.TRANSACTION_HAS_TASKS,
+                data,
+                reply,
+                0
+            )
+            reply.readException()
+            reply.readInt() != 0
+        } catch (_: Exception) {
+            true
         } finally {
             data.recycle()
             reply.recycle()

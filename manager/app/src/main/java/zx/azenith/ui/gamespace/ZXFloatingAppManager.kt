@@ -82,9 +82,11 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
@@ -629,7 +631,6 @@ class ZXFloatingAppManager(
                                         action = MotionEvent.ACTION_CANCEL
                                     }
                                     super.dispatchTouchEvent(cancelEv)
-                                    cancelEv.recycle()
                                     gestureMode = GESTURE_TOPBAR_DRAG
                                     session.isDragging = true
                                     moveSessionAbsolute(
@@ -637,6 +638,8 @@ class ZXFloatingAppManager(
                                         targetX = startWinX + dx.roundToInt(),
                                         targetY = startWinY + dy.roundToInt()
                                     )
+                                } else {
+                                    super.dispatchTouchEvent(ev)
                                 }
                                 return true
                             }
@@ -863,6 +866,7 @@ class ZXFloatingAppManager(
                 if (createdDisplayId > 0) {
                     session.virtualDisplayId = createdDisplayId
                     client.launchAppOnDisplay(session.packageName, createdDisplayId)
+                    startSessionTaskMonitor(session)
                 }
             }
 
@@ -898,6 +902,7 @@ class ZXFloatingAppManager(
                                         ).exec()
                                     }
                                 }
+                                startSessionTaskMonitor(session)
                             }
                         }
                     }
@@ -926,6 +931,38 @@ class ZXFloatingAppManager(
         session.localVirtualDisplay = null
         runCatching { session.renderSurface?.release() }
         session.renderSurface = null
+    }
+
+    private fun startSessionTaskMonitor(session: ZXFloatingAppSession) {
+        scope.launch(Dispatchers.IO) {
+            delay(6000)
+            while (sessions.contains(session) && session.virtualDisplayId > 0) {
+                delay(3000)
+                if (session.sizeState == FloatingSizeState.MINIMIZED) continue
+                val displayId = session.virtualDisplayId
+                if (displayId <= 0 || !sessions.contains(session)) break
+                val client = rootClient
+                val hasTasks = if (client != null && client.isBinderAlive) {
+                    client.hasTasksOnDisplay(displayId)
+                } else {
+                    val out = runCatching {
+                        Shell.cmd("dumpsys activity activities").exec().out.joinToString("\n")
+                    }.getOrDefault("")
+                    val section = Regex("""Display #$displayId\b.*?(?=Display #|\z)""", RegexOption.DOT_MATCHES_ALL)
+                        .find(out)?.value.orEmpty()
+                    if (section.isEmpty()) false else section.contains("Task{") || section.contains("TaskRecord{")
+                }
+                if (!hasTasks) {
+                    Log.i("ZXFloatingAppManager", "No active tasks on display $displayId, auto-closing session")
+                    withContext(Dispatchers.Main) {
+                        if (sessions.contains(session) && session.sizeState != FloatingSizeState.MINIMIZED) {
+                            closeSession(session)
+                        }
+                    }
+                    break
+                }
+            }
+        }
     }
 
     fun dispatchTouchToVirtualDisplay(
@@ -1007,7 +1044,7 @@ class ZXFloatingAppManager(
                 }
             }
         } finally {
-            runCatching { mapped.recycle() }
+            // Do not invoke mapped.recycle() to prevent 'recycled twice' crash on Android 14+
         }
     }
 
@@ -1232,10 +1269,15 @@ private fun FloatingAppWindowContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .background(Color(0xFF120D0C))
+                    .background(Color(0xFF120D0C)),
+                contentAlignment = Alignment.Center
             ) {
+                var hasDrawnFrame by remember { mutableStateOf(false) }
+
                 AndroidView(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .alpha(if (hasDrawnFrame) 1f else 0f),
                     factory = { ctx ->
                         TextureView(ctx).apply {
                             isOpaque = false
@@ -1249,7 +1291,6 @@ private fun FloatingAppWindowContent(
                                         ZXFloatingAppManager.VIRTUAL_PORTRAIT_WIDTH,
                                         ZXFloatingAppManager.VIRTUAL_PORTRAIT_HEIGHT
                                     )
-                                    applyPortraitTransform(this@apply, width, height)
                                     manager.bindSessionSurface(session, surface)
                                 }
 
@@ -1262,19 +1303,18 @@ private fun FloatingAppWindowContent(
                                         ZXFloatingAppManager.VIRTUAL_PORTRAIT_WIDTH,
                                         ZXFloatingAppManager.VIRTUAL_PORTRAIT_HEIGHT
                                     )
-                                    applyPortraitTransform(this@apply, width, height)
                                 }
 
                                 override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
                                     manager.unbindSessionSurface(session)
+                                    hasDrawnFrame = false
                                     return true
                                 }
 
                                 override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
-                                    surface.setDefaultBufferSize(
-                                        ZXFloatingAppManager.VIRTUAL_PORTRAIT_WIDTH,
-                                        ZXFloatingAppManager.VIRTUAL_PORTRAIT_HEIGHT
-                                    )
+                                    if (!hasDrawnFrame) {
+                                        hasDrawnFrame = true
+                                    }
                                 }
                             }
 
@@ -1294,15 +1334,40 @@ private fun FloatingAppWindowContent(
                         }
                     },
                     update = { tv ->
-                        if (tv.width > 0 && tv.height > 0) {
-                            tv.surfaceTexture?.setDefaultBufferSize(
-                                ZXFloatingAppManager.VIRTUAL_PORTRAIT_WIDTH,
-                                ZXFloatingAppManager.VIRTUAL_PORTRAIT_HEIGHT
-                            )
-                            applyPortraitTransform(tv, tv.width, tv.height)
-                        }
+                        tv.surfaceTexture?.setDefaultBufferSize(
+                            ZXFloatingAppManager.VIRTUAL_PORTRAIT_WIDTH,
+                            ZXFloatingAppManager.VIRTUAL_PORTRAIT_HEIGHT
+                        )
                     }
                 )
+
+                // Placeholder / Loading before first frame is drawn (prevents black/blank screen or recursive mirror)
+                if (!hasDrawnFrame) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFF120D0C)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (session.iconBitmap != null) {
+                            Image(
+                                bitmap = session.iconBitmap,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(12.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Rounded.Apps,
+                                contentDescription = null,
+                                tint = scheme.primary,
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -1370,22 +1435,6 @@ private fun applyPortraitTransform(textureView: TextureView, viewW: Int, viewH: 
         ZXFloatingAppManager.VIRTUAL_PORTRAIT_WIDTH,
         ZXFloatingAppManager.VIRTUAL_PORTRAIT_HEIGHT
     )
-    val matrix = Matrix()
-    val bufferW = ZXFloatingAppManager.VIRTUAL_PORTRAIT_WIDTH.toFloat()
-    val bufferH = ZXFloatingAppManager.VIRTUAL_PORTRAIT_HEIGHT.toFloat()
-
-    val scaleX = viewW.toFloat() / bufferW
-    val scaleY = viewH.toFloat() / bufferH
-    val scale = minOf(scaleX, scaleY).coerceAtLeast(0.001f)
-
-    val contentW = bufferW * scale
-    val contentH = bufferH * scale
-
-    val sx = contentW / viewW.toFloat()
-    val sy = contentH / viewH.toFloat()
-
-    matrix.setScale(sx, sy, viewW / 2f, viewH / 2f)
-    textureView.setTransform(matrix)
 }
 
 @Composable
