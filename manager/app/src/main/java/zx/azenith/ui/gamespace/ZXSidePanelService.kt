@@ -28,7 +28,10 @@ import android.graphics.PixelFormat
 import android.os.IBinder
 import android.provider.Settings
 import android.view.Gravity
+import android.view.MotionEvent
+import android.view.View
 import android.view.WindowManager
+import android.widget.FrameLayout
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -187,7 +190,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private var windowManager: WindowManager? = null
     private var composeView: ComposeView? = null
     private var crosshairView: ComposeView? = null
-    private var hudView: ComposeView? = null
+    private var hudView: View? = null
     private var isViewAttached = false
     private var monitorJob: Job? = null
 
@@ -281,6 +284,12 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         isExpanded = isPanelExpanded,
                         onExpandRequest = { expandPanel() },
                         onCollapseRequest = { collapsePanel() },
+                        onHudVisibilityChanged = { visible ->
+                            hudView?.visibility = if (visible) View.VISIBLE else View.GONE
+                        },
+                        onCrosshairVisibilityChanged = { visible ->
+                            crosshairView?.visibility = if (visible) View.VISIBLE else View.GONE
+                        },
                         onVerticalDragDelta = { delta ->
                             val screenH = resources.displayMetrics.heightPixels
                             val newY = (currentVerticalY + delta).roundToInt().coerceIn(60, screenH - 140)
@@ -301,7 +310,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             }
         }
 
-        // Non-touchable in-game crosshair overlay window when sidepanel is collapsed
+        // Single non-touchable Crosshair overlay window (persists whether sidepanel is open or collapsed)
         val chParams = WindowManager.LayoutParams(
             (120 * resources.displayMetrics.density).roundToInt(),
             (120 * resources.displayMetrics.density).roundToInt(),
@@ -317,18 +326,17 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             setViewTreeLifecycleOwner(this@ZXSidePanelService)
             setViewTreeViewModelStoreOwner(this@ZXSidePanelService)
             setViewTreeSavedStateRegistryOwner(this@ZXSidePanelService)
+            visibility = if (panelState.crosshair.enabled) View.VISIBLE else View.GONE
             setContent {
                 AZenithTheme(darkOverride = true) {
-                    if (isHandleVisible && !isPanelExpanded && panelState.crosshair.enabled) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CrosshairReticleCanvas(crosshair = panelState.crosshair)
-                        }
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CrosshairReticleCanvas(crosshair = panelState.crosshair)
                     }
                 }
             }
         }
 
-        // Draggable Floating Monitor HUD window when sidepanel is collapsed
+        // Single draggable Floating System Monitor window (persists whether sidepanel is open or collapsed)
         val hudParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -338,39 +346,82 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            y = (16 * resources.displayMetrics.density).roundToInt()
+            x = panelState.hudOffsetX.roundToInt()
+            y = ((16 * resources.displayMetrics.density) + panelState.hudOffsetY).roundToInt()
         }
-        val hView = ComposeView(this).apply {
+        val hudComposeView = ComposeView(this).apply {
             setViewTreeLifecycleOwner(this@ZXSidePanelService)
             setViewTreeViewModelStoreOwner(this@ZXSidePanelService)
             setViewTreeSavedStateRegistryOwner(this@ZXSidePanelService)
             setContent {
                 AZenithTheme(darkOverride = true) {
-                    if (isHandleVisible && !isPanelExpanded && panelState.floatingHudVisible) {
-                        FloatingMonitorPill(
-                            fps = panelState.currentFps,
-                            cpuLoad = panelState.cpuLoad,
-                            gpuLoad = panelState.gpuLoad,
-                            onDragDelta = { dx, dy ->
-                                panelState.hudOffsetX += dx
-                                panelState.hudOffsetY += dy
-                                hudParams.x = panelState.hudOffsetX.roundToInt()
-                                hudParams.y = ((16 * resources.displayMetrics.density) + panelState.hudOffsetY).roundToInt()
-                                runCatching { wm.updateViewLayout(this@apply, hudParams) }
-                            }
-                        )
-                    }
+                    FloatingMonitorPill(
+                        fps = panelState.currentFps,
+                        cpuLoad = panelState.cpuLoad,
+                        gpuLoad = panelState.gpuLoad
+                    )
                 }
             }
         }
+        val hView = object : FrameLayout(this) {
+            private var startRawX = 0f
+            private var startRawY = 0f
+            private var origX = 0
+            private var origY = 0
+
+            override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+                when (ev.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        startRawX = ev.rawX
+                        startRawY = ev.rawY
+                        origX = hudParams.x
+                        origY = hudParams.y
+                        return true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val dm = resources.displayMetrics
+                        val halfW = ((dm.widthPixels - width).coerceAtLeast(0)) / 2
+                        val maxY = (dm.heightPixels - height - 8).coerceAtLeast(8)
+                        val newX = (origX + (ev.rawX - startRawX)).roundToInt().coerceIn(-halfW, halfW)
+                        val newY = (origY + (ev.rawY - startRawY)).roundToInt().coerceIn(8, maxY)
+                        if (newX != hudParams.x || newY != hudParams.y) {
+                            hudParams.x = newX
+                            hudParams.y = newY
+                            panelState.hudOffsetX = newX.toFloat()
+                            panelState.hudOffsetY = newY - (16 * dm.density)
+                            if (isViewAttached) {
+                                runCatching { wm.updateViewLayout(this, hudParams) }
+                            }
+                        }
+                        return true
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        return true
+                    }
+                }
+                return super.dispatchTouchEvent(ev)
+            }
+        }.apply {
+            setViewTreeLifecycleOwner(this@ZXSidePanelService)
+            setViewTreeViewModelStoreOwner(this@ZXSidePanelService)
+            setViewTreeSavedStateRegistryOwner(this@ZXSidePanelService)
+            visibility = if (panelState.floatingHudVisible) View.VISIBLE else View.GONE
+            addView(
+                hudComposeView,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+                )
+            )
+        }
 
         try {
+            wm.addView(view, handleParams)
             wm.addView(chView, chParams)
             wm.addView(hView, hudParams)
-            wm.addView(view, handleParams)
+            composeView = view
             crosshairView = chView
             hudView = hView
-            composeView = view
             isViewAttached = true
         } catch (e: Exception) {
             e.printStackTrace()
@@ -560,11 +611,22 @@ fun SidePanelRoot(
     isExpanded: Boolean,
     onExpandRequest: () -> Unit,
     onCollapseRequest: () -> Unit,
+    onHudVisibilityChanged: (Boolean) -> Unit,
+    onCrosshairVisibilityChanged: (Boolean) -> Unit,
     onVerticalDragDelta: (Float) -> Unit,
     onVerticalDragFinish: () -> Unit
 ) {
     val motion = MaterialTheme.motionScheme
     var clockTime by remember { mutableStateOf("04:05") }
+
+    // Sync single floating HUD and crosshair window visibilities regardless of sidepanel expand/collapse state
+    LaunchedEffect(isHandleVisible, state.floatingHudVisible) {
+        onHudVisibilityChanged(isHandleVisible && state.floatingHudVisible)
+    }
+
+    LaunchedEffect(isHandleVisible, state.crosshair.enabled) {
+        onCrosshairVisibilityChanged(isHandleVisible && state.crosshair.enabled)
+    }
 
     // Live telemetry simulation (1100ms interval matching gamespace_sidebar.html) + clock update
     LaunchedEffect(Unit) {
@@ -608,45 +670,7 @@ fun SidePanelRoot(
             )
         }
 
-        // 2. In-game Crosshair Overlay (#crosshairOverlay) when expanded
-        AnimatedVisibility(
-            visible = isExpanded && state.crosshair.enabled,
-            enter = fadeIn(tween(200)),
-            exit = fadeOut(tween(200)),
-            modifier = Modifier.align(Alignment.Center)
-        ) {
-            CrosshairReticleCanvas(crosshair = state.crosshair)
-        }
-
-        // 3. Floating Monitor (#floatingMonitor) when expanded
-        AnimatedVisibility(
-            visible = isExpanded && state.floatingHudVisible,
-            enter = fadeIn(tween(200)) + scaleIn(initialScale = 0.92f),
-            exit = fadeOut(tween(200)) + scaleOut(targetScale = 0.92f),
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 16.dp)
-                .offset {
-                    IntOffset(
-                        state.hudOffsetX.roundToInt(),
-                        state.hudOffsetY.roundToInt()
-                    )
-                }
-        ) {
-            FloatingMonitorPill(
-                fps = state.currentFps,
-                cpuLoad = state.cpuLoad,
-                gpuLoad = state.gpuLoad,
-                onDragDelta = { dx, dy ->
-                    val maxX = screenWidthPx * 0.45f
-                    val maxY = screenHeightPx * 0.85f
-                    state.hudOffsetX = (state.hudOffsetX + dx).coerceIn(-maxX, maxX)
-                    state.hudOffsetY = (state.hudOffsetY + dy).coerceIn(-8f, maxY)
-                }
-            )
-        }
-
-        // 4. Swipe Edge Trigger (#swipeEdgeArea) when collapsed
+        // 2. Swipe Edge Trigger (#swipeEdgeArea) when collapsed
         AnimatedVisibility(
             visible = isHandleVisible && !isExpanded,
             enter = slideInHorizontally(
@@ -672,7 +696,7 @@ fun SidePanelRoot(
             )
         }
 
-        // 5. Sidepanel Root (#sidepanelRoot: Detached Left Rail + Main Sidepanel + Right Widget Drawer)
+        // 3. Sidepanel Root (#sidepanelRoot: Detached Left Rail + Main Sidepanel + Right Widget Drawer)
         AnimatedVisibility(
             visible = isExpanded,
             enter = slideInHorizontally(
@@ -703,7 +727,7 @@ fun SidePanelRoot(
             )
         }
 
-        // 6. Floating App Window (#floatingAppWindow - Mock WhatsApp UI)
+        // 4. Floating App Window (#floatingAppWindow - Mock WhatsApp UI)
         val activeFloatingApp = remember(state.floatingAppId) {
             state.allApps.find { it.id == state.floatingAppId }
         }
@@ -738,7 +762,7 @@ fun SidePanelRoot(
             )
         }
 
-        // 7. Snackbar (#m3Toast)
+        // 5. Snackbar (#m3Toast)
         M3ToastSnackbar(
             visible = isExpanded && state.toastVisible,
             message = state.toastMessage,
@@ -999,9 +1023,9 @@ private fun DetachedLeftRail(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(vertical = 16.dp, horizontal = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Top: Section Scroll Shortcuts
             Column(
@@ -1085,96 +1109,83 @@ private fun DetachedLeftRail(
             )
 
             // Below Divider: Floating Apps List
+            Text(
+                text = "Apps",
+                style = MaterialTheme.typography.labelSmall,
+                color = scheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
             Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .fillMaxWidth()
+                    .padding(vertical = 2.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(
-                    text = "Apps",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = scheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+                state.quickApps.forEach { appId ->
+                    val app = state.allApps.find { it.id == appId } ?: return@forEach
+                    val isOpen = state.floatingAppId == app.id
+                    val btnScale by animateFloatAsState(
+                        targetValue = if (isOpen) 1.05f else 1f,
+                        animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMedium),
+                        label = "QuickAppScale"
+                    )
+                    val containerColor by animateColorAsState(
+                        targetValue = if (isOpen) scheme.primary else scheme.surfaceContainerHigh,
+                        animationSpec = tween(durationMillis = 250),
+                        label = "QuickAppContainer"
+                    )
+                    val contentColor by animateColorAsState(
+                        targetValue = if (isOpen) scheme.onPrimary else scheme.onSurface,
+                        animationSpec = tween(durationMillis = 250),
+                        label = "QuickAppContent"
+                    )
+                    val shape = RoundedCornerShape(16.dp)
 
-                LazyColumn(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding = PaddingValues(vertical = 2.dp)
-                ) {
-                    items(
-                        items = state.quickApps,
-                        key = { it }
-                    ) { appId ->
-                        val app = state.allApps.find { it.id == appId } ?: return@items
-                        val isOpen = state.floatingAppId == app.id
-                        val btnScale by animateFloatAsState(
-                            targetValue = if (isOpen) 1.05f else 1f,
-                            animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMedium),
-                            label = "QuickAppScale"
-                        )
-                        val containerColor by animateColorAsState(
-                            targetValue = if (isOpen) scheme.primary else scheme.surfaceContainerHigh,
-                            animationSpec = tween(durationMillis = 250),
-                            label = "QuickAppContainer"
-                        )
-                        val contentColor by animateColorAsState(
-                            targetValue = if (isOpen) scheme.onPrimary else scheme.onSurface,
-                            animationSpec = tween(durationMillis = 250),
-                            label = "QuickAppContent"
-                        )
-                        val shape = RoundedCornerShape(16.dp)
-
-                        Surface(
-                            shape = shape,
-                            color = containerColor,
-                            contentColor = contentColor,
-                            modifier = Modifier
-                                .size(48.dp)
-                                .graphicsLayer {
-                                    scaleX = btnScale
-                                    scaleY = btnScale
-                                }
-                                .clip(shape)
-                                .clickable { state.toggleFloatingAppWindow(app.id) }
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = ZXSidePanelIcons.get(app.icon),
-                                    contentDescription = app.name,
-                                    tint = contentColor,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                    Surface(
+                        shape = shape,
+                        color = containerColor,
+                        contentColor = contentColor,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .graphicsLayer {
+                                scaleX = btnScale
+                                scaleY = btnScale
                             }
+                            .clip(shape)
+                            .clickable { state.toggleFloatingAppWindow(app.id) }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = ZXSidePanelIcons.get(app.icon),
+                                contentDescription = app.name,
+                                tint = contentColor,
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                     }
+                }
 
-                    // Add App (+) Button
-                    item(key = "add_app_btn") {
-                        val shape = RoundedCornerShape(16.dp)
-                        Surface(
-                            shape = shape,
-                            color = scheme.surfaceContainerHigh,
-                            contentColor = scheme.onSurface,
-                            modifier = Modifier
-                                .size(48.dp)
-                                .graphicsLayer { alpha = 0.7f }
-                                .clip(shape)
-                                .clickable { state.openSubscreen("appsManager") }
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = ZXSidePanelIcons.get("add"),
-                                    contentDescription = "Manage floating apps",
-                                    tint = scheme.onSurface,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
+                // Add App (+) Button
+                val addShape = RoundedCornerShape(16.dp)
+                Surface(
+                    shape = addShape,
+                    color = scheme.surfaceContainerHigh,
+                    contentColor = scheme.onSurface,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .graphicsLayer { alpha = 0.7f }
+                        .clip(addShape)
+                        .clickable { state.openSubscreen("appsManager") }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = ZXSidePanelIcons.get("add"),
+                            contentDescription = "Manage floating apps",
+                            tint = scheme.onSurface,
+                            modifier = Modifier.size(20.dp)
+                        )
                     }
                 }
             }

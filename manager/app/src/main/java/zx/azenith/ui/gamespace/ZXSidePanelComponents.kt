@@ -716,12 +716,16 @@ fun FloatingMonitorPill(
                 Text(
                     text = "$fps",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = scheme.primary
+                    color = scheme.primary,
+                    maxLines = 1,
+                    softWrap = false
                 )
                 Text(
                     text = "FPS",
                     style = MaterialTheme.typography.labelSmall,
                     color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    softWrap = false,
                     modifier = Modifier.padding(bottom = 1.dp)
                 )
             }
@@ -734,7 +738,9 @@ fun FloatingMonitorPill(
                 Text(
                     text = "CPU",
                     style = MaterialTheme.typography.labelSmall,
-                    color = scheme.onSurfaceVariant
+                    color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    softWrap = false
                 )
                 Box(
                     modifier = Modifier
@@ -756,7 +762,9 @@ fun FloatingMonitorPill(
                     style = MaterialTheme.typography.labelMedium,
                     color = scheme.onSurface,
                     textAlign = TextAlign.End,
-                    modifier = Modifier.width(32.dp)
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier.widthIn(min = 36.dp)
                 )
             }
 
@@ -768,7 +776,9 @@ fun FloatingMonitorPill(
                 Text(
                     text = "GPU",
                     style = MaterialTheme.typography.labelSmall,
-                    color = scheme.onSurfaceVariant
+                    color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    softWrap = false
                 )
                 Box(
                     modifier = Modifier
@@ -790,7 +800,9 @@ fun FloatingMonitorPill(
                     style = MaterialTheme.typography.labelMedium,
                     color = scheme.onSurface,
                     textAlign = TextAlign.End,
-                    modifier = Modifier.width(32.dp)
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier.widthIn(min = 36.dp)
                 )
             }
         }
