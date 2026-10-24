@@ -25,19 +25,27 @@ import android.content.SharedPreferences
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.PixelFormat
-import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
 import android.view.Gravity
 import android.view.WindowManager
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -45,33 +53,36 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.RocketLaunch
-import androidx.compose.material.icons.rounded.Speed
-import androidx.compose.material.icons.rounded.SportsEsports
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -82,13 +93,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -114,13 +125,14 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.util.RootUtils
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * Overlay Service hosting the in-game AZenith Side Panel (Game Booster).
- *
- * Provides a resting floating edge handle that respects configured side and vertical
- * position, expanding into a pure Material 3 Expressive blank booster panel upon inward swipe.
+ * Overlay Service hosting the Material 3 Expressive Game Space Sidepanel, Detached Left Rail,
+ * Right Widget Drawer, Floating Monitor, Crosshair Reticle, and Floating App Window.
  */
 class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
 
@@ -174,12 +186,14 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
     private var windowManager: WindowManager? = null
     private var composeView: ComposeView? = null
+    private var crosshairView: ComposeView? = null
+    private var hudView: ComposeView? = null
     private var isViewAttached = false
     private var monitorJob: Job? = null
 
     private lateinit var prefs: SharedPreferences
 
-    // Reactive UI state
+    private val panelState = ZXSidePanelStateHolder()
     private var isPanelExpanded by mutableStateOf(false)
     private var isHandleVisible by mutableStateOf(false)
     private var sideSetting by mutableStateOf("left")
@@ -259,17 +273,17 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             setViewTreeSavedStateRegistryOwner(this@ZXSidePanelService)
 
             setContent {
-                AZenithTheme {
+                AZenithTheme(darkOverride = true) {
                     SidePanelRoot(
+                        state = panelState,
                         isLeft = sideSetting == "left",
                         isHandleVisible = isHandleVisible,
                         isExpanded = isPanelExpanded,
-                        gameLabel = activeGameLabel ?: activeGamePackage ?: "Active Game",
                         onExpandRequest = { expandPanel() },
                         onCollapseRequest = { collapsePanel() },
                         onVerticalDragDelta = { delta ->
                             val screenH = resources.displayMetrics.heightPixels
-                            val newY = (currentVerticalY + delta).roundToInt().coerceIn(60, screenH - 120)
+                            val newY = (currentVerticalY + delta).roundToInt().coerceIn(60, screenH - 140)
                             if (newY != currentVerticalY) {
                                 currentVerticalY = newY
                                 if (!isPanelExpanded && isViewAttached) {
@@ -287,8 +301,75 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             }
         }
 
+        // Non-touchable in-game crosshair overlay window when sidepanel is collapsed
+        val chParams = WindowManager.LayoutParams(
+            (120 * resources.displayMetrics.density).roundToInt(),
+            (120 * resources.displayMetrics.density).roundToInt(),
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.CENTER
+        }
+        val chView = ComposeView(this).apply {
+            setViewTreeLifecycleOwner(this@ZXSidePanelService)
+            setViewTreeViewModelStoreOwner(this@ZXSidePanelService)
+            setViewTreeSavedStateRegistryOwner(this@ZXSidePanelService)
+            setContent {
+                AZenithTheme(darkOverride = true) {
+                    if (isHandleVisible && !isPanelExpanded && panelState.crosshair.enabled) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CrosshairReticleCanvas(crosshair = panelState.crosshair)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Draggable Floating Monitor HUD window when sidepanel is collapsed
+        val hudParams = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            y = (16 * resources.displayMetrics.density).roundToInt()
+        }
+        val hView = ComposeView(this).apply {
+            setViewTreeLifecycleOwner(this@ZXSidePanelService)
+            setViewTreeViewModelStoreOwner(this@ZXSidePanelService)
+            setViewTreeSavedStateRegistryOwner(this@ZXSidePanelService)
+            setContent {
+                AZenithTheme(darkOverride = true) {
+                    if (isHandleVisible && !isPanelExpanded && panelState.floatingHudVisible) {
+                        FloatingMonitorPill(
+                            fps = panelState.currentFps,
+                            cpuLoad = panelState.cpuLoad,
+                            gpuLoad = panelState.gpuLoad,
+                            onDragDelta = { dx, dy ->
+                                panelState.hudOffsetX += dx
+                                panelState.hudOffsetY += dy
+                                hudParams.x = panelState.hudOffsetX.roundToInt()
+                                hudParams.y = ((16 * resources.displayMetrics.density) + panelState.hudOffsetY).roundToInt()
+                                runCatching { wm.updateViewLayout(this@apply, hudParams) }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
         try {
+            wm.addView(chView, chParams)
+            wm.addView(hView, hudParams)
             wm.addView(view, handleParams)
+            crosshairView = chView
+            hudView = hView
             composeView = view
             isViewAttached = true
         } catch (e: Exception) {
@@ -299,10 +380,14 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private fun detachOverlay() {
         if (!isViewAttached) return
         try {
+            crosshairView?.let { windowManager?.removeView(it) }
+            hudView?.let { windowManager?.removeView(it) }
             composeView?.let { windowManager?.removeView(it) }
         } catch (e: Exception) {
             e.printStackTrace()
         } finally {
+            crosshairView = null
+            hudView = null
             composeView = null
             isViewAttached = false
         }
@@ -324,7 +409,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         if (!isPanelExpanded) return
         isPanelExpanded = false
         serviceScope.launch {
-            delay(240)
+            delay(280)
             if (!isPanelExpanded && isViewAttached) {
                 val view = composeView ?: return@launch
                 val wm = windowManager ?: return@launch
@@ -339,8 +424,8 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
     private fun createHandleLayoutParams(isLeft: Boolean, yPx: Int): WindowManager.LayoutParams {
         val density = resources.displayMetrics.density
-        val targetWidth = (28 * density).roundToInt()
-        val targetHeight = (96 * density).roundToInt()
+        val targetWidth = (40 * density).roundToInt()
+        val targetHeight = (136 * density).roundToInt()
 
         return WindowManager.LayoutParams(
             targetWidth,
@@ -397,7 +482,6 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                                         isHandleVisible = true
                                     }
                                 } else if (pkg != packageName) {
-                                    // User switched from a game to an ordinary app
                                     if (lastKnownGamePkg.isNotEmpty() && isHandleVisible) {
                                         withContext(Dispatchers.Main) {
                                             isHandleVisible = false
@@ -406,7 +490,6 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                                     }
                                 }
                             } else {
-                                // Returned to launcher
                                 if (isHandleVisible) {
                                     withContext(Dispatchers.Main) {
                                         isHandleVisible = false
@@ -434,7 +517,6 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     }
 
     private fun isRecognizedGame(pkg: String): Boolean {
-        // 1. Check AZenith configured gamelist
         try {
             val file = SuFile(APPLIST_PATH)
             if (file.exists()) {
@@ -446,7 +528,6 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         } catch (_: Exception) {
         }
 
-        // 2. Fallback to package manager CATEGORY_GAME
         return try {
             val appInfo = packageManager.getApplicationInfo(pkg, 0)
             @Suppress("DEPRECATION")
@@ -468,27 +549,49 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 }
 
 /**
- * Root Composable orchestrating the resting floating edge handle and expanded booster sheet.
+ * Root Composable orchestrating the Material 3 Game Space Sidepanel, Detached Left Rail,
+ * Right Widget Drawer, Floating Monitor, Crosshair Overlay, Floating App Window, and Snackbar.
  */
 @Composable
-private fun SidePanelRoot(
+fun SidePanelRoot(
+    state: ZXSidePanelStateHolder,
     isLeft: Boolean,
     isHandleVisible: Boolean,
     isExpanded: Boolean,
-    gameLabel: String,
     onExpandRequest: () -> Unit,
     onCollapseRequest: () -> Unit,
     onVerticalDragDelta: (Float) -> Unit,
     onVerticalDragFinish: () -> Unit
 ) {
-    val scheme = MaterialTheme.colorScheme
     val motion = MaterialTheme.motionScheme
+    var clockTime by remember { mutableStateOf("04:05") }
 
-    Box(
+    // Live telemetry simulation (1100ms interval matching gamespace_sidebar.html) + clock update
+    LaunchedEffect(Unit) {
+        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+        while (isActive) {
+            clockTime = formatter.format(Date())
+            state.simulateLiveMetrics()
+            delay(1100L)
+        }
+    }
+
+    // Auto-hide toast after 2200ms
+    LaunchedEffect(state.toastSequence) {
+        if (state.toastVisible) {
+            delay(2200L)
+            state.toastVisible = false
+        }
+    }
+
+    BoxWithConstraints(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = if (isLeft) Alignment.CenterStart else Alignment.CenterEnd
     ) {
-        // 1. Scrim overlay for expanded booster panel
+        val screenWidthPx = constraints.maxWidth.toFloat()
+        val screenHeightPx = constraints.maxHeight.toFloat()
+
+        // 1. Outside-tap dismiss layer when expanded
         AnimatedVisibility(
             visible = isExpanded,
             enter = fadeIn(animationSpec = motion.defaultEffectsSpec()),
@@ -497,7 +600,6 @@ private fun SidePanelRoot(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(scheme.scrim.copy(alpha = 0.45f))
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -506,7 +608,45 @@ private fun SidePanelRoot(
             )
         }
 
-        // 2. Resting Floating Edge Handle (The "Bar")
+        // 2. In-game Crosshair Overlay (#crosshairOverlay) when expanded
+        AnimatedVisibility(
+            visible = isExpanded && state.crosshair.enabled,
+            enter = fadeIn(tween(200)),
+            exit = fadeOut(tween(200)),
+            modifier = Modifier.align(Alignment.Center)
+        ) {
+            CrosshairReticleCanvas(crosshair = state.crosshair)
+        }
+
+        // 3. Floating Monitor (#floatingMonitor) when expanded
+        AnimatedVisibility(
+            visible = isExpanded && state.floatingHudVisible,
+            enter = fadeIn(tween(200)) + scaleIn(initialScale = 0.92f),
+            exit = fadeOut(tween(200)) + scaleOut(targetScale = 0.92f),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 16.dp)
+                .offset {
+                    IntOffset(
+                        state.hudOffsetX.roundToInt(),
+                        state.hudOffsetY.roundToInt()
+                    )
+                }
+        ) {
+            FloatingMonitorPill(
+                fps = state.currentFps,
+                cpuLoad = state.cpuLoad,
+                gpuLoad = state.gpuLoad,
+                onDragDelta = { dx, dy ->
+                    val maxX = screenWidthPx * 0.45f
+                    val maxY = screenHeightPx * 0.85f
+                    state.hudOffsetX = (state.hudOffsetX + dx).coerceIn(-maxX, maxX)
+                    state.hudOffsetY = (state.hudOffsetY + dy).coerceIn(-8f, maxY)
+                }
+            )
+        }
+
+        // 4. Swipe Edge Trigger (#swipeEdgeArea) when collapsed
         AnimatedVisibility(
             visible = isHandleVisible && !isExpanded,
             enter = slideInHorizontally(
@@ -524,7 +664,7 @@ private fun SidePanelRoot(
                 )
             ) + fadeOut(animationSpec = motion.defaultEffectsSpec())
         ) {
-            FloatingHandle(
+            SwipeEdgeHandle(
                 isLeft = isLeft,
                 onExpand = onExpandRequest,
                 onVerticalDrag = onVerticalDragDelta,
@@ -532,13 +672,13 @@ private fun SidePanelRoot(
             )
         }
 
-        // 3. Expanded Blank Material 3 Expressive Booster Panel Sheet
+        // 5. Sidepanel Root (#sidepanelRoot: Detached Left Rail + Main Sidepanel + Right Widget Drawer)
         AnimatedVisibility(
             visible = isExpanded,
             enter = slideInHorizontally(
                 initialOffsetX = { fullWidth -> if (isLeft) -fullWidth else fullWidth },
                 animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioLowBouncy,
+                    dampingRatio = 0.72f,
                     stiffness = Spring.StiffnessMediumLow
                 )
             ) + fadeIn(animationSpec = motion.defaultEffectsSpec()),
@@ -548,22 +688,74 @@ private fun SidePanelRoot(
                     dampingRatio = Spring.DampingRatioNoBouncy,
                     stiffness = Spring.StiffnessMedium
                 )
-            ) + fadeOut(animationSpec = motion.defaultEffectsSpec())
+            ) + fadeOut(animationSpec = motion.defaultEffectsSpec()),
+            modifier = Modifier
+                .align(if (isLeft) Alignment.CenterStart else Alignment.CenterEnd)
+                .padding(
+                    start = if (isLeft) 16.dp else 0.dp,
+                    end = if (!isLeft) 16.dp else 0.dp
+                )
         ) {
-            BlankBoosterPanelSheet(
-                isLeft = isLeft,
-                gameLabel = gameLabel,
-                onClose = onCollapseRequest
+            SidepanelWorkspaceRow(
+                state = state,
+                clockTime = clockTime,
+                isLeft = isLeft
             )
         }
+
+        // 6. Floating App Window (#floatingAppWindow - Mock WhatsApp UI)
+        val activeFloatingApp = remember(state.floatingAppId) {
+            state.allApps.find { it.id == state.floatingAppId }
+        }
+        AnimatedVisibility(
+            visible = isExpanded && activeFloatingApp != null,
+            enter = scaleIn(
+                initialScale = 0.88f,
+                animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f)
+            ) + fadeIn(tween(200)),
+            exit = scaleOut(
+                targetScale = 0.88f,
+                animationSpec = tween(180)
+            ) + fadeOut(tween(180)),
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .offset {
+                    val baseX = (screenWidthPx * 0.15f).roundToInt()
+                    val baseY = (screenHeightPx * 0.20f).roundToInt()
+                    IntOffset(
+                        baseX + state.appWindowOffsetX.roundToInt(),
+                        baseY + state.appWindowOffsetY.roundToInt()
+                    )
+                }
+        ) {
+            FloatingAppWindow(
+                appName = activeFloatingApp?.name ?: "WhatsApp",
+                onClose = { state.closeFloatingAppWindow() },
+                onDragDelta = { dx, dy ->
+                    state.appWindowOffsetX += dx
+                    state.appWindowOffsetY += dy
+                }
+            )
+        }
+
+        // 7. Snackbar (#m3Toast)
+        M3ToastSnackbar(
+            visible = isExpanded && state.toastVisible,
+            message = state.toastMessage,
+            iconName = state.toastIcon,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 20.dp)
+        )
     }
 }
 
 /**
- * Material 3 Expressive Floating Edge Handle pinned to Left or Right side.
+ * Swipe Edge Trigger (#swipeEdgeArea) matching `w-1.5 h-32 rounded-r-full md-surface-high`
+ * that expands to `w-2.5` (`10.dp`) and turns `primary` (`#d0bcff`) on active touch/drag.
  */
 @Composable
-private fun FloatingHandle(
+private fun SwipeEdgeHandle(
     isLeft: Boolean,
     onExpand: () -> Unit,
     onVerticalDrag: (Float) -> Unit,
@@ -573,13 +765,18 @@ private fun FloatingHandle(
     var isPressed by remember { mutableStateOf(false) }
     var accumulatedHorizontalDrag by remember { mutableFloatStateOf(0f) }
 
-    val handleWidth by animateDpAsState(
-        targetValue = if (isPressed) 7.dp else 5.dp,
+    val barWidth by animateDpAsState(
+        targetValue = if (isPressed) 10.dp else 6.dp,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioLowBouncy,
             stiffness = Spring.StiffnessMediumLow
         ),
-        label = "HandleWidth"
+        label = "SwipeEdgeBarWidth"
+    )
+    val barColor by animateColorAsState(
+        targetValue = if (isPressed) scheme.primary else scheme.surfaceContainerHigh.copy(alpha = 0.6f),
+        animationSpec = tween(durationMillis = 200),
+        label = "SwipeEdgeBarColor"
     )
 
     Box(
@@ -619,8 +816,7 @@ private fun FloatingHandle(
                     onHorizontalDrag = { change, dragAmount ->
                         change.consume()
                         accumulatedHorizontalDrag += dragAmount
-                        // Inward swipe detection
-                        val thresholdPx = 28 * density
+                        val thresholdPx = 24 * density
                         val inward = if (isLeft) {
                             accumulatedHorizontalDrag > thresholdPx
                         } else {
@@ -639,200 +835,912 @@ private fun FloatingHandle(
             ),
         contentAlignment = if (isLeft) Alignment.CenterStart else Alignment.CenterEnd
     ) {
-        // Aesthetic tactile pill resting exactly on the edge
-        Surface(
-            shape = if (isLeft) {
-                RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
-            } else {
-                RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)
-            },
-            color = scheme.primary,
+        val pillShape = if (isLeft) {
+            RoundedCornerShape(topEnd = 999.dp, bottomEnd = 999.dp)
+        } else {
+            RoundedCornerShape(topStart = 999.dp, bottomStart = 999.dp)
+        }
+        Box(
             modifier = Modifier
-                .width(handleWidth)
-                .height(48.dp)
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+                .width(barWidth)
+                .height(128.dp)
+                .clip(pillShape)
+                .background(barColor)
+        )
+    }
+}
+
+@Composable
+private fun SidepanelWorkspaceRow(
+    state: ZXSidePanelStateHolder,
+    clockTime: String,
+    isLeft: Boolean
+) {
+    val feedListState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    val feedBlocks by remember {
+        derivedStateOf { state.buildFeedBlocks() }
+    }
+
+    // Automatically sync active category in Left Rail when scrolling main feed
+    val firstVisibleIndex by remember {
+        derivedStateOf { feedListState.firstVisibleItemIndex }
+    }
+    LaunchedEffect(firstVisibleIndex, state.editMode, state.activeSubscreen) {
+        if (!state.editMode && state.activeSubscreen == null) {
+            val block = feedBlocks.getOrNull(firstVisibleIndex)
+            if (block != null && block.category != state.activeScrollCategory) {
+                state.activeScrollCategory = block.category
+            }
+        }
+    }
+
+    val onScrollToSection: (String) -> Unit = { categoryName ->
+        if (state.activeSubscreen != null) {
+            state.closeSubscreen()
+        }
+        state.activeScrollCategory = categoryName
+        coroutineScope.launch {
+            if (state.editMode) {
+                val idx = state.activeWidgets.indexOfFirst { wId ->
+                    state.widgetCatalog[wId]?.category == categoryName
+                }
+                if (idx >= 0) {
+                    feedListState.animateScrollToItem(idx)
+                }
+            } else {
+                val idx = feedBlocks.indexOfFirst { it.category == categoryName }
+                if (idx >= 0) {
+                    feedListState.animateScrollToItem(idx)
+                }
+            }
+        }
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxHeight(0.86f)
+            .heightIn(max = 740.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {}
+            ),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (isLeft) {
+            DetachedLeftRail(
+                state = state,
+                onScrollToSection = onScrollToSection
+            )
+
+            MainSidepanelContent(
+                state = state,
+                clockTime = clockTime,
+                feedBlocks = feedBlocks,
+                feedListState = feedListState
+            )
+
+            AnimatedVisibility(
+                visible = state.editMode,
+                enter = slideInHorizontally(
+                    initialOffsetX = { it / 2 },
+                    animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
+                ) + expandHorizontally(
+                    animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)
+                ) + fadeIn(tween(200)),
+                exit = slideOutHorizontally(
+                    targetOffsetX = { it / 2 },
+                    animationSpec = tween(200)
+                ) + shrinkHorizontally(
+                    animationSpec = tween(200)
+                ) + fadeOut(tween(150))
             ) {
-                Box(
-                    modifier = Modifier
-                        .width(2.dp)
-                        .height(18.dp)
-                        .clip(CircleShape)
-                        .background(scheme.onPrimary.copy(alpha = 0.85f))
+                RightWidgetDrawer(state = state)
+            }
+        } else {
+            AnimatedVisibility(
+                visible = state.editMode,
+                enter = slideInHorizontally(
+                    initialOffsetX = { -it / 2 },
+                    animationSpec = spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessMediumLow)
+                ) + expandHorizontally(
+                    animationSpec = spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMediumLow)
+                ) + fadeIn(tween(200)),
+                exit = slideOutHorizontally(
+                    targetOffsetX = { -it / 2 },
+                    animationSpec = tween(200)
+                ) + shrinkHorizontally(
+                    animationSpec = tween(200)
+                ) + fadeOut(tween(150))
+            ) {
+                RightWidgetDrawer(state = state)
+            }
+
+            MainSidepanelContent(
+                state = state,
+                clockTime = clockTime,
+                feedBlocks = feedBlocks,
+                feedListState = feedListState
+            )
+
+            DetachedLeftRail(
+                state = state,
+                onScrollToSection = onScrollToSection
+            )
+        }
+    }
+}
+
+@Composable
+private fun DetachedLeftRail(
+    state: ZXSidePanelStateHolder,
+    onScrollToSection: (String) -> Unit
+) {
+    val scheme = MaterialTheme.colorScheme
+    val navItems = remember {
+        listOf(
+            Triple("overview", "Basic", "speed"),
+            Triple("quickTools", "Tools", "grid_view"),
+            Triple("antiInterference", "DND", "do_not_disturb_on"),
+            Triple("addons", "Add-ons", "auto_fix_high")
+        )
+    }
+
+    Surface(
+        shape = RoundedCornerShape(32.dp),
+        color = scheme.surfaceContainerLow,
+        shadowElevation = 24.dp,
+        modifier = Modifier
+            .width(84.dp)
+            .fillMaxHeight()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(vertical = 16.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Top: Section Scroll Shortcuts
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                navItems.forEach { (catId, label, iconName) ->
+                    val isActive = state.activeScrollCategory == catId
+                    val pillScale by animateFloatAsState(
+                        targetValue = if (isActive) 1.1f else 1f,
+                        animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMedium),
+                        label = "NavRailPillScale"
+                    )
+                    val pillColor by animateColorAsState(
+                        targetValue = if (isActive) scheme.secondaryContainer else scheme.surfaceContainerLow.copy(alpha = 0f),
+                        animationSpec = tween(durationMillis = 250),
+                        label = "NavRailPillColor"
+                    )
+                    val iconColor by animateColorAsState(
+                        targetValue = if (isActive) scheme.onSecondaryContainer else scheme.onSurfaceVariant,
+                        animationSpec = tween(durationMillis = 250),
+                        label = "NavRailIconColor"
+                    )
+                    val labelColor by animateColorAsState(
+                        targetValue = if (isActive) scheme.onSurface else scheme.onSurfaceVariant,
+                        animationSpec = tween(durationMillis = 250),
+                        label = "NavRailLabelColor"
+                    )
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = { onScrollToSection(catId) }
+                            )
+                            .padding(vertical = 4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(52.dp)
+                                .height(30.dp)
+                                .graphicsLayer {
+                                    scaleX = pillScale
+                                    scaleY = pillScale
+                                }
+                                .clip(CircleShape)
+                                .background(pillColor),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = ZXSidePanelIcons.get(iconName),
+                                contentDescription = label,
+                                tint = iconColor,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = labelColor,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+
+            // Tonal Divider (w-10 h-0.5 rounded-full md-surface-highest my-3)
+            Box(
+                modifier = Modifier
+                    .padding(vertical = 12.dp)
+                    .width(40.dp)
+                    .height(2.dp)
+                    .clip(CircleShape)
+                    .background(scheme.surfaceContainerHighest)
+            )
+
+            // Below Divider: Floating Apps List
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Apps",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
+
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(vertical = 2.dp)
+                ) {
+                    items(
+                        items = state.quickApps,
+                        key = { it }
+                    ) { appId ->
+                        val app = state.allApps.find { it.id == appId } ?: return@items
+                        val isOpen = state.floatingAppId == app.id
+                        val btnScale by animateFloatAsState(
+                            targetValue = if (isOpen) 1.05f else 1f,
+                            animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMedium),
+                            label = "QuickAppScale"
+                        )
+                        val containerColor by animateColorAsState(
+                            targetValue = if (isOpen) scheme.primary else scheme.surfaceContainerHigh,
+                            animationSpec = tween(durationMillis = 250),
+                            label = "QuickAppContainer"
+                        )
+                        val contentColor by animateColorAsState(
+                            targetValue = if (isOpen) scheme.onPrimary else scheme.onSurface,
+                            animationSpec = tween(durationMillis = 250),
+                            label = "QuickAppContent"
+                        )
+                        val shape = RoundedCornerShape(16.dp)
+
+                        Surface(
+                            shape = shape,
+                            color = containerColor,
+                            contentColor = contentColor,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .graphicsLayer {
+                                    scaleX = btnScale
+                                    scaleY = btnScale
+                                }
+                                .clip(shape)
+                                .clickable { state.toggleFloatingAppWindow(app.id) }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get(app.icon),
+                                    contentDescription = app.name,
+                                    tint = contentColor,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // Add App (+) Button
+                    item(key = "add_app_btn") {
+                        val shape = RoundedCornerShape(16.dp)
+                        Surface(
+                            shape = shape,
+                            color = scheme.surfaceContainerHigh,
+                            contentColor = scheme.onSurface,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .graphicsLayer { alpha = 0.7f }
+                                .clip(shape)
+                                .clickable { state.openSubscreen("appsManager") }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get("add"),
+                                    contentDescription = "Manage floating apps",
+                                    tint = scheme.onSurface,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-/**
- * Pure Material 3 Expressive Blank Booster Panel Sheet.
- * Displays a clean booster header and placeholder surface, with strictly NO glassmorphism and NO widget outlines.
- */
 @Composable
-private fun BlankBoosterPanelSheet(
-    isLeft: Boolean,
-    gameLabel: String,
-    onClose: () -> Unit
+private fun MainSidepanelContent(
+    state: ZXSidePanelStateHolder,
+    clockTime: String,
+    feedBlocks: List<SidePanelFeedBlock>,
+    feedListState: androidx.compose.foundation.lazy.LazyListState
 ) {
     val scheme = MaterialTheme.colorScheme
-    val sheetShape = if (isLeft) {
-        RoundedCornerShape(topEnd = 28.dp, bottomEnd = 28.dp)
-    } else {
-        RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp)
-    }
 
     Surface(
-        shape = sheetShape,
+        shape = RoundedCornerShape(32.dp),
         color = scheme.surfaceContainerLow,
+        shadowElevation = 24.dp,
         modifier = Modifier
-            .width(340.dp)
+            .width(360.dp)
             .fillMaxHeight()
-            .padding(vertical = 16.dp)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = {}
-            )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(12.dp)
         ) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
+            // Header vs Sub-Screen Header
+            if (state.activeSubscreen == null) {
                 Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = scheme.primaryContainer,
-                        modifier = Modifier.size(42.dp)
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Rounded.RocketLaunch,
-                                contentDescription = null,
-                                tint = scheme.onPrimaryContainer,
-                                modifier = Modifier.size(22.dp)
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = scheme.primaryContainer,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get("sports_esports"),
+                                    contentDescription = null,
+                                    tint = scheme.onPrimaryContainer,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Game Space",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = scheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get("wifi"),
+                                    contentDescription = null,
+                                    tint = scheme.onSurfaceVariant,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = "82%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = scheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "•",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = scheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = clockTime,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = scheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
 
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "AZenith Booster",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                            color = scheme.onSurface
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        // Toggle Floating Monitor Button
+                        val hudBtnContainer by animateColorAsState(
+                            targetValue = if (state.floatingHudVisible) scheme.secondaryContainer else scheme.surfaceContainerHigh,
+                            animationSpec = tween(250),
+                            label = "HudBtnContainer"
                         )
+                        val hudBtnContent by animateColorAsState(
+                            targetValue = if (state.floatingHudVisible) scheme.onSecondaryContainer else scheme.onSurface,
+                            animationSpec = tween(250),
+                            label = "HudBtnContent"
+                        )
+                        Surface(
+                            shape = CircleShape,
+                            color = hudBtnContainer,
+                            contentColor = hudBtnContent,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .clickable { state.toggleFloatingHud() }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get("monitoring"),
+                                    contentDescription = "Toggle floating monitor",
+                                    tint = hudBtnContent,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        // Toggle Edit Mode Button
+                        val editBtnContainer by animateColorAsState(
+                            targetValue = if (state.editMode) scheme.primary else scheme.surfaceContainerHigh,
+                            animationSpec = tween(250),
+                            label = "EditBtnContainer"
+                        )
+                        val editBtnContent by animateColorAsState(
+                            targetValue = if (state.editMode) scheme.onPrimary else scheme.onSurface,
+                            animationSpec = tween(250),
+                            label = "EditBtnContent"
+                        )
+                        Surface(
+                            shape = CircleShape,
+                            color = editBtnContainer,
+                            contentColor = editBtnContent,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .clickable { state.toggleEditMode() }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get(if (state.editMode) "check" else "edit"),
+                                    contentDescription = "Customize and reorder widgets",
+                                    tint = editBtnContent,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Subscreen Header
+                val subscreenTitle = when (state.activeSubscreen) {
+                    "crosshair" -> "Crosshair settings"
+                    "display" -> "Color Scheme"
+                    "appsManager" -> "Manage Apps"
+                    else -> "Settings"
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 4.dp, end = 4.dp, top = 4.dp, bottom = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = scheme.surfaceContainerHigh,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .clickable { state.closeSubscreen() }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get("arrow_back"),
+                                    contentDescription = "Back to Game Space",
+                                    tint = scheme.onSurface,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
                         Text(
-                            text = "Running: $gameLabel",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = scheme.onSurfaceVariant,
+                            text = subscreenTitle,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = scheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                }
 
-                IconButton(
-                    onClick = onClose,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Close,
-                        contentDescription = "Close",
-                        tint = scheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            // Material 3 Expressive Blank Booster Workspace Card
-            Surface(
-                shape = RoundedCornerShape(22.dp),
-                color = scheme.surfaceContainerHighest,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
                     Surface(
                         shape = CircleShape,
                         color = scheme.surfaceContainerHigh,
-                        modifier = Modifier.size(64.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Rounded.SportsEsports,
-                                contentDescription = null,
-                                tint = scheme.primary,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.height(14.dp))
-
-                    Text(
-                        text = "Game Booster Active",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = scheme.onSurface
-                    )
-
-                    Spacer(Modifier.height(6.dp))
-
-                    Text(
-                        text = "Real-time FPS overlay, performance tuning, and game tools will appear in this workspace.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = scheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 12.dp)
-                    )
-
-                    Spacer(Modifier.height(18.dp))
-
-                    // Performance Status Pill
-                    Surface(
-                        shape = CircleShape,
-                        color = scheme.primaryContainer
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .clickable { state.resetCurrentSubscreen() }
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Rounded.Speed,
-                                contentDescription = null,
-                                tint = scheme.onPrimaryContainer,
-                                modifier = Modifier.size(16.dp)
+                                imageVector = ZXSidePanelIcons.get("restart_alt"),
+                                contentDescription = "Reset to default",
+                                tint = scheme.onSurface,
+                                modifier = Modifier.size(14.dp)
                             )
                             Text(
-                                text = "PERFORMANCE ENGINE ACTIVE",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 10.sp,
-                                    letterSpacing = 0.6.sp
-                                ),
-                                color = scheme.onPrimaryContainer
+                                text = "Reset",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = scheme.onSurface
                             )
+                        }
+                    }
+                }
+            }
+
+            // Scrollable Widgets Feed / Subscreens
+            AnimatedContent(
+                targetState = state.activeSubscreen,
+                transitionSpec = {
+                    if (targetState != null) {
+                        (slideInHorizontally(
+                            initialOffsetX = { 48 },
+                            animationSpec = spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMediumLow)
+                        ) + fadeIn(tween(200))) togetherWith fadeOut(tween(150))
+                    } else {
+                        fadeIn(tween(200)) togetherWith fadeOut(tween(150))
+                    }
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                label = "MainFeedSubscreenTransition"
+            ) { currentSubscreen ->
+                when (currentSubscreen) {
+                    "crosshair" -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 4.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            CrosshairSubscreen(state = state)
+                        }
+                    }
+                    "display" -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 4.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            DisplaySubscreen(state = state)
+                        }
+                    }
+                    "appsManager" -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 4.dp)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+                            AppsManagerSubscreen(state = state)
+                        }
+                    }
+                    else -> {
+                        if (state.activeWidgets.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 4.dp),
+                                contentAlignment = Alignment.TopCenter
+                            ) {
+                                M3WidgetCard(
+                                    contentPadding = PaddingValues(32.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = ZXSidePanelIcons.get("widgets"),
+                                            contentDescription = null,
+                                            tint = scheme.primary,
+                                            modifier = Modifier.size(30.dp)
+                                        )
+                                        Text(
+                                            text = "No widgets on home screen",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = scheme.onSurface,
+                                            textAlign = TextAlign.Center
+                                        )
+                                        Text(
+                                            text = "Add widgets from the right panel",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = scheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    }
+                                }
+                            }
+                        } else if (state.editMode) {
+                            LazyColumn(
+                                state = feedListState,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 4.dp),
+                                contentPadding = PaddingValues(bottom = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                itemsIndexed(
+                                    items = state.activeWidgets,
+                                    key = { _, wId -> "edit_$wId" }
+                                ) { index, widgetId ->
+                                    EditModeWidgetCard(
+                                        widgetId = widgetId,
+                                        index = index,
+                                        totalCount = state.activeWidgets.size,
+                                        state = state
+                                    )
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                state = feedListState,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 4.dp),
+                                contentPadding = PaddingValues(bottom = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(
+                                    items = feedBlocks,
+                                    key = { block ->
+                                        when (block) {
+                                            is SidePanelFeedBlock.Single -> block.widgetId
+                                            is SidePanelFeedBlock.Merged -> block.groupIds.joinToString(",")
+                                        }
+                                    }
+                                ) { block ->
+                                    when (block) {
+                                        is SidePanelFeedBlock.Single -> {
+                                            SidePanelWidgetContent(
+                                                widgetId = block.widgetId,
+                                                state = state,
+                                                isMerged = false
+                                            )
+                                        }
+                                        is SidePanelFeedBlock.Merged -> {
+                                            val isSliders = block.mergeGroup == "sliders"
+                                            M3WidgetCard(
+                                                contentPadding = if (isSliders) PaddingValues(16.dp) else PaddingValues(14.dp),
+                                                verticalArrangement = Arrangement.spacedBy(if (isSliders) 14.dp else 12.dp)
+                                            ) {
+                                                block.groupIds.forEach { wId ->
+                                                    SidePanelWidgetContent(
+                                                        widgetId = wId,
+                                                        state = state,
+                                                        isMerged = true
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RightWidgetDrawer(
+    state: ZXSidePanelStateHolder
+) {
+    val scheme = MaterialTheme.colorScheme
+
+    Surface(
+        shape = RoundedCornerShape(32.dp),
+        color = scheme.surfaceContainerLow,
+        shadowElevation = 24.dp,
+        modifier = Modifier
+            .width(290.dp)
+            .fillMaxHeight()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            // Drawer Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Widget library",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = scheme.onSurface
+                    )
+                    Text(
+                        text = "Drag to main panel or tap + to add",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant
+                    )
+                }
+
+                Surface(
+                    shape = CircleShape,
+                    color = scheme.surfaceContainerHigh,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .clickable { state.resetDefaultWidgets() }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = ZXSidePanelIcons.get("restart_alt"),
+                            contentDescription = "Reset default layout",
+                            tint = scheme.onSurface,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+
+            // Library Widgets Container
+            if (state.libraryWidgets.isEmpty()) {
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = scheme.surfaceContainer,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = ZXSidePanelIcons.get("check_circle"),
+                            contentDescription = null,
+                            tint = scheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Text(
+                            text = "All widgets active",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = scheme.onSurface,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = "Drag any widget here to store it.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = scheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(
+                        items = state.libraryWidgets,
+                        key = { it }
+                    ) { widgetId ->
+                        val meta = state.widgetCatalog[widgetId] ?: return@items
+                        val cardShape = RoundedCornerShape(24.dp)
+
+                        Surface(
+                            shape = cardShape,
+                            color = scheme.surfaceContainerHigh,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(cardShape)
+                                .clickable { state.addWidgetFromLibrary(widgetId) }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = scheme.primaryContainer,
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = ZXSidePanelIcons.get(meta.icon),
+                                                contentDescription = null,
+                                                tint = scheme.onPrimaryContainer,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Text(
+                                        text = meta.title,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        color = scheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+
+                                Surface(
+                                    shape = CircleShape,
+                                    color = scheme.primary,
+                                    contentColor = scheme.onPrimary,
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .clickable { state.addWidgetFromLibrary(widgetId) }
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = ZXSidePanelIcons.get("add"),
+                                            contentDescription = "Add to Game Space",
+                                            tint = scheme.onPrimary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
