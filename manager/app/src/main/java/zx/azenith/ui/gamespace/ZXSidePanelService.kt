@@ -598,7 +598,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             setViewTreeSavedStateRegistryOwner(this@ZXSidePanelService)
 
             setContent {
-                AZenithTheme(darkOverride = true) {
+                AZenithTheme {
                     val barHeightDp = computeHandleBarHeightDp()
                     SidePanelRoot(
                         state = panelState,
@@ -765,7 +765,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             setViewTreeSavedStateRegistryOwner(this@ZXSidePanelService)
             visibility = if (panelState.crosshair.enabled) View.VISIBLE else View.GONE
             setContent {
-                AZenithTheme(darkOverride = true) {
+                AZenithTheme {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CrosshairReticleCanvas(crosshair = panelState.crosshair)
                     }
@@ -792,7 +792,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             setViewTreeViewModelStoreOwner(this@ZXSidePanelService)
             setViewTreeSavedStateRegistryOwner(this@ZXSidePanelService)
             setContent {
-                AZenithTheme(darkOverride = true) {
+                AZenithTheme {
                     FloatingMonitorPill(state = panelState)
                 }
             }

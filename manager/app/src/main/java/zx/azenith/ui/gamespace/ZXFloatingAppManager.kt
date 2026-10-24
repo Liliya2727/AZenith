@@ -509,7 +509,7 @@ class ZXFloatingAppManager(
             setViewTreeViewModelStoreOwner(viewModelStoreOwner)
             setViewTreeSavedStateRegistryOwner(savedStateRegistryOwner)
             setContent {
-                AZenithTheme(darkOverride = true) {
+                AZenithTheme {
                     FloatingAppWindowContent(
                         session = session,
                         manager = this@ZXFloatingAppManager
@@ -1045,7 +1045,7 @@ class ZXFloatingAppManager(
                 setViewTreeViewModelStoreOwner(viewModelStoreOwner)
                 setViewTreeSavedStateRegistryOwner(savedStateRegistryOwner)
                 setContent {
-                    AZenithTheme(darkOverride = true) {
+                    AZenithTheme {
                         MinimizedIconStackOverlay(manager = this@ZXFloatingAppManager)
                     }
                 }
