@@ -21,18 +21,23 @@ package zx.azenith.ui.gamespace
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.PixelFormat
 import android.graphics.drawable.Drawable
+import android.media.AudioManager
+import android.os.BatteryManager
 import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
+import android.view.Choreographer
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.compose.animation.AnimatedContent
@@ -125,6 +130,7 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.io.SuFile
 import com.topjohnwu.superuser.io.SuFileInputStream
 import kotlinx.coroutines.CoroutineScope
@@ -138,8 +144,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import zx.azenith.ui.theme.AZenithTheme
+import zx.azenith.ui.util.PropertyUtils
 import zx.azenith.ui.util.RootUtils
+import zx.azenith.ui.viewmodel.AutoModeBus
+import java.io.File
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
@@ -160,6 +172,15 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
         private const val APPLIST_PATH = "/data/adb/.config/AZenith/gamelist/azenithApplist.json"
         private const val APP_STATUS_PATH = "/data/adb/.config/AZenith/app_status"
+        private const val DAEMON_BIN = "/data/adb/modules/AZenith/system/bin/sys.azenith-service"
+        private const val DAEMON_PROFILE_PATH = "/data/adb/.config/AZenith/API/current_profile"
+        private const val APP_PROFILE_PATH = "/data/data/zx.azenith/API/current_profile"
+        private const val DAEMON_GAMEINFO_PATH = "/data/adb/.config/AZenith/API/gameinfo"
+        private const val APP_GAMEINFO_PATH = "/data/data/zx.azenith/API/gameinfo"
+        private const val DAEMON_MODES_PATH = "/data/adb/.config/AZenith/API/current_modes"
+        private const val AI_PROP = "persist.sys.azenithconf.AIenabled"
+        private const val LITE_PROP = "persist.sys.azenithconf.litemode"
+        private const val BYPASS_PROP = "persist.sys.azenithconf.bypasschg"
         private const val PREF_QUICK_APPS = "gamespace_sidepanel_quick_apps"
 
         @Volatile
@@ -202,12 +223,40 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
 
     private var windowManager: WindowManager? = null
+    private var audioManager: AudioManager? = null
     private var rootOverlayView: View? = null
     private var crosshairView: ComposeView? = null
     private var hudView: View? = null
     private var isViewAttached = false
     private var monitorJob: Job? = null
+    private var telemetryJob: Job? = null
     private var windowTransitionJob: Job? = null
+    private var fpsTrackingActive = false
+    private var fpsWindowStartNs = 0L
+    private var fpsFrameCount = 0
+
+    private val telemetryCollector by lazy { ZXRealTelemetryCollector() }
+
+    private val frameCallback = object : Choreographer.FrameCallback {
+        override fun doFrame(frameTimeNanos: Long) {
+            if (!fpsTrackingActive) return
+            if (fpsWindowStartNs == 0L) {
+                fpsWindowStartNs = frameTimeNanos
+                fpsFrameCount = 0
+            } else {
+                fpsFrameCount++
+                val elapsedNs = frameTimeNanos - fpsWindowStartNs
+                if (elapsedNs >= 500_000_000L) {
+                    val measured = ((fpsFrameCount * 1_000_000_000.0) / elapsedNs).roundToInt()
+                    val cap = panelState.fpsCap.coerceAtLeast(60)
+                    panelState.currentFps = measured.coerceIn(1, cap)
+                    fpsWindowStartNs = frameTimeNanos
+                    fpsFrameCount = 0
+                }
+            }
+            Choreographer.getInstance().postFrameCallback(this)
+        }
+    }
 
     private lateinit var prefs: SharedPreferences
 
@@ -256,6 +305,16 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         prefs.registerOnSharedPreferenceChangeListener(prefListener)
 
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+        audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+
+        // Ensure app-local API mirror directory exists and is world-accessible for the daemon
+        runCatching {
+            val apiDir = File(applicationInfo.dataDir, "API")
+            if (!apiDir.exists()) apiDir.mkdirs()
+            apiDir.setReadable(true, false)
+            apiDir.setWritable(true, false)
+            apiDir.setExecutable(true, false)
+        }
 
         val displayMetrics = resources.displayMetrics
         val posPct = prefs.getInt("gamespace_sidepanel_pos", 50).coerceIn(10, 90)
@@ -267,9 +326,23 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         panelState.onLaunchAppRequest = { pkg ->
             launchExternalApp(pkg)
         }
+        panelState.onBrightnessChangedRequest = { pct ->
+            applySystemBrightness(pct)
+        }
+        panelState.onVolumeChangedRequest = { pct, isMuted ->
+            applySystemVolume(pct, isMuted)
+        }
+        panelState.onToggleAutoModeRequest = { enableAuto ->
+            applyAutoModeToggle(enableAuto)
+        }
+        panelState.onSelectProfileRequest = { profileCode ->
+            applyDaemonProfile(profileCode)
+        }
 
+        syncInitialAudioAndBrightness()
         loadInstalledLauncherApps()
         startAppMonitorWatcher()
+        startRealTelemetryMonitor()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -289,8 +362,10 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 barLengthPref = prefs.getInt("gamespace_sidepanel_length", 50).coerceIn(20, 100)
                 attachOverlayIfNeeded()
                 isHandleVisible = true
+                startFpsChoreographer()
             }
             ACTION_HIDE -> {
+                stopFpsChoreographer()
                 isHandleVisible = false
                 isPanelExpanded = false
                 isWindowFullScreen = false
@@ -302,8 +377,10 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
     override fun onDestroy() {
         isServiceActive = false
+        stopFpsChoreographer()
         runCatching { prefs.unregisterOnSharedPreferenceChangeListener(prefListener) }
         monitorJob?.cancel()
+        telemetryJob?.cancel()
         windowTransitionJob?.cancel()
         detachOverlay()
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
@@ -472,6 +549,16 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             private var startVertY = 0
             private var gestureMode = 0 // 0 = undecided, 1 = triggered expand, 2 = vertical drag
 
+            override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
+                // Consume system cutout/bar insets so WindowManager does not create a safe-area gap on the left/right edge
+                return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    WindowInsets.CONSUMED
+                } else {
+                    @Suppress("DEPRECATION")
+                    insets.consumeSystemWindowInsets()
+                }
+            }
+
             override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
                 super.onLayout(changed, left, top, right, bottom)
                 updateGestureExclusion()
@@ -566,6 +653,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 return super.dispatchTouchEvent(ev)
             }
         }.apply {
+            fitsSystemWindows = false
             setViewTreeLifecycleOwner(this@ZXSidePanelService)
             setViewTreeViewModelStoreOwner(this@ZXSidePanelService)
             setViewTreeSavedStateRegistryOwner(this@ZXSidePanelService)
@@ -589,6 +677,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.CENTER
+            applyFullCutoutMode()
         }
         val chView = ComposeView(this).apply {
             setViewTreeLifecycleOwner(this@ZXSidePanelService)
@@ -616,6 +705,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
             x = panelState.hudOffsetX.roundToInt()
             y = ((16 * resources.displayMetrics.density) + panelState.hudOffsetY).roundToInt()
+            applyFullCutoutMode()
         }
         val hudComposeView = ComposeView(this).apply {
             setViewTreeLifecycleOwner(this@ZXSidePanelService)
@@ -734,6 +824,9 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private fun collapsePanel() {
         if (!isPanelExpanded && !isWindowFullScreen) return
         panelState.cancelWidgetDrag()
+        if (panelState.editMode) {
+            panelState.editMode = false
+        }
         isPanelExpanded = false
         windowTransitionJob?.cancel()
         windowTransitionJob = serviceScope.launch {
@@ -755,6 +848,14 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
     }
 
+    private fun WindowManager.LayoutParams.applyFullCutoutMode() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        }
+    }
+
     private fun createHandleLayoutParams(isLeft: Boolean, yPx: Int): WindowManager.LayoutParams {
         val density = resources.displayMetrics.density
         val barHeightDp = computeHandleBarHeightDp()
@@ -773,6 +874,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             gravity = Gravity.TOP or (if (isLeft) Gravity.START else Gravity.END)
             y = yPx
             x = 0
+            applyFullCutoutMode()
         }
     }
 
@@ -782,10 +884,12 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_INSET_DECOR,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.FILL
+            applyFullCutoutMode()
         }
     }
 
@@ -814,10 +918,12 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                                         activeGameLabel = label
                                         attachOverlayIfNeeded()
                                         isHandleVisible = true
+                                        startFpsChoreographer()
                                     }
                                 } else if (pkg != packageName) {
                                     if (lastKnownGamePkg.isNotEmpty() && isHandleVisible) {
                                         withContext(Dispatchers.Main) {
+                                            stopFpsChoreographer()
                                             isHandleVisible = false
                                             collapsePanel()
                                         }
@@ -826,6 +932,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                             } else {
                                 if (isHandleVisible) {
                                     withContext(Dispatchers.Main) {
+                                        stopFpsChoreographer()
                                         isHandleVisible = false
                                         collapsePanel()
                                     }
@@ -880,6 +987,506 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             pkg
         }
     }
+
+    private fun startFpsChoreographer() {
+        if (fpsTrackingActive) return
+        fpsTrackingActive = true
+        fpsWindowStartNs = 0L
+        fpsFrameCount = 0
+        updateDisplayRefreshRateCap()
+        Choreographer.getInstance().postFrameCallback(frameCallback)
+    }
+
+    private fun stopFpsChoreographer() {
+        if (!fpsTrackingActive) return
+        fpsTrackingActive = false
+        runCatching { Choreographer.getInstance().removeFrameCallback(frameCallback) }
+    }
+
+    private fun updateDisplayRefreshRateCap() {
+        runCatching {
+            @Suppress("DEPRECATION")
+            val display = windowManager?.defaultDisplay ?: return
+            val currentRate = display.refreshRate.roundToInt().coerceAtLeast(60)
+            val maxRate = display.supportedModes.maxOfOrNull { it.refreshRate.roundToInt() } ?: currentRate
+            panelState.fpsCap = maxRate.coerceAtLeast(currentRate)
+            if (panelState.currentFps <= 0 || panelState.currentFps > panelState.fpsCap) {
+                panelState.currentFps = currentRate
+            }
+        }
+    }
+
+    private fun syncInitialAudioAndBrightness() {
+        runCatching {
+            val rawBrightness = Settings.System.getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, 200)
+            panelState.brightness = ((rawBrightness * 100f) / 255f).roundToInt().coerceIn(10, 100)
+        }
+        runCatching {
+            val am = audioManager ?: return@runCatching
+            val maxVol = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+            val curVol = am.getStreamVolume(AudioManager.STREAM_MUSIC)
+            panelState.volume = ((curVol * 100f) / maxVol).roundToInt().coerceIn(0, 100)
+            panelState.muted = curVol == 0
+        }
+    }
+
+    private fun applySystemBrightness(pct: Int) {
+        serviceScope.launch(Dispatchers.IO) {
+            runCatching {
+                if (Settings.System.canWrite(this@ZXSidePanelService)) {
+                    val sysVal = ((pct.coerceIn(10, 100) / 100f) * 255f).roundToInt().coerceIn(10, 255)
+                    Settings.System.putInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, sysVal)
+                }
+            }
+        }
+    }
+
+    private fun applySystemVolume(pct: Int, isMuted: Boolean) {
+        serviceScope.launch(Dispatchers.IO) {
+            runCatching {
+                val am = audioManager ?: return@runCatching
+                val maxVol = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+                val targetVol = if (isMuted) 0 else ((pct.coerceIn(0, 100) / 100f) * maxVol).roundToInt()
+                am.setStreamVolume(AudioManager.STREAM_MUSIC, targetVol.coerceIn(0, maxVol), 0)
+            }
+        }
+    }
+
+    private fun applyAutoModeToggle(enableAuto: Boolean) {
+        serviceScope.launch(Dispatchers.IO) {
+            val stateStr = if (enableAuto) "1" else "0"
+            PropertyUtils.set(AI_PROP, stateStr)
+            AutoModeBus.notify(stateStr)
+            if (Shell.isAppGrantedRoot() == true) {
+                RootUtils.writeRootFile(DAEMON_MODES_PATH, "$stateStr\n")
+            }
+        }
+    }
+
+    private fun applyDaemonProfile(profileCode: String) {
+        serviceScope.launch(Dispatchers.IO) {
+            if (Shell.isAppGrantedRoot() == true) {
+                Shell.cmd("$DAEMON_BIN -p $profileCode").submit()
+            }
+        }
+    }
+
+    private fun startRealTelemetryMonitor() {
+        telemetryJob?.cancel()
+        telemetryJob = serviceScope.launch(Dispatchers.IO) {
+            var tick = 0
+            var lastObservedProfileCode = ""
+            var lastParsedStartTimeStr = ""
+
+            while (isActive) {
+                if (isHandleVisible) {
+                    val rootGranted = runCatching { Shell.isAppGrantedRoot() == true }.getOrDefault(false)
+                    if (rootGranted) {
+                        telemetryCollector.unlockSysfsOnceWithRoot()
+                    }
+
+                    // 1. Read CPU & GPU load via direct File IO (no inline shell commands)
+                    val cpuPct = telemetryCollector.readCpuLoadPercent(rootGranted)
+                    val gpuPct = telemetryCollector.readGpuLoadPercent(
+                        rootGranted = rootGranted,
+                        currentFps = panelState.currentFps,
+                        fpsCap = panelState.fpsCap,
+                        cpuLoad = cpuPct
+                    )
+
+                    // 2. Read Battery Level, Charging & Thermal Temperature
+                    val batteryInfo = readBatteryAndThermal(rootGranted)
+
+                    // 3. Read AZenith Auto Mode, Running Profile, and Profile Duration
+                    val aiPropVal = PropertyUtils.get(AI_PROP, "")
+                    val modesFileVal = telemetryCollector.readFileTextDirectOrSu(DAEMON_MODES_PATH, rootGranted)?.trim()
+                    val resolvedAuto = when {
+                        !modesFileVal.isNullOrEmpty() -> modesFileVal == "1"
+                        aiPropVal.isNotEmpty() -> aiPropVal == "1"
+                        else -> panelState.isAutoMode
+                    }
+                    val liteEnabled = PropertyUtils.get(LITE_PROP, "0") == "1"
+                    val bypassActive = PropertyUtils.get(BYPASS_PROP, "0") == "1"
+
+                    val rawProfileCode = telemetryCollector.readFileTextDirectOrSu(APP_PROFILE_PATH, false)?.trim()
+                        ?.takeIf { it.isNotEmpty() }
+                        ?: telemetryCollector.readFileTextDirectOrSu(DAEMON_PROFILE_PATH, rootGranted)?.trim()
+                        ?: panelState.currentProfileCode
+
+                    val normalizedCode = if (rawProfileCode in listOf("0", "1", "2", "3")) {
+                        rawProfileCode
+                    } else {
+                        panelState.currentProfileCode
+                    }
+
+                    val mappedActiveProfile = when (normalizedCode) {
+                        "3" -> "saving"
+                        "2" -> "balanced"
+                        "1" -> "performance"
+                        else -> panelState.activeProfile
+                    }
+
+                    // Read start time from gameinfo ("Time: HH:MM:SS") or file mtime
+                    val gameInfoRaw = telemetryCollector.readFileTextDirectOrSu(APP_GAMEINFO_PATH, false)
+                        ?.takeIf { it.isNotBlank() }
+                        ?: telemetryCollector.readFileTextDirectOrSu(DAEMON_GAMEINFO_PATH, rootGranted)
+
+                    val startTimeLine = gameInfoRaw?.lineSequence()
+                        ?.firstOrNull { it.startsWith("Time:") }
+                        ?.substringAfter("Time:")
+                        ?.trim()
+                        .orEmpty()
+
+                    if (normalizedCode != lastObservedProfileCode ||
+                        (startTimeLine.isNotEmpty() && startTimeLine != lastParsedStartTimeStr)
+                    ) {
+                        lastObservedProfileCode = normalizedCode
+                        lastParsedStartTimeStr = startTimeLine
+                        val parsedEpoch = parseTodayTimeStrToEpochMs(startTimeLine)
+                        val fileMtime = File(APP_PROFILE_PATH).takeIf { it.exists() }?.lastModified() ?: 0L
+                        panelState.profileSessionStartMs = when {
+                            parsedEpoch != null -> parsedEpoch
+                            fileMtime > 0L -> fileMtime
+                            else -> System.currentTimeMillis()
+                        }
+                    }
+
+                    val elapsedMs = (System.currentTimeMillis() - panelState.profileSessionStartMs).coerceAtLeast(0L)
+                    val totalSec = elapsedMs / 1000L
+                    val hours = totalSec / 3600L
+                    val mins = (totalSec % 3600L) / 60L
+                    val secs = totalSec % 60L
+                    val durationFormatted = String.format(Locale.US, "%02d:%02d:%02d", hours, mins, secs)
+
+                    // 4. Periodically measure network latency & sync external brightness/volume changes
+                    var measuredPing = panelState.pingMs
+                    if (tick % 3 == 0) {
+                        telemetryCollector.measureTcpPingMs()?.let { measuredPing = it }
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        updateDisplayRefreshRateCap()
+                        panelState.isRootAvailable = rootGranted
+                        panelState.cpuLoad = cpuPct
+                        panelState.gpuLoad = gpuPct
+                        panelState.batteryLevel = batteryInfo.first
+                        panelState.isBatteryCharging = batteryInfo.second
+                        panelState.tempCelsius = batteryInfo.third
+                        panelState.isAutoMode = resolvedAuto
+                        panelState.isLiteMode = liteEnabled
+                        panelState.isBypassChargingActive = bypassActive
+                        panelState.currentProfileCode = normalizedCode
+                        panelState.activeProfile = mappedActiveProfile
+                        panelState.profileDurationText = durationFormatted
+                        panelState.pingMs = measuredPing
+                    }
+                    tick++
+                }
+                delay(1000L)
+            }
+        }
+    }
+
+    private fun readBatteryAndThermal(rootGranted: Boolean): Triple<Int, Boolean, Int> {
+        var levelPct = panelState.batteryLevel
+        var charging = panelState.isBatteryCharging
+        var tempC = panelState.tempCelsius
+
+        runCatching {
+            val intent = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            if (intent != null) {
+                val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1)
+                if (level >= 0) {
+                    levelPct = ((level * 100f) / scale).roundToInt().coerceIn(0, 100)
+                }
+                val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                charging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                    status == BatteryManager.BATTERY_STATUS_FULL
+                val rawBatteryTemp = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1)
+                if (rawBatteryTemp > 0) {
+                    tempC = (rawBatteryTemp / 10f).roundToInt().coerceIn(15, 95)
+                }
+            }
+        }
+
+        val sysfsTemp = telemetryCollector.readThermalZoneCelsius(rootGranted)
+        if (sysfsTemp != null && sysfsTemp in 20..95) {
+            tempC = sysfsTemp
+        }
+        return Triple(levelPct, charging, tempC)
+    }
+
+    private fun parseTodayTimeStrToEpochMs(timeStr: String): Long? {
+        if (timeStr.isBlank()) return null
+        return try {
+            val sdf = SimpleDateFormat("HH:mm:ss", Locale.US)
+            val parsed = sdf.parse(timeStr) ?: return null
+            val now = Calendar.getInstance()
+            val start = Calendar.getInstance().apply {
+                time = parsed
+                set(Calendar.YEAR, now.get(Calendar.YEAR))
+                set(Calendar.MONTH, now.get(Calendar.MONTH))
+                set(Calendar.DAY_OF_MONTH, now.get(Calendar.DAY_OF_MONTH))
+            }
+            var targetMs = start.timeInMillis
+            if (targetMs > now.timeInMillis + 2000L) {
+                targetMs -= 24L * 60L * 60L * 1000L
+            }
+            targetMs
+        } catch (_: Exception) {
+            null
+        }
+    }
+}
+
+/**
+ * Direct sysfs/procfs telemetry collector that operates both with and without root
+ * using standard `java.io.File` reads (and `SuFileInputStream` stream fallback when root is granted)
+ * without spawning per-tick inline shell commands.
+ */
+private class ZXRealTelemetryCollector {
+    private val coreDirs: List<File> by lazy {
+        val cpuRoot = File("/sys/devices/system/cpu")
+        val count = Runtime.getRuntime().availableProcessors().coerceIn(1, 16)
+        (0 until count).map { idx -> File(cpuRoot, "cpu$idx/cpufreq") }
+    }
+
+    private val coreMaxFreqKhz = HashMap<Int, Long>()
+    private val coreMinFreqKhz = HashMap<Int, Long>()
+
+    private var prevProcTotal = 0L
+    private var prevProcIdle = 0L
+    private var sysfsPermissionsUnlocked = false
+
+    private val gpuDirectCandidates = listOf(
+        "/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage",
+        "/sys/class/kgsl/kgsl-3d0/gpubusy",
+        "/sys/kernel/gpu/gpu_busy",
+        "/sys/module/ged/parameters/gpu_loading",
+        "/sys/kernel/ged/hal/gpu_utilization",
+        "/proc/mali/utilization",
+        "/sys/class/misc/mali0/device/utilization",
+        "/sys/devices/platform/mali/utilization"
+    )
+
+    fun unlockSysfsOnceWithRoot() {
+        if (sysfsPermissionsUnlocked) return
+        sysfsPermissionsUnlocked = true
+        runCatching {
+            // One-time chmod when service starts with root so all subsequent reads use direct java.io.File
+            Shell.cmd(
+                "chmod 0444 /sys/devices/system/cpu/cpu*/cpufreq/* /proc/stat 2>/dev/null",
+                "chmod 0444 /sys/class/kgsl/kgsl-3d0/gpu_busy_percentage /sys/class/kgsl/kgsl-3d0/gpubusy /sys/kernel/gpu/gpu_busy /sys/module/ged/parameters/gpu_loading /sys/kernel/ged/hal/gpu_utilization /proc/mali/utilization 2>/dev/null",
+                "chmod 0644 /data/adb/.config/AZenith/API/* /data/data/zx.azenith/API/* 2>/dev/null"
+            ).submit()
+        }
+    }
+
+    fun readFileTextDirectOrSu(path: String, allowSuFallback: Boolean): String? {
+        try {
+            val f = File(path)
+            if (f.exists() && f.canRead()) {
+                return f.readText()
+            }
+        } catch (_: Exception) {
+        }
+        if (allowSuFallback) {
+            try {
+                val suFile = SuFile(path)
+                if (suFile.exists()) {
+                    return SuFileInputStream.open(suFile).bufferedReader().use { it.readText() }
+                }
+            } catch (_: Exception) {
+            }
+        }
+        return null
+    }
+
+    fun readCpuLoadPercent(rootGranted: Boolean): Int {
+        // 1. Try /proc/stat delta first via direct File IO
+        val statLine = readFirstLineDirect(File("/proc/stat"))
+        var procStatPct = -1
+        if (statLine != null && statLine.startsWith("cpu ")) {
+            val parts = statLine.trim().split(Regex("\\s+"))
+            if (parts.size >= 5) {
+                val user = parts.getOrNull(1)?.toLongOrNull() ?: 0L
+                val nice = parts.getOrNull(2)?.toLongOrNull() ?: 0L
+                val system = parts.getOrNull(3)?.toLongOrNull() ?: 0L
+                val idle = parts.getOrNull(4)?.toLongOrNull() ?: 0L
+                val iowait = parts.getOrNull(5)?.toLongOrNull() ?: 0L
+                val irq = parts.getOrNull(6)?.toLongOrNull() ?: 0L
+                val softirq = parts.getOrNull(7)?.toLongOrNull() ?: 0L
+                val steal = parts.getOrNull(8)?.toLongOrNull() ?: 0L
+
+                val totalIdle = idle + iowait
+                val total = user + nice + system + totalIdle + irq + softirq + steal
+                val diffTotal = total - prevProcTotal
+                val diffIdle = totalIdle - prevProcIdle
+                prevProcTotal = total
+                prevProcIdle = totalIdle
+
+                if (diffTotal > 0L) {
+                    procStatPct = (((diffTotal - diffIdle) * 100L) / diffTotal).toInt().coerceIn(1, 100)
+                }
+            }
+        }
+
+        // 2. Read per-core cpufreq scaling_cur_freq / cpuinfo_max_freq via direct File IO (public sysfs)
+        var weightedCur = 0.0
+        var weightedMax = 0.0
+        coreDirs.forEachIndexed { idx, dir ->
+            val curKhz = readLongDirect(File(dir, "scaling_cur_freq"))
+                ?: readLongDirect(File(dir, "cpuinfo_cur_freq"))
+                ?: if (rootGranted) {
+                    readFileTextDirectOrSu("${dir.absolutePath}/scaling_cur_freq", true)?.trim()?.toLongOrNull()
+                } else {
+                    null
+                }
+
+            val maxKhz = coreMaxFreqKhz[idx] ?: run {
+                val m = readLongDirect(File(dir, "cpuinfo_max_freq"))
+                    ?: readLongDirect(File(dir, "scaling_max_freq"))
+                if (m != null && m > 0L) coreMaxFreqKhz[idx] = m
+                m
+            }
+            val minKhz = coreMinFreqKhz[idx] ?: run {
+                val mn = readLongDirect(File(dir, "cpuinfo_min_freq"))
+                    ?: readLongDirect(File(dir, "scaling_min_freq"))
+                    ?: 300_000L
+                coreMinFreqKhz[idx] = mn
+                mn
+            }
+
+            if (curKhz != null && maxKhz != null && maxKhz > 0L) {
+                val baseline = (minKhz * 0.45).coerceAtMost(maxKhz * 0.5)
+                val span = (maxKhz - baseline).coerceAtLeast(1.0)
+                val norm = ((curKhz - baseline) / span).coerceIn(0.04, 1.0)
+                val weight = maxKhz.toDouble()
+                weightedCur += norm * weight
+                weightedMax += weight
+            }
+        }
+
+        val freqPct = if (weightedMax > 0.0) {
+            ((weightedCur / weightedMax) * 100.0).roundToInt().coerceIn(2, 100)
+        } else {
+            -1
+        }
+
+        return when {
+            procStatPct >= 0 && freqPct >= 0 -> ((procStatPct * 0.55) + (freqPct * 0.45)).roundToInt().coerceIn(2, 100)
+            freqPct >= 0 -> freqPct
+            procStatPct >= 0 -> procStatPct
+            else -> 25
+        }
+    }
+
+    fun readGpuLoadPercent(
+        rootGranted: Boolean,
+        currentFps: Int,
+        fpsCap: Int,
+        cpuLoad: Int
+    ): Int {
+        // 1. Probe direct GPU load sysfs files
+        for (path in gpuDirectCandidates) {
+            val raw = readFileTextDirectOrSu(path, rootGranted)?.trim()
+            if (!raw.isNullOrEmpty()) {
+                if (path.endsWith("gpubusy")) {
+                    val nums = Regex("\\d+").findAll(raw).mapNotNull { it.value.toLongOrNull() }.toList()
+                    if (nums.size >= 2 && nums[1] > 0L) {
+                        return ((nums[0] * 100L) / nums[1]).toInt().coerceIn(0, 100)
+                    }
+                } else {
+                    val firstInt = Regex("\\d+").find(raw)?.value?.toIntOrNull()
+                    if (firstInt != null && firstInt in 0..100) {
+                        return firstInt
+                    }
+                }
+            }
+        }
+
+        // 2. Try /sys/kernel/gpu/gpu_clock vs gpu_max_clock or /sys/class/kgsl/kgsl-3d0/devfreq
+        val curClk = readFileTextDirectOrSu("/sys/kernel/gpu/gpu_clock", rootGranted)?.trim()?.toLongOrNull()
+            ?: readFileTextDirectOrSu("/sys/class/kgsl/kgsl-3d0/devfreq/cur_freq", rootGranted)?.trim()?.toLongOrNull()
+        val maxClk = readFileTextDirectOrSu("/sys/kernel/gpu/gpu_max_clock", rootGranted)?.trim()?.toLongOrNull()
+            ?: readFileTextDirectOrSu("/sys/class/kgsl/kgsl-3d0/devfreq/max_freq", rootGranted)?.trim()?.toLongOrNull()
+        if (curClk != null && maxClk != null && maxClk > 0L) {
+            return ((curClk * 100L) / maxClk).toInt().coerceIn(1, 100)
+        }
+
+        // 3. Try /sys/class/devfreq/*gpu* or *mali*
+        runCatching {
+            val devfreqRoot = File("/sys/class/devfreq")
+            val dirs = devfreqRoot.listFiles()
+            if (dirs != null) {
+                for (d in dirs) {
+                    val name = d.name.lowercase(Locale.US)
+                    if (name.contains("gpu") || name.contains("mali") || name.contains("kgsl") || name.contains("dfrgx")) {
+                        val loadRaw = readFirstLineDirect(File(d, "load"))
+                            ?: readFirstLineDirect(File(d, "utilization"))
+                        if (!loadRaw.isNullOrEmpty()) {
+                            val pct = Regex("\\d+").find(loadRaw.substringBefore('@'))?.value?.toIntOrNull()
+                            if (pct != null && pct in 0..100) return pct
+                        }
+                        val cf = readLongDirect(File(d, "cur_freq"))
+                        val mf = readLongDirect(File(d, "max_freq"))
+                        if (cf != null && mf != null && mf > 0L) {
+                            return ((cf * 100L) / mf).toInt().coerceIn(1, 100)
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Non-root fallback when kernel hides all GPU sysfs nodes: derive from live frame cadence & CPU freq load
+        val fpsRatio = (currentFps.toFloat() / fpsCap.coerceAtLeast(60).toFloat()).coerceIn(0.2f, 1f)
+        return ((cpuLoad * 0.65f) + (fpsRatio * 28f)).roundToInt().coerceIn(8, 98)
+    }
+
+    fun readThermalZoneCelsius(rootGranted: Boolean): Int? {
+        val candidates = listOf(
+            "/sys/class/thermal/thermal_zone0/temp",
+            "/sys/class/thermal/thermal_zone1/temp",
+            "/sys/class/power_supply/battery/temp"
+        )
+        for (path in candidates) {
+            val raw = readFileTextDirectOrSu(path, rootGranted)?.trim()?.toIntOrNull() ?: continue
+            val c = when {
+                raw >= 10000 -> raw / 1000
+                raw >= 200 -> raw / 10
+                else -> raw
+            }
+            if (c in 20..95) return c
+        }
+        return null
+    }
+
+    fun measureTcpPingMs(): Int? {
+        return try {
+            val start = System.nanoTime()
+            Socket().use { socket ->
+                socket.connect(InetSocketAddress("8.8.8.8", 53), 650)
+            }
+            val elapsedMs = ((System.nanoTime() - start) / 1_000_000L).toInt()
+            elapsedMs.coerceIn(1, 999)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun readFirstLineDirect(file: File): String? {
+        return try {
+            if (!file.exists() || !file.canRead()) return null
+            file.bufferedReader().use { it.readLine() }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun readLongDirect(file: File): Long? {
+        return readFirstLineDirect(file)?.trim()?.toLongOrNull()
+    }
 }
 
 /**
@@ -911,13 +1518,12 @@ fun SidePanelRoot(
         onCrosshairVisibilityChanged(isHandleVisible && state.crosshair.enabled)
     }
 
-    // Live telemetry simulation + clock update
+    // Clock update (telemetry is driven by ZXSidePanelService.startRealTelemetryMonitor)
     LaunchedEffect(Unit) {
         val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
         while (isActive) {
             clockTime = formatter.format(Date())
-            state.simulateLiveMetrics()
-            delay(1100L)
+            delay(1000L)
         }
     }
 
@@ -989,10 +1595,8 @@ fun SidePanelRoot(
             Box(
                 modifier = Modifier
                     .align(if (isLeft) Alignment.CenterStart else Alignment.CenterEnd)
-                    .padding(
-                        start = if (isLeft) 16.dp else 0.dp,
-                        end = if (!isLeft) 16.dp else 0.dp
-                    )
+                    // Manual safe-area padding (system display cutout safe-area inset is disabled)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
                     .graphicsLayer {
                         transformOrigin = TransformOrigin(
                             pivotFractionX = if (isLeft) 0f else 1f,
@@ -1209,7 +1813,7 @@ private fun SidepanelWorkspaceRow(
     ) {
         Row(
             modifier = Modifier.fillMaxHeight(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (isLeft) {
@@ -1374,7 +1978,7 @@ private fun DetachedLeftRail(
         color = scheme.surfaceContainerLow,
         shadowElevation = 24.dp,
         modifier = Modifier
-            .width(84.dp)
+            .width(78.dp)
             .fillMaxHeight()
     ) {
         Column(
@@ -1610,12 +2214,21 @@ private fun MainSidepanelContent(
         }
     }
 
+    val mainPanelWidth by animateDpAsState(
+        targetValue = if (state.editMode) 332.dp else 354.dp,
+        animationSpec = spring(
+            dampingRatio = 0.82f,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "MainSidepanelWidth"
+    )
+
     Surface(
         shape = RoundedCornerShape(32.dp),
         color = scheme.surfaceContainerLow,
         shadowElevation = 24.dp,
         modifier = Modifier
-            .width(360.dp)
+            .width(mainPanelWidth)
             .fillMaxHeight()
     ) {
         Column(
@@ -1662,7 +2275,7 @@ private fun MainSidepanelContent(
                             )
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
                                 Icon(
                                     imageVector = ZXSidePanelIcons.get("wifi"),
@@ -1671,7 +2284,7 @@ private fun MainSidepanelContent(
                                     modifier = Modifier.size(12.dp)
                                 )
                                 Text(
-                                    text = "82%",
+                                    text = "${state.batteryLevel}%",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = scheme.onSurfaceVariant
                                 )
@@ -1684,6 +2297,16 @@ private fun MainSidepanelContent(
                                     text = clockTime,
                                     style = MaterialTheme.typography.labelSmall,
                                     color = scheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "•",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = scheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = if (state.isAutoMode) "Auto" else "Manual",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = if (state.isAutoMode) scheme.primary else scheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -2054,7 +2677,7 @@ private fun RightWidgetDrawer(
         },
         shadowElevation = 24.dp,
         modifier = Modifier
-            .width(290.dp)
+            .width(264.dp)
             .fillMaxHeight()
             .onGloballyPositioned { coords ->
                 onDrawerBoundsChanged(coords.boundsInRoot())
@@ -2063,7 +2686,7 @@ private fun RightWidgetDrawer(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(14.dp)
         ) {
             // Drawer Header
             Row(
@@ -2090,21 +2713,44 @@ private fun RightWidgetDrawer(
                     )
                 }
 
-                Surface(
-                    shape = CircleShape,
-                    color = scheme.surfaceContainerHigh,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .clickable { state.resetDefaultWidgets() }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = ZXSidePanelIcons.get("restart_alt"),
-                            contentDescription = "Reset default layout",
-                            tint = scheme.onSurface,
-                            modifier = Modifier.size(18.dp)
-                        )
+                    Surface(
+                        shape = CircleShape,
+                        color = scheme.surfaceContainerHigh,
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .clickable { state.resetDefaultWidgets() }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = ZXSidePanelIcons.get("restart_alt"),
+                                contentDescription = "Reset default layout",
+                                tint = scheme.onSurface,
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
+                    }
+
+                    Surface(
+                        shape = CircleShape,
+                        color = scheme.surfaceContainerHigh,
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .clickable { state.toggleEditMode(false) }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = ZXSidePanelIcons.get("close"),
+                                contentDescription = "Close widget library",
+                                tint = scheme.onSurface,
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
                     }
                 }
             }

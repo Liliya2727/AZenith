@@ -20,13 +20,13 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import kotlin.random.Random
 
 data class SidePanelQuickTool(
     val id: String,
@@ -112,13 +112,36 @@ class ZXSidePanelStateHolder {
     var volume by mutableIntStateOf(68)
     var muted by mutableStateOf(false)
 
+    var isAutoMode by mutableStateOf(true)
+    var currentProfileCode by mutableStateOf("1")
+    var isLiteMode by mutableStateOf(false)
     var activeProfile by mutableStateOf("performance")
+    var profileSessionStartMs by mutableLongStateOf(System.currentTimeMillis())
+    var profileDurationText by mutableStateOf("00:00:00")
+
     var fpsCap by mutableIntStateOf(120)
-    var currentFps by mutableIntStateOf(118)
-    var cpuLoad by mutableIntStateOf(83)
-    var gpuLoad by mutableIntStateOf(34)
-    var tempCelsius by mutableIntStateOf(39)
+    var currentFps by mutableIntStateOf(60)
+    var cpuLoad by mutableIntStateOf(24)
+    var gpuLoad by mutableIntStateOf(18)
+    var tempCelsius by mutableIntStateOf(36)
     var pingMs by mutableIntStateOf(24)
+    var batteryLevel by mutableIntStateOf(100)
+    var isBatteryCharging by mutableStateOf(false)
+    var isBypassChargingActive by mutableStateOf(false)
+    var isRootAvailable by mutableStateOf(false)
+
+    val currentProfileDisplayName: String
+        get() = when (currentProfileCode) {
+            "0" -> "Initializing"
+            "1" -> if (isLiteMode) "Perf Lite" else "Performance"
+            "2" -> "Balanced"
+            "3" -> "ECO Mode"
+            else -> when (activeProfile) {
+                "saving" -> "ECO Mode"
+                "balanced" -> "Balanced"
+                else -> if (isLiteMode) "Perf Lite" else "Performance"
+            }
+        }
 
     var visualFilter by mutableStateOf("standard")
     var rgbRed by mutableIntStateOf(100)
@@ -130,8 +153,6 @@ class ZXSidePanelStateHolder {
     var shadowBoost by mutableIntStateOf(20)
     var touchSampling by mutableIntStateOf(720)
     var touchSensitivity by mutableIntStateOf(7)
-
-    var voiceFilter by mutableStateOf("Off")
 
     var hudOffsetX by mutableFloatStateOf(0f)
     var hudOffsetY by mutableFloatStateOf(0f)
@@ -166,6 +187,10 @@ class ZXSidePanelStateHolder {
     var defaultQuickApps: List<String> = emptyList()
     var onQuickAppsChanged: ((List<String>) -> Unit)? = null
     var onLaunchAppRequest: ((String) -> Unit)? = null
+    var onSelectProfileRequest: ((String) -> Unit)? = null
+    var onToggleAutoModeRequest: ((Boolean) -> Unit)? = null
+    var onBrightnessChangedRequest: ((Int) -> Unit)? = null
+    var onVolumeChangedRequest: ((Int, Boolean) -> Unit)? = null
 
     val activeWidgets = mutableStateListOf(
         "fpsHeader",
@@ -181,8 +206,7 @@ class ZXSidePanelStateHolder {
 
     val libraryWidgets = mutableStateListOf(
         "networkPing",
-        "thermalBattery",
-        "voiceMacro"
+        "thermalBattery"
     )
 
     val widgetCatalog: Map<String, SidePanelWidgetMeta> = mapOf(
@@ -267,13 +291,6 @@ class ZXSidePanelStateHolder {
             subtitle = "Direct power delivery & core temp",
             icon = "thermostat",
             category = "addons"
-        ),
-        "voiceMacro" to SidePanelWidgetMeta(
-            id = "voiceMacro",
-            title = "Voice changer & macros",
-            subtitle = "Real-time voice pitch & combo triggers",
-            icon = "graphic_eq",
-            category = "addons"
         )
     )
 
@@ -356,7 +373,10 @@ class ZXSidePanelStateHolder {
     }
 
     fun openSubscreen(subscreenName: String) {
-        if (editMode) return
+        if (editMode) {
+            cancelWidgetDrag()
+            editMode = false
+        }
         activeSubscreen = subscreenName
     }
 
@@ -510,74 +530,70 @@ class ZXSidePanelStateHolder {
         libraryWidgets.addAll(
             listOf(
                 "networkPing",
-                "thermalBattery",
-                "voiceMacro"
+                "thermalBattery"
             )
         )
         showToast("Restored default widget order", "restart_alt")
     }
 
-    fun selectPerformanceProfile(profileId: String) {
-        activeProfile = profileId
-        when (profileId) {
-            "saving" -> {
-                fpsCap = 60
-                currentFps = 60
-                cpuLoad = 32
-                gpuLoad = 24
-            }
-            "balanced" -> {
-                fpsCap = 90
-                currentFps = 90
-                cpuLoad = 58
-                gpuLoad = 46
-            }
-            else -> {
-                fpsCap = 120
-                currentFps = 120
-                cpuLoad = 83
-                gpuLoad = 68
-            }
+    fun toggleAutoMode() {
+        val nextAuto = !isAutoMode
+        isAutoMode = nextAuto
+        onToggleAutoModeRequest?.invoke(nextAuto)
+        if (nextAuto) {
+            showToast("Auto Mode enabled — dynamic game profile active", "auto_fix_high")
+        } else {
+            showToast("Manual Mode enabled — select profile below", "tune")
         }
     }
 
-    fun simulateLiveMetrics() {
-        val jitter = Random.nextInt(5) - 2
-        currentFps = (fpsCap + jitter).coerceIn(fpsCap - 5, fpsCap)
-        val baseCpu = when (activeProfile) {
-            "performance" -> 83
-            "balanced" -> 56
-            else -> 30
+    fun selectPerformanceProfile(profileId: String) {
+        val code = when (profileId) {
+            "saving" -> "3"
+            "balanced" -> "2"
+            else -> "1"
         }
-        val baseGpu = when (activeProfile) {
-            "performance" -> 64
-            "balanced" -> 42
-            else -> 24
+        if (isAutoMode && isRootAvailable) {
+            showToast("Auto Mode is active — tap Auto Mode chip to switch manually", "auto_fix_high")
+            return
         }
-        cpuLoad = (baseCpu + Random.nextInt(9) - 4).coerceIn(12, 99)
-        gpuLoad = (baseGpu + Random.nextInt(9) - 4).coerceIn(10, 99)
-        pingMs = 20 + Random.nextInt(8)
+        activeProfile = profileId
+        currentProfileCode = code
+        profileSessionStartMs = System.currentTimeMillis()
+        profileDurationText = "00:00:00"
+        onSelectProfileRequest?.invoke(code)
+        val label = when (profileId) {
+            "saving" -> "ECO Mode"
+            "balanced" -> "Balanced"
+            else -> if (isLiteMode) "Performance Lite" else "Performance"
+        }
+        showToast("Applying $label profile", "bolt")
     }
 
     fun nudgeGaugeLoad(target: String) {
         if (target == "cpu") {
-            cpuLoad = if (cpuLoad > 80) 35 else cpuLoad + 22
+            showToast("CPU Load: $cpuLoad% • Temp: ${tempCelsius}°C", "donut_large")
         } else {
-            gpuLoad = if (gpuLoad > 80) 28 else gpuLoad + 24
+            showToast("GPU Load: $gpuLoad% • ${currentFps} FPS", "donut_large")
         }
     }
 
     fun updateHorizontalBrightness(value: Int) {
-        brightness = value.coerceIn(10, 100)
+        val clamped = value.coerceIn(10, 100)
+        brightness = clamped
+        onBrightnessChangedRequest?.invoke(clamped)
     }
 
     fun updateHorizontalVolume(value: Int) {
-        volume = value.coerceIn(0, 100)
-        muted = volume == 0
+        val clamped = value.coerceIn(0, 100)
+        volume = clamped
+        muted = clamped == 0
+        onVolumeChangedRequest?.invoke(clamped, muted)
     }
 
     fun toggleMuteAudio() {
         muted = !muted
+        onVolumeChangedRequest?.invoke(volume, muted)
     }
 
     fun triggerQuickTool(toolId: String) {

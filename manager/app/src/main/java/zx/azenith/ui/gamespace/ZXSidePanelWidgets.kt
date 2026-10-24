@@ -94,8 +94,7 @@ fun SidePanelWidgetContent(
         "crosshair" -> CrosshairWidget(state)
         "displayTouch" -> DisplayTouchWidget(state)
         "networkPing" -> NetworkPingWidget(state)
-        "thermalBattery" -> ThermalBatteryWidget()
-        "voiceMacro" -> VoiceMacroWidget(state)
+        "thermalBattery" -> ThermalBatteryWidget(state)
     }
 }
 
@@ -569,51 +568,132 @@ private fun ProfileSegmentedWidget(
     isMerged: Boolean
 ) {
     val scheme = MaterialTheme.colorScheme
-    val profiles = remember {
-        listOf(
-            "saving" to "Power saving",
-            "balanced" to "Balanced",
-            "performance" to "Performance"
-        )
-    }
+    val perfLabel = if (state.isLiteMode) "Perf Lite" else "Performance"
+    val profiles = listOf(
+        "saving" to "Power saving",
+        "balanced" to "Balanced",
+        "performance" to perfLabel
+    )
 
     val inner: @Composable () -> Unit = {
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            profiles.forEach { (id, label) ->
-                val isSelected = state.activeProfile == id
-                val containerColor by animateColorAsState(
-                    targetValue = if (isSelected) scheme.primaryContainer else scheme.surfaceContainerHigh,
-                    animationSpec = tween(durationMillis = 250),
-                    label = "ProfileContainerColor"
+            // Auto Mode + Current Running Profile + Profile Session Duration Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                val autoChipContainer by animateColorAsState(
+                    targetValue = if (state.isAutoMode) scheme.tertiaryContainer else scheme.surfaceContainerHigh,
+                    animationSpec = tween(durationMillis = 220),
+                    label = "AutoModeChipContainer"
                 )
-                val contentColor by animateColorAsState(
-                    targetValue = if (isSelected) scheme.onPrimaryContainer else scheme.onSurface,
-                    animationSpec = tween(durationMillis = 250),
-                    label = "ProfileContentColor"
+                val autoChipContent by animateColorAsState(
+                    targetValue = if (state.isAutoMode) scheme.onTertiaryContainer else scheme.onSurfaceVariant,
+                    animationSpec = tween(durationMillis = 220),
+                    label = "AutoModeChipContent"
                 )
-                val shape = RoundedCornerShape(16.dp)
 
                 Surface(
-                    shape = shape,
-                    color = containerColor,
-                    contentColor = contentColor,
+                    shape = CircleShape,
+                    color = autoChipContainer,
+                    contentColor = autoChipContent,
                     modifier = Modifier
-                        .weight(1f)
-                        .clip(shape)
-                        .clickable { state.selectPerformanceProfile(id) }
+                        .clip(CircleShape)
+                        .clickable { state.toggleAutoMode() }
                 ) {
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = contentColor,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp)
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Icon(
+                            imageVector = ZXSidePanelIcons.get(if (state.isAutoMode) "auto_fix_high" else "tune"),
+                            contentDescription = null,
+                            tint = autoChipContent,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = if (state.isAutoMode) "Auto Mode" else "Manual Mode",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = autoChipContent,
+                            maxLines = 1
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = CircleShape,
+                    color = scheme.surfaceContainerHigh,
+                    contentColor = scheme.onSurfaceVariant
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Icon(
+                            imageVector = ZXSidePanelIcons.get("schedule"),
+                            contentDescription = null,
+                            tint = scheme.primary,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = "${state.currentProfileDisplayName} • ${state.profileDurationText}",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                            color = scheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                profiles.forEach { (id, label) ->
+                    val isSelected = state.activeProfile == id
+                    val containerColor by animateColorAsState(
+                        targetValue = if (isSelected) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                        animationSpec = tween(durationMillis = 250),
+                        label = "ProfileContainerColor"
                     )
+                    val contentColor by animateColorAsState(
+                        targetValue = if (isSelected) scheme.onPrimaryContainer else scheme.onSurface,
+                        animationSpec = tween(durationMillis = 250),
+                        label = "ProfileContentColor"
+                    )
+                    val shape = RoundedCornerShape(16.dp)
+
+                    Surface(
+                        shape = shape,
+                        color = containerColor,
+                        contentColor = contentColor,
+                        modifier = Modifier
+                            .weight(1f)
+                            .graphicsLayer {
+                                alpha = if (!isSelected && state.isAutoMode && state.isRootAvailable) 0.72f else 1f
+                            }
+                            .clip(shape)
+                            .clickable { state.selectPerformanceProfile(id) }
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = contentColor,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 4.dp)
+                        )
+                    }
                 }
             }
         }
@@ -623,7 +703,7 @@ private fun ProfileSegmentedWidget(
         inner()
     } else {
         M3WidgetCard(
-            contentPadding = PaddingValues(8.dp)
+            contentPadding = PaddingValues(10.dp)
         ) {
             inner()
         }
@@ -1240,8 +1320,11 @@ private fun NetworkPingWidget(
 }
 
 @Composable
-private fun ThermalBatteryWidget() {
+private fun ThermalBatteryWidget(
+    state: ZXSidePanelStateHolder
+) {
     val scheme = MaterialTheme.colorScheme
+    val isActive = state.isBypassChargingActive
     M3WidgetCard(
         contentPadding = PaddingValues(16.dp)
     ) {
@@ -1268,89 +1351,30 @@ private fun ThermalBatteryWidget() {
                         )
                     }
                 }
-                Text(
-                    text = "Bypass charging",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = scheme.onSurface
-                )
+                Column {
+                    Text(
+                        text = "Thermal & bypass",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = scheme.onSurface
+                    )
+                    Text(
+                        text = "${state.tempCelsius}°C • Battery ${state.batteryLevel}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = scheme.onSurfaceVariant
+                    )
+                }
             }
 
             Surface(
                 shape = CircleShape,
-                color = scheme.secondaryContainer
+                color = if (isActive) scheme.secondaryContainer else scheme.surfaceContainerHigh
             ) {
                 Text(
-                    text = "Active",
+                    text = if (isActive) "Active" else "${state.tempCelsius}°C",
                     style = MaterialTheme.typography.labelLarge,
-                    color = scheme.onSecondaryContainer,
+                    color = if (isActive) scheme.onSecondaryContainer else scheme.onSurface,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun VoiceMacroWidget(
-    state: ZXSidePanelStateHolder
-) {
-    val scheme = MaterialTheme.colorScheme
-    val voices = remember { listOf("Off", "Deep", "Robot", "Studio") }
-
-    M3WidgetCard(
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            text = "Voice changer",
-            style = MaterialTheme.typography.titleSmall,
-            color = scheme.onSurfaceVariant
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            voices.forEach { voice ->
-                val isSelected = state.voiceFilter == voice
-                val scale by animateFloatAsState(
-                    targetValue = if (isSelected) 1.05f else 1f,
-                    animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMedium),
-                    label = "VoiceMacroScale"
-                )
-                val containerColor by animateColorAsState(
-                    targetValue = if (isSelected) scheme.primaryContainer else scheme.surfaceContainerHigh,
-                    animationSpec = tween(durationMillis = 250),
-                    label = "VoiceMacroContainer"
-                )
-                val contentColor by animateColorAsState(
-                    targetValue = if (isSelected) scheme.onPrimaryContainer else scheme.onSurface,
-                    animationSpec = tween(durationMillis = 250),
-                    label = "VoiceMacroContent"
-                )
-                val shape = RoundedCornerShape(16.dp)
-
-                Surface(
-                    shape = shape,
-                    color = containerColor,
-                    contentColor = contentColor,
-                    modifier = Modifier
-                        .weight(1f)
-                        .graphicsLayer {
-                            scaleX = scale
-                            scaleY = scale
-                        }
-                        .clip(shape)
-                        .clickable { state.voiceFilter = voice }
-                ) {
-                    Text(
-                        text = voice,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = contentColor,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
-                }
             }
         }
     }
