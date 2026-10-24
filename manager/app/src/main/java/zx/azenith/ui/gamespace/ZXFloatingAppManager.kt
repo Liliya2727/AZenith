@@ -28,6 +28,7 @@ import android.graphics.PixelFormat
 import android.graphics.SurfaceTexture
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
+import android.os.Build
 import android.os.IBinder
 import android.view.Gravity
 import android.view.InputDevice
@@ -346,6 +347,10 @@ class ZXFloatingAppManager(
 
         updateSessionWindowLayout(session)
         bringSessionToFront(session)
+        val displayId = session.virtualDisplayId
+        if (displayId > 0) {
+            rootClient?.launchAppOnDisplay(session.packageName, displayId)
+        }
         syncMinimizedStackWindow()
     }
 
@@ -484,8 +489,12 @@ class ZXFloatingAppManager(
         updateSessionWindowLayout(session)
     }
 
-    private fun bringSessionToFront(session: ZXFloatingAppSession) {
+    fun bringSessionToFront(session: ZXFloatingAppSession) {
         session.lastActiveTimestampMs = System.currentTimeMillis()
+        if (sessions.contains(session)) {
+            sessions.remove(session)
+            sessions.add(session)
+        }
         val host = session.hostView ?: return
         val lp = session.layoutParams ?: return
         runCatching {
@@ -507,6 +516,9 @@ class ZXFloatingAppManager(
             gravity = Gravity.TOP or Gravity.START
             x = session.windowX
             y = session.windowY
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+            }
         }
 
         val composeView = ComposeView(context).apply {
@@ -544,6 +556,11 @@ class ZXFloatingAppManager(
                 when (ev.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
                         session.lastActiveTimestampMs = System.currentTimeMillis()
+                        bringSessionToFront(session)
+                        val displayId = session.virtualDisplayId
+                        if (displayId > 0) {
+                            rootClient?.launchAppOnDisplay(session.packageName, displayId)
+                        }
                         downRawX = ev.rawX
                         downRawY = ev.rawY
                         startWinX = session.windowX
@@ -1034,9 +1051,8 @@ class ZXFloatingAppManager(
 
         if (minimizedStackHostView == null) {
             val dm = context.resources.displayMetrics
-            val edgeMargin = (8 * dm.density).roundToInt()
-            val bubbleW = (58 * dm.density).roundToInt()
-            val initialX = if (stackSide == "left") edgeMargin else (dm.widthPixels - bubbleW - edgeMargin)
+            val bubbleW = (40 * dm.density).roundToInt()
+            val initialX = if (stackSide == "left") 0 else (dm.widthPixels - bubbleW)
 
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -1044,12 +1060,16 @@ class ZXFloatingAppManager(
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
                 x = initialX
                 y = stackY
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                }
             }
 
             val composeView = ComposeView(context).apply {
@@ -1080,6 +1100,13 @@ class ZXFloatingAppManager(
 
                 override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
                     val p = minimizedStackParams ?: return super.dispatchTouchEvent(ev)
+                    if (ev.actionMasked == MotionEvent.ACTION_OUTSIDE) {
+                        if (isStackExpanded) {
+                            isStackExpanded = false
+                            post { snapMinimizedStackToEdge(animate = true) }
+                            return true
+                        }
+                    }
                     when (ev.actionMasked) {
                         MotionEvent.ACTION_DOWN -> {
                             snapAnimator?.cancel()
@@ -1098,10 +1125,10 @@ class ZXFloatingAppManager(
                             }
                             if (draggingStack) {
                                 val dmMetrics = resources.displayMetrics
-                                val maxX = (dmMetrics.widthPixels - width - 6).coerceAtLeast(6)
-                                val maxY = (dmMetrics.heightPixels - height - 12).coerceAtLeast(12)
-                                p.x = (startParamX + dx.roundToInt()).coerceIn(6, maxX)
-                                p.y = (startParamY + dy.roundToInt()).coerceIn(12, maxY)
+                                val maxX = (dmMetrics.widthPixels - width).coerceAtLeast(0)
+                                val maxY = (dmMetrics.heightPixels - height).coerceAtLeast(0)
+                                p.x = (startParamX + dx.roundToInt()).coerceIn(0, maxX)
+                                p.y = (startParamY + dy.roundToInt()).coerceIn(0, maxY)
                                 stackY = p.y
                                 runCatching { windowManager.updateViewLayout(this, p) }
                                 return true
@@ -1144,31 +1171,28 @@ class ZXFloatingAppManager(
         val host = minimizedStackHostView ?: return
         val params = minimizedStackParams ?: return
         val dm = context.resources.displayMetrics
-        val edgeMargin = (8 * dm.density).roundToInt()
-        val viewW = host.width.takeIf { it > 0 } ?: (58 * dm.density).roundToInt()
-        val viewH = host.height.takeIf { it > 0 } ?: (58 * dm.density).roundToInt()
+        val viewW = host.width.takeIf { it > 0 } ?: (40 * dm.density).roundToInt()
+        val viewH = host.height.takeIf { it > 0 } ?: (40 * dm.density).roundToInt()
 
         val centerX = params.x + viewW / 2
-        if (animate) {
-            stackSide = if (centerX < dm.widthPixels / 2) "left" else "right"
-        }
+        stackSide = if (centerX < dm.widthPixels / 2) "left" else "right"
         val targetX = if (stackSide == "left") {
-            edgeMargin
+            0
         } else {
-            (dm.widthPixels - viewW - edgeMargin).coerceAtLeast(edgeMargin)
+            (dm.widthPixels - viewW).coerceAtLeast(0)
         }
         val targetY = stackY.coerceIn(
-            (24 * dm.density).roundToInt(),
-            (dm.heightPixels - viewH - (24 * dm.density).roundToInt()).coerceAtLeast((24 * dm.density).roundToInt())
+            (16 * dm.density).roundToInt(),
+            (dm.heightPixels - viewH - (16 * dm.density).roundToInt()).coerceAtLeast((16 * dm.density).roundToInt())
         )
         stackY = targetY
         params.y = targetY
 
         snapAnimator?.cancel()
-        if (animate && abs(params.x - targetX) > 4) {
+        if (animate && abs(params.x - targetX) > 2) {
             val startX = params.x
             snapAnimator = ValueAnimator.ofInt(startX, targetX).apply {
-                duration = 210L
+                duration = 180L
                 interpolator = DecelerateInterpolator()
                 addUpdateListener { anim ->
                     params.x = anim.animatedValue as Int
@@ -1528,26 +1552,38 @@ private fun MinimizedIconStackOverlay(manager: ZXFloatingAppManager) {
     if (minimized.isEmpty()) return
 
     val isExpanded = manager.isStackExpanded && minimized.size > 1
+    val isRightSide = manager.stackSide == "right"
+
+    // Shape hugs the screen edge: flat (0dp) on the docked edge, rounded (14dp) on the inward edge
+    val dockShape = if (isRightSide) {
+        RoundedCornerShape(topStart = 14.dp, bottomStart = 14.dp, topEnd = 0.dp, bottomEnd = 0.dp)
+    } else {
+        RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 14.dp, bottomEnd = 14.dp)
+    }
 
     Box(
         modifier = Modifier
-            .shadow(12.dp, RoundedCornerShape(18.dp), clip = false)
-            .clip(RoundedCornerShape(18.dp))
+            .shadow(3.dp, dockShape, clip = false)
+            .clip(dockShape)
             .background(scheme.surfaceContainerHigh.copy(alpha = 0.95f))
-            .border(1.5.dp, scheme.outlineVariant.copy(alpha = 0.70f), RoundedCornerShape(18.dp))
-            .padding(6.dp)
+            .border(1.dp, scheme.outlineVariant.copy(alpha = 0.50f), dockShape)
+            .padding(
+                start = if (isRightSide) 4.dp else 0.dp,
+                end = if (isRightSide) 0.dp else 4.dp,
+                top = 2.dp,
+                bottom = 2.dp
+            )
     ) {
         if (minimized.size == 1) {
             val single = minimized.first()
             MinimizedAppIconTile(
                 iconBitmap = single.iconBitmap,
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(28.dp)
                     .clickable(
                         interactionSource = MutableInteractionSource(),
                         indication = null
                     ) {
-                        // Tapping a minimized icon opens it as a SMALL floating app (not NORMAL size)
                         manager.restoreSessionFromIcon(single, targetSize = FloatingSizeState.SMALL)
                     }
             )
@@ -1560,7 +1596,7 @@ private fun MinimizedIconStackOverlay(manager: ZXFloatingAppManager) {
                 // Stacked state: both app icons visually layered together; tapping once expands to show both
                 Box(
                     modifier = Modifier
-                        .size(width = 48.dp, height = 44.dp)
+                        .size(width = 34.dp, height = 30.dp)
                         .clickable(
                             interactionSource = MutableInteractionSource(),
                             indication = null
@@ -1575,16 +1611,16 @@ private fun MinimizedIconStackOverlay(manager: ZXFloatingAppManager) {
                     MinimizedAppIconTile(
                         iconBitmap = backSession.iconBitmap,
                         modifier = Modifier
-                            .size(34.dp)
+                            .size(22.dp)
                             .align(Alignment.BottomEnd)
                             .offset(x = (-1).dp, y = (-1).dp)
                     )
                     MinimizedAppIconTile(
                         iconBitmap = frontSession.iconBitmap,
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(24.dp)
                             .align(Alignment.TopStart)
-                            .border(1.5.dp, scheme.surfaceContainerHigh, RoundedCornerShape(11.dp))
+                            .border(1.dp, scheme.surfaceContainerHigh, RoundedCornerShape(8.dp))
                     )
                 }
             }
@@ -1594,16 +1630,16 @@ private fun MinimizedIconStackOverlay(manager: ZXFloatingAppManager) {
                 enter = fadeIn(tween(140)) + expandHorizontally(tween(180)),
                 exit = fadeOut(tween(120)) + shrinkHorizontally(tween(150))
             ) {
-                // Expanded state: shows both icons; tapping either one opens it as a SMALL floating app
+                // Expanded state: shows both icons; tapping either one opens it as a SMALL floating app and focuses it
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     minimized.take(2).forEach { item ->
                         MinimizedAppIconTile(
                             iconBitmap = item.iconBitmap,
                             modifier = Modifier
-                                .size(42.dp)
+                                .size(28.dp)
                                 .clickable {
                                     manager.restoreSessionFromIcon(
                                         item,
@@ -1626,9 +1662,9 @@ private fun MinimizedAppIconTile(
     val scheme = MaterialTheme.colorScheme
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(scheme.surfaceContainerHighest)
-            .border(1.dp, scheme.outlineVariant.copy(alpha = 0.50f), RoundedCornerShape(12.dp)),
+            .border(1.dp, scheme.outlineVariant.copy(alpha = 0.45f), RoundedCornerShape(8.dp)),
         contentAlignment = Alignment.Center
     ) {
         if (iconBitmap != null) {
@@ -1643,7 +1679,7 @@ private fun MinimizedAppIconTile(
                 imageVector = Icons.Rounded.Apps,
                 contentDescription = null,
                 tint = scheme.primary,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(16.dp)
             )
         }
     }

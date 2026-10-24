@@ -450,6 +450,10 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     attachOverlayIfNeeded()
                     isHandleVisible = true
                     startFpsChoreographer()
+                } else {
+                    attachOverlayIfNeeded()
+                    isHandleVisible = true
+                    startFpsChoreographer()
                 }
             }
             ACTION_HIDE -> {
@@ -470,6 +474,8 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 if (!pkg.isNullOrBlank()) {
                     launchExternalApp(pkg)
                 }
+                attachOverlayIfNeeded()
+                isHandleVisible = true
             }
         }
         return START_STICKY
@@ -1051,11 +1057,14 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             events.getNextEvent(event)
             if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
                 val pkg = event.packageName
+                val isHostedFloatingApp = floatingAppManager?.isPackageHosted(pkg) == true ||
+                    floatingAppManager?.sessions?.any { it.packageName == pkg } == true
                 if (!pkg.isNullOrBlank() &&
                     pkg != "android" &&
                     pkg != "com.android.systemui" &&
                     pkg != "com.android.permissioncontroller" &&
                     pkg != "com.google.android.permissioncontroller" &&
+                    !isHostedFloatingApp &&
                     event.timeStamp >= latestTs
                 ) {
                     latestTs = event.timeStamp
@@ -1109,6 +1118,8 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                             !isLauncherPackage(focusedPkg) &&
                             (isConfiguredAzGame(focusedPkg, rootGranted) || focusedPkg == pendingLaunchPkg)
 
+                        val isHomeLauncher = isLauncherPackage(focusedPkg)
+
                         if (screenAwake && (isHostedFloatingApp || hasFloatingWindows)) {
                             withContext(Dispatchers.Main) {
                                 attachOverlayIfNeeded()
@@ -1129,9 +1140,17 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                                 isHandleVisible = true
                                 startFpsChoreographer()
                             }
-                        } else if (!(inLaunchGrace && focusedPkg == packageName)) {
+                        } else if (screenAwake && activeGamePackage != null && !isHomeLauncher) {
+                            withContext(Dispatchers.Main) {
+                                attachOverlayIfNeeded()
+                                isHandleVisible = true
+                                startFpsChoreographer()
+                            }
+                        } else if (isHomeLauncher || !screenAwake) {
                             pendingLaunchPkg = null
                             pendingLaunchGraceUntilMs = 0L
+                            activeGamePackage = null
+                            activeGameLabel = null
                             if (isHandleVisible || isViewAttached) {
                                 withContext(Dispatchers.Main) {
                                     stopFpsChoreographer()
