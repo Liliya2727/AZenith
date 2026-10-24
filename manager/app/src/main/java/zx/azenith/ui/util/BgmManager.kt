@@ -40,6 +40,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import zx.azenith.R
 import java.io.File
+import java.io.FileInputStream
 import java.util.UUID
 
 private const val TAG = "BgmManager"
@@ -164,6 +165,8 @@ object BgmManager {
     val isShuffleEnabled: StateFlow<Boolean> = _isShuffleEnabled.asStateFlow()
 
     private var mediaPlayer: MediaPlayer? = null
+    private var flacPlayer: FlacAudioTrackPlayer? = null
+    private var currentFis: FileInputStream? = null
     private var isInitialized = false
 
     fun formatTimeMs(timeMs: Long): String {
@@ -222,10 +225,22 @@ object BgmManager {
         positionJob = scope.launch {
             while (_isPlaying.value) {
                 val player = mediaPlayer
+                val flac = flacPlayer
                 if (player != null) {
                     try {
                         _playbackPositionMs.value = player.currentPosition.toLong()
                         val liveDuration = player.duration.toLong()
+                        val cur = _currentTrack.value
+                        if (liveDuration > 0L && cur != null && cur.durationMs != liveDuration) {
+                            val updated = cur.copy(durationMs = liveDuration)
+                            _currentTrack.value = updated
+                            _playlist.value = _playlist.value.map { if (it.id == cur.id) updated else it }
+                        }
+                    } catch (_: Exception) {}
+                } else if (flac != null) {
+                    try {
+                        _playbackPositionMs.value = flac.currentPosition
+                        val liveDuration = flac.durationMs
                         val cur = _currentTrack.value
                         if (liveDuration > 0L && cur != null && cur.durationMs != liveDuration) {
                             val updated = cur.copy(durationMs = liveDuration)
@@ -256,6 +271,7 @@ object BgmManager {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putString(PREF_BGM_REPEAT_MODE, newMode.name.lowercase()).apply()
 
+        flacPlayer?.isLooping = newMode == BgmRepeatMode.ONE
         mediaPlayer?.let { player ->
             try {
                 if (newMode == BgmRepeatMode.ONE) {
@@ -271,6 +287,7 @@ object BgmManager {
     }
 
     fun seekTo(positionMs: Long) {
+        flacPlayer?.seekTo(positionMs)
         mediaPlayer?.let { player ->
             try {
                 // Seek closest prevents OGG/Opus sync frame snapback
@@ -283,8 +300,19 @@ object BgmManager {
     }
 
     fun togglePlayPause(context: Context) {
+        val flac = flacPlayer
         val player = mediaPlayer
-        if (player != null) {
+        if (flac != null) {
+            if (flac.isPlaying) {
+                flac.pause()
+                _isPlaying.value = false
+                stopPositionTracker()
+            } else {
+                flac.start()
+                _isPlaying.value = true
+                startPositionTracker()
+            }
+        } else if (player != null) {
             if (player.isPlaying) {
                 player.pause()
                 _isPlaying.value = false
@@ -565,9 +593,10 @@ object BgmManager {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putInt(PREF_BGM_VOLUME, clamped).apply()
 
+        val volFactor = clamped / 100f
+        flacPlayer?.setVolume(volFactor)
         mediaPlayer?.let { player ->
             try {
-                val volFactor = clamped / 100f
                 player.setVolume(volFactor, volFactor)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to set volume", e)
@@ -631,6 +660,38 @@ object BgmManager {
         selectTrack(context, list[prevIndex])
     }
 
+    fun sanitizeFlacFileIfNeeded(file: File) {
+        if (!file.exists() || !file.name.endsWith(".flac", ignoreCase = true)) return
+        try {
+            FileInputStream(file).use { fis ->
+                val buf = ByteArray(10)
+                val read = fis.read(buf)
+                if (read >= 10 && buf[0] == 'I'.code.toByte() && buf[1] == 'D'.code.toByte() && buf[2] == '3'.code.toByte()) {
+                    val b6 = buf[6].toInt() and 0x7F
+                    val b7 = buf[7].toInt() and 0x7F
+                    val b8 = buf[8].toInt() and 0x7F
+                    val b9 = buf[9].toInt() and 0x7F
+                    val tagSize = (b6 shl 21) or (b7 shl 14) or (b8 shl 7) or b9
+                    val hasFooter = (buf[5].toInt() and 0x10) != 0
+                    val totalHeader = 10L + tagSize + (if (hasFooter) 10L else 0L)
+
+                    val tempFile = File(file.parentFile, "${file.name}.tmp")
+                    FileInputStream(file).use { input ->
+                        input.skip(totalHeader)
+                        tempFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    if (tempFile.exists() && tempFile.length() > 0L) {
+                        tempFile.renameTo(file)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to sanitize FLAC header for ${file.name}", e)
+        }
+    }
+
     @Synchronized
     private fun playCurrentTrack(context: Context) {
         val track = _currentTrack.value ?: BgmTrack.DEFAULT
@@ -645,10 +706,18 @@ object BgmManager {
                     .build()
             )
 
+            val volFactor = _volume.value / 100f
+            val currentPlaylist = _playlist.value
+            val isOne = _repeatMode.value == BgmRepeatMode.ONE
+            var isFlac = false
+            var flacFile: File? = null
+
             if (track.isDefault) {
                 val file = getDefaultBgmFile(context)
                 if (file.exists() && file.length() > 0L) {
-                    player.setDataSource(file.absolutePath)
+                    val fis = FileInputStream(file)
+                    currentFis = fis
+                    player.setDataSource(fis.fd, 0, file.length())
                 } else {
                     val afd = context.resources.openRawResourceFd(R.raw.bgm)
                     player.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
@@ -661,14 +730,18 @@ object BgmManager {
                     selectTrack(context, BgmTrack.DEFAULT)
                     return
                 }
-                player.setDataSource(file.absolutePath)
+                isFlac = file.name.endsWith(".flac", ignoreCase = true)
+                if (isFlac) {
+                    sanitizeFlacFileIfNeeded(file)
+                    flacFile = file
+                }
+                val fis = FileInputStream(file)
+                currentFis = fis
+                player.setDataSource(fis.fd, 0, file.length())
             }
 
-            val volFactor = _volume.value / 100f
             player.setVolume(volFactor, volFactor)
 
-            val currentPlaylist = _playlist.value
-            val isOne = _repeatMode.value == BgmRepeatMode.ONE
             if (isOne || currentPlaylist.size <= 1) {
                 player.isLooping = true
             } else {
@@ -678,13 +751,58 @@ object BgmManager {
                 }
             }
 
-            player.setOnErrorListener { _, what, extra ->
-                Log.e(TAG, "MediaPlayer error: what=$what, extra=$extra")
-                playNext(context)
-                true
+            var prepared = false
+            try {
+                player.prepare()
+                prepared = true
+            } catch (prepErr: Exception) {
+                Log.w(TAG, "MediaPlayer prepare failed for ${track.title}: ${prepErr.message}")
             }
 
-            player.prepare()
+            if (!prepared && isFlac && flacFile != null) {
+                try { player.release() } catch (_: Exception) {}
+                try { currentFis?.close() } catch (_: Exception) {}
+                currentFis = null
+
+                val customPlayer = FlacAudioTrackPlayer(
+                    file = flacFile,
+                    isLooping = isOne || currentPlaylist.size <= 1,
+                    onCompletion = { playNext(context) },
+                    onError = { playNext(context) }
+                )
+                customPlayer.setVolume(volFactor)
+                customPlayer.start()
+                flacPlayer = customPlayer
+                _isPlaying.value = true
+                startPositionTracker()
+                return
+            }
+
+            player.setOnErrorListener { _, what, extra ->
+                Log.e(TAG, "MediaPlayer error: what=$what, extra=$extra")
+                if (isFlac && flacFile != null) {
+                    try { player.release() } catch (_: Exception) {}
+                    try { currentFis?.close() } catch (_: Exception) {}
+                    currentFis = null
+                    mediaPlayer = null
+                    val customPlayer = FlacAudioTrackPlayer(
+                        file = flacFile,
+                        isLooping = isOne || currentPlaylist.size <= 1,
+                        onCompletion = { playNext(context) },
+                        onError = { playNext(context) }
+                    )
+                    customPlayer.setVolume(volFactor)
+                    customPlayer.start()
+                    flacPlayer = customPlayer
+                    _isPlaying.value = true
+                    startPositionTracker()
+                    true
+                } else {
+                    playNext(context)
+                    true
+                }
+            }
+
             val actualDuration = player.duration.toLong()
             if (actualDuration > 0L && track.durationMs != actualDuration) {
                 val updatedTrack = track.copy(durationMs = actualDuration)
@@ -705,6 +823,11 @@ object BgmManager {
     private fun stopPlayback() {
         stopPositionTracker()
         try {
+            flacPlayer?.release()
+        } catch (_: Exception) {}
+        flacPlayer = null
+
+        try {
             mediaPlayer?.apply {
                 if (isPlaying) stop()
                 reset()
@@ -713,6 +836,8 @@ object BgmManager {
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping player", e)
         } finally {
+            try { currentFis?.close() } catch (_: Exception) {}
+            currentFis = null
             mediaPlayer = null
             _isPlaying.value = false
             _playbackPositionMs.value = 0L
@@ -722,7 +847,19 @@ object BgmManager {
     fun onActivityResume(context: Context) {
         isGameHubActive = true
         if (_isEnabled.value) {
-            mediaPlayer?.let { player ->
+            val flac = flacPlayer
+            val player = mediaPlayer
+            if (flac != null) {
+                try {
+                    if (!flac.isPlaying) {
+                        flac.start()
+                        _isPlaying.value = true
+                        startPositionTracker()
+                    }
+                } catch (e: Exception) {
+                    playCurrentTrack(context.applicationContext)
+                }
+            } else if (player != null) {
                 try {
                     if (!player.isPlaying) {
                         player.start()
@@ -733,13 +870,16 @@ object BgmManager {
                     Log.e(TAG, "Error resuming player", e)
                     playCurrentTrack(context.applicationContext)
                 }
-            } ?: playCurrentTrack(context.applicationContext)
+            } else {
+                playCurrentTrack(context.applicationContext)
+            }
         }
     }
 
     fun onActivityPause() {
         stopPositionTracker()
         try {
+            flacPlayer?.pause()
             mediaPlayer?.let { player ->
                 if (player.isPlaying) {
                     player.pause()
@@ -778,6 +918,9 @@ object BgmManager {
                 }
 
                 if (destFile.exists() && destFile.length() > 0) {
+                    if (ext == "flac") {
+                        sanitizeFlacFileIfNeeded(destFile)
+                    }
                     val meta = extractMetadata(destFile)
                     val resolvedTitle = meta.title
                         ?: rawTitle.replace('_', ' ').replace('-', ' ').trim().ifEmpty { "Track" }
