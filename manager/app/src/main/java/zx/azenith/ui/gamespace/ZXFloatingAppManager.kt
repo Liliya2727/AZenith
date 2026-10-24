@@ -973,28 +973,30 @@ class ZXFloatingAppManager(
             InputDevice.SOURCE_TOUCHSCREEN,
             rawEvent.flags
         )
-        if (client != null && client.isBinderAlive) {
-            client.injectMotionEvent(displayId, mapped)
-        } else {
-            val actionStr = when (rawEvent.actionMasked) {
-                MotionEvent.ACTION_DOWN -> "DOWN"
-                MotionEvent.ACTION_MOVE -> "MOVE"
-                MotionEvent.ACTION_UP -> "UP"
-                MotionEvent.ACTION_CANCEL -> "CANCEL"
-                else -> null
-            }
-            if (actionStr != null) {
-                val mappedX = coords[0].x.toInt()
-                val mappedY = coords[0].y.toInt()
-                scope.launch(Dispatchers.IO) {
-                    runCatching {
-                        Shell.cmd("input -d $displayId motionevent $actionStr $mappedX $mappedY").exec()
+        try {
+            if (client != null && client.isBinderAlive) {
+                client.injectMotionEvent(displayId, mapped)
+            } else {
+                val actionStr = when (rawEvent.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> "DOWN"
+                    MotionEvent.ACTION_MOVE -> "MOVE"
+                    MotionEvent.ACTION_UP -> "UP"
+                    MotionEvent.ACTION_CANCEL -> "CANCEL"
+                    else -> null
+                }
+                if (actionStr != null) {
+                    val mappedX = coords[0].x.toInt()
+                    val mappedY = coords[0].y.toInt()
+                    scope.launch(Dispatchers.IO) {
+                        runCatching {
+                            Shell.cmd("input -d $displayId motionevent $actionStr $mappedX $mappedY").exec()
+                        }
                     }
                 }
             }
+        } finally {
+            runCatching { mapped.recycle() }
         }
-        mapped.recycle()
-        mapped.recycle()
     }
 
     fun dispatchBackToSession(session: ZXFloatingAppSession) {

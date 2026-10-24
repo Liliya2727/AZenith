@@ -161,7 +161,7 @@ class ZXFloatingAppRootService : RootService() {
                         val displayId = data.readInt()
                         val event = MotionEvent.CREATOR.createFromParcel(data)
                         injectMotionOnDisplay(displayId, event)
-                        event.recycle()
+                        runCatching { event.recycle() }
                         return true
                     }
                     TRANSACTION_INJECT_BACK -> {
