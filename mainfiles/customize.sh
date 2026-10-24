@@ -440,6 +440,7 @@ if [ "$APP_INSTALLED" = "true" ]; then
     pm grant zx.azenith android.permission.READ_MEDIA_IMAGES
     pm grant zx.azenith android.permission.WRITE_SECURE_SETTINGS > /dev/null 2>&1
     pm grant zx.azenith android.permission.PACKAGE_USAGE_STATS > /dev/null 2>&1
+    pm grant zx.azenith android.permission.BATTERY_STATS > /dev/null 2>&1
     pm grant zx.azenith android.permission.DUMP > /dev/null 2>&1
     appops set zx.azenith SYSTEM_ALERT_WINDOW allow > /dev/null 2>&1
     appops set zx.azenith WRITE_SETTINGS allow > /dev/null 2>&1
