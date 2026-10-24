@@ -98,6 +98,9 @@ pm grant zx.azenith android.permission.DUMP > /dev/null 2>&1
 appops set zx.azenith SYSTEM_ALERT_WINDOW allow > /dev/null 2>&1
 appops set zx.azenith WRITE_SETTINGS allow > /dev/null 2>&1
 appops set zx.azenith GET_USAGE_STATS allow > /dev/null 2>&1
+appops set zx.azenith RUN_IN_BACKGROUND allow > /dev/null 2>&1
+appops set zx.azenith RUN_ANY_IN_BACKGROUND allow > /dev/null 2>&1
+dumpsys deviceidle whitelist +zx.azenith > /dev/null 2>&1
 
 # Exec Binder Companion Daemon
 "$BIN_MON"

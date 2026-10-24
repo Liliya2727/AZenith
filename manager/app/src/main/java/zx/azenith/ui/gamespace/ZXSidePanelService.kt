@@ -19,6 +19,8 @@
 package zx.azenith.ui.gamespace
 
 import android.app.Service
+import android.app.usage.UsageEvents
+import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -32,6 +34,7 @@ import android.media.AudioManager
 import android.os.BatteryManager
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.provider.Settings
 import android.view.Choreographer
 import android.view.Gravity
@@ -289,6 +292,12 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private var pendingLaunchGraceUntilMs: Long = 0L
 
     @Volatile
+    private var lastUsageForegroundPkg: String? = null
+
+    @Volatile
+    private var lastUsageEventTs: Long = 0L
+
+    @Volatile
     private var cachedApplistPackages: Set<String> = emptySet()
 
     @Volatile
@@ -379,21 +388,47 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 barLengthPref = prefs.getInt("gamespace_sidepanel_length", 50).coerceIn(20, 100)
 
                 if (pkg != null) {
-                    // Explicit game launch from ZXGameSpaceHub: grant 4s foreground transition grace window
+                    val now = System.currentTimeMillis()
                     pendingLaunchPkg = pkg
-                    pendingLaunchGraceUntilMs = System.currentTimeMillis() + 4_000L
+                    pendingLaunchGraceUntilMs = now + 6_000L
+                    lastUsageForegroundPkg = pkg
+                    lastUsageEventTs = now
                     activeGamePackage = pkg
                     activeGameLabel = label ?: resolveAppLabel(pkg)
                     panelState.loadForApp(pkg)
                     attachOverlayIfNeeded()
                     isHandleVisible = true
                     startFpsChoreographer()
+                } else if (!label.isNullOrBlank()) {
+                    val now = System.currentTimeMillis()
+                    pendingLaunchGraceUntilMs = now + 6_000L
+                    val matchedPkg = panelState.installedApps.firstOrNull {
+                        it.name.equals(label, ignoreCase = true)
+                    }?.packageName
+                    if (matchedPkg != null) {
+                        pendingLaunchPkg = matchedPkg
+                        lastUsageForegroundPkg = matchedPkg
+                        lastUsageEventTs = now
+                        if (activeGamePackage != matchedPkg) {
+                            activeGamePackage = matchedPkg
+                            activeGameLabel = label
+                            panelState.loadForApp(matchedPkg)
+                        }
+                    } else {
+                        activeGameLabel = label
+                    }
+                    attachOverlayIfNeeded()
+                    isHandleVisible = true
+                    startFpsChoreographer()
                 }
-                // When pkg == null (e.g. broadcast from ZenithReceiver), startAppMonitorWatcher()
-                // verifies that the foreground app in app_status is actually an AZenith game before showing.
             }
             ACTION_HIDE -> {
+                pendingLaunchPkg = null
                 pendingLaunchGraceUntilMs = 0L
+                if (lastUsageForegroundPkg == activeGamePackage) {
+                    lastUsageForegroundPkg = packageName
+                    lastUsageEventTs = System.currentTimeMillis()
+                }
                 stopFpsChoreographer()
                 isHandleVisible = false
                 isPanelExpanded = false
@@ -919,48 +954,98 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
     }
 
+    private fun checkRootGranted(): Boolean {
+        return runCatching {
+            Shell.isAppGrantedRoot() ?: Shell.getShell().isRoot
+        }.getOrDefault(false)
+    }
+
+    private fun queryForegroundPackageFromUsageStats(nowMs: Long): String? {
+        val usm = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
+            ?: return lastUsageForegroundPkg
+        val lookbackMs = if (lastUsageForegroundPkg == null) 600_000L else 15_000L
+        val events = runCatching { usm.queryEvents(nowMs - lookbackMs, nowMs) }.getOrNull()
+            ?: return lastUsageForegroundPkg
+        val event = UsageEvents.Event()
+        var latestTs = lastUsageEventTs
+        var latestPkg = lastUsageForegroundPkg
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
+                val pkg = event.packageName
+                if (!pkg.isNullOrBlank() &&
+                    pkg != "android" &&
+                    pkg != "com.android.systemui" &&
+                    pkg != "com.android.permissioncontroller" &&
+                    pkg != "com.google.android.permissioncontroller" &&
+                    event.timeStamp >= latestTs
+                ) {
+                    latestTs = event.timeStamp
+                    latestPkg = pkg
+                }
+            }
+        }
+        lastUsageEventTs = latestTs
+        lastUsageForegroundPkg = latestPkg
+        return latestPkg
+    }
+
     private fun startAppMonitorWatcher() {
         monitorJob?.cancel()
         monitorJob = serviceScope.launch(Dispatchers.IO) {
             while (isActive) {
                 try {
-                    val rootGranted = runCatching { Shell.isAppGrantedRoot() == true }.getOrDefault(false)
-                    val statusText = telemetryCollector.readFileTextDirectOrSu(APP_STATUS_PATH, rootGranted)
+                    val rootGranted = checkRootGranted()
+                    if (rootGranted) {
+                        telemetryCollector.unlockSysfsOnceWithRoot(packageName)
+                    }
                     val nowMs = System.currentTimeMillis()
                     val inLaunchGrace = nowMs < pendingLaunchGraceUntilMs
 
-                    if (statusText != null && statusText.isNotBlank()) {
-                        val focusedLine = statusText.lineSequence().firstOrNull { it.startsWith("focused_app ") }
-                        val pkg = focusedLine?.substringAfter("focused_app ")?.substringBefore(" ")?.trim()
-                        val screenAwakeLine = statusText.lineSequence().firstOrNull { it.startsWith("screen_awake ") }
-                        val screenAwake = screenAwakeLine?.substringAfter("screen_awake ")?.trim() != "0"
+                    val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
+                    var screenAwake = pm?.isInteractive ?: true
+                    var focusedPkg: String? = null
 
-                        val isConfiguredGame = !pkg.isNullOrBlank() &&
-                            pkg != "unknown" &&
-                            pkg != "none" &&
-                            pkg != packageName &&
-                            !isLauncherPackage(pkg) &&
-                            (isConfiguredAzGame(pkg, rootGranted) || pkg == pendingLaunchPkg)
+                    val daemonRunning = PropertyUtils.get("persist.sys.azenith.state", "") == "running"
+                    if (daemonRunning) {
+                        val statusText = telemetryCollector.readFileTextDirectOrSu(APP_STATUS_PATH, rootGranted)
+                        if (!statusText.isNullOrBlank()) {
+                            val focusedLine = statusText.lineSequence().firstOrNull { it.startsWith("focused_app ") }
+                            focusedPkg = focusedLine?.substringAfter("focused_app ")?.substringBefore(" ")?.trim()
+                                ?.takeIf { it.isNotEmpty() && it != "unknown" && it != "none" }
+                            val screenAwakeLine = statusText.lineSequence().firstOrNull { it.startsWith("screen_awake ") }
+                            if (screenAwakeLine != null) {
+                                screenAwake = screenAwakeLine.substringAfter("screen_awake ").trim() != "0"
+                            }
+                        }
+                    }
+
+                    if (focusedPkg == null) {
+                        focusedPkg = queryForegroundPackageFromUsageStats(nowMs)
+                    }
+
+                    if (!focusedPkg.isNullOrBlank()) {
+                        val isConfiguredGame = focusedPkg != packageName &&
+                            !isLauncherPackage(focusedPkg) &&
+                            (isConfiguredAzGame(focusedPkg, rootGranted) || focusedPkg == pendingLaunchPkg)
 
                         if (screenAwake && isConfiguredGame) {
-                            if (pkg == pendingLaunchPkg) {
-                                pendingLaunchGraceUntilMs = 0L
-                            }
-                            val switchedGame = activeGamePackage != pkg
-                            val label = if (switchedGame || activeGameLabel == null) resolveAppLabel(pkg) else activeGameLabel
+                            val switchedGame = activeGamePackage != focusedPkg
+                            val label = if (switchedGame || activeGameLabel == null) resolveAppLabel(focusedPkg) else activeGameLabel
                             withContext(Dispatchers.Main) {
                                 sideSetting = prefs.getString("gamespace_sidepanel_side", "left") ?: "left"
                                 if (switchedGame) {
-                                    activeGamePackage = pkg
+                                    activeGamePackage = focusedPkg
                                     activeGameLabel = label
-                                    panelState.loadForApp(pkg)
+                                    panelState.loadForApp(focusedPkg)
                                 }
                                 attachOverlayIfNeeded()
                                 isHandleVisible = true
                                 startFpsChoreographer()
                             }
-                        } else if (!inLaunchGrace) {
-                            // User is NOT in an AZenith-configured game (exited to launcher, another app, or AZenith)
+                        } else if (!(inLaunchGrace && focusedPkg == packageName)) {
+                            pendingLaunchPkg = null
+                            pendingLaunchGraceUntilMs = 0L
                             if (isHandleVisible || isViewAttached) {
                                 withContext(Dispatchers.Main) {
                                     stopFpsChoreographer()
@@ -971,23 +1056,14 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                                 }
                             }
                         }
-                    } else if (!inLaunchGrace) {
-                        // Fallback when app_status does not exist: check gameinfo written into app data dir
-                        val gameInfoText = telemetryCollector.readFileTextDirectOrSu(APP_GAMEINFO_PATH, false)
-                            ?.takeIf { it.isNotBlank() }
-                            ?: telemetryCollector.readFileTextDirectOrSu(DAEMON_GAMEINFO_PATH, rootGranted)
-                        if (gameInfoText != null) {
-                            val firstToken = gameInfoText.lineSequence().firstOrNull()?.substringBefore(" ")?.trim()
-                            if (firstToken == "NULL" || firstToken.isNullOrEmpty()) {
-                                if (isHandleVisible || isViewAttached) {
-                                    withContext(Dispatchers.Main) {
-                                        stopFpsChoreographer()
-                                        isHandleVisible = false
-                                        isPanelExpanded = false
-                                        isWindowFullScreen = false
-                                        detachOverlay()
-                                    }
-                                }
+                    } else if (!screenAwake) {
+                        if (isHandleVisible || isViewAttached) {
+                            withContext(Dispatchers.Main) {
+                                stopFpsChoreographer()
+                                isHandleVisible = false
+                                isPanelExpanded = false
+                                isWindowFullScreen = false
+                                detachOverlay()
                             }
                         }
                     }
@@ -1120,7 +1196,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             val stateStr = if (enableAuto) "1" else "0"
             PropertyUtils.set(AI_PROP, stateStr)
             AutoModeBus.notify(stateStr)
-            if (Shell.isAppGrantedRoot() == true) {
+            if (checkRootGranted()) {
                 RootUtils.writeRootFile(DAEMON_MODES_PATH, "$stateStr\n")
             }
         }
@@ -1128,7 +1204,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
     private fun applyDaemonProfile(profileCode: String) {
         serviceScope.launch(Dispatchers.IO) {
-            if (Shell.isAppGrantedRoot() == true) {
+            if (checkRootGranted()) {
                 Shell.cmd("$DAEMON_BIN -p $profileCode").submit()
             }
         }
@@ -1143,9 +1219,9 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
             while (isActive) {
                 if (isHandleVisible) {
-                    val rootGranted = runCatching { Shell.isAppGrantedRoot() == true }.getOrDefault(false)
+                    val rootGranted = checkRootGranted()
                     if (rootGranted) {
-                        telemetryCollector.unlockSysfsOnceWithRoot()
+                        telemetryCollector.unlockSysfsOnceWithRoot(packageName)
                     }
 
                     // 1. Read CPU & GPU load via direct File IO (no inline shell commands)
@@ -1161,6 +1237,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     val batteryInfo = readBatteryAndThermal(rootGranted)
 
                     // 3. Read AZenith Auto Mode, Running Profile, and Profile Duration
+                    val daemonRunning = PropertyUtils.get("persist.sys.azenith.state", "") == "running"
                     val aiPropVal = PropertyUtils.get(AI_PROP, "")
                     val modesFileVal = telemetryCollector.readFileTextDirectOrSu(DAEMON_MODES_PATH, rootGranted)?.trim()
                     val resolvedAuto = when {
@@ -1171,10 +1248,14 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     val liteEnabled = PropertyUtils.get(LITE_PROP, "0") == "1"
                     val bypassActive = PropertyUtils.get(BYPASS_PROP, "0") == "1"
 
-                    val rawProfileCode = telemetryCollector.readFileTextDirectOrSu(APP_PROFILE_PATH, false)?.trim()
-                        ?.takeIf { it.isNotEmpty() }
-                        ?: telemetryCollector.readFileTextDirectOrSu(DAEMON_PROFILE_PATH, rootGranted)?.trim()
-                        ?: panelState.currentProfileCode
+                    val rawProfileCode = if (daemonRunning) {
+                        telemetryCollector.readFileTextDirectOrSu(APP_PROFILE_PATH, false)?.trim()
+                            ?.takeIf { it.isNotEmpty() }
+                            ?: telemetryCollector.readFileTextDirectOrSu(DAEMON_PROFILE_PATH, rootGranted)?.trim()
+                            ?: panelState.currentProfileCode
+                    } else {
+                        panelState.currentProfileCode
+                    }
 
                     val normalizedCode = if (rawProfileCode in listOf("0", "1", "2", "3")) {
                         rawProfileCode
@@ -1189,29 +1270,33 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         else -> panelState.activeProfile
                     }
 
-                    // Read start time from gameinfo ("Time: HH:MM:SS") or file mtime
-                    val gameInfoRaw = telemetryCollector.readFileTextDirectOrSu(APP_GAMEINFO_PATH, false)
-                        ?.takeIf { it.isNotBlank() }
-                        ?: telemetryCollector.readFileTextDirectOrSu(DAEMON_GAMEINFO_PATH, rootGranted)
+                    if (daemonRunning) {
+                        val gameInfoRaw = telemetryCollector.readFileTextDirectOrSu(APP_GAMEINFO_PATH, false)
+                            ?.takeIf { it.isNotBlank() }
+                            ?: telemetryCollector.readFileTextDirectOrSu(DAEMON_GAMEINFO_PATH, rootGranted)
 
-                    val startTimeLine = gameInfoRaw?.lineSequence()
-                        ?.firstOrNull { it.startsWith("Time:") }
-                        ?.substringAfter("Time:")
-                        ?.trim()
-                        .orEmpty()
+                        val startTimeLine = gameInfoRaw?.lineSequence()
+                            ?.firstOrNull { it.startsWith("Time:") }
+                            ?.substringAfter("Time:")
+                            ?.trim()
+                            .orEmpty()
 
-                    if (normalizedCode != lastObservedProfileCode ||
-                        (startTimeLine.isNotEmpty() && startTimeLine != lastParsedStartTimeStr)
-                    ) {
-                        lastObservedProfileCode = normalizedCode
-                        lastParsedStartTimeStr = startTimeLine
-                        val parsedEpoch = parseTodayTimeStrToEpochMs(startTimeLine)
-                        val fileMtime = File(APP_PROFILE_PATH).takeIf { it.exists() }?.lastModified() ?: 0L
-                        panelState.profileSessionStartMs = when {
-                            parsedEpoch != null -> parsedEpoch
-                            fileMtime > 0L -> fileMtime
-                            else -> System.currentTimeMillis()
+                        if (normalizedCode != lastObservedProfileCode ||
+                            (startTimeLine.isNotEmpty() && startTimeLine != lastParsedStartTimeStr)
+                        ) {
+                            lastObservedProfileCode = normalizedCode
+                            lastParsedStartTimeStr = startTimeLine
+                            val parsedEpoch = parseTodayTimeStrToEpochMs(startTimeLine)
+                            val fileMtime = File(APP_PROFILE_PATH).takeIf { it.exists() }?.lastModified() ?: 0L
+                            panelState.profileSessionStartMs = when {
+                                parsedEpoch != null -> parsedEpoch
+                                fileMtime > 0L -> fileMtime
+                                else -> System.currentTimeMillis()
+                            }
                         }
+                    } else if (normalizedCode != lastObservedProfileCode) {
+                        lastObservedProfileCode = normalizedCode
+                        panelState.profileSessionStartMs = System.currentTimeMillis()
                     }
 
                     val elapsedMs = (System.currentTimeMillis() - panelState.profileSessionStartMs).coerceAtLeast(0L)
@@ -1333,16 +1418,21 @@ private class ZXRealTelemetryCollector {
         "/sys/devices/platform/mali/utilization"
     )
 
-    fun unlockSysfsOnceWithRoot() {
+    fun unlockSysfsOnceWithRoot(pkgName: String) {
         if (sysfsPermissionsUnlocked) return
         sysfsPermissionsUnlocked = true
         runCatching {
-            // One-time chmod when service starts with root so all subsequent reads use direct java.io.File
+            // One-time chmod & appops grant when service starts with root so all subsequent reads use direct APIs/File IO
             Shell.cmd(
+                "appops set $pkgName GET_USAGE_STATS allow 2>/dev/null",
+                "appops set $pkgName RUN_IN_BACKGROUND allow 2>/dev/null",
+                "appops set $pkgName RUN_ANY_IN_BACKGROUND allow 2>/dev/null",
+                "dumpsys deviceidle whitelist +$pkgName >/dev/null 2>&1",
+                "pm grant $pkgName android.permission.PACKAGE_USAGE_STATS 2>/dev/null",
                 "chmod 0444 /sys/devices/system/cpu/cpu*/cpufreq/* /proc/stat 2>/dev/null",
                 "chmod 0444 /sys/class/kgsl/kgsl-3d0/gpu_busy_percentage /sys/class/kgsl/kgsl-3d0/gpubusy /sys/kernel/gpu/gpu_busy /sys/module/ged/parameters/gpu_loading /sys/kernel/ged/hal/gpu_utilization /proc/mali/utilization 2>/dev/null",
                 "chmod 0644 /data/adb/.config/AZenith/API/* /data/data/zx.azenith/API/* 2>/dev/null"
-            ).submit()
+            ).exec()
         }
     }
 
