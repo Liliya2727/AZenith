@@ -68,11 +68,15 @@ class ZenithReceiver : BroadcastReceiver() {
                 }
                 val notifyTitle = intent.getStringExtra("notifytitle") ?: ""
                 val notifyMessage = intent.getStringExtra("notifytext") ?: ""
-                if (notifyTitle.contains("Performance Profile", ignoreCase = true)) {
+                if (notifyTitle.contains("Performance Profile", ignoreCase = true) &&
+                    notifyMessage.startsWith("Running at ", ignoreCase = true)
+                ) {
                     val appName = notifyMessage.removePrefix("Running at ").trim()
                     zx.azenith.ui.gamespace.ZXSidePanelService.show(context, null, appName)
                 } else if (notifyTitle.contains("ECO Mode", ignoreCase = true) ||
-                    notifyTitle.contains("Balanced Profile", ignoreCase = true)) {
+                    notifyTitle.contains("Balanced Profile", ignoreCase = true) ||
+                    notifyMessage.contains("Manual", ignoreCase = true)
+                ) {
                     zx.azenith.ui.gamespace.ZXSidePanelService.hide(context)
                 }
             }

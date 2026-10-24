@@ -28,8 +28,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -44,6 +44,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -53,7 +54,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -62,6 +62,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -69,12 +70,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
@@ -91,6 +93,7 @@ fun SidePanelWidgetContent(
         "volumeSlider" -> VolumeSliderWidget(state, isMerged)
         "quickTools" -> QuickToolsWidget(state)
         "antiInterference" -> AntiInterferenceWidget(state)
+        "liveMonitor" -> LiveMonitorWidget(state)
         "crosshair" -> CrosshairWidget(state)
         "displayTouch" -> DisplayTouchWidget(state)
         "networkPing" -> NetworkPingWidget(state)
@@ -103,17 +106,13 @@ fun EditModeWidgetCard(
     widgetId: String,
     index: Int,
     state: ZXSidePanelStateHolder,
-    onStartDrag: (grabOffset: Offset, cardOriginInRoot: Offset) -> Unit,
-    onDragMove: (pointerInRoot: Offset) -> Unit,
-    onEndDrag: () -> Unit,
-    onCancelDrag: () -> Unit,
+    onReportBounds: (cardBoundsInRoot: Rect, dragBarBoundsInRoot: Rect) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val meta = state.widgetCatalog[widgetId] ?: return
     val scheme = MaterialTheme.colorScheme
-    var cardRootOrigin by remember { mutableStateOf(Offset.Zero) }
-    var headerRootOrigin by remember { mutableStateOf(Offset.Zero) }
-    var lastPointerInRoot by remember { mutableStateOf(Offset.Zero) }
+    var cardBounds by remember { mutableStateOf(Rect.Zero) }
+    var dragBarBounds by remember { mutableStateOf(Rect.Zero) }
 
     val isBeingDragged = state.draggingWidgetId == widgetId && !state.draggingFromLibrary
 
@@ -122,56 +121,22 @@ fun EditModeWidgetCard(
         verticalArrangement = Arrangement.spacedBy(10.dp),
         modifier = modifier
             .onGloballyPositioned { coords ->
-                cardRootOrigin = coords.positionInRoot()
+                cardBounds = coords.boundsInRoot()
+                if (dragBarBounds != Rect.Zero) {
+                    onReportBounds(cardBounds, dragBarBounds)
+                }
             }
             .graphicsLayer {
                 alpha = if (isBeingDragged) 0.22f else 1f
                 scaleX = if (isBeingDragged) 0.96f else 1f
                 scaleY = if (isBeingDragged) 0.96f else 1f
             }
-            .pointerInput(widgetId, index) {
-                detectDragGesturesAfterLongPress(
-                    onDragStart = { localOffset ->
-                        val startInRoot = cardRootOrigin + localOffset
-                        lastPointerInRoot = startInRoot
-                        onStartDrag(localOffset, cardRootOrigin)
-                    },
-                    onDragEnd = { onEndDrag() },
-                    onDragCancel = { onCancelDrag() },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        lastPointerInRoot += dragAmount
-                        onDragMove(lastPointerInRoot)
-                    }
-                )
-            }
     ) {
-        // Edit Bar Header (Immediate Drag Handle)
+        // Edit Bar Header (Only this top bar initiates widget drag; swiping body scrolls normally)
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = scheme.surfaceContainerHigh,
-            modifier = Modifier
-                .fillMaxWidth()
-                .onGloballyPositioned { coords ->
-                    headerRootOrigin = coords.positionInRoot()
-                }
-                .pointerInput(widgetId, index) {
-                    detectDragGestures(
-                        onDragStart = { localOffset ->
-                            val startInRoot = headerRootOrigin + localOffset
-                            val grabInCard = startInRoot - cardRootOrigin
-                            lastPointerInRoot = startInRoot
-                            onStartDrag(grabInCard, cardRootOrigin)
-                        },
-                        onDragEnd = { onEndDrag() },
-                        onDragCancel = { onCancelDrag() },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            lastPointerInRoot += dragAmount
-                            onDragMove(lastPointerInRoot)
-                        }
-                    )
-                }
+            modifier = Modifier.fillMaxWidth()
         ) {
             Row(
                 modifier = Modifier
@@ -181,7 +146,14 @@ fun EditModeWidgetCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .onGloballyPositioned { coords ->
+                            dragBarBounds = coords.boundsInRoot()
+                            if (cardBounds != Rect.Zero) {
+                                onReportBounds(cardBounds, dragBarBounds)
+                            }
+                        },
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -229,16 +201,31 @@ fun EditModeWidgetCard(
             }
         }
 
-        // Disabled Inner Widget Preview
+        // Disabled Inner Widget Preview (allows vertical LazyColumn scrolling while blocking taps & horizontal sliders)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .graphicsLayer { alpha = 0.88f }
                 .pointerInput(Unit) {
-                    awaitPointerEventScope {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                        var isVerticalScroll = false
                         while (true) {
                             val event = awaitPointerEvent(PointerEventPass.Initial)
-                            event.changes.forEach { it.consume() }
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            if (!change.pressed) {
+                                if (!isVerticalScroll) {
+                                    change.consume()
+                                }
+                                break
+                            }
+                            val dy = abs(change.position.y - down.position.y)
+                            val dx = abs(change.position.x - down.position.x)
+                            if (dy > viewConfiguration.touchSlop && dy >= dx * 0.8f) {
+                                isVerticalScroll = true
+                            } else if (!isVerticalScroll && dx > viewConfiguration.touchSlop * 0.5f) {
+                                change.consume()
+                            }
                         }
                     }
                 }
@@ -347,7 +334,7 @@ fun DraggedWidgetMockupOverlay(
         ),
         shadowElevation = 28.dp,
         modifier = modifier
-            .width(320.dp)
+            .widthIn(min = 240.dp, max = 304.dp)
             .graphicsLayer {
                 scaleX = 1.03f
                 scaleY = 1.03f
@@ -362,54 +349,36 @@ fun DraggedWidgetMockupOverlay(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = if (isHoverLibrary) scheme.errorContainer else scheme.primaryContainer,
+                    modifier = Modifier.size(38.dp)
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = if (isHoverLibrary) scheme.errorContainer else scheme.primaryContainer,
-                        modifier = Modifier.size(38.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = ZXSidePanelIcons.get(meta.icon),
-                                contentDescription = null,
-                                tint = if (isHoverLibrary) scheme.onErrorContainer else scheme.onPrimaryContainer,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = meta.title,
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                            color = scheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = if (isHoverLibrary) "Release to move to library" else meta.subtitle,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (isHoverLibrary) scheme.error else scheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = ZXSidePanelIcons.get(meta.icon),
+                            contentDescription = null,
+                            tint = if (isHoverLibrary) scheme.onErrorContainer else scheme.onPrimaryContainer,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
-
-                Surface(
-                    shape = CircleShape,
-                    color = if (isHoverLibrary) scheme.error else scheme.primary
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = if (isHoverLibrary) "Store" else "Moving",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = if (isHoverLibrary) scheme.onError else scheme.onPrimary,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        text = meta.title,
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = if (isHoverLibrary) "Release to move to library" else meta.subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isHoverLibrary) scheme.error else scheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -1002,6 +971,142 @@ private fun AntiInterferenceWidget(
 }
 
 @Composable
+private fun LiveMonitorWidget(
+    state: ZXSidePanelStateHolder
+) {
+    val scheme = MaterialTheme.colorScheme
+    val styles = remember {
+        listOf(
+            "line" to "One line",
+            "stacked" to "Stacked",
+            "minimal" to "Compact"
+        )
+    }
+
+    M3WidgetCard(
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { state.openSubscreen("liveMonitor") }
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = scheme.tertiaryContainer,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = ZXSidePanelIcons.get("monitoring"),
+                            contentDescription = null,
+                            tint = scheme.onTertiaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                Text(
+                    text = "Live Monitor",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = scheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                M3ExpressiveSwitch(
+                    checked = state.liveMonitor.enabled,
+                    onCheckedChange = { state.toggleFloatingHud() }
+                )
+
+                Surface(
+                    shape = CircleShape,
+                    color = scheme.surfaceContainerHigh,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .clickable { state.openSubscreen("liveMonitor") }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = ZXSidePanelIcons.get("chevron_right"),
+                            contentDescription = "Open live monitor settings",
+                            tint = scheme.onSurface,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            styles.forEach { (id, label) ->
+                val isSelected = state.liveMonitor.layoutStyle == id
+                val scale by animateFloatAsState(
+                    targetValue = if (isSelected) 1.05f else 1f,
+                    animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMedium),
+                    label = "LiveMonitorStyleScale"
+                )
+                val containerColor by animateColorAsState(
+                    targetValue = if (isSelected) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                    animationSpec = tween(durationMillis = 250),
+                    label = "LiveMonitorStyleContainer"
+                )
+                val contentColor by animateColorAsState(
+                    targetValue = if (isSelected) scheme.onPrimaryContainer else scheme.onSurface,
+                    animationSpec = tween(durationMillis = 250),
+                    label = "LiveMonitorStyleContent"
+                )
+                val shape = RoundedCornerShape(16.dp)
+
+                Surface(
+                    shape = shape,
+                    color = containerColor,
+                    contentColor = contentColor,
+                    modifier = Modifier
+                        .weight(1f)
+                        .graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
+                        }
+                        .clip(shape)
+                        .clickable { state.setLiveMonitorLayoutStyle(id) }
+                ) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = contentColor,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun CrosshairWidget(
     state: ZXSidePanelStateHolder
 ) {
@@ -1050,7 +1155,7 @@ private fun CrosshairWidget(
                     }
                 }
                 Text(
-                    text = "Crosshair overlay",
+                    text = "Crosshair",
                     style = MaterialTheme.typography.titleSmall,
                     color = scheme.onSurface,
                     maxLines = 1,
@@ -1239,7 +1344,7 @@ private fun DisplayTouchWidget(
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(shape)
-                                .clickable { state.visualFilter = id }
+                                .clickable { state.selectVisualFilter(id) }
                         ) {
                             Row(
                                 modifier = Modifier
@@ -1365,17 +1470,234 @@ private fun ThermalBatteryWidget(
                 }
             }
 
-            Surface(
-                shape = CircleShape,
-                color = if (isActive) scheme.secondaryContainer else scheme.surfaceContainerHigh
+            Text(
+                text = if (isActive) "Active" else "${state.tempCelsius}°C",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = if (isActive) scheme.primary else scheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+fun LiveMonitorSubscreen(
+    state: ZXSidePanelStateHolder
+) {
+    val scheme = MaterialTheme.colorScheme
+    val lm = state.liveMonitor
+    val styles = remember {
+        listOf(
+            "line" to "One line bar",
+            "stacked" to "Stacked box",
+            "minimal" to "Compact pill"
+        )
+    }
+    val metricItems = remember {
+        listOf(
+            "fps" to "Frame rate (FPS)",
+            "cpu" to "CPU load",
+            "gpu" to "GPU load",
+            "temp" to "Temperature",
+            "ping" to "Network ping",
+            "battery" to "Battery level",
+            "profile" to "Active profile"
+        )
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // 1. Live Monitor Preview & Main Toggle
+        M3WidgetCard(
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = if (isActive) "Active" else "${state.tempCelsius}°C",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (isActive) scheme.onSecondaryContainer else scheme.onSurface,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                Column {
+                    Text(
+                        text = "Floating overlay monitor",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = scheme.onSurface
+                    )
+                    Text(
+                        text = "Drag anywhere on screen while in game",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant
+                    )
+                }
+
+                M3ExpressiveSwitch(
+                    checked = lm.enabled,
+                    onCheckedChange = { state.toggleFloatingHud() }
                 )
             }
+
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = scheme.surfaceContainerHigh,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 2.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 20.dp, horizontal = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    FloatingMonitorPill(state = state)
+                }
+            }
+        }
+
+        // 2. Layout Style Selection
+        M3WidgetCard(
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "Monitor layout",
+                style = MaterialTheme.typography.titleSmall,
+                color = scheme.onSurfaceVariant
+            )
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                styles.forEach { (styleId, label) ->
+                    val isActive = lm.layoutStyle == styleId
+                    M3ToggleTile(
+                        active = isActive,
+                        onClick = { state.setLiveMonitorLayoutStyle(styleId) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                            if (isActive) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get("check_circle"),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Telemetry Metrics to Display
+        M3WidgetCard(
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "Telemetry to show",
+                style = MaterialTheme.typography.titleSmall,
+                color = scheme.onSurfaceVariant
+            )
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                metricItems.chunked(2).forEach { rowItems ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        rowItems.forEach { (metricKey, label) ->
+                            val isActive = when (metricKey) {
+                                "fps" -> lm.showFps
+                                "cpu" -> lm.showCpu
+                                "gpu" -> lm.showGpu
+                                "temp" -> lm.showTemp
+                                "ping" -> lm.showPing
+                                "battery" -> lm.showBattery
+                                "profile" -> lm.showProfile
+                                else -> false
+                            }
+
+                            M3ToggleTile(
+                                active = isActive,
+                                onClick = { state.toggleLiveMonitorMetric(metricKey) },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Icon(
+                                        imageVector = ZXSidePanelIcons.get(
+                                            if (isActive) "check_circle" else "add_circle"
+                                        ),
+                                        contentDescription = null,
+                                        modifier = Modifier
+                                            .padding(start = 4.dp)
+                                            .size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                        if (rowItems.size == 1) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Opacity Slider
+        M3WidgetCard(
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Overlay opacity",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = scheme.onSurfaceVariant
+                )
+                Text(
+                    text = "${lm.opacity}%",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = scheme.primary
+                )
+            }
+            M3ExpressiveLinearSlider(
+                value = lm.opacity.toFloat(),
+                min = 40f,
+                max = 100f,
+                step = 1f,
+                onValueChange = { state.updateLiveMonitorOpacity(it.roundToInt()) }
+            )
         }
     }
 }
@@ -1738,7 +2060,7 @@ fun DisplaySubscreen(
                             val isActive = state.visualFilter == id
                             M3ToggleTile(
                                 active = isActive,
-                                onClick = { state.visualFilter = id },
+                                onClick = { state.selectVisualFilter(id) },
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Row(
@@ -1770,28 +2092,11 @@ fun DisplaySubscreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "RGB balance",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = scheme.onSurfaceVariant
-                )
-                Surface(
-                    shape = CircleShape,
-                    color = scheme.surfaceContainerHigh
-                ) {
-                    Text(
-                        text = "R ${state.rgbRed}% • G ${state.rgbGreen}% • B ${state.rgbBlue}%",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = scheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
-                }
-            }
+            Text(
+                text = "RGB balance",
+                style = MaterialTheme.typography.titleSmall,
+                color = scheme.onSurfaceVariant
+            )
 
             // Red channel
             Column {
@@ -1819,7 +2124,7 @@ fun DisplaySubscreen(
                     max = 150f,
                     step = 1f,
                     variant = M3SliderVariant.Red,
-                    onValueChange = { state.rgbRed = it.roundToInt() }
+                    onValueChange = { state.updateRgbRedChannel(it.roundToInt()) }
                 )
             }
 
@@ -1849,7 +2154,7 @@ fun DisplaySubscreen(
                     max = 150f,
                     step = 1f,
                     variant = M3SliderVariant.Green,
-                    onValueChange = { state.rgbGreen = it.roundToInt() }
+                    onValueChange = { state.updateRgbGreenChannel(it.roundToInt()) }
                 )
             }
 
@@ -1879,7 +2184,7 @@ fun DisplaySubscreen(
                     max = 150f,
                     step = 1f,
                     variant = M3SliderVariant.Blue,
-                    onValueChange = { state.rgbBlue = it.roundToInt() }
+                    onValueChange = { state.updateRgbBlueChannel(it.roundToInt()) }
                 )
             }
         }
@@ -1920,7 +2225,7 @@ fun DisplaySubscreen(
                     max = 200f,
                     step = 1f,
                     variant = M3SliderVariant.Primary,
-                    onValueChange = { state.saturation = it.roundToInt() }
+                    onValueChange = { state.updateDisplaySaturation(it.roundToInt()) }
                 )
             }
 
@@ -1949,7 +2254,7 @@ fun DisplaySubscreen(
                     max = 150f,
                     step = 1f,
                     variant = M3SliderVariant.Secondary,
-                    onValueChange = { state.contrast = it.roundToInt() }
+                    onValueChange = { state.updateDisplayContrast(it.roundToInt()) }
                 )
             }
         }
@@ -1972,34 +2277,17 @@ fun AppsManagerSubscreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text = "Quick Launch Apps",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = scheme.onSurface
-                    )
-                    Text(
-                        text = "Tap an app in the sidebar to open it directly",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = scheme.onSurfaceVariant
-                    )
-                }
-                Surface(
-                    shape = CircleShape,
-                    color = scheme.secondaryContainer
-                ) {
-                    Text(
-                        text = "${state.quickApps.size} pinned",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = scheme.onSecondaryContainer,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
-                }
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Quick Launch Apps",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = scheme.onSurface
+                )
+                Text(
+                    text = "Tap an app in the sidebar to open it directly",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant
+                )
             }
 
             if (state.installedApps.isEmpty()) {

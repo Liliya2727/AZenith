@@ -16,6 +16,7 @@
 
 package zx.azenith.ui.gamespace
 
+import android.content.SharedPreferences
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -43,7 +44,7 @@ data class SidePanelAntiInterferenceItem(
 )
 
 data class SidePanelCrosshairState(
-    val enabled: Boolean = true,
+    val enabled: Boolean = false,
     val style: String = "cross",
     val showDot: Boolean = true,
     val showCross: Boolean = true,
@@ -70,6 +71,19 @@ data class SidePanelCrosshairState(
             else -> Color(0xFFD0BCFF)
         }
 }
+
+data class SidePanelLiveMonitorState(
+    val enabled: Boolean = false,
+    val layoutStyle: String = "line",
+    val showFps: Boolean = true,
+    val showCpu: Boolean = true,
+    val showGpu: Boolean = true,
+    val showTemp: Boolean = false,
+    val showPing: Boolean = false,
+    val showBattery: Boolean = false,
+    val showProfile: Boolean = false,
+    val opacity: Int = 92
+)
 
 data class SidePanelAppItem(
     val packageName: String,
@@ -103,10 +117,37 @@ sealed interface SidePanelFeedBlock {
 
 @Stable
 class ZXSidePanelStateHolder {
+    companion object {
+        val DEFAULT_ACTIVE_WIDGETS = listOf(
+            "fpsHeader",
+            "speedometers",
+            "profileSwitch",
+            "brightnessSlider",
+            "volumeSlider",
+            "quickTools",
+            "antiInterference",
+            "liveMonitor",
+            "crosshair",
+            "displayTouch"
+        )
+
+        val DEFAULT_LIBRARY_WIDGETS = listOf(
+            "networkPing",
+            "thermalBattery"
+        )
+    }
+
+    private var boundPrefs: SharedPreferences? = null
+    var currentAppPackage by mutableStateOf("default")
+        private set
+
     var editMode by mutableStateOf(false)
     var activeSubscreen by mutableStateOf<String?>(null)
-    var floatingHudVisible by mutableStateOf(true)
     var activeScrollCategory by mutableStateOf("overview")
+
+    var liveMonitor by mutableStateOf(SidePanelLiveMonitorState())
+    val floatingHudVisible: Boolean
+        get() = liveMonitor.enabled
 
     var brightness by mutableIntStateOf(82)
     var volume by mutableIntStateOf(68)
@@ -192,22 +233,13 @@ class ZXSidePanelStateHolder {
     var onBrightnessChangedRequest: ((Int) -> Unit)? = null
     var onVolumeChangedRequest: ((Int, Boolean) -> Unit)? = null
 
-    val activeWidgets = mutableStateListOf(
-        "fpsHeader",
-        "speedometers",
-        "profileSwitch",
-        "brightnessSlider",
-        "volumeSlider",
-        "quickTools",
-        "antiInterference",
-        "crosshair",
-        "displayTouch"
-    )
+    val activeWidgets = mutableStateListOf<String>().apply {
+        addAll(DEFAULT_ACTIVE_WIDGETS)
+    }
 
-    val libraryWidgets = mutableStateListOf(
-        "networkPing",
-        "thermalBattery"
-    )
+    val libraryWidgets = mutableStateListOf<String>().apply {
+        addAll(DEFAULT_LIBRARY_WIDGETS)
+    }
 
     val widgetCatalog: Map<String, SidePanelWidgetMeta> = mapOf(
         "fpsHeader" to SidePanelWidgetMeta(
@@ -264,9 +296,16 @@ class ZXSidePanelStateHolder {
             icon = "do_not_disturb_on",
             category = "antiInterference"
         ),
+        "liveMonitor" to SidePanelWidgetMeta(
+            id = "liveMonitor",
+            title = "Live Monitor",
+            subtitle = "Floating telemetry layout & metrics",
+            icon = "monitoring",
+            category = "addons"
+        ),
         "crosshair" to SidePanelWidgetMeta(
             id = "crosshair",
-            title = "Crosshair aim assist",
+            title = "Crosshair",
             subtitle = "Custom reticle style, size & color",
             icon = "my_location",
             category = "addons"
@@ -274,7 +313,7 @@ class ZXSidePanelStateHolder {
         "displayTouch" to SidePanelWidgetMeta(
             id = "displayTouch",
             title = "Color Scheme",
-            subtitle = "Color filters, refresh rate & sampling",
+            subtitle = "Color filters, RGB balance & tuning",
             icon = "display_settings",
             category = "addons"
         ),
@@ -298,6 +337,164 @@ class ZXSidePanelStateHolder {
     var toastIcon by mutableStateOf("check_circle")
     var toastVisible by mutableStateOf(false)
     var toastSequence by mutableIntStateOf(0)
+
+    fun bindPreferences(prefs: SharedPreferences) {
+        boundPrefs = prefs
+        loadWidgetLayoutPreferences()
+        loadForApp(currentAppPackage)
+    }
+
+    fun loadWidgetLayoutPreferences() {
+        val prefs = boundPrefs ?: return
+        hudOffsetX = prefs.getFloat("gs_global_hud_offset_x", 0f)
+        hudOffsetY = prefs.getFloat("gs_global_hud_offset_y", 0f)
+
+        val savedActive = prefs.getString("gs_global_active_widgets", null)
+        val savedLib = prefs.getString("gs_global_library_widgets", null)
+        if (savedActive != null && savedLib != null) {
+            val activeList = savedActive.split(",")
+                .map { it.trim() }
+                .filter { it.isNotEmpty() && widgetCatalog.containsKey(it) }
+                .distinct()
+                .toMutableList()
+            val libList = savedLib.split(",")
+                .map { it.trim() }
+                .filter { it.isNotEmpty() && widgetCatalog.containsKey(it) && !activeList.contains(it) }
+                .distinct()
+                .toMutableList()
+
+            // Ensure any newly introduced catalog widgets (such as liveMonitor) are included
+            for (wId in DEFAULT_ACTIVE_WIDGETS) {
+                if (!activeList.contains(wId) && !libList.contains(wId)) {
+                    val defaultIdx = DEFAULT_ACTIVE_WIDGETS.indexOf(wId).coerceIn(0, activeList.size)
+                    activeList.add(defaultIdx, wId)
+                }
+            }
+            for (wId in DEFAULT_LIBRARY_WIDGETS) {
+                if (!activeList.contains(wId) && !libList.contains(wId)) {
+                    libList.add(wId)
+                }
+            }
+
+            activeWidgets.clear()
+            activeWidgets.addAll(activeList)
+            libraryWidgets.clear()
+            libraryWidgets.addAll(libList)
+        }
+    }
+
+    fun saveWidgetLayoutPreferences() {
+        val prefs = boundPrefs ?: return
+        prefs.edit()
+            .putString("gs_global_active_widgets", activeWidgets.joinToString(","))
+            .putString("gs_global_library_widgets", libraryWidgets.joinToString(","))
+            .putFloat("gs_global_hud_offset_x", hudOffsetX)
+            .putFloat("gs_global_hud_offset_y", hudOffsetY)
+            .apply()
+    }
+
+    fun loadForApp(packageName: String) {
+        val pkgKey = packageName.trim().ifEmpty { "default" }
+        currentAppPackage = pkgKey
+        val prefs = boundPrefs ?: return
+        val p = "gs_app_${pkgKey}_"
+
+        crosshair = SidePanelCrosshairState(
+            enabled = prefs.getBoolean("${p}ch_enabled", false),
+            style = prefs.getString("${p}ch_style", "cross") ?: "cross",
+            showDot = prefs.getBoolean("${p}ch_dot", true),
+            showCross = prefs.getBoolean("${p}ch_cross", true),
+            showCircle = prefs.getBoolean("${p}ch_circle", false),
+            showAngle = prefs.getBoolean("${p}ch_angle", false),
+            outline = prefs.getBoolean("${p}ch_outline", true),
+            colorHex = prefs.getString("${p}ch_color", "#d0bcff") ?: "#d0bcff",
+            size = prefs.getFloat("${p}ch_size", 28f).coerceIn(8f, 56f),
+            thickness = prefs.getFloat("${p}ch_thick", 3f).coerceIn(1f, 8f),
+            gap = prefs.getFloat("${p}ch_gap", 6f).coerceIn(0f, 28f)
+        )
+
+        liveMonitor = SidePanelLiveMonitorState(
+            enabled = prefs.getBoolean("${p}lm_enabled", false),
+            layoutStyle = prefs.getString("${p}lm_style", "line") ?: "line",
+            showFps = prefs.getBoolean("${p}lm_fps", true),
+            showCpu = prefs.getBoolean("${p}lm_cpu", true),
+            showGpu = prefs.getBoolean("${p}lm_gpu", true),
+            showTemp = prefs.getBoolean("${p}lm_temp", false),
+            showPing = prefs.getBoolean("${p}lm_ping", false),
+            showBattery = prefs.getBoolean("${p}lm_battery", false),
+            showProfile = prefs.getBoolean("${p}lm_profile", false),
+            opacity = prefs.getInt("${p}lm_opacity", 92).coerceIn(40, 100)
+        )
+
+        visualFilter = prefs.getString("${p}disp_filter", "standard") ?: "standard"
+        rgbRed = prefs.getInt("${p}disp_r", 100).coerceIn(50, 150)
+        rgbGreen = prefs.getInt("${p}disp_g", 100).coerceIn(50, 150)
+        rgbBlue = prefs.getInt("${p}disp_b", 100).coerceIn(50, 150)
+        saturation = prefs.getInt("${p}disp_sat", 100).coerceIn(0, 200)
+        contrast = prefs.getInt("${p}disp_con", 100).coerceIn(50, 150)
+
+        for (i in antiInterference.indices) {
+            val item = antiInterference[i]
+            val defaultActive = item.id != "calls"
+            val savedActive = prefs.getBoolean("${p}anti_${item.id}", defaultActive)
+            antiInterference[i] = item.copy(active = savedActive)
+        }
+
+        for (i in quickTools.indices) {
+            val tool = quickTools[i]
+            if (tool.id != "cleanup") {
+                val savedActive = prefs.getBoolean("${p}tool_${tool.id}", false)
+                quickTools[i] = tool.copy(active = savedActive)
+            }
+        }
+    }
+
+    fun saveCurrentAppPreferences() {
+        val prefs = boundPrefs ?: return
+        val pkgKey = currentAppPackage.ifEmpty { "default" }
+        val p = "gs_app_${pkgKey}_"
+        val editor = prefs.edit()
+
+        editor.putBoolean("${p}ch_enabled", crosshair.enabled)
+        editor.putString("${p}ch_style", crosshair.style)
+        editor.putBoolean("${p}ch_dot", crosshair.showDot)
+        editor.putBoolean("${p}ch_cross", crosshair.showCross)
+        editor.putBoolean("${p}ch_circle", crosshair.showCircle)
+        editor.putBoolean("${p}ch_angle", crosshair.showAngle)
+        editor.putBoolean("${p}ch_outline", crosshair.outline)
+        editor.putString("${p}ch_color", crosshair.colorHex)
+        editor.putFloat("${p}ch_size", crosshair.size)
+        editor.putFloat("${p}ch_thick", crosshair.thickness)
+        editor.putFloat("${p}ch_gap", crosshair.gap)
+
+        editor.putBoolean("${p}lm_enabled", liveMonitor.enabled)
+        editor.putString("${p}lm_style", liveMonitor.layoutStyle)
+        editor.putBoolean("${p}lm_fps", liveMonitor.showFps)
+        editor.putBoolean("${p}lm_cpu", liveMonitor.showCpu)
+        editor.putBoolean("${p}lm_gpu", liveMonitor.showGpu)
+        editor.putBoolean("${p}lm_temp", liveMonitor.showTemp)
+        editor.putBoolean("${p}lm_ping", liveMonitor.showPing)
+        editor.putBoolean("${p}lm_battery", liveMonitor.showBattery)
+        editor.putBoolean("${p}lm_profile", liveMonitor.showProfile)
+        editor.putInt("${p}lm_opacity", liveMonitor.opacity)
+
+        editor.putString("${p}disp_filter", visualFilter)
+        editor.putInt("${p}disp_r", rgbRed)
+        editor.putInt("${p}disp_g", rgbGreen)
+        editor.putInt("${p}disp_b", rgbBlue)
+        editor.putInt("${p}disp_sat", saturation)
+        editor.putInt("${p}disp_con", contrast)
+
+        for (item in antiInterference) {
+            editor.putBoolean("${p}anti_${item.id}", item.active)
+        }
+        for (tool in quickTools) {
+            if (tool.id != "cleanup") {
+                editor.putBoolean("${p}tool_${tool.id}", tool.active)
+            }
+        }
+        editor.apply()
+    }
 
     fun showToast(message: String, iconName: String = "check_circle") {
         toastMessage = message
@@ -368,7 +565,7 @@ class ZXSidePanelStateHolder {
         val next = force ?: !editMode
         editMode = next
         if (next) {
-            showToast("Edit mode enabled — drag widgets to reorder or drop", "edit")
+            showToast("Edit mode enabled — drag top bar to reorder", "edit")
         }
     }
 
@@ -388,7 +585,13 @@ class ZXSidePanelStateHolder {
         when (activeSubscreen) {
             "crosshair" -> {
                 crosshair = SidePanelCrosshairState()
+                saveCurrentAppPreferences()
                 showToast("Crosshair settings reset", "restart_alt")
+            }
+            "liveMonitor" -> {
+                liveMonitor = SidePanelLiveMonitorState()
+                saveCurrentAppPreferences()
+                showToast("Live Monitor settings reset", "restart_alt")
             }
             "display" -> {
                 visualFilter = "standard"
@@ -401,6 +604,7 @@ class ZXSidePanelStateHolder {
                 shadowBoost = 20
                 touchSampling = 720
                 touchSensitivity = 7
+                saveCurrentAppPreferences()
                 showToast("Display & RGB balance reset", "restart_alt")
             }
             "appsManager" -> {
@@ -462,6 +666,7 @@ class ZXSidePanelStateHolder {
                 if (!activeWidgets.contains(wId)) {
                     val insertIdx = dstIdx.coerceIn(0, activeWidgets.size)
                     activeWidgets.add(insertIdx, wId)
+                    saveWidgetLayoutPreferences()
                     showToast("Placed $title", "add_circle")
                 }
             }
@@ -470,6 +675,7 @@ class ZXSidePanelStateHolder {
                 removeWidgetToLibrary(wId)
             } else if (srcIdx in activeWidgets.indices && dstIdx in activeWidgets.indices && srcIdx != dstIdx) {
                 moveActiveWidget(srcIdx, dstIdx)
+                saveWidgetLayoutPreferences()
                 showToast("Moved $title", "drag_indicator")
             }
         }
@@ -488,6 +694,7 @@ class ZXSidePanelStateHolder {
             if (!libraryWidgets.contains(widgetId)) {
                 libraryWidgets.add(0, widgetId)
             }
+            saveWidgetLayoutPreferences()
             val title = widgetCatalog[widgetId]?.title ?: widgetId
             showToast("Moved $title to library", "inventory_2")
         }
@@ -499,6 +706,7 @@ class ZXSidePanelStateHolder {
                 val idx = atIndex.coerceIn(0, activeWidgets.size)
                 activeWidgets.add(idx, widgetId)
             }
+            saveWidgetLayoutPreferences()
             val title = widgetCatalog[widgetId]?.title ?: widgetId
             showToast("Added $title", "add_circle")
         }
@@ -508,31 +716,16 @@ class ZXSidePanelStateHolder {
         if (fromIndex in activeWidgets.indices && toIndex in activeWidgets.indices && fromIndex != toIndex) {
             val item = activeWidgets.removeAt(fromIndex)
             activeWidgets.add(toIndex, item)
+            saveWidgetLayoutPreferences()
         }
     }
 
     fun resetDefaultWidgets() {
         activeWidgets.clear()
-        activeWidgets.addAll(
-            listOf(
-                "fpsHeader",
-                "speedometers",
-                "profileSwitch",
-                "brightnessSlider",
-                "volumeSlider",
-                "quickTools",
-                "antiInterference",
-                "crosshair",
-                "displayTouch"
-            )
-        )
+        activeWidgets.addAll(DEFAULT_ACTIVE_WIDGETS)
         libraryWidgets.clear()
-        libraryWidgets.addAll(
-            listOf(
-                "networkPing",
-                "thermalBattery"
-            )
-        )
+        libraryWidgets.addAll(DEFAULT_LIBRARY_WIDGETS)
+        saveWidgetLayoutPreferences()
         showToast("Restored default widget order", "restart_alt")
     }
 
@@ -608,6 +801,7 @@ class ZXSidePanelStateHolder {
         }
         val updated = tool.copy(active = !tool.active)
         quickTools[idx] = updated
+        saveCurrentAppPreferences()
         showToast("${updated.name} ${if (updated.active) "started" else "stopped"}", updated.icon)
     }
 
@@ -616,10 +810,12 @@ class ZXSidePanelStateHolder {
         if (idx == -1) return
         val item = antiInterference[idx]
         antiInterference[idx] = item.copy(active = !item.active)
+        saveCurrentAppPreferences()
     }
 
     fun toggleCrosshairQuick() {
         crosshair = crosshair.copy(enabled = !crosshair.enabled)
+        saveCurrentAppPreferences()
     }
 
     fun toggleCrosshairLayer(layerKey: String) {
@@ -630,6 +826,7 @@ class ZXSidePanelStateHolder {
             "showAngle" -> crosshair.copy(showAngle = !crosshair.showAngle, enabled = true)
             else -> crosshair
         }
+        saveCurrentAppPreferences()
     }
 
     fun setCrosshairStyle(styleName: String) {
@@ -668,27 +865,94 @@ class ZXSidePanelStateHolder {
             )
             else -> crosshair
         }
+        saveCurrentAppPreferences()
     }
 
     fun setCrosshairColor(hex: String) {
         crosshair = crosshair.copy(colorHex = hex, enabled = true)
+        saveCurrentAppPreferences()
     }
 
     fun updateCrosshairThickness(value: Float) {
         val snapped = (Math.round(value * 2f) / 2f).coerceIn(1f, 8f)
         crosshair = crosshair.copy(thickness = snapped)
+        saveCurrentAppPreferences()
     }
 
     fun updateCrosshairSize(value: Float) {
         crosshair = crosshair.copy(size = value.coerceIn(8f, 56f))
+        saveCurrentAppPreferences()
     }
 
     fun updateCrosshairGap(value: Float) {
         crosshair = crosshair.copy(gap = value.coerceIn(0f, 28f))
+        saveCurrentAppPreferences()
     }
 
     fun toggleFloatingHud() {
-        floatingHudVisible = !floatingHudVisible
+        liveMonitor = liveMonitor.copy(enabled = !liveMonitor.enabled)
+        saveCurrentAppPreferences()
+    }
+
+    fun setLiveMonitorLayoutStyle(styleName: String) {
+        liveMonitor = liveMonitor.copy(layoutStyle = styleName, enabled = true)
+        saveCurrentAppPreferences()
+    }
+
+    fun toggleLiveMonitorMetric(metricKey: String) {
+        val cur = liveMonitor
+        val updated = when (metricKey) {
+            "fps" -> cur.copy(showFps = !cur.showFps)
+            "cpu" -> cur.copy(showCpu = !cur.showCpu)
+            "gpu" -> cur.copy(showGpu = !cur.showGpu)
+            "temp" -> cur.copy(showTemp = !cur.showTemp)
+            "ping" -> cur.copy(showPing = !cur.showPing)
+            "battery" -> cur.copy(showBattery = !cur.showBattery)
+            "profile" -> cur.copy(showProfile = !cur.showProfile)
+            else -> cur
+        }
+        // Keep at least one metric enabled
+        val anyEnabled = updated.showFps || updated.showCpu || updated.showGpu ||
+            updated.showTemp || updated.showPing || updated.showBattery || updated.showProfile
+        if (anyEnabled) {
+            liveMonitor = updated
+            saveCurrentAppPreferences()
+        }
+    }
+
+    fun updateLiveMonitorOpacity(opacityPct: Int) {
+        liveMonitor = liveMonitor.copy(opacity = opacityPct.coerceIn(40, 100))
+        saveCurrentAppPreferences()
+    }
+
+    fun selectVisualFilter(filterId: String) {
+        visualFilter = filterId
+        saveCurrentAppPreferences()
+    }
+
+    fun updateRgbRedChannel(value: Int) {
+        rgbRed = value.coerceIn(50, 150)
+        saveCurrentAppPreferences()
+    }
+
+    fun updateRgbGreenChannel(value: Int) {
+        rgbGreen = value.coerceIn(50, 150)
+        saveCurrentAppPreferences()
+    }
+
+    fun updateRgbBlueChannel(value: Int) {
+        rgbBlue = value.coerceIn(50, 150)
+        saveCurrentAppPreferences()
+    }
+
+    fun updateDisplaySaturation(value: Int) {
+        saturation = value.coerceIn(0, 200)
+        saveCurrentAppPreferences()
+    }
+
+    fun updateDisplayContrast(value: Int) {
+        contrast = value.coerceIn(50, 150)
+        saveCurrentAppPreferences()
     }
 
     fun launchQuickApp(packageName: String) {

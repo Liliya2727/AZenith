@@ -667,143 +667,293 @@ fun CrosshairReticleCanvas(
 
 @Composable
 fun FloatingMonitorPill(
-    fps: Int,
-    cpuLoad: Int,
-    gpuLoad: Int,
+    state: ZXSidePanelStateHolder,
     modifier: Modifier = Modifier,
     onDragDelta: ((Float, Float) -> Unit)? = null
 ) {
     val scheme = MaterialTheme.colorScheme
+    val cfg = state.liveMonitor
+    val alphaVal = (cfg.opacity / 100f).coerceIn(0.4f, 1f)
+
     val animatedCpu by animateFloatAsState(
-        targetValue = (cpuLoad / 100f).coerceIn(0f, 1f),
+        targetValue = (state.cpuLoad / 100f).coerceIn(0f, 1f),
         animationSpec = tween(durationMillis = 300),
         label = "HudCpuBar"
     )
     val animatedGpu by animateFloatAsState(
-        targetValue = (gpuLoad / 100f).coerceIn(0f, 1f),
+        targetValue = (state.gpuLoad / 100f).coerceIn(0f, 1f),
         animationSpec = tween(durationMillis = 300),
         label = "HudGpuBar"
     )
 
-    Surface(
-        shape = CircleShape,
-        color = scheme.surfaceContainerLow,
-        shadowElevation = 16.dp,
-        modifier = modifier
-            .then(
-                if (onDragDelta != null) {
-                    Modifier.pointerInput(Unit) {
-                        detectDragGestures { change, dragAmount ->
-                            change.consume()
-                            onDragDelta(dragAmount.x, dragAmount.y)
+    val dragMod = if (onDragDelta != null) {
+        Modifier.pointerInput(Unit) {
+            detectDragGestures { change, dragAmount ->
+                change.consume()
+                onDragDelta(dragAmount.x, dragAmount.y)
+            }
+        }
+    } else {
+        Modifier
+    }
+
+    when (cfg.layoutStyle) {
+        "stacked" -> {
+            val metrics = buildList<Triple<String, String, Color>> {
+                if (cfg.showFps) add(Triple("FPS", "${state.currentFps}", scheme.primary))
+                if (cfg.showCpu) add(Triple("CPU", "${state.cpuLoad}%", scheme.primary))
+                if (cfg.showGpu) add(Triple("GPU", "${state.gpuLoad}%", scheme.tertiary))
+                if (cfg.showTemp) add(Triple("TEMP", "${state.tempCelsius}°C", scheme.secondary))
+                if (cfg.showPing) add(Triple("PING", "${state.pingMs}ms", scheme.primary))
+                if (cfg.showBattery) add(Triple("BAT", "${state.batteryLevel}%", scheme.onSurface))
+                if (cfg.showProfile) add(Triple("MODE", state.currentProfileDisplayName, scheme.tertiary))
+            }
+
+            Surface(
+                shape = RoundedCornerShape(22.dp),
+                color = scheme.surfaceContainerLow.copy(alpha = alphaVal),
+                shadowElevation = 16.dp,
+                modifier = modifier.then(dragMod)
+            ) {
+                Column(
+                    modifier = Modifier.padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    metrics.chunked(2).forEach { rowMetrics ->
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            rowMetrics.forEach { (label, value, accentColor) ->
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = scheme.surfaceContainerHigh.copy(alpha = alphaVal),
+                                    modifier = Modifier.widthIn(min = 84.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = scheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            softWrap = false,
+                                            modifier = Modifier.padding(end = 8.dp)
+                                        )
+                                        Text(
+                                            text = value,
+                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                            color = accentColor,
+                                            maxLines = 1,
+                                            softWrap = false
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
-                } else {
-                    Modifier
                 }
-            )
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            // FPS Readout
-            Row(
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = "$fps",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = scheme.primary,
-                    maxLines = 1,
-                    softWrap = false
-                )
-                Text(
-                    text = "FPS",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = scheme.onSurfaceVariant,
-                    maxLines = 1,
-                    softWrap = false,
-                    modifier = Modifier.padding(bottom = 1.dp)
-                )
+            }
+        }
+        "minimal" -> {
+            val segments = buildList<Pair<String, Color>> {
+                if (cfg.showFps) add("${state.currentFps} FPS" to scheme.primary)
+                if (cfg.showCpu) add("CPU ${state.cpuLoad}%" to scheme.onSurface)
+                if (cfg.showGpu) add("GPU ${state.gpuLoad}%" to scheme.tertiary)
+                if (cfg.showTemp) add("${state.tempCelsius}°C" to scheme.secondary)
+                if (cfg.showPing) add("${state.pingMs}ms" to scheme.onSurface)
+                if (cfg.showBattery) add("${state.batteryLevel}%" to scheme.onSurfaceVariant)
+                if (cfg.showProfile) add(state.currentProfileDisplayName to scheme.primary)
             }
 
-            // CPU Load Bar
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            Surface(
+                shape = CircleShape,
+                color = scheme.surfaceContainerLow.copy(alpha = alphaVal),
+                shadowElevation = 14.dp,
+                modifier = modifier.then(dragMod)
             ) {
-                Text(
-                    text = "CPU",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = scheme.onSurfaceVariant,
-                    maxLines = 1,
-                    softWrap = false
-                )
-                Box(
-                    modifier = Modifier
-                        .width(56.dp)
-                        .height(8.dp)
-                        .clip(CircleShape)
-                        .background(scheme.surfaceContainerHighest)
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(animatedCpu)
-                            .clip(CircleShape)
-                            .background(scheme.primary)
-                    )
+                    segments.forEachIndexed { idx, (text, color) ->
+                        if (idx > 0) {
+                            Text(
+                                text = "•",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = scheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+                        Text(
+                            text = text,
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = color,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
                 }
-                Text(
-                    text = "$cpuLoad%",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = scheme.onSurface,
-                    textAlign = TextAlign.End,
-                    maxLines = 1,
-                    softWrap = false,
-                    modifier = Modifier.widthIn(min = 36.dp)
-                )
             }
-
-            // GPU Load Bar
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+        }
+        else -> {
+            Surface(
+                shape = CircleShape,
+                color = scheme.surfaceContainerLow.copy(alpha = alphaVal),
+                shadowElevation = 16.dp,
+                modifier = modifier.then(dragMod)
             ) {
-                Text(
-                    text = "GPU",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = scheme.onSurfaceVariant,
-                    maxLines = 1,
-                    softWrap = false
-                )
-                Box(
-                    modifier = Modifier
-                        .width(56.dp)
-                        .height(8.dp)
-                        .clip(CircleShape)
-                        .background(scheme.surfaceContainerHighest)
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .fillMaxWidth(animatedGpu)
-                            .clip(CircleShape)
-                            .background(scheme.tertiary)
-                    )
+                    if (cfg.showFps) {
+                        Row(
+                            verticalAlignment = Alignment.Bottom,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "${state.currentFps}",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = scheme.primary,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                            Text(
+                                text = "FPS",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = scheme.onSurfaceVariant,
+                                maxLines = 1,
+                                softWrap = false,
+                                modifier = Modifier.padding(bottom = 1.dp)
+                            )
+                        }
+                    }
+
+                    if (cfg.showCpu) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "CPU",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = scheme.onSurfaceVariant,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .width(42.dp)
+                                    .height(7.dp)
+                                    .clip(CircleShape)
+                                    .background(scheme.surfaceContainerHighest)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .fillMaxWidth(animatedCpu)
+                                        .clip(CircleShape)
+                                        .background(scheme.primary)
+                                )
+                            }
+                            Text(
+                                text = "${state.cpuLoad}%",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = scheme.onSurface,
+                                textAlign = TextAlign.End,
+                                maxLines = 1,
+                                softWrap = false,
+                                modifier = Modifier.widthIn(min = 32.dp)
+                            )
+                        }
+                    }
+
+                    if (cfg.showGpu) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "GPU",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = scheme.onSurfaceVariant,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .width(42.dp)
+                                    .height(7.dp)
+                                    .clip(CircleShape)
+                                    .background(scheme.surfaceContainerHighest)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .fillMaxWidth(animatedGpu)
+                                        .clip(CircleShape)
+                                        .background(scheme.tertiary)
+                                )
+                            }
+                            Text(
+                                text = "${state.gpuLoad}%",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = scheme.onSurface,
+                                textAlign = TextAlign.End,
+                                maxLines = 1,
+                                softWrap = false,
+                                modifier = Modifier.widthIn(min = 32.dp)
+                            )
+                        }
+                    }
+
+                    if (cfg.showTemp) {
+                        Text(
+                            text = "${state.tempCelsius}°C",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.secondary,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+
+                    if (cfg.showPing) {
+                        Text(
+                            text = "${state.pingMs}ms",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = scheme.onSurface,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+
+                    if (cfg.showBattery) {
+                        Text(
+                            text = "${state.batteryLevel}%",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = scheme.onSurfaceVariant,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+
+                    if (cfg.showProfile) {
+                        Text(
+                            text = state.currentProfileDisplayName,
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.primary,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
                 }
-                Text(
-                    text = "$gpuLoad%",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = scheme.onSurface,
-                    textAlign = TextAlign.End,
-                    maxLines = 1,
-                    softWrap = false,
-                    modifier = Modifier.widthIn(min = 36.dp)
-                )
             }
         }
     }

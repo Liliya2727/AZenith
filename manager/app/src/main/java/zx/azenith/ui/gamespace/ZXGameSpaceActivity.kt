@@ -117,6 +117,7 @@ class ZXGameSpaceActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        ZXSidePanelService.hide(this)
         BgmManager.onActivityResume(this)
     }
 

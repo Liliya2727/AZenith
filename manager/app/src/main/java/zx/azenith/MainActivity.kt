@@ -190,6 +190,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        zx.azenith.ui.gamespace.ZXSidePanelService.hide(this)
         if (isStandingByForGameSpace) {
             isStandingByForGameSpace = false
         }
