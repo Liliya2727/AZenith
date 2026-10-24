@@ -226,22 +226,6 @@ class ZXFloatingAppRootService : RootService() {
         val iDm = getIDisplayManager() ?: return -1
         return runCatching {
             runCatching { Os.seteuid(SYSTEM_UID) }
-            val builderClass = Class.forName("android.hardware.display.VirtualDisplayConfig\$Builder")
-            val constructor = builderClass.getConstructor(
-                String::class.java,
-                Int::class.javaPrimitiveType,
-                Int::class.javaPrimitiveType,
-                Int::class.javaPrimitiveType
-            )
-            val builder = constructor.newInstance(name, width, height, dpi)
-            builderClass.getMethod("setFlags", Int::class.javaPrimitiveType).invoke(builder, flags)
-            if (surface != null) {
-                builderClass.getMethod("setSurface", Surface::class.java).invoke(builder, surface)
-            }
-            runCatching {
-                builderClass.getMethod("setPackageName", String::class.java).invoke(builder, "android")
-            }
-            val config = builderClass.getMethod("build").invoke(builder)
 
             val cbInterface = Class.forName("android.hardware.display.IVirtualDisplayCallback")
             val stubBinder = object : Binder() {
@@ -263,24 +247,89 @@ class ZXFloatingAppRootService : RootService() {
                 }
             }
 
+            // Path A: Android 14+ (VirtualDisplayConfig)
+            val hasVdConfig = runCatching {
+                Class.forName("android.hardware.display.VirtualDisplayConfig\$Builder")
+            }.isSuccess
+
+            if (hasVdConfig) {
+                val builderClass = Class.forName("android.hardware.display.VirtualDisplayConfig\$Builder")
+                val constructor = builderClass.getConstructor(
+                    String::class.java,
+                    Int::class.javaPrimitiveType,
+                    Int::class.javaPrimitiveType,
+                    Int::class.javaPrimitiveType
+                )
+                val builder = constructor.newInstance(name, width, height, dpi)
+                builderClass.getMethod("setFlags", Int::class.javaPrimitiveType).invoke(builder, flags)
+                if (surface != null) {
+                    builderClass.getMethod("setSurface", Surface::class.java).invoke(builder, surface)
+                }
+                runCatching {
+                    builderClass.getMethod("setPackageName", String::class.java).invoke(builder, "android")
+                }
+                val config = builderClass.getMethod("build").invoke(builder)
+
+                val methods = iDm.javaClass.methods.filter { it.name == "createVirtualDisplay" }
+                for (m in methods) {
+                    val params = m.parameterTypes
+                    if (params.isEmpty() || !params[0].name.contains("VirtualDisplayConfig")) continue
+                    m.isAccessible = true
+                    val args = arrayOfNulls<Any>(params.size)
+                    args[0] = config
+                    if (params.size > 1) {
+                        args[1] = callback
+                    }
+                    if (params.last() == String::class.java) {
+                        args[params.size - 1] = "android"
+                    }
+                    val res = m.invoke(iDm, *args)
+                    val displayId = (res as? Number)?.toInt() ?: -1
+                    if (displayId > 0) {
+                        Log.i("ZXFloatRoot", "createDisplayViaBinder (A14+) SUCCESS: id=$displayId flags=0x${flags.toString(16)}")
+                        displayCallbacks[displayId] = callback
+                        return displayId
+                    }
+                }
+            }
+
+            // Path B: Android 10-13 (Legacy IDisplayManager.createVirtualDisplay overloads)
             val methods = iDm.javaClass.methods.filter { it.name == "createVirtualDisplay" }
             for (m in methods) {
                 val params = m.parameterTypes
-                if (params.isEmpty() || !params[0].name.contains("VirtualDisplayConfig")) continue
+                if (params.any { it.name.contains("VirtualDisplayConfig") }) continue
                 m.isAccessible = true
                 val args = arrayOfNulls<Any>(params.size)
-                args[0] = config
-                if (params.size > 1) {
-                    args[1] = callback
+                var intCount = 0
+                for (i in params.indices) {
+                    val p = params[i]
+                    when {
+                        p.name.contains("IVirtualDisplayCallback") || p.isAssignableFrom(cbInterface) -> args[i] = callback
+                        p.name.contains("Surface") -> args[i] = surface
+                        p == Int::class.javaPrimitiveType || p == java.lang.Integer::class.java -> {
+                            when (intCount) {
+                                0 -> args[i] = width
+                                1 -> args[i] = height
+                                2 -> args[i] = dpi
+                                3 -> args[i] = flags
+                                else -> args[i] = 0
+                            }
+                            intCount++
+                        }
+                        p == String::class.java -> {
+                            if (i == 0 || i == 2) {
+                                args[i] = "android"
+                            } else {
+                                args[i] = name
+                            }
+                        }
+                        else -> args[i] = null
+                    }
                 }
-                if (params.last() == String::class.java) {
-                    args[params.size - 1] = "android"
-                }
-                Log.i("ZXFloatRoot", "Calling createVirtualDisplay: $m with ${args.size} args")
-                val res = m.invoke(iDm, *args)
+                val res = runCatching { m.invoke(iDm, *args) }.getOrNull()
                 val displayId = (res as? Number)?.toInt() ?: -1
                 if (displayId > 0) {
-                    Log.i("ZXFloatRoot", "createDisplayViaBinder SUCCESS: id=$displayId flags=0x${flags.toString(16)}")
+                    Log.i("ZXFloatRoot", "createDisplayViaBinder (legacy A10-13) SUCCESS: id=$displayId flags=0x${flags.toString(16)}")
                     displayCallbacks[displayId] = callback
                     return displayId
                 }
@@ -473,6 +522,15 @@ class ZXFloatingAppRootService : RootService() {
                     val err = proc.errorStream.bufferedReader().readText().trim()
                     proc.waitFor(1500, TimeUnit.MILLISECONDS)
                     Log.i("ZXFloatRoot", "startCmd finished: exit=${proc.exitValue()} out='$out' err='$err'")
+
+                    if (proc.exitValue() != 0) {
+                        val amCmd = "am start --user 0 --display $displayId --windowingMode 1 " +
+                            "--activity-multiple-task -a android.intent.action.MAIN -c android.intent.category.LAUNCHER " +
+                            "-f 0x18080000 -n $component"
+                        Log.i("ZXFloatRoot", "Falling back to amCmd on display $displayId: $amCmd")
+                        val amProc = Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", amCmd))
+                        amProc.waitFor(1500, TimeUnit.MILLISECONDS)
+                    }
                 } else {
                     Log.w("ZXFloatRoot", "Could not resolve component for $pkg")
                 }

@@ -160,10 +160,10 @@ class ZXFloatingAppManager(
     companion object {
         private const val MAX_FLOATING_WINDOWS = 2
         private const val MAX_MINIMIZED_ICONS = 2
-        private const val VIRTUAL_PORTRAIT_WIDTH = 900
-        private const val VIRTUAL_PORTRAIT_HEIGHT = 1600
-        private const val VIRTUAL_PORTRAIT_DPI = 320
-        private const val PORTRAIT_ASPECT_RATIO = 9f / 16f
+        const val VIRTUAL_PORTRAIT_WIDTH = 720
+        const val VIRTUAL_PORTRAIT_HEIGHT = 1280
+        const val VIRTUAL_PORTRAIT_DPI = 320
+        const val PORTRAIT_ASPECT_RATIO = 9f / 16f
 
         private const val GESTURE_NONE = 0
         private const val GESTURE_TOPBAR_PENDING = 1
@@ -421,45 +421,46 @@ class ZXFloatingAppManager(
         val availW = (screenW - (24 * density)).coerceAtLeast(200 * density)
         val availH = (screenH - (24 * density)).coerceAtLeast(200 * density)
 
-        return when (state) {
+        val borderPx = (4f * density).roundToInt()
+        val topBarPx = if (state == FloatingSizeState.MINI) 0 else (34f * density).roundToInt()
+
+        val contentH = when (state) {
             FloatingSizeState.MINI -> {
-                val h = if (isLandscapeScreen) {
-                    (availH * 0.36f).coerceIn(150 * density, 240 * density)
+                if (isLandscapeScreen) {
+                    (availH * 0.36f).coerceIn(140 * density, 220 * density)
                 } else {
-                    ((availW * 0.36f) / PORTRAIT_ASPECT_RATIO).coerceIn(150 * density, 240 * density)
+                    ((availW * 0.36f) / PORTRAIT_ASPECT_RATIO).coerceIn(140 * density, 220 * density)
                 }
-                val w = (h * PORTRAIT_ASPECT_RATIO).roundToInt()
-                Pair(w, h.roundToInt())
             }
             FloatingSizeState.SMALL -> {
-                val h = if (isLandscapeScreen) {
-                    (availH * 0.54f).coerceIn(210 * density, 360 * density)
+                if (isLandscapeScreen) {
+                    (availH * 0.52f).coerceIn(200 * density, 340 * density)
                 } else {
-                    ((availW * 0.54f) / PORTRAIT_ASPECT_RATIO).coerceIn(210 * density, 380 * density)
+                    ((availW * 0.52f) / PORTRAIT_ASPECT_RATIO).coerceIn(200 * density, 350 * density)
                 }
-                val w = (h * PORTRAIT_ASPECT_RATIO).roundToInt()
-                Pair(w, h.roundToInt())
             }
             FloatingSizeState.NORMAL -> {
-                val h = if (isLandscapeScreen) {
-                    (availH * 0.74f).coerceIn(290 * density, 470 * density)
+                if (isLandscapeScreen) {
+                    (availH * 0.72f).coerceIn(280 * density, 450 * density)
                 } else {
-                    ((availW * 0.72f) / PORTRAIT_ASPECT_RATIO).coerceIn(290 * density, 490 * density)
+                    ((availW * 0.70f) / PORTRAIT_ASPECT_RATIO).coerceIn(280 * density, 470 * density)
                 }
-                val w = (h * PORTRAIT_ASPECT_RATIO).roundToInt()
-                Pair(w, h.roundToInt())
             }
             FloatingSizeState.LARGE -> {
-                val h = if (isLandscapeScreen) {
-                    (availH * 0.90f).coerceIn(360 * density, 580 * density)
+                if (isLandscapeScreen) {
+                    (availH * 0.88f).coerceIn(340 * density, 550 * density)
                 } else {
-                    ((availW * 0.88f) / PORTRAIT_ASPECT_RATIO).coerceIn(360 * density, 600 * density)
+                    ((availW * 0.85f) / PORTRAIT_ASPECT_RATIO).coerceIn(340 * density, 570 * density)
                 }
-                val w = (h * PORTRAIT_ASPECT_RATIO).roundToInt()
-                Pair(w, h.roundToInt())
             }
-            FloatingSizeState.MINIMIZED -> Pair(1, 1)
+            FloatingSizeState.MINIMIZED -> return Pair(1, 1)
         }
+
+        val contentW = (contentH * PORTRAIT_ASPECT_RATIO).roundToInt()
+        val totalW = contentW + borderPx
+        val totalH = contentH.roundToInt() + borderPx + topBarPx
+
+        return Pair(totalW, totalH)
     }
 
     fun applySizePreset(session: ZXFloatingAppSession, targetState: FloatingSizeState) {
@@ -760,7 +761,13 @@ class ZXFloatingAppManager(
         }
 
         val targetH = rawTargetH.coerceIn((miniH * 0.82f).roundToInt(), largeH)
-        val targetW = (targetH * PORTRAIT_ASPECT_RATIO).roundToInt()
+        val targetTier = resolveNearestSizeTier(targetH)
+        val density = dm.density
+        val borderPx = (4f * density).roundToInt()
+        val topBarPx = if (targetTier == FloatingSizeState.MINI) 0 else (34f * density).roundToInt()
+        val contentH = (targetH - borderPx - topBarPx).coerceAtLeast((100 * density).roundToInt())
+        val contentW = (contentH * PORTRAIT_ASPECT_RATIO).roundToInt()
+        val targetW = contentW + borderPx
 
         session.widthPx = targetW
         session.heightPx = targetH
@@ -771,7 +778,7 @@ class ZXFloatingAppManager(
             startX.coerceIn(6, (dm.widthPixels - targetW - 6).coerceAtLeast(6))
         }
         session.windowY = startY.coerceIn(6, (dm.heightPixels - targetH - 6).coerceAtLeast(6))
-        session.sizeState = resolveNearestSizeTier(targetH)
+        session.sizeState = targetTier
         updateSessionWindowLayout(session)
     }
 
@@ -924,8 +931,17 @@ class ZXFloatingAppManager(
         val client = rootClient
         if (displayId <= 0 || client == null || !client.isBinderAlive) return
 
-        val scaleX = VIRTUAL_PORTRAIT_WIDTH.toFloat() / viewWidth.coerceAtLeast(1).toFloat()
-        val scaleY = VIRTUAL_PORTRAIT_HEIGHT.toFloat() / viewHeight.coerceAtLeast(1).toFloat()
+        val bufferW = VIRTUAL_PORTRAIT_WIDTH.toFloat()
+        val bufferH = VIRTUAL_PORTRAIT_HEIGHT.toFloat()
+
+        val scaleX = viewWidth.toFloat() / bufferW
+        val scaleY = viewHeight.toFloat() / bufferH
+        val scale = minOf(scaleX, scaleY).coerceAtLeast(0.001f)
+
+        val contentW = bufferW * scale
+        val contentH = bufferH * scale
+        val offsetX = (viewWidth - contentW) / 2f
+        val offsetY = (viewHeight - contentH) / 2f
 
         val pointerCount = rawEvent.pointerCount
         val props = Array(pointerCount) { idx ->
@@ -934,8 +950,10 @@ class ZXFloatingAppManager(
         val coords = Array(pointerCount) { idx ->
             MotionEvent.PointerCoords().also {
                 rawEvent.getPointerCoords(idx, it)
-                it.x = (rawEvent.getX(idx) * scaleX).coerceIn(0f, VIRTUAL_PORTRAIT_WIDTH.toFloat())
-                it.y = (rawEvent.getY(idx) * scaleY).coerceIn(0f, VIRTUAL_PORTRAIT_HEIGHT.toFloat())
+                val mappedX = ((rawEvent.getX(idx) - offsetX) / scale).coerceIn(0f, bufferW - 1f)
+                val mappedY = ((rawEvent.getY(idx) - offsetY) / scale).coerceIn(0f, bufferH - 1f)
+                it.x = mappedX
+                it.y = mappedY
             }
         }
 
@@ -975,6 +993,7 @@ class ZXFloatingAppManager(
                 }
             }
         }
+        mapped.recycle()
         mapped.recycle()
     }
 
@@ -1204,6 +1223,10 @@ private fun FloatingAppWindowContent(
                                     width: Int,
                                     height: Int
                                 ) {
+                                    surface.setDefaultBufferSize(
+                                        ZXFloatingAppManager.VIRTUAL_PORTRAIT_WIDTH,
+                                        ZXFloatingAppManager.VIRTUAL_PORTRAIT_HEIGHT
+                                    )
                                     applyPortraitTransform(this@apply, width, height)
                                     manager.bindSessionSurface(session, surface)
                                 }
@@ -1213,6 +1236,10 @@ private fun FloatingAppWindowContent(
                                     width: Int,
                                     height: Int
                                 ) {
+                                    surface.setDefaultBufferSize(
+                                        ZXFloatingAppManager.VIRTUAL_PORTRAIT_WIDTH,
+                                        ZXFloatingAppManager.VIRTUAL_PORTRAIT_HEIGHT
+                                    )
                                     applyPortraitTransform(this@apply, width, height)
                                 }
 
@@ -1221,7 +1248,12 @@ private fun FloatingAppWindowContent(
                                     return true
                                 }
 
-                                override fun onSurfaceTextureUpdated(surface: SurfaceTexture) = Unit
+                                override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
+                                    surface.setDefaultBufferSize(
+                                        ZXFloatingAppManager.VIRTUAL_PORTRAIT_WIDTH,
+                                        ZXFloatingAppManager.VIRTUAL_PORTRAIT_HEIGHT
+                                    )
+                                }
                             }
 
                             setOnTouchListener { v, event ->
@@ -1241,6 +1273,10 @@ private fun FloatingAppWindowContent(
                     },
                     update = { tv ->
                         if (tv.width > 0 && tv.height > 0) {
+                            tv.surfaceTexture?.setDefaultBufferSize(
+                                ZXFloatingAppManager.VIRTUAL_PORTRAIT_WIDTH,
+                                ZXFloatingAppManager.VIRTUAL_PORTRAIT_HEIGHT
+                            )
                             applyPortraitTransform(tv, tv.width, tv.height)
                         }
                     }
@@ -1264,7 +1300,25 @@ private fun FloatingAppWindowContent(
 
 private fun applyPortraitTransform(textureView: TextureView, viewW: Int, viewH: Int) {
     if (viewW <= 0 || viewH <= 0) return
+    textureView.surfaceTexture?.setDefaultBufferSize(
+        ZXFloatingAppManager.VIRTUAL_PORTRAIT_WIDTH,
+        ZXFloatingAppManager.VIRTUAL_PORTRAIT_HEIGHT
+    )
     val matrix = Matrix()
+    val bufferW = ZXFloatingAppManager.VIRTUAL_PORTRAIT_WIDTH.toFloat()
+    val bufferH = ZXFloatingAppManager.VIRTUAL_PORTRAIT_HEIGHT.toFloat()
+
+    val scaleX = viewW.toFloat() / bufferW
+    val scaleY = viewH.toFloat() / bufferH
+    val scale = minOf(scaleX, scaleY).coerceAtLeast(0.001f)
+
+    val contentW = bufferW * scale
+    val contentH = bufferH * scale
+
+    val sx = contentW / viewW.toFloat()
+    val sy = contentH / viewH.toFloat()
+
+    matrix.setScale(sx, sy, viewW / 2f, viewH / 2f)
     textureView.setTransform(matrix)
 }
 
