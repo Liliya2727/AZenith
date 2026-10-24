@@ -180,6 +180,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     companion object {
         const val ACTION_SHOW = "zx.azenith.action.SIDE_PANEL_SHOW"
         const val ACTION_HIDE = "zx.azenith.action.SIDE_PANEL_HIDE"
+        const val ACTION_OPEN_FLOATING_APP = "zx.azenith.action.OPEN_FLOATING_APP"
         const val EXTRA_PACKAGE_NAME = "extra_package_name"
         const val EXTRA_APP_LABEL = "extra_app_label"
 
@@ -450,6 +451,12 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 isPanelExpanded = false
                 isWindowFullScreen = false
                 detachOverlay()
+            }
+            ACTION_OPEN_FLOATING_APP -> {
+                val pkg = intent?.getStringExtra(EXTRA_PACKAGE_NAME)
+                if (!pkg.isNullOrBlank()) {
+                    launchExternalApp(pkg)
+                }
             }
         }
         return START_STICKY

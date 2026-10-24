@@ -875,7 +875,7 @@ class ZXFloatingAppManager(
                                             "cmd window set-ignore-orientation-request -d $displayId true",
                                             "cmd window set-fix-to-user-rotation -d $displayId enabled",
                                             "cmd window user-rotation -d $displayId lock 0",
-                                            "cmd activity start-activity --user 0 --display $displayId -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -f 0x18008000 -n $component"
+                                            "cmd activity start-activity --user 0 --display $displayId --windowingMode 1 -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -f 0x18008000 -n $component"
                                         ).exec()
                                     }
                                 }
