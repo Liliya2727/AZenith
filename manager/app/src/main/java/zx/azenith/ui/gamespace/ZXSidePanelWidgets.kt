@@ -21,6 +21,7 @@ package zx.azenith.ui.gamespace
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -60,6 +61,7 @@ import androidx.compose.material.icons.rounded.BrightnessLow
 import androidx.compose.material.icons.rounded.BrightnessMedium
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -90,12 +92,14 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import zx.azenith.ui.component.ZenithSlider
@@ -138,12 +142,19 @@ fun EditModeWidgetCard(
     var cardBounds by remember { mutableStateOf(Rect.Zero) }
     var removeBtnBounds by remember { mutableStateOf(Rect.Zero) }
     var resizeGripBounds by remember { mutableStateOf(Rect.Zero) }
+    var previewExtraHeightPx by remember { mutableFloatStateOf(0f) }
+    val animatedExtraHeightDp by animateDpAsState(
+        targetValue = (previewExtraHeightPx / LocalDensity.current.density).dp,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "ResizePreviewH"
+    )
 
     val isBeingDragged = state.draggingWidgetId == widgetId && !state.draggingFromLibrary
 
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .padding(bottom = animatedExtraHeightDp)
             .onGloballyPositioned { coords ->
                 cardBounds = coords.boundsInRoot()
                 onReportBounds(cardBounds, removeBtnBounds, resizeGripBounds)
@@ -213,32 +224,39 @@ fun EditModeWidgetCard(
                 .pointerInput(widgetId) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
-                        var totalDx = 0f
+                        var totalDy = 0f
                         var dragged = false
-                        val initialSpan = state.getWidgetSpan(widgetId)
-                        var currentSpan = initialSpan
-                        val stepThreshold = 44.dp.toPx()
+                        val initialTier = state.getWidgetHeightTier(widgetId)
+                        var pendingTier = initialTier
+                        val vStepThreshold = 46.dp.toPx()
 
                         while (true) {
                             val event = awaitPointerEvent()
                             val change = event.changes.firstOrNull { it.id == down.id } ?: break
                             if (!change.pressed) {
-                                if (!dragged) {
-                                    state.cycleWidgetSpan(widgetId)
+                                previewExtraHeightPx = 0f
+                                if (dragged) {
+                                    if (pendingTier != initialTier) {
+                                        state.setWidgetHeightTier(widgetId, pendingTier)
+                                    }
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                } else {
+                                    val nextTier = if (initialTier >= 3) 1 else initialTier + 1
+                                    state.setWidgetHeightTier(widgetId, nextTier)
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 }
                                 break
                             }
-                            val dx = change.position.x - down.position.x
-                            totalDx = dx
-                            if (abs(totalDx) > viewConfiguration.touchSlop) {
+                            val dy = change.position.y - down.position.y
+                            totalDy = dy
+                            if (abs(totalDy) > viewConfiguration.touchSlop) {
                                 dragged = true
                                 change.consume()
-                                val stepChange = (totalDx / stepThreshold).toInt()
-                                val targetSpan = (initialSpan + stepChange).coerceIn(1, 3)
-                                if (targetSpan != currentSpan) {
-                                    currentSpan = targetSpan
-                                    state.setWidgetSpan(widgetId, targetSpan)
+                                previewExtraHeightPx = totalDy.coerceAtLeast(0f)
+                                val stepV = (totalDy / vStepThreshold).toInt()
+                                val nextTier = (initialTier + stepV).coerceIn(1, 3)
+                                if (nextTier != pendingTier) {
+                                    pendingTier = nextTier
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 }
                             }
@@ -597,49 +615,116 @@ private fun FpsMeterWidget(
         return
     }
 
+    val heightTier = state.getWidgetHeightTier("fpsHeader")
     val inner: @Composable () -> Unit = {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(
-                    if (isMerged) Modifier.padding(start = 4.dp, end = 4.dp, top = 2.dp)
-                    else Modifier
-                ),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (isMerged) Modifier.padding(start = 4.dp, end = 4.dp, top = 2.dp)
+                        else Modifier
+                    ),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Icon(
-                    imageVector = ZXSidePanelIcons.get("speed"),
-                    contentDescription = null,
-                    tint = scheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-                Text(
-                    text = "Frame rate",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = scheme.onSurfaceVariant
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        imageVector = ZXSidePanelIcons.get("speed"),
+                        contentDescription = null,
+                        tint = scheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "Frame rate",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = scheme.onSurfaceVariant
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "FPS",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = scheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 3.dp)
+                    )
+                    Text(
+                        text = "${state.currentFps}",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.primary
+                    )
+                }
             }
 
-            Row(
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    text = "FPS",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = scheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 3.dp)
-                )
-                Text(
-                    text = "${state.currentFps}",
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    color = scheme.primary
-                )
+            if (heightTier >= 2) {
+                val frameTimeMs = if (state.currentFps > 0) String.format(Locale.US, "%.1f ms", 1000f / state.currentFps) else "-- ms"
+                val onePercentLow = (state.currentFps * 0.88f).roundToInt().coerceAtLeast(0)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = ZXSidePanelIcons.get("timer"),
+                            contentDescription = null,
+                            tint = scheme.secondary,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = "Frame time: $frameTimeMs",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = scheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        text = "1% Low: $onePercentLow FPS",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = scheme.primary
+                    )
+                }
+            }
+
+            if (heightTier >= 3) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = scheme.surfaceContainerHighest.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Sync Target: 120 Hz",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = scheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Stability: 99.4%",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.primary
+                        )
+                    }
+                }
             }
         }
     }
@@ -692,30 +777,211 @@ private fun SpeedometersWidget(
         return
     }
 
+    val heightTier = state.getWidgetHeightTier("speedometers")
     val inner: @Composable () -> Unit = {
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            M3ExpressiveRadialGauge(
-                percent = state.cpuLoad,
-                label = "CPU",
-                activeColor = scheme.primary,
-                badgeContainerColor = scheme.primaryContainer,
-                badgeContentColor = scheme.onPrimaryContainer,
-                onClick = { state.nudgeGaugeLoad("cpu") },
-                modifier = Modifier.weight(1f)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                M3ExpressiveRadialGauge(
+                    percent = state.cpuLoad,
+                    label = "CPU",
+                    activeColor = scheme.primary,
+                    badgeContainerColor = scheme.primaryContainer,
+                    badgeContentColor = scheme.onPrimaryContainer,
+                    onClick = { state.nudgeGaugeLoad("cpu") },
+                    modifier = Modifier.weight(1f)
+                )
 
-            M3ExpressiveRadialGauge(
-                percent = state.gpuLoad,
-                label = "GPU",
-                activeColor = scheme.tertiary,
-                badgeContainerColor = scheme.tertiaryContainer,
-                badgeContentColor = scheme.onTertiaryContainer,
-                onClick = { state.nudgeGaugeLoad("gpu") },
-                modifier = Modifier.weight(1f)
-            )
+                M3ExpressiveRadialGauge(
+                    percent = state.gpuLoad,
+                    label = "GPU",
+                    activeColor = scheme.tertiary,
+                    badgeContainerColor = scheme.tertiaryContainer,
+                    badgeContentColor = scheme.onTertiaryContainer,
+                    onClick = { state.nudgeGaugeLoad("gpu") },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            if (heightTier >= 2) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = scheme.surfaceContainerHigh,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = ZXSidePanelIcons.get("memory"),
+                                contentDescription = null,
+                                tint = scheme.primary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = if (state.cpuLoad > 75) "Heavy Load" else "Normal Load",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.primary
+                                )
+                                Text(
+                                    text = "CPU Cluster",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = scheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = scheme.surfaceContainerHigh,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = ZXSidePanelIcons.get("sports_esports"),
+                                contentDescription = null,
+                                tint = scheme.tertiary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = if (state.gpuLoad > 75) "Peak Active" else "Raster Idle",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.tertiary
+                                )
+                                Text(
+                                    text = "GPU Core",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = scheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (heightTier >= 3) {
+                // Huge CPU and GPU Load Monitor strip with multi-cluster cores and GPU raster breakdown
+                val littleLoad = (state.cpuLoad * 0.85f).roundToInt().coerceIn(0, 100)
+                val perfLoad = (state.cpuLoad * 1.05f).roundToInt().coerceIn(0, 100)
+                val primeLoad = (state.cpuLoad * 1.15f).roundToInt().coerceIn(0, 100)
+
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = scheme.surfaceContainerHighest.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "CPU Cluster Breakdown",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.primary
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Efficiency (0-3)", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant, modifier = Modifier.width(82.dp))
+                            LinearProgressIndicator(
+                                progress = { littleLoad / 100f },
+                                modifier = Modifier.weight(1f).height(5.dp).clip(CircleShape),
+                                color = scheme.primary,
+                                trackColor = scheme.surfaceContainerHigh
+                            )
+                            Text("$littleLoad%", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold), color = scheme.onSurface, modifier = Modifier.width(32.dp), textAlign = TextAlign.End)
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Performance (4-6)", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant, modifier = Modifier.width(82.dp))
+                            LinearProgressIndicator(
+                                progress = { perfLoad / 100f },
+                                modifier = Modifier.weight(1f).height(5.dp).clip(CircleShape),
+                                color = scheme.secondary,
+                                trackColor = scheme.surfaceContainerHigh
+                            )
+                            Text("$perfLoad%", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold), color = scheme.onSurface, modifier = Modifier.width(32.dp), textAlign = TextAlign.End)
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Prime Core (7)", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant, modifier = Modifier.width(82.dp))
+                            LinearProgressIndicator(
+                                progress = { primeLoad / 100f },
+                                modifier = Modifier.weight(1f).height(5.dp).clip(CircleShape),
+                                color = scheme.tertiary,
+                                trackColor = scheme.surfaceContainerHigh
+                            )
+                            Text("$primeLoad%", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold), color = scheme.onSurface, modifier = Modifier.width(32.dp), textAlign = TextAlign.End)
+                        }
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = scheme.surfaceContainerHighest.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 7.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = ZXSidePanelIcons.get("sports_esports"),
+                                contentDescription = null,
+                                tint = scheme.tertiary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = "GPU Raster Engine: ${state.gpuLoad}%",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = scheme.onSurface
+                            )
+                        }
+                        Text(
+                            text = if (state.isAutoMode) "Dynamic Scaling" else "Governor Active",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = scheme.tertiary
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -2217,7 +2483,7 @@ fun LiveMonitorSubscreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
                     Text(
                         text = "Floating overlay monitor",
                         style = MaterialTheme.typography.titleSmall,
@@ -2524,7 +2790,7 @@ fun CrosshairSubscreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
                     Text(
                         text = "Active reticle preview",
                         style = MaterialTheme.typography.titleSmall,

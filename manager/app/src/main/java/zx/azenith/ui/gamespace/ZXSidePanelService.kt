@@ -120,6 +120,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -467,6 +469,13 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     isHandleVisible = true
                     startFpsChoreographer()
                 } else {
+                    val currentFg = lastUsageForegroundPkg
+                    if (!currentFg.isNullOrBlank() && !isLauncherPackage(currentFg)) {
+                        activeGamePackage = currentFg
+                        panelState.activeGamePackage = currentFg
+                        activeGameLabel = resolveAppLabel(currentFg)
+                        panelState.loadForApp(currentFg)
+                    }
                     attachOverlayIfNeeded()
                     isHandleVisible = true
                     startFpsChoreographer()
@@ -866,18 +875,30 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
 
         // Single draggable Floating System Monitor window (persists whether sidepanel is open or collapsed)
+        val dmMetrics = resources.displayMetrics
+        val initHudX = if (panelState.hudOffsetX > 0f) {
+            panelState.hudOffsetX.roundToInt().coerceIn(0, (dmMetrics.widthPixels - (100 * dmMetrics.density).roundToInt()).coerceAtLeast(0))
+        } else {
+            ((dmMetrics.widthPixels - (220 * dmMetrics.density)) / 2).roundToInt().coerceAtLeast(16)
+        }
+        val initHudY = if (panelState.hudOffsetY > 0f) {
+            panelState.hudOffsetY.roundToInt().coerceIn(0, (dmMetrics.heightPixels - (40 * dmMetrics.density).roundToInt()).coerceAtLeast(0))
+        } else {
+            (16 * dmMetrics.density).roundToInt()
+        }
+
         val hudParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            x = panelState.hudOffsetX.roundToInt()
-            y = ((16 * resources.displayMetrics.density) + panelState.hudOffsetY).roundToInt()
+            gravity = Gravity.TOP or Gravity.START
+            x = initHudX
+            y = initHudY
             applyFullCutoutMode()
         }
         val hudComposeView = ComposeView(this).apply {
@@ -895,6 +916,31 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             private var startRawY = 0f
             private var origX = 0
             private var origY = 0
+            private var pendingFrame = false
+            private val frameCallback = Choreographer.FrameCallback {
+                if (isAttachedToWindow && pendingFrame) {
+                    pendingFrame = false
+                    runCatching { wm.updateViewLayout(this, hudParams) }
+                }
+            }
+
+            override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+                super.onSizeChanged(w, h, oldw, oldh)
+                if (w > 0 && h > 0 && isAttachedToWindow) {
+                    val dm = resources.displayMetrics
+                    val maxX = (dm.widthPixels - w).coerceAtLeast(0)
+                    val maxY = (dm.heightPixels - h).coerceAtLeast(0)
+                    val clampedX = hudParams.x.coerceIn(0, maxX)
+                    val clampedY = hudParams.y.coerceIn(0, maxY)
+                    if (clampedX != hudParams.x || clampedY != hudParams.y) {
+                        hudParams.x = clampedX
+                        hudParams.y = clampedY
+                        panelState.hudOffsetX = clampedX.toFloat()
+                        panelState.hudOffsetY = clampedY.toFloat()
+                        runCatching { wm.updateViewLayout(this, hudParams) }
+                    }
+                }
+            }
 
             override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
                 when (ev.actionMasked) {
@@ -907,22 +953,32 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     }
                     MotionEvent.ACTION_MOVE -> {
                         val dm = resources.displayMetrics
-                        val halfW = ((dm.widthPixels - width).coerceAtLeast(0)) / 2
-                        val maxY = (dm.heightPixels - height - 8).coerceAtLeast(8)
-                        val newX = (origX + (ev.rawX - startRawX)).roundToInt().coerceIn(-halfW, halfW)
-                        val newY = (origY + (ev.rawY - startRawY)).roundToInt().coerceIn(8, maxY)
-                        if (newX != hudParams.x || newY != hudParams.y) {
-                            hudParams.x = newX
-                            hudParams.y = newY
-                            panelState.hudOffsetX = newX.toFloat()
-                            panelState.hudOffsetY = newY - (16 * dm.density)
-                            if (isViewAttached) {
-                                runCatching { wm.updateViewLayout(this, hudParams) }
+                        val maxX = (dm.widthPixels - width).coerceAtLeast(0)
+                        val maxY = (dm.heightPixels - height).coerceAtLeast(0)
+                        val rawTargetX = (origX + (ev.rawX - startRawX)).roundToInt()
+                        val rawTargetY = (origY + (ev.rawY - startRawY)).roundToInt()
+                        val clampedX = rawTargetX.coerceIn(0, maxX)
+                        val clampedY = rawTargetY.coerceIn(0, maxY)
+                        if (clampedX != hudParams.x || clampedY != hudParams.y) {
+                            hudParams.x = clampedX
+                            hudParams.y = clampedY
+                            if (!pendingFrame) {
+                                pendingFrame = true
+                                Choreographer.getInstance().postFrameCallback(frameCallback)
                             }
                         }
                         return true
                     }
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        if (pendingFrame) {
+                            pendingFrame = false
+                            Choreographer.getInstance().removeFrameCallback(frameCallback)
+                        }
+                        if (isAttachedToWindow) {
+                            runCatching { wm.updateViewLayout(this, hudParams) }
+                        }
+                        panelState.hudOffsetX = hudParams.x.toFloat()
+                        panelState.hudOffsetY = hudParams.y.toFloat()
                         panelState.saveWidgetLayoutPreferences()
                         return true
                     }
@@ -951,6 +1007,21 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             crosshairView = chView
             hudView = hView
             isViewAttached = true
+
+            // Dynamically re-measure and update window layout when live monitor configuration or scale changes
+            serviceScope.launch {
+                snapshotFlow { panelState.liveMonitor }
+                    .collect {
+                        withContext(Dispatchers.Main) {
+                            if (isViewAttached && hudView != null) {
+                                runCatching {
+                                    hudView?.requestLayout()
+                                    wm.updateViewLayout(hudView, hudParams)
+                                }
+                            }
+                        }
+                    }
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -1167,8 +1238,14 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                                 isHandleVisible = true
                                 startFpsChoreographer()
                             }
-                        } else if (screenAwake && activeGamePackage != null && !isHomeLauncher) {
+                        } else if (screenAwake && !isHomeLauncher) {
                             withContext(Dispatchers.Main) {
+                                if (activeGamePackage == null && !focusedPkg.isNullOrBlank()) {
+                                    activeGamePackage = focusedPkg
+                                    panelState.activeGamePackage = focusedPkg
+                                    activeGameLabel = resolveAppLabel(focusedPkg)
+                                    panelState.loadForApp(focusedPkg)
+                                }
                                 attachOverlayIfNeeded()
                                 isHandleVisible = true
                                 startFpsChoreographer()
@@ -1550,7 +1627,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     }
                     tick++
                 }
-                delay(1000L)
+                delay(if (panelState.floatingHudVisible) 400L else 1000L)
             }
         }
     }
@@ -1643,6 +1720,12 @@ private class ZXRealTelemetryCollector {
         "/proc/gpufreq/gpufreq_var_dump",
         "/sys/class/misc/mali0/device/utilization",
         "/sys/devices/platform/mali/utilization",
+        "/sys/devices/platform/gpu/utilization",
+        "/sys/devices/platform/20100000.gpu/utilization",
+        "/sys/class/devfreq/gpu/cur_freq",
+        "/sys/class/devfreq/20100000.gpu/cur_freq",
+        "/sys/devices/platform/1c500000.mali/utilization",
+        "/sys/class/devfreq/1c500000.mali/cur_freq",
         "/sys/class/devfreq/13040000.mali/cur_freq",
         "/sys/class/devfreq/13000000.mali/cur_freq"
     )
@@ -2960,10 +3043,65 @@ private data class EditFeedRow(
     val items: List<EditFeedRenderEntry>
 )
 
+private sealed interface NormalFeedItem {
+    val key: String
+    val span: Int
+
+    data class Single(
+        val widgetId: String,
+        override val span: Int
+    ) : NormalFeedItem {
+        override val key: String get() = widgetId
+    }
+
+    data class Merged(
+        val groupIds: List<String>,
+        val mergeGroup: String,
+        override val span: Int
+    ) : NormalFeedItem {
+        override val key: String get() = groupIds.joinToString("_")
+    }
+}
+
 private data class NormalFeedRow(
     val key: String,
-    val widgetIds: List<String>
+    val items: List<NormalFeedItem>
 )
+
+@Composable
+private fun MergedSidePanelWidgetContent(
+    groupIds: List<String>,
+    mergeGroup: String,
+    state: ZXSidePanelStateHolder,
+    span: Int,
+    modifier: Modifier = Modifier
+) {
+    val scheme = MaterialTheme.colorScheme
+    M3WidgetCard(
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            groupIds.forEachIndexed { index, wId ->
+                if (index > 0) {
+                    HorizontalDivider(
+                        color = scheme.outlineVariant.copy(alpha = 0.25f),
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                    )
+                }
+                SidePanelWidgetContent(
+                    widgetId = wId,
+                    state = state,
+                    isMerged = true,
+                    span = span
+                )
+            }
+        }
+    }
+}
 
 @Composable
 private fun MainSidepanelContent(
@@ -3043,27 +3181,38 @@ private fun MainSidepanelContent(
         }
     }
 
-    val normalRows by remember {
+    val normalRows by remember(feedBlocks) {
         derivedStateOf {
             val rows = mutableListOf<NormalFeedRow>()
-            var currentRow = mutableListOf<String>()
+            var currentRow = mutableListOf<NormalFeedItem>()
             var currentSpan = 0
 
-            for (wId in state.activeWidgets) {
-                val span = state.getWidgetSpan(wId)
-                if (currentSpan + span <= 3) {
-                    currentRow.add(wId)
-                    currentSpan += span
+            for (block in feedBlocks) {
+                val item: NormalFeedItem = when (block) {
+                    is SidePanelFeedBlock.Single -> NormalFeedItem.Single(
+                        widgetId = block.widgetId,
+                        span = state.getWidgetSpan(block.widgetId)
+                    )
+                    is SidePanelFeedBlock.Merged -> NormalFeedItem.Merged(
+                        groupIds = block.groupIds,
+                        mergeGroup = block.mergeGroup,
+                        span = state.getWidgetSpan(block.groupIds.first())
+                    )
+                }
+
+                if (currentSpan + item.span <= 3) {
+                    currentRow.add(item)
+                    currentSpan += item.span
                 } else {
                     if (currentRow.isNotEmpty()) {
-                        rows.add(NormalFeedRow(currentRow.joinToString("_"), currentRow))
+                        rows.add(NormalFeedRow(currentRow.joinToString("_") { it.key }, currentRow))
                     }
-                    currentRow = mutableListOf(wId)
-                    currentSpan = span
+                    currentRow = mutableListOf(item)
+                    currentSpan = item.span
                 }
             }
             if (currentRow.isNotEmpty()) {
-                rows.add(NormalFeedRow(currentRow.joinToString("_"), currentRow))
+                rows.add(NormalFeedRow(currentRow.joinToString("_") { it.key }, currentRow))
             }
             rows
         }
@@ -3457,7 +3606,7 @@ private fun MainSidepanelContent(
                                     items = normalRows,
                                     key = { it.key }
                                 ) { row ->
-                                    val rowSpanSum = row.widgetIds.sumOf { state.getWidgetSpan(it) }
+                                    val rowSpanSum = row.items.sumOf { it.span }
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -3470,17 +3619,28 @@ private fun MainSidepanelContent(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        row.widgetIds.forEach { wId ->
-                                            val span = state.getWidgetSpan(wId)
+                                        row.items.forEach { item ->
                                             Box(
-                                                modifier = Modifier.weight(span.toFloat())
+                                                modifier = Modifier.weight(item.span.toFloat())
                                             ) {
-                                                SidePanelWidgetContent(
-                                                    widgetId = wId,
-                                                    state = state,
-                                                    isMerged = false,
-                                                    span = span
-                                                )
+                                                when (item) {
+                                                    is NormalFeedItem.Single -> {
+                                                        SidePanelWidgetContent(
+                                                            widgetId = item.widgetId,
+                                                            state = state,
+                                                            isMerged = false,
+                                                            span = item.span
+                                                        )
+                                                    }
+                                                    is NormalFeedItem.Merged -> {
+                                                        MergedSidePanelWidgetContent(
+                                                            groupIds = item.groupIds,
+                                                            mergeGroup = item.mergeGroup,
+                                                            state = state,
+                                                            span = item.span
+                                                        )
+                                                    }
+                                                }
                                             }
                                         }
                                         if (rowSpanSum < 3) {

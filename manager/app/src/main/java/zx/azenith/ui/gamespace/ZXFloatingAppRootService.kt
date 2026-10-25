@@ -17,6 +17,7 @@
 package zx.azenith.ui.gamespace
 
 import android.app.ActivityOptions
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -44,6 +45,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
+@SuppressLint("BlockedPrivateApi", "DiscouragedPrivateApi")
 class ZXFloatingAppRootService : RootService() {
 
     companion object {
@@ -85,12 +87,6 @@ class ZXFloatingAppRootService : RootService() {
     override fun onCreate() {
         super.onCreate()
         runCatching { HiddenApiBypass.addHiddenApiExemptions("") }
-        runCatching {
-            Os.setuid(SYSTEM_UID)
-            Os.setgid(SYSTEM_UID)
-        }.onFailure {
-            runCatching { Os.seteuid(SYSTEM_UID) }
-        }
         runCatching {
             val ctx = createPackageContext("android", Context.CONTEXT_IGNORE_SECURITY)
             // Patch ContextImpl fields so DisplayManager transactions pass "android" matching UID 1000
@@ -239,8 +235,6 @@ class ZXFloatingAppRootService : RootService() {
     ): Int {
         val iDm = getIDisplayManager() ?: return -1
         return runCatching {
-            runCatching { Os.seteuid(SYSTEM_UID) }
-
             val cbInterface = Class.forName("android.hardware.display.IVirtualDisplayCallback")
             val stubBinder = object : Binder() {
                 override fun onTransact(code: Int, data: Parcel, reply: Parcel?, flags: Int): Boolean {
@@ -438,7 +432,6 @@ class ZXFloatingAppRootService : RootService() {
 
     private fun injectMotionOnDisplay(displayId: Int, event: MotionEvent) {
         try {
-            runCatching { Os.seteuid(SYSTEM_UID) }
             setDisplayIdMethod?.invoke(event, displayId)
             val im = inputManagerInstance ?: return
             injectInputMethod?.invoke(im, event, 0)
@@ -449,7 +442,6 @@ class ZXFloatingAppRootService : RootService() {
     private fun injectBackKeyOnDisplay(displayId: Int) {
         ioExecutor.execute {
             try {
-                runCatching { Os.seteuid(SYSTEM_UID) }
                 val now = SystemClock.uptimeMillis()
                 val down = KeyEvent(
                     now,
@@ -506,7 +498,7 @@ class ZXFloatingAppRootService : RootService() {
                 val launchIntent = pm.getLaunchIntentForPackage(pkg)?.apply {
                     addFlags(
                         Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+                            Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
                     )
                 }
                 var component = launchIntent?.component?.flattenToShortString()
@@ -533,8 +525,8 @@ class ZXFloatingAppRootService : RootService() {
                 var launched = false
                 if (component != null) {
                     val startCmd = "cmd activity start-activity --user 0 --display $displayId --windowingMode 1 " +
-                        "--activity-multiple-task --activity-reorder-to-front -a android.intent.action.MAIN -c android.intent.category.LAUNCHER " +
-                        "-f 0x18000000 -n $component"
+                        "--activity-reorder-to-front -a android.intent.action.MAIN -c android.intent.category.LAUNCHER " +
+                        "-f 0x10200000 -n $component"
                     Log.i("ZXFloatRoot", "Executing startCmd on display $displayId: $startCmd")
                     val proc = Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", startCmd))
                     val finished = proc.waitFor(1200, TimeUnit.MILLISECONDS)
@@ -542,7 +534,7 @@ class ZXFloatingAppRootService : RootService() {
                         launched = true
                     }
                 } else {
-                    val amPkgCmd = "am start --user 0 --display $displayId --windowingMode 1 --activity-multiple-task -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p $pkg"
+                    val amPkgCmd = "am start --user 0 --display $displayId --windowingMode 1 --activity-reorder-to-front -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -p $pkg"
                     val proc = Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", amPkgCmd))
                     val finished = proc.waitFor(1200, TimeUnit.MILLISECONDS)
                     if (finished && proc.exitValue() == 0) {
@@ -564,19 +556,12 @@ class ZXFloatingAppRootService : RootService() {
                     }).apply {
                         addFlags(
                             Intent.FLAG_ACTIVITY_NEW_TASK or
-                                Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+                                Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
                         )
                     }
                     runCatching {
                         (sysContext ?: this@ZXFloatingAppRootService).startActivity(intent, opts.toBundle())
                     }
-                }
-
-                // 5. Ensure orientation stays locked and keyguard dismissed
-                Thread.sleep(400L)
-                runCatching {
-                    Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", lockCmd))
-                        .waitFor(800, TimeUnit.MILLISECONDS)
                 }
             } catch (e: Exception) {
                 Log.e("ZXFloatRoot", "Error in launchPackageOnDisplay", e)

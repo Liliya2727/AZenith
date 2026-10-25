@@ -52,6 +52,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -102,6 +104,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.LifecycleOwner
@@ -155,6 +158,7 @@ class ZXFloatingAppSession(
     var lastResizeTier: FloatingSizeState? = null
     var hasLaunchedApp = false
     var lastActiveTimestampMs by mutableLongStateOf(System.currentTimeMillis())
+    var isClosing: Boolean = false
 
     var virtualDisplayId: Int = -1
     var localVirtualDisplay: VirtualDisplay? = null
@@ -386,6 +390,7 @@ class ZXFloatingAppManager(
     }
 
     fun closeSession(session: ZXFloatingAppSession) {
+        session.isClosing = true
         sessions.remove(session)
         releaseSessionDisplay(session)
         session.hostView?.let { view ->
@@ -519,16 +524,17 @@ class ZXFloatingAppManager(
             session.widthPx,
             session.heightPx,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
+                WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
             x = session.windowX
             y = session.windowY
+            softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_UNCHANGED
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
             }
@@ -709,6 +715,8 @@ class ZXFloatingAppManager(
                 return super.dispatchTouchEvent(ev)
             }
         }.apply {
+            elevation = 0f
+            outlineProvider = null
             setViewTreeLifecycleOwner(lifecycleOwner)
             setViewTreeViewModelStoreOwner(viewModelStoreOwner)
             setViewTreeSavedStateRegistryOwner(savedStateRegistryOwner)
@@ -748,10 +756,12 @@ class ZXFloatingAppManager(
             lp.x = session.windowX
             lp.y = session.windowY
             lp.alpha = 1f
-            lp.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+            lp.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
+                WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM
+            lp.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_UNCHANGED
         }
         runCatching {
             windowManager.updateViewLayout(host, lp)
@@ -791,33 +801,22 @@ class ZXFloatingAppManager(
         val signedDx = if (fromLeftCorner) -dxPx else dxPx
         val deltaH = (signedDx * 0.45f + dyPx * 0.85f).roundToInt()
         val rawTargetH = startH + deltaH
+        val minAllowableH = (miniH * 0.70f).roundToInt()
+        val maxAllowableH = (largeH * 1.15f).roundToInt()
+        val targetH = rawTargetH.coerceIn(minAllowableH, maxAllowableH)
 
         // Shrinking past 86% of mini height visually indicates intent to minimize to icon.
         // It does NOT minimize immediately: it displays the icon preview.
         // If user enlarges it again, isPendingMinimizeToIcon cancels!
         val iconThresholdH = (miniH * 0.86f).roundToInt()
-        val isShrunkToIcon = rawTargetH < iconThresholdH
+        val isShrunkToIcon = targetH < iconThresholdH
         session.isPendingMinimizeToIcon = isShrunkToIcon
 
-        // Snap to discrete tiers with magnetic snap tolerance
-        val snapTolerancePx = (16f * density).roundToInt()
-        val snappedH = if (isShrunkToIcon) {
-            rawTargetH
-        } else {
-            when {
-                abs(rawTargetH - miniH) <= snapTolerancePx -> miniH
-                abs(rawTargetH - smallH) <= snapTolerancePx -> smallH
-                abs(rawTargetH - normalH) <= snapTolerancePx -> normalH
-                abs(rawTargetH - largeH) <= snapTolerancePx -> largeH
-                else -> rawTargetH
-            }
-        }
+        // Smooth continuous scaling during drag (discrete magnetic snap commits on release)
+        val effectiveH = targetH
+        val targetTier = if (isShrunkToIcon) FloatingSizeState.MINI else resolveNearestSizeTier(effectiveH)
 
-        val minPreviewH = (miniH * 0.62f).roundToInt()
-        val targetH = snappedH.coerceIn(minPreviewH, largeH)
-        val targetTier = if (isShrunkToIcon) FloatingSizeState.MINI else resolveNearestSizeTier(targetH)
-
-        // Haptic tick feedback when transitioning between mode boundaries
+        // Haptic tick feedback when snapping between mode boundaries
         val currentModeKey = if (isShrunkToIcon) "ICON" else targetTier.name
         if (session.lastResizeModeKey != currentModeKey) {
             session.lastResizeModeKey = currentModeKey
@@ -837,19 +836,19 @@ class ZXFloatingAppManager(
 
         val borderPx = (4f * density).roundToInt()
         val topBarPx = if (targetTier == FloatingSizeState.MINI || isShrunkToIcon) 0 else (34f * density).roundToInt()
-        val contentH = (targetH - borderPx - topBarPx).coerceAtLeast((72 * density).roundToInt())
+        val contentH = (effectiveH - borderPx - topBarPx).coerceAtLeast((72 * density).roundToInt())
         val contentW = (contentH * PORTRAIT_ASPECT_RATIO).roundToInt()
         val targetW = contentW + borderPx
 
         session.widthPx = targetW
-        session.heightPx = targetH
+        session.heightPx = effectiveH
 
         session.windowX = if (fromLeftCorner) {
             (startX + (startW - targetW)).coerceIn(6, (dm.widthPixels - targetW - 6).coerceAtLeast(6))
         } else {
             startX.coerceIn(6, (dm.widthPixels - targetW - 6).coerceAtLeast(6))
         }
-        session.windowY = startY.coerceIn(6, (dm.heightPixels - targetH - 6).coerceAtLeast(6))
+        session.windowY = startY.coerceIn(6, (dm.heightPixels - effectiveH - 6).coerceAtLeast(6))
         session.sizeState = targetTier
         updateSessionWindowLayout(session)
     }
@@ -935,7 +934,6 @@ class ZXFloatingAppManager(
             if (session.virtualDisplayId > 0) {
                 if (client != null && client.isBinderAlive) {
                     client.setSurface(session.virtualDisplayId, surface)
-                    client.enforcePortrait(session.virtualDisplayId)
                 } else {
                     session.localVirtualDisplay?.surface = surface
                 }
@@ -998,6 +996,9 @@ class ZXFloatingAppManager(
     }
 
     fun unbindSessionSurface(session: ZXFloatingAppSession) {
+        if (!session.isClosing && sessions.contains(session)) {
+            return
+        }
         val id = session.virtualDisplayId
         if (id > 0) {
             rootClient?.setSurface(id, null)
@@ -1071,7 +1072,7 @@ class ZXFloatingAppManager(
             rawEvent.buttonState,
             rawEvent.xPrecision,
             rawEvent.yPrecision,
-            rawEvent.deviceId,
+            0,
             rawEvent.edgeFlags,
             InputDevice.SOURCE_TOUCHSCREEN,
             rawEvent.flags
@@ -1125,7 +1126,7 @@ class ZXFloatingAppManager(
 
         if (minimizedStackHostView == null) {
             val dm = context.resources.displayMetrics
-            val bubbleW = (40 * dm.density).roundToInt()
+            val bubbleW = (48 * dm.density).roundToInt()
             val initialX = if (stackSide == "left") 0 else (dm.widthPixels - bubbleW)
 
             val params = WindowManager.LayoutParams(
@@ -1133,10 +1134,8 @@ class ZXFloatingAppManager(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
@@ -1168,20 +1167,13 @@ class ZXFloatingAppManager(
 
                 override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
                     super.onSizeChanged(w, h, oldw, oldh)
-                    if (!draggingStack && w > 0 && w != oldw) {
+                    if (!draggingStack && w > 0 && w != oldw && !isStackExpanded) {
                         post { snapMinimizedStackToEdge(animate = false) }
                     }
                 }
 
                 override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
                     val p = minimizedStackParams ?: return super.dispatchTouchEvent(ev)
-                    if (ev.actionMasked == MotionEvent.ACTION_OUTSIDE) {
-                        if (isStackExpanded) {
-                            isStackExpanded = false
-                            post { snapMinimizedStackToEdge(animate = true) }
-                            return true
-                        }
-                    }
                     when (ev.actionMasked) {
                         MotionEvent.ACTION_DOWN -> {
                             snapAnimator?.cancel()
@@ -1194,9 +1186,8 @@ class ZXFloatingAppManager(
                         MotionEvent.ACTION_MOVE -> {
                             val dx = ev.rawX - downRawX
                             val dy = ev.rawY - downRawY
-                            if (!draggingStack && hypot(dx, dy) > touchSlopPx) {
+                            if (!draggingStack && hypot(dx, dy) > touchSlopPx && !isStackExpanded) {
                                 draggingStack = true
-                                isStackExpanded = false
                             }
                             if (draggingStack) {
                                 val dmMetrics = resources.displayMetrics
@@ -1220,6 +1211,8 @@ class ZXFloatingAppManager(
                     return super.dispatchTouchEvent(ev)
                 }
             }.apply {
+                elevation = 0f
+                outlineProvider = null
                 setViewTreeLifecycleOwner(lifecycleOwner)
                 setViewTreeViewModelStoreOwner(viewModelStoreOwner)
                 setViewTreeSavedStateRegistryOwner(savedStateRegistryOwner)
@@ -1246,8 +1239,27 @@ class ZXFloatingAppManager(
         val host = minimizedStackHostView ?: return
         val params = minimizedStackParams ?: return
         val dm = context.resources.displayMetrics
-        val viewW = host.width.takeIf { it > 0 } ?: (40 * dm.density).roundToInt()
-        val viewH = host.height.takeIf { it > 0 } ?: (40 * dm.density).roundToInt()
+
+        val minimizedCount = sessions.count { it.sizeState == FloatingSizeState.MINIMIZED }
+        if (isStackExpanded && minimizedCount > 1) {
+            params.width = WindowManager.LayoutParams.MATCH_PARENT
+            params.height = WindowManager.LayoutParams.MATCH_PARENT
+            params.x = 0
+            params.y = 0
+            params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+            runCatching { windowManager.updateViewLayout(host, params) }
+            return
+        }
+
+        params.width = WindowManager.LayoutParams.WRAP_CONTENT
+        params.height = WindowManager.LayoutParams.WRAP_CONTENT
+        params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+
+        val viewW = (32 * dm.density).roundToInt()
+        val viewH = (32 * dm.density).roundToInt()
 
         val centerX = params.x + viewW / 2
         stackSide = if (centerX < dm.widthPixels / 2) "left" else "right"
@@ -1588,51 +1600,44 @@ private fun MinimizedIconStackOverlay(manager: ZXFloatingAppManager) {
     val isExpanded = manager.isStackExpanded && minimized.size > 1
     val isRightSide = manager.stackSide == "right"
 
-    // Shape hugs the screen edge: flat (0dp) on the docked edge, rounded (14dp) on the inward edge
     val dockShape = if (isRightSide) {
-        RoundedCornerShape(topStart = 14.dp, bottomStart = 14.dp, topEnd = 0.dp, bottomEnd = 0.dp)
+        RoundedCornerShape(topStart = 18.dp, bottomStart = 18.dp, topEnd = 0.dp, bottomEnd = 0.dp)
     } else {
-        RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 14.dp, bottomEnd = 14.dp)
+        RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 18.dp, bottomEnd = 18.dp)
     }
 
-    Box(
-        modifier = Modifier
-            .shadow(3.dp, dockShape, clip = false)
-            .clip(dockShape)
-            .background(scheme.surfaceContainerHigh.copy(alpha = 0.95f))
-            .border(1.dp, scheme.outlineVariant.copy(alpha = 0.50f), dockShape)
-            .padding(
-                start = if (isRightSide) 4.dp else 0.dp,
-                end = if (isRightSide) 0.dp else 4.dp,
-                top = 2.dp,
-                bottom = 2.dp
-            )
-    ) {
-        if (minimized.size == 1) {
-            val single = minimized.first()
-            MinimizedAppIconTile(
-                iconBitmap = single.iconBitmap,
-                modifier = Modifier
-                    .size(28.dp)
-                    .clickable(
-                        interactionSource = MutableInteractionSource(),
-                        indication = null
-                    ) {
-                        manager.restoreSessionFromIcon(single, targetSize = FloatingSizeState.SMALL)
-                    }
-            )
-        } else {
-            AnimatedVisibility(
-                visible = !isExpanded,
-                enter = fadeIn(tween(140)) + expandHorizontally(tween(160)),
-                exit = fadeOut(tween(120)) + shrinkHorizontally(tween(140))
-            ) {
-                // Stacked state: both app icons visually layered together; tapping once expands to show both
+    val dockContent = @Composable {
+        Box(
+            modifier = Modifier
+                .clip(dockShape)
+                .background(scheme.surfaceContainerHigh.copy(alpha = 0.96f))
+                .border(1.dp, scheme.outlineVariant.copy(alpha = 0.40f), dockShape)
+                .padding(
+                    start = if (isRightSide) 6.dp else 2.dp,
+                    end = if (isRightSide) 2.dp else 6.dp,
+                    top = 4.dp,
+                    bottom = 4.dp
+                )
+        ) {
+            if (minimized.size == 1) {
+                val single = minimized.first()
+                MinimizedAppIconTile(
+                    iconBitmap = single.iconBitmap,
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            manager.restoreSessionFromIcon(single, targetSize = FloatingSizeState.SMALL)
+                        }
+                )
+            } else if (!isExpanded) {
                 Box(
                     modifier = Modifier
-                        .size(width = 34.dp, height = 30.dp)
+                        .size(width = 44.dp, height = 40.dp)
                         .clickable(
-                            interactionSource = MutableInteractionSource(),
+                            interactionSource = remember { MutableInteractionSource() },
                             indication = null
                         ) {
                             manager.isStackExpanded = true
@@ -1645,46 +1650,60 @@ private fun MinimizedIconStackOverlay(manager: ZXFloatingAppManager) {
                     MinimizedAppIconTile(
                         iconBitmap = backSession.iconBitmap,
                         modifier = Modifier
-                            .size(22.dp)
+                            .size(28.dp)
                             .align(Alignment.BottomEnd)
-                            .offset(x = (-1).dp, y = (-1).dp)
+                            .offset(x = (-2).dp, y = (-2).dp)
                     )
                     MinimizedAppIconTile(
                         iconBitmap = frontSession.iconBitmap,
                         modifier = Modifier
-                            .size(24.dp)
+                            .size(32.dp)
                             .align(Alignment.TopStart)
-                            .border(1.dp, scheme.surfaceContainerHigh, RoundedCornerShape(8.dp))
+                            .border(1.5.dp, scheme.surfaceContainerHigh, RoundedCornerShape(10.dp))
                     )
                 }
-            }
-
-            AnimatedVisibility(
-                visible = isExpanded,
-                enter = fadeIn(tween(140)) + expandHorizontally(tween(180)),
-                exit = fadeOut(tween(120)) + shrinkHorizontally(tween(150))
-            ) {
-                // Expanded state: shows both icons; tapping either one opens it as a SMALL floating app and focuses it
+            } else {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     minimized.take(2).forEach { item ->
                         MinimizedAppIconTile(
                             iconBitmap = item.iconBitmap,
                             modifier = Modifier
-                                .size(28.dp)
+                                .size(36.dp)
                                 .clickable {
-                                    manager.restoreSessionFromIcon(
-                                        item,
-                                        targetSize = FloatingSizeState.SMALL
-                                    )
+                                    manager.isStackExpanded = false
+                                    manager.restoreSessionFromIcon(item, targetSize = FloatingSizeState.SMALL)
                                 }
                         )
                     }
                 }
             }
         }
+    }
+
+    if (isExpanded) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTapGestures {
+                        manager.isStackExpanded = false
+                        manager.snapMinimizedStackToEdge(animate = true)
+                    }
+                }
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(if (isRightSide) Alignment.TopEnd else Alignment.TopStart)
+                    .offset { IntOffset(0, manager.stackY) }
+            ) {
+                dockContent()
+            }
+        }
+    } else {
+        dockContent()
     }
 }
 
