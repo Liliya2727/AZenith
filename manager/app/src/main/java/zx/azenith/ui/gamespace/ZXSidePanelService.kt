@@ -3011,6 +3011,67 @@ private fun SidepanelWorkspaceRow(
             )
         }
 
+        if (state.resetConfirmVisible) {
+            val sch = MaterialTheme.colorScheme
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(sch.scrim.copy(alpha = 0.5f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { state.resetConfirmVisible = false }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(28.dp),
+                    color = sch.surfaceContainerHigh,
+                    modifier = Modifier
+                        .padding(24.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {}
+                        )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text("Reset to default?", style = MaterialTheme.typography.titleMedium, color = sch.onSurface)
+                        Text(
+                            "This discards your current customization for this screen.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = sch.onSurfaceVariant
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = sch.surfaceContainerHighest,
+                                modifier = Modifier.clip(CircleShape).clickable { state.resetConfirmVisible = false }
+                            ) {
+                                Text("Cancel", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.labelLarge, color = sch.onSurface)
+                            }
+                            Surface(
+                                shape = CircleShape,
+                                color = sch.error,
+                                modifier = Modifier.clip(CircleShape).clickable {
+                                    state.resetConfirmVisible = false
+                                    state.resetCurrentSubscreen()
+                                }
+                            ) {
+                                Text("Reset", modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.labelLarge, color = sch.onError)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Falling / Dropping Widget Animation Overlay
         val droppingId = state.droppingWidgetId
         if (droppingId != null) {
@@ -3621,12 +3682,33 @@ private fun MainSidepanelContent(
                         )
                     }
 
+                    if (state.activeSubscreen == "appsManager") {
+                        Surface(
+                            shape = CircleShape,
+                            color = if (state.appsPickMode) scheme.primary else scheme.surfaceContainerHigh,
+                            modifier = Modifier
+                                .padding(end = 6.dp)
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .clickable { state.appsPickMode = !state.appsPickMode }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get(if (state.appsPickMode) "check" else "edit"),
+                                    contentDescription = "Edit sidepanel apps",
+                                    tint = if (state.appsPickMode) scheme.onPrimary else scheme.onSurface,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+
                     Surface(
                         shape = CircleShape,
                         color = scheme.surfaceContainerHigh,
                         modifier = Modifier
                             .clip(CircleShape)
-                            .clickable { state.resetCurrentSubscreen() }
+                            .clickable { state.resetConfirmVisible = true }
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),

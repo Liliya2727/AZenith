@@ -147,6 +147,8 @@ class ZXSidePanelStateHolder {
 
     var editMode by mutableStateOf(false)
     var activeSubscreen by mutableStateOf<String?>(null)
+    var appsPickMode by mutableStateOf(false)
+    var resetConfirmVisible by mutableStateOf(false)
     var activeScrollCategory by mutableStateOf("overview")
 
     var liveMonitor by mutableStateOf(SidePanelLiveMonitorState())
@@ -664,10 +666,14 @@ class ZXSidePanelStateHolder {
             cancelWidgetDrag()
             editMode = false
         }
+        appsPickMode = false
+        resetConfirmVisible = false
         activeSubscreen = subscreenName
     }
 
     fun closeSubscreen() {
+        appsPickMode = false
+        resetConfirmVisible = false
         activeSubscreen = null
     }
 
