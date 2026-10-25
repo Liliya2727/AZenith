@@ -673,6 +673,7 @@ fun CrosshairReticleCanvas(
 fun FloatingMonitorPill(
     state: ZXSidePanelStateHolder,
     modifier: Modifier = Modifier,
+    applyAlpha: Boolean = false,
     onDragDelta: ((Float, Float) -> Unit)? = null
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -710,8 +711,15 @@ fun FloatingMonitorPill(
         Modifier
     }
 
+    val alphaMod = if (applyAlpha) {
+        Modifier.graphicsLayer { alpha = alphaVal }
+    } else {
+        Modifier
+    }
+
     val baseModifier = modifier
         .then(dragMod)
+        .then(alphaMod)
 
     CompositionLocalProvider(LocalDensity provides scaledDensity) {
         when (cfg.layoutStyle) {
@@ -735,7 +743,7 @@ fun FloatingMonitorPill(
 
                 Surface(
                     shape = RoundedCornerShape(18.dp),
-                    color = scheme.surfaceContainerHigh.copy(alpha = alphaVal),
+                    color = scheme.surfaceContainerHigh,
                     shadowElevation = 0.dp,
                     tonalElevation = 0.dp,
                     modifier = baseModifier
@@ -750,10 +758,17 @@ fun FloatingMonitorPill(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 rowMetrics.forEach { (label, value, accentColor) ->
-                                    Row(
-                                        modifier = Modifier
+                                    val cellMod = if (rowMetrics.size == 1) {
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                                    } else {
+                                        Modifier
                                             .widthIn(min = 68.dp)
-                                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                                    }
+                                    Row(
+                                        modifier = cellMod,
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
@@ -807,7 +822,7 @@ fun FloatingMonitorPill(
 
                 Surface(
                     shape = CircleShape,
-                    color = scheme.surfaceContainerHigh.copy(alpha = alphaVal),
+                    color = scheme.surfaceContainerHigh,
                     shadowElevation = 0.dp,
                     tonalElevation = 0.dp,
                     modifier = baseModifier
@@ -841,19 +856,19 @@ fun FloatingMonitorPill(
             else -> {
                 Surface(
                     shape = CircleShape,
-                    color = scheme.surfaceContainerHigh.copy(alpha = alphaVal),
+                    color = scheme.surfaceContainerHigh,
                     shadowElevation = 0.dp,
                     tonalElevation = 0.dp,
                     modifier = baseModifier
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         if (cfg.showFps) {
                             Text(
-                                text = "${state.currentFps}",
+                                text = "${state.currentFps} FPS",
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                 color = scheme.primary,
                                 maxLines = 1,
@@ -943,13 +958,13 @@ fun FloatingMonitorPill(
                             }
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(1.dp)
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Icon(
                                     imageVector = ZXSidePanelIcons.get("thermostat"),
                                     contentDescription = null,
                                     tint = tempColor,
-                                    modifier = Modifier.size(11.dp)
+                                    modifier = Modifier.size(12.dp)
                                 )
                                 Text(
                                     text = "${state.tempCelsius}°",
@@ -966,13 +981,13 @@ fun FloatingMonitorPill(
                             val netIcon = if (state.isCellularNetwork) "signal_cellular" else "wifi"
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(1.dp)
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Icon(
                                     imageVector = ZXSidePanelIcons.get(netIcon),
                                     contentDescription = null,
                                     tint = if (state.pingMs > 120) scheme.error else scheme.primary,
-                                    modifier = Modifier.size(11.dp)
+                                    modifier = Modifier.size(12.dp)
                                 )
                                 Text(
                                     text = "${state.pingMs}ms",
@@ -989,13 +1004,13 @@ fun FloatingMonitorPill(
                             val batIcon = if (state.isBatteryCharging) "battery_charging" else "battery_std"
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(1.dp)
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Icon(
                                     imageVector = ZXSidePanelIcons.get(batIcon),
                                     contentDescription = null,
                                     tint = if (state.isBatteryCharging) scheme.primary else batColor,
-                                    modifier = Modifier.size(11.dp)
+                                    modifier = Modifier.size(12.dp)
                                 )
                                 Text(
                                     text = "${state.batteryLevel}%",
@@ -1022,13 +1037,13 @@ fun FloatingMonitorPill(
                             }
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(1.dp)
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Icon(
                                     imageVector = ZXSidePanelIcons.get(profIcon),
                                     contentDescription = null,
                                     tint = scheme.tertiary,
-                                    modifier = Modifier.size(11.dp)
+                                    modifier = Modifier.size(12.dp)
                                 )
                                 Text(
                                     text = profShort,

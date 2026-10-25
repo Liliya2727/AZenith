@@ -75,11 +75,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.AspectRatio
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.OpenInFull
 import androidx.compose.material.icons.rounded.Remove
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -159,6 +165,11 @@ class ZXFloatingAppSession(
     var hasLaunchedApp = false
     var lastActiveTimestampMs by mutableLongStateOf(System.currentTimeMillis())
     var isClosing: Boolean = false
+
+    var isFreeform by mutableStateOf(false)
+    var virtualWidth: Int = 720
+    var virtualHeight: Int = 1280
+    var renderTextureView: TextureView? = null
 
     var virtualDisplayId: Int = -1
     var localVirtualDisplay: VirtualDisplay? = null
@@ -794,12 +805,51 @@ class ZXFloatingAppManager(
     ) {
         val dm = context.resources.displayMetrics
         val density = dm.density
+        val signedDx = if (fromLeftCorner) -dxPx else dxPx
+
+        if (session.isFreeform) {
+            val rawTargetW = startW + signedDx
+            val rawTargetH = startH + dyPx
+            val minW = (140 * density).roundToInt()
+            val minH = (140 * density).roundToInt()
+            val maxW = (dm.widthPixels - 12).coerceAtLeast(minW)
+            val maxH = (dm.heightPixels - 12).coerceAtLeast(minH)
+
+            val targetW = rawTargetW.roundToInt().coerceIn(minW, maxW)
+            val targetH = rawTargetH.roundToInt().coerceIn(minH, maxH)
+
+            val iconThresholdPx = (100 * density).roundToInt()
+            val isShrunkToIcon = targetW < iconThresholdPx && targetH < iconThresholdPx
+            session.isPendingMinimizeToIcon = isShrunkToIcon
+
+            val currentModeKey = if (isShrunkToIcon) "ICON" else "FREEFORM"
+            if (session.lastResizeModeKey != currentModeKey) {
+                session.lastResizeModeKey = currentModeKey
+                session.hostView?.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+            }
+            session.resizeModeHint = if (isShrunkToIcon) {
+                "Release to minimize"
+            } else {
+                "Freeform (${(targetW / density).roundToInt()}×${(targetH / density).roundToInt()})"
+            }
+
+            session.widthPx = targetW
+            session.heightPx = targetH
+            session.windowX = if (fromLeftCorner) {
+                (startX + (startW - targetW)).coerceIn(6, (dm.widthPixels - targetW - 6).coerceAtLeast(6))
+            } else {
+                startX.coerceIn(6, (dm.widthPixels - targetW - 6).coerceAtLeast(6))
+            }
+            session.windowY = startY.coerceIn(6, (dm.heightPixels - targetH - 6).coerceAtLeast(6))
+            updateSessionWindowLayout(session)
+            return
+        }
+
         val (_, miniH) = computeDimensionsForState(FloatingSizeState.MINI)
         val (_, smallH) = computeDimensionsForState(FloatingSizeState.SMALL)
         val (_, normalH) = computeDimensionsForState(FloatingSizeState.NORMAL)
         val (_, largeH) = computeDimensionsForState(FloatingSizeState.LARGE)
 
-        val signedDx = if (fromLeftCorner) -dxPx else dxPx
         val deltaH = (signedDx * 0.45f + dyPx * 0.85f).roundToInt()
         val rawTargetH = startH + deltaH
         val minAllowableH = (miniH * 0.70f).roundToInt()
@@ -881,6 +931,9 @@ class ZXFloatingAppManager(
         if (willMinimize) {
             showModeToast("Minimized to icon")
             minimizeSessionToIcon(session)
+        } else if (session.isFreeform) {
+            showModeToast("Freeform window")
+            commitFreeformDimensions(session)
         } else {
             val settledTier = resolveNearestSizeTier(session.heightPx)
             applySizePreset(session, settledTier)
@@ -892,6 +945,65 @@ class ZXFloatingAppManager(
                 else -> "Floating window"
             }
             showModeToast(label)
+        }
+    }
+
+    private fun commitFreeformDimensions(session: ZXFloatingAppSession) {
+        val density = context.resources.displayMetrics.density
+        val borderPx = (4f * density).roundToInt()
+        val topBarPx = (34f * density).roundToInt()
+        val contentW = (session.widthPx - borderPx).coerceAtLeast((72 * density).roundToInt())
+        val contentH = (session.heightPx - borderPx - topBarPx).coerceAtLeast((72 * density).roundToInt())
+
+        val contentWidthDp = contentW / density
+        val contentHeightDp = contentH / density
+        val virtW = (contentWidthDp * 2f).roundToInt().coerceAtLeast(360)
+        val virtH = (contentHeightDp * 2f).roundToInt().coerceAtLeast(360)
+        session.virtualWidth = virtW
+        session.virtualHeight = virtH
+
+        val client = rootClient
+        if (client != null && client.isBinderAlive) {
+            client.resizeVirtualDisplay(session.virtualDisplayId, virtW, virtH, VIRTUAL_PORTRAIT_DPI)
+        }
+        session.renderTextureView?.surfaceTexture?.setDefaultBufferSize(virtW, virtH)
+        updateSessionWindowLayout(session)
+    }
+
+    fun toggleFreeformMode(session: ZXFloatingAppSession) {
+        val nextFreeform = !session.isFreeform
+        session.isFreeform = nextFreeform
+        val density = context.resources.displayMetrics.density
+
+        if (nextFreeform) {
+            showModeToast("Freeform enabled")
+            commitFreeformDimensions(session)
+        } else {
+            showModeToast("Portrait locked")
+            val borderPx = (4f * density).roundToInt()
+            val topBarPx = (34f * density).roundToInt()
+            val contentH = (session.heightPx - borderPx - topBarPx).coerceAtLeast((72 * density).roundToInt())
+            val contentW = (contentH * PORTRAIT_ASPECT_RATIO).roundToInt()
+            val targetW = contentW + borderPx
+            session.widthPx = targetW
+            session.virtualWidth = VIRTUAL_PORTRAIT_WIDTH
+            session.virtualHeight = VIRTUAL_PORTRAIT_HEIGHT
+
+            val client = rootClient
+            if (client != null && client.isBinderAlive) {
+                client.resizeVirtualDisplay(
+                    session.virtualDisplayId,
+                    VIRTUAL_PORTRAIT_WIDTH,
+                    VIRTUAL_PORTRAIT_HEIGHT,
+                    VIRTUAL_PORTRAIT_DPI
+                )
+                client.enforcePortrait(session.virtualDisplayId)
+            }
+            session.renderTextureView?.surfaceTexture?.setDefaultBufferSize(
+                VIRTUAL_PORTRAIT_WIDTH,
+                VIRTUAL_PORTRAIT_HEIGHT
+            )
+            updateSessionWindowLayout(session)
         }
     }
 
@@ -914,7 +1026,9 @@ class ZXFloatingAppManager(
     }
 
     fun bindSessionSurface(session: ZXFloatingAppSession, surfaceTexture: SurfaceTexture) {
-        surfaceTexture.setDefaultBufferSize(VIRTUAL_PORTRAIT_WIDTH, VIRTUAL_PORTRAIT_HEIGHT)
+        val virtW = if (session.isFreeform && session.virtualWidth > 0) session.virtualWidth else VIRTUAL_PORTRAIT_WIDTH
+        val virtH = if (session.isFreeform && session.virtualHeight > 0) session.virtualHeight else VIRTUAL_PORTRAIT_HEIGHT
+        surfaceTexture.setDefaultBufferSize(virtW, virtH)
         val surface = Surface(surfaceTexture)
         session.renderSurface = surface
 
@@ -1040,8 +1154,16 @@ class ZXFloatingAppManager(
         val client = rootClient
         if (displayId <= 0 || client == null || !client.isBinderAlive) return
 
-        val bufferW = VIRTUAL_PORTRAIT_WIDTH.toFloat()
-        val bufferH = VIRTUAL_PORTRAIT_HEIGHT.toFloat()
+        val bufferW = if (session.isFreeform && session.virtualWidth > 0) {
+            session.virtualWidth.toFloat()
+        } else {
+            VIRTUAL_PORTRAIT_WIDTH.toFloat()
+        }
+        val bufferH = if (session.isFreeform && session.virtualHeight > 0) {
+            session.virtualHeight.toFloat()
+        } else {
+            VIRTUAL_PORTRAIT_HEIGHT.toFloat()
+        }
 
         val scaleX = viewWidth.toFloat() / bufferW
         val scaleY = viewHeight.toFloat() / bufferH
@@ -1337,6 +1459,8 @@ private fun FloatingAppWindowContent(
             // Top bar (shown in SMALL, NORMAL, and LARGE; hidden in MINI square box mode or pending icon)
             if (!isMini && !isPendingIcon) {
                 FloatingWindowTopBar(
+                    session = session,
+                    manager = manager,
                     onFullScreen = { manager.expandSessionToFullscreen(session) },
                     onClose = { manager.closeSession(session) }
                 )
@@ -1358,6 +1482,7 @@ private fun FloatingAppWindowContent(
                         .alpha(if (hasDrawnFrame) 1f else 0f),
                     factory = { ctx ->
                         TextureView(ctx).apply {
+                            session.renderTextureView = this
                             isOpaque = false
                             surfaceTextureListener = object : TextureView.SurfaceTextureListener {
                                 override fun onSurfaceTextureAvailable(
@@ -1365,10 +1490,9 @@ private fun FloatingAppWindowContent(
                                     width: Int,
                                     height: Int
                                 ) {
-                                    surface.setDefaultBufferSize(
-                                        ZXFloatingAppManager.VIRTUAL_PORTRAIT_WIDTH,
-                                        ZXFloatingAppManager.VIRTUAL_PORTRAIT_HEIGHT
-                                    )
+                                    val virtW = if (session.isFreeform && session.virtualWidth > 0) session.virtualWidth else ZXFloatingAppManager.VIRTUAL_PORTRAIT_WIDTH
+                                    val virtH = if (session.isFreeform && session.virtualHeight > 0) session.virtualHeight else ZXFloatingAppManager.VIRTUAL_PORTRAIT_HEIGHT
+                                    surface.setDefaultBufferSize(virtW, virtH)
                                     manager.bindSessionSurface(session, surface)
                                 }
 
@@ -1377,13 +1501,15 @@ private fun FloatingAppWindowContent(
                                     width: Int,
                                     height: Int
                                 ) {
-                                    surface.setDefaultBufferSize(
-                                        ZXFloatingAppManager.VIRTUAL_PORTRAIT_WIDTH,
-                                        ZXFloatingAppManager.VIRTUAL_PORTRAIT_HEIGHT
-                                    )
+                                    val virtW = if (session.isFreeform && session.virtualWidth > 0) session.virtualWidth else ZXFloatingAppManager.VIRTUAL_PORTRAIT_WIDTH
+                                    val virtH = if (session.isFreeform && session.virtualHeight > 0) session.virtualHeight else ZXFloatingAppManager.VIRTUAL_PORTRAIT_HEIGHT
+                                    surface.setDefaultBufferSize(virtW, virtH)
                                 }
 
                                 override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+                                    if (session.renderTextureView == this@apply) {
+                                        session.renderTextureView = null
+                                    }
                                     manager.unbindSessionSurface(session)
                                     hasDrawnFrame = false
                                     return true
@@ -1526,10 +1652,14 @@ private fun applyPortraitTransform(textureView: TextureView, viewW: Int, viewH: 
 
 @Composable
 private fun FloatingWindowTopBar(
+    session: ZXFloatingAppSession,
+    manager: ZXFloatingAppManager,
     onFullScreen: () -> Unit,
     onClose: () -> Unit
 ) {
     val scheme = MaterialTheme.colorScheme
+    var menuExpanded by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -1552,15 +1682,78 @@ private fun FloatingWindowTopBar(
             }
         }
 
-        // Center drag handle pill
+        // Center control: 3-dots button with DropdownMenu
         Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .width(36.dp)
-                .height(4.dp)
-                .clip(CircleShape)
-                .background(scheme.outline.copy(alpha = 0.45f))
-        )
+            modifier = Modifier.align(Alignment.Center)
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(38.dp)
+                    .height(22.dp)
+                    .clip(CircleShape)
+                    .background(scheme.surfaceContainerHighest.copy(alpha = 0.85f))
+                    .clickable { menuExpanded = true },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.MoreHoriz,
+                    contentDescription = null,
+                    tint = scheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false },
+                shape = RoundedCornerShape(16.dp),
+                containerColor = scheme.surfaceContainerHigh
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Back", style = MaterialTheme.typography.bodyMedium) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    onClick = {
+                        menuExpanded = false
+                        manager.dispatchBackToSession(session)
+                    }
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            if (session.isFreeform) "Lock aspect ratio" else "Enable freeform",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Rounded.AspectRatio,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    trailingIcon = if (session.isFreeform) {
+                        {
+                            Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = null,
+                                tint = scheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    } else null,
+                    onClick = {
+                        menuExpanded = false
+                        manager.toggleFreeformMode(session)
+                    }
+                )
+            }
+        }
 
         // Right control: Close (minimize is triggered by resizing smaller into icon mode)
         Box(

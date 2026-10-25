@@ -58,6 +58,7 @@ class ZXFloatingAppRootService : RootService() {
         const val TRANSACTION_LAUNCH_APP = IBinder.FIRST_CALL_TRANSACTION + 6
         const val TRANSACTION_ENFORCE_PORTRAIT = IBinder.FIRST_CALL_TRANSACTION + 7
         const val TRANSACTION_HAS_TASKS = IBinder.FIRST_CALL_TRANSACTION + 8
+        const val TRANSACTION_RESIZE_DISPLAY = IBinder.FIRST_CALL_TRANSACTION + 9
 
         private const val SYSTEM_UID = 1000
         private const val FLAG_PUBLIC = DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC
@@ -198,6 +199,16 @@ class ZXFloatingAppRootService : RootService() {
                         val has = hasTasksOnDisplay(displayId)
                         reply?.writeNoException()
                         reply?.writeInt(if (has) 1 else 0)
+                        return true
+                    }
+                    TRANSACTION_RESIZE_DISPLAY -> {
+                        data.enforceInterface(DESCRIPTOR)
+                        val displayId = data.readInt()
+                        val width = data.readInt()
+                        val height = data.readInt()
+                        val dpi = data.readInt()
+                        resizeVirtualDisplay(displayId, width, height, dpi)
+                        reply?.writeNoException()
                         return true
                     }
                 }
@@ -429,6 +440,21 @@ class ZXFloatingAppRootService : RootService() {
                     val m = iDm.javaClass.methods.firstOrNull { it.name == "releaseVirtualDisplay" }
                     m?.isAccessible = true
                     m?.invoke(iDm, cb)
+                }
+            }
+        }
+    }
+
+    private fun resizeVirtualDisplay(displayId: Int, width: Int, height: Int, dpi: Int) {
+        if (displayId <= 0 || width <= 0 || height <= 0) return
+        mainHandler.post {
+            virtualDisplays[displayId]?.resize(width, height, dpi)
+            displayCallbacks[displayId]?.let { cb ->
+                val iDm = getIDisplayManager() ?: return@let
+                runCatching {
+                    val m = iDm.javaClass.methods.firstOrNull { it.name == "resizeVirtualDisplay" }
+                    m?.isAccessible = true
+                    m?.invoke(iDm, cb, width, height, dpi)
                 }
             }
         }
@@ -745,6 +771,25 @@ class ZXFloatingDisplayRootClient(private val remote: IBinder) {
             reply.readInt() != 0
         } catch (_: Exception) {
             true
+        } finally {
+            data.recycle()
+            reply.recycle()
+        }
+    }
+
+    fun resizeVirtualDisplay(displayId: Int, width: Int, height: Int, dpi: Int) {
+        if (displayId <= 0) return
+        val data = Parcel.obtain()
+        val reply = Parcel.obtain()
+        try {
+            data.writeInterfaceToken(DESCRIPTOR)
+            data.writeInt(displayId)
+            data.writeInt(width)
+            data.writeInt(height)
+            data.writeInt(dpi)
+            remote.transact(ZXFloatingAppRootService.TRANSACTION_RESIZE_DISPLAY, data, reply, 0)
+            reply.readException()
+        } catch (_: Exception) {
         } finally {
             data.recycle()
             reply.recycle()

@@ -2514,7 +2514,7 @@ fun LiveMonitorSubscreen(
 
             Surface(
                 shape = RoundedCornerShape(24.dp),
-                color = scheme.surfaceContainerHigh,
+                color = scheme.surfaceContainerHighest,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 2.dp)
@@ -2526,7 +2526,7 @@ fun LiveMonitorSubscreen(
                         .padding(vertical = 20.dp, horizontal = 12.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    FloatingMonitorPill(state = state)
+                    FloatingMonitorPill(state = state, applyAlpha = true)
                 }
             }
         }

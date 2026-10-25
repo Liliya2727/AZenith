@@ -47,6 +47,7 @@ import android.os.PowerManager
 import android.provider.Settings
 import android.view.Choreographer
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowInsets
@@ -731,7 +732,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         isWindowFullScreen = isWindowFullScreen,
                         barHeightDp = barHeightDp,
                         currentVerticalY = currentVerticalY,
-                        onCollapseRequest = { collapsePanel() },
+                        onCollapseRequest = { handleBackPress() },
                         onHudVisibilityChanged = { visible ->
                             hudView?.visibility = if (visible) View.VISIBLE else View.GONE
                             if (visible) {
@@ -753,6 +754,32 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             private var downRawY = 0f
             private var startVertY = 0
             private var gestureMode = 0 // 0 = undecided, 1 = triggered expand, 2 = vertical drag
+
+            private var edgeSwipeStartX = 0f
+            private var edgeSwipeStartY = 0f
+            private var isEdgeBackPending = false
+
+            override fun onAttachedToWindow() {
+                super.onAttachedToWindow()
+                if (isPanelExpanded) {
+                    registerBackInvokedCallback(this)
+                }
+            }
+
+            override fun onDetachedFromWindow() {
+                unregisterBackInvokedCallback(this)
+                super.onDetachedFromWindow()
+            }
+
+            override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+                if (isPanelExpanded && (event.keyCode == KeyEvent.KEYCODE_BACK || event.keyCode == KeyEvent.KEYCODE_ESCAPE)) {
+                    if (event.action == KeyEvent.ACTION_UP) {
+                        handleBackPress()
+                    }
+                    return true
+                }
+                return super.dispatchKeyEvent(event)
+            }
 
             override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
                 // Consume system cutout/bar insets so WindowManager does not create a safe-area gap on the left/right edge
@@ -782,6 +809,42 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             }
 
             override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+                if (isPanelExpanded) {
+                    val dm = resources.displayMetrics
+                    val edgeSlopPx = 32f * dm.density
+                    val isNearEdge = ev.rawX <= edgeSlopPx || ev.rawX >= (dm.widthPixels - edgeSlopPx)
+
+                    when (ev.actionMasked) {
+                        MotionEvent.ACTION_DOWN -> {
+                            if (isNearEdge) {
+                                edgeSwipeStartX = ev.rawX
+                                edgeSwipeStartY = ev.rawY
+                                isEdgeBackPending = true
+                            } else {
+                                isEdgeBackPending = false
+                            }
+                        }
+                        MotionEvent.ACTION_MOVE -> {
+                            if (isEdgeBackPending) {
+                                val dx = abs(ev.rawX - edgeSwipeStartX)
+                                val dy = abs(ev.rawY - edgeSwipeStartY)
+                                val triggerPx = 36f * dm.density
+                                if (dx >= triggerPx && dx > dy * 1.4f) {
+                                    isEdgeBackPending = false
+                                    handleBackPress()
+                                    val cancelEv = MotionEvent.obtain(ev).apply { action = MotionEvent.ACTION_CANCEL }
+                                    super.dispatchTouchEvent(cancelEv)
+                                    runCatching { cancelEv.recycle() }
+                                    return true
+                                }
+                            }
+                        }
+                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                            isEdgeBackPending = false
+                        }
+                    }
+                }
+
                 // When collapsed into the edge bar, handle touch directly in screen coordinates
                 // so inward swipes immediately open the sidepanel without triggering system Back or notifications.
                 if (!isWindowFullScreen && !isPanelExpanded) {
@@ -929,15 +992,17 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             gravity = Gravity.TOP or Gravity.START
             x = initHudX
             y = initHudY
+            alpha = (panelState.liveMonitor.opacity / 100f).coerceIn(0.2f, 1f)
             applyFullCutoutMode()
         }
         val hudComposeView = ComposeView(this).apply {
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
             setViewTreeLifecycleOwner(this@ZXSidePanelService)
             setViewTreeViewModelStoreOwner(this@ZXSidePanelService)
             setViewTreeSavedStateRegistryOwner(this@ZXSidePanelService)
             setContent {
                 AZenithTheme {
-                    FloatingMonitorPill(state = panelState)
+                    FloatingMonitorPill(state = panelState, applyAlpha = false)
                 }
             }
         }
@@ -946,12 +1011,9 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             private var startRawY = 0f
             private var origX = 0
             private var origY = 0
-            private var pendingFrame = false
-            private val frameCallback = Choreographer.FrameCallback {
-                if (isAttachedToWindow && pendingFrame) {
-                    pendingFrame = false
-                    runCatching { wm.updateViewLayout(this, hudParams) }
-                }
+
+            init {
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
             }
 
             private fun getScreenBounds(): android.graphics.Rect {
@@ -963,22 +1025,44 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 }
             }
 
+            private fun syncWindowSizeAndPosition(w: Int, h: Int) {
+                if (!isAttachedToWindow || w <= 0 || h <= 0) return
+                val bounds = getScreenBounds()
+                val targetW = w.coerceIn(1, bounds.width())
+                val targetH = h.coerceIn(1, bounds.height())
+                val maxX = (bounds.width() - targetW).coerceAtLeast(0)
+                val maxY = (bounds.height() - targetH).coerceAtLeast(0)
+                val clampedX = hudParams.x.coerceIn(0, maxX)
+                val clampedY = hudParams.y.coerceIn(0, maxY)
+                val targetAlpha = (panelState.liveMonitor.opacity / 100f).coerceIn(0.2f, 1f)
+
+                val needsUpdate = hudParams.width != targetW ||
+                    hudParams.height != targetH ||
+                    hudParams.x != clampedX ||
+                    hudParams.y != clampedY ||
+                    hudParams.alpha != targetAlpha
+
+                if (needsUpdate) {
+                    hudParams.width = targetW
+                    hudParams.height = targetH
+                    hudParams.x = clampedX
+                    hudParams.y = clampedY
+                    hudParams.alpha = targetAlpha
+                    panelState.hudOffsetX = clampedX.toFloat()
+                    panelState.hudOffsetY = clampedY.toFloat()
+                    post {
+                        if (isAttachedToWindow) {
+                            runCatching { wm.updateViewLayout(this, hudParams) }
+                        }
+                    }
+                }
+            }
+
             override fun onAttachedToWindow() {
                 super.onAttachedToWindow()
                 post {
                     if (isAttachedToWindow && width > 0 && height > 0) {
-                        val bounds = getScreenBounds()
-                        val maxX = (bounds.width() - width).coerceAtLeast(0)
-                        val maxY = (bounds.height() - height).coerceAtLeast(0)
-                        val clampedX = hudParams.x.coerceIn(0, maxX)
-                        val clampedY = hudParams.y.coerceIn(0, maxY)
-                        if (clampedX != hudParams.x || clampedY != hudParams.y) {
-                            hudParams.x = clampedX
-                            hudParams.y = clampedY
-                            panelState.hudOffsetX = clampedX.toFloat()
-                            panelState.hudOffsetY = clampedY.toFloat()
-                            runCatching { wm.updateViewLayout(this, hudParams) }
-                        }
+                        syncWindowSizeAndPosition(width, height)
                     }
                 }
             }
@@ -988,43 +1072,12 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 val unconstrainedWidthSpec = MeasureSpec.makeMeasureSpec(bounds.width(), MeasureSpec.AT_MOST)
                 val unconstrainedHeightSpec = MeasureSpec.makeMeasureSpec(bounds.height(), MeasureSpec.AT_MOST)
                 super.onMeasure(unconstrainedWidthSpec, unconstrainedHeightSpec)
-                val w = measuredWidth
-                val h = measuredHeight
-                if (w > 0 && h > 0 && isAttachedToWindow) {
-                    val maxX = (bounds.width() - w).coerceAtLeast(0)
-                    val maxY = (bounds.height() - h).coerceAtLeast(0)
-                    val clampedX = hudParams.x.coerceIn(0, maxX)
-                    val clampedY = hudParams.y.coerceIn(0, maxY)
-                    if (clampedX != hudParams.x || clampedY != hudParams.y) {
-                        hudParams.x = clampedX
-                        hudParams.y = clampedY
-                        panelState.hudOffsetX = clampedX.toFloat()
-                        panelState.hudOffsetY = clampedY.toFloat()
-                        post {
-                            if (isAttachedToWindow) {
-                                runCatching { wm.updateViewLayout(this, hudParams) }
-                            }
-                        }
-                    }
-                }
+                syncWindowSizeAndPosition(measuredWidth, measuredHeight)
             }
 
             override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
                 super.onSizeChanged(w, h, oldw, oldh)
-                if (w > 0 && h > 0 && isAttachedToWindow) {
-                    val bounds = getScreenBounds()
-                    val maxX = (bounds.width() - w).coerceAtLeast(0)
-                    val maxY = (bounds.height() - h).coerceAtLeast(0)
-                    val clampedX = hudParams.x.coerceIn(0, maxX)
-                    val clampedY = hudParams.y.coerceIn(0, maxY)
-                    if (clampedX != hudParams.x || clampedY != hudParams.y) {
-                        hudParams.x = clampedX
-                        hudParams.y = clampedY
-                        panelState.hudOffsetX = clampedX.toFloat()
-                        panelState.hudOffsetY = clampedY.toFloat()
-                        runCatching { wm.updateViewLayout(this, hudParams) }
-                    }
-                }
+                syncWindowSizeAndPosition(w, h)
             }
 
             override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
@@ -1047,18 +1100,11 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         if (clampedX != hudParams.x || clampedY != hudParams.y) {
                             hudParams.x = clampedX
                             hudParams.y = clampedY
-                            if (!pendingFrame) {
-                                pendingFrame = true
-                                Choreographer.getInstance().postFrameCallback(frameCallback)
-                            }
+                            runCatching { wm.updateViewLayout(this, hudParams) }
                         }
                         return true
                     }
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                        if (pendingFrame) {
-                            pendingFrame = false
-                            Choreographer.getInstance().removeFrameCallback(frameCallback)
-                        }
                         if (isAttachedToWindow) {
                             runCatching { wm.updateViewLayout(this, hudParams) }
                         }
@@ -1096,11 +1142,14 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             // Dynamically re-measure and update window layout when live monitor configuration or scale changes
             serviceScope.launch {
                 snapshotFlow { panelState.liveMonitor }
-                    .collect {
+                    .collect { lm ->
                         withContext(Dispatchers.Main) {
                             if (isViewAttached && hudView != null) {
+                                val targetAlpha = (lm.opacity / 100f).coerceIn(0.2f, 1f)
+                                hudParams.alpha = targetAlpha
+                                hudComposeView.requestLayout()
+                                hudView?.requestLayout()
                                 runCatching {
-                                    hudView?.requestLayout()
                                     wm.updateViewLayout(hudView, hudParams)
                                 }
                             }
@@ -1129,6 +1178,47 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
     }
 
+    private var backInvokedCallback: Any? = null
+
+    private fun handleBackPress() {
+        if (panelState.activeSubscreen != null) {
+            panelState.closeSubscreen()
+        } else if (panelState.editMode) {
+            panelState.editMode = false
+        } else {
+            collapsePanel()
+        }
+    }
+
+    private fun registerBackInvokedCallback(view: View) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (backInvokedCallback == null) {
+                val callback = android.window.OnBackInvokedCallback {
+                    handleBackPress()
+                }
+                backInvokedCallback = callback
+                runCatching {
+                    view.findOnBackInvokedDispatcher()?.registerOnBackInvokedCallback(
+                        android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                        callback
+                    )
+                }
+            }
+        }
+    }
+
+    private fun unregisterBackInvokedCallback(view: View) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val callback = backInvokedCallback as? android.window.OnBackInvokedCallback
+            if (callback != null) {
+                runCatching {
+                    view.findOnBackInvokedDispatcher()?.unregisterOnBackInvokedCallback(callback)
+                }
+                backInvokedCallback = null
+            }
+        }
+    }
+
     private fun expandPanel() {
         if (isPanelExpanded) return
         syncInitialAudioAndBrightness()
@@ -1138,6 +1228,10 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         try {
             isWindowFullScreen = true
             wm.updateViewLayout(view, createExpandedLayoutParams())
+            view.isFocusable = true
+            view.isFocusableInTouchMode = true
+            view.requestFocus()
+            registerBackInvokedCallback(view)
             windowTransitionJob = serviceScope.launch {
                 // Allow WindowManager 1 frame to expand surface before starting smooth morph animation
                 delay(16)
@@ -1150,6 +1244,13 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
     private fun collapsePanel() {
         if (!isPanelExpanded && !isWindowFullScreen) return
+        val v = rootOverlayView
+        if (v != null) {
+            unregisterBackInvokedCallback(v)
+            v.clearFocus()
+            v.isFocusable = false
+            v.isFocusableInTouchMode = false
+        }
         panelState.cancelWidgetDrag()
         if (panelState.editMode) {
             panelState.editMode = false
