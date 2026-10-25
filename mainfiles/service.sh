@@ -65,6 +65,8 @@ for cpu_dir in /sys/devices/system/cpu/cpu[0-9]*/cpufreq; do
 done
 chmod 0444 /proc/stat 2>/dev/null
 
+chmod 0755 /sys/kernel/ged /sys/kernel/ged/hal 2>/dev/null
+
 for gpu_node in \
     /sys/class/kgsl/kgsl-3d0/gpu_busy_percentage \
     /sys/class/kgsl/kgsl-3d0/gpubusy \
@@ -75,6 +77,7 @@ for gpu_node in \
     /sys/kernel/gpu/gpu_max_clock \
     /sys/module/ged/parameters/gpu_loading \
     /sys/kernel/ged/hal/gpu_utilization \
+    /sys/kernel/ged/hal/ged_kpi \
     /proc/mali/utilization \
     /proc/gpufreq/gpufreq_var_dump \
     /proc/gpufreqv2/gpufreq_status \

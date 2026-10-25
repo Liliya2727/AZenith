@@ -1129,39 +1129,32 @@ private fun BgmPlaylistStagingSection(
         val isStacked = stagedTracks.isNotEmpty() && totalWidth < 820.dp
         val halfWidth = if (totalWidth > gap) (totalWidth - gap) / 2 else totalWidth
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top
-        ) {
-            AnimatedVisibility(
-                visible = stagedTracks.isNotEmpty(),
-                enter = slideInHorizontally(
-                    animationSpec = springBouncyOffset,
-                    initialOffsetX = { -it }
-                ) + expandHorizontally(
-                    animationSpec = springBouncySize,
-                    expandFrom = Alignment.Start
-                ) + fadeIn(animationSpec = springBouncyFloat),
-                exit = slideOutHorizontally(
-                    animationSpec = springBouncyOffset,
-                    targetOffsetX = { -it }
-                ) + shrinkHorizontally(
-                    animationSpec = springBouncySize,
-                    shrinkTowards = Alignment.Start
-                ) + fadeOut(animationSpec = springBouncyFloat)
-            ) {
-                val stagingCardShape = RoundedCornerShape(18.dp)
-                val stagingModifier = if (isStacked) {
-                    Modifier.fillMaxWidth()
-                } else {
-                    Modifier.width(halfWidth)
-                }
-                Row(verticalAlignment = Alignment.Top) {
+        // A Row can't hold two fillMaxWidth children, so the stacked case needs a Column parent.
+        val stagingCard: @Composable (Modifier) -> Unit = { cardModifier ->
+            Row(verticalAlignment = Alignment.Top) {
+                AnimatedVisibility(
+                    visible = stagedTracks.isNotEmpty(),
+                    enter = slideInHorizontally(
+                        animationSpec = springBouncyOffset,
+                        initialOffsetX = { -it }
+                    ) + expandHorizontally(
+                        animationSpec = springBouncySize,
+                        expandFrom = Alignment.Start
+                    ) + fadeIn(animationSpec = springBouncyFloat),
+                    exit = slideOutHorizontally(
+                        animationSpec = springBouncyOffset,
+                        targetOffsetX = { -it }
+                    ) + shrinkHorizontally(
+                        animationSpec = springBouncySize,
+                        shrinkTowards = Alignment.Start
+                    ) + fadeOut(animationSpec = springBouncyFloat)
+                ) {
+                    val stagingCardShape = RoundedCornerShape(18.dp)
                     Surface(
                         shape = stagingCardShape,
                         color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
                         contentColor = scheme.onSurface,
-                        modifier = stagingModifier
+                        modifier = cardModifier
                             .gamepadFocusOutline(shape = stagingCardShape, register = true)
                     ) {
                         Column(
@@ -1540,24 +1533,17 @@ private fun BgmPlaylistStagingSection(
                             }
                         }
                     }
-                    if (!isStacked) {
-                        Spacer(Modifier.width(gap))
-                    }
                 }
             }
+        }
 
+        val playlistCard: @Composable (Modifier) -> Unit = { cardModifier ->
             val playlistCardShape = RoundedCornerShape(18.dp)
-            val playlistModifier = if (isStacked) {
-                Modifier.fillMaxWidth()
-            } else {
-                Modifier.weight(1f)
-            }
-
             Surface(
                 shape = playlistCardShape,
                 color = scheme.surfaceContainerHigh.copy(alpha = 0.85f),
                 contentColor = scheme.onSurface,
-                modifier = playlistModifier
+                modifier = cardModifier
                     .gamepadFocusOutline(shape = playlistCardShape, register = true)
             ) {
                 Column(
@@ -2004,6 +1990,25 @@ private fun BgmPlaylistStagingSection(
                         }
                     }
                 }
+            }
+        }
+
+        if (isStacked) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(gap)
+            ) {
+                stagingCard(Modifier.fillMaxWidth())
+                playlistCard(Modifier.fillMaxWidth())
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
+            ) {
+                stagingCard(Modifier.width(halfWidth))
+                Spacer(Modifier.width(gap))
+                playlistCard(Modifier.weight(1f))
             }
         }
     }

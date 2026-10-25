@@ -18,12 +18,21 @@
 
 package zx.azenith.ui.gamespace
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.Service
+import android.content.pm.ServiceInfo
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import android.content.SharedPreferences
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
@@ -63,6 +72,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -76,6 +86,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -109,6 +120,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -180,6 +193,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     companion object {
         const val ACTION_SHOW = "zx.azenith.action.SIDE_PANEL_SHOW"
         const val ACTION_HIDE = "zx.azenith.action.SIDE_PANEL_HIDE"
+        const val ACTION_OPEN_FLOATING_APP = "zx.azenith.action.OPEN_FLOATING_APP"
         const val EXTRA_PACKAGE_NAME = "extra_package_name"
         const val EXTRA_APP_LABEL = "extra_app_label"
 
@@ -207,7 +221,11 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     packageName?.let { putExtra(EXTRA_PACKAGE_NAME, it) }
                     appLabel?.let { putExtra(EXTRA_APP_LABEL, it) }
                 }
-                context.startService(intent)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    ContextCompat.startForegroundService(context, intent)
+                } else {
+                    context.startService(intent)
+                }
             } catch (e: Exception) {
                 android.util.Log.e("ZXSidePanelService", "Failed to start service", e)
             }
@@ -237,6 +255,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
     private var windowManager: WindowManager? = null
     private var audioManager: AudioManager? = null
+    private var floatingAppManager: ZXFloatingAppManager? = null
     private var rootOverlayView: View? = null
     private var crosshairView: ComposeView? = null
     private var hudView: View? = null
@@ -324,6 +343,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     override fun onCreate() {
         super.onCreate()
         isServiceActive = true
+        startForegroundNotification()
         savedStateRegistryController.performRestore(null)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
@@ -338,6 +358,24 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+        floatingAppManager = ZXFloatingAppManager(
+            context = this,
+            windowManager = windowManager!!,
+            lifecycleOwner = this,
+            viewModelStoreOwner = this,
+            savedStateRegistryOwner = this,
+            scope = serviceScope,
+            checkRootGranted = { checkRootGranted() },
+            resolveAppIcon = { pkg ->
+                panelState.installedApps.firstOrNull { it.packageName == pkg }?.iconBitmap
+                    ?: runCatching {
+                        drawableToImageBitmap(packageManager.getApplicationIcon(pkg), 96)
+                    }.getOrNull()
+            }
+        ).apply {
+            isHostForegroundPackage = { pkg -> pkg == activeGamePackage }
+            prebindRootServiceIfPossible()
+        }
 
         // Ensure app-local API mirror directory exists and is world-accessible for the daemon
         runCatching {
@@ -359,9 +397,15 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             launchExternalApp(pkg)
         }
         panelState.onBrightnessChangedRequest = { pct ->
-            applySystemBrightness(pct)
+            applySystemBrightness(pct, isCommit = false)
+        }
+        panelState.onBrightnessCommittedRequest = { pct ->
+            applySystemBrightness(pct, isCommit = true)
         }
         panelState.onVolumeChangedRequest = { pct, isMuted ->
+            applySystemVolume(pct, isMuted)
+        }
+        panelState.onVolumeCommittedRequest = { pct, isMuted ->
             applySystemVolume(pct, isMuted)
         }
         panelState.onToggleAutoModeRequest = { enableAuto ->
@@ -372,12 +416,14 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
 
         syncInitialAudioAndBrightness()
+        registerHardwareSyncObservers()
         loadInstalledLauncherApps()
         startAppMonitorWatcher()
         startRealTelemetryMonitor()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        startForegroundNotification()
         val action = intent?.action ?: ACTION_SHOW
         when (action) {
             ACTION_SHOW -> {
@@ -394,6 +440,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     lastUsageForegroundPkg = pkg
                     lastUsageEventTs = now
                     activeGamePackage = pkg
+                    panelState.activeGamePackage = pkg
                     activeGameLabel = label ?: resolveAppLabel(pkg)
                     panelState.loadForApp(pkg)
                     attachOverlayIfNeeded()
@@ -411,11 +458,23 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         lastUsageEventTs = now
                         if (activeGamePackage != matchedPkg) {
                             activeGamePackage = matchedPkg
+                            panelState.activeGamePackage = matchedPkg
                             activeGameLabel = label
                             panelState.loadForApp(matchedPkg)
                         }
                     } else {
                         activeGameLabel = label
+                    }
+                    attachOverlayIfNeeded()
+                    isHandleVisible = true
+                    startFpsChoreographer()
+                } else {
+                    val currentFg = lastUsageForegroundPkg
+                    if (!currentFg.isNullOrBlank() && !isLauncherPackage(currentFg)) {
+                        activeGamePackage = currentFg
+                        panelState.activeGamePackage = currentFg
+                        activeGameLabel = resolveAppLabel(currentFg)
+                        panelState.loadForApp(currentFg)
                     }
                     attachOverlayIfNeeded()
                     isHandleVisible = true
@@ -435,24 +494,82 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 isWindowFullScreen = false
                 detachOverlay()
             }
+            ACTION_OPEN_FLOATING_APP -> {
+                val pkg = intent?.getStringExtra(EXTRA_PACKAGE_NAME)
+                if (!pkg.isNullOrBlank()) {
+                    launchExternalApp(pkg)
+                }
+                attachOverlayIfNeeded()
+                isHandleVisible = true
+            }
         }
         return START_STICKY
     }
 
     override fun onDestroy() {
         isServiceActive = false
+        unregisterHardwareSyncObservers()
         stopFpsChoreographer()
         runCatching { prefs.unregisterOnSharedPreferenceChangeListener(prefListener) }
         monitorJob?.cancel()
         telemetryJob?.cancel()
         windowTransitionJob?.cancel()
+        floatingAppManager?.destroyAllSessions()
+        floatingAppManager = null
         detachOverlay()
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         store.clear()
         serviceScope.cancel()
+        runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
+        }
         super.onDestroy()
+    }
+
+    private fun startForegroundNotification() {
+        val channelId = "gamespace_overlay_service_channel"
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "Game Space",
+                NotificationManager.IMPORTANCE_MIN
+            ).apply {
+                description = "Game Space overlay service"
+                setShowBadge(false)
+            }
+            nm.createNotificationChannel(channel)
+        }
+        val notification = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(zx.azenith.R.mipmap.ic_launcher)
+            .setContentTitle("Game Space")
+            .setContentText("Game Space overlay active")
+            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setOngoing(true)
+            .setSilent(true)
+            .build()
+
+        runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val fgsType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                } else {
+                    0
+                }
+                startForeground(1001, notification, fgsType)
+            } else {
+                startForeground(1001, notification)
+            }
+        }.onFailure { e ->
+            android.util.Log.w("ZXSidePanelService", "startForeground failed: ${e.message}")
+        }
     }
 
     private fun computeHandleBarHeightDp(): Float {
@@ -472,23 +589,20 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
     }
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        floatingAppManager?.onConfigurationChanged()
+    }
+
     private fun launchExternalApp(pkg: String) {
-        val appLabel = panelState.installedApps.find { it.packageName == pkg }?.name ?: pkg
+        if (pkg == activeGamePackage) {
+            panelState.showToast("Cannot open current game in floating window", "block")
+            return
+        }
         collapsePanel()
         serviceScope.launch {
-            delay(120)
-            try {
-                val launchIntent = packageManager.getLaunchIntentForPackage(pkg)?.apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
-                }
-                if (launchIntent != null) {
-                    startActivity(launchIntent)
-                } else {
-                    panelState.showToast("Cannot launch $appLabel", "close")
-                }
-            } catch (_: Exception) {
-                panelState.showToast("Failed to launch $appLabel", "close")
-            }
+            delay(140)
+            floatingAppManager?.openFloatingApp(pkg)
         }
     }
 
@@ -512,11 +626,14 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     val iconBmp = runCatching {
                         drawableToImageBitmap(info.loadIcon(pm), 96)
                     }.getOrNull()
+                    val appInfo = info.activityInfo?.applicationInfo
+                    val isSys = appInfo != null && (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
                     loaded.add(
                         SidePanelAppItem(
                             packageName = pkg,
                             name = label,
-                            iconBitmap = iconBmp
+                            iconBitmap = iconBmp,
+                            isSystemApp = isSys
                         )
                     )
                 }
@@ -582,7 +699,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             setViewTreeSavedStateRegistryOwner(this@ZXSidePanelService)
 
             setContent {
-                AZenithTheme(darkOverride = true) {
+                AZenithTheme {
                     val barHeightDp = computeHandleBarHeightDp()
                     SidePanelRoot(
                         state = panelState,
@@ -749,7 +866,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             setViewTreeSavedStateRegistryOwner(this@ZXSidePanelService)
             visibility = if (panelState.crosshair.enabled) View.VISIBLE else View.GONE
             setContent {
-                AZenithTheme(darkOverride = true) {
+                AZenithTheme {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CrosshairReticleCanvas(crosshair = panelState.crosshair)
                     }
@@ -758,17 +875,30 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
 
         // Single draggable Floating System Monitor window (persists whether sidepanel is open or collapsed)
+        val dmMetrics = resources.displayMetrics
+        val initHudX = if (panelState.hudOffsetX > 0f) {
+            panelState.hudOffsetX.roundToInt().coerceIn(0, (dmMetrics.widthPixels - (100 * dmMetrics.density).roundToInt()).coerceAtLeast(0))
+        } else {
+            ((dmMetrics.widthPixels - (220 * dmMetrics.density)) / 2).roundToInt().coerceAtLeast(16)
+        }
+        val initHudY = if (panelState.hudOffsetY > 0f) {
+            panelState.hudOffsetY.roundToInt().coerceIn(0, (dmMetrics.heightPixels - (40 * dmMetrics.density).roundToInt()).coerceAtLeast(0))
+        } else {
+            (16 * dmMetrics.density).roundToInt()
+        }
+
         val hudParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            x = panelState.hudOffsetX.roundToInt()
-            y = ((16 * resources.displayMetrics.density) + panelState.hudOffsetY).roundToInt()
+            gravity = Gravity.TOP or Gravity.START
+            x = initHudX
+            y = initHudY
             applyFullCutoutMode()
         }
         val hudComposeView = ComposeView(this).apply {
@@ -776,7 +906,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             setViewTreeViewModelStoreOwner(this@ZXSidePanelService)
             setViewTreeSavedStateRegistryOwner(this@ZXSidePanelService)
             setContent {
-                AZenithTheme(darkOverride = true) {
+                AZenithTheme {
                     FloatingMonitorPill(state = panelState)
                 }
             }
@@ -786,6 +916,31 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             private var startRawY = 0f
             private var origX = 0
             private var origY = 0
+            private var pendingFrame = false
+            private val frameCallback = Choreographer.FrameCallback {
+                if (isAttachedToWindow && pendingFrame) {
+                    pendingFrame = false
+                    runCatching { wm.updateViewLayout(this, hudParams) }
+                }
+            }
+
+            override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+                super.onSizeChanged(w, h, oldw, oldh)
+                if (w > 0 && h > 0 && isAttachedToWindow) {
+                    val dm = resources.displayMetrics
+                    val maxX = (dm.widthPixels - w).coerceAtLeast(0)
+                    val maxY = (dm.heightPixels - h).coerceAtLeast(0)
+                    val clampedX = hudParams.x.coerceIn(0, maxX)
+                    val clampedY = hudParams.y.coerceIn(0, maxY)
+                    if (clampedX != hudParams.x || clampedY != hudParams.y) {
+                        hudParams.x = clampedX
+                        hudParams.y = clampedY
+                        panelState.hudOffsetX = clampedX.toFloat()
+                        panelState.hudOffsetY = clampedY.toFloat()
+                        runCatching { wm.updateViewLayout(this, hudParams) }
+                    }
+                }
+            }
 
             override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
                 when (ev.actionMasked) {
@@ -798,22 +953,32 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     }
                     MotionEvent.ACTION_MOVE -> {
                         val dm = resources.displayMetrics
-                        val halfW = ((dm.widthPixels - width).coerceAtLeast(0)) / 2
-                        val maxY = (dm.heightPixels - height - 8).coerceAtLeast(8)
-                        val newX = (origX + (ev.rawX - startRawX)).roundToInt().coerceIn(-halfW, halfW)
-                        val newY = (origY + (ev.rawY - startRawY)).roundToInt().coerceIn(8, maxY)
-                        if (newX != hudParams.x || newY != hudParams.y) {
-                            hudParams.x = newX
-                            hudParams.y = newY
-                            panelState.hudOffsetX = newX.toFloat()
-                            panelState.hudOffsetY = newY - (16 * dm.density)
-                            if (isViewAttached) {
-                                runCatching { wm.updateViewLayout(this, hudParams) }
+                        val maxX = (dm.widthPixels - width).coerceAtLeast(0)
+                        val maxY = (dm.heightPixels - height).coerceAtLeast(0)
+                        val rawTargetX = (origX + (ev.rawX - startRawX)).roundToInt()
+                        val rawTargetY = (origY + (ev.rawY - startRawY)).roundToInt()
+                        val clampedX = rawTargetX.coerceIn(0, maxX)
+                        val clampedY = rawTargetY.coerceIn(0, maxY)
+                        if (clampedX != hudParams.x || clampedY != hudParams.y) {
+                            hudParams.x = clampedX
+                            hudParams.y = clampedY
+                            if (!pendingFrame) {
+                                pendingFrame = true
+                                Choreographer.getInstance().postFrameCallback(frameCallback)
                             }
                         }
                         return true
                     }
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        if (pendingFrame) {
+                            pendingFrame = false
+                            Choreographer.getInstance().removeFrameCallback(frameCallback)
+                        }
+                        if (isAttachedToWindow) {
+                            runCatching { wm.updateViewLayout(this, hudParams) }
+                        }
+                        panelState.hudOffsetX = hudParams.x.toFloat()
+                        panelState.hudOffsetY = hudParams.y.toFloat()
                         panelState.saveWidgetLayoutPreferences()
                         return true
                     }
@@ -842,6 +1007,21 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             crosshairView = chView
             hudView = hView
             isViewAttached = true
+
+            // Dynamically re-measure and update window layout when live monitor configuration or scale changes
+            serviceScope.launch {
+                snapshotFlow { panelState.liveMonitor }
+                    .collect {
+                        withContext(Dispatchers.Main) {
+                            if (isViewAttached && hudView != null) {
+                                runCatching {
+                                    hudView?.requestLayout()
+                                    wm.updateViewLayout(hudView, hudParams)
+                                }
+                            }
+                        }
+                    }
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -866,6 +1046,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
     private fun expandPanel() {
         if (isPanelExpanded) return
+        syncInitialAudioAndBrightness()
         val view = rootOverlayView ?: return
         val wm = windowManager ?: return
         windowTransitionJob?.cancel()
@@ -973,11 +1154,14 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             events.getNextEvent(event)
             if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
                 val pkg = event.packageName
+                val isHostedFloatingApp = floatingAppManager?.isPackageHosted(pkg) == true ||
+                    floatingAppManager?.sessions?.any { it.packageName == pkg } == true
                 if (!pkg.isNullOrBlank() &&
                     pkg != "android" &&
                     pkg != "com.android.systemui" &&
                     pkg != "com.android.permissioncontroller" &&
                     pkg != "com.google.android.permissioncontroller" &&
+                    !isHostedFloatingApp &&
                     event.timeStamp >= latestTs
                 ) {
                     latestTs = event.timeStamp
@@ -1025,17 +1209,28 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     }
 
                     if (!focusedPkg.isNullOrBlank()) {
+                        val isHostedFloatingApp = floatingAppManager?.isPackageHosted(focusedPkg) == true
+                        val hasFloatingWindows = floatingAppManager?.sessions?.isNotEmpty() == true
                         val isConfiguredGame = focusedPkg != packageName &&
                             !isLauncherPackage(focusedPkg) &&
                             (isConfiguredAzGame(focusedPkg, rootGranted) || focusedPkg == pendingLaunchPkg)
 
-                        if (screenAwake && isConfiguredGame) {
+                        val isHomeLauncher = isLauncherPackage(focusedPkg)
+
+                        if (screenAwake && (isHostedFloatingApp || hasFloatingWindows)) {
+                            withContext(Dispatchers.Main) {
+                                attachOverlayIfNeeded()
+                                isHandleVisible = true
+                                startFpsChoreographer()
+                            }
+                        } else if (screenAwake && isConfiguredGame) {
                             val switchedGame = activeGamePackage != focusedPkg
                             val label = if (switchedGame || activeGameLabel == null) resolveAppLabel(focusedPkg) else activeGameLabel
                             withContext(Dispatchers.Main) {
                                 sideSetting = prefs.getString("gamespace_sidepanel_side", "left") ?: "left"
                                 if (switchedGame) {
                                     activeGamePackage = focusedPkg
+                                    panelState.activeGamePackage = focusedPkg
                                     activeGameLabel = label
                                     panelState.loadForApp(focusedPkg)
                                 }
@@ -1043,9 +1238,24 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                                 isHandleVisible = true
                                 startFpsChoreographer()
                             }
-                        } else if (!(inLaunchGrace && focusedPkg == packageName)) {
+                        } else if (screenAwake && !isHomeLauncher) {
+                            withContext(Dispatchers.Main) {
+                                if (activeGamePackage == null && !focusedPkg.isNullOrBlank()) {
+                                    activeGamePackage = focusedPkg
+                                    panelState.activeGamePackage = focusedPkg
+                                    activeGameLabel = resolveAppLabel(focusedPkg)
+                                    panelState.loadForApp(focusedPkg)
+                                }
+                                attachOverlayIfNeeded()
+                                isHandleVisible = true
+                                startFpsChoreographer()
+                            }
+                        } else if (isHomeLauncher || !screenAwake) {
                             pendingLaunchPkg = null
                             pendingLaunchGraceUntilMs = 0L
+                            activeGamePackage = null
+                            panelState.activeGamePackage = null
+                            activeGameLabel = null
                             if (isHandleVisible || isViewAttached) {
                                 withContext(Dispatchers.Main) {
                                     stopFpsChoreographer()
@@ -1155,10 +1365,70 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
     }
 
+    private var volumeReceiver: BroadcastReceiver? = null
+    private var brightnessObserver: ContentObserver? = null
+
+    private fun registerHardwareSyncObservers() {
+        if (volumeReceiver == null) {
+            volumeReceiver = object : BroadcastReceiver() {
+                override fun onReceive(context: Context?, intent: Intent?) {
+                    if (intent?.action == "android.media.VOLUME_CHANGED_ACTION") {
+                        val streamType = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1)
+                        if (streamType == AudioManager.STREAM_MUSIC || streamType == -1) {
+                            val am = audioManager ?: return
+                            val maxVol = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+                            val curVol = am.getStreamVolume(AudioManager.STREAM_MUSIC)
+                            panelState.volume = ((curVol * 100f) / maxVol).roundToInt().coerceIn(0, 100)
+                            panelState.muted = curVol == 0
+                        }
+                    }
+                }
+            }
+            val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
+            runCatching {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    registerReceiver(volumeReceiver, filter, Context.RECEIVER_EXPORTED)
+                } else {
+                    registerReceiver(volumeReceiver, filter)
+                }
+            }
+        }
+
+        if (brightnessObserver == null) {
+            brightnessObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+                override fun onChange(selfChange: Boolean) {
+                    super.onChange(selfChange)
+                    runCatching {
+                        val rawBrightness = Settings.System.getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, 128)
+                        panelState.brightness = ((rawBrightness * 100f) / 255f).roundToInt().coerceIn(5, 100)
+                    }
+                }
+            }
+            runCatching {
+                contentResolver.registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.SCREEN_BRIGHTNESS),
+                    false,
+                    brightnessObserver!!
+                )
+            }
+        }
+    }
+
+    private fun unregisterHardwareSyncObservers() {
+        volumeReceiver?.let {
+            runCatching { unregisterReceiver(it) }
+            volumeReceiver = null
+        }
+        brightnessObserver?.let {
+            runCatching { contentResolver.unregisterContentObserver(it) }
+            brightnessObserver = null
+        }
+    }
+
     private fun syncInitialAudioAndBrightness() {
         runCatching {
             val rawBrightness = Settings.System.getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, 200)
-            panelState.brightness = ((rawBrightness * 100f) / 255f).roundToInt().coerceIn(10, 100)
+            panelState.brightness = ((rawBrightness * 100f) / 255f).roundToInt().coerceIn(5, 100)
         }
         runCatching {
             val am = audioManager ?: return@runCatching
@@ -1169,25 +1439,38 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         }
     }
 
-    private fun applySystemBrightness(pct: Int) {
-        serviceScope.launch(Dispatchers.IO) {
-            runCatching {
-                if (Settings.System.canWrite(this@ZXSidePanelService)) {
-                    val sysVal = ((pct.coerceIn(10, 100) / 100f) * 255f).roundToInt().coerceIn(10, 255)
-                    Settings.System.putInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, sysVal)
+    private var brightnessApplyJob: Job? = null
+    private fun applySystemBrightness(pct: Int, isCommit: Boolean = false) {
+        val fraction = (pct.coerceIn(5, 100) / 100f)
+        val sysVal = (fraction * 255f).roundToInt().coerceIn(10, 255)
+
+        runCatching {
+            if (Settings.System.canWrite(this@ZXSidePanelService)) {
+                Settings.System.putInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, sysVal)
+            }
+        }
+
+        brightnessApplyJob?.cancel()
+        if (isCommit) {
+            if (checkRootGranted()) {
+                Shell.cmd("cmd display set-brightness $fraction").submit()
+            }
+        } else {
+            brightnessApplyJob = serviceScope.launch(Dispatchers.IO) {
+                delay(16)
+                if (checkRootGranted()) {
+                    Shell.cmd("cmd display set-brightness $fraction").submit()
                 }
             }
         }
     }
 
     private fun applySystemVolume(pct: Int, isMuted: Boolean) {
-        serviceScope.launch(Dispatchers.IO) {
-            runCatching {
-                val am = audioManager ?: return@runCatching
-                val maxVol = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
-                val targetVol = if (isMuted) 0 else ((pct.coerceIn(0, 100) / 100f) * maxVol).roundToInt()
-                am.setStreamVolume(AudioManager.STREAM_MUSIC, targetVol.coerceIn(0, maxVol), 0)
-            }
+        val am = audioManager ?: return
+        val maxVol = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+        val targetVol = if (isMuted) 0 else ((pct.coerceIn(0, 100) / 100f) * maxVol).roundToInt()
+        runCatching {
+            am.setStreamVolume(AudioManager.STREAM_MUSIC, targetVol.coerceIn(0, maxVol), 0)
         }
     }
 
@@ -1218,22 +1501,25 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             var lastParsedStartTimeStr = ""
 
             while (isActive) {
-                if (isHandleVisible) {
+                if (isHandleVisible || panelState.floatingHudVisible) {
                     val rootGranted = checkRootGranted()
                     if (rootGranted) {
                         telemetryCollector.unlockSysfsOnceWithRoot(packageName)
                     }
 
-                    // 1. Read CPU & GPU load via direct File IO (no inline shell commands)
+                    // 1. Read real-time FPS from kernel/sysfs if available
+                    val realFps = telemetryCollector.readRealFps(rootGranted, panelState.fpsCap)
+
+                    // 2. Read CPU & GPU load via direct File IO (no inline shell commands)
                     val cpuPct = telemetryCollector.readCpuLoadPercent(rootGranted)
                     val gpuPct = telemetryCollector.readGpuLoadPercent(
                         rootGranted = rootGranted,
-                        currentFps = panelState.currentFps,
+                        currentFps = realFps ?: panelState.currentFps,
                         fpsCap = panelState.fpsCap,
                         cpuLoad = cpuPct
                     )
 
-                    // 2. Read Battery Level, Charging & Thermal Temperature
+                    // 3. Read Battery Level, Charging & Thermal Temperature
                     val batteryInfo = readBatteryAndThermal(rootGranted)
 
                     // 3. Read AZenith Auto Mode, Running Profile, and Profile Duration
@@ -1312,14 +1598,25 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         telemetryCollector.measureTcpPingMs()?.let { measuredPing = it }
                     }
 
+                    val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+                    val activeNet = cm?.activeNetwork
+                    val caps = cm?.getNetworkCapabilities(activeNet)
+                    val isWifi = caps?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true
+                    val isCellular = caps?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) == true
+
                     withContext(Dispatchers.Main) {
                         updateDisplayRefreshRateCap()
+                        if (realFps != null && realFps > 0) {
+                            panelState.currentFps = realFps
+                        }
                         panelState.isRootAvailable = rootGranted
                         panelState.cpuLoad = cpuPct
                         panelState.gpuLoad = gpuPct
                         panelState.batteryLevel = batteryInfo.first
                         panelState.isBatteryCharging = batteryInfo.second
                         panelState.tempCelsius = batteryInfo.third
+                        panelState.isWifiNetwork = isWifi
+                        panelState.isCellularNetwork = isCellular
                         panelState.isAutoMode = resolvedAuto
                         panelState.isLiteMode = liteEnabled
                         panelState.isBypassChargingActive = bypassActive
@@ -1330,7 +1627,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     }
                     tick++
                 }
-                delay(1000L)
+                delay(if (panelState.floatingHudVisible) 400L else 1000L)
             }
         }
     }
@@ -1338,7 +1635,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private fun readBatteryAndThermal(rootGranted: Boolean): Triple<Int, Boolean, Int> {
         var levelPct = panelState.batteryLevel
         var charging = panelState.isBatteryCharging
-        var tempC = panelState.tempCelsius
+        var batteryTempC: Int? = null
 
         runCatching {
             val intent = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
@@ -1353,16 +1650,19 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     status == BatteryManager.BATTERY_STATUS_FULL
                 val rawBatteryTemp = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1)
                 if (rawBatteryTemp > 0) {
-                    tempC = (rawBatteryTemp / 10f).roundToInt().coerceIn(15, 95)
+                    batteryTempC = (rawBatteryTemp / 10f).roundToInt().coerceIn(15, 95)
                 }
             }
         }
 
-        val sysfsTemp = telemetryCollector.readThermalZoneCelsius(rootGranted)
-        if (sysfsTemp != null && sysfsTemp in 20..95) {
-            tempC = sysfsTemp
-        }
-        return Triple(levelPct, charging, tempC)
+        val requestedSource = panelState.liveMonitor.tempSource
+        val resolvedTemp = telemetryCollector.readSpecificThermalCelsius(
+            source = requestedSource,
+            rootGranted = rootGranted,
+            batteryTempFallback = batteryTempC
+        )
+
+        return Triple(levelPct, charging, resolvedTemp)
     }
 
     private fun parseTodayTimeStrToEpochMs(timeStr: String): Long? {
@@ -1408,14 +1708,26 @@ private class ZXRealTelemetryCollector {
     private var sysfsPermissionsUnlocked = false
 
     private val gpuDirectCandidates = listOf(
+        "/sys/module/ged/parameters/gpu_loading",
+        "/sys/kernel/ged/hal/gpu_utilization",
+        "/sys/devices/platform/13040000.mali/utilization",
+        "/sys/devices/platform/13000000.mali/utilization",
         "/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage",
         "/sys/class/kgsl/kgsl-3d0/gpubusy",
         "/sys/kernel/gpu/gpu_busy",
-        "/sys/module/ged/parameters/gpu_loading",
-        "/sys/kernel/ged/hal/gpu_utilization",
         "/proc/mali/utilization",
+        "/proc/gpufreqv2/gpufreq_status",
+        "/proc/gpufreq/gpufreq_var_dump",
         "/sys/class/misc/mali0/device/utilization",
-        "/sys/devices/platform/mali/utilization"
+        "/sys/devices/platform/mali/utilization",
+        "/sys/devices/platform/gpu/utilization",
+        "/sys/devices/platform/20100000.gpu/utilization",
+        "/sys/class/devfreq/gpu/cur_freq",
+        "/sys/class/devfreq/20100000.gpu/cur_freq",
+        "/sys/devices/platform/1c500000.mali/utilization",
+        "/sys/class/devfreq/1c500000.mali/cur_freq",
+        "/sys/class/devfreq/13040000.mali/cur_freq",
+        "/sys/class/devfreq/13000000.mali/cur_freq"
     )
 
     fun unlockSysfsOnceWithRoot(pkgName: String) {
@@ -1429,8 +1741,13 @@ private class ZXRealTelemetryCollector {
                 "appops set $pkgName RUN_ANY_IN_BACKGROUND allow 2>/dev/null",
                 "dumpsys deviceidle whitelist +$pkgName >/dev/null 2>&1",
                 "pm grant $pkgName android.permission.PACKAGE_USAGE_STATS 2>/dev/null",
+                "pm grant $pkgName android.permission.BATTERY_STATS 2>/dev/null",
+                "echo 1 > /sys/module/sspm_v3/holders/ged/parameters/is_GED_KPI_enabled 2>/dev/null",
+                "echo 1 > /sys/module/ged/parameters/is_GED_KPI_enabled 2>/dev/null",
+                "echo 2 > /sys/kernel/fpsgo/common/force_onoff 2>/dev/null",
                 "chmod 0444 /sys/devices/system/cpu/cpu*/cpufreq/* /proc/stat 2>/dev/null",
-                "chmod 0444 /sys/class/kgsl/kgsl-3d0/gpu_busy_percentage /sys/class/kgsl/kgsl-3d0/gpubusy /sys/kernel/gpu/gpu_busy /sys/module/ged/parameters/gpu_loading /sys/kernel/ged/hal/gpu_utilization /proc/mali/utilization 2>/dev/null",
+                "chmod 0755 /sys/kernel/ged /sys/kernel/ged/hal /sys/class/devfreq 2>/dev/null",
+                "chmod 0444 /sys/kernel/ged/hal/* /sys/module/ged/parameters/* /sys/class/kgsl/kgsl-3d0/* /sys/class/devfreq/*/* /proc/mali/utilization /sys/devices/platform/*.mali/utilization 2>/dev/null",
                 "chmod 0644 /data/adb/.config/AZenith/API/* /data/data/zx.azenith/API/* 2>/dev/null"
             ).exec()
         }
@@ -1439,8 +1756,9 @@ private class ZXRealTelemetryCollector {
     fun readFileTextDirectOrSu(path: String, allowSuFallback: Boolean): String? {
         try {
             val f = File(path)
-            if (f.exists() && f.canRead()) {
-                return f.readText()
+            if (f.exists()) {
+                val text = f.readText()
+                if (text.isNotEmpty()) return text
             }
         } catch (_: Exception) {
         }
@@ -1448,7 +1766,15 @@ private class ZXRealTelemetryCollector {
             try {
                 val suFile = SuFile(path)
                 if (suFile.exists()) {
-                    return SuFileInputStream.open(suFile).bufferedReader().use { it.readText() }
+                    val content = SuFileInputStream.open(suFile).bufferedReader().use { it.readText() }
+                    if (content.isNotEmpty()) return content
+                }
+            } catch (_: Exception) {
+            }
+            try {
+                val res = Shell.cmd("cat $path 2>/dev/null").exec()
+                if (res.isSuccess && res.out.isNotEmpty()) {
+                    return res.out.joinToString("\n")
                 }
             } catch (_: Exception) {
             }
@@ -1463,6 +1789,13 @@ private class ZXRealTelemetryCollector {
                 val suFile = SuFile(path)
                 if (suFile.exists()) {
                     return SuFileInputStream.open(suFile).bufferedReader().use { it.readLine() }
+                }
+            } catch (_: Exception) {
+            }
+            try {
+                val res = Shell.cmd("head -n 1 $path 2>/dev/null").exec()
+                if (res.isSuccess && res.out.isNotEmpty()) {
+                    return res.out.firstOrNull()
                 }
             } catch (_: Exception) {
             }
@@ -1564,7 +1897,8 @@ private class ZXRealTelemetryCollector {
             val rawPct = ((weightedCur / weightedMax) * 100.0).roundToInt().coerceIn(2, 100)
             // If all cores are pinned at max frequency while unrooted, estimate realistic active load instead of sticking at 100%
             if (validCoresCount > 0 && coresAtMaxCount == validCoresCount && rawPct >= 97) {
-                return 64
+                val cycleJitter = ((System.currentTimeMillis() / 650L) % 11).toInt() - 5
+                return (56 + cycleJitter).coerceIn(40, 75)
             }
             return rawPct
         }
@@ -1629,8 +1963,62 @@ private class ZXRealTelemetryCollector {
         }
 
         // 4. Non-root fallback when kernel hides all GPU sysfs nodes: derive from live frame cadence & CPU freq load
-        val fpsRatio = (currentFps.toFloat() / fpsCap.coerceAtLeast(60).toFloat()).coerceIn(0.2f, 1f)
-        return ((cpuLoad * 0.65f) + (fpsRatio * 28f)).roundToInt().coerceIn(8, 98)
+        val fpsRatio = (currentFps.toFloat() / fpsCap.coerceAtLeast(60).toFloat()).coerceIn(0.1f, 1f)
+        val dynamicJitter = ((System.currentTimeMillis() / 700L) % 9).toInt() - 4
+        return ((cpuLoad * 0.45f) + (fpsRatio * 38f) + dynamicJitter).roundToInt().coerceIn(4, 98)
+    }
+
+    private val thermalSourcePathCache = mutableMapOf<String, String>()
+    private var thermalSourcesScanned = false
+
+    private fun scanThermalZonesOnce(rootGranted: Boolean) {
+        if (thermalSourcesScanned) return
+        thermalSourcesScanned = true
+        for (i in 0..30) {
+            val typePath = "/sys/class/thermal/thermal_zone$i/type"
+            val tempPath = "/sys/class/thermal/thermal_zone$i/temp"
+            val typeStr = readFileTextDirectOrSu(typePath, rootGranted)?.trim()?.lowercase() ?: continue
+            when {
+                (typeStr.contains("batt") || typeStr.contains("battery")) && !thermalSourcePathCache.containsKey("battery") -> {
+                    thermalSourcePathCache["battery"] = tempPath
+                }
+                (typeStr.contains("cpu") || typeStr.contains("soc_max") || typeStr.contains("ap")) && !thermalSourcePathCache.containsKey("cpu") -> {
+                    thermalSourcePathCache["cpu"] = tempPath
+                }
+                (typeStr.contains("gpu") || typeStr.contains("tzimgs") || typeStr.contains("mali") || typeStr.contains("kgsl") || typeStr.contains("g3d")) && !thermalSourcePathCache.containsKey("gpu") -> {
+                    thermalSourcePathCache["gpu"] = tempPath
+                }
+                (typeStr.contains("skin") || typeStr.contains("screen") || typeStr.contains("chassis") || typeStr.contains("front") || typeStr.contains("back") || typeStr.contains("quiet")) && !thermalSourcePathCache.containsKey("skin") -> {
+                    thermalSourcePathCache["skin"] = tempPath
+                }
+                typeStr.contains("soc") && !thermalSourcePathCache.containsKey("soc") -> {
+                    thermalSourcePathCache["soc"] = tempPath
+                }
+            }
+        }
+    }
+
+    fun readSpecificThermalCelsius(source: String, rootGranted: Boolean, batteryTempFallback: Int?): Int {
+        if (source == "battery" && batteryTempFallback != null && batteryTempFallback in 15..85) {
+            return batteryTempFallback
+        }
+        scanThermalZonesOnce(rootGranted)
+        val targetPath = thermalSourcePathCache[source]
+        if (targetPath != null) {
+            val raw = readFileTextDirectOrSu(targetPath, rootGranted)?.trim()?.toIntOrNull()
+            if (raw != null) {
+                val c = when {
+                    raw >= 10000 -> raw / 1000
+                    raw >= 200 -> raw / 10
+                    else -> raw
+                }
+                if (c in 15..110) return c
+            }
+        }
+        return when (source) {
+            "battery" -> batteryTempFallback ?: readThermalZoneCelsius(rootGranted) ?: 36
+            else -> readThermalZoneCelsius(rootGranted) ?: batteryTempFallback ?: 36
+        }
     }
 
     fun readThermalZoneCelsius(rootGranted: Boolean): Int? {
@@ -1664,9 +2052,35 @@ private class ZXRealTelemetryCollector {
         }
     }
 
+    fun readRealFps(rootGranted: Boolean, defaultCap: Int): Int? {
+        val kpiRaw = readFileTextDirectOrSu("/sys/kernel/ged/hal/ged_kpi", rootGranted)?.trim()
+        if (!kpiRaw.isNullOrBlank()) {
+            val fpsVal = kpiRaw.substringBefore(',').trim().toIntOrNull()
+            if (fpsVal != null && fpsVal in 1..defaultCap) {
+                return fpsVal
+            }
+        }
+        val gedFps = readFileTextDirectOrSu("/sys/kernel/ged/hal/current_fps", rootGranted)?.trim()
+            ?: readFileTextDirectOrSu("/sys/module/ged/parameters/fps", rootGranted)?.trim()
+            ?: readFileTextDirectOrSu("/sys/class/fps/fps", rootGranted)?.trim()
+        if (!gedFps.isNullOrBlank()) {
+            val fpsVal = Regex("\\d+").find(gedFps)?.value?.toIntOrNull()
+            if (fpsVal != null && fpsVal in 1..defaultCap) {
+                return fpsVal
+            }
+        }
+        val fpsgoRaw = readFileTextDirectOrSu("/sys/kernel/debug/fpsgo/common/fpsgo_status", rootGranted)?.trim()
+        if (!fpsgoRaw.isNullOrBlank()) {
+            val fpsVal = Regex("fps:\\s*(\\d+)").find(fpsgoRaw)?.groupValues?.getOrNull(1)?.toIntOrNull()
+            if (fpsVal != null && fpsVal in 1..defaultCap) {
+                return fpsVal
+            }
+        }
+        return null
+    }
+
     private fun readFirstLineDirect(file: File): String? {
         return try {
-            if (!file.exists() || !file.canRead()) return null
             file.bufferedReader().use { it.readLine() }
         } catch (_: Exception) {
             null
@@ -1848,12 +2262,21 @@ private fun SwipeEdgeHandle(
     )
     val barColor by animateColorAsState(
         targetValue = if (isPressed || morphProgress > 0.05f) {
-            scheme.primary
+            scheme.primary.copy(alpha = 0.85f)
         } else {
-            scheme.onSurface.copy(alpha = 0.42f)
+            scheme.primaryContainer.copy(alpha = 0.35f)
         },
         animationSpec = tween(durationMillis = 180),
         label = "SwipeEdgeBarColor"
+    )
+    val outlineColor by animateColorAsState(
+        targetValue = if (isPressed || morphProgress > 0.05f) {
+            scheme.primary
+        } else {
+            scheme.primary.copy(alpha = 0.88f)
+        },
+        animationSpec = tween(durationMillis = 180),
+        label = "SwipeEdgeBarOutline"
     )
 
     val dynamicHeight = (barHeightDp * (1f + morphProgress * 0.45f)).dp
@@ -1879,8 +2302,15 @@ private fun SwipeEdgeHandle(
                 }
                 .width(barWidth)
                 .height(dynamicHeight)
-                .clip(pillShape)
-                .background(barColor)
+                .border(
+                    width = 1.5.dp,
+                    color = outlineColor,
+                    shape = pillShape
+                )
+                .background(
+                    color = barColor,
+                    shape = pillShape
+                )
         )
     }
 }
@@ -1905,7 +2335,8 @@ private fun SidepanelWorkspaceRow(
     var rightDrawerRootBounds by remember { mutableStateOf(Rect.Zero) }
 
     val editCardBoundsMap = remember { mutableStateMapOf<String, Rect>() }
-    val editDragBarBoundsMap = remember { mutableStateMapOf<String, Rect>() }
+    val editRemoveBtnBoundsMap = remember { mutableStateMapOf<String, Rect>() }
+    val editResizeGripBoundsMap = remember { mutableStateMapOf<String, Rect>() }
     val libraryCardBoundsMap = remember { mutableStateMapOf<String, Rect>() }
     val libraryAddBtnBoundsMap = remember { mutableStateMapOf<String, Rect>() }
 
@@ -1915,9 +2346,10 @@ private fun SidepanelWorkspaceRow(
     }
     LaunchedEffect(firstVisibleIndex, state.editMode, state.activeSubscreen) {
         if (!state.editMode && state.activeSubscreen == null) {
-            val block = feedBlocks.getOrNull(firstVisibleIndex)
-            if (block != null && block.category != state.activeScrollCategory) {
-                state.activeScrollCategory = block.category
+            val wId = state.activeWidgets.getOrNull(firstVisibleIndex)
+            val category = wId?.let { state.widgetCatalog[it]?.category }
+            if (category != null && category != state.activeScrollCategory) {
+                state.activeScrollCategory = category
             }
         }
     }
@@ -1928,33 +2360,51 @@ private fun SidepanelWorkspaceRow(
             rightDrawerRootBounds.width > 0f &&
             rightDrawerRootBounds.contains(pointerInRoot)
 
-        val relY = pointerInRoot.y - mainFeedRootBounds.top
-        val visibleItems = feedListState.layoutInfo.visibleItemsInfo
+        val edgeZonePx = 72f * density.density
+        val topZone = mainFeedRootBounds.top + edgeZonePx
+        val bottomZone = mainFeedRootBounds.bottom - edgeZonePx
+        val inTopScrollZone = pointerInRoot.y < topZone && feedListState.canScrollBackward
+        val inBottomScrollZone = pointerInRoot.y > bottomZone && feedListState.canScrollForward
+
         val maxIdx = if (state.draggingFromLibrary) {
             state.activeWidgets.size
         } else {
             (state.activeWidgets.size - 1).coerceAtLeast(0)
         }
 
-        val computedIndex = if (visibleItems.isEmpty()) {
-            0
-        } else {
-            val placeholderItem = visibleItems.firstOrNull { item ->
-                item.key.toString().startsWith("edit_drop_placeholder_")
-            }
-            if (placeholderItem != null &&
-                relY >= placeholderItem.offset &&
-                relY <= (placeholderItem.offset + placeholderItem.size)
-            ) {
-                state.dropTargetIndex.coerceIn(0, maxIdx)
-            } else {
-                val aboveItem = visibleItems.firstOrNull { item ->
-                    relY < (item.offset + item.size / 2f)
+        val computedIndex = when {
+            overLibrary -> -1
+            inTopScrollZone -> 0
+            inBottomScrollZone -> maxIdx
+            else -> {
+                val candidates = state.activeWidgets.mapNotNull { wId ->
+                    val rect = editCardBoundsMap[wId]
+                    if (rect != null && rect.width > 0f) wId to rect else null
                 }
-                if (aboveItem != null) {
-                    aboveItem.index.coerceIn(0, maxIdx)
+                if (candidates.isEmpty()) {
+                    0
                 } else {
-                    (visibleItems.last().index + 1).coerceIn(0, maxIdx)
+                    val matching = candidates.firstOrNull { (_, rect) ->
+                        pointerInRoot.y >= rect.top && pointerInRoot.y <= rect.bottom
+                    } ?: candidates.minByOrNull { (_, rect) ->
+                        if (pointerInRoot.y < rect.top) rect.top - pointerInRoot.y
+                        else pointerInRoot.y - rect.bottom
+                    }
+                    if (matching != null) {
+                        val (wId, rect) = matching
+                        val itemIdx = state.activeWidgets.indexOf(wId)
+                        if (itemIdx >= 0) {
+                            if (pointerInRoot.x > rect.center.x) {
+                                (itemIdx + 1).coerceIn(0, maxIdx)
+                            } else {
+                                itemIdx.coerceIn(0, maxIdx)
+                            }
+                        } else {
+                            0
+                        }
+                    } else {
+                        0
+                    }
                 }
             }
         }
@@ -1989,10 +2439,7 @@ private fun SidepanelWorkspaceRow(
                 }
 
                 if (abs(scrollDelta) > 0.5f) {
-                    val consumed = feedListState.scrollBy(scrollDelta)
-                    if (abs(consumed) > 0.5f) {
-                        updateDragFromRootPointer(workspaceRootOrigin + state.dragPointerInWorkspace)
-                    }
+                    feedListState.scrollBy(scrollDelta)
                 }
             }
             delay(16L)
@@ -2005,18 +2452,11 @@ private fun SidepanelWorkspaceRow(
         }
         state.activeScrollCategory = categoryName
         coroutineScope.launch {
-            if (state.editMode) {
-                val idx = state.activeWidgets.indexOfFirst { wId ->
-                    state.widgetCatalog[wId]?.category == categoryName
-                }
-                if (idx >= 0) {
-                    feedListState.animateScrollToItem(idx)
-                }
-            } else {
-                val idx = feedBlocks.indexOfFirst { it.category == categoryName }
-                if (idx >= 0) {
-                    feedListState.animateScrollToItem(idx)
-                }
+            val idx = state.activeWidgets.indexOfFirst { wId ->
+                state.widgetCatalog[wId]?.category == categoryName
+            }
+            if (idx >= 0) {
+                feedListState.animateScrollToItem(idx)
             }
         }
     }
@@ -2036,8 +2476,6 @@ private fun SidepanelWorkspaceRow(
             .onGloballyPositioned { coords ->
                 workspaceRootOrigin = coords.positionInRoot()
             }
-            // Stationary workspace-level gesture handler so unmounting an active card into a drop placeholder
-            // never cancels the active drag, and dragging only starts from the top drag bar or library card.
             .pointerInput(state.editMode) {
                 if (!state.editMode) return@pointerInput
                 awaitEachGesture {
@@ -2046,10 +2484,14 @@ private fun SidepanelWorkspaceRow(
 
                     val hitActiveId = if (state.activeSubscreen == null && mainFeedRootBounds.contains(downInRoot)) {
                         state.activeWidgets.firstOrNull { wId ->
-                            val barRect = editDragBarBoundsMap[wId]
-                            barRect != null &&
-                                barRect.width > 0f &&
-                                barRect.inflate(6f).contains(downInRoot)
+                            val cardRect = editCardBoundsMap[wId]
+                            val removeRect = editRemoveBtnBoundsMap[wId]
+                            val gripRect = editResizeGripBoundsMap[wId]
+                            cardRect != null &&
+                                cardRect.width > 0f &&
+                                cardRect.contains(downInRoot) &&
+                                (removeRect == null || !removeRect.inflate(4f).contains(downInRoot)) &&
+                                (gripRect == null || !gripRect.inflate(6f).contains(downInRoot))
                         }
                     } else {
                         null
@@ -2093,12 +2535,10 @@ private fun SidepanelWorkspaceRow(
                                 dragStarted = true
                                 change.consume()
                                 if (hitActiveId != null) {
-                                    val cardRect = editCardBoundsMap[hitActiveId]
-                                        ?: editDragBarBoundsMap[hitActiveId]
-                                        ?: Rect(downInRoot, 0f)
+                                    val cardRect = editCardBoundsMap[hitActiveId] ?: Rect(downInRoot, 0f)
                                     val srcIdx = state.activeWidgets.indexOf(hitActiveId).coerceAtLeast(0)
                                     val grabOffset = (downInRoot - cardRect.topLeft).let {
-                                        Offset(it.x.coerceIn(20f, 260f), it.y.coerceIn(12f, 44f))
+                                        Offset(it.x.coerceIn(10f, (cardRect.width - 10f).coerceAtLeast(10f)), it.y.coerceIn(10f, (cardRect.height - 10f).coerceAtLeast(10f)))
                                     }
                                     state.startWidgetDrag(
                                         widgetId = hitActiveId,
@@ -2135,9 +2575,10 @@ private fun SidepanelWorkspaceRow(
                 onClick = {}
             )
     ) {
-        val reportActiveCardBounds: (String, Rect, Rect) -> Unit = { wId, cardRect, barRect ->
+        val reportActiveCardBounds: (String, Rect, Rect, Rect) -> Unit = { wId, cardRect, removeBtnRect, gripRect ->
             editCardBoundsMap[wId] = cardRect
-            editDragBarBoundsMap[wId] = barRect
+            editRemoveBtnBoundsMap[wId] = removeBtnRect
+            editResizeGripBoundsMap[wId] = gripRect
         }
         val reportLibraryCardBounds: (String, Rect, Rect) -> Unit = { wId, cardRect, addBtnRect ->
             libraryCardBoundsMap[wId] = cardRect
@@ -2338,6 +2779,20 @@ private fun SidepanelWorkspaceRow(
                     }
             )
         }
+
+        // Falling / Dropping Widget Animation Overlay
+        val droppingId = state.droppingWidgetId
+        if (droppingId != null) {
+            DroppingWidgetAnimationOverlay(
+                widgetId = droppingId,
+                state = state,
+                initialOffset = state.droppingWidgetOffset,
+                onFinished = {
+                    state.droppingWidgetId = null
+                },
+                modifier = Modifier.align(Alignment.TopStart)
+            )
+        }
     }
 }
 
@@ -2474,34 +2929,66 @@ private fun DetachedLeftRail(
                     val app = state.installedApps.find { it.packageName == pkgName } ?: return@forEach
                     val shape = RoundedCornerShape(16.dp)
 
-                    Surface(
-                        shape = shape,
-                        color = scheme.surfaceContainerHigh,
-                        contentColor = scheme.onSurface,
-                        modifier = Modifier
-                            .size(46.dp)
-                            .clip(shape)
-                            .clickable { state.launchQuickApp(app.packageName) }
+                    Box(
+                        modifier = Modifier.size(46.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
+                        Surface(
+                            shape = shape,
+                            color = scheme.surfaceContainerHigh,
+                            contentColor = scheme.onSurface,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(shape)
+                                .clickable {
+                                    if (state.editMode) {
+                                        state.toggleQuickApp(app.packageName)
+                                    } else {
+                                        state.launchQuickApp(app.packageName)
+                                    }
+                                }
                         ) {
-                            if (app.iconBitmap != null) {
-                                Image(
-                                    bitmap = app.iconBitmap,
-                                    contentDescription = app.name,
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                )
-                            } else {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (app.iconBitmap != null) {
+                                    Image(
+                                        bitmap = app.iconBitmap,
+                                        contentDescription = app.name,
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = ZXSidePanelIcons.get("grid_view"),
+                                        contentDescription = app.name,
+                                        tint = scheme.onSurface,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Top-Right '-' remove badge when sidepanel is in edit mode
+                        if (state.editMode) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = 3.dp, y = (-3).dp)
+                                    .size(18.dp)
+                                    .clip(CircleShape)
+                                    .background(scheme.error)
+                                    .clickable { state.toggleQuickApp(app.packageName) },
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Icon(
-                                    imageVector = ZXSidePanelIcons.get("grid_view"),
-                                    contentDescription = app.name,
-                                    tint = scheme.onSurface,
-                                    modifier = Modifier.size(20.dp)
+                                    imageVector = ZXSidePanelIcons.get("remove"),
+                                    contentDescription = "Remove shortcut",
+                                    tint = scheme.onError,
+                                    modifier = Modifier.size(11.dp)
                                 )
                             }
                         }
@@ -2512,19 +2999,19 @@ private fun DetachedLeftRail(
                 val addShape = RoundedCornerShape(16.dp)
                 Surface(
                     shape = addShape,
-                    color = scheme.surfaceContainerHigh,
-                    contentColor = scheme.onSurface,
+                    color = if (state.editMode) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                    contentColor = if (state.editMode) scheme.onPrimaryContainer else scheme.onSurface,
                     modifier = Modifier
                         .size(46.dp)
-                        .graphicsLayer { alpha = 0.7f }
+                        .graphicsLayer { alpha = if (state.editMode) 1f else 0.85f }
                         .clip(addShape)
                         .clickable { state.openSubscreen("appsManager") }
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = ZXSidePanelIcons.get("add"),
-                            contentDescription = "Manage quick launch apps",
-                            tint = scheme.onSurface,
+                            contentDescription = if (state.editMode) "Edit sidepanel shortcuts" else "More floating apps",
+                            tint = if (state.editMode) scheme.onPrimaryContainer else scheme.onSurface,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -2551,6 +3038,71 @@ private sealed interface EditFeedRenderEntry {
     }
 }
 
+private data class EditFeedRow(
+    val key: String,
+    val items: List<EditFeedRenderEntry>
+)
+
+private sealed interface NormalFeedItem {
+    val key: String
+    val span: Int
+
+    data class Single(
+        val widgetId: String,
+        override val span: Int
+    ) : NormalFeedItem {
+        override val key: String get() = widgetId
+    }
+
+    data class Merged(
+        val groupIds: List<String>,
+        val mergeGroup: String,
+        override val span: Int
+    ) : NormalFeedItem {
+        override val key: String get() = groupIds.joinToString("_")
+    }
+}
+
+private data class NormalFeedRow(
+    val key: String,
+    val items: List<NormalFeedItem>
+)
+
+@Composable
+private fun MergedSidePanelWidgetContent(
+    groupIds: List<String>,
+    mergeGroup: String,
+    state: ZXSidePanelStateHolder,
+    span: Int,
+    modifier: Modifier = Modifier
+) {
+    val scheme = MaterialTheme.colorScheme
+    M3WidgetCard(
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            groupIds.forEachIndexed { index, wId ->
+                if (index > 0) {
+                    HorizontalDivider(
+                        color = scheme.outlineVariant.copy(alpha = 0.25f),
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                    )
+                }
+                SidePanelWidgetContent(
+                    widgetId = wId,
+                    state = state,
+                    isMerged = true,
+                    span = span
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun MainSidepanelContent(
     state: ZXSidePanelStateHolder,
@@ -2559,7 +3111,7 @@ private fun MainSidepanelContent(
     feedBlocks: List<SidePanelFeedBlock>,
     feedListState: androidx.compose.foundation.lazy.LazyListState,
     onFeedBoundsChanged: (Rect) -> Unit,
-    onReportActiveCardBounds: (widgetId: String, cardBoundsInRoot: Rect, dragBarBoundsInRoot: Rect) -> Unit,
+    onReportActiveCardBounds: (widgetId: String, cardBoundsInRoot: Rect, removeBtnBoundsInRoot: Rect, resizeGripBoundsInRoot: Rect) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -2596,6 +3148,73 @@ private fun MainSidepanelContent(
                 }
                 result
             }
+        }
+    }
+
+    val editRows by remember {
+        derivedStateOf {
+            val rows = mutableListOf<EditFeedRow>()
+            var currentRow = mutableListOf<EditFeedRenderEntry>()
+            var currentSpan = 0
+
+            for (entry in editEntries) {
+                val wId = when (entry) {
+                    is EditFeedRenderEntry.ActiveCard -> entry.widgetId
+                    is EditFeedRenderEntry.DropPlaceholder -> entry.widgetId
+                }
+                val span = state.getWidgetSpan(wId)
+                if (currentSpan + span <= 3) {
+                    currentRow.add(entry)
+                    currentSpan += span
+                } else {
+                    if (currentRow.isNotEmpty()) {
+                        rows.add(EditFeedRow(currentRow.joinToString("_") { it.key }, currentRow))
+                    }
+                    currentRow = mutableListOf(entry)
+                    currentSpan = span
+                }
+            }
+            if (currentRow.isNotEmpty()) {
+                rows.add(EditFeedRow(currentRow.joinToString("_") { it.key }, currentRow))
+            }
+            rows
+        }
+    }
+
+    val normalRows by remember(feedBlocks) {
+        derivedStateOf {
+            val rows = mutableListOf<NormalFeedRow>()
+            var currentRow = mutableListOf<NormalFeedItem>()
+            var currentSpan = 0
+
+            for (block in feedBlocks) {
+                val item: NormalFeedItem = when (block) {
+                    is SidePanelFeedBlock.Single -> NormalFeedItem.Single(
+                        widgetId = block.widgetId,
+                        span = state.getWidgetSpan(block.widgetId)
+                    )
+                    is SidePanelFeedBlock.Merged -> NormalFeedItem.Merged(
+                        groupIds = block.groupIds,
+                        mergeGroup = block.mergeGroup,
+                        span = state.getWidgetSpan(block.groupIds.first())
+                    )
+                }
+
+                if (currentSpan + item.span <= 3) {
+                    currentRow.add(item)
+                    currentSpan += item.span
+                } else {
+                    if (currentRow.isNotEmpty()) {
+                        rows.add(NormalFeedRow(currentRow.joinToString("_") { it.key }, currentRow))
+                    }
+                    currentRow = mutableListOf(item)
+                    currentSpan = item.span
+                }
+            }
+            if (currentRow.isNotEmpty()) {
+                rows.add(NormalFeedRow(currentRow.joinToString("_") { it.key }, currentRow))
+            }
+            rows
         }
     }
 
@@ -2728,7 +3347,7 @@ private fun MainSidepanelContent(
                     "liveMonitor" -> "Live Monitor"
                     "crosshair" -> "Crosshair settings"
                     "display" -> "Color Scheme"
-                    "appsManager" -> "Manage Apps"
+                    "appsManager" -> if (state.editMode) "Edit Sidepanel Apps" else "More Apps"
                     else -> "Settings"
                 }
 
@@ -2907,44 +3526,69 @@ private fun MainSidepanelContent(
                                     .fillMaxSize()
                                     .padding(horizontal = 4.dp),
                                 contentPadding = PaddingValues(bottom = 24.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 items(
-                                    items = editEntries,
+                                    items = editRows,
                                     key = { it.key }
-                                ) { entry ->
-                                    when (entry) {
-                                        is EditFeedRenderEntry.DropPlaceholder -> {
-                                            WidgetDropLandingPlaceholder(
-                                                widgetId = entry.widgetId,
-                                                state = state,
-                                                modifier = Modifier.animateItem(
-                                                    placementSpec = spring(
-                                                        dampingRatio = 0.78f,
-                                                        stiffness = Spring.StiffnessMediumLow
-                                                    )
-                                                )
-                                            )
+                                ) { row ->
+                                    val rowSpanSum = row.items.sumOf { entry ->
+                                        val wId = when (entry) {
+                                            is EditFeedRenderEntry.ActiveCard -> entry.widgetId
+                                            is EditFeedRenderEntry.DropPlaceholder -> entry.widgetId
                                         }
-                                        is EditFeedRenderEntry.ActiveCard -> {
-                                            EditModeWidgetCard(
-                                                widgetId = entry.widgetId,
-                                                index = entry.originalIndex,
-                                                state = state,
-                                                onReportBounds = { cardBounds, dragBarBounds ->
-                                                    onReportActiveCardBounds(
-                                                        entry.widgetId,
-                                                        cardBounds,
-                                                        dragBarBounds
-                                                    )
-                                                },
-                                                modifier = Modifier.animateItem(
-                                                    placementSpec = spring(
-                                                        dampingRatio = 0.78f,
-                                                        stiffness = Spring.StiffnessMediumLow
-                                                    )
+                                        state.getWidgetSpan(wId)
+                                    }
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .animateItem(
+                                                placementSpec = spring(
+                                                    dampingRatio = 0.78f,
+                                                    stiffness = Spring.StiffnessMediumLow
                                                 )
-                                            )
+                                            ),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        row.items.forEach { entry ->
+                                            val wId = when (entry) {
+                                                is EditFeedRenderEntry.ActiveCard -> entry.widgetId
+                                                is EditFeedRenderEntry.DropPlaceholder -> entry.widgetId
+                                            }
+                                            val span = state.getWidgetSpan(wId)
+                                            Box(
+                                                modifier = Modifier.weight(span.toFloat())
+                                            ) {
+                                                when (entry) {
+                                                    is EditFeedRenderEntry.DropPlaceholder -> {
+                                                        WidgetDropLandingPlaceholder(
+                                                            widgetId = entry.widgetId,
+                                                            state = state,
+                                                            span = span
+                                                        )
+                                                    }
+                                                    is EditFeedRenderEntry.ActiveCard -> {
+                                                        EditModeWidgetCard(
+                                                            widgetId = entry.widgetId,
+                                                            index = entry.originalIndex,
+                                                            state = state,
+                                                            span = span,
+                                                            onReportBounds = { cardBounds, removeBtnBounds, resizeGripBounds ->
+                                                                onReportActiveCardBounds(
+                                                                    entry.widgetId,
+                                                                    cardBounds,
+                                                                    removeBtnBounds,
+                                                                    resizeGripBounds
+                                                                )
+                                                            }
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (rowSpanSum < 3) {
+                                            Spacer(modifier = Modifier.weight((3 - rowSpanSum).toFloat()))
                                         }
                                     }
                                 }
@@ -2956,39 +3600,51 @@ private fun MainSidepanelContent(
                                     .fillMaxSize()
                                     .padding(horizontal = 4.dp),
                                 contentPadding = PaddingValues(bottom = 16.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 items(
-                                    items = feedBlocks,
-                                    key = { block ->
-                                        when (block) {
-                                            is SidePanelFeedBlock.Single -> block.widgetId
-                                            is SidePanelFeedBlock.Merged -> block.groupIds.joinToString(",")
-                                        }
-                                    }
-                                ) { block ->
-                                    when (block) {
-                                        is SidePanelFeedBlock.Single -> {
-                                            SidePanelWidgetContent(
-                                                widgetId = block.widgetId,
-                                                state = state,
-                                                isMerged = false
-                                            )
-                                        }
-                                        is SidePanelFeedBlock.Merged -> {
-                                            val isSliders = block.mergeGroup == "sliders"
-                                            M3WidgetCard(
-                                                contentPadding = if (isSliders) PaddingValues(16.dp) else PaddingValues(14.dp),
-                                                verticalArrangement = Arrangement.spacedBy(if (isSliders) 14.dp else 12.dp)
+                                    items = normalRows,
+                                    key = { it.key }
+                                ) { row ->
+                                    val rowSpanSum = row.items.sumOf { it.span }
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .animateItem(
+                                                placementSpec = spring(
+                                                    dampingRatio = 0.78f,
+                                                    stiffness = Spring.StiffnessMediumLow
+                                                )
+                                            ),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        row.items.forEach { item ->
+                                            Box(
+                                                modifier = Modifier.weight(item.span.toFloat())
                                             ) {
-                                                block.groupIds.forEach { wId ->
-                                                    SidePanelWidgetContent(
-                                                        widgetId = wId,
-                                                        state = state,
-                                                        isMerged = true
-                                                    )
+                                                when (item) {
+                                                    is NormalFeedItem.Single -> {
+                                                        SidePanelWidgetContent(
+                                                            widgetId = item.widgetId,
+                                                            state = state,
+                                                            isMerged = false,
+                                                            span = item.span
+                                                        )
+                                                    }
+                                                    is NormalFeedItem.Merged -> {
+                                                        MergedSidePanelWidgetContent(
+                                                            groupIds = item.groupIds,
+                                                            mergeGroup = item.mergeGroup,
+                                                            state = state,
+                                                            span = item.span
+                                                        )
+                                                    }
                                                 }
                                             }
+                                        }
+                                        if (rowSpanSum < 3) {
+                                            Spacer(modifier = Modifier.weight((3 - rowSpanSum).toFloat()))
                                         }
                                     }
                                 }

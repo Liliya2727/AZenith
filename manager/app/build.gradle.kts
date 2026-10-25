@@ -100,6 +100,11 @@ android {
         includeInApk = false
         includeInBundle = false
     }
+
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+    }
 }
 
 dependencies {

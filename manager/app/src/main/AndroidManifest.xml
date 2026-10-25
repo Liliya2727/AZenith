@@ -15,6 +15,8 @@
     <uses-permission android:name="android.permission.DUMP" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     
     <queries>
         <intent>
@@ -65,7 +67,17 @@
 
         <service
             android:name=".ui.gamespace.ZXSidePanelService"
-            android:exported="false" />
+            android:foregroundServiceType="specialUse"
+            android:exported="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Game Space in-game overlay and floating windows" />
+        </service>
+
+        <service
+            android:name=".ui.gamespace.ZXFloatingAppRootService"
+            android:exported="false"
+            tools:ignore="Instantiatable" />
         
         <activity
             android:name="com.yalantis.ucrop.UCropActivity"

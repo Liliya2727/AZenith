@@ -79,6 +79,19 @@ class ZenithReceiver : BroadcastReceiver() {
                 ) {
                     zx.azenith.ui.gamespace.ZXSidePanelService.hide(context)
                 }
+
+                val openFloatingPkg = intent.getStringExtra("open_floating_app")
+                if (!openFloatingPkg.isNullOrBlank()) {
+                    val floatIntent = Intent(context, zx.azenith.ui.gamespace.ZXSidePanelService::class.java).apply {
+                        this.action = zx.azenith.ui.gamespace.ZXSidePanelService.ACTION_OPEN_FLOATING_APP
+                        putExtra(zx.azenith.ui.gamespace.ZXSidePanelService.EXTRA_PACKAGE_NAME, openFloatingPkg)
+                    }
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        androidx.core.content.ContextCompat.startForegroundService(context, floatIntent)
+                    } else {
+                        context.startService(floatIntent)
+                    }
+                }
             }
 
             ACTION_RESHOW -> {

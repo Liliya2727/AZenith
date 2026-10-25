@@ -21,3 +21,4 @@
 #-renamesourcefileattribute SourceFile
 
 -keep class org.lsposed.hiddenapibypass.** { *; }
+-keep class zx.azenith.ui.gamespace.ZXFloatingAppRootService { *; }

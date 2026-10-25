@@ -19,7 +19,9 @@
 package zx.azenith.ui.gamespace
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -28,6 +30,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -41,19 +45,30 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.VolumeDown
+import androidx.compose.material.icons.automirrored.rounded.VolumeMute
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.BrightnessHigh
+import androidx.compose.material.icons.rounded.BrightnessLow
+import androidx.compose.material.icons.rounded.BrightnessMedium
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -63,41 +78,52 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import zx.azenith.ui.component.ZenithSlider
 
 @Composable
 fun SidePanelWidgetContent(
     widgetId: String,
     state: ZXSidePanelStateHolder,
-    isMerged: Boolean = false
+    isMerged: Boolean = false,
+    span: Int = state.getWidgetSpan(widgetId)
 ) {
     when (widgetId) {
-        "fpsHeader" -> FpsMeterWidget(state, isMerged)
-        "speedometers" -> SpeedometersWidget(state, isMerged)
-        "profileSwitch" -> ProfileSegmentedWidget(state, isMerged)
-        "brightnessSlider" -> BrightnessSliderWidget(state, isMerged)
-        "volumeSlider" -> VolumeSliderWidget(state, isMerged)
-        "quickTools" -> QuickToolsWidget(state)
-        "antiInterference" -> AntiInterferenceWidget(state)
-        "liveMonitor" -> LiveMonitorWidget(state)
-        "crosshair" -> CrosshairWidget(state)
-        "displayTouch" -> DisplayTouchWidget(state)
-        "networkPing" -> NetworkPingWidget(state)
-        "thermalBattery" -> ThermalBatteryWidget(state)
+        "fpsHeader" -> FpsMeterWidget(state, isMerged, span)
+        "speedometers" -> SpeedometersWidget(state, isMerged, span)
+        "profileSwitch" -> ProfileSegmentedWidget(state, isMerged, span)
+        "brightnessSlider" -> BrightnessSliderWidget(state, isMerged, span)
+        "volumeSlider" -> VolumeSliderWidget(state, isMerged, span)
+        "quickTools" -> QuickToolsWidget(state, span)
+        "antiInterference" -> AntiInterferenceWidget(state, span)
+        "liveMonitor" -> LiveMonitorWidget(state, span)
+        "crosshair" -> CrosshairWidget(state, span)
+        "displayTouch" -> DisplayTouchWidget(state, span)
+        "networkPing" -> NetworkPingWidget(state, span)
+        "thermalBattery" -> ThermalBatteryWidget(state, span)
     }
 }
 
@@ -106,25 +132,32 @@ fun EditModeWidgetCard(
     widgetId: String,
     index: Int,
     state: ZXSidePanelStateHolder,
-    onReportBounds: (cardBoundsInRoot: Rect, dragBarBoundsInRoot: Rect) -> Unit,
+    span: Int = state.getWidgetSpan(widgetId),
+    onReportBounds: (cardBoundsInRoot: Rect, removeBtnBoundsInRoot: Rect, resizeGripBoundsInRoot: Rect) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val meta = state.widgetCatalog[widgetId] ?: return
     val scheme = MaterialTheme.colorScheme
+    val haptic = LocalHapticFeedback.current
     var cardBounds by remember { mutableStateOf(Rect.Zero) }
-    var dragBarBounds by remember { mutableStateOf(Rect.Zero) }
+    var removeBtnBounds by remember { mutableStateOf(Rect.Zero) }
+    var resizeGripBounds by remember { mutableStateOf(Rect.Zero) }
+    var previewExtraHeightPx by remember { mutableFloatStateOf(0f) }
+    val animatedExtraHeightDp by animateDpAsState(
+        targetValue = (previewExtraHeightPx / LocalDensity.current.density).dp,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "ResizePreviewH"
+    )
 
     val isBeingDragged = state.draggingWidgetId == widgetId && !state.draggingFromLibrary
 
-    M3WidgetCard(
-        contentPadding = PaddingValues(12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+    Box(
         modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = animatedExtraHeightDp)
             .onGloballyPositioned { coords ->
                 cardBounds = coords.boundsInRoot()
-                if (dragBarBounds != Rect.Zero) {
-                    onReportBounds(cardBounds, dragBarBounds)
-                }
+                onReportBounds(cardBounds, removeBtnBounds, resizeGripBounds)
             }
             .graphicsLayer {
                 alpha = if (isBeingDragged) 0.22f else 1f
@@ -132,109 +165,151 @@ fun EditModeWidgetCard(
                 scaleY = if (isBeingDragged) 0.96f else 1f
             }
     ) {
-        // Edit Bar Header (Only this top bar initiates widget drag; swiping body scrolls normally)
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = scheme.surfaceContainerHigh,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .onGloballyPositioned { coords ->
-                            dragBarBounds = coords.boundsInRoot()
-                            if (cardBounds != Rect.Zero) {
-                                onReportBounds(cardBounds, dragBarBounds)
-                            }
-                        },
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = ZXSidePanelIcons.get("drag_indicator"),
-                        contentDescription = null,
-                        tint = scheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = meta.title,
-                            style = MaterialTheme.typography.titleSmall,
-                            color = scheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = "Drag bar to move",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = scheme.onSurfaceVariant,
-                            maxLines = 1
-                        )
-                    }
-                }
-
-                Surface(
-                    shape = CircleShape,
-                    color = scheme.errorContainer,
-                    contentColor = scheme.onErrorContainer,
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .clickable { state.removeWidgetToLibrary(widgetId) }
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = ZXSidePanelIcons.get("remove"),
-                            contentDescription = "Remove widget",
-                            tint = scheme.onErrorContainer,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-            }
-        }
-
-        // Disabled Inner Widget Preview (allows vertical LazyColumn scrolling while blocking taps & horizontal sliders)
+        // Disabled Inner Widget Preview (entire surface is draggable directly)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .graphicsLayer { alpha = 0.88f }
-                .pointerInput(Unit) {
+                .graphicsLayer { alpha = 0.94f }
+        ) {
+            SidePanelWidgetContent(
+                widgetId = widgetId,
+                state = state,
+                isMerged = false,
+                span = span
+            )
+        }
+
+        // Circular '-' Remove Button at Top-Right
+        Surface(
+            shape = CircleShape,
+            color = scheme.errorContainer,
+            contentColor = scheme.onErrorContainer,
+            shadowElevation = 4.dp,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(6.dp)
+                .size(26.dp)
+                .clip(CircleShape)
+                .onGloballyPositioned { coords ->
+                    removeBtnBounds = coords.boundsInRoot()
+                    onReportBounds(cardBounds, removeBtnBounds, resizeGripBounds)
+                }
+                .clickable {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    state.removeWidgetToLibrary(widgetId)
+                }
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = ZXSidePanelIcons.get("remove"),
+                    contentDescription = "Remove widget",
+                    tint = scheme.onErrorContainer,
+                    modifier = Modifier.size(15.dp)
+                )
+            }
+        }
+
+        // Corner Mirrored 'L' Resize Grip at Bottom-Right
+        Box(
+            contentAlignment = Alignment.BottomEnd,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(bottom = 4.dp, end = 4.dp)
+                .size(34.dp)
+                .clip(RoundedCornerShape(bottomEnd = 16.dp))
+                .onGloballyPositioned { coords ->
+                    resizeGripBounds = coords.boundsInRoot()
+                    onReportBounds(cardBounds, removeBtnBounds, resizeGripBounds)
+                }
+                .pointerInput(widgetId) {
                     awaitEachGesture {
-                        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                        var isVerticalScroll = false
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        var totalDy = 0f
+                        var dragged = false
+                        val initialTier = state.getWidgetHeightTier(widgetId)
+                        var pendingTier = initialTier
+                        val vStepThreshold = 46.dp.toPx()
+
                         while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            val event = awaitPointerEvent()
                             val change = event.changes.firstOrNull { it.id == down.id } ?: break
                             if (!change.pressed) {
-                                if (!isVerticalScroll) {
-                                    change.consume()
+                                previewExtraHeightPx = 0f
+                                if (dragged) {
+                                    if (pendingTier != initialTier) {
+                                        state.setWidgetHeightTier(widgetId, pendingTier)
+                                    }
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                } else {
+                                    val nextTier = if (initialTier >= 3) 1 else initialTier + 1
+                                    state.setWidgetHeightTier(widgetId, nextTier)
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 }
                                 break
                             }
-                            val dy = abs(change.position.y - down.position.y)
-                            val dx = abs(change.position.x - down.position.x)
-                            if (dy > viewConfiguration.touchSlop && dy >= dx * 0.8f) {
-                                isVerticalScroll = true
-                            } else if (!isVerticalScroll && dx > viewConfiguration.touchSlop * 0.5f) {
+                            val dy = change.position.y - down.position.y
+                            totalDy = dy
+                            if (abs(totalDy) > viewConfiguration.touchSlop) {
+                                dragged = true
                                 change.consume()
+                                previewExtraHeightPx = totalDy.coerceAtLeast(0f)
+                                val stepV = (totalDy / vStepThreshold).toInt()
+                                val nextTier = (initialTier + stepV).coerceIn(1, 3)
+                                if (nextTier != pendingTier) {
+                                    pendingTier = nextTier
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
                             }
                         }
                     }
                 }
         ) {
-            SidePanelWidgetContent(
-                widgetId = widgetId,
-                state = state,
-                isMerged = false
-            )
+            Canvas(modifier = Modifier.size(22.dp).padding(3.dp)) {
+                val strokeW = 2.4.dp.toPx()
+                val w = size.width
+                val h = size.height
+                val cornerRadius = 3.dp.toPx()
+                val gripColor = scheme.primary
+
+                // Outer mirrored 'L' corner bracket: _|
+                val path = Path().apply {
+                    moveTo(w * 0.35f, h - strokeW / 2f)
+                    lineTo(w - cornerRadius, h - strokeW / 2f)
+                    quadraticTo(w, h - strokeW / 2f, w, h - cornerRadius)
+                    lineTo(w, h * 0.35f)
+                }
+                drawPath(
+                    path = path,
+                    color = gripColor,
+                    style = Stroke(
+                        width = strokeW,
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
+                )
+
+                // Inner mirrored 'L' corner bracket
+                val innerPath = Path().apply {
+                    moveTo(w * 0.65f, h - strokeW * 2.5f)
+                    lineTo(w - cornerRadius - strokeW * 1.4f, h - strokeW * 2.5f)
+                    quadraticTo(
+                        w - strokeW * 1.4f,
+                        h - strokeW * 2.5f,
+                        w - strokeW * 1.4f,
+                        h - cornerRadius - strokeW * 1.4f
+                    )
+                    lineTo(w - strokeW * 1.4f, h * 0.65f)
+                }
+                drawPath(
+                    path = innerPath,
+                    color = gripColor.copy(alpha = 0.65f),
+                    style = Stroke(
+                        width = strokeW * 0.85f,
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
+                )
+            }
         }
     }
 }
@@ -243,16 +318,18 @@ fun EditModeWidgetCard(
 fun WidgetDropLandingPlaceholder(
     widgetId: String,
     state: ZXSidePanelStateHolder,
+    span: Int = 3,
     modifier: Modifier = Modifier
 ) {
     val meta = state.widgetCatalog[widgetId] ?: return
     val scheme = MaterialTheme.colorScheme
+    val targetHeight = if (span == 1) 96.dp else if (span == 2) 90.dp else 84.dp
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(92.dp)
-            .clip(RoundedCornerShape(28.dp))
+            .height(targetHeight)
+            .clip(RoundedCornerShape(24.dp))
             .background(scheme.primaryContainer.copy(alpha = 0.18f))
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -261,12 +338,7 @@ fun WidgetDropLandingPlaceholder(
             val gapPx = 6.dp.toPx()
             drawRoundRect(
                 color = scheme.primary.copy(alpha = 0.85f),
-                topLeft = Offset(strokePx / 2f, strokePx / 2f),
-                size = androidx.compose.ui.geometry.Size(
-                    size.width - strokePx,
-                    size.height - strokePx
-                ),
-                cornerRadius = CornerRadius(28.dp.toPx(), 28.dp.toPx()),
+                cornerRadius = CornerRadius(24.dp.toPx(), 24.dp.toPx()),
                 style = Stroke(
                     width = strokePx,
                     pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashPx, gapPx), 0f)
@@ -276,40 +348,122 @@ fun WidgetDropLandingPlaceholder(
 
         Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 18.dp),
+                .align(Alignment.Center)
+                .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = scheme.primaryContainer,
-                modifier = Modifier.size(42.dp)
+            Icon(
+                imageVector = ZXSidePanelIcons.get(meta.icon),
+                contentDescription = null,
+                tint = scheme.primary,
+                modifier = Modifier.size(if (span == 1) 22.dp else 20.dp)
+            )
+            if (span >= 2) {
+                Text(
+                    text = "Drop here",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.primary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DroppingWidgetAnimationOverlay(
+    widgetId: String,
+    state: ZXSidePanelStateHolder,
+    initialOffset: Offset,
+    onFinished: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val meta = state.widgetCatalog[widgetId] ?: run {
+        onFinished()
+        return
+    }
+    val scheme = MaterialTheme.colorScheme
+    val animProgress = remember { Animatable(0f) }
+
+    androidx.compose.runtime.LaunchedEffect(widgetId) {
+        animProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = spring(
+                dampingRatio = 0.74f,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        )
+        onFinished()
+    }
+
+    val progress = animProgress.value
+    val currentScale = 1.04f - (0.04f * progress)
+    val currentAlpha = (1f - ((progress - 0.72f) / 0.28f)).coerceIn(0f, 1f)
+    val dropYShift = progress * 16.dp.value
+
+    Surface(
+        shape = RoundedCornerShape(28.dp),
+        color = scheme.surfaceContainerHighest.copy(alpha = 0.96f),
+        border = BorderStroke(
+            width = (2.dp.value * (1f - progress)).coerceAtLeast(0.5f).dp,
+            color = scheme.primary.copy(alpha = (1f - progress).coerceIn(0f, 1f))
+        ),
+        shadowElevation = (28.dp.value * (1f - progress)).coerceAtLeast(0f).dp,
+        modifier = modifier
+            .offset {
+                IntOffset(
+                    initialOffset.x.roundToInt(),
+                    (initialOffset.y + dropYShift).roundToInt()
+                )
+            }
+            .widthIn(min = 240.dp, max = 304.dp)
+            .graphicsLayer {
+                scaleX = currentScale
+                scaleY = currentScale
+                alpha = currentAlpha
+            }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = ZXSidePanelIcons.get(meta.icon),
-                        contentDescription = null,
-                        tint = scheme.onPrimaryContainer,
-                        modifier = Modifier.size(20.dp)
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = scheme.primaryContainer,
+                    modifier = Modifier.size(38.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = ZXSidePanelIcons.get(meta.icon),
+                            contentDescription = null,
+                            tint = scheme.onPrimaryContainer,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = meta.title,
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = meta.subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = scheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Drop ${meta.title} here",
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                    color = scheme.primary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "Release finger to settle widget into this slot",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = scheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
             }
         }
     }
@@ -426,23 +580,18 @@ fun DraggedWidgetMockupOverlay(
 @Composable
 private fun FpsMeterWidget(
     state: ZXSidePanelStateHolder,
-    isMerged: Boolean
+    isMerged: Boolean,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
-    val inner: @Composable () -> Unit = {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(
-                    if (isMerged) Modifier.padding(start = 4.dp, end = 4.dp, top = 2.dp)
-                    else Modifier
-                ),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
                 Icon(
                     imageVector = ZXSidePanelIcons.get("speed"),
@@ -450,28 +599,132 @@ private fun FpsMeterWidget(
                     tint = scheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
+                Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Frame rate",
-                    style = MaterialTheme.typography.titleSmall,
+                    text = "${state.currentFps}",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.primary
+                )
+                Text(
+                    text = "FPS",
+                    style = MaterialTheme.typography.labelSmall,
                     color = scheme.onSurfaceVariant
                 )
             }
+        }
+        return
+    }
 
+    val heightTier = state.getWidgetHeightTier("fpsHeader")
+    val inner: @Composable () -> Unit = {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Row(
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (isMerged) Modifier.padding(start = 4.dp, end = 4.dp, top = 2.dp)
+                        else Modifier
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = "FPS",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = scheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 3.dp)
-                )
-                Text(
-                    text = "${state.currentFps}",
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    color = scheme.primary
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        imageVector = ZXSidePanelIcons.get("speed"),
+                        contentDescription = null,
+                        tint = scheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = "Frame rate",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = scheme.onSurfaceVariant
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "FPS",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = scheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 3.dp)
+                    )
+                    Text(
+                        text = "${state.currentFps}",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                        color = scheme.primary
+                    )
+                }
+            }
+
+            if (heightTier >= 2) {
+                val frameTimeMs = if (state.currentFps > 0) String.format(Locale.US, "%.1f ms", 1000f / state.currentFps) else "-- ms"
+                val onePercentLow = (state.currentFps * 0.88f).roundToInt().coerceAtLeast(0)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = ZXSidePanelIcons.get("timer"),
+                            contentDescription = null,
+                            tint = scheme.secondary,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = "Frame time: $frameTimeMs",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = scheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        text = "1% Low: $onePercentLow FPS",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = scheme.primary
+                    )
+                }
+            }
+
+            if (heightTier >= 3) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = scheme.surfaceContainerHighest.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Sync Target: 120 Hz",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = scheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Stability: 99.4%",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.primary
+                        )
+                    }
+                }
             }
         }
     }
@@ -490,33 +743,245 @@ private fun FpsMeterWidget(
 @Composable
 private fun SpeedometersWidget(
     state: ZXSidePanelStateHolder,
-    isMerged: Boolean
+    isMerged: Boolean,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
-    val inner: @Composable () -> Unit = {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp)
         ) {
-            M3ExpressiveRadialGauge(
-                percent = state.cpuLoad,
-                label = "CPU",
-                activeColor = scheme.primary,
-                badgeContainerColor = scheme.primaryContainer,
-                badgeContentColor = scheme.onPrimaryContainer,
-                onClick = { state.nudgeGaugeLoad("cpu") },
-                modifier = Modifier.weight(1f)
-            )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("CPU", style = MaterialTheme.typography.labelSmall, color = scheme.primary)
+                    Text("${state.cpuLoad}%", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = scheme.primary)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("GPU", style = MaterialTheme.typography.labelSmall, color = scheme.tertiary)
+                    Text("${state.gpuLoad}%", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = scheme.tertiary)
+                }
+            }
+        }
+        return
+    }
 
-            M3ExpressiveRadialGauge(
-                percent = state.gpuLoad,
-                label = "GPU",
-                activeColor = scheme.tertiary,
-                badgeContainerColor = scheme.tertiaryContainer,
-                badgeContentColor = scheme.onTertiaryContainer,
-                onClick = { state.nudgeGaugeLoad("gpu") },
-                modifier = Modifier.weight(1f)
-            )
+    val heightTier = state.getWidgetHeightTier("speedometers")
+    val inner: @Composable () -> Unit = {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                M3ExpressiveRadialGauge(
+                    percent = state.cpuLoad,
+                    label = "CPU",
+                    activeColor = scheme.primary,
+                    badgeContainerColor = scheme.primaryContainer,
+                    badgeContentColor = scheme.onPrimaryContainer,
+                    onClick = { state.nudgeGaugeLoad("cpu") },
+                    modifier = Modifier.weight(1f)
+                )
+
+                M3ExpressiveRadialGauge(
+                    percent = state.gpuLoad,
+                    label = "GPU",
+                    activeColor = scheme.tertiary,
+                    badgeContainerColor = scheme.tertiaryContainer,
+                    badgeContentColor = scheme.onTertiaryContainer,
+                    onClick = { state.nudgeGaugeLoad("gpu") },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            if (heightTier >= 2) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = scheme.surfaceContainerHigh,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = ZXSidePanelIcons.get("memory"),
+                                contentDescription = null,
+                                tint = scheme.primary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = if (state.cpuLoad > 75) "Heavy Load" else "Normal Load",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.primary
+                                )
+                                Text(
+                                    text = "CPU Cluster",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = scheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = scheme.surfaceContainerHigh,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = ZXSidePanelIcons.get("sports_esports"),
+                                contentDescription = null,
+                                tint = scheme.tertiary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = if (state.gpuLoad > 75) "Peak Active" else "Raster Idle",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.tertiary
+                                )
+                                Text(
+                                    text = "GPU Core",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = scheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (heightTier >= 3) {
+                // Huge CPU and GPU Load Monitor strip with multi-cluster cores and GPU raster breakdown
+                val littleLoad = (state.cpuLoad * 0.85f).roundToInt().coerceIn(0, 100)
+                val perfLoad = (state.cpuLoad * 1.05f).roundToInt().coerceIn(0, 100)
+                val primeLoad = (state.cpuLoad * 1.15f).roundToInt().coerceIn(0, 100)
+
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = scheme.surfaceContainerHighest.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "CPU Cluster Breakdown",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = scheme.primary
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Efficiency (0-3)", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant, modifier = Modifier.width(82.dp))
+                            LinearProgressIndicator(
+                                progress = { littleLoad / 100f },
+                                modifier = Modifier.weight(1f).height(5.dp).clip(CircleShape),
+                                color = scheme.primary,
+                                trackColor = scheme.surfaceContainerHigh
+                            )
+                            Text("$littleLoad%", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold), color = scheme.onSurface, modifier = Modifier.width(32.dp), textAlign = TextAlign.End)
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Performance (4-6)", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant, modifier = Modifier.width(82.dp))
+                            LinearProgressIndicator(
+                                progress = { perfLoad / 100f },
+                                modifier = Modifier.weight(1f).height(5.dp).clip(CircleShape),
+                                color = scheme.secondary,
+                                trackColor = scheme.surfaceContainerHigh
+                            )
+                            Text("$perfLoad%", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold), color = scheme.onSurface, modifier = Modifier.width(32.dp), textAlign = TextAlign.End)
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Prime Core (7)", style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant, modifier = Modifier.width(82.dp))
+                            LinearProgressIndicator(
+                                progress = { primeLoad / 100f },
+                                modifier = Modifier.weight(1f).height(5.dp).clip(CircleShape),
+                                color = scheme.tertiary,
+                                trackColor = scheme.surfaceContainerHigh
+                            )
+                            Text("$primeLoad%", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold), color = scheme.onSurface, modifier = Modifier.width(32.dp), textAlign = TextAlign.End)
+                        }
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = scheme.surfaceContainerHighest.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 7.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = ZXSidePanelIcons.get("sports_esports"),
+                                contentDescription = null,
+                                tint = scheme.tertiary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = "GPU Raster Engine: ${state.gpuLoad}%",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = scheme.onSurface
+                            )
+                        }
+                        Text(
+                            text = if (state.isAutoMode) "Dynamic Scaling" else "Governor Active",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = scheme.tertiary
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -534,9 +999,60 @@ private fun SpeedometersWidget(
 @Composable
 private fun ProfileSegmentedWidget(
     state: ZXSidePanelStateHolder,
-    isMerged: Boolean
+    isMerged: Boolean,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
+    if (span == 1) {
+        val currentTitle = when (state.activeProfile) {
+            "saving" -> "Saving"
+            "balanced" -> "Balanced"
+            else -> "Perf"
+        }
+        val currentIcon = when (state.activeProfile) {
+            "saving" -> "eco"
+            "balanced" -> "balance"
+            else -> "bolt"
+        }
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        val next = when (state.activeProfile) {
+                            "saving" -> "balanced"
+                            "balanced" -> "performance"
+                            else -> "saving"
+                        }
+                        state.selectPerformanceProfile(next)
+                    },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = ZXSidePanelIcons.get(currentIcon),
+                    contentDescription = null,
+                    tint = scheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = currentTitle,
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.primary
+                )
+                Text(
+                    text = "Mode",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
     val perfLabel = if (state.isLiteMode) "Perf Lite" else "Performance"
     val profiles = listOf(
         "saving" to "Power saving",
@@ -682,15 +1198,78 @@ private fun ProfileSegmentedWidget(
 @Composable
 private fun BrightnessSliderWidget(
     state: ZXSidePanelStateHolder,
-    isMerged: Boolean
+    isMerged: Boolean,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
-    val inner: @Composable () -> Unit = {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Row(
+    var isDragging by remember { mutableStateOf(false) }
+    var localFraction by remember {
+        mutableFloatStateOf((state.brightness / 100f).coerceIn(0.05f, 1f))
+    }
+
+    LaunchedEffect(state.brightness) {
+        if (!isDragging) {
+            localFraction = (state.brightness / 100f).coerceIn(0.05f, 1f)
+        }
+    }
+
+    val displayPercent = (localFraction * 100).roundToInt().coerceIn(5, 100)
+    val brightnessIcon = when {
+        localFraction < 0.33f -> Icons.Rounded.BrightnessLow
+        localFraction < 0.66f -> Icons.Rounded.BrightnessMedium
+        else -> Icons.Rounded.BrightnessHigh
+    }
+
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+        ) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 4.dp),
+                    .clickable {
+                        val next = when {
+                            state.brightness < 40 -> 60
+                            state.brightness < 80 -> 100
+                            else -> 25
+                        }
+                        localFraction = next / 100f
+                        state.updateHorizontalBrightness(next)
+                        state.commitHorizontalBrightness(next)
+                    },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = brightnessIcon,
+                    contentDescription = null,
+                    tint = scheme.tertiary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "$displayPercent%",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.tertiary
+                )
+                Text(
+                    text = "Brightness",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
+    if (isMerged) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 2.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -699,64 +1278,128 @@ private fun BrightnessSliderWidget(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
-                        imageVector = ZXSidePanelIcons.get("light_mode"),
+                        imageVector = brightnessIcon,
                         contentDescription = null,
-                        tint = scheme.primary,
-                        modifier = Modifier.size(18.dp)
+                        tint = scheme.tertiary,
+                        modifier = Modifier.size(20.dp)
                     )
                     Text(
                         text = "Brightness",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = scheme.onSurfaceVariant
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = scheme.onSurface
                     )
                 }
                 Text(
-                    text = "${state.brightness}%",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = scheme.primary
+                    text = "$displayPercent%",
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.tertiary
                 )
             }
 
-            M3ExpressiveLinearSlider(
-                value = state.brightness.toFloat(),
-                min = 10f,
-                max = 100f,
-                step = 1f,
-                variant = M3SliderVariant.Primary,
-                onValueChange = { state.updateHorizontalBrightness(it.roundToInt()) }
+            Spacer(Modifier.height(4.dp))
+
+            ZenithSlider(
+                value = localFraction,
+                onValueChange = { newFraction ->
+                    isDragging = true
+                    localFraction = newFraction.coerceIn(0.05f, 1f)
+                    state.updateHorizontalBrightness((newFraction * 100).roundToInt().coerceIn(5, 100))
+                },
+                onValueChangeFinished = {
+                    isDragging = false
+                    state.commitHorizontalBrightness((localFraction * 100).roundToInt().coerceIn(5, 100))
+                },
+                accent = scheme.tertiary,
+                modifier = Modifier.fillMaxWidth()
             )
         }
-    }
-
-    if (isMerged) {
-        inner()
     } else {
-        M3WidgetCard(
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
-        ) {
-            inner()
-        }
+        BentoSliderCard(
+            icon = brightnessIcon,
+            title = "Brightness",
+            valuePercent = displayPercent,
+            accent = scheme.tertiary,
+            value = localFraction,
+            onValueChange = { newFraction ->
+                isDragging = true
+                localFraction = newFraction.coerceIn(0.05f, 1f)
+                state.updateHorizontalBrightness((newFraction * 100).roundToInt().coerceIn(5, 100))
+            },
+            onValueChangeFinished = {
+                isDragging = false
+                state.commitHorizontalBrightness((localFraction * 100).roundToInt().coerceIn(5, 100))
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
 @Composable
 private fun VolumeSliderWidget(
     state: ZXSidePanelStateHolder,
-    isMerged: Boolean
+    isMerged: Boolean,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
-    val volumeIconName = when {
-        state.muted -> "volume_off"
-        state.volume < 50 -> "volume_down"
-        else -> "volume_up"
+    var isDragging by remember { mutableStateOf(false) }
+    var localFraction by remember {
+        mutableFloatStateOf(if (state.muted) 0f else (state.volume / 100f).coerceIn(0f, 1f))
     }
 
-    val inner: @Composable () -> Unit = {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Row(
+    LaunchedEffect(state.volume, state.muted) {
+        if (!isDragging) {
+            localFraction = if (state.muted) 0f else (state.volume / 100f).coerceIn(0f, 1f)
+        }
+    }
+
+    val displayPercent = if (state.muted) 0 else (localFraction * 100).roundToInt().coerceIn(0, 100)
+    val volumeIcon = when {
+        state.muted || localFraction <= 0.01f -> Icons.AutoMirrored.Rounded.VolumeMute
+        localFraction < 0.5f -> Icons.AutoMirrored.Rounded.VolumeDown
+        else -> Icons.AutoMirrored.Rounded.VolumeUp
+    }
+
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+        ) {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 4.dp),
+                    .clickable { state.toggleMuteAudio() },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = volumeIcon,
+                    contentDescription = null,
+                    tint = scheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = if (state.muted) "Muted" else "$displayPercent%",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.primary
+                )
+                Text(
+                    text = "Volume",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
+    if (isMerged) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 2.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -770,51 +1413,138 @@ private fun VolumeSliderWidget(
                     )
                 ) {
                     Icon(
-                        imageVector = ZXSidePanelIcons.get(volumeIconName),
+                        imageVector = volumeIcon,
                         contentDescription = null,
-                        tint = scheme.secondary,
-                        modifier = Modifier.size(18.dp)
+                        tint = scheme.primary,
+                        modifier = Modifier.size(20.dp)
                     )
                     Text(
                         text = "Volume",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = scheme.onSurfaceVariant
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = scheme.onSurface
                     )
                 }
                 Text(
-                    text = "${state.volume}%",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = scheme.secondary
+                    text = if (state.muted) "0%" else "$displayPercent%",
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.primary
                 )
             }
 
-            M3ExpressiveLinearSlider(
-                value = state.volume.toFloat(),
-                min = 0f,
-                max = 100f,
-                step = 1f,
-                variant = M3SliderVariant.Secondary,
-                onValueChange = { state.updateHorizontalVolume(it.roundToInt()) }
+            Spacer(Modifier.height(4.dp))
+
+            ZenithSlider(
+                value = localFraction,
+                onValueChange = { newFraction ->
+                    isDragging = true
+                    localFraction = newFraction.coerceIn(0f, 1f)
+                    if (state.muted && newFraction > 0.01f) {
+                        state.muted = false
+                    }
+                    state.updateHorizontalVolume((newFraction * 100).roundToInt().coerceIn(0, 100))
+                },
+                onValueChangeFinished = {
+                    isDragging = false
+                    state.commitHorizontalVolume((localFraction * 100).roundToInt().coerceIn(0, 100))
+                },
+                accent = scheme.primary,
+                modifier = Modifier.fillMaxWidth()
             )
         }
-    }
-
-    if (isMerged) {
-        inner()
     } else {
-        M3WidgetCard(
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
-        ) {
-            inner()
-        }
+        BentoSliderCard(
+            icon = volumeIcon,
+            title = "Volume",
+            valuePercent = displayPercent,
+            accent = scheme.primary,
+            value = localFraction,
+            onValueChange = { newFraction ->
+                isDragging = true
+                localFraction = newFraction.coerceIn(0f, 1f)
+                if (state.muted && newFraction > 0.01f) {
+                    state.muted = false
+                }
+                state.updateHorizontalVolume((newFraction * 100).roundToInt().coerceIn(0, 100))
+            },
+            onValueChangeFinished = {
+                isDragging = false
+                state.commitHorizontalVolume((localFraction * 100).roundToInt().coerceIn(0, 100))
+            },
+            onHeaderClick = { state.toggleMuteAudio() },
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
 @Composable
 private fun QuickToolsWidget(
-    state: ZXSidePanelStateHolder
+    state: ZXSidePanelStateHolder,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(6.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    state.quickTools.take(2).forEach { tool ->
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (tool.active) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { state.triggerQuickTool(tool.id) }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get(tool.icon),
+                                    contentDescription = tool.name,
+                                    tint = if (tool.active) scheme.onPrimaryContainer else scheme.onSurface,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    state.quickTools.drop(2).take(2).forEach { tool ->
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (tool.active) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { state.triggerQuickTool(tool.id) }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get(tool.icon),
+                                    contentDescription = tool.name,
+                                    tint = if (tool.active) scheme.onPrimaryContainer else scheme.onSurface,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return
+    }
+
     M3WidgetCard(
         contentPadding = PaddingValues(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -901,9 +1631,73 @@ private fun QuickToolsWidget(
 
 @Composable
 private fun AntiInterferenceWidget(
-    state: ZXSidePanelStateHolder
+    state: ZXSidePanelStateHolder,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(6.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    state.antiInterference.take(2).forEach { item ->
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (item.active) scheme.errorContainer else scheme.surfaceContainerHigh,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { state.toggleAntiInterference(item.id) }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get(item.icon),
+                                    contentDescription = item.name,
+                                    tint = if (item.active) scheme.onErrorContainer else scheme.onSurface,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    state.antiInterference.drop(2).take(2).forEach { item ->
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (item.active) scheme.errorContainer else scheme.surfaceContainerHigh,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { state.toggleAntiInterference(item.id) }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get(item.icon),
+                                    contentDescription = item.name,
+                                    tint = if (item.active) scheme.onErrorContainer else scheme.onSurface,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return
+    }
+
     M3WidgetCard(
         contentPadding = PaddingValues(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -972,9 +1766,43 @@ private fun AntiInterferenceWidget(
 
 @Composable
 private fun LiveMonitorWidget(
-    state: ZXSidePanelStateHolder
+    state: ZXSidePanelStateHolder,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { state.toggleFloatingHud() },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = ZXSidePanelIcons.get("monitoring"),
+                    contentDescription = null,
+                    tint = if (state.liveMonitor.enabled) scheme.primary else scheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = if (state.liveMonitor.enabled) "ON" else "OFF",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = if (state.liveMonitor.enabled) scheme.primary else scheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Monitor",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
     val styles = remember {
         listOf(
             "line" to "One line",
@@ -1108,9 +1936,43 @@ private fun LiveMonitorWidget(
 
 @Composable
 private fun CrosshairWidget(
-    state: ZXSidePanelStateHolder
+    state: ZXSidePanelStateHolder,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { state.toggleCrosshairQuick() },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = ZXSidePanelIcons.get("my_location"),
+                    contentDescription = null,
+                    tint = if (state.crosshair.enabled) scheme.primary else scheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = if (state.crosshair.enabled) "ON" else "OFF",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = if (state.crosshair.enabled) scheme.primary else scheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Crosshair",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
     val styles = remember {
         listOf(
             "dot" to "Dot",
@@ -1243,9 +2105,45 @@ private fun CrosshairWidget(
 
 @Composable
 private fun DisplayTouchWidget(
-    state: ZXSidePanelStateHolder
+    state: ZXSidePanelStateHolder,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { state.openSubscreen("display") },
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = ZXSidePanelIcons.get("display_settings"),
+                    contentDescription = null,
+                    tint = scheme.secondary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = state.visualFilter.replaceFirstChar { it.uppercase() },
+                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.secondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "Color",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
     val filters = remember {
         listOf(
             "standard" to "Standard",
@@ -1379,9 +2277,41 @@ private fun DisplayTouchWidget(
 
 @Composable
 private fun NetworkPingWidget(
-    state: ZXSidePanelStateHolder
+    state: ZXSidePanelStateHolder,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = ZXSidePanelIcons.get("wifi_tethering"),
+                    contentDescription = null,
+                    tint = scheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "${state.pingMs}ms",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = scheme.primary
+                )
+                Text(
+                    text = "Ping",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
     M3WidgetCard(
         contentPadding = PaddingValues(16.dp)
     ) {
@@ -1426,10 +2356,43 @@ private fun NetworkPingWidget(
 
 @Composable
 private fun ThermalBatteryWidget(
-    state: ZXSidePanelStateHolder
+    state: ZXSidePanelStateHolder,
+    span: Int = 3
 ) {
     val scheme = MaterialTheme.colorScheme
     val isActive = state.isBypassChargingActive
+
+    if (span == 1) {
+        M3WidgetCard(
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = ZXSidePanelIcons.get("thermostat"),
+                    contentDescription = null,
+                    tint = if (isActive) scheme.tertiary else scheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "${state.tempCelsius}°C",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = if (isActive) scheme.tertiary else scheme.primary
+                )
+                Text(
+                    text = "${state.batteryLevel}%",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant
+                )
+            }
+        }
+        return
+    }
+
     M3WidgetCard(
         contentPadding = PaddingValues(16.dp)
     ) {
@@ -1520,7 +2483,7 @@ fun LiveMonitorSubscreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
                     Text(
                         text = "Floating overlay monitor",
                         style = MaterialTheme.typography.titleSmall,
@@ -1549,7 +2512,8 @@ fun LiveMonitorSubscreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 20.dp, horizontal = 8.dp),
+                        .horizontalScroll(rememberScrollState())
+                        .padding(vertical = 20.dp, horizontal = 12.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     FloatingMonitorPill(state = state)
@@ -1699,6 +2663,87 @@ fun LiveMonitorSubscreen(
                 onValueChange = { state.updateLiveMonitorOpacity(it.roundToInt()) }
             )
         }
+
+        // 5. Size Scale Slider
+        M3WidgetCard(
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Monitor size",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = scheme.onSurfaceVariant
+                )
+                Text(
+                    text = "${lm.scalePercent}%",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = scheme.primary
+                )
+            }
+            M3ExpressiveLinearSlider(
+                value = lm.scalePercent.toFloat(),
+                min = 75f,
+                max = 140f,
+                step = 1f,
+                onValueChange = { state.updateLiveMonitorScale(it.roundToInt()) }
+            )
+        }
+
+        // 6. Temperature Sensor Selection
+        val tempSources = listOf(
+            "soc" to "SOC / System",
+            "battery" to "Battery",
+            "cpu" to "CPU",
+            "gpu" to "GPU",
+            "skin" to "Skin / Screen"
+        )
+        M3WidgetCard(
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "Temperature sensor",
+                style = MaterialTheme.typography.titleSmall,
+                color = scheme.onSurfaceVariant
+            )
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                tempSources.forEach { (sourceId, label) ->
+                    val isActive = lm.tempSource == sourceId
+                    M3ToggleTile(
+                        active = isActive,
+                        onClick = { state.updateLiveMonitorTempSource(sourceId) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                            if (isActive) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get("check_circle"),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1745,7 +2790,7 @@ fun CrosshairSubscreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
                     Text(
                         text = "Active reticle preview",
                         style = MaterialTheme.typography.titleSmall,
@@ -2266,137 +3311,246 @@ fun AppsManagerSubscreen(
     state: ZXSidePanelStateHolder
 ) {
     val scheme = MaterialTheme.colorScheme
+    var showSystemApps by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        M3WidgetCard(
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+    val userApps = remember(state.installedApps) { state.installedApps.filter { !it.isSystemApp } }
+    val displayedApps = if (showSystemApps) state.installedApps else userApps
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "Quick Launch Apps",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = scheme.onSurface
-                )
-                Text(
-                    text = "Tap an app in the sidebar to open it directly",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = scheme.onSurfaceVariant
-                )
-            }
-
-            if (state.installedApps.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Loading installed apps...",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = scheme.onSurfaceVariant
-                    )
-                }
-            } else {
-                Column(
+            M3WidgetCard(
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Header row with title, description, and singular System Apps toggle
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    state.installedApps.chunked(3).forEach { rowApps ->
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (state.editMode) "Edit Sidepanel Shortcuts" else "More Apps",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = scheme.onSurface,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            text = if (state.editMode) {
+                                "Tap an app to add or remove it from the sidebar"
+                            } else {
+                                "Tap an app to launch it in a floating window"
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = scheme.onSurfaceVariant
+                        )
+                    }
+
+                    // Singular System Apps toggle (Material 3 container pill)
+                    val toggleContainer by animateColorAsState(
+                        targetValue = if (showSystemApps) scheme.primaryContainer else scheme.surfaceContainerHighest,
+                        animationSpec = tween(180),
+                        label = "systemToggleContainer"
+                    )
+                    val toggleContent by animateColorAsState(
+                        targetValue = if (showSystemApps) scheme.onPrimaryContainer else scheme.onSurfaceVariant,
+                        animationSpec = tween(180),
+                        label = "systemToggleContent"
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = toggleContainer,
+                        contentColor = toggleContent,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable {
+                                val next = !showSystemApps
+                                showSystemApps = next
+                                if (next) {
+                                    state.showToast(
+                                        "Showing all apps. System apps may not be optimized for floating windows.",
+                                        "warning"
+                                    )
+                                }
+                            }
+                    ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            rowApps.forEach { app ->
-                                val isAdded = state.quickApps.contains(app.packageName)
-                                val containerColor by animateColorAsState(
-                                    targetValue = if (isAdded) scheme.primaryContainer else scheme.surfaceContainerHigh,
-                                    animationSpec = tween(durationMillis = 250),
-                                    label = "AppCellContainer"
-                                )
-                                val contentColor by animateColorAsState(
-                                    targetValue = if (isAdded) scheme.onPrimaryContainer else scheme.onSurface,
-                                    animationSpec = tween(durationMillis = 250),
-                                    label = "AppCellContent"
-                                )
-                                val shape = RoundedCornerShape(20.dp)
+                            Icon(
+                                imageVector = ZXSidePanelIcons.get(if (showSystemApps) "check" else "tune"),
+                                contentDescription = null,
+                                tint = toggleContent,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = "System Apps",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = toggleContent
+                            )
+                        }
+                    }
+                }
 
-                                Surface(
-                                    shape = shape,
-                                    color = containerColor,
-                                    contentColor = contentColor,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(shape)
-                                        .clickable { state.toggleQuickApp(app.packageName) }
-                                ) {
-                                    Box(modifier = Modifier.fillMaxWidth()) {
-                                        Column(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 8.dp, vertical = 12.dp),
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            if (app.iconBitmap != null) {
-                                                Image(
-                                                    bitmap = app.iconBitmap,
-                                                    contentDescription = app.name,
-                                                    contentScale = ContentScale.Fit,
-                                                    modifier = Modifier
-                                                        .size(34.dp)
-                                                        .clip(RoundedCornerShape(10.dp))
-                                                )
-                                            } else {
-                                                Icon(
-                                                    imageVector = ZXSidePanelIcons.get("grid_view"),
-                                                    contentDescription = app.name,
-                                                    tint = contentColor,
-                                                    modifier = Modifier.size(28.dp)
-                                                )
+                if (state.installedApps.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Loading installed apps...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = scheme.onSurfaceVariant
+                        )
+                    }
+                } else if (displayedApps.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (!showSystemApps) "No user installed apps found" else "No apps found",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = scheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        displayedApps.chunked(3).forEach { rowApps ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                rowApps.forEach { app ->
+                                    val isAdded = state.quickApps.contains(app.packageName)
+                                    val isActiveGame = app.packageName == state.activeGamePackage
+                                    val containerColor by animateColorAsState(
+                                        targetValue = when {
+                                            isActiveGame -> scheme.surfaceContainerHighest.copy(alpha = 0.5f)
+                                            state.editMode && isAdded -> scheme.primaryContainer
+                                            else -> scheme.surfaceContainerHigh
+                                        },
+                                        animationSpec = tween(durationMillis = 200),
+                                        label = "AppCellContainer"
+                                    )
+                                    val contentColor by animateColorAsState(
+                                        targetValue = when {
+                                            isActiveGame -> scheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                            state.editMode && isAdded -> scheme.onPrimaryContainer
+                                            else -> scheme.onSurface
+                                        },
+                                        animationSpec = tween(durationMillis = 200),
+                                        label = "AppCellContent"
+                                    )
+                                    val shape = RoundedCornerShape(18.dp)
+
+                                    Surface(
+                                        shape = shape,
+                                        color = containerColor,
+                                        contentColor = contentColor,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(96.dp)
+                                            .clip(shape)
+                                            .clickable {
+                                                if (isActiveGame) {
+                                                    state.showToast("Cannot open current game in floating window", "block")
+                                                } else if (state.editMode) {
+                                                    state.toggleQuickApp(app.packageName)
+                                                } else {
+                                                    state.launchQuickApp(app.packageName)
+                                                }
                                             }
-                                            Text(
-                                                text = app.name,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = contentColor,
-                                                textAlign = TextAlign.Center,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                modifier = Modifier.fillMaxWidth()
-                                            )
-                                        }
-
-                                        // Top-Right Add/Remove Badge
+                                    ) {
                                         Box(
-                                            modifier = Modifier
-                                                .align(Alignment.TopEnd)
-                                                .padding(top = 6.dp, end = 6.dp)
-                                                .size(20.dp)
-                                                .clip(CircleShape)
-                                                .background(
-                                                    if (isAdded) scheme.primary
-                                                    else scheme.surfaceContainerHighest
-                                                ),
+                                            modifier = Modifier.fillMaxSize(),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Icon(
-                                                imageVector = ZXSidePanelIcons.get(if (isAdded) "check" else "add"),
-                                                contentDescription = null,
-                                                tint = if (isAdded) scheme.onPrimary else scheme.onSurface,
-                                                modifier = Modifier.size(14.dp)
-                                            )
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .padding(horizontal = 6.dp, vertical = 8.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.Center
+                                            ) {
+                                                if (app.iconBitmap != null) {
+                                                    Image(
+                                                        bitmap = app.iconBitmap,
+                                                        contentDescription = app.name,
+                                                        contentScale = ContentScale.Fit,
+                                                        modifier = Modifier
+                                                            .size(36.dp)
+                                                            .graphicsLayer { if (isActiveGame) alpha = 0.45f }
+                                                            .clip(RoundedCornerShape(10.dp))
+                                                    )
+                                                } else {
+                                                    Icon(
+                                                        imageVector = ZXSidePanelIcons.get("grid_view"),
+                                                        contentDescription = app.name,
+                                                        tint = contentColor,
+                                                        modifier = Modifier.size(30.dp)
+                                                    )
+                                                }
+                                                Spacer(Modifier.height(4.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .height(28.dp),
+                                                    contentAlignment = Alignment.TopCenter
+                                                ) {
+                                                    Text(
+                                                        text = if (isActiveGame) "${app.name}\n(Active Game)" else app.name,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = contentColor,
+                                                        textAlign = TextAlign.Center,
+                                                        maxLines = 2,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
+                                            }
+
+                                            // Top-Right Badge: Only shown in edit mode
+                                            if (state.editMode && !isActiveGame) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .align(Alignment.TopEnd)
+                                                        .padding(top = 6.dp, end = 6.dp)
+                                                        .size(20.dp)
+                                                        .clip(CircleShape)
+                                                        .background(
+                                                            if (isAdded) scheme.primary
+                                                            else scheme.surfaceContainerHighest
+                                                        ),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = ZXSidePanelIcons.get(if (isAdded) "check" else "add"),
+                                                        contentDescription = null,
+                                                        tint = if (isAdded) scheme.onPrimary else scheme.onSurface,
+                                                        modifier = Modifier.size(13.dp)
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            repeat(3 - rowApps.size) {
-                                Spacer(modifier = Modifier.weight(1f))
+                                repeat(3 - rowApps.size) {
+                                    Spacer(modifier = Modifier.weight(1f).height(96.dp))
+                                }
                             }
                         }
                     }

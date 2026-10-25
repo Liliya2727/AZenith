@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
@@ -82,13 +83,16 @@ data class SidePanelLiveMonitorState(
     val showPing: Boolean = false,
     val showBattery: Boolean = false,
     val showProfile: Boolean = false,
-    val opacity: Int = 92
+    val opacity: Int = 92,
+    val scalePercent: Int = 100,
+    val tempSource: String = "soc"
 )
 
 data class SidePanelAppItem(
     val packageName: String,
     val name: String,
-    val iconBitmap: ImageBitmap? = null
+    val iconBitmap: ImageBitmap? = null,
+    val isSystemApp: Boolean = false
 )
 
 data class SidePanelWidgetMeta(
@@ -168,6 +172,8 @@ class ZXSidePanelStateHolder {
     var pingMs by mutableIntStateOf(24)
     var batteryLevel by mutableIntStateOf(100)
     var isBatteryCharging by mutableStateOf(false)
+    var isWifiNetwork by mutableStateOf(true)
+    var isCellularNetwork by mutableStateOf(false)
     var isBypassChargingActive by mutableStateOf(false)
     var isRootAvailable by mutableStateOf(false)
 
@@ -207,6 +213,50 @@ class ZXSidePanelStateHolder {
     var dropTargetIndex by mutableIntStateOf(-1)
     var isHoveringLibraryDropZone by mutableStateOf(false)
 
+    // Landing / Dropping Widget Animation
+    var droppingWidgetId by mutableStateOf<String?>(null)
+    var droppingWidgetOffset by mutableStateOf(Offset.Zero)
+
+    // Dynamic 3-Column Grid Spans (1..3)
+    val widgetSpans = mutableStateMapOf<String, Int>()
+
+    // Dynamic Downward Height Tiers (1 = Standard, 2 = Tall, 3 = Huge)
+    val widgetHeightTiers = mutableStateMapOf<String, Int>()
+
+    fun getWidgetSpan(widgetId: String): Int {
+        return widgetSpans[widgetId] ?: 3
+    }
+
+    fun setWidgetSpan(widgetId: String, span: Int) {
+        val clamped = span.coerceIn(1, 3)
+        widgetSpans[widgetId] = clamped
+        saveWidgetLayoutPreferences()
+    }
+
+    fun cycleWidgetSpan(widgetId: String): Int {
+        val current = getWidgetSpan(widgetId)
+        val next = if (current >= 3) 1 else current + 1
+        setWidgetSpan(widgetId, next)
+        return next
+    }
+
+    fun getWidgetHeightTier(widgetId: String): Int {
+        return widgetHeightTiers[widgetId] ?: 1
+    }
+
+    fun setWidgetHeightTier(widgetId: String, tier: Int) {
+        val clamped = tier.coerceIn(1, 3)
+        widgetHeightTiers[widgetId] = clamped
+        saveWidgetLayoutPreferences()
+    }
+
+    fun cycleWidgetHeightTier(widgetId: String): Int {
+        val current = getWidgetHeightTier(widgetId)
+        val next = if (current >= 3) 1 else current + 1
+        setWidgetHeightTier(widgetId, next)
+        return next
+    }
+
     val quickTools = mutableStateListOf(
         SidePanelQuickTool(id = "screenshot", name = "Screenshot", icon = "screenshot_region", active = false),
         SidePanelQuickTool(id = "record", name = "Screen record", icon = "videocam", active = false),
@@ -226,12 +276,15 @@ class ZXSidePanelStateHolder {
     val installedApps = mutableStateListOf<SidePanelAppItem>()
     val quickApps = mutableStateListOf<String>()
     var defaultQuickApps: List<String> = emptyList()
+    var activeGamePackage by mutableStateOf<String?>(null)
     var onQuickAppsChanged: ((List<String>) -> Unit)? = null
     var onLaunchAppRequest: ((String) -> Unit)? = null
     var onSelectProfileRequest: ((String) -> Unit)? = null
     var onToggleAutoModeRequest: ((Boolean) -> Unit)? = null
     var onBrightnessChangedRequest: ((Int) -> Unit)? = null
+    var onBrightnessCommittedRequest: ((Int) -> Unit)? = null
     var onVolumeChangedRequest: ((Int, Boolean) -> Unit)? = null
+    var onVolumeCommittedRequest: ((Int, Boolean) -> Unit)? = null
 
     val activeWidgets = mutableStateListOf<String>().apply {
         addAll(DEFAULT_ACTIVE_WIDGETS)
@@ -381,13 +434,45 @@ class ZXSidePanelStateHolder {
             libraryWidgets.clear()
             libraryWidgets.addAll(libList)
         }
+
+        val savedSpans = prefs.getString("gs_global_widget_spans", null)
+        widgetSpans.clear()
+        if (savedSpans != null) {
+            savedSpans.split(";").forEach { pair ->
+                val parts = pair.split(":")
+                if (parts.size == 2) {
+                    val span = parts[1].toIntOrNull()
+                    if (span != null && parts[0].isNotEmpty()) {
+                        widgetSpans[parts[0]] = span.coerceIn(1, 3)
+                    }
+                }
+            }
+        }
+
+        val savedHeights = prefs.getString("gs_global_widget_height_tiers", null)
+        widgetHeightTiers.clear()
+        if (savedHeights != null) {
+            savedHeights.split(";").forEach { pair ->
+                val parts = pair.split(":")
+                if (parts.size == 2) {
+                    val tier = parts[1].toIntOrNull()
+                    if (tier != null && parts[0].isNotEmpty()) {
+                        widgetHeightTiers[parts[0]] = tier.coerceIn(1, 3)
+                    }
+                }
+            }
+        }
     }
 
     fun saveWidgetLayoutPreferences() {
         val prefs = boundPrefs ?: return
+        val spansString = widgetSpans.entries.joinToString(";") { (k, v) -> "$k:$v" }
+        val heightsString = widgetHeightTiers.entries.joinToString(";") { (k, v) -> "$k:$v" }
         prefs.edit()
             .putString("gs_global_active_widgets", activeWidgets.joinToString(","))
             .putString("gs_global_library_widgets", libraryWidgets.joinToString(","))
+            .putString("gs_global_widget_spans", spansString)
+            .putString("gs_global_widget_height_tiers", heightsString)
             .putFloat("gs_global_hud_offset_x", hudOffsetX)
             .putFloat("gs_global_hud_offset_y", hudOffsetY)
             .apply()
@@ -423,7 +508,9 @@ class ZXSidePanelStateHolder {
             showPing = prefs.getBoolean("${p}lm_ping", false),
             showBattery = prefs.getBoolean("${p}lm_battery", false),
             showProfile = prefs.getBoolean("${p}lm_profile", false),
-            opacity = prefs.getInt("${p}lm_opacity", 92).coerceIn(40, 100)
+            opacity = prefs.getInt("${p}lm_opacity", 92).coerceIn(40, 100),
+            scalePercent = prefs.getInt("${p}lm_scale", 100).coerceIn(75, 140),
+            tempSource = prefs.getString("${p}lm_temp_src", "soc") ?: "soc"
         )
 
         visualFilter = prefs.getString("${p}disp_filter", "standard") ?: "standard"
@@ -477,6 +564,8 @@ class ZXSidePanelStateHolder {
         editor.putBoolean("${p}lm_battery", liveMonitor.showBattery)
         editor.putBoolean("${p}lm_profile", liveMonitor.showProfile)
         editor.putInt("${p}lm_opacity", liveMonitor.opacity)
+        editor.putInt("${p}lm_scale", liveMonitor.scalePercent)
+        editor.putString("${p}lm_temp_src", liveMonitor.tempSource)
 
         editor.putString("${p}disp_filter", visualFilter)
         editor.putInt("${p}disp_r", rgbRed)
@@ -514,13 +603,17 @@ class ZXSidePanelStateHolder {
                 continue
             }
             val mg = meta.mergeGroup
+            val span = getWidgetSpan(wId)
             if (mg != null) {
                 val groupIds = mutableListOf(wId)
                 var j = i + 1
                 while (j < activeWidgets.size) {
                     val nextId = activeWidgets[j]
                     val nextMeta = widgetCatalog[nextId]
-                    if (nextMeta != null && nextMeta.mergeGroup == mg) {
+                    if (nextMeta != null &&
+                        nextMeta.mergeGroup == mg &&
+                        getWidgetSpan(nextId) == span
+                    ) {
                         groupIds.add(nextId)
                         j++
                     } else {
@@ -564,9 +657,6 @@ class ZXSidePanelStateHolder {
         cancelWidgetDrag()
         val next = force ?: !editMode
         editMode = next
-        if (next) {
-            showToast("Edit mode enabled — drag top bar to reorder", "edit")
-        }
     }
 
     fun openSubscreen(subscreenName: String) {
@@ -652,6 +742,7 @@ class ZXSidePanelStateHolder {
         val srcIdx = draggingSourceIndex
         val dstIdx = dropTargetIndex
         val hoverLib = isHoveringLibraryDropZone
+        val finalOffset = dragPointerInWorkspace - dragGrabOffset
 
         draggingWidgetId = null
         draggingFromLibrary = false
@@ -667,16 +758,22 @@ class ZXSidePanelStateHolder {
                     val insertIdx = dstIdx.coerceIn(0, activeWidgets.size)
                     activeWidgets.add(insertIdx, wId)
                     saveWidgetLayoutPreferences()
+                    droppingWidgetId = wId
+                    droppingWidgetOffset = finalOffset
                     showToast("Placed $title", "add_circle")
                 }
             }
         } else {
             if (hoverLib) {
                 removeWidgetToLibrary(wId)
-            } else if (srcIdx in activeWidgets.indices && dstIdx in activeWidgets.indices && srcIdx != dstIdx) {
-                moveActiveWidget(srcIdx, dstIdx)
-                saveWidgetLayoutPreferences()
-                showToast("Moved $title", "drag_indicator")
+            } else if (srcIdx in activeWidgets.indices && dstIdx in activeWidgets.indices) {
+                if (srcIdx != dstIdx) {
+                    moveActiveWidget(srcIdx, dstIdx)
+                    saveWidgetLayoutPreferences()
+                    showToast("Moved $title", "drag_indicator")
+                }
+                droppingWidgetId = wId
+                droppingWidgetOffset = finalOffset
             }
         }
     }
@@ -725,6 +822,7 @@ class ZXSidePanelStateHolder {
         activeWidgets.addAll(DEFAULT_ACTIVE_WIDGETS)
         libraryWidgets.clear()
         libraryWidgets.addAll(DEFAULT_LIBRARY_WIDGETS)
+        widgetSpans.clear()
         saveWidgetLayoutPreferences()
         showToast("Restored default widget order", "restart_alt")
     }
@@ -771,22 +869,48 @@ class ZXSidePanelStateHolder {
         }
     }
 
+    private var unmutedVolumeCache = 40
+
     fun updateHorizontalBrightness(value: Int) {
-        val clamped = value.coerceIn(10, 100)
+        val clamped = value.coerceIn(5, 100)
         brightness = clamped
         onBrightnessChangedRequest?.invoke(clamped)
+    }
+
+    fun commitHorizontalBrightness(value: Int) {
+        val clamped = value.coerceIn(5, 100)
+        brightness = clamped
+        onBrightnessCommittedRequest?.invoke(clamped)
     }
 
     fun updateHorizontalVolume(value: Int) {
         val clamped = value.coerceIn(0, 100)
         volume = clamped
         muted = clamped == 0
+        if (!muted) unmutedVolumeCache = clamped
         onVolumeChangedRequest?.invoke(clamped, muted)
+    }
+
+    fun commitHorizontalVolume(value: Int) {
+        val clamped = value.coerceIn(0, 100)
+        volume = clamped
+        muted = clamped == 0
+        if (!muted) unmutedVolumeCache = clamped
+        onVolumeCommittedRequest?.invoke(clamped, muted)
     }
 
     fun toggleMuteAudio() {
         muted = !muted
-        onVolumeChangedRequest?.invoke(volume, muted)
+        if (muted) {
+            if (volume > 0) unmutedVolumeCache = volume
+            onVolumeChangedRequest?.invoke(0, true)
+            onVolumeCommittedRequest?.invoke(0, true)
+        } else {
+            val restored = if (volume > 0) volume else unmutedVolumeCache.coerceIn(10, 100)
+            volume = restored
+            onVolumeChangedRequest?.invoke(restored, false)
+            onVolumeCommittedRequest?.invoke(restored, false)
+        }
     }
 
     fun triggerQuickTool(toolId: String) {
@@ -922,6 +1046,16 @@ class ZXSidePanelStateHolder {
 
     fun updateLiveMonitorOpacity(opacityPct: Int) {
         liveMonitor = liveMonitor.copy(opacity = opacityPct.coerceIn(40, 100))
+        saveCurrentAppPreferences()
+    }
+
+    fun updateLiveMonitorScale(scalePct: Int) {
+        liveMonitor = liveMonitor.copy(scalePercent = scalePct.coerceIn(75, 140))
+        saveCurrentAppPreferences()
+    }
+
+    fun updateLiveMonitorTempSource(source: String) {
+        liveMonitor = liveMonitor.copy(tempSource = source)
         saveCurrentAppPreferences()
     }
 

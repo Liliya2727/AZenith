@@ -31,6 +31,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -55,6 +56,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -84,12 +86,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -268,7 +273,7 @@ fun M3ExpressiveSwitch(
         label = "SwitchThumbSize"
     )
     val thumbOffset by animateDpAsState(
-        targetValue = if (checked) 20.dp else 4.dp,
+        targetValue = if (checked) 20.dp else 0.dp,
         animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMediumLow),
         label = "SwitchThumbOffset"
     )
@@ -280,8 +285,7 @@ fun M3ExpressiveSwitch(
 
     Box(
         modifier = modifier
-            .width(52.dp)
-            .height(32.dp)
+            .requiredSize(width = 52.dp, height = 32.dp)
             .clip(CircleShape)
             .background(trackColor)
             .clickable(
@@ -673,16 +677,25 @@ fun FloatingMonitorPill(
 ) {
     val scheme = MaterialTheme.colorScheme
     val cfg = state.liveMonitor
-    val alphaVal = (cfg.opacity / 100f).coerceIn(0.4f, 1f)
+    val alphaVal = (cfg.opacity / 100f).coerceIn(0.2f, 1f)
+    val scaleFactor = (cfg.scalePercent / 100f).coerceIn(0.75f, 1.4f)
+
+    val currentDensity = LocalDensity.current
+    val scaledDensity = remember(currentDensity, scaleFactor) {
+        Density(
+            density = currentDensity.density * scaleFactor,
+            fontScale = currentDensity.fontScale * scaleFactor
+        )
+    }
 
     val animatedCpu by animateFloatAsState(
         targetValue = (state.cpuLoad / 100f).coerceIn(0f, 1f),
-        animationSpec = tween(durationMillis = 300),
+        animationSpec = tween(durationMillis = 120),
         label = "HudCpuBar"
     )
     val animatedGpu by animateFloatAsState(
         targetValue = (state.gpuLoad / 100f).coerceIn(0f, 1f),
-        animationSpec = tween(durationMillis = 300),
+        animationSpec = tween(durationMillis = 120),
         label = "HudGpuBar"
     )
 
@@ -697,41 +710,50 @@ fun FloatingMonitorPill(
         Modifier
     }
 
-    when (cfg.layoutStyle) {
-        "stacked" -> {
-            val metrics = buildList<Triple<String, String, Color>> {
-                if (cfg.showFps) add(Triple("FPS", "${state.currentFps}", scheme.primary))
-                if (cfg.showCpu) add(Triple("CPU", "${state.cpuLoad}%", scheme.primary))
-                if (cfg.showGpu) add(Triple("GPU", "${state.gpuLoad}%", scheme.tertiary))
-                if (cfg.showTemp) add(Triple("TEMP", "${state.tempCelsius}°C", scheme.secondary))
-                if (cfg.showPing) add(Triple("PING", "${state.pingMs}ms", scheme.primary))
-                if (cfg.showBattery) add(Triple("BAT", "${state.batteryLevel}%", scheme.onSurface))
-                if (cfg.showProfile) add(Triple("MODE", state.currentProfileDisplayName, scheme.tertiary))
-            }
+    val baseModifier = modifier
+        .then(dragMod)
 
-            Surface(
-                shape = RoundedCornerShape(22.dp),
-                color = scheme.surfaceContainerLow.copy(alpha = alphaVal),
-                shadowElevation = 16.dp,
-                modifier = modifier.then(dragMod)
-            ) {
-                Column(
-                    modifier = Modifier.padding(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+    CompositionLocalProvider(LocalDensity provides scaledDensity) {
+        when (cfg.layoutStyle) {
+            "stacked" -> {
+                val metrics = buildList<Triple<String, String, Color>> {
+                    if (cfg.showFps) add(Triple("FPS", "${state.currentFps}", scheme.primary))
+                    if (cfg.showCpu) add(Triple("CPU", "${state.cpuLoad}%", scheme.primary))
+                    if (cfg.showGpu) add(Triple("GPU", "${state.gpuLoad}%", scheme.tertiary))
+                    val tempLabel = when (cfg.tempSource) {
+                        "battery" -> "BAT"
+                        "cpu" -> "CPU"
+                        "gpu" -> "GPU"
+                        "skin" -> "SKIN"
+                        else -> "TEMP"
+                    }
+                    if (cfg.showTemp) add(Triple(tempLabel, "${state.tempCelsius}°C", scheme.secondary))
+                    if (cfg.showPing) add(Triple("PING", "${state.pingMs}ms", scheme.primary))
+                    if (cfg.showBattery) add(Triple("BAT", "${state.batteryLevel}%", scheme.onSurface))
+                    if (cfg.showProfile) add(Triple("MODE", state.currentProfileDisplayName, scheme.tertiary))
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = scheme.surfaceContainerHigh.copy(alpha = alphaVal),
+                    shadowElevation = 0.dp,
+                    tonalElevation = 0.dp,
+                    modifier = baseModifier
                 ) {
-                    metrics.chunked(2).forEach { rowMetrics ->
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            rowMetrics.forEach { (label, value, accentColor) ->
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = scheme.surfaceContainerHigh.copy(alpha = alphaVal),
-                                    modifier = Modifier.widthIn(min = 84.dp)
-                                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        metrics.chunked(2).forEach { rowMetrics ->
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                rowMetrics.forEach { (label, value, accentColor) ->
                                     Row(
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        modifier = Modifier
+                                            .widthIn(min = 68.dp)
+                                            .padding(horizontal = 4.dp, vertical = 2.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
@@ -741,7 +763,7 @@ fun FloatingMonitorPill(
                                             color = scheme.onSurfaceVariant,
                                             maxLines = 1,
                                             softWrap = false,
-                                            modifier = Modifier.padding(end = 8.dp)
+                                            modifier = Modifier.padding(end = 4.dp)
                                         )
                                         Text(
                                             text = value,
@@ -757,201 +779,259 @@ fun FloatingMonitorPill(
                     }
                 }
             }
-        }
-        "minimal" -> {
-            val segments = buildList<Pair<String, Color>> {
-                if (cfg.showFps) add("${state.currentFps} FPS" to scheme.primary)
-                if (cfg.showCpu) add("CPU ${state.cpuLoad}%" to scheme.onSurface)
-                if (cfg.showGpu) add("GPU ${state.gpuLoad}%" to scheme.tertiary)
-                if (cfg.showTemp) add("${state.tempCelsius}°C" to scheme.secondary)
-                if (cfg.showPing) add("${state.pingMs}ms" to scheme.onSurface)
-                if (cfg.showBattery) add("${state.batteryLevel}%" to scheme.onSurfaceVariant)
-                if (cfg.showProfile) add(state.currentProfileDisplayName to scheme.primary)
-            }
+            "minimal" -> {
+                val segments = buildList<Pair<String, Color>> {
+                    if (cfg.showFps) add("${state.currentFps} FPS" to scheme.primary)
+                    if (cfg.showCpu) add("${state.cpuLoad}%" to scheme.onSurface)
+                    if (cfg.showGpu) add("${state.gpuLoad}%" to scheme.tertiary)
+                    if (cfg.showTemp) add("${state.tempCelsius}°" to scheme.secondary)
+                    if (cfg.showPing) add("${state.pingMs}ms" to scheme.onSurface)
+                    if (cfg.showBattery) add("${state.batteryLevel}%" to scheme.onSurfaceVariant)
+                    if (cfg.showProfile) {
+                        val modeShort = when (state.currentProfileCode) {
+                            "1" -> if (state.isLiteMode) "Lite" else "Perf"
+                            "2" -> "Bal"
+                            "3" -> "Eco"
+                            else -> state.currentProfileDisplayName
+                        }
+                        add(modeShort to scheme.primary)
+                    }
+                }
 
-            Surface(
-                shape = CircleShape,
-                color = scheme.surfaceContainerLow.copy(alpha = alphaVal),
-                shadowElevation = 14.dp,
-                modifier = modifier.then(dragMod)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Surface(
+                    shape = CircleShape,
+                    color = scheme.surfaceContainerHigh.copy(alpha = alphaVal),
+                    shadowElevation = 0.dp,
+                    tonalElevation = 0.dp,
+                    modifier = baseModifier
                 ) {
-                    segments.forEachIndexed { idx, (text, color) ->
-                        if (idx > 0) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        segments.forEachIndexed { idx, (text, color) ->
+                            if (idx > 0) {
+                                Text(
+                                    text = "•",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = scheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
                             Text(
-                                text = "•",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = scheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                text = text,
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = color,
                                 maxLines = 1,
                                 softWrap = false
                             )
                         }
-                        Text(
-                            text = text,
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            color = color,
-                            maxLines = 1,
-                            softWrap = false
-                        )
                     }
                 }
             }
-        }
-        else -> {
-            Surface(
-                shape = CircleShape,
-                color = scheme.surfaceContainerLow.copy(alpha = alphaVal),
-                shadowElevation = 16.dp,
-                modifier = modifier.then(dragMod)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+            else -> {
+                Surface(
+                    shape = CircleShape,
+                    color = scheme.surfaceContainerHigh.copy(alpha = alphaVal),
+                    shadowElevation = 0.dp,
+                    tonalElevation = 0.dp,
+                    modifier = baseModifier
                 ) {
-                    if (cfg.showFps) {
-                        Row(
-                            verticalAlignment = Alignment.Bottom,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        if (cfg.showFps) {
                             Text(
                                 text = "${state.currentFps}",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                 color = scheme.primary,
                                 maxLines = 1,
                                 softWrap = false
                             )
-                            Text(
-                                text = "FPS",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = scheme.onSurfaceVariant,
-                                maxLines = 1,
-                                softWrap = false,
-                                modifier = Modifier.padding(bottom = 1.dp)
-                            )
                         }
-                    }
 
-                    if (cfg.showCpu) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                text = "CPU",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = scheme.onSurfaceVariant,
-                                maxLines = 1,
-                                softWrap = false
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .width(42.dp)
-                                    .height(7.dp)
-                                    .clip(CircleShape)
-                                    .background(scheme.surfaceContainerHighest)
+                        if (cfg.showCpu) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
+                                Text(
+                                    text = "C",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
                                 Box(
                                     modifier = Modifier
-                                        .fillMaxHeight()
-                                        .fillMaxWidth(animatedCpu)
+                                        .width(14.dp)
+                                        .height(4.dp)
                                         .clip(CircleShape)
-                                        .background(scheme.primary)
+                                        .background(scheme.surfaceContainerHighest)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .fillMaxWidth(animatedCpu)
+                                            .clip(CircleShape)
+                                            .background(scheme.primary)
+                                    )
+                                }
+                                Text(
+                                    text = "${state.cpuLoad}%",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                    color = scheme.onSurface,
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
-                            Text(
-                                text = "${state.cpuLoad}%",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = scheme.onSurface,
-                                textAlign = TextAlign.End,
-                                maxLines = 1,
-                                softWrap = false,
-                                modifier = Modifier.widthIn(min = 32.dp)
-                            )
                         }
-                    }
 
-                    if (cfg.showGpu) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                text = "GPU",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = scheme.onSurfaceVariant,
-                                maxLines = 1,
-                                softWrap = false
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .width(42.dp)
-                                    .height(7.dp)
-                                    .clip(CircleShape)
-                                    .background(scheme.surfaceContainerHighest)
+                        if (cfg.showGpu) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
+                                Text(
+                                    text = "G",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
                                 Box(
                                     modifier = Modifier
-                                        .fillMaxHeight()
-                                        .fillMaxWidth(animatedGpu)
+                                        .width(14.dp)
+                                        .height(4.dp)
                                         .clip(CircleShape)
-                                        .background(scheme.tertiary)
+                                        .background(scheme.surfaceContainerHighest)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .fillMaxWidth(animatedGpu)
+                                            .clip(CircleShape)
+                                            .background(scheme.tertiary)
+                                    )
+                                }
+                                Text(
+                                    text = "${state.gpuLoad}%",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                    color = scheme.onSurface,
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
-                            Text(
-                                text = "${state.gpuLoad}%",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = scheme.onSurface,
-                                textAlign = TextAlign.End,
-                                maxLines = 1,
-                                softWrap = false,
-                                modifier = Modifier.widthIn(min = 32.dp)
-                            )
                         }
-                    }
 
-                    if (cfg.showTemp) {
-                        Text(
-                            text = "${state.tempCelsius}°C",
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            color = scheme.secondary,
-                            maxLines = 1,
-                            softWrap = false
-                        )
-                    }
+                        if (cfg.showTemp) {
+                            val tempColor = when {
+                                state.tempCelsius >= 52 -> scheme.error
+                                state.tempCelsius >= 44 -> scheme.secondary
+                                else -> scheme.primary
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(1.dp)
+                            ) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get("thermostat"),
+                                    contentDescription = null,
+                                    tint = tempColor,
+                                    modifier = Modifier.size(11.dp)
+                                )
+                                Text(
+                                    text = "${state.tempCelsius}°",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = tempColor,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+                        }
 
-                    if (cfg.showPing) {
-                        Text(
-                            text = "${state.pingMs}ms",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = scheme.onSurface,
-                            maxLines = 1,
-                            softWrap = false
-                        )
-                    }
+                        if (cfg.showPing) {
+                            val pingColor = if (state.pingMs > 120) scheme.error else scheme.onSurface
+                            val netIcon = if (state.isCellularNetwork) "signal_cellular" else "wifi"
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(1.dp)
+                            ) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get(netIcon),
+                                    contentDescription = null,
+                                    tint = if (state.pingMs > 120) scheme.error else scheme.primary,
+                                    modifier = Modifier.size(11.dp)
+                                )
+                                Text(
+                                    text = "${state.pingMs}ms",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                    color = pingColor,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+                        }
 
-                    if (cfg.showBattery) {
-                        Text(
-                            text = "${state.batteryLevel}%",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = scheme.onSurfaceVariant,
-                            maxLines = 1,
-                            softWrap = false
-                        )
-                    }
+                        if (cfg.showBattery) {
+                            val batColor = if (state.batteryLevel <= 20) scheme.error else scheme.onSurfaceVariant
+                            val batIcon = if (state.isBatteryCharging) "battery_charging" else "battery_std"
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(1.dp)
+                            ) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get(batIcon),
+                                    contentDescription = null,
+                                    tint = if (state.isBatteryCharging) scheme.primary else batColor,
+                                    modifier = Modifier.size(11.dp)
+                                )
+                                Text(
+                                    text = "${state.batteryLevel}%",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                                    color = batColor,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+                        }
 
-                    if (cfg.showProfile) {
-                        Text(
-                            text = state.currentProfileDisplayName,
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            color = scheme.primary,
-                            maxLines = 1,
-                            softWrap = false
-                        )
+                        if (cfg.showProfile) {
+                            val profIcon = when (state.currentProfileCode) {
+                                "1" -> "rocket_launch"
+                                "2" -> "balance"
+                                "3" -> "eco"
+                                else -> "rocket_launch"
+                            }
+                            val profShort = when (state.currentProfileCode) {
+                                "1" -> if (state.isLiteMode) "Lite" else "Perf"
+                                "2" -> "Bal"
+                                "3" -> "Eco"
+                                else -> state.currentProfileDisplayName
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(1.dp)
+                            ) {
+                                Icon(
+                                    imageVector = ZXSidePanelIcons.get(profIcon),
+                                    contentDescription = null,
+                                    tint = scheme.tertiary,
+                                    modifier = Modifier.size(11.dp)
+                                )
+                                Text(
+                                    text = profShort,
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = scheme.tertiary,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
+                        }
                     }
                 }
             }
