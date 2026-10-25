@@ -955,10 +955,17 @@ class ZXFloatingAppManager(
         val contentW = (session.widthPx - borderPx).coerceAtLeast((72 * density).roundToInt())
         val contentH = (session.heightPx - borderPx - topBarPx).coerceAtLeast((72 * density).roundToInt())
 
-        val contentWidthDp = contentW / density
-        val contentHeightDp = contentH / density
-        val virtW = (contentWidthDp * 2f).roundToInt().coerceAtLeast(360)
-        val virtH = (contentHeightDp * 2f).roundToInt().coerceAtLeast(360)
+        val ratio = contentW.toFloat() / contentH.toFloat()
+        val base = VIRTUAL_PORTRAIT_WIDTH
+        val virtW: Int
+        val virtH: Int
+        if (ratio <= 1f) {
+            virtW = base
+            virtH = (base / ratio).roundToInt().coerceIn(base, 2560)
+        } else {
+            virtH = base
+            virtW = (base * ratio).roundToInt().coerceIn(base, 2560)
+        }
         session.virtualWidth = virtW
         session.virtualHeight = virtH
 
@@ -1230,9 +1237,25 @@ class ZXFloatingAppManager(
         }
     }
 
+    private fun closeIfAppExited(session: ZXFloatingAppSession) {
+        scope.launch(Dispatchers.IO) {
+            repeat(5) {
+                delay(350)
+                val id = session.virtualDisplayId
+                val client = rootClient
+                if (session.isClosing || id <= 0 || client == null || !client.isBinderAlive) return@launch
+                if (!client.hasTasksOnDisplay(id)) {
+                    withContext(Dispatchers.Main) { if (!session.isClosing) closeSession(session) }
+                    return@launch
+                }
+            }
+        }
+    }
+
     fun dispatchBackToSession(session: ZXFloatingAppSession) {
         val displayId = session.virtualDisplayId
         if (displayId > 0) {
+            closeIfAppExited(session)
             val client = rootClient
             if (client != null && client.isBinderAlive) {
                 client.injectBack(displayId)

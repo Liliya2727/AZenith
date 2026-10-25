@@ -3322,6 +3322,7 @@ fun AppsManagerSubscreen(
 ) {
     val scheme = MaterialTheme.colorScheme
     var showSystemApps by remember { mutableStateOf(false) }
+    var pickMode by remember { mutableStateOf(false) }
 
     val userApps = remember(state.installedApps) { state.installedApps.filter { !it.isSystemApp } }
     val displayedApps = if (showSystemApps) state.installedApps else userApps
@@ -3345,13 +3346,13 @@ fun AppsManagerSubscreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (state.editMode) "Edit Sidepanel Shortcuts" else "More Apps",
+                            text = if (pickMode) "Edit Sidepanel Shortcuts" else "More Apps",
                             style = MaterialTheme.typography.titleSmall,
                             color = scheme.onSurface,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = if (state.editMode) {
+                            text = if (pickMode) {
                                 "Tap an app to add or remove it from the sidebar"
                             } else {
                                 "Tap an app to launch it in a floating window"
@@ -3359,6 +3360,25 @@ fun AppsManagerSubscreen(
                             style = MaterialTheme.typography.labelSmall,
                             color = scheme.onSurfaceVariant
                         )
+                    }
+
+                    Surface(
+                        shape = CircleShape,
+                        color = if (pickMode) scheme.primary else scheme.surfaceContainerHighest,
+                        modifier = Modifier
+                            .padding(end = 8.dp)
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .clickable { pickMode = !pickMode }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = ZXSidePanelIcons.get(if (pickMode) "check" else "edit"),
+                                contentDescription = "Edit sidepanel apps",
+                                tint = if (pickMode) scheme.onPrimary else scheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
 
                     // Singular System Apps toggle (Material 3 container pill)
@@ -3451,7 +3471,7 @@ fun AppsManagerSubscreen(
                                     val containerColor by animateColorAsState(
                                         targetValue = when {
                                             isActiveGame -> scheme.surfaceContainerHighest.copy(alpha = 0.5f)
-                                            state.editMode && isAdded -> scheme.primaryContainer
+                                            pickMode && isAdded -> scheme.primaryContainer
                                             else -> scheme.surfaceContainerHigh
                                         },
                                         animationSpec = tween(durationMillis = 200),
@@ -3460,7 +3480,7 @@ fun AppsManagerSubscreen(
                                     val contentColor by animateColorAsState(
                                         targetValue = when {
                                             isActiveGame -> scheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                            state.editMode && isAdded -> scheme.onPrimaryContainer
+                                            pickMode && isAdded -> scheme.onPrimaryContainer
                                             else -> scheme.onSurface
                                         },
                                         animationSpec = tween(durationMillis = 200),
@@ -3479,7 +3499,7 @@ fun AppsManagerSubscreen(
                                             .clickable {
                                                 if (isActiveGame) {
                                                     state.showToast("Cannot open current game in floating window", "block")
-                                                } else if (state.editMode) {
+                                                } else if (pickMode) {
                                                     state.toggleQuickApp(app.packageName)
                                                 } else {
                                                     state.launchQuickApp(app.packageName)
@@ -3534,7 +3554,7 @@ fun AppsManagerSubscreen(
                                             }
 
                                             // Top-Right Badge: Only shown in edit mode
-                                            if (state.editMode && !isActiveGame) {
+                                            if (pickMode && !isActiveGame) {
                                                 Box(
                                                     modifier = Modifier
                                                         .align(Alignment.TopEnd)

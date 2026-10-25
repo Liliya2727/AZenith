@@ -217,6 +217,15 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         const val PROP_FORCE_SIDEPANEL = "persist.sys.azenith.force_sidepanel"
         const val PROP_FORCE_SIDEPANEL_DEBUG = "debug.azenith.force_sidepanel"
 
+        val appsOpenedFromAzenith: MutableSet<String> = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+
+        fun registerAppOpenedFromAzenith(packageName: String) {
+            val trimmed = packageName.trim()
+            if (trimmed.isNotEmpty() && trimmed != "zx.azenith") {
+                appsOpenedFromAzenith.add(trimmed)
+            }
+        }
+
         fun isForceSidepanelEnabled(): Boolean {
             val p1 = PropertyUtils.get(PROP_FORCE_SIDEPANEL, "0").trim()
             if (p1 == "1" || p1.equals("true", ignoreCase = true)) return true
@@ -230,6 +239,9 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
         fun show(context: Context, packageName: String? = null, appLabel: String? = null) {
             try {
+                if (!packageName.isNullOrBlank()) {
+                    registerAppOpenedFromAzenith(packageName)
+                }
                 val intent = Intent(context, ZXSidePanelService::class.java).apply {
                     action = ACTION_SHOW
                     packageName?.let { putExtra(EXTRA_PACKAGE_NAME, it) }
@@ -448,6 +460,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 barLengthPref = prefs.getInt("gamespace_sidepanel_length", 50).coerceIn(20, 100)
 
                 if (pkg != null) {
+                    registerAppOpenedFromAzenith(pkg)
                     val now = System.currentTimeMillis()
                     pendingLaunchPkg = pkg
                     pendingLaunchGraceUntilMs = now + 6_000L
@@ -467,6 +480,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         it.name.equals(label, ignoreCase = true)
                     }?.packageName
                     if (matchedPkg != null) {
+                        registerAppOpenedFromAzenith(matchedPkg)
                         pendingLaunchPkg = matchedPkg
                         lastUsageForegroundPkg = matchedPkg
                         lastUsageEventTs = now
@@ -488,7 +502,8 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     val rootGranted = checkRootGranted()
                     val isConfigured = !currentFg.isNullOrBlank() &&
                         currentFg != packageName &&
-                        (isConfiguredAzGame(currentFg, rootGranted) || (forceSidepanel && !isLauncherPackage(currentFg)))
+                        !isLauncherPackage(currentFg) &&
+                        (isConfiguredAzGame(currentFg, rootGranted) || appsOpenedFromAzenith.contains(currentFg) || (forceSidepanel && !isLauncherPackage(currentFg)))
 
                     if (isConfigured && currentFg != null) {
                         activeGamePackage = currentFg
@@ -500,6 +515,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         startFpsChoreographer()
                     } else {
                         isHandleVisible = false
+                        detachOverlay()
                     }
                 }
             }
@@ -1402,9 +1418,9 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         val forceSidepanel = isForceSidepanelEnabled()
                         val isConfiguredGame = focusedPkg != packageName &&
                             !isHomeLauncher &&
-                            (isConfiguredAzGame(focusedPkg, rootGranted) || (inLaunchGrace && focusedPkg == pendingLaunchPkg))
+                            (isConfiguredAzGame(focusedPkg, rootGranted) || appsOpenedFromAzenith.contains(focusedPkg) || (inLaunchGrace && focusedPkg == pendingLaunchPkg))
 
-                        val shouldShowForForeground = isConfiguredGame || (forceSidepanel && focusedPkg != packageName)
+                        val shouldShowForForeground = isConfiguredGame || (forceSidepanel && !isHomeLauncher && focusedPkg != packageName)
 
                         if (screenAwake && (isHostedFloatingApp || hasFloatingWindows)) {
                             withContext(Dispatchers.Main) {
@@ -1479,6 +1495,10 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private fun isConfiguredAzGame(pkg: String, rootGranted: Boolean): Boolean {
         if (pkg.isBlank() || pkg == packageName) return false
 
+        if (appsOpenedFromAzenith.contains(pkg)) {
+            return true
+        }
+
         val inMemoryApps = ApplistViewmodel.apps
         if (inMemoryApps.any { it.packageName == pkg && it.isEnabledInConfig }) {
             return true
@@ -1503,7 +1523,13 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             } catch (_: Exception) {
             }
         }
-        return cachedApplistPackages.contains(pkg)
+        if (cachedApplistPackages.contains(pkg)) {
+            return true
+        }
+
+        return prefs.contains("gs_app_${pkg}_lm_enabled") ||
+            prefs.contains("gs_app_${pkg}_ch_enabled") ||
+            prefs.contains("gs_app_${pkg}_disp_filter")
     }
 
     private fun resolveAppLabel(pkg: String): String {

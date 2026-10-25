@@ -490,6 +490,8 @@ fun AppSettingsScreen(
                         packageName?.let { pkg ->
                             val intent = context.packageManager.getLaunchIntentForPackage(pkg)
                             if (intent != null) {
+                                zx.azenith.ui.gamespace.ZXSidePanelService.registerAppOpenedFromAzenith(pkg)
+                                zx.azenith.ui.gamespace.ZXSidePanelService.show(context, pkg)
                                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                 context.startActivity(intent)
                             } else {

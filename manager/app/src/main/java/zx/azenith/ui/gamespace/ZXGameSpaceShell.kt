@@ -186,6 +186,8 @@ fun ZXGameSpaceShell(
  * stays where it is rather than tearing itself down behind the game.
  */
 internal fun launchGame(context: android.content.Context, packageName: String) {
+    zx.azenith.ui.gamespace.ZXSidePanelService.registerAppOpenedFromAzenith(packageName)
+    zx.azenith.ui.gamespace.ZXSidePanelService.show(context, packageName)
     val intent = context.packageManager.getLaunchIntentForPackage(packageName) ?: return
     intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
     runCatching { context.startActivity(intent) }
