@@ -782,11 +782,18 @@ fun FloatingMonitorPill(
             "minimal" -> {
                 val segments = buildList<Pair<String, Color>> {
                     if (cfg.showFps) add("${state.currentFps} FPS" to scheme.primary)
-                    if (cfg.showCpu) add("${state.cpuLoad}%" to scheme.onSurface)
-                    if (cfg.showGpu) add("${state.gpuLoad}%" to scheme.tertiary)
-                    if (cfg.showTemp) add("${state.tempCelsius}°" to scheme.secondary)
+                    if (cfg.showCpu) add("CPU ${state.cpuLoad}%" to scheme.onSurface)
+                    if (cfg.showGpu) add("GPU ${state.gpuLoad}%" to scheme.tertiary)
+                    val tempLabel = when (cfg.tempSource) {
+                        "battery" -> "Bat "
+                        "cpu" -> "CPU "
+                        "gpu" -> "GPU "
+                        "skin" -> "Skin "
+                        else -> ""
+                    }
+                    if (cfg.showTemp) add("$tempLabel${state.tempCelsius}°C" to scheme.secondary)
                     if (cfg.showPing) add("${state.pingMs}ms" to scheme.onSurface)
-                    if (cfg.showBattery) add("${state.batteryLevel}%" to scheme.onSurfaceVariant)
+                    if (cfg.showBattery) add("BAT ${state.batteryLevel}%" to scheme.onSurfaceVariant)
                     if (cfg.showProfile) {
                         val modeShort = when (state.currentProfileCode) {
                             "1" -> if (state.isLiteMode) "Lite" else "Perf"

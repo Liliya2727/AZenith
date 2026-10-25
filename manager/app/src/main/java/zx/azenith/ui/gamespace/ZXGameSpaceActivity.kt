@@ -81,6 +81,10 @@ class ZXGameSpaceActivity : ComponentActivity() {
             hide(WindowInsetsCompat.Type.systemBars())
         }
 
+        if (ZXSidePanelService.isForceSidepanelEnabled() && !ZXSidePanelService.isServiceActive) {
+            ZXSidePanelService.show(this)
+        }
+
         setContent {
             // Material You straight through: the shell reads the same dynamic palette as the
             // manager, in whichever mode the system is in, so there is no branded dark room.

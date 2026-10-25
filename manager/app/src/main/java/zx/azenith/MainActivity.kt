@@ -150,6 +150,12 @@ class MainActivity : ComponentActivity() {
             launchGameSpaceDirectly(this)
         }
 
+        if (zx.azenith.ui.gamespace.ZXSidePanelService.isForceSidepanelEnabled() &&
+            !zx.azenith.ui.gamespace.ZXSidePanelService.isServiceActive
+        ) {
+            zx.azenith.ui.gamespace.ZXSidePanelService.show(this)
+        }
+
         setContent {
             AZenithTheme {
                 val context = LocalContext.current

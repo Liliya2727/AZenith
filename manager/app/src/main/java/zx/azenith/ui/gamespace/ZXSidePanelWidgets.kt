@@ -19,6 +19,7 @@
 package zx.azenith.ui.gamespace
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -109,21 +110,22 @@ fun SidePanelWidgetContent(
     widgetId: String,
     state: ZXSidePanelStateHolder,
     isMerged: Boolean = false,
-    span: Int = state.getWidgetSpan(widgetId)
+    span: Int = state.getWidgetSpan(widgetId),
+    overrideTier: Int? = null
 ) {
     when (widgetId) {
-        "fpsHeader" -> FpsMeterWidget(state, isMerged, span)
-        "speedometers" -> SpeedometersWidget(state, isMerged, span)
-        "profileSwitch" -> ProfileSegmentedWidget(state, isMerged, span)
-        "brightnessSlider" -> BrightnessSliderWidget(state, isMerged, span)
-        "volumeSlider" -> VolumeSliderWidget(state, isMerged, span)
-        "quickTools" -> QuickToolsWidget(state, span)
-        "antiInterference" -> AntiInterferenceWidget(state, span)
-        "liveMonitor" -> LiveMonitorWidget(state, span)
-        "crosshair" -> CrosshairWidget(state, span)
-        "displayTouch" -> DisplayTouchWidget(state, span)
-        "networkPing" -> NetworkPingWidget(state, span)
-        "thermalBattery" -> ThermalBatteryWidget(state, span)
+        "fpsHeader" -> FpsMeterWidget(state, isMerged, span, overrideTier)
+        "speedometers" -> SpeedometersWidget(state, isMerged, span, overrideTier)
+        "profileSwitch" -> ProfileSegmentedWidget(state, isMerged, span, overrideTier)
+        "brightnessSlider" -> BrightnessSliderWidget(state, isMerged, span, overrideTier)
+        "volumeSlider" -> VolumeSliderWidget(state, isMerged, span, overrideTier)
+        "quickTools" -> QuickToolsWidget(state, span, overrideTier)
+        "antiInterference" -> AntiInterferenceWidget(state, span, overrideTier)
+        "liveMonitor" -> LiveMonitorWidget(state, span, overrideTier)
+        "crosshair" -> CrosshairWidget(state, span, overrideTier)
+        "displayTouch" -> DisplayTouchWidget(state, span, overrideTier)
+        "networkPing" -> NetworkPingWidget(state, span, overrideTier)
+        "thermalBattery" -> ThermalBatteryWidget(state, span, overrideTier)
     }
 }
 
@@ -142,19 +144,14 @@ fun EditModeWidgetCard(
     var cardBounds by remember { mutableStateOf(Rect.Zero) }
     var removeBtnBounds by remember { mutableStateOf(Rect.Zero) }
     var resizeGripBounds by remember { mutableStateOf(Rect.Zero) }
-    var previewExtraHeightPx by remember { mutableFloatStateOf(0f) }
-    val animatedExtraHeightDp by animateDpAsState(
-        targetValue = (previewExtraHeightPx / LocalDensity.current.density).dp,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-        label = "ResizePreviewH"
-    )
+    var previewTier by remember { mutableStateOf<Int?>(null) }
 
     val isBeingDragged = state.draggingWidgetId == widgetId && !state.draggingFromLibrary
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(bottom = animatedExtraHeightDp)
+            .animateContentSize(spring(stiffness = Spring.StiffnessMediumLow))
             .onGloballyPositioned { coords ->
                 cardBounds = coords.boundsInRoot()
                 onReportBounds(cardBounds, removeBtnBounds, resizeGripBounds)
@@ -165,7 +162,7 @@ fun EditModeWidgetCard(
                 scaleY = if (isBeingDragged) 0.96f else 1f
             }
     ) {
-        // Disabled Inner Widget Preview (entire surface is draggable directly)
+        // Inner Widget with live resizing preview
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -175,7 +172,8 @@ fun EditModeWidgetCard(
                 widgetId = widgetId,
                 state = state,
                 isMerged = false,
-                span = span
+                span = span,
+                overrideTier = previewTier
             )
         }
 
@@ -234,7 +232,7 @@ fun EditModeWidgetCard(
                             val event = awaitPointerEvent()
                             val change = event.changes.firstOrNull { it.id == down.id } ?: break
                             if (!change.pressed) {
-                                previewExtraHeightPx = 0f
+                                previewTier = null
                                 if (dragged) {
                                     if (pendingTier != initialTier) {
                                         state.setWidgetHeightTier(widgetId, pendingTier)
@@ -252,11 +250,11 @@ fun EditModeWidgetCard(
                             if (abs(totalDy) > viewConfiguration.touchSlop) {
                                 dragged = true
                                 change.consume()
-                                previewExtraHeightPx = totalDy.coerceAtLeast(0f)
                                 val stepV = (totalDy / vStepThreshold).toInt()
                                 val nextTier = (initialTier + stepV).coerceIn(1, 3)
                                 if (nextTier != pendingTier) {
                                     pendingTier = nextTier
+                                    previewTier = nextTier
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 }
                             }
@@ -581,7 +579,8 @@ fun DraggedWidgetMockupOverlay(
 private fun FpsMeterWidget(
     state: ZXSidePanelStateHolder,
     isMerged: Boolean,
-    span: Int = 3
+    span: Int = 3,
+    overrideTier: Int? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     if (span == 1) {
@@ -615,7 +614,7 @@ private fun FpsMeterWidget(
         return
     }
 
-    val heightTier = state.getWidgetHeightTier("fpsHeader")
+    val heightTier = overrideTier ?: state.getWidgetHeightTier("fpsHeader")
     val inner: @Composable () -> Unit = {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -744,7 +743,8 @@ private fun FpsMeterWidget(
 private fun SpeedometersWidget(
     state: ZXSidePanelStateHolder,
     isMerged: Boolean,
-    span: Int = 3
+    span: Int = 3,
+    overrideTier: Int? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     if (span == 1) {
@@ -777,7 +777,7 @@ private fun SpeedometersWidget(
         return
     }
 
-    val heightTier = state.getWidgetHeightTier("speedometers")
+    val heightTier = overrideTier ?: state.getWidgetHeightTier("speedometers")
     val inner: @Composable () -> Unit = {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -1000,7 +1000,8 @@ private fun SpeedometersWidget(
 private fun ProfileSegmentedWidget(
     state: ZXSidePanelStateHolder,
     isMerged: Boolean,
-    span: Int = 3
+    span: Int = 3,
+    overrideTier: Int? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     if (span == 1) {
@@ -1199,7 +1200,8 @@ private fun ProfileSegmentedWidget(
 private fun BrightnessSliderWidget(
     state: ZXSidePanelStateHolder,
     isMerged: Boolean,
-    span: Int = 3
+    span: Int = 3,
+    overrideTier: Int? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     var isDragging by remember { mutableStateOf(false) }
@@ -1338,7 +1340,8 @@ private fun BrightnessSliderWidget(
 private fun VolumeSliderWidget(
     state: ZXSidePanelStateHolder,
     isMerged: Boolean,
-    span: Int = 3
+    span: Int = 3,
+    overrideTier: Int? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     var isDragging by remember { mutableStateOf(false) }
@@ -1479,7 +1482,8 @@ private fun VolumeSliderWidget(
 @Composable
 private fun QuickToolsWidget(
     state: ZXSidePanelStateHolder,
-    span: Int = 3
+    span: Int = 3,
+    overrideTier: Int? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     if (span == 1) {
@@ -1632,7 +1636,8 @@ private fun QuickToolsWidget(
 @Composable
 private fun AntiInterferenceWidget(
     state: ZXSidePanelStateHolder,
-    span: Int = 3
+    span: Int = 3,
+    overrideTier: Int? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     if (span == 1) {
@@ -1767,7 +1772,8 @@ private fun AntiInterferenceWidget(
 @Composable
 private fun LiveMonitorWidget(
     state: ZXSidePanelStateHolder,
-    span: Int = 3
+    span: Int = 3,
+    overrideTier: Int? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     if (span == 1) {
@@ -1937,7 +1943,8 @@ private fun LiveMonitorWidget(
 @Composable
 private fun CrosshairWidget(
     state: ZXSidePanelStateHolder,
-    span: Int = 3
+    span: Int = 3,
+    overrideTier: Int? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     if (span == 1) {
@@ -2106,7 +2113,8 @@ private fun CrosshairWidget(
 @Composable
 private fun DisplayTouchWidget(
     state: ZXSidePanelStateHolder,
-    span: Int = 3
+    span: Int = 3,
+    overrideTier: Int? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     if (span == 1) {
@@ -2278,7 +2286,8 @@ private fun DisplayTouchWidget(
 @Composable
 private fun NetworkPingWidget(
     state: ZXSidePanelStateHolder,
-    span: Int = 3
+    span: Int = 3,
+    overrideTier: Int? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     if (span == 1) {
@@ -2357,7 +2366,8 @@ private fun NetworkPingWidget(
 @Composable
 private fun ThermalBatteryWidget(
     state: ZXSidePanelStateHolder,
-    span: Int = 3
+    span: Int = 3,
+    overrideTier: Int? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     val isActive = state.isBypassChargingActive

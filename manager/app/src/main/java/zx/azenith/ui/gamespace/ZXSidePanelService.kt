@@ -138,6 +138,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -167,6 +169,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 import zx.azenith.ui.theme.AZenithTheme
 import zx.azenith.ui.util.PropertyUtils
@@ -209,6 +212,16 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         private const val LITE_PROP = "persist.sys.azenithconf.litemode"
         private const val BYPASS_PROP = "persist.sys.azenithconf.bypasschg"
         private const val PREF_QUICK_APPS = "gamespace_sidepanel_quick_apps"
+
+        const val PROP_FORCE_SIDEPANEL = "persist.sys.azenith.force_sidepanel"
+        const val PROP_FORCE_SIDEPANEL_DEBUG = "debug.azenith.force_sidepanel"
+
+        fun isForceSidepanelEnabled(): Boolean {
+            val p1 = PropertyUtils.get(PROP_FORCE_SIDEPANEL, "0").trim()
+            if (p1 == "1" || p1.equals("true", ignoreCase = true)) return true
+            val p2 = PropertyUtils.get(PROP_FORCE_SIDEPANEL_DEBUG, "0").trim()
+            return p2 == "1" || p2.equals("true", ignoreCase = true)
+        }
 
         @Volatile
         var isServiceActive = false
@@ -469,16 +482,24 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     isHandleVisible = true
                     startFpsChoreographer()
                 } else {
-                    val currentFg = lastUsageForegroundPkg
-                    if (!currentFg.isNullOrBlank() && !isLauncherPackage(currentFg)) {
+                    val forceSidepanel = isForceSidepanelEnabled()
+                    val currentFg = lastUsageForegroundPkg ?: queryForegroundPackageFromUsageStats(System.currentTimeMillis())
+                    val rootGranted = checkRootGranted()
+                    val isConfigured = !currentFg.isNullOrBlank() &&
+                        currentFg != packageName &&
+                        (isConfiguredAzGame(currentFg, rootGranted) || (forceSidepanel && !isLauncherPackage(currentFg)))
+
+                    if (isConfigured && currentFg != null) {
                         activeGamePackage = currentFg
                         panelState.activeGamePackage = currentFg
                         activeGameLabel = resolveAppLabel(currentFg)
                         panelState.loadForApp(currentFg)
+                        attachOverlayIfNeeded()
+                        isHandleVisible = true
+                        startFpsChoreographer()
+                    } else {
+                        isHandleVisible = false
                     }
-                    attachOverlayIfNeeded()
-                    isHandleVisible = true
-                    startFpsChoreographer()
                 }
             }
             ACTION_HIDE -> {
@@ -713,6 +734,9 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         onCollapseRequest = { collapsePanel() },
                         onHudVisibilityChanged = { visible ->
                             hudView?.visibility = if (visible) View.VISIBLE else View.GONE
+                            if (visible) {
+                                hudView?.post { hudView?.requestLayout() }
+                            }
                         },
                         onCrosshairVisibilityChanged = { visible ->
                             crosshairView?.visibility = if (visible) View.VISIBLE else View.GONE
@@ -876,13 +900,18 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
         // Single draggable Floating System Monitor window (persists whether sidepanel is open or collapsed)
         val dmMetrics = resources.displayMetrics
-        val initHudX = if (panelState.hudOffsetX > 0f) {
-            panelState.hudOffsetX.roundToInt().coerceIn(0, (dmMetrics.widthPixels - (100 * dmMetrics.density).roundToInt()).coerceAtLeast(0))
+        val initBounds: android.graphics.Rect = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            wm.currentWindowMetrics.bounds
         } else {
-            ((dmMetrics.widthPixels - (220 * dmMetrics.density)) / 2).roundToInt().coerceAtLeast(16)
+            android.graphics.Rect(0, 0, dmMetrics.widthPixels, dmMetrics.heightPixels)
+        }
+        val initHudX = if (panelState.hudOffsetX > 0f) {
+            panelState.hudOffsetX.roundToInt().coerceIn(0, (initBounds.width() - (100 * dmMetrics.density).roundToInt()).coerceAtLeast(0))
+        } else {
+            ((initBounds.width() - (220 * dmMetrics.density)) / 2).roundToInt().coerceAtLeast(16)
         }
         val initHudY = if (panelState.hudOffsetY > 0f) {
-            panelState.hudOffsetY.roundToInt().coerceIn(0, (dmMetrics.heightPixels - (40 * dmMetrics.density).roundToInt()).coerceAtLeast(0))
+            panelState.hudOffsetY.roundToInt().coerceIn(0, (initBounds.height() - (40 * dmMetrics.density).roundToInt()).coerceAtLeast(0))
         } else {
             (16 * dmMetrics.density).roundToInt()
         }
@@ -893,6 +922,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                 WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
             PixelFormat.TRANSLUCENT
         ).apply {
@@ -924,12 +954,67 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 }
             }
 
+            private fun getScreenBounds(): android.graphics.Rect {
+                return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    wm.currentWindowMetrics.bounds
+                } else {
+                    val dm = resources.displayMetrics
+                    android.graphics.Rect(0, 0, dm.widthPixels, dm.heightPixels)
+                }
+            }
+
+            override fun onAttachedToWindow() {
+                super.onAttachedToWindow()
+                post {
+                    if (isAttachedToWindow && width > 0 && height > 0) {
+                        val bounds = getScreenBounds()
+                        val maxX = (bounds.width() - width).coerceAtLeast(0)
+                        val maxY = (bounds.height() - height).coerceAtLeast(0)
+                        val clampedX = hudParams.x.coerceIn(0, maxX)
+                        val clampedY = hudParams.y.coerceIn(0, maxY)
+                        if (clampedX != hudParams.x || clampedY != hudParams.y) {
+                            hudParams.x = clampedX
+                            hudParams.y = clampedY
+                            panelState.hudOffsetX = clampedX.toFloat()
+                            panelState.hudOffsetY = clampedY.toFloat()
+                            runCatching { wm.updateViewLayout(this, hudParams) }
+                        }
+                    }
+                }
+            }
+
+            override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+                val bounds = getScreenBounds()
+                val unconstrainedWidthSpec = MeasureSpec.makeMeasureSpec(bounds.width(), MeasureSpec.AT_MOST)
+                val unconstrainedHeightSpec = MeasureSpec.makeMeasureSpec(bounds.height(), MeasureSpec.AT_MOST)
+                super.onMeasure(unconstrainedWidthSpec, unconstrainedHeightSpec)
+                val w = measuredWidth
+                val h = measuredHeight
+                if (w > 0 && h > 0 && isAttachedToWindow) {
+                    val maxX = (bounds.width() - w).coerceAtLeast(0)
+                    val maxY = (bounds.height() - h).coerceAtLeast(0)
+                    val clampedX = hudParams.x.coerceIn(0, maxX)
+                    val clampedY = hudParams.y.coerceIn(0, maxY)
+                    if (clampedX != hudParams.x || clampedY != hudParams.y) {
+                        hudParams.x = clampedX
+                        hudParams.y = clampedY
+                        panelState.hudOffsetX = clampedX.toFloat()
+                        panelState.hudOffsetY = clampedY.toFloat()
+                        post {
+                            if (isAttachedToWindow) {
+                                runCatching { wm.updateViewLayout(this, hudParams) }
+                            }
+                        }
+                    }
+                }
+            }
+
             override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
                 super.onSizeChanged(w, h, oldw, oldh)
                 if (w > 0 && h > 0 && isAttachedToWindow) {
-                    val dm = resources.displayMetrics
-                    val maxX = (dm.widthPixels - w).coerceAtLeast(0)
-                    val maxY = (dm.heightPixels - h).coerceAtLeast(0)
+                    val bounds = getScreenBounds()
+                    val maxX = (bounds.width() - w).coerceAtLeast(0)
+                    val maxY = (bounds.height() - h).coerceAtLeast(0)
                     val clampedX = hudParams.x.coerceIn(0, maxX)
                     val clampedY = hudParams.y.coerceIn(0, maxY)
                     if (clampedX != hudParams.x || clampedY != hudParams.y) {
@@ -952,9 +1037,9 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         return true
                     }
                     MotionEvent.ACTION_MOVE -> {
-                        val dm = resources.displayMetrics
-                        val maxX = (dm.widthPixels - width).coerceAtLeast(0)
-                        val maxY = (dm.heightPixels - height).coerceAtLeast(0)
+                        val bounds = getScreenBounds()
+                        val maxX = (bounds.width() - width).coerceAtLeast(0)
+                        val maxY = (bounds.height() - height).coerceAtLeast(0)
                         val rawTargetX = (origX + (ev.rawX - startRawX)).roundToInt()
                         val rawTargetY = (origY + (ev.rawY - startRawY)).roundToInt()
                         val clampedX = rawTargetX.coerceIn(0, maxX)
@@ -1209,13 +1294,16 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     }
 
                     if (!focusedPkg.isNullOrBlank()) {
-                        val isHostedFloatingApp = floatingAppManager?.isPackageHosted(focusedPkg) == true
                         val hasFloatingWindows = floatingAppManager?.sessions?.isNotEmpty() == true
-                        val isConfiguredGame = focusedPkg != packageName &&
-                            !isLauncherPackage(focusedPkg) &&
-                            (isConfiguredAzGame(focusedPkg, rootGranted) || focusedPkg == pendingLaunchPkg)
-
+                        val isHostedFloatingApp = floatingAppManager?.isPackageHosted(focusedPkg) == true ||
+                            floatingAppManager?.sessions?.any { it.packageName == focusedPkg } == true
                         val isHomeLauncher = isLauncherPackage(focusedPkg)
+                        val forceSidepanel = isForceSidepanelEnabled()
+                        val isConfiguredGame = focusedPkg != packageName &&
+                            !isHomeLauncher &&
+                            (isConfiguredAzGame(focusedPkg, rootGranted) || (inLaunchGrace && focusedPkg == pendingLaunchPkg))
+
+                        val shouldShowForForeground = isConfiguredGame || (forceSidepanel && focusedPkg != packageName)
 
                         if (screenAwake && (isHostedFloatingApp || hasFloatingWindows)) {
                             withContext(Dispatchers.Main) {
@@ -1223,7 +1311,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                                 isHandleVisible = true
                                 startFpsChoreographer()
                             }
-                        } else if (screenAwake && isConfiguredGame) {
+                        } else if (screenAwake && shouldShowForForeground) {
                             val switchedGame = activeGamePackage != focusedPkg
                             val label = if (switchedGame || activeGameLabel == null) resolveAppLabel(focusedPkg) else activeGameLabel
                             withContext(Dispatchers.Main) {
@@ -1238,19 +1326,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                                 isHandleVisible = true
                                 startFpsChoreographer()
                             }
-                        } else if (screenAwake && !isHomeLauncher) {
-                            withContext(Dispatchers.Main) {
-                                if (activeGamePackage == null && !focusedPkg.isNullOrBlank()) {
-                                    activeGamePackage = focusedPkg
-                                    panelState.activeGamePackage = focusedPkg
-                                    activeGameLabel = resolveAppLabel(focusedPkg)
-                                    panelState.loadForApp(focusedPkg)
-                                }
-                                attachOverlayIfNeeded()
-                                isHandleVisible = true
-                                startFpsChoreographer()
-                            }
-                        } else if (isHomeLauncher || !screenAwake) {
+                        } else {
                             pendingLaunchPkg = null
                             pendingLaunchGraceUntilMs = 0L
                             activeGamePackage = null
@@ -1309,6 +1385,7 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
         val now = System.currentTimeMillis()
         if (now - cachedApplistTimestampMs > 1_500L) {
+            cachedApplistTimestampMs = now
             try {
                 val raw = telemetryCollector.readFileTextDirectOrSu(APPLIST_PATH, rootGranted)
                 if (!raw.isNullOrBlank()) {
@@ -1319,7 +1396,8 @@ class ZXSidePanelService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         parsed.add(keys.next())
                     }
                     cachedApplistPackages = parsed
-                    cachedApplistTimestampMs = now
+                } else {
+                    cachedApplistPackages = emptySet()
                 }
             } catch (_: Exception) {
             }
@@ -2324,6 +2402,7 @@ private fun SidepanelWorkspaceRow(
     isCompactPortrait: Boolean
 ) {
     val density = LocalDensity.current
+    val haptic = LocalHapticFeedback.current
     val feedListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val feedBlocks by remember {
@@ -2516,56 +2595,81 @@ private fun SidepanelWorkspaceRow(
 
                     val pointerId = down.id
                     val slopPx = viewConfiguration.touchSlop
-                    var dragStarted = false
+                    val holdDurationMs = 1000L
+                    val startTime = System.currentTimeMillis()
+                    var cancelled = false
 
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                    // Hold phase: require finger to stay still on the widget for 1.0 second before picking up
+                    while (!cancelled && (System.currentTimeMillis() - startTime) < holdDurationMs) {
+                        val remaining = holdDurationMs - (System.currentTimeMillis() - startTime)
+                        if (remaining <= 0) break
+
+                        val event = withTimeoutOrNull(remaining) {
+                            awaitPointerEvent(PointerEventPass.Initial)
+                        } ?: break
+
                         val change = event.changes.firstOrNull { it.id == pointerId } ?: event.changes.firstOrNull()
                         if (change == null || !change.pressed) {
-                            if (dragStarted) {
-                                state.commitWidgetDrag()
-                            }
+                            cancelled = true
                             break
                         }
 
                         val currentInRoot = workspaceRootOrigin + change.position
-                        if (!dragStarted) {
-                            val dist = (currentInRoot - downInRoot).getDistance()
-                            if (dist >= slopPx) {
-                                dragStarted = true
-                                change.consume()
-                                if (hitActiveId != null) {
-                                    val cardRect = editCardBoundsMap[hitActiveId] ?: Rect(downInRoot, 0f)
-                                    val srcIdx = state.activeWidgets.indexOf(hitActiveId).coerceAtLeast(0)
-                                    val grabOffset = (downInRoot - cardRect.topLeft).let {
-                                        Offset(it.x.coerceIn(10f, (cardRect.width - 10f).coerceAtLeast(10f)), it.y.coerceIn(10f, (cardRect.height - 10f).coerceAtLeast(10f)))
-                                    }
-                                    state.startWidgetDrag(
-                                        widgetId = hitActiveId,
-                                        fromLibrary = false,
-                                        sourceIndex = srcIdx,
-                                        initialPointerInWorkspace = currentInRoot - workspaceRootOrigin,
-                                        grabOffset = grabOffset
-                                    )
-                                } else if (hitLibraryId != null) {
-                                    val cardRect = libraryCardBoundsMap[hitLibraryId] ?: Rect(downInRoot, 0f)
-                                    val grabOffset = (downInRoot - cardRect.topLeft).let {
-                                        Offset(it.x.coerceIn(20f, 220f), it.y.coerceIn(12f, 44f))
-                                    }
-                                    state.startWidgetDrag(
-                                        widgetId = hitLibraryId,
-                                        fromLibrary = true,
-                                        sourceIndex = -1,
-                                        initialPointerInWorkspace = currentInRoot - workspaceRootOrigin,
-                                        grabOffset = grabOffset
-                                    )
-                                }
-                                updateDragFromRootPointer(currentInRoot)
-                            }
-                        } else {
-                            change.consume()
-                            updateDragFromRootPointer(currentInRoot)
+                        val dist = (currentInRoot - downInRoot).getDistance()
+                        if (dist >= slopPx) {
+                            // User moved finger before 1s -> scrolling gesture, cancel hold so LazyColumn can scroll smoothly
+                            cancelled = true
+                            break
                         }
+                    }
+
+                    if (cancelled) {
+                        return@awaitEachGesture
+                    }
+
+                    // 1 second elapsed holding the widget: trigger haptic and pick it up!
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+
+                    if (hitActiveId != null) {
+                        val cardRect = editCardBoundsMap[hitActiveId] ?: Rect(downInRoot, 0f)
+                        val srcIdx = state.activeWidgets.indexOf(hitActiveId).coerceAtLeast(0)
+                        val grabOffset = (downInRoot - cardRect.topLeft).let {
+                            Offset(it.x.coerceIn(10f, (cardRect.width - 10f).coerceAtLeast(10f)), it.y.coerceIn(10f, (cardRect.height - 10f).coerceAtLeast(10f)))
+                        }
+                        state.startWidgetDrag(
+                            widgetId = hitActiveId,
+                            fromLibrary = false,
+                            sourceIndex = srcIdx,
+                            initialPointerInWorkspace = downInRoot - workspaceRootOrigin,
+                            grabOffset = grabOffset
+                        )
+                    } else if (hitLibraryId != null) {
+                        val cardRect = libraryCardBoundsMap[hitLibraryId] ?: Rect(downInRoot, 0f)
+                        val grabOffset = (downInRoot - cardRect.topLeft).let {
+                            Offset(it.x.coerceIn(20f, 220f), it.y.coerceIn(12f, 44f))
+                        }
+                        state.startWidgetDrag(
+                            widgetId = hitLibraryId,
+                            fromLibrary = true,
+                            sourceIndex = -1,
+                            initialPointerInWorkspace = downInRoot - workspaceRootOrigin,
+                            grabOffset = grabOffset
+                        )
+                    }
+                    updateDragFromRootPointer(downInRoot)
+
+                    // Drag phase: consume all events and update position until released
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val change = event.changes.firstOrNull { it.id == pointerId } ?: event.changes.firstOrNull()
+                        if (change == null || !change.pressed) {
+                            state.commitWidgetDrag()
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            break
+                        }
+                        change.consume()
+                        val currentInRoot = workspaceRootOrigin + change.position
+                        updateDragFromRootPointer(currentInRoot)
                     }
                 }
             }

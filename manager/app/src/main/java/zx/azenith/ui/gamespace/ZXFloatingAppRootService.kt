@@ -163,7 +163,11 @@ class ZXFloatingAppRootService : RootService() {
                         data.enforceInterface(DESCRIPTOR)
                         val displayId = data.readInt()
                         val event = MotionEvent.CREATOR.createFromParcel(data)
-                        injectMotionOnDisplay(displayId, event)
+                        try {
+                            injectMotionOnDisplay(displayId, event)
+                        } finally {
+                            runCatching { event.recycle() }
+                        }
                         return true
                     }
                     TRANSACTION_INJECT_BACK -> {
@@ -496,10 +500,7 @@ class ZXFloatingAppRootService : RootService() {
             try {
                 val pm = packageManager
                 val launchIntent = pm.getLaunchIntentForPackage(pkg)?.apply {
-                    addFlags(
-                        Intent.FLAG_ACTIVITY_NEW_TASK or
-                            Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
-                    )
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
                 }
                 var component = launchIntent?.component?.flattenToShortString()
                 if (component == null) {
@@ -526,7 +527,7 @@ class ZXFloatingAppRootService : RootService() {
                 if (component != null) {
                     val startCmd = "cmd activity start-activity --user 0 --display $displayId --windowingMode 1 " +
                         "--activity-reorder-to-front -a android.intent.action.MAIN -c android.intent.category.LAUNCHER " +
-                        "-f 0x10200000 -n $component"
+                        "-f 0x10000000 -n $component"
                     Log.i("ZXFloatRoot", "Executing startCmd on display $displayId: $startCmd")
                     val proc = Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", startCmd))
                     val finished = proc.waitFor(1200, TimeUnit.MILLISECONDS)
@@ -554,10 +555,7 @@ class ZXFloatingAppRootService : RootService() {
                             setComponent(ComponentName.unflattenFromString(component))
                         }
                     }).apply {
-                        addFlags(
-                            Intent.FLAG_ACTIVITY_NEW_TASK or
-                                Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
-                        )
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
                     }
                     runCatching {
                         (sysContext ?: this@ZXFloatingAppRootService).startActivity(intent, opts.toBundle())

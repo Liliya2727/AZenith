@@ -524,10 +524,11 @@ class ZXFloatingAppManager(
             session.widthPx,
             session.heightPx,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED or
-                WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM,
+                WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
@@ -951,7 +952,10 @@ class ZXFloatingAppManager(
                 )
                 if (createdDisplayId > 0) {
                     session.virtualDisplayId = createdDisplayId
-                    client.launchAppOnDisplay(session.packageName, createdDisplayId)
+                    if (!session.hasLaunchedApp) {
+                        session.hasLaunchedApp = true
+                        client.launchAppOnDisplay(session.packageName, createdDisplayId)
+                    }
                 }
             }
 
@@ -976,14 +980,15 @@ class ZXFloatingAppManager(
                                 .getLaunchIntentForPackage(session.packageName)
                             val component = launchIntent?.component?.flattenToShortString()
 
-                            if (component != null && hasRoot) {
+                            if (component != null && hasRoot && !session.hasLaunchedApp) {
+                                session.hasLaunchedApp = true
                                 scope.launch(Dispatchers.IO) {
                                     runCatching {
                                         Shell.cmd(
                                             "cmd window set-ignore-orientation-request -d $displayId true",
                                             "cmd window set-fix-to-user-rotation -d $displayId enabled",
                                             "cmd window user-rotation -d $displayId lock 0",
-                                            "cmd activity start-activity --user 0 --display $displayId --windowingMode 1 -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -f 0x18008000 -n $component"
+                                            "cmd activity start-activity --user 0 --display $displayId --windowingMode 1 --activity-reorder-to-front -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -f 0x10000000 -n $component"
                                         ).exec()
                                     }
                                 }
@@ -1099,7 +1104,7 @@ class ZXFloatingAppManager(
                 }
             }
         } finally {
-            // Do not invoke mapped.recycle() to prevent 'recycled twice' crash on Android 14+
+            runCatching { mapped.recycle() }
         }
     }
 
